@@ -57,9 +57,6 @@ What does a project template look like?
 - main.lua
 ```
 
-
-```
-
 ## For Developers
 
 This system is built using deno and compiled in to executable binaries, it requires docker as the `hb` executable will need to externally invoke docker commands to run lua and emscripten as well as build tools

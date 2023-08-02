@@ -10,3 +10,12 @@ This system enables each process/contract to exist in isolation while communicat
 ## Projects
 
 - [Developer CLI](dev-cli)
+
+## Contributing
+
+SEE [CONTRIBUTING](CONTRIBUTING.md)
+
+## License 
+
+SEE [LICENSE](LICENSE)
+
