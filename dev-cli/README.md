@@ -26,7 +26,7 @@ hb repl
 exec a lua file
 
 ```sh
-hb exec [file.lua]
+hb run [file.lua]
 ```
 
 compile to wasm
@@ -38,7 +38,7 @@ hb compile [myproject]
 publish to permaweb
 
 ```sh
-hb publish [myproject] -w [wallet]
+hb publish [myproject] -w [wallet] -t [name:value] -t [name:value]
 ```
 
 get help
