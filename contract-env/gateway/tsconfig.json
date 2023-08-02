@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "allowJs": true
+  },
+  "ts-node": {
+    "files": true
+  },
+  "files": ["src/TsLogFactory.d.ts", "src/JSONStream.d.ts", "src/gateway/init.ts"]
+}

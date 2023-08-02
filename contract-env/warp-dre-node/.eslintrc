@@ -1,0 +1,24 @@
+{
+  "root": true,
+  "plugins": [
+    "prettier"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "rules": {
+    "no-console": 1,       // warning
+    "multiline-ternary": "off",
+    "no-nested-ternary": "error",
+    "no-multiple-empty-lines": "off",
+    "prettier/prettier": 2 // error
+  }
+}

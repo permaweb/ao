@@ -1,0 +1,11 @@
+.idea/
+.secrets/
+cache/
+node_modules/
+sqlite/
+docker-compose.yml
+README.md
+*.png
+safeContracts.json
+.env
+.DS_Store

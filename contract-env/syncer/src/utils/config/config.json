@@ -1,0 +1,6 @@
+{
+    "address": "0.0.0.0:9016",
+    "shutdownTimeout": "60s",
+    "httpReadHeadersTimeout": "100s",
+    "httpWriteTimeout": "90s"
+}

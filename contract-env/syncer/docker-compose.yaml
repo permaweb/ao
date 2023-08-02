@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  syncer:
+    image: warpredstone/syncer:latest
+    profiles:
+      - syncer
+    command: [ "/app/bin/syncer", "sync" ]
+    depends_on:
+      - db
+    healthcheck:
+      test: curl --fail http://localhost:3333/v1/health || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 1
+      start_period: 40s
+    environment:
+      SYNCER_DB_PORT: 5432
+      SYNCER_DB_HOST: db
+      SYNCER_DB_USER: postgres
+      SYNCER_DB_PASSWORD: postgres
+      SYNCER_DB_NAME: warp
+      SYNCER_DB_SSL_MODE: disable
+      SYNCER_DB_PING_TIMEOUT: 10s
+      SYNCER_REST_LISTEN_ADDRESS: :3333
+      SYNCER_LOG_LEVEL: debug
+   
+  db:
+    image: postgres:13
+    restart: unless-stopped
+    volumes:
+      - syncer_db_volume:/var/lib/postgresql/data
+    ports:
+      - 7654:5432
+    command: [ "postgres", "-c", "log_statement=all" ]
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: warp
+
+  redis:
+    image: redis:6.2.11-alpine3.17
+    restart: unless-stopped
+    volumes:
+      - syncer_redis_volume:/data
+    ports:
+      - 6379:6379
+    command: >
+      --requirepass password
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - db
+    environment:
+      - PGADMIN_LISTEN_PORT=5151
+      - PGADMIN_DEFAULT_EMAIL=admin@warp.cc
+      - PGADMIN_DEFAULT_PASSWORD=password
+      - MAX_LOGIN_ATTEMPTS=10000
+
+volumes:
+  syncer_db_volume: null
+  syncer_redis_volume: null

@@ -1,0 +1,7 @@
+.idea/
+node_modules/
+cache/
+sqlite/
+
+# TODO: I'm not sure about a few tools, remove this ignore after figure this out
+tools/

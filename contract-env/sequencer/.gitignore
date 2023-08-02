@@ -1,0 +1,21 @@
+vue/node_modules
+vue/dist
+release/
+.idea/
+
+.DS_Store
+
+# Erlang
+*.beam
+
+# Dependency directories (remove the comment below to include it)
+/bin/
+/.gopath~/
+/vendor
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
