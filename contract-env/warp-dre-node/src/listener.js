@@ -26,6 +26,8 @@ const logger = require('./logger')('listener');
 const exitHook = require('async-exit-hook');
 const warp = require('./warp');
 
+console.log('VINCEEEEEE =======================================');
+
 let isTestInstance = config.env === 'test';
 let port = 8080;
 
