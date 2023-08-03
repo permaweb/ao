@@ -19,7 +19,7 @@
     "start": "yarn-or-npm run run-bullmq && node src/listener.js",
     "start:prod": "yarn-or-npm run run-bullmq && ENV=prod node src/listener.js",
     "start:test": "yarn-or-npm run run-bullmq && ENV=test node src/listener.js",
-    "start:local": "docker-compose -f docker-compose-local.yml up --force-recreate --build -d",
+    "start:local": "docker-compose -f docker-compose-local.yml up --force-recreate --build",
     "logs": "docker logs -f --tail 1000 warp-dre-node-dre-1",
     "stop:local": "docker logs -f --tail 1000 warp-dre-node-dre-1"
   },
