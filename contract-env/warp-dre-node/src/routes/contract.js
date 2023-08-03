@@ -30,7 +30,8 @@ module.exports = async (ctx) => {
       response.status = registrationStatus['blacklisted'];
       response.errors = await getContractErrors(nodeDb, contractId);
     } else {
-      const warpState = await warp.stateEvaluator.latestAvailableState(contractId);
+      const warpState = await warp.contract(contractId).readState();
+      console.log("helllllllllooooooooooooooooo");
       let result = await getLastStateFromDreCache(nodeDb, contractId);
       let parsed = false;
       if (warpState && (!result || result.sort_key.localeCompare(warpState.sortKey) < 0)) {
