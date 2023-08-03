@@ -1,4 +1,5 @@
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.2/command/mod.ts'
+import { init } from './commands/init.js'
 
 await new Command()
   .name('hyperbeam')
@@ -7,7 +8,7 @@ await new Command()
   // init
   .command("init", "create project")
   .arguments("<name:string>")
-  .action(_ => console.log("TODO: init project"))
+  .action(init)
   // repl
   .command("repl", "run a lua repl")
   .action(_ => console.log("TODO: repl"))
