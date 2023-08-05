@@ -2,7 +2,7 @@ FROM emscripten/emsdk:3.1.14
 LABEL maintainer "tom wilson <tom@hyper.io>"
 
 RUN apt-get update -qq -y
-RUN apt-get install curl vim make gcc libreadline6-dev libssl-dev zlib1g-dev zip unzip
+RUN apt-get install -y curl vim make gcc libreadline6-dev libssl-dev zlib1g-dev zip unzip
 
 ENV LUA_VERSION 5.3.4
 ENV LUAROCKS_VERSION 2.4.4
@@ -30,3 +30,13 @@ RUN cd /lua-${LUA_VERSION} && \
   make clean && \
   make generic CC='emcc -s WASM=1'
 
+
+# Install commands
+# COPY ./src/emcc-lua /usr/local/bin/emcc-lua
+# COPY ./src/emcc_lua_lib /usr/local/emcc-lua/emcc_lua_lib
+# COPY ./src/main.c /opt/main.c
+# COPY ./src/main.lua /opt/main.lua
+# RUN chmod +x /usr/local/bin/emcc-lua
+
+# ENV CC 'emcc -s WASM=1'
+# ENV NM 'llvm-nm'
