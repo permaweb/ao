@@ -1,8 +1,0 @@
-{
-  "output": "foo.js",
-  "entry": "foo.lua",
-  "dependencies": [
-    "LuaFileSystem",
-    "rapidjson"
-  ]
-}
