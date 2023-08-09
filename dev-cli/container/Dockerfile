@@ -34,7 +34,8 @@ RUN cd / && \
 # And, re-compile lua with "generic WASM"
 RUN cd /lua-${LUA_VERSION} && \
   make clean && \
-  make generic CC='emcc -s WASM=1'
+  make generic CC='emcc -s WASM=1 -U LUA_32BITS' 
+
 
 # Install commands
 COPY ./src/emcc-lua /usr/local/bin/emcc-lua
