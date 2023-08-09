@@ -5,7 +5,7 @@ function contract.handle(state, action, SmartWeave)
   -- do stuff
   local response = {
     state = state,
-    result = { messages = [] }
+    result = { messages = {} }
   }
   return response
 end
@@ -19,6 +19,6 @@ export function init(_, name) {
     entry: 'src/main.lua',
     output: `${name}.lua`
   }
-  return Deno.mkdir(`./${name}`, { recursive: true})
+  return Deno.mkdir(`./${name}`, { recursive: true })
     .then(_ => Deno.writeTextFile(`./${name}/contract.lua`, LUA))
 }
