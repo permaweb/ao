@@ -66,15 +66,13 @@ def main():
     local_include_prefix_re = re.compile(re.escape(local_include_dir + '/'))
 
     # Detect bundles
-    bundle_files = []
+    bundle_files = [os.path.abspath('contract.lua')]
     # Optional dependencies
-    bundle_files += ['/opt/src/json.lua', '/src/contract.lua']
     bundle_files += glob.glob(local_include_dir + '/**/*.lua', recursive=True)
     bundle_files += glob.glob(local_include_dir + '/**/*.so', recursive=True)
     bundle_files += glob.glob(LUAROCKS_LOCAL_MODULE_DIR + '/lib/lua/**/*.so', recursive=True)
     bundle_files += glob.glob(LUAROCKS_LOCAL_MODULE_DIR + '/share/lua/**/*.lua', recursive=True)
 
-    debug_print(bundle_files)
     debug_print('Start to factory and distinguish module files')
 
     for bundle in bundle_files:
@@ -118,6 +116,7 @@ def main():
     debug_print('===== Dependency libraries =====')
     debug_print('\n'.join([v.filepath for v in dependency_libraries]))
 
+    
     #Generate compile target file
     debug_print('Start to generate complie.c')
 
@@ -149,6 +148,7 @@ def main():
                         '  lua_setfield(L, -2, "{}");\n'.format(f.module_name)
                     ])
 
+            
             for f in library_files:
                 inject_lua_files.extend([
                     '  int luaopen_{}(lua_State* L);'.format(f.module_name),
