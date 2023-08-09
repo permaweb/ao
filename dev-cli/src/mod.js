@@ -6,7 +6,7 @@ import { run } from './commands/run.js'
 
 await new Command()
   .name('hyperbeam')
-  .version('0.0.2')
+  .version('0.0.3')
   .description('Create Hyperbeam contracts')
   // init
   .command("init", "create project")
