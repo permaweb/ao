@@ -1,0 +1,10 @@
+functions:
+  handle:
+    return: string
+    args:
+      - string
+      - string
+      - string
+
+entry_file: loader.lua
+output_file: contract.js
