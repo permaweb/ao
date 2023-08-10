@@ -43,7 +43,7 @@
     "koa-compress": "^5.1.0",
     "node-nlp": "^4.24.0",
     "safe-stable-stringify": "^2.4.3",
-    "warp-contracts": "1.4.10",
+    "warp-contracts": "file:./warp",
     "warp-contracts-evaluation-progress-plugin": "1.0.17",
     "warp-contracts-lmdb": "1.1.10",
     "warp-contracts-plugin-ethers": "1.0.7",

@@ -1,0 +1,49 @@
+{
+    "name": "Vint",
+    "ticker": "VINT",
+    "balances": {
+
+    },
+    "claimable": [],
+    "claims": [],
+    "settings": [
+      [
+        "quorum",
+        0.5
+      ],
+      [
+        "support",
+        0.5
+      ],
+      [
+        "voteLength",
+        2160
+      ],
+      [
+        "lockMinLength",
+        129600
+      ],
+      [
+        "lockMaxLength",
+        1051200
+      ],
+      [
+        "communityAppUrl",
+        ""
+      ],
+      [
+        "communityDiscussionLinks",
+        [
+          ""
+        ]
+      ],
+      [
+        "communityDescription",
+        ""
+      ],
+      [
+        "communityLogo",
+        ""
+      ]
+    ]
+  }

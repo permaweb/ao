@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<!--<script src="https://unpkg.com/arweave@1.11.7/bundles/web.bundle.js"></script>-->
+<script src="web.bundle.js"></script>
+<script>
+  (async () => {
+
+    const arweave = Arweave.init({
+      host: 'arweave.net', // Hostname or IP address for a Arweave host
+      port: 443, // Port
+      protocol: 'https', // Network protocol http or https
+      timeout: 60000, // Network request timeouts in milliseconds
+      logging: false // Enable network request logging
+    });
+
+    const tx = await arweave.transactions.get('4qKYMNIysqPUFtMCDTixXUvy8xGap6dH0OvOQYw968U');
+    const verified = await arweave.transactions.verify(tx);
+    document.getElementById('result').innerText = "" + verified;
+    console.log("Verified?", verified);
+  })();
+</script>
+<body>
+<div id="result"></div>
+</body>
+</html>

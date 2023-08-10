@@ -40,6 +40,7 @@ module.exports = async (ctx) => {
       };
       const warpState = await warp.contract(contractId).setEvaluationOptions(options).readState();
       let result = await getLastStateFromDreCache(nodeDb, contractId);
+
       let parsed = false;
       if (warpState && (!result || result.sort_key.localeCompare(warpState.sortKey) < 0)) {
         result = await insertState(nodeDb, contractId, warpState);

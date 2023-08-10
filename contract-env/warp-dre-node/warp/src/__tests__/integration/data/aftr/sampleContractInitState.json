@@ -1,0 +1,26 @@
+{
+    "name" : "AFTR",
+    "ticker" : "AFTR-v001",
+    "balances" : {
+        "abd7DMW1A8-XiGUVn5qxHLseNhkJ5C1Cxjjbj6XC3M8": 150000000,
+        "Fof_-BNkZN_nQp0VsD_A9iGb-Y4zOeFKHA8_GK2ZZ-I" : 100000000
+    },
+    "creator" : "Fof_-BNkZN_nQp0VsD_A9iGb-Y4zOeFKHA8_GK2ZZ-I",
+    "ownership" : "single",
+    "votingSystem": "weighted",
+    "status" : "stopped",
+    "claimable": [],
+    "claims": [],
+    "settings" : [
+        [ "quorum", 0.5 ],
+        [ "support", 0.5],
+        [ "voteLength", 2000 ],
+        [ "lockMinLength", 100 ],
+        [ "lockMaxLength", 10000 ],
+        [ "communityAppUrl", "" ],
+        [ "communityDiscussionLinks", "" ],
+        [ "communityDescription", "" ],
+        [ "communityLogo", ""],
+        [ "evolve", null ]
+    ]
+}

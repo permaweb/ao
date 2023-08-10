@@ -53,6 +53,7 @@ module.exports = {
         t.jsonb('state').notNullable();
         t.jsonb('validity').notNullable();
         t.jsonb('error_messages').notNullable();
+        t.jsonb('result');
         t.unique(['contract_tx_id', 'sort_key']);
       });
     }
@@ -131,7 +132,8 @@ module.exports = {
       state_hash: stateHash,
       state: readResult.cachedValue.state,
       validity: readResult.cachedValue.validity,
-      error_messages: readResult.cachedValue.errorMessages
+      error_messages: readResult.cachedValue.errorMessages,
+      result: readResult.cachedValue.result ? readResult.cachedValue.result : null
     };
 
     await nodeDb('states').insert(entry).onConflict(['contract_tx_id']).merge();
@@ -211,6 +213,17 @@ module.exports = {
     const result = await nodeDb('states')
       .where({
         contract_tx_id: contractTxId
+      })
+      .first('*')
+      .orderBy('sort_key', 'desc');
+
+    return result;
+  },
+
+  getLastStateBySortKey: async (nodeDb, sortkey) => {
+    const result = await nodeDb('states')
+      .where({
+        sort_key: sortkey
       })
       .first('*')
       .orderBy('sort_key', 'desc');
