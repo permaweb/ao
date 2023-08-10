@@ -1,14 +1,20 @@
-# Use specific Node.js version
 FROM node:18.16.0
 
 # Set environment variable
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
 # Set working directory
 WORKDIR /app
 
 # Copy the warp directory first
 COPY ./warp ./warp
+
+# Change into the warp directory
+WORKDIR /app/warp
+
+# Run yarn install and build in the warp directory
+RUN yarn install
+RUN yarn build
 
 # Change back to the /app directory
 WORKDIR /app
