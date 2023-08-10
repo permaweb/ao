@@ -9,17 +9,6 @@ WORKDIR /app
 # Copy the warp directory first
 COPY ./warp ./warp
 
-# Change into the warp directory
-WORKDIR /app/warp
-
-# Run yarn install and build in the warp directory
-RUN yarn install
-RUN yarn add rimraf typescript --production=false
-RUN yarn build
-
-# Change back to the /app directory
-WORKDIR /app
-
 # Copy package.json and yarn.lock and install dependencies
 COPY ["package.json", "yarn.lock", "./"]
 RUN yarn install
