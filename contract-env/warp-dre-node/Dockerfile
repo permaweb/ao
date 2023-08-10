@@ -1,7 +1,7 @@
 FROM node:18.16.0
 
 # Set environment variable
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
 # Set working directory
 WORKDIR /app
@@ -14,6 +14,7 @@ WORKDIR /app/warp
 
 # Run yarn install and build in the warp directory
 RUN yarn install
+RUN yarn add rimraf typescript --production=false
 RUN yarn build
 
 # Change back to the /app directory
