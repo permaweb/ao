@@ -27,8 +27,6 @@ yalc.lock
 
 /db/
 
-bundles/
-
 .secrets
 logs
 
