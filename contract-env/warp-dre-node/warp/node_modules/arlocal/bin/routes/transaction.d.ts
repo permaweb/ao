@@ -1,0 +1,13 @@
+import Router from 'koa-router';
+import { Next } from 'koa';
+export declare const pathRegex: RegExp;
+export declare function txAnchorRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txOffsetRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txPostRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txStatusRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txFieldRoute(ctx: Router.RouterContext, next: Next): Promise<void>;
+export declare function txFileRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txRawDataRoute(ctx: Router.RouterContext): Promise<void>;
+export declare function txDataRoute(ctx: Router.RouterContext, next: Next): Promise<any>;
+export declare function deleteTxRoute(ctx: Router.RouterContext): Promise<void>;

@@ -1,0 +1,25 @@
+{
+  "name": "articles",
+  "version": "0.2.2",
+  "description": "Utility to determine the indirect article (in English) for a given word, using the method described at http://stackoverflow.com/questions/1288291/how-can-i-correctly-prefix-a-word-with-a-and-an/1288473#1288473 and the data provided at http://home.nerbonne.org/A-vs-An/",
+  "main": "lib/Articles.js",
+  "scripts": {
+    "test": "tape tests/*-test.js"
+  },
+  "repository": "https://github.com/chadkirby/Articles.git",
+  "keywords": [
+    "linguistics",
+    "nlp"
+  ],
+  "author": "Chad Kirby",
+  "license": "BSD",
+  "devDependencies": {
+    "coffeescript": "^1.12.7",
+    "eslint": "^4.17.0",
+    "eslint-plugin-turbopatent": "2",
+    "tape": "^4.8.0"
+  },
+  "files": [
+    "lib"
+  ]
+}

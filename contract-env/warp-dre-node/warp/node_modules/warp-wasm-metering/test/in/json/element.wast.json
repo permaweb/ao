@@ -1,0 +1,169 @@
+[
+  {
+    "name": "preramble",
+    "magic": [
+      0,
+      97,
+      115,
+      109
+    ],
+    "version": [
+      13,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "name": "type",
+    "entries": [
+      {
+        "form": "func",
+        "params": []
+      },
+      {
+        "form": "func",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "form": "func",
+        "params": [
+          "i32"
+        ],
+        "return_type": "i32"
+      }
+    ]
+  },
+  {
+    "name": "import",
+    "entries": [
+      {
+        "moduleStr": "Mt",
+        "fieldStr": "call",
+        "kind": "function",
+        "type": 2
+      },
+      {
+        "moduleStr": "Mt",
+        "fieldStr": "h",
+        "kind": "function",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "name": "function",
+    "entries": [
+      1,
+      2,
+      2
+    ]
+  },
+  {
+    "name": "table",
+    "entries": [
+      {
+        "elementType": "anyFunc",
+        "limits": {
+          "flags": 1,
+          "intial": 5,
+          "maximum": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "export",
+    "entries": [
+      {
+        "field_str": "Mt.call",
+        "kind": "function",
+        "index": 0
+      },
+      {
+        "field_str": "call Mt.call",
+        "kind": "function",
+        "index": 3
+      },
+      {
+        "field_str": "call",
+        "kind": "function",
+        "index": 4
+      }
+    ]
+  },
+  {
+    "name": "element",
+    "entries": [
+      {
+        "elements": [
+          2,
+          2,
+          2,
+          1,
+          0
+        ],
+        "index": 0,
+        "offset": {
+          "return_type": "i32",
+          "name": "const",
+          "immediates": "0"
+        }
+      }
+    ]
+  },
+  {
+    "name": "code",
+    "entries": [
+      {
+        "locals": [],
+        "code": [
+          {
+            "return_type": "i32",
+            "name": "const",
+            "immediates": "5"
+          },
+          {
+            "name": "end"
+          }
+        ]
+      },
+      {
+        "locals": [],
+        "code": [
+          {
+            "name": "get_local",
+            "immediates": "0"
+          },
+          {
+            "name": "call",
+            "immediates": "0"
+          },
+          {
+            "name": "end"
+          }
+        ]
+      },
+      {
+        "locals": [],
+        "code": [
+          {
+            "name": "get_local",
+            "immediates": "0"
+          },
+          {
+            "name": "call_indirect",
+            "immediates": {
+              "index": 1,
+              "reserved": 0
+            }
+          },
+          {
+            "name": "end"
+          }
+        ]
+      }
+    ]
+  }
+]

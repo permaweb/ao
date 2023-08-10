@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+const fs = require('fs')
+const wasm2json = require('../wasm2json.js')
+
+const file = process.argv[2]
+
+if (file) {
+  const wasm = fs.readFileSync(file)
+  const json = wasm2json(wasm)
+
+  process.stdout.write(JSON.stringify(json, null, 2))
+} else {
+  const helpMessage = 'Usage: wasm2json [FILE]'
+  process.stdout.write(helpMessage)
+}

@@ -1,0 +1,92 @@
+{
+  "start": 0,
+  "type": {
+    "params": {
+      "DEFAULT": 0
+    },
+    "return_type": {
+      "DEFAULT": 0
+    }
+  },
+  "import": 0,
+  "code": {
+    "locals": {
+      "DEFAULT": 1
+    },
+    "code": {
+      "get_local": 120,
+      "set_local": 120,
+      "tee_local": 120,
+      "get_global": 120,
+      "set_global": 120,
+
+      "load8_s": 120,
+      "load8_u": 120,
+      "load16_s": 120,
+      "load16_u": 120,
+      "load32_s": 120,
+      "load32_u": 120,
+      "load": 120,
+
+      "store8": 120,
+      "store16": 120,
+      "store32": 120,
+      "store": 120,
+
+      "grow_memory": 10000,
+      "current_memory": 100,
+
+      "nop": 1,
+      "block": 1,
+      "loop": 1,
+      "if": 1,
+      "then": 90,
+      "else": 90,
+      "br": 90,
+      "br_if": 90,
+      "br_table": 120,
+      "return": 90,
+
+      "call": 90,
+      "call_indirect": 10000,
+
+      "const": 1,
+
+      "add": 45,
+      "sub": 45,
+      "mul": 45,
+      "div_s": 36000,
+      "div_u": 36000,
+      "rem_s": 36000,
+      "rem_u": 36000,
+      "and": 45,
+      "or": 45,
+      "xor": 45,
+      "shl": 67,
+      "shr_u": 67,
+      "shr_s": 67,
+      "rotl": 90,
+      "rotr": 90,
+      "eq": 45,
+      "eqz": 45,
+      "ne": 45,
+      "lt_s": 45,
+      "lt_u": 45,
+      "le_s": 45,
+      "le_u": 45,
+      "gt_s": 45,
+      "gt_u": 45,
+      "ge_s": 45,
+      "ge_u": 45,
+      "clz": 45,
+      "ctz": 45,
+      "popcnt": 45,
+
+      "drop": 120,
+      "select": 120,
+
+      "unreachable": 1
+    }
+  },
+  "data": 0
+}

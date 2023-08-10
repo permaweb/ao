@@ -1,0 +1,22 @@
+query getCollectionsWithOwnedTokens(
+  $where_condition: current_collection_ownership_v2_view_bool_exp!
+  $offset: Int
+  $limit: Int
+  $order_by: [current_collection_ownership_v2_view_order_by!]
+) {
+  current_collection_ownership_v2_view(where: $where_condition, offset: $offset, limit: $limit, order_by: $order_by) {
+    current_collection {
+      creator_address
+      collection_name
+      token_standard
+      collection_id
+      description
+      table_handle_v1
+      uri
+      total_minted_v2
+      max_supply
+    }
+    distinct_tokens
+    last_transaction_version
+  }
+}

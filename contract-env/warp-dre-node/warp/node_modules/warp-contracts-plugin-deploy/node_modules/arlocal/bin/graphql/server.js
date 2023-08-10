@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.graphServer = void 0;
+const fs_1 = require("fs");
+const path_1 = require("path");
+const apollo_server_koa_1 = require("apollo-server-koa");
+const resolvers_1 = require("./resolvers");
+const typeDefs = (0, apollo_server_koa_1.gql)((0, fs_1.readFileSync)((0, path_1.join)(__dirname, 'types.graphql'), 'utf8'));
+function graphServer(opts = {}, ctx, connection) {
+    return new apollo_server_koa_1.ApolloServer(Object.assign({ typeDefs,
+        resolvers: resolvers_1.resolvers, debug: false, context: ({ req }) => {
+            return Object.assign(Object.assign({ req }, ctx), { connection });
+        } }, opts));
+}
+exports.graphServer = graphServer;
+//# sourceMappingURL=server.js.map

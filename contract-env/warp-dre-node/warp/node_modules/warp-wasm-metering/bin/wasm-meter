@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+const fs = require('fs')
+const meter = require('../')
+
+const file = process.argv[2]
+const out = process.argv[3]
+
+if (file) {
+  const wasm = fs.readFileSync(file)
+  const meteredWasm = meter.meterWASM(wasm)
+
+  fs.writeFileSync(out, meteredWasm)
+} else {
+  const helpMessage = 'Usage: meter-meter [FILE]'
+  process.stdout.write(helpMessage)
+}

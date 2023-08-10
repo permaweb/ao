@@ -1,0 +1,13 @@
+{
+  "basic+import.wast.json": 1,
+  "basic.wast.json": 0,
+  "element.wast.json": 2,
+  "fac.wast.json": 0,
+  "memory0.wast.json": 20,
+  "memory1.wast.json": 30,
+  "memory2.wast.json": 26,
+  "mixedImports.wast.json": 2,
+  "start.wast.json": 4,
+  "zeroCostOps.wast.json": 0,
+  "stuff.wast.json": 3
+}

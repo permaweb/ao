@@ -1,0 +1,36 @@
+{
+  "name": "randy",
+  "version": "1.5.1",
+  "description": "Random utilities based on WELL-1024a PRNG.",
+  "author": {
+    "name": "Helge Skogly Holm",
+    "email": "helge.holm@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "random"
+  ],
+  "bugs": {
+    "url": "http://github.com/deestan/randy/issues",
+    "email": "helge.holm@gmail.com"
+  },
+  "main": "./index",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/deestan/randy.git"
+  },
+  "devDependencies": {
+    "mocha": "~1.2.0",
+    "uglify-js": "~1.3.0"
+  },
+  "scripts": {
+    "test": "node_modules/mocha/bin/mocha",
+    "prepublish": "npm test && npm run-script browser && npm run-script test-distribution && echo Prepublish Checks OK",
+    "browser": "node ./bundle.js && node_modules/uglify-js/bin/uglifyjs --unsafe -o browser/randy.min.js browser/randy.js",
+    "test-distribution": "node_modules/mocha/bin/mocha -R landing -t 300000 -s 300000 test-distribution/",
+    "prepare-webclient-tests": "git submodule update --init --recursive"
+  },
+  "dependencies": {
+    "prng-well1024a": "~1.0.0"
+  }
+}

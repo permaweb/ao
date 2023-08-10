@@ -1,0 +1,45 @@
+{
+    "common": {
+        "figletText": "SmartWeave"
+    },
+    "commands": {
+        "readCommand": {
+            "command": "read <contractId>",
+            "description": "Read a contracts state or executes a read interaction.",
+            "options": {
+                "input": {
+                    "description": "Input to the contract, if not provided, contracts full state will be read"
+                },
+                "prettify": {
+                    "description": "If set prints the eventual output state as a stringified and prettified JSON"
+                }
+            },
+            "positionals": {
+                "contractId": {
+                    "description": "The Contract ID"
+                }
+            }
+        },
+        "writeCommand": {
+            "command": "write <contractId>",
+            "description": "Writes an interaction with contract, or simulates a write interaction.",
+            "options": {
+                "keyFile": {
+                    "description": "Your key file"
+                },
+                "dryRun": {
+                    "description": "Input to the contract"
+                },
+                "input": {
+                    "description": "Input to the contract"
+                }
+            },
+            "positionals": {
+                "contractId": {
+                    "description": "The Contract ID"
+                }
+            }
+        },
+        "createCommand": {}
+    }
+}

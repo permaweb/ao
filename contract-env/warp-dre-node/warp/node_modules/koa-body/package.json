@@ -1,0 +1,65 @@
+{
+  "name": "koa-body",
+  "version": "4.2.0",
+  "description": "A Koa body parser middleware. Supports multipart, urlencoded and JSON request bodies.",
+  "main": "index.js",
+  "types": "./index.d.ts",
+  "scripts": {
+    "test": "mocha test/unit/",
+    "examples-multer": "node examples/multer.js",
+    "examples-koa-router": "node examples/koa-router.js"
+  },
+  "author": {
+    "name": "Daryl Lau",
+    "email": "dlau00@gmail.com",
+    "url": "https://github.com/dlau"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/dlau/koa-body.git"
+  },
+  "keywords": [
+    "koa",
+    "urlencoded",
+    "multipart",
+    "json",
+    "body",
+    "parser",
+    "form"
+  ],
+  "files": [
+    "LICENSE",
+    "README.md",
+    "index.js",
+    "index.d.ts",
+    "package.json",
+    "unparsed.js"
+  ],
+  "dependencies": {
+    "@types/formidable": "^1.0.31",
+    "co-body": "^5.1.1",
+    "formidable": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.0.39",
+    "koa": "^2.0.0",
+    "koa-router": "^7.0.1",
+    "mocha": "5.2.0",
+    "should": "13.2.1",
+    "sinon": "^7.2.2",
+    "supertest": "3.1.0"
+  },
+  "contributors": [
+    {
+      "name": "Daryl Lau",
+      "email": "dlau00@gmail.com",
+      "url": "https://github.com/dlau"
+    },
+    {
+      "name": "Charlike Mike Reagent",
+      "email": "mameto_100@mail.bg",
+      "url": "https://github.com/tunnckoCore"
+    }
+  ],
+  "license": "MIT"
+}

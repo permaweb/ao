@@ -1,0 +1,10 @@
+export default class Logging {
+    _log: boolean;
+    constructor(showLogs: boolean, persist: boolean);
+    logInFile(args: any[]): void;
+    log(...args: any[]): void;
+    info(...args: any[]): void;
+    warn(...args: any[]): void;
+    error(...args: any[]): void;
+    private show;
+}

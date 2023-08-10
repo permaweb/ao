@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+
+var beautify = require("../index.js");
+var fs = require('fs');
+var util = require('util');
+
+var filenames = process.argv.slice(2);
+
+for (filename of filenames) {
+  data = JSON.parse(fs.readFileSync(filename, {encoding: 'utf8'}));
+  fs.writeFileSync(filename, beautify(data, null, 2, 80));
+}
