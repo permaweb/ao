@@ -1,6 +1,5 @@
 # Dependency directories
 
-node_modules/
 crates/warp-contracts/target
 crates/pst/contract/definition/bindings/
 crates/pst/cache/
@@ -8,7 +7,6 @@ crates/pst/cache/
 # Optional eslint cache
 .eslintcache
 
-lib/
 
 # WebStorm Local files
 .idea/

@@ -1,7 +1,6 @@
 .idea/
 .secrets/
 cache/
-node_modules/
 sqlite/
 docker-compose.yml
 README.md
