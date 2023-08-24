@@ -41,6 +41,7 @@ RUN cd /lua-${LUA_VERSION} && \
 COPY ./src/emcc-lua /usr/local/bin/emcc-lua
 COPY ./src/emcc_lua_lib /usr/local/emcc-lua/emcc_lua_lib
 
+COPY ./src/pre.js /opt/pre.js
 COPY ./src/definition.yml /opt/definition.yml
 COPY ./src/loader.lua /opt/loader.lua
 
