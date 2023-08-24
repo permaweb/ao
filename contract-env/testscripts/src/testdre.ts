@@ -7,8 +7,9 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
 (async function () {
     console.log('Testing test dre...');
 
-    let contractId = "1_5_vDnDiuD2QVpNd9-r2QpL2SxyqIoKvXjtDgyy2l0";
-    let dreNode = 'http://localhost/contract';
+    let contractId = "1eCJNSVblgBnWLCfIRzNEXWVCSyStxEGVaWQlgs_ZlE";
+    let dreHost = 'http://localhost';
+    let dreNode = dreHost + '/contract';
 
     const walletPath = process.env.PATH_TO_WALLET;
 
@@ -44,5 +45,19 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
     let state = await warpContract.readState();
 
     console.log(state.cachedValue.state);
+
+    let originalTxId = res.originalTxId;
+
+    let crankResponse = await fetch(`http://localhost:3004/crank/${originalTxId}`, {
+        method: `POST`,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            dre: dreHost
+        })
+    });
+
+    console.log(await crankResponse.text());
     
 })();
