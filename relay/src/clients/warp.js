@@ -15,7 +15,7 @@ let warpClient = {
             allowBigInt: true,
             internalWrites: true,
             remoteStateSyncEnabled: true,
-            remoteStateSyncSource: dreNode,
+            remoteStateSyncSource: dreNode + '/contract',
             unsafeClient: 'skip',
         };
 
@@ -23,14 +23,11 @@ let warpClient = {
     },
 
     write: async function(contractId, wallet, input) {
-        console.log(wallet)
-        console.log(this.options)
-        console.log(contractId)
-        return await this.warp
+        let c = this.warp
             .contract(contractId)
             .connect(wallet)
-            .setEvaluationOptions(this.options)
-            .writeInteraction(input);
+            .setEvaluationOptions(this.options);
+        return await c.writeInteraction(input);
     }
 }
 

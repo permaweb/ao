@@ -43,6 +43,8 @@ module.exports = async (ctx) => {
 
       let parsed = false;
       if (warpState && (!result || result.sort_key.localeCompare(warpState.sortKey) < 0)) {
+        console.log("vince------");
+        console.log(warpState);
         result = await insertState(nodeDb, contractId, warpState);
         parsed = true;
       }

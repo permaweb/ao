@@ -9,7 +9,7 @@ function handle(state, action) {
             messages: [
                 {
                   txId: SmartWeave.transaction.id, 
-                  target: action.input.target, 
+                  target: action.input.message.caller, 
                   message: { 
                     type: "received",
                     caller: SmartWeave.contract.id,

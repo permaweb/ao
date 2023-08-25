@@ -7,7 +7,7 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
 (async function () {
     console.log('Testing test dre...');
 
-    let contractId = "1eCJNSVblgBnWLCfIRzNEXWVCSyStxEGVaWQlgs_ZlE";
+    let contractId = "eI1P0ZBNLwrY9_7_vx4WvKVHLbvkcCqorrc0s2NLuk8";
     let dreHost = 'http://localhost';
     let dreNode = dreHost + '/contract';
 

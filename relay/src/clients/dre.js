@@ -3,6 +3,7 @@
 
 let dreClient = {
     result: async function(dreNode, txId) {
+        console.log(`${dreNode}/result?tx=${txId}`)
         let resultResponse = await fetch(`${dreNode}/result?tx=${txId}`);
         let resultJson = await resultResponse.json();
 
