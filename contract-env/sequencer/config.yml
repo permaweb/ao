@@ -1,0 +1,25 @@
+version: 1
+build:
+  main: cmd/sequencerd
+accounts:
+- name: alice
+  coins:
+  - 200000000warptest
+- name: bob
+  coins:
+  - 100000000warptest
+client:
+  openapi:
+    path: docs/static/openapi.yml
+faucet:
+  name: bob
+  coins:
+  - 100000warptest
+validators:
+- name: alice
+  bonded: 100000000warptest
+genesis:
+  app_state:
+    staking:
+      params:
+        bond_denom: "warptest"

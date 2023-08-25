@@ -1,0 +1,265 @@
+{
+  "contractTxId": "sR3FG6Wvvq0uYeILMCkK-tG7i2N0fxIB2LpgqgS__TI",
+  "depth": 0,
+  "label": "",
+  "interactions": {
+    "dataType": "Map",
+    "value": [
+      [
+        "W1COLMVJN2nr1G-Qe03lozP6fOKFotXxyxRR5FSU6pc",
+        {
+          "interactionInput": {
+            "txId": "W1COLMVJN2nr1G-Qe03lozP6fOKFotXxyxRR5FSU6pc",
+            "blockHeight": 879965,
+            "blockTimestamp": 1645687971,
+            "caller": "LOLS0MQ6sKprHDYVgwfYaMm0ypRmVU0T6oYQxrx3Bks",
+            "functionArguments": [
+              {
+                "function": "transfer",
+                "qty": "1000000000000000",
+                "target": "kyGgyXpsHGX8wT9Oe4rsIGNb7ilybknVvSjcrLKVt1Y"
+              },
+              {
+                "function": "transfer",
+                "qty": "1000000000000000",
+                "target": "SFvtYkST38oYwQGG1NuVeA7EMaM2QLhzBXGwDXe1fjg"
+              },
+              {
+                "function": "transfer",
+                "qty": "1000000000000000",
+                "target": "FDtVABwHgn1VL4bgLwkiP-UbWtvSBZ-XZ9TLuQDN1fQ"
+              },
+              {
+                "function": "transfer",
+                "qty": "1000000000000000",
+                "target": "iqqGjbgTJIrXVo71pySg2uiwhqEb-QShNGj-APcxhoQ"
+              }
+            ],
+            "foreignContractCalls": {
+              "dataType": "Map",
+              "value": []
+            }
+          },
+          "interactionOutput": {
+            "cacheHit": false,
+            "intermediaryCacheHit": false,
+            "executionTime": 6,
+            "errorMessage": "No function supplied or function not recognised: \\"
+            undefined
+            \
+            \
+            ""
+          }
+        }
+      ],
+      [
+        "p5tPewKCHD8P6w4p-Jtn0UIV0CwaZCSUZt6PV9vezRg",
+        {
+          "interactionInput": {
+            "txId": "p5tPewKCHD8P6w4p-Jtn0UIV0CwaZCSUZt6PV9vezRg",
+            "blockHeight": 879975,
+            "blockTimestamp": 1645688473,
+            "caller": "LOLS0MQ6sKprHDYVgwfYaMm0ypRmVU0T6oYQxrx3Bks",
+            "functionArguments": [
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "kyGgyXpsHGX8wT9Oe4rsIGNb7ilybknVvSjcrLKVt1Y"
+              },
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "SFvtYkST38oYwQGG1NuVeA7EMaM2QLhzBXGwDXe1fjg"
+              },
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "FDtVABwHgn1VL4bgLwkiP-UbWtvSBZ-XZ9TLuQDN1fQ"
+              },
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "iqqGjbgTJIrXVo71pySg2uiwhqEb-QShNGj-APcxhoQ"
+              }
+            ],
+            "foreignContractCalls": {
+              "dataType": "Map",
+              "value": []
+            }
+          },
+          "interactionOutput": {
+            "cacheHit": false,
+            "intermediaryCacheHit": false,
+            "executionTime": 2,
+            "errorMessage": "No function supplied or function not recognised: \\"
+            undefined
+            \
+            \
+            ""
+          }
+        }
+      ],
+      [
+        "iJoZwH9dwHPWS8l0z4j6JRNOET_mXjHdi10eVOnGnhA",
+        {
+          "interactionInput": {
+            "txId": "iJoZwH9dwHPWS8l0z4j6JRNOET_mXjHdi10eVOnGnhA",
+            "blockHeight": 879981,
+            "blockTimestamp": 1645689677,
+            "caller": "LOLS0MQ6sKprHDYVgwfYaMm0ypRmVU0T6oYQxrx3Bks",
+            "functionArguments": [
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "DEgJqP8Zd4RBld0JCuc2U-UKtUJyNtLcW6jt4k6L1pQ"
+              }
+            ],
+            "foreignContractCalls": {
+              "dataType": "Map",
+              "value": []
+            }
+          },
+          "interactionOutput": {
+            "cacheHit": false,
+            "intermediaryCacheHit": false,
+            "executionTime": 2,
+            "errorMessage": "No function supplied or function not recognised: \\"
+            undefined
+            \
+            \
+            ""
+          }
+        }
+      ],
+      [
+        "WHiXm0P6BTne5_VxNk76U4H6Zl3D_SoQ8-KRaAMlgNM",
+        {
+          "interactionInput": {
+            "txId": "WHiXm0P6BTne5_VxNk76U4H6Zl3D_SoQ8-KRaAMlgNM",
+            "blockHeight": 879985,
+            "blockTimestamp": 1645690362,
+            "caller": "LOLS0MQ6sKprHDYVgwfYaMm0ypRmVU0T6oYQxrx3Bks",
+            "functionName": "transfer",
+            "functionArguments": {
+              "function": "transfer",
+              "qty": 1000000000000000,
+              "target": "DEgJqP8Zd4RBld0JCuc2U-UKtUJyNtLcW6jt4k6L1pQ"
+            },
+            "foreignContractCalls": {
+              "dataType": "Map",
+              "value": []
+            }
+          },
+          "interactionOutput": {
+            "cacheHit": false,
+            "intermediaryCacheHit": false,
+            "executionTime": 1
+          }
+        }
+      ],
+      [
+        "6IOtBWPh-9loPiJ8V2zIo1NzGtYNn4kA_Xdt9P1IIFg",
+        {
+          "interactionInput": {
+            "txId": "6IOtBWPh-9loPiJ8V2zIo1NzGtYNn4kA_Xdt9P1IIFg",
+            "blockHeight": 880001,
+            "blockTimestamp": 1645692336,
+            "caller": "LOLS0MQ6sKprHDYVgwfYaMm0ypRmVU0T6oYQxrx3Bks",
+            "functionArguments": [
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "kyGgyXpsHGX8wT9Oe4rsIGNb7ilybknVvSjcrLKVt1Y"
+              },
+              {
+                "function": "transfer",
+                "qty": 1000000000000000,
+                "target": "SFvtYkST38oYwQGG1NuVeA7EMaM2QLhzBXGwDXe1fjg"
+              }
+            ],
+            "foreignContractCalls": {
+              "dataType": "Map",
+              "value": []
+            }
+          },
+          "interactionOutput": {
+            "cacheHit": false,
+            "intermediaryCacheHit": false,
+            "executionTime": 2,
+            "errorMessage": "No function supplied or function not recognised: \\"
+            undefined
+            \
+            \
+            ""
+          }
+        }
+      ],
+      [
+        "ipmwMylSfoiXUPqm8e5_oLvzWAoel98jRt00ewJa7hk",
+        {
+          "interactionInput": {
+            "txId": "ipmwMylSfoiXUPqm8e5_oLvzWAoel98jRt00ewJa7hk",
+            "blockHeight": 880051,
+            "blockTimestamp": 1645698048,
+            "caller": "LOLS0MQ6sKprHDYVgwfYaMm0ypRmVU0T6oYQxrx3Bks",
+            "functionArguments": "[{\\"
+            function
+            \
+            \
+            ":\\"
+            transfer
+            \
+            \
+            ",\\"
+            qty
+            \
+            \
+            ":1000000000000000,\\"
+            target
+            \
+            \
+            ":\\"
+            kyGgyXpsHGX8wT9Oe4rsIGNb7ilybknVvSjcrLKVt1Y
+            \
+            \
+            "},{\\"
+            function
+            \
+            \
+            ":\\"
+            transfer
+            \
+            \
+            ",\\"
+            qty
+            \
+            \
+            ":1000000000000000,\\"
+            target
+            \
+            \
+            ":\\"
+            SFvtYkST38oYwQGG1NuVeA7EMaM2QLhzBXGwDXe1fjg
+            \
+            \
+            "}]",
+            "foreignContractCalls": {
+              "dataType": "Map",
+              "value": []
+            }
+          },
+          "interactionOutput": {
+            "cacheHit": false,
+            "intermediaryCacheHit": false,
+            "executionTime": 1,
+            "errorMessage": "No function supplied or function not recognised: \\"
+            undefined
+            \
+            \
+            ""
+          }
+        }
+      ]
+    ]
+  }
+}

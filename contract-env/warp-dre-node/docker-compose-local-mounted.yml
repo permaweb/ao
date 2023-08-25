@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  dre:
+    build: .
+    env_file:
+      - .env
+    environment:
+      BULLMQ_HOST: "${BULLMQ_HOST:-bullmq}"
+    ports:
+      - '80:8080'
+
+    volumes:
+      - ~/warp-dre-node/sqlite:/app/sqlite
+      - ~/warp-dre-node/cache:/app/cache
+  bullmq:
+    image: redis:7.0-alpine
+    restart: always
+    ports:
+      - '127.0.0.1:6379:6379'
+    command: redis-server --save 20 1 --loglevel warning --maxmemory-policy noeviction
+    volumes:
+      - cache:/data
+volumes:
+  cache:
+    driver: local

@@ -1,0 +1,17 @@
+dist
+node_modules
+.idea
+db*.sqlite
+.secrets
+.secrets/.env
+.secrets/local.env
+gateway.lock
+network-cache.json
+.DS_Store
+gateway_dump
+yarn-error.log
+.yalc
+dump_*
+cache
+db_error_log
+contracts-sync-l1.json

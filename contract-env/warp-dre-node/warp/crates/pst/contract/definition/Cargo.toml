@@ -1,0 +1,15 @@
+[package]
+name = "warp_pst"
+version = "0.1.0"
+edition = "2021"
+description = "Warp PST template"
+license = "MIT"
+
+[dependencies]
+warp-contracts = { version = "0.1.2", features = ["debug"], path = "../../../warp-contracts" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio-test = "0.4.2"
+schemars = "0.8.10"
+strum = "0.24.1"
+strum_macros = "0.24.3"

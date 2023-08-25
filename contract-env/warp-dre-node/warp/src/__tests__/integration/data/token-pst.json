@@ -1,0 +1,9 @@
+{
+  "ticker": "EXAMPLE_PST_TOKEN",
+  "owner": "uhE-QeYS8i4pmUtnxQyHD7dzXFNaJ9oMK-IM-QPNY6M",
+  "canEvolve": true,
+  "balances": {
+    "uhE-QeYS8i4pmUtnxQyHD7dzXFNaJ9oMK-IM-QPNY6M": 10000000,
+    "33F0QHcb22W7LwWR1iRC8Az1ntZG09XQ03YWuw2ABqA": 23111222
+  }
+}

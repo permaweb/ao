@@ -1,0 +1,114 @@
+version: "3"
+
+services:
+  sequencer-node-0:
+    container_name: sequencer-0
+    image: "warpredstone/sequencer:latest"
+    profiles:
+      - sequencer
+    environment:
+      - DEBUG=1
+      - ID=0
+      - LOG=${LOG:-sequencerd.log}
+      - SEQUENCER_KEYPASSWD=Sad9aoDDrKla22FYrFmEw6S24hFkhUXJ
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "26656-26657:26656-26657"
+      - "1317:1317"
+      - "9090:9090"
+      - "2345:2345"
+    volumes:
+      - type: volume
+        source: sequencer-0-data
+        target: /root/.sequencer/data
+        volume:
+          nocopy: false
+      - type: bind
+        source: ./network/local/sequencer-0/config
+        target: /root/.sequencer/config
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.2
+
+  sequencer-node-1:
+    container_name: sequencer-1
+    image: "warpredstone/sequencer:latest"
+    profiles:
+      - sequencer
+    environment:
+      - DEBUG=1
+      - ID=0
+      - LOG=${LOG:-sequencerd.log}
+      - SEQUENCER_KEYPASSWD=FsWdSLhbbfzwEv22H6ZotOb6ArNLd1Ef
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "26666-26667:26656-26657"
+      - "1318:1317"
+      - "9091:9090"
+      - "2346:2345"
+    volumes:
+      - type: volume
+        source: sequencer-1-data
+        target: /root/.sequencer/data
+        volume:
+          nocopy: false
+      - type: bind
+        source: ./network/local/sequencer-1/config
+        target: /root/.sequencer/config
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.3
+
+  sequencer-node-2:
+    container_name: sequencer-2
+    image: "warpredstone/sequencer:latest"
+    profiles:
+      - sequencer
+    environment:
+      - DEBUG=1
+      - ID=0
+      - LOG=${LOG:-sequencerd.log}
+      - SEQUENCER_KEYPASSWD=uNZCkSCmId4Odyz7GtGE1W66eRnZw3uB
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "26676-26677:26656-26657"
+      - "1319:1317"
+      - "9092:9090"
+      - "2347:2345"
+    volumes:
+      - type: volume
+        source: sequencer-2-data
+        target: /root/.sequencer/data
+        volume:
+          nocopy: false
+      - type: bind
+        source: ./network/local/sequencer-2/config
+        target: /root/.sequencer/config
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.4
+
+volumes:
+  sequencer-0-data:
+  sequencer-0-config:
+  sequencer-1-data:
+  sequencer-1-config:
+  sequencer-2-data:
+  sequencer-2-config:
+
+networks:
+  localnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.10.0/25
