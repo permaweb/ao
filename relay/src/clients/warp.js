@@ -28,6 +28,14 @@ let warpClient = {
             .connect(wallet)
             .setEvaluationOptions(this.options);
         return await c.writeInteraction(input);
+    },
+
+    read: async function(contractId, walletKey) {
+        const warpContract = this.warp
+            .contract(contractId)
+            .connect(walletKey)
+            .setEvaluationOptions(this.options);
+        await warpContract.readState();
     }
 }
 

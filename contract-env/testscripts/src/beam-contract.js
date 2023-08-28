@@ -21,6 +21,11 @@ function handle(state, action) {
         }  
       }
     }
+    if (action.input.function === 'handleMessage') {
+      return { 
+        state
+      }
+    }
 
-    throw ContractError('No function specified')
+    throw new ContractError('No function specified')
 }

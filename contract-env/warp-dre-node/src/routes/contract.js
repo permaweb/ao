@@ -30,21 +30,17 @@ module.exports = async (ctx) => {
       response.status = registrationStatus['blacklisted'];
       response.errors = await getContractErrors(nodeDb, contractId);
     } else {
-      let u = 'skip';
-
       let options = {
         allowBigInt: true,
         internalWrites: true,
         remoteStateSyncEnabled: false,
-        unsafeClient: u,
+        unsafeClient: 'skip',
       };
       const warpState = await warp.contract(contractId).setEvaluationOptions(options).readState();
       let result = await getLastStateFromDreCache(nodeDb, contractId);
 
       let parsed = false;
       if (warpState && (!result || result.sort_key.localeCompare(warpState.sortKey) < 0)) {
-        console.log("vince------");
-        console.log(warpState);
         result = await insertState(nodeDb, contractId, warpState);
         parsed = true;
       }

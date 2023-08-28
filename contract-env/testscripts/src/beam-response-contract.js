@@ -20,6 +20,5 @@ function handle(state, action) {
       }
     }
 
-    // {function: "handleMessage", message: {type: "transfer", from: "u contract address", qty: "qty", caller: "walletAddress"}}
-    throw ContractError('No function specified')
+    throw new ContractError('No function specified');
 }

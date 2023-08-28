@@ -30,18 +30,17 @@ const processor = {
                 message: message.message
             }
         );
+
+        // must read state to load the new state/sortKey into the DRE
+        await this.warpCli.read(message.target, config.relayWallet);
         
         let newTxId = writeTx.originalTxId;
-
-        console.log(newTxId)
 
         let replyMessages = await dreClient.result(this.dreNode, newTxId);
 
         if(replyMessages) {
             this.msgCallStack.writeStack(newTxId, replyMessages, message.txId);
             let moreMsgs = this.msgCallStack[newTxId];
-            console.log("more msgs");
-            console.log(moreMsgs);
             await Promise.all(moreMsgs.map(msg => this.msgRecurse(msg)));
         }
     }
