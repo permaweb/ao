@@ -1,0 +1,9 @@
+**/node_modules
+**/bin
+**/build
+**/wallets
+**/cache
+**/sindex
+**/.DS_Store
+**/data
+*yalc*
