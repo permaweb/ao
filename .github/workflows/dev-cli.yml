@@ -1,0 +1,175 @@
+name: 👨‍💻 Test & Deploy Dev CLI
+
+on:
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "dev-cli/**"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "dev-cli/**"
+
+  # Perform a release using a workflow dispatch
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "semver version to bump to"
+        required: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: dev-cli
+
+jobs:
+  # # Run only run tests on PRs and pushes to main
+  # test:
+  #   if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       deno-version: [1.x]
+
+  #   steps:
+  #     - name: ⬇️ Checkout repo
+  #       uses: actions/checkout@v3
+
+  #     - name: 🦕 Setup Deno
+  #       uses: denoland/setup-deno@v1
+  #       with:
+  #         deno-version: ${{ matrix.deno-version }}
+
+  #     - name: ⚡ Run Tests
+  #       run: |
+  #         deno task test
+  #       env:
+  #         CI: true
+
+  release:
+    # Releases are performed via a workflow dispatch
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+      
+      - name: 🦕 Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: 1.x
+
+      # Until we use something more comprehensive
+      # this simple check of the provided version will suffice
+      - name: 🫠 Check Inputs
+        id: check_inputs
+        run: |
+          VERSION=$(deno run https://deno.land/x/semver/cli.ts clean "${{ github.event.inputs.version }}")
+          if [[ "$VERSION" == "undefined" ]]; then
+            echo "${{ github.event.inputs.version }} is not a valid semver version" 1>&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: 🛠 Build Binaries
+        id: build_binaries
+        run: |
+          BINARIES_OUTPUT_DIR=$(\
+            tools/build.sh \
+            | tail -1
+          )
+          echo "binaries_output_dir=${BINARIES_OUTPUT_DIR}" >> $GITHUB_OUTPUT
+        env:
+          CI: true
+
+      # Load the Wallet credentials from the Github secret
+      # This action outputs the filePath, which can be accessed via ${{ steps.wallet_json.outputs.filePath }}
+      - name: 🪪 Load Wallet
+        uses: timheuer/base64-to-file@v1
+        id: wallet_json
+        with:
+          fileName: wallet.json
+          encodedString: ${{ secrets.CI_WALLET }}
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install ArkB
+        run: |
+          npm i -g arkb@1.1.61
+
+      - name: 💾 Publish Binaries to Arweave
+        id: publish_binaries
+        # arkb outputs text to the console, the final line being
+        # the url of the transaction. We only need the transaction id
+        # 
+        # So we tail the output and strip the last part of the printed url
+        # which should be the transaction id
+        run: |
+          BINARIES_OUTPUT_DIR=${{ steps.build_binaries.outputs.binaries_output_dir }}
+          ARKB_TRANSACTION_ID=$(\
+            arkb deploy ${BINARIES_OUTPUT_DIR} \
+              --no-colors \
+              --auto-confirm \
+              --wallet ${{ steps.wallet_json.outputs.filePath }} \
+              --use-bundler https://node2.bundlr.network \
+              | tail -1 \
+              | awk -F/ '{print $NF}'
+          )
+          echo "tx_id=${ARKB_TRANSACTION_ID}" >> $GITHUB_OUTPUT
+
+      - name: 🛠 Publish Install Script to Arweave
+        id: publish_install
+        # arkb outputs text to the console, the final line being
+        # the url of the transaction. We only need the transaction id
+        # 
+        # So we tail the output and strip the last part of the printed url
+        # which should be the transaction id
+        run: |
+          INSTALL_SCRIPT=$(deno run -A tools/create-install-script.js --binaries=${{ steps.publish_binaries.outputs.tx_id }})
+          ARKB_TRANSACTION_ID=$(\
+            arkb deploy ${INSTALL_SCRIPT} \
+              --no-colors \
+              --auto-confirm \
+              --wallet ${{ steps.wallet_json.outputs.filePath }} \
+              --use-bundler https://node2.bundlr.network \
+              | tail -1 \
+              | awk -F/ '{print $NF}'
+          )
+          echo "tx_id=${ARKB_TRANSACTION_ID}" >> $GITHUB_OUTPUT
+
+      - name: 🤓 Set Git User
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+      # Until we use something like ArNS, we need a way to keep track of the transactions
+      # that contain the hyperbeam CLI
+      #
+      # So we will persist the transaction ids into this file, committed as part of this CI
+      - name: 🗺️ Update txMappings
+        run: |
+          deno run -A tools/update-tx-mappings.js \
+            --version=${{ steps.check_inputs.outputs.version }} \
+            --binaries=${{ steps.publish_binaries.outputs.tx_id }} \
+            --install=${{ steps.publish_install.outputs.tx_id }} \
+            --latest
+
+      - name: ⬆️ Push
+        # We purposefully don't use "--follow-tags" here
+        #
+        # Git will push tags in parallel when using '--follow-tags'.
+        # So if the tip of trunk has changed, this will cause the tag to be pushed, but not the commit.
+        #
+        # To get around this, we first attempt to push the commit. If it succeeds, the tag is then pushed.
+        # If pushing the commit fails, then the step fails and no tag is pushed up, which is what we want.
+        run: |
+          git add egg.json
+          git commit "chore(dev-cli): bump version and update txMappings"
+          git push
+          git push --tags
