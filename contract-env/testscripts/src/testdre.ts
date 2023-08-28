@@ -7,7 +7,7 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
 (async function () {
     console.log('Testing test dre...');
 
-    let contractId = "eI1P0ZBNLwrY9_7_vx4WvKVHLbvkcCqorrc0s2NLuk8";
+    let contractId = "LM-WBXIICBbWxATecLgI8RGKVUWkiUmAKS5_GKI031c";
     let dreHost = 'http://localhost';
     let dreNode = dreHost + '/contract';
 
@@ -39,12 +39,8 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
 
     let res = await warpContract.writeInteraction(input);
 
-    console.log("output")
-    console.log(res);
-
-    let state = await warpContract.readState();
-
-    console.log(state.cachedValue.state);
+    // must read state to load the new state/sortKey into the DRE
+    await warpContract.readState();
 
     let originalTxId = res.originalTxId;
 
