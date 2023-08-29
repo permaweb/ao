@@ -218,6 +218,6 @@ jobs:
         # If pushing the commit fails, then the step fails and no tag is pushed up, which is what we want.
         run: |
           git add egg.json
-          git commit "chore(dev-cli): bump version and update txMappings"
+          git commit -m "chore(dev-cli): bump version and update txMappings"
           git push
           git push --tags
