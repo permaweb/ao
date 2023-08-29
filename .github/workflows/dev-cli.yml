@@ -147,7 +147,7 @@ jobs:
           )
           echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
-          CI_WALLET_ADDRESS: ${{ secrets.CI_WALLET.ADDRESS }}
+          CI_WALLET_ADDRESS: ${{ secrets.CI_WALLET_ADDRESS }}
           BINARIES_OUTPUT_DIR: ${{ steps.build_binaries.outputs.binaries_output_dir }}
           BUNDLR_NODE: https://node2.bundlr.network
           WALLET_FILE: ${{ steps.wallet_json.outputs.filePath }}
