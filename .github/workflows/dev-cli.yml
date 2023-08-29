@@ -67,12 +67,14 @@ jobs:
       - name: 🫠 Check Inputs
         id: check_inputs
         run: |
-          VERSION=$(deno run https://deno.land/x/semver/cli.ts clean "${{ github.event.inputs.version }}")
+          VERSION=$(deno run https://deno.land/x/semver/cli.ts clean "${INPUT_VERSION}")
           if [[ "$VERSION" == "undefined" ]]; then
-            echo "${{ github.event.inputs.version }} is not a valid semver version" 1>&2
+            echo "${INPUT_VERSION} is not a valid semver version" 1>&2
             exit 1
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
 
       - name: 🛠 Build Binaries
         id: build_binaries
@@ -99,62 +101,91 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install ArkB
+      - name: Install Bundlr Client
         run: |
-          npm i -g arkb@1.1.61
+          npm i -g @bundlr-network/client@0.11.13
 
       - name: 💾 Publish Binaries to Arweave
         id: publish_binaries
-        # ArkB may fail to deploy the binaries to Arweave for a number of reasons
+        # Bundlr may fail to deploy the binaries to Arweave for a number of reasons
         # 
         # So before attempting to extract the transaction id from the output
         # We first check to make sure the success message is output
         # 
-        # If the deploy was successful, arkb outputs text to the console, the final line being
+        # If the deploy was successful, bundlr outputs text to stdout, the final line containing
         # the url of the transaction. We only need the transaction id
         # 
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          BINARIES_OUTPUT_DIR=${{ steps.build_binaries.outputs.binaries_output_dir }}
-          ARKB_RESULT=$(\
-            arkb deploy ${BINARIES_OUTPUT_DIR} \
-              --no-colors \
-              --auto-confirm \
-              --wallet ${{ steps.wallet_json.outputs.filePath }} \
-              --use-bundler https://node2.bundlr.network
+          bundlr balance ${CI_WALLET_ADDRESS} \
+            -h ${BUNDLR_NODE} \
+            -c arweave
+
+          bundlr price $(du -b "${BINARIES_OUTPUT_DIR}" | cut -f1) \
+            -h ${BUNDLR_NODE} \
+            -c arweave
+
+          BUNDLR_RESULT=$(\
+            bundlr upload-dir ${BINARIES_OUTPUT_DIR} \
+              -h ${BUNDLR_NODE} \
+              -w ${WALLET_FILE} \
+              -c arweave \
+              --no-confirmation
           )
-          echo "${ARKB_RESULT}"
-          if [[ -z $(echo "${ARKB_RESULT}" | awk '/^Data items deployed/') ]]; then
+
+          echo "${BUNDLR_RESULT}"
+          if [[ -z $(echo "${BUNDLR_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
             echo "Binaries were not successfully deployed to Bundlr! See above logs."
             exit 1
           fi
-          ARKB_TRANSACTION_ID=$(\
-            echo "${ARKB_RESULT}" \
+
+          TRANSACTION_ID=$(\
+            echo "${BUNDLR_RESULT}" \
             | tail -1 \
             | awk -F/ '{print $NF}'
           )
-          echo "tx_id=${ARKB_TRANSACTION_ID}" >> $GITHUB_OUTPUT
+          echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
+        env:
+          CI_WALLET_ADDRESS: ${{ secrets.CI_WALLET.ADDRESS }}
+          BINARIES_OUTPUT_DIR: ${{ steps.build_binaries.outputs.binaries_output_dir }}
+          BUNDLR_NODE: https://node2.bundlr.network
+          WALLET_FILE: ${{ steps.wallet_json.outputs.filePath }}
 
       - name: 🛠 Publish Install Script to Arweave
         id: publish_install
-        # arkb outputs text to the console, the final line being
+        # bundlr outputs text to stdout, the final line containing
         # the url of the transaction. We only need the transaction id
         # 
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          INSTALL_SCRIPT=$(deno run -A tools/create-install-script.js --binaries=${{ steps.publish_binaries.outputs.tx_id }})
-          ARKB_TRANSACTION_ID=$(\
-            arkb deploy ${INSTALL_SCRIPT} \
-              --no-colors \
-              --auto-confirm \
-              --wallet ${{ steps.wallet_json.outputs.filePath }} \
-              --use-bundler https://node2.bundlr.network \
-              | tail -1 \
-              | awk -F/ '{print $NF}'
+          INSTALL_SCRIPT=$(deno run -A tools/create-install-script.js --binaries=${BINARIES_TRANSACTION_ID})
+
+          BUNDLR_RESULT=$(\
+            bundlr upload ${INSTALL_SCRIPT} \
+              -h ${BUNDLR_NODE} \
+              -w ${WALLET_FILE} \
+              -c arweave \
+              --no-confirmation
           )
-          echo "tx_id=${ARKB_TRANSACTION_ID}" >> $GITHUB_OUTPUT
+
+          echo "${BUNDLR_RESULT}"
+          if [[ -z $(echo "${BUNDLR_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
+            echo "Binaries were not successfully deployed to Bundlr! See above logs."
+            exit 1
+          fi
+
+          TRANSACTION_ID=$(\
+            echo "${BUNDLR_RESULT}" \
+            | tail -1 \
+            | awk -F/ '{print $NF}'
+          )
+          echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
+        env:
+          BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
+          BUNDLR_NODE: https://node2.bundlr.network
+          WALLET_FILE: ${{ steps.wallet_json.outputs.filePath }}
 
       - name: 🤓 Set Git User
         run: |
@@ -168,10 +199,14 @@ jobs:
       - name: 🗺️ Update txMappings
         run: |
           deno run -A tools/update-tx-mappings.js \
-            --version=${{ steps.check_inputs.outputs.version }} \
-            --binaries=${{ steps.publish_binaries.outputs.tx_id }} \
-            --install=${{ steps.publish_install.outputs.tx_id }} \
+            --version=${VERSION} \
+            --binaries=${BINARIES_TRANSACTION_ID} \
+            --install=${INSTALL_TRANSACTION_ID} \
             --latest
+        env:
+          VERSION: ${{ steps.check_inputs.outputs.version }}
+          BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
+          INSTALL_TRANSACTION_ID: ${{ steps.publish_install.outputs.tx_id }}
 
       - name: ⬆️ Push
         # We purposefully don't use "--follow-tags" here
