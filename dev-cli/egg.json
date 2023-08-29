@@ -1,7 +1,13 @@
 {
-  "version": "0.0.0",
+  "version": "0.0.4",
   "txMappings": {
-    "binaries": {},
-    "install": {}
+    "binaries": {
+      "0.0.4": "VwgW98LUuQbtYHvBfOjwtNbAQje2u5kB8Jn9056fzng",
+      "latest": "VwgW98LUuQbtYHvBfOjwtNbAQje2u5kB8Jn9056fzng"
+    },
+    "install": {
+      "0.0.4": "eE9FZCa3LFNx-zFBy3blppz9er1Hj5AjwTJS0bBBjmE",
+      "latest": "eE9FZCa3LFNx-zFBy3blppz9er1Hj5AjwTJS0bBBjmE"
+    }
   }
 }
