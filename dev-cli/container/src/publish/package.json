@@ -4,6 +4,10 @@
   "description": "publish ability for the hyperbeam CLI",
   "type": "module",
   "main": "src/index.js",
+  "sideEffects": false,
+  "bin": {
+    "hyperbeam-publish": "src/bin/index.js"
+  },
   "scripts": {
     "start": "node src/index.js",
     "test": "uvu test"
