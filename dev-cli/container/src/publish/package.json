@@ -1,0 +1,17 @@
+{
+  "name": "@p3rmaw3b/hyperbeam-publish",
+  "version": "0.0.1",
+  "description": "publish ability for the hyperbeam CLI",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "uvu test"
+  },
+  "dependencies": {
+    "@bundlr-network/client": "0.11.13"
+  },
+  "devDependencies": {
+    "uvu": "^0.5.6"
+  }
+}
