@@ -7,7 +7,7 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
 (async function () {
     console.log('Testing test dre...');
 
-    let contractId = "LM-WBXIICBbWxATecLgI8RGKVUWkiUmAKS5_GKI031c";
+    let contractId = "9Gwws4SL80TcZvBxisbugqA5t43UbiUfivokKMcIiPs";
     let dreHost = 'http://localhost';
     let dreNode = dreHost + '/contract';
 
@@ -42,18 +42,18 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
     // must read state to load the new state/sortKey into the DRE
     await warpContract.readState();
 
-    let originalTxId = res.originalTxId;
+    // let originalTxId = res.originalTxId;
 
-    let crankResponse = await fetch(`http://localhost:3004/crank/${originalTxId}`, {
-        method: `POST`,
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            dre: dreHost
-        })
-    });
+    // let crankResponse = await fetch(`http://localhost:3004/crank/${originalTxId}`, {
+    //     method: `POST`,
+    //     headers: {
+    //         'Content-Type': 'application/json'
+    //     },
+    //     body: JSON.stringify({
+    //         dre: dreHost
+    //     })
+    // });
 
-    console.log(await crankResponse.text());
+    // console.log(await crankResponse.text());
     
 })();

@@ -1,0 +1,67 @@
+{
+  "name": "warp-contracts-plugin-deploy",
+  "version": "1.0.9",
+  "description": "A deploy plugin for warp contracts",
+  "types": "./lib/types/index.d.ts",
+  "main": "./lib/cjs/index.js",
+  "browser": {
+    "./lib/cjs/index.js": "./bundles/web.bundle.min.js"
+  },
+  "exports": {
+    ".": "./lib/cjs/index.js",
+    "./web": "./bundles/web.bundle.min.js"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=16.5"
+  },
+  "scripts": {
+    "bundle:web": "node bundle.js",
+    "compile:types": "tsc -b tsconfig.types.json",
+    "build": "yarn run clean && tsc -b tsconfig.json && yarn compile:types && yarn bundle:web",
+    "format": "prettier --write 'src/**/*.ts'",
+    "clean": "rimraf ./lib",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "prettier:format": "prettier --config .prettierrc 'src/**/*.ts' --write",
+    "prepublishOnly": "yarn lint:fix",
+    "preversion": "yarn lint && yarn build",
+    "version": "yarn format && git add -A src",
+    "postversion": "git push origin HEAD && git push --tags",
+    "yalc:publish": "yarn build && yalc publish --push",
+    "test": "jest",
+    "test:unit": "jest ./src/__tests__/unit"
+  },
+  "license": "MIT",
+  "files": [
+    "lib/",
+    "docs/",
+    "LICENSE",
+    "README.md",
+    "bundles/"
+  ],
+  "dependencies": {
+    "arbundles": "^0.7.3",
+    "arlocal": "^1.1.59",
+    "node-stdlib-browser": "^1.2.0"
+  },
+  "peerDependencies": {
+    "warp-arbundles": "^1.0.1",
+    "warp-contracts": "^1.4.5"
+  },
+  "devDependencies": {
+    "@types/jest": "*",
+    "@types/node": "*",
+    "@typescript-eslint/eslint-plugin": "*",
+    "@typescript-eslint/parser": "*",
+    "esbuild": "0.15.12",
+    "eslint": "*",
+    "eslint-config-prettier": "*",
+    "eslint-plugin-prettier": "*",
+    "jest": "*",
+    "prettier": "*",
+    "rimraf": "*",
+    "ts-node": "*",
+    "typescript": "*"
+  }
+}
