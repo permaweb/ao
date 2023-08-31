@@ -1,4 +1,10 @@
 {
+  "tasks": {
+    "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
+    "build": "./tools/build.sh",
+    "tx-mappings": "deno run -A tools/update-tx-mappings.js",
+    "install-script": "deno run -A tools/create-install-script.js"
+  },
   "fmt": {
     "include": ["./"],
     "exclude": ["./src/icons", "./example2"]
