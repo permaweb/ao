@@ -1,13 +1,6 @@
 import { basename, resolve } from "https://deno.land/std@0.200.0/path/mod.ts";
 
-/**
- * TODO:
- * - Allow providing path to contract
- * - Validate existence of wallet
- * - allow using environment variables to set things like path to wallet
- * - require confirmation and bypass with --yes
- */
-export async function publish({ wallet, tags }) {
+function walletArgs(wallet) {
   /**
    * Use wallet in pwd by default
    */
@@ -15,26 +8,52 @@ export async function publish({ wallet, tags }) {
   const walletName = basename(wallet);
   const walletDest = `/src/${walletName}`;
 
-  const walletArgs = [
+  const walletSrc = resolve(wallet);
+
+  return [
     // mount the wallet to file in /src
     "-v",
-    `${resolve(wallet)}:${walletDest}`,
+    `${walletSrc}:${walletDest}`,
     "-e",
     `WALLET_PATH=${walletDest}`,
   ];
-  const contractArgs = [
+}
+
+function contractArgs(contractWasmPath) {
+  /**
+   * Use contract.wasm in pwd by default
+   */
+  contractWasmPath = contractWasmPath || "contract.wasm";
+  const contractName = basename(contractWasmPath);
+  const contractWasmDest = `/src/${contractName}`;
+
+  const contractWasmSrc = resolve(contractWasmPath);
+
+  return [
     // mount the wasm contract in pwd to /src
     "-v",
-    ".:/src",
+    `${contractWasmSrc}:/src/${contractName}`,
     "-e",
-    `CONTRACT_WASM_PATH=/src/contract.wasm`,
+    `CONTRACT_WASM_PATH=${contractWasmDest}`,
   ];
-  const tagsArgs = tags ? ["-e", `TAGS=${tags}`] : [];
+}
 
+function tagArg(tags) {
+  return tags ? ["-e", `TAGS=${tags.join(",")}`] : [];
+}
+
+/**
+ * TODO:
+ * - Validate existence of wallet
+ * - Validate existence of contract wasm
+ * - allow using environment variables to set things like path to wallet
+ * - require confirmation and bypass with --yes
+ */
+export async function publish({ wallet, tag }, contractWasmPath) {
   const cmdArgs = [
-    ...walletArgs,
-    ...contractArgs,
-    ...tagsArgs,
+    ...walletArgs(wallet),
+    ...contractArgs(contractWasmPath),
+    ...tagArg(tag),
   ];
 
   const p = Deno.run({

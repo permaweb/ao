@@ -1,4 +1,5 @@
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.2/command/mod.ts";
+import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.3/command/mod.ts";
+
 import { init } from "./commands/init.js";
 import { repl } from "./commands/repl.js";
 import { build } from "./commands/build.js";
@@ -7,7 +8,7 @@ import { publish } from "./commands/publish.js";
 
 await new Command()
   .name("hyperbeam")
-  .version("0.0.5")
+  .version("0.0.6")
   .description("Create Hyperbeam contracts")
   // init
   .command("init", "create project")
@@ -30,12 +31,12 @@ await new Command()
     "the path to the wallet that should be used to sign the transaction",
   )
   .option(
-    "-t, --tags <tags:string>",
-    'comma delimited string of "name:value" additional tags to add to the transaction',
+    "-t, --tag <tag:string>",
+    '"name:value" additional tag to add to the transaction',
+    { collect: true },
   )
   // TODO: expose bundlr node option?
   // .option('-n, --node <path:string>', 'the bundlr node that you would like to use to upload your built wasm contract')
-  // TODO: allow passing contract wasm path? For now, just assuming pwd because build works that way
-  // .arguments('<wasmfile:string>')
+  .arguments("<wasmfile:string>")
   .action(publish)
   .parse(Deno.args);
