@@ -12,22 +12,22 @@ import { parse } from "https://deno.land/std@0.200.0/flags/mod.ts";
 import { join } from "https://deno.land/std@0.200.0/path/mod.ts";
 
 async function main() {
-	const { binaries } = parse(Deno.args);
+  const { binaries } = parse(Deno.args);
 
-	if (!binaries) {
-		throw new Error('Insufficient arguments. "--binaries" is required');
-	}
+  if (!binaries) {
+    throw new Error('Insufficient arguments. "--binaries" is required');
+  }
 
-	const here = new URL(import.meta.url).pathname;
-	const dest = join(here, "../..", "dist", "install.sh");
+  const here = new URL(import.meta.url).pathname;
+  const dest = join(here, "../..", "dist", "install.sh");
 
-	/**
-	 * A simple templated script that will install the hyperbeam binary from a known transaction
-	 * HYPERBEAM_BINARIES_TX_ID is replaced with the transaction id that contains the binaries
-	 */
-	await Deno.writeTextFile(
-		dest,
-		`\
+  /**
+   * A simple templated script that will install the hyperbeam binary from a known transaction
+   * HYPERBEAM_BINARIES_TX_ID is replaced with the transaction id that contains the binaries
+   */
+  await Deno.writeTextFile(
+    dest,
+    `\
 #!/bin/bash
 
 # Copyright (C) arweave.org 2023
@@ -98,10 +98,10 @@ else
 fi
 echo
 `,
-	);
+  );
 
-	// stdout, so can be piped or saved to a variable
-	console.log(dest);
+  // stdout, so can be piped or saved to a variable
+  console.log(dest);
 }
 
 await main();

@@ -31,7 +31,7 @@ async function main() {
     );
   }
 
-  manifest.version = version
+  manifest.version = version;
 
   console.log(`Writing new txMappings for version ${version}...`);
   manifest.txMappings.binaries[version] = binaries;
