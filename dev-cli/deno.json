@@ -1,0 +1,6 @@
+{
+  "fmt": {
+    "include": ["./"],
+    "exclude": ["./src/icons", "./example2"]
+  }
+}
