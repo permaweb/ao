@@ -70,8 +70,10 @@ jobs:
       # never pushed. If it succeeds, the CI will push any changes to the
       # manifest, including the version bump, which is what we want
       - name: 🔺 Update Version
+        id: version
         run: |
-          deno task bump --version=${INPUT_VERSION}
+          VERSION=$(deno task bump --version=${INPUT_VERSION})
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
 
@@ -204,7 +206,7 @@ jobs:
             --latest
           deno fmt deno.json
         env:
-          VERSION: ${{ steps.check_inputs.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
           BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
           INSTALL_TRANSACTION_ID: ${{ steps.publish_install.outputs.tx_id }}
 
