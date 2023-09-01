@@ -96,6 +96,7 @@ export class HandlerExecutorFactory implements ExecutorFactory<HandlerApi<unknow
 
 
     // } else 
+    console.log(contractDefinition);
     if (contractDefinition.contractType == 'wasm') {
       this.logger.info('Creating handler for wasm contract', contractDefinition.txId);
       const benchmark = Benchmark.measure();

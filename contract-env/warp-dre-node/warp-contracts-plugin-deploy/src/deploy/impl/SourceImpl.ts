@@ -58,13 +58,13 @@ export class SourceImpl implements Source {
       throw new Error('JS contract source does not contain properly exported "handle" function');
     }
 
-    let wasmData: Buffer = null;
-    let srcWasmTags = [];
+    let wasmData: Buffer = src as Buffer;
+    let srcWasmTags = [new Tag('Contract-Type', 'hyperbeam')];
 
-    if (contractType == 'wasm') {
-      const wasmHandler = new WasmHandler(src, wasmSrcCodeDir, wasmGlueCode);
-      ({ wasmData, srcWasmTags } = await wasmHandler.createWasmSrc());
-    }
+    // if (contractType == 'wasm') {
+    //   const wasmHandler = new WasmHandler(src, wasmSrcCodeDir, wasmGlueCode);
+    //   ({ wasmData, srcWasmTags } = await wasmHandler.createWasmSrc());
+    // }
 
     const allData = contractType == 'wasm' ? wasmData : src;
 

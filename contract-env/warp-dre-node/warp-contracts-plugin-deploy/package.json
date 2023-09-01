@@ -43,11 +43,11 @@
   "dependencies": {
     "arbundles": "^0.7.3",
     "arlocal": "^1.1.59",
-    "node-stdlib-browser": "^1.2.0"
-  },
-  "peerDependencies": {
+    "node-stdlib-browser": "^1.2.0",
     "warp-arbundles": "^1.0.1",
     "warp-contracts": "^1.4.5"
+  },
+  "peerDependencies": {
   },
   "devDependencies": {
     "@types/jest": "*",
