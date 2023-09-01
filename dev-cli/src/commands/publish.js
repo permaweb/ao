@@ -32,7 +32,7 @@ function contractArgs(contractWasmPath) {
   return [
     // mount the wasm contract in pwd to /src
     "-v",
-    `${contractWasmSrc}:/src/${contractName}`,
+    `${contractWasmSrc}:${contractWasmDest}`,
     "-e",
     `CONTRACT_WASM_PATH=${contractWasmDest}`,
   ];
