@@ -76,11 +76,22 @@ jobs:
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
 
+      # The version in the manifest is used to set the version
+      # displayed for the CI. So we need to update version,
+      # prior to building the binaries
+      # 
+      # So we update version here. If CI fails, then that bump is
+      # never pushed. If it succeeds, the CI will push any changes to the
+      # manifest, including the version bump, which is what we want
+      - name: 🔺 Update Version
+        run: |
+          deno task bump --version=${VERSION}
+
       - name: 🛠 Build Binaries
         id: build_binaries
         run: |
           BINARIES_OUTPUT_DIR=$(\
-            tools/build.sh \
+            deno task build \
             | tail -1
           )
           echo "binaries_output_dir=${BINARIES_OUTPUT_DIR}" >> $GITHUB_OUTPUT
@@ -160,7 +171,7 @@ jobs:
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          INSTALL_SCRIPT=$(deno run -A tools/create-install-script.js --binaries=${BINARIES_TRANSACTION_ID})
+          INSTALL_SCRIPT=$(deno task install-script --binaries=${BINARIES_TRANSACTION_ID})
 
           BUNDLR_RESULT=$(\
             bundlr upload ${INSTALL_SCRIPT} \
@@ -198,11 +209,12 @@ jobs:
       # So we will persist the transaction ids into this file, committed as part of this CI
       - name: 🗺️ Update txMappings
         run: |
-          deno run -A tools/update-tx-mappings.js \
+          deno task tx-mappings \
             --version=${VERSION} \
             --binaries=${BINARIES_TRANSACTION_ID} \
             --install=${INSTALL_TRANSACTION_ID} \
             --latest
+          deno fmt deno.json
         env:
           VERSION: ${{ steps.check_inputs.outputs.version }}
           BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}

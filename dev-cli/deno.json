@@ -3,8 +3,10 @@
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
     "build": "./tools/build.sh",
+    "bump": "deno run -A tools/update-version.js",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
-    "install-script": "deno run -A tools/create-install-script.js"
+    "install-script": "deno run -A tools/create-install-script.js",
+    "install-locall": "./tools/local-install.sh"
   },
   "fmt": {
     "include": ["./"],

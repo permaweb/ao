@@ -11,9 +11,6 @@
  * The transaction id that contains the install script
  * --install=F63wJCavB_sN2xxW-qtQ1Vv7_eRgmYCdcoQPMp_-N0w
  *
- * The semver version
- * --version=1.2.3
- *
  * Whether these transaction ids should be used as the latest version in the manifest
  * --latest
  */
@@ -30,8 +27,6 @@ async function main() {
       'Insufficient arguments. "--binaries", "--install", and "--version" are required',
     );
   }
-
-  manifest.version = version;
 
   if (latest) {
     console.log(`Updating latest txMappings to version ${version}...`);
