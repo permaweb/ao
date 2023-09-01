@@ -62,20 +62,6 @@ jobs:
         with:
           deno-version: 1.x
 
-      # Until we use something more comprehensive
-      # this simple check of the provided version will suffice
-      - name: 🫠 Check Inputs
-        id: check_inputs
-        run: |
-          VERSION=$(deno run https://deno.land/x/semver/cli.ts clean "${INPUT_VERSION}")
-          if [[ "$VERSION" == "undefined" ]]; then
-            echo "${INPUT_VERSION} is not a valid semver version" 1>&2
-            exit 1
-          fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        env:
-          INPUT_VERSION: ${{ github.event.inputs.version }}
-
       # The version in the manifest is used to set the version
       # displayed for the CI. So we need to update version,
       # prior to building the binaries
@@ -85,7 +71,9 @@ jobs:
       # manifest, including the version bump, which is what we want
       - name: 🔺 Update Version
         run: |
-          deno task bump --version=${VERSION}
+          deno task bump --version=${INPUT_VERSION}
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
 
       - name: 🛠 Build Binaries
         id: build_binaries
