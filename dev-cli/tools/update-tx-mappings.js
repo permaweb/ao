@@ -20,7 +20,7 @@
 import { parse } from "https://deno.land/std@0.200.0/flags/mod.ts";
 import { join } from "https://deno.land/std@0.200.0/path/mod.ts";
 
-import manifest from "../egg.json" assert { type: "json" };
+import manifest from "../deno.json" assert { type: "json" };
 
 async function main() {
   const { binaries, install, version, latest } = parse(Deno.args);
@@ -33,18 +33,18 @@ async function main() {
 
   manifest.version = version;
 
-  console.log(`Writing new txMappings for version ${version}...`);
-  manifest.txMappings.binaries[version] = binaries;
-  manifest.txMappings.install[version] = install;
-
   if (latest) {
     console.log(`Updating latest txMappings to version ${version}...`);
     manifest.txMappings.binaries.latest = binaries;
     manifest.txMappings.install.latest = install;
   }
 
+  console.log(`Writing new txMappings for version ${version}...`);
+  manifest.txMappings.binaries[version] = binaries;
+  manifest.txMappings.install[version] = install;
+
   const here = new URL(import.meta.url).pathname;
-  const dest = join(here, "../..", "egg.json");
+  const dest = join(here, "../..", "deno.json");
 
   await Deno.writeTextFile(dest, JSON.stringify(manifest, null, 2));
 }

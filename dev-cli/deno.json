@@ -1,4 +1,5 @@
 {
+  "version": "0.0.5",
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
     "build": "./tools/build.sh",
@@ -8,5 +9,17 @@
   "fmt": {
     "include": ["./"],
     "exclude": ["./src/icons", "./example2"]
+  },
+  "txMappings": {
+    "binaries": {
+      "0.0.4": "1k3Iygu7AFk_VUhz0HNcKbiGt3x_NQyfkv5Q1U9Ov9M",
+      "latest": "-vGb25sGLntIypV5zZ2rWmglEuoa6S4gQyD9vgHp7Xs",
+      "0.0.5": "-vGb25sGLntIypV5zZ2rWmglEuoa6S4gQyD9vgHp7Xs"
+    },
+    "install": {
+      "0.0.4": "FgjlKbVNKV5WR2pyxn4sqNT25Pge6IAXdEvd3_-3y4k",
+      "latest": "mn9In69KjyAaWJEJOKbCI40Iq686ermXI5f13phuGrQ",
+      "0.0.5": "mn9In69KjyAaWJEJOKbCI40Iq686ermXI5f13phuGrQ"
+    }
   }
 }

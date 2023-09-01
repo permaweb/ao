@@ -1,5 +1,7 @@
 import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.3/command/mod.ts";
 
+import manifest from "../deno.json" assert { type: "json" };
+
 import { init } from "./commands/init.js";
 import { repl } from "./commands/repl.js";
 import { build } from "./commands/build.js";
@@ -8,7 +10,7 @@ import { publish } from "./commands/publish.js";
 
 await new Command()
   .name("hyperbeam")
-  .version("0.0.6")
+  .version(manifest.version)
   .description("Create Hyperbeam contracts")
   // init
   .command("init", "create project")
