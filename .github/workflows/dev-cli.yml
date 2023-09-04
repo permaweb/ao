@@ -1,4 +1,4 @@
-name: 👨‍💻 Test & Deploy Dev CLI
+name: 👨‍💻 Test & Deploy AO CLI
 
 on:
   pull_request:
