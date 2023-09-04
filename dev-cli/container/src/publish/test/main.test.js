@@ -1,13 +1,7 @@
-import { suite } from "uvu";
-import * as assert from "uvu/assert";
+import { describe, it } from "node:test";
+import * as assert from "node:assert";
 
 import { uploadWith } from "../src/main.js";
-
-function group(name, fn) {
-  const group = suite(name);
-  fn(group);
-  group.run();
-}
 
 const happy = {
   walletExists: async () => true,
@@ -16,7 +10,7 @@ const happy = {
   upload: async (params) => ({ params, id: "123" }),
 };
 
-group("uploadWith", (it) => {
+describe("uploadWith", () => {
   it("should publish the artifact to arweave", async () => {
     const upload = uploadWith(happy);
 
@@ -36,7 +30,7 @@ group("uploadWith", (it) => {
     const upload = uploadWith({
       ...happy,
       upload: (params) => {
-        assert.equal(params, {
+        assert.deepStrictEqual(params, {
           path: "/path/to/artifact.wasm",
           wallet: { id: "id-123" },
           to: "https://fake.place",
@@ -69,7 +63,7 @@ group("uploadWith", (it) => {
       tags: [
         { name: "foo", value: "bar" },
       ],
-    }).then(assert.unreachable)
+    }).then(assert.fail)
       .catch((err) => assert.equal(err.code, "WalletNotFound"));
   });
 
@@ -83,7 +77,7 @@ group("uploadWith", (it) => {
       tags: [
         { name: "foo", value: "bar" },
       ],
-    }).then(assert.unreachable)
+    }).then(assert.fail)
       .catch((err) => assert.equal(err.code, "ArtifactNotFound"));
   });
 });

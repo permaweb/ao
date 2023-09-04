@@ -2,7 +2,7 @@ FROM emscripten/emsdk:3.1.14
 LABEL maintainer "tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there
-# to expose files on the host to the hyperbeam container
+# to expose files on the host to the ao container
 # 
 # https://github.com/emscripten-core/emsdk/blob/9b0db91883452051aca8deddc932363aab29060b/docker/Dockerfile#L120
 
@@ -64,7 +64,7 @@ RUN cd /lua-${LUA_VERSION} && \
 #### Init #####
 ###############
 # The init command currently does not require running
-# within the hyperbeam container, and so requires no additional setup
+# within the ao container, and so requires no additional setup
 
 ###############
 #### Repl #####
