@@ -1,5 +1,5 @@
 -- Contract used in test
--- make sure to run hb build to rebuild the corresponding wasm
+-- make sure to run ao build to rebuild the corresponding wasm
 local contract = { _version = "0.0.1" }
 
 local function handleMessage(state, _action, _SmartWeave)
