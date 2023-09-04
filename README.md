@@ -1,6 +1,6 @@
-# HyperBEAM - SmartWeave Contract Interoperability Platform
+# AO - SmartWeave Contract Interoperability Platform
 
-HyperBEAM takes a messaging based approach to interoperability with smartweave
+`ao` takes a messaging based approach to interoperability with smartweave
 contracts. Having a decentralized deterministic execution environment is a
 challenge. Interoperability is a requirement for execution environments, we want
 to build small units of logic that focuses on their state, these units of logic
