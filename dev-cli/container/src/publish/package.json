@@ -1,21 +1,20 @@
 {
-  "name": "@p3rmaw3b/hyperbeam-publish",
+  "name": "@p3rmaw3b/ao-publish",
   "version": "0.0.1",
-  "description": "publish ability for the hyperbeam CLI",
+  "description": "publish ability for the ao CLI",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/main.js",
+  "engines": {
+    "node": ">=18"
+  },
   "sideEffects": false,
   "bin": {
-    "hyperbeam-publish": "src/bin/index.js"
+    "ao-publish": "src/bin/index.js"
   },
   "scripts": {
-    "start": "node src/index.js",
-    "test": "uvu test"
+    "test": "node --test"
   },
   "dependencies": {
     "@bundlr-network/client": "0.11.13"
-  },
-  "devDependencies": {
-    "uvu": "^0.5.6"
   }
 }
