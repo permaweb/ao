@@ -1,62 +1,96 @@
-# HyperBEAM CLI
+# ao CLI
 
-This is a developer cli that allows developers to create their lua scripts and
-run them in a lua repl, or exec them on a command line, compile them to wasm and
-publish them on the permaweb.
+The `ao` cli enables developers to create, run, build, and publish
+SmartWeaveContracts written in [Lua](https://www.lua.org/).
+
+- Initialize a Lua SmartWeaveContract template
+- Run Lua in a Repl or run your Lua SmartWeaveContract
+- Compile your Lua SmartWeaveContract into WASM
+- Publish your compiled WASM to the Permaweb
+
+<!-- toc -->
+
+- [Requirements](#requirements)
+- [Usage](#usage)
+  - [Initialize a new Project](#initialize-a-new-project)
+  - [Run a Lua Repl](#run-a-lua-repl)
+  - [Execute a Lua file](#execute-a-lua-file)
+  - [Build Lua to Wasm](#build-lua-to-wasm)
+  - [Publish Wasm to Permaweb](#publish-wasm-to-permaweb)
+  - [Help](#help)
+- [Testing example](#testing-example)
+- [For Developers](#for-developers)
+
+<!-- tocstop -->
 
 ## Requirements
 
-- Docker is required - docker is used to create/install lua runtime and
-  emscripten in a cross-platform way
+Docker is required - docker is used to create/install the Lua runtime and
+`emscripten` to compiled Lua into WASM.
+
+Learn how to [Install Docker](https://www.docker.com/get-started/)
 
 ## Usage
 
-- Download hyperbeam cli - `hb`
-- Add to your system path
+- Download the `ao` cli install script for the CLI version you would like to
+  install
+- Once the CLI has been installed, follow the prompts to add the `ao` binary to
+  your system `PATH`
 
-create a new project
-
-```sh
-hb init [myproject]
-```
-
-run the repl - this gives you an lua interpeter
+### Initialize a new Project
 
 ```sh
-hb repl
+ao init [myproject]
 ```
 
-exec a lua file - this is great for testing
+This will create a new directory, if needed, named `{myproject}`
+
+### Run a Lua Repl
+
+This gives you a Lua interpeter
 
 ```sh
-hb run [file.lua]
+ao repl
 ```
 
-build to wasm
+### Execute a Lua file
+
+This is great for testing Lua modules
 
 ```sh
-hb build
+ao run [file.lua]
 ```
 
-publish to permaweb - not implemented
+### Build Lua to Wasm
 
 ```sh
-hb publish [myproject] -w [wallet] -t [name:value] -t [name:value]
+ao build
 ```
 
-get help
+### Publish Wasm to Permaweb
 
 ```sh
-hb help
+ao publish [file.wasm] -w [wallet] -t [name:value] -t [name:value]
 ```
+
+### Help
+
+```sh
+ao help
+```
+
+You can also run `ao [command] --help` for command-lvl help.
 
 ## Testing example
 
-Once you have built your wasm, you get a `contract.js` and a `contract.wasm`
-file
+Once you have built your Lua into Wasm using `ao build`, the output will be a
+`contract.js` and a `contract.wasm` file.
+
+The `contract.js` file is the JS interop that allows invoking Wasm from a JS
+program, while the `contract.wasm` is your Lua code compiled into Wasm.
 
 ## For Developers
 
 This system is built using deno and compiled in to executable binaries, it
-requires docker as the `hb` executable will need to externally invoke docker
+requires docker as the `ao` executable will need to externally invoke docker
 commands to run lua and emscripten as well as build tools
