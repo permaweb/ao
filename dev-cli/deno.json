@@ -2,7 +2,7 @@
   "version": "0.0.7",
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
-    "build": "./tools/build.sh",
+    "build-cli": "./tools/build.sh",
     "bump": "deno run -A tools/update-version.js",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
     "toc": "deno run -A npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",

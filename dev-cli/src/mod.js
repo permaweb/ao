@@ -9,9 +9,9 @@ import { run } from "./commands/run.js";
 import { publish } from "./commands/publish.js";
 
 await new Command()
-  .name("hyperbeam")
+  .name("ao")
   .version(manifest.version)
-  .description("Create Hyperbeam contracts")
+  .description("Create ao contracts")
   // init
   .command("init", "create project")
   .arguments("<name:string>")

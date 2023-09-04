@@ -7,7 +7,7 @@ export async function run(_, f) {
       "linux/amd64",
       "-v",
       ".:/src",
-      "p3rmaw3b/hyperbeam",
+      "p3rmaw3b/ao",
       "lua",
       f,
     ],

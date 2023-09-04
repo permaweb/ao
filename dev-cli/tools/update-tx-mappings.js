@@ -1,4 +1,10 @@
 /**
+ * Add new Canonical Version name -> Transaction id mapping
+ * in the manifest file.
+ *
+ * This allows us to keep track of which transaction contains which version
+ * of the binaries and install script
+ *
  * USAGE:
  *
  * deno run -A update-tx-mappings.js [-- <SCRIPT_ARG>]
