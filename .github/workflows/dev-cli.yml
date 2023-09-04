@@ -1,16 +1,16 @@
 name: 👨‍💻 Test & Deploy Dev CLI
 
 on:
-  # pull_request:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - "dev-cli/**"
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - "dev-cli/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "dev-cli/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "dev-cli/**"
 
   # Perform a release using a workflow dispatch
   workflow_dispatch:
@@ -25,28 +25,47 @@ defaults:
     working-directory: dev-cli
 
 jobs:
-  # # Run only run tests on PRs and pushes to main
-  # test:
-  #   if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       deno-version: [1.x]
+  # Run only run tests on PRs and pushes to main
+  test:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deno-version: [1.x]
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-  #   steps:
-  #     - name: ⬇️ Checkout repo
-  #       uses: actions/checkout@v3
+      - name: 🦕 Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: ${{ matrix.deno-version }}
 
-  #     - name: 🦕 Setup Deno
-  #       uses: denoland/setup-deno@v1
-  #       with:
-  #         deno-version: ${{ matrix.deno-version }}
+      - name: ⚡ Run Tests
+        run: |
+          deno task test
+        env:
+          CI: true
 
-  #     - name: ⚡ Run Tests
-  #       run: |
-  #         deno task test
-  #       env:
-  #         CI: true
+  test-publish-command:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: ⚡ Run Tests
+        working-directory: dev-cli/container/src/publish
+        run: |
+          npm i
+          npm test
+        env:
+          CI: true
 
   release:
     # Releases are performed via a workflow dispatch

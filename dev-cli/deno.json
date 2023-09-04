@@ -4,6 +4,7 @@
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
     "build-cli": "./tools/build.sh",
     "bump": "deno run -A tools/update-version.js",
+    "test": "echo 'NOT IMPLEMENTED'",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
     "toc": "deno run -A npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",
     "install-script": "deno run -A tools/create-install-script.js",
