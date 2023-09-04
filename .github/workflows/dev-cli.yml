@@ -71,6 +71,8 @@ jobs:
     # Releases are performed via a workflow dispatch
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    concurrency:
+      group: release
     steps:
 
       - name: ⬇️ Checkout repo
@@ -80,6 +82,21 @@ jobs:
         uses: denoland/setup-deno@v1
         with:
           deno-version: 1.x
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: 👀 Env
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Git ref:    ${{ github.ref }}"
+          echo "GH actor:   ${{ github.actor }}"
+          echo "SHA:        ${{ github.sha }}"
+          VER=`node --version`; echo "Node ver:   $VER"
+          VER=`npm --version`; echo "npm ver:    $VER"
+          VER=`deno --version`; echo "deno ver:    $VER"
 
       # The version in the manifest is used to set the version
       # displayed for the CI. So we need to update version,
@@ -115,11 +132,6 @@ jobs:
         with:
           fileName: wallet.json
           encodedString: ${{ secrets.CI_WALLET }}
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
 
       - name: Install Bundlr Client
         run: |
