@@ -1,4 +1,4 @@
-name: ✨ Test AO Wasm Loader
+name: ✨ Test & Deploy AO Wasm Loader
 
 on:
   pull_request:
@@ -11,6 +11,13 @@ on:
       - main
     paths:
       - "loader/**"
+  
+  # Perform a release using a workflow dispatch
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "semver version to bump to"
+        required: true
 
 defaults:
   run:
@@ -37,3 +44,55 @@ jobs:
           yarn test
         env:
           CI: true
+
+  release:
+    # Releases are performed via a workflow dispatch
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          registry-url: "https://registry.npmjs.org"
+
+      - name: 👀 Env
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Git ref:    ${{ github.ref }}"
+          echo "GH actor:   ${{ github.actor }}"
+          echo "SHA:        ${{ github.sha }}"
+          VER=`node --version`; echo "Node ver:   $VER"
+          VER=`npm --version`; echo "npm ver:    $VER"
+
+      - name: 🤓 Set Git User
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: ✊ Bump
+        id: bump
+        uses: hyper63/hyper-ci-bump@2
+        with:
+          bump-to: ${{ github.event.inputs.version }}
+          package: loader
+
+      - name: ⬆️ Push
+        run: |
+          git push
+      
+      - name: 🦠 Publish to NPM
+        run: |
+          yarn
+          yarn build
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
