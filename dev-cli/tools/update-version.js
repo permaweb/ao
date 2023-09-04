@@ -1,4 +1,9 @@
 /**
+ * Update the version in the manifest file.
+ *
+ * The version is parsed to ensure it is a valid Semver version
+ * and throws if the input cannot be parsed into a valid Semver version
+ *
  * USAGE:
  *
  * deno run -A update-version.js [-- <SCRIPT_ARG>]

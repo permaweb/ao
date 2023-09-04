@@ -64,8 +64,8 @@ export async function publish({ wallet, tag }, contractWasmPath) {
       "linux/amd64",
       ...cmdArgs,
       "-it",
-      "p3rmaw3b/hyperbeam",
-      "hyperbeam-publish",
+      "p3rmaw3b/ao",
+      "ao-publish",
     ],
   });
   await p.status();

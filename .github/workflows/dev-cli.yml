@@ -81,7 +81,7 @@ jobs:
         id: build_binaries
         run: |
           BINARIES_OUTPUT_DIR=$(\
-            deno task build \
+            deno task build-cli \
             | tail -1
           )
           echo "binaries_output_dir=${BINARIES_OUTPUT_DIR}" >> $GITHUB_OUTPUT
@@ -194,7 +194,7 @@ jobs:
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       # Until we use something like ArNS, we need a way to keep track of the transactions
-      # that contain the hyperbeam CLI
+      # that contain the ao CLI
       #
       # So we will persist the transaction ids into this file, committed as part of this CI
       - name: 🗺️ Update txMappings

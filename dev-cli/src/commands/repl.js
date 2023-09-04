@@ -8,7 +8,7 @@ export async function repl() {
       "-v",
       ".:/src",
       "-it",
-      "p3rmaw3b/hyperbeam",
+      "p3rmaw3b/ao",
       "lua",
     ],
   });
