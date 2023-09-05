@@ -1,0 +1,15 @@
+{
+  "name": "ao-sdk",
+  "type": "module",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@permaweb/hyperbeam-loader": "^0.0.1",
+    "hyper-async": "^1.1.2",
+    "ramda": "^0.29.0"
+  },
+  "devDependencies": {
+    "uvu": "^0.5.6"
+  }
+}
