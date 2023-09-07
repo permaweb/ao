@@ -1,5 +1,5 @@
-import { test } from 'uvu'
-import * as assert from 'uvu/assert'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 
 const CONTRACT = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 
@@ -10,4 +10,3 @@ test('readState', async () => {
   assert.ok(true)
 })
 
-test.run()
