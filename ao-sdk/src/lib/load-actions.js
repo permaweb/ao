@@ -7,10 +7,12 @@ const GATEWAY = 'https://gw.warp.cc'
 
 export const loadActions = ctx => of(ctx.id)
   .chain(fetchActions)
+  .map(actions => ({...ctx, actions}))
 
 function fetchActions(contractId) {
-  return fromPromise(fetch(`${GATEWAY}/gateway/v2/interactions-sort-key?contractId=${contractId}&limit=1000`)
+  return fromPromise(id => fetch(`${GATEWAY}/gateway/v2/interactions-sort-key?contractId=${id}&limit=1000`)
     .then(res => res.json())
+    .then(res => res.interactions)
     // map and inject in to ctx.actions
   )(contractId)
 

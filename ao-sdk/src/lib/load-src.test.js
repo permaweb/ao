@@ -1,5 +1,5 @@
-import { test } from 'uvu'
-import * as assert from 'uvu/assert'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 
 const CONTRACT = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 
@@ -9,5 +9,3 @@ test('load contract source', async () => {
   assert.ok(result.src.byteLength === 214390)
   assert.ok(true)
 })
-
-test.run()
