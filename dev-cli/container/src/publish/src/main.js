@@ -59,10 +59,13 @@ export const parseTags = (tagsStr) =>
  * A reusuable upload client to upload any artifact
  * to any destination that implements the api
  *
- * @param {WalletExists} walletExists
- * @param {ArtifactExists} artifactExists
- * @param {ReadWallet} readWallet
- * @param {Upload} upload
+ * @typedef Environment
+ * @property {WalletExists} walletExists
+ * @property {ArtifactExists} artifactExists
+ * @property {ReadWallet} readWallet
+ * @property {Upload} upload
+ *
+ * @param {Environment} env
  *
  * @returns {Uploader}
  */
