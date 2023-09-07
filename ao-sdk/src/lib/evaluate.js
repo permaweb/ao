@@ -1,3 +1,4 @@
+import { reduce } from "ramda";
 import { fromPromise, of } from "hyper-async";
 import HyperbeamLoader from "@permaweb/hyperbeam-loader";
 
@@ -17,6 +18,7 @@ function doEvaluation(ctx) {
 }
 
 function setHandle(ctx) {
-  return fromPromise((buffer) => HyperbeamLoader(buffer))(ctx.src)
+  return of(ctx.src)
+    .chain(fromPromise((buffer) => HyperbeamLoader(buffer)))
     .map((handle) => ({ handle, ...ctx }));
 }

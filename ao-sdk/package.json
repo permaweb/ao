@@ -1,13 +1,28 @@
 {
-  "name": "ao-sdk",
-  "type": "module",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "@permaweb/ao-sdk",
+  "version": "0.0.1",
   "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "yarn build:types && yarn build:src",
+    "build:src": "esbuild src/index.js --platform=node --format=esm --bundle --outdir=dist",
+    "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
+    "test": "node --test"
+  },
   "dependencies": {
     "@permaweb/hyperbeam-loader": "^0.0.1",
     "hyper-async": "^1.1.2",
-    "ramda": "^0.29.0"
+    "ramda": "^0.29.0",
+    "zod": "^3.22.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "esbuild": "^0.19.2",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

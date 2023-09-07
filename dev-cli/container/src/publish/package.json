@@ -1,5 +1,5 @@
 {
-  "name": "@p3rmaw3b/ao-publish",
+  "name": "@permaweb/ao-publish",
   "version": "0.0.1",
   "description": "publish ability for the ao CLI",
   "type": "module",
