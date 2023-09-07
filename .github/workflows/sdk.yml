@@ -1,4 +1,4 @@
-name: ✨ Test & Deploy AO SDK
+name: 🧰 Test & Deploy AO SDK
 
 on:
   pull_request:
