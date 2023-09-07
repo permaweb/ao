@@ -2,6 +2,7 @@ import { of } from "hyper-async";
 
 import { loadTransactionDataWith, loadTransactionMetaWith } from "./dal.js";
 import { loadSourceWith } from "./lib/load-src.js";
+import { loadInitialStateWith } from "./lib/load-state.js";
 
 /**
  * @typedef ContractResult
@@ -30,10 +31,15 @@ export function readStateWith({ fetch, GATEWAY_URL }) {
     loadTransactionMeta,
     loadTransactionData,
   });
+  const loadInitialState = loadInitialStateWith({
+    loadTransactionMeta,
+    loadTransactionData,
+  });
 
   return (contractId, sortKeyHeight) => {
     return of({ id: contractId })
       .chain(loadSource)
+      .chain(loadInitialState)
       //.chain(loadInteractions)
       // evaluate and cache result
       // return result
