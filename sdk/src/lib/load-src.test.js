@@ -1,71 +1,35 @@
-import test from "node:test";
+import { describe, test } from "node:test";
 import * as assert from "node:assert";
 
-import { GET_CONTRACT_QUERY, loadSourceWith } from "./load-src.js";
+import { loadSourceWith } from "./load-src.js";
+import { Resolved } from "hyper-async";
 
 const CONTRACT = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
 
-test("return contract source and contract id", async () => {
-  const loadSource = loadSourceWith({ fetch });
-  const result = await loadSource({ id: CONTRACT }).toPromise();
-  assert.ok(result.src.byteLength === 214390);
-  assert.equal(result.id, CONTRACT);
-  assert.ok(true);
-});
+describe("load-src", () => {
+  test("return contract source and contract id", async () => {
+    const loadSource = loadSourceWith({
+      loadTransactionData: (_id) =>
+        Resolved(new Response(JSON.stringify({ hello: "world" }))),
+      loadTransactionMeta: (_id) =>
+        Resolved({ tags: [{ name: "Contract-Src", value: "foobar" }] }),
+    });
 
-test("pass the correct request", async () => {
-  const loadSource = loadSourceWith({
-    fetch: async (url, options) => {
-      if (url.endsWith("/graphql")) {
-        const body = JSON.parse(options.body);
-        assert.deepStrictEqual(body, {
-          query: GET_CONTRACT_QUERY,
-          variables: { contractId: CONTRACT },
-        });
-
-        return new Response(JSON.stringify({
-          "data": {
-            "transactions": {
-              "edges": [
-                {
-                  "node": {
-                    "tags": [
-                      {
-                        "name": "App-Name",
-                        "value": "SmartWeaveContract",
-                      },
-                      {
-                        "name": "App-Version",
-                        "value": "0.3.0",
-                      },
-                      {
-                        "name": "Contract-Src",
-                        "value": "gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w",
-                      },
-                      {
-                        "name": "SDK",
-                        "value": "Warp",
-                      },
-                      {
-                        "name": "Nonce",
-                        "value": "1693579974165",
-                      },
-                      {
-                        "name": "Content-Type",
-                        "value": "application/json",
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        }));
-      }
-
-      return new Response(JSON.stringify({ byteLength: 214390 }));
-    },
+    const result = await loadSource({ id: CONTRACT }).toPromise();
+    assert.equal(result.src.byteLength, 17);
+    assert.equal(result.id, CONTRACT);
   });
 
-  await loadSource({ id: CONTRACT }).toPromise();
+  test("throw if the Contract-Src tag is not provided", async () => {
+    const loadSource = loadSourceWith({
+      loadTransactionData: (_id) =>
+        Resolved(new Response(JSON.stringify({ hello: "world" }))),
+      loadTransactionMeta: (_id) =>
+        Resolved({ tags: [{ name: "Not-Contract-Src", value: "foobar" }] }),
+    });
+
+    await loadSource({ id: CONTRACT }).toPromise()
+      .then(() => assert("unreachable. Should have thrown"))
+      .catch(assert.ok);
+  });
 });

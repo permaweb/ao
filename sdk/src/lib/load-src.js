@@ -1,46 +1,31 @@
 import { fromPromise, of } from "hyper-async";
-import { assoc, path, prop, reduce } from "ramda";
+import { __, assoc, path, prop, reduce } from "ramda";
 import { z } from "zod";
 
-const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
-
-export const GET_CONTRACT_QUERY = `
-query GetContract ($contractId: ID!) {
-  transactions(first: 1, ids: [$contractId]) {
-    edges {
-      node {
-        tags {
-          name
-          value
-        }
-      }
-    }
-  }
-}`;
-
-const transactionConnectionSchema = z.object({
-  data: z.object({
-    transactions: z.object({
-      edges: z.array(z.object({
-        node: z.object({
-          tags: z.array(z.object({
-            name: z.string(),
-            value: z.string(),
-          })),
-        }),
-      })),
-    }),
-  }),
+const transactionSchema = z.object({
+  tags: z.array(z.object({
+    name: z.string(),
+    value: z.string(),
+  })),
 });
 
 const contractSrcIdSchema = z.string().min(
   1,
-  "Contract-Src tag was not present on the transaction",
+  { message: "Contract-Src tag was not present on the transaction" },
 );
 
 /**
+ * @callback LoadTransactionMeta
+ * @param {string} id - the id of the transaction
+ * @returns {Async<z.infer<typeof transactionSchema>>}
+ *
+ * @callback LoadTransaction
+ * @param {string} id - the id of the transaction
+ * @returns {Async<Response>}
+ *
  * @typedef Env
- * @property {fetch} fetch
+ * @property {LoadTransactionMeta} loadTransactionMeta
+ * @property {LoadTransaction} loadTransactionData
  */
 
 /**
@@ -51,13 +36,10 @@ const contractSrcIdSchema = z.string().min(
  * @param {Env} env
  * @returns {LoadSourceBuffer}
  */
-function getSourceBufferWith({ fetch }) {
+function getSourceBufferWith({ loadTransactionData }) {
   return (srcId) => {
-    return of(srcId)
-      .chain(fromPromise((id) =>
-        fetch(`${GATEWAY_URL}/${id}`)
-          .then((res) => res.arrayBuffer())
-      ));
+    return loadTransactionData(srcId)
+      .chain(fromPromise((res) => res.arrayBuffer()));
   };
 }
 
@@ -69,25 +51,14 @@ function getSourceBufferWith({ fetch }) {
  * @param {Env} env
  * @returns {LoadContractSrcId}
  */
-function getSourceIdWith({ fetch }) {
+function getSourceIdWith({ loadTransactionMeta }) {
   return (id) => {
-    return of(id)
-      .chain(fromPromise((id) =>
-        fetch(`${GATEWAY_URL}/graphql`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: GET_CONTRACT_QUERY,
-            variables: { contractId: id },
-          }),
-        })
-          .then((res) => res.json())
-          .then(transactionConnectionSchema.parse)
-          .then(path(["data", "transactions", "edges", "0", "node", "tags"]))
-          .then(reduce((a, t) => assoc(t.name, t.value, a), {}))
-          .then(prop("Contract-Src"))
-          .then(contractSrcIdSchema.parse)
-      ));
+    return loadTransactionMeta(id)
+      .map(transactionSchema.parse)
+      .map(path(["tags"]))
+      .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
+      .map(prop("Contract-Src"))
+      .map(contractSrcIdSchema.parse);
   };
 }
 
@@ -106,14 +77,14 @@ function getSourceIdWith({ fetch }) {
  * @param {Env} env
  * @returns {LoadSource}
  */
-export function loadSourceWith({ fetch }) {
-  const getSourceId = getSourceIdWith({ fetch });
-  const getSourceBuffer = getSourceBufferWith({ fetch });
+export function loadSourceWith(env) {
+  const getSourceId = getSourceIdWith(env);
+  const getSourceBuffer = getSourceBufferWith(env);
 
-  return ({ id }) => {
-    return of(id)
+  return (ctx) => {
+    return of(ctx.id)
       .chain(getSourceId)
       .chain(getSourceBuffer)
-      .map((src) => ({ id, src }));
+      .map(assoc("src", __, ctx));
   };
 }
