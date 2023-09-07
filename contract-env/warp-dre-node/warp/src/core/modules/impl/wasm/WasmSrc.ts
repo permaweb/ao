@@ -40,13 +40,10 @@ export class WasmSrc {
   private splitBuffer(inputBuffer: Buffer): Buffer[] {
     let header = '';
     const elements = parseInt(inputBuffer.toString('utf8', 0, 1));
-
     this.logger.debug(`Number of elements: ${elements}`);
     const l = inputBuffer.length;
-
     let delimiters = 0;
     let dataStart = 0;
-
     for (let i = 2; i < l; i++) {
       const element = inputBuffer.toString('utf8', i, i + 1);
       if (element == '|') {
@@ -58,7 +55,6 @@ export class WasmSrc {
       }
       header += element;
     }
-
     this.logger.debug(`Parsed:`, {
       header,
       dataStart
@@ -66,7 +62,6 @@ export class WasmSrc {
 
     const lengths = header.split('|').map((l) => parseInt(l));
     this.logger.debug('Lengths', lengths);
-
     const result: Buffer[] = [];
     for (const length of lengths) {
       const buffer = Buffer.alloc(length);
@@ -75,7 +70,6 @@ export class WasmSrc {
       dataStart = end;
       result.push(buffer);
     }
-
     return result;
   }
 }

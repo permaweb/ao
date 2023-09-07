@@ -78,6 +78,7 @@
   },
   "homepage": "https://github.com/warp-contracts/warp#readme",
   "dependencies": {
+    "@permaweb/hyperbeam-loader": "^0.0.1",
     "archiver": "^5.3.0",
     "arweave": "1.13.7",
     "async-mutex": "^0.4.0",

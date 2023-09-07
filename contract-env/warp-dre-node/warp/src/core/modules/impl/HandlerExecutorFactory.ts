@@ -82,6 +82,21 @@ export class HandlerExecutorFactory implements ExecutorFactory<HandlerApi<unknow
       extension.process(swGlobal.extensions);
     });
 
+    // if (contractDefinition.contractType == 'hyperbeam') {
+    //   // deploy contract contentType application/wasm contractType hyperbeam
+    //   // appVersion 0.4.0, appName 
+    //   // import loader 
+    //   // create smartweave global object readonly (txid, blockid)
+    //   // https://academy.warp.cc/docs/sdk/basic/smartweave-global
+    //   // readonly no functions
+    //   // get current state and action
+    //   // get hyperbeam wasm, instantiate loader
+    //   // https://www.npmjs.com/package/@permaweb/hyperbeam-loader
+    //   // run handle
+
+
+    // } else 
+    console.log(contractDefinition);
     if (contractDefinition.contractType == 'wasm') {
       this.logger.info('Creating handler for wasm contract', contractDefinition.txId);
       const benchmark = Benchmark.measure();

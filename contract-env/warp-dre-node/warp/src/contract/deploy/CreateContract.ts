@@ -10,7 +10,7 @@ export type Tags = Tag[];
 
 export type ArWallet = JWKInterface | 'use_wallet';
 
-export type ContractType = 'js' | 'wasm';
+export type ContractType = 'js' | 'wasm' | 'hyperbeam';
 
 export type ArTransfer = {
   target: string;

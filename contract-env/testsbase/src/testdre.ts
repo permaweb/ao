@@ -7,8 +7,8 @@ import { defaultCacheOptions, UnsafeClientOptions, WarpFactory } from 'warp-cont
 (async function () {
     console.log('Testing test dre...');
 
-    let contractId = "yvWawTXhK-EsgVnNOeoQJOPK4ZEoBZ9P77JZ6jwBVJM";
-    let dreHost = 'https://dre-1.warp.cc';
+    let contractId = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
+    let dreHost = 'http://localhost';
     let dreNode = dreHost + '/contract';
 
     const walletPath = process.env.PATH_TO_WALLET;
