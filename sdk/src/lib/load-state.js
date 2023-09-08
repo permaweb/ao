@@ -21,9 +21,14 @@ const transactionSchema = z.object({
     value: z.string(),
   })),
   block: z.object({
-    height: z.number(),
+    height: z.coerce.string(),
   }),
 });
+
+const stateSchema = z.object({
+  state: z.record(z.any()),
+  from: z.string(),
+}).passthrough();
 
 /**
  * @callback LoadTransactionMeta
@@ -52,7 +57,7 @@ function resolveStateWith({ loadTransactionData }) {
     if (!ctx.tags[INIT_STATE_TAG]) {
       return Rejected(ctx);
     }
-    return Resolved(JSON.parse(ctx.tags["Init-State"]));
+    return Resolved(JSON.parse(ctx.tags[INIT_STATE_TAG]));
   }
 
   function maybeInitStateTx(ctx) {
@@ -181,6 +186,6 @@ export function loadStateWith(env) {
            */
           from: res.from,
         })
-      );
+      ).map(stateSchema.parse);
   };
 }
