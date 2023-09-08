@@ -14,6 +14,10 @@ const contractSrcIdSchema = z.string().min(
   { message: "Contract-Src tag was not present on the transaction" },
 );
 
+const srcSchema = z.object({
+  src: z.any().refine((val) => !!val),
+}).passthrough();
+
 /**
  * @callback LoadTransactionMeta
  * @param {string} id - the id of the transaction
@@ -85,6 +89,7 @@ export function loadSourceWith(env) {
     return of(ctx.id)
       .chain(getSourceId)
       .chain(getSourceBuffer)
-      .map(assoc("src", __, ctx));
+      .map(assoc("src", __, ctx))
+      .map(srcSchema.parse);
   };
 }
