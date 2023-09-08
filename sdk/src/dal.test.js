@@ -1,9 +1,14 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
 
-import { loadTransactionDataWith, loadTransactionMetaWith } from "./dal.js";
+import {
+  loadInteractionsWith,
+  loadTransactionDataWith,
+  loadTransactionMetaWith,
+} from "./dal.js";
 
 const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
+const SEQUENCER_URL = globalThis.SEQUENCER_URL || "https://gw.warp.cc";
 const CONTRACT = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
 
 describe("dal", () => {
@@ -85,6 +90,26 @@ describe("dal", () => {
       assert.ok(result.json);
       assert.ok(result.text);
       assert.ok(result.ok);
+    });
+  });
+
+  describe("loadSequencerInteractions", () => {
+    test("load the interactions from the sequencer", async () => {
+      const CONTRACT = "SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY";
+
+      const loadSequencerInteractions = loadInteractionsWith({
+        fetch,
+        SEQUENCER_URL,
+      });
+
+      const res = await loadSequencerInteractions({
+        id: CONTRACT,
+        from: "",
+        to: "",
+      }).toPromise();
+      assert.ok(res.length);
+      const [firstInteraction] = res;
+      assert.ok(firstInteraction.function);
     });
   });
 });
