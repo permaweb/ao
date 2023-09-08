@@ -110,7 +110,9 @@ function getSourceInitStateTagsWith({ loadTransactionMeta }) {
           pick([INIT_STATE_TAG, INIT_STATE_TX_TAG]),
         ),
         /**
-         * TODO: is this right? Can I use the block height as the sort key?
+         * Use the block height as the sort key
+         *
+         * See https://academy.warp.cc/docs/sdk/advanced/bundled-interaction#how-it-works
          */
         from: path(["block", "height"]),
       }));

@@ -1,9 +1,12 @@
-import { fromPromise, of } from "hyper-async";
+import { fromPromise, of, Rejected, Resolved } from "hyper-async";
 import {
   __,
+  always,
+  applySpec,
   assoc,
   compose,
   evolve,
+  head,
   map,
   path,
   pipe,
@@ -68,8 +71,52 @@ const interactionsPageSchema = z.object({
 });
 
 const interactionSchema = z.object({
-  function: z.string(),
+  action: z.object({
+    function: z.string(),
+  }).passthrough(),
+  sortKey: z.string(),
 });
+
+const cachedInteractionSchema = z.object({
+  /**
+   * The sort key of the interaction
+   */
+  id: z.string().min(1),
+  /**
+   * the id of the contract that the interaction was performed upon
+   */
+  contractId: z.string().min(1),
+  /**
+   * The date when this record was created, effectively
+   * when this record was cached
+   *
+   * not to be confused with when the transaction was placed on chain
+   */
+  createdAt: z.preprocess(
+    (
+      arg,
+    ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
+    z.date(),
+  ),
+  /**
+   * The sort key of the previous interaction.
+   *
+   * If the interaction is the initial state, then this will
+   * be undefined
+   */
+  parent: z.string().optional(),
+  /**
+   * The state resolved after applying the interaction
+   * to the previous state
+   */
+  resultantState: z.record(z.any()),
+});
+
+const cachedInteractionDocSchema = cachedInteractionSchema.omit({ id: true })
+  .extend({
+    _id: z.string().min(1),
+    type: z.literal("interaction"),
+  });
 
 /**
  * @typedef Env1
@@ -225,13 +272,19 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
               // { interaction: { tags: [ { name, value }] } }
               compose(
                 // [ { name, value } ]
-                map(path(["interaction", "tags"])),
-                // { first: tag, second: tag }
-                map(reduce((a, t) => assoc(t.name, t.value, a), {})),
-                // "{\"hello\": \"world\"}"
-                map(prop("Input")),
-                // { hello: "world" }
-                map((input) => JSON.parse(input)),
+                map(path(["interaction"])),
+                map(applySpec({
+                  sortKey: prop("sortKey"),
+                  action: pipe(
+                    path(["tags"]),
+                    // { first: tag, second: tag }
+                    reduce((a, t) => assoc(t.name, t.value, a), {}),
+                    // "{\"function\": \"balance\"}"
+                    prop("Input"),
+                    // { function: "balance" }
+                    (input) => JSON.parse(input),
+                  ),
+                })),
               ),
               (acc, input) => {
                 acc.unshift(input);
@@ -244,3 +297,56 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
           .then(z.array(interactionSchema).parse)
       ));
 }
+
+export const dbWith = ({ dbClient }) => {
+  function findLatestInteraction({ id, to }) {
+    // TODO: implement to fetch from PouchDB. Mock for now
+    return of([])
+      .map(head)
+      .chain((doc) => doc ? Resolved(doc) : Rejected(doc))
+      .map(cachedInteractionDocSchema.parse)
+      .map(applySpec({
+        id: prop("_id"),
+        contractId: prop("contractId"),
+        parent: prop("parent"),
+        resultantState: prop("resultantState"),
+        createdAt: prop("createdAt"),
+      }))
+      .map(cachedInteractionSchema.parse)
+      .bichain(Resolved, Resolved);
+  }
+
+  function saveInteractions(interactions) {
+    return of(interactions)
+      .map(
+        (interactions) =>
+          transduce(
+            compose(
+              map(cachedInteractionSchema.parse),
+              map(applySpec({
+                _id: prop("id"),
+                contractId: prop("contractId"),
+                parent: prop("parent"),
+                resultantState: prop("resultantState"),
+                createdAt: prop("createdAt"),
+                type: always("interaction"),
+              })),
+            ),
+            (acc, input) => {
+              acc.unshift(input);
+              return acc;
+            },
+            [],
+            interactions,
+          ),
+      ).chain((interactionDocs) => {
+        // TODO: implement bulk save to PouchDB, mock for now
+        return Resolved(interactionDocs);
+      });
+  }
+
+  return {
+    findLatestInteraction,
+    saveInteractions,
+  };
+};

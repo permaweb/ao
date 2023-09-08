@@ -11,23 +11,37 @@ describe("load-actions", () => {
     const loadActions = loadActionsWith({
       loadInteractions: ({ id, from, to }) =>
         Resolved([
-          { function: "createOrder" },
-          { function: "createOrder" },
+          { action: { function: "createOrder" }, sortKey: "abcd,123,fsdf" },
+          { action: { function: "createOrder" }, sortKey: "fdsa,456,cdskjfs" },
         ]),
     });
     const result = await loadActions({ id: CONTRACT }).toPromise();
     assert.ok(result.actions);
-    assert.ok(true);
+    assert.ok(result.id);
+
+    const [firstInteraction] = result.actions;
+    assert.ok(firstInteraction.action);
+    assert.ok(firstInteraction.sortKey);
   });
 
   test("throw if actions are not in expected shape", async () => {
-    const loadActions = loadActionsWith({
+    const loadActionsNoAction = loadActionsWith({
       loadInteractions: ({ id, from, to }) =>
         Resolved([
-          { not_function: "createOrder" },
+          { not_action: { function: "createOrder" }, sortKey: "abcd,123,fsdf" },
         ]),
     });
-    await loadActions({ id: CONTRACT }).toPromise()
+    await loadActionsNoAction({ id: CONTRACT }).toPromise()
+      .then(() => assert("unreachable. Should have thrown"))
+      .catch(assert.ok);
+
+    const loadActionsNoSortKey = loadActionsWith({
+      loadInteractions: ({ id, from, to }) =>
+        Resolved([
+          { action: { function: "createOrder" }, noSortKey: "abcd,123,fsdf" },
+        ]),
+    });
+    await loadActionsNoSortKey({ id: CONTRACT }).toPromise()
       .then(() => assert("unreachable. Should have thrown"))
       .catch(assert.ok);
   });
