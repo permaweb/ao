@@ -35,7 +35,9 @@ describe("load-state", () => {
         Resolved({
           tags: [{ name: "Init-State", value: JSON.stringify({ foo: "bar" }) }],
           block: {
-            height: "123",
+            id: "456",
+            height: 123,
+            timestamp: new Date().getTime(),
           },
         }),
     });
@@ -61,7 +63,9 @@ describe("load-state", () => {
         Resolved({
           tags: [{ name: "Init-State-Tx", value: initStateTx }],
           block: {
-            height: "123",
+            id: "456",
+            height: 123,
+            timestamp: new Date().getTime(),
           },
         }),
     });
@@ -85,7 +89,9 @@ describe("load-state", () => {
         Resolved({
           tags: [{ name: "Title", value: "Foobar" }],
           block: {
-            height: "123",
+            id: "456",
+            height: 123,
+            timestamp: new Date().getTime(),
           },
         }),
     });
