@@ -93,23 +93,25 @@ describe("dal", () => {
     });
   });
 
-  describe("loadSequencerInteractions", () => {
+  describe("loadInteractions", () => {
     test("load the interactions from the sequencer", async () => {
       const CONTRACT = "SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY";
 
-      const loadSequencerInteractions = loadInteractionsWith({
+      const loadInteractions = loadInteractionsWith({
         fetch,
         SEQUENCER_URL,
       });
 
-      const res = await loadSequencerInteractions({
+      const res = await loadInteractions({
         id: CONTRACT,
         from: "",
         to: "",
       }).toPromise();
       assert.ok(res.length);
       const [firstInteraction] = res;
-      assert.ok(firstInteraction.function);
+      assert.ok(firstInteraction.action);
+      assert.ok(firstInteraction.action.function);
+      assert.ok(firstInteraction.sortKey);
     });
   });
 });

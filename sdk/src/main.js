@@ -1,6 +1,7 @@
-import { of, Resolved } from "hyper-async";
+import { of } from "hyper-async";
 
 import {
+  dbWith,
   loadInteractionsWith,
   loadTransactionDataWith,
   loadTransactionMetaWith,
@@ -29,19 +30,14 @@ import { loadActionsWith } from "./lib/load-actions.js";
  * @param {Env} - the environment
  * @returns {ReadState}
  */
-export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL }) {
+export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
   /**
    * build dal, injecting bottom lvl deps
    */
   const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
   const loadTransactionData = loadTransactionDataWith({ fetch, GATEWAY_URL });
   const loadInteractions = loadInteractionsWith({ fetch, SEQUENCER_URL });
-  const db = {
-    // TODO: implement to fetch from PouchDB. Mock for now
-    findLatestInteraction: ({ id, to }) => {
-      return Resolved(undefined);
-    },
-  };
+  const db = dbWith({ dbClient });
 
   /**
    * build the domain, injecting various dal deps as the env
@@ -55,6 +51,8 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL }) {
   const loadSource = loadSourceWith(env);
   const loadState = loadStateWith(env);
   const loadActions = loadActionsWith(env);
+
+  // TODO: add debug logging
 
   return (contractId, sortKeyHeight) => {
     return of({ id: contractId, to: sortKeyHeight })

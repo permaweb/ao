@@ -5,8 +5,11 @@ import { z } from "zod";
 const actionsSchema = z.object({
   actions: z.array(
     z.object({
-      function: z.string(),
-    }).passthrough(),
+      action: z.object({
+        function: z.string(),
+      }).passthrough(),
+      sortKey: z.string(),
+    }),
   ),
 }).passthrough();
 
