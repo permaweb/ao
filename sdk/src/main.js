@@ -1,8 +1,8 @@
-import { of } from "hyper-async";
+import { of, Resolved } from "hyper-async";
 
 import { loadTransactionDataWith, loadTransactionMetaWith } from "./dal.js";
 import { loadSourceWith } from "./lib/load-src.js";
-import { loadInitialStateWith } from "./lib/load-state.js";
+import { loadStateWith } from "./lib/load-state.js";
 
 /**
  * @typedef ContractResult
@@ -24,22 +24,35 @@ import { loadInitialStateWith } from "./lib/load-state.js";
  * @returns {ReadState}
  */
 export function readStateWith({ fetch, GATEWAY_URL }) {
+  /**
+   * build dal, injecting bottom lvl deps
+   */
   const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
   const loadTransactionData = loadTransactionDataWith({ fetch, GATEWAY_URL });
+  const db = {
+    // TODO: implement to fetch from PouchDB. Mock for now
+    findLatestInteraction: ({ id, to }) => {
+      return Resolved({
+        _id: "",
+        parent: id,
+        type: "interaction",
+        input: {},
+        resultantState: {},
+      });
+    },
+  };
 
-  const loadSource = loadSourceWith({
-    loadTransactionMeta,
-    loadTransactionData,
-  });
-  const loadInitialState = loadInitialStateWith({
-    loadTransactionMeta,
-    loadTransactionData,
-  });
+  /**
+   * build the domain, injecting various dal deps as the env
+   */
+  const env = { loadTransactionMeta, loadTransactionData, db };
+  const loadSource = loadSourceWith(env);
+  const loadState = loadStateWith(env);
 
   return (contractId, sortKeyHeight) => {
-    return of({ id: contractId })
+    return of({ id: contractId, to: sortKeyHeight })
       .chain(loadSource)
-      .chain(loadInitialState)
+      .chain(loadState)
       //.chain(loadInteractions)
       // evaluate and cache result
       // return result
