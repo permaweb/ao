@@ -1,21 +1,36 @@
-import { fromPromise, of } from "hyper-async";
+import { of } from "hyper-async";
+import { __, assoc } from "ramda";
+import { z } from "zod";
+
+const actionsSchema = z.object({
+  actions: z.array(
+    z.object({
+      function: z.string(),
+    }).passthrough(),
+  ),
+}).passthrough();
+
 /**
- * https://gw.warp.cc/gateway/v2/interactions-sort-key?contractId=SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY&limit=15&totalCount=true&page=1
+ * @callback LoadInteractions
+ * @param {string} id - the id of the transaction
+ * @returns {Async<z.infer<typeof inputSchema>}
+ *
+ * @typedef Env
+ * @property {LoadInteractions} loadInteractions
  */
-const GATEWAY = "https://gw.warp.cc";
 
-export const loadActions = (ctx) =>
-  of(ctx.id)
-    .chain(fetchActions)
-    .map((actions) => ({ ...ctx, actions }));
-
-function fetchActions(contractId) {
-  return fromPromise((id) =>
-    fetch(
-      `${GATEWAY}/gateway/v2/interactions-sort-key?contractId=${id}&limit=1000`,
-    )
-      .then((res) => res.json())
-      .then((res) => res.interactions)
-    // map and inject in to ctx.actions
-  )(contractId);
+/**
+ * @callback LoadInteractions
+ * @param {string} id - the id of the contract whose src is being loaded
+ * @returns {Async<string>}
+ *
+ * @param {Env} env
+ * @returns {LoadInteractions}
+ */
+export function loadActionsWith({ loadInteractions }) {
+  return (ctx) =>
+    of({ id: ctx.id, from: ctx.from, to: ctx.to })
+      .chain(({ id, to, from }) => loadInteractions({ id, from, to }))
+      .map(assoc("actions", __, ctx))
+      .map(actionsSchema.parse);
 }
