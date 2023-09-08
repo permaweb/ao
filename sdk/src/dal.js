@@ -52,8 +52,15 @@ const interactionsPageSchema = z.object({
       })),
       block: z.object({
         id: z.string(),
-        height: z.coerce.string(),
-        timestamp: z.coerce.string(),
+        /**
+         * These come back as strings from the sequencer
+         * despite the values actually being numbers
+         * on the graph
+         *
+         * So we will coerce them to a number
+         */
+        height: z.coerce.number(),
+        timestamp: z.coerce.number(),
       }),
       sortKey: z.string(),
     }),

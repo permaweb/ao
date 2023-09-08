@@ -21,13 +21,15 @@ const transactionSchema = z.object({
     value: z.string(),
   })),
   block: z.object({
-    height: z.coerce.string(),
+    id: z.string(),
+    height: z.coerce.number(),
+    timestamp: z.coerce.number(),
   }),
 });
 
 const stateSchema = z.object({
   state: z.record(z.any()),
-  from: z.string(),
+  from: z.coerce.string(),
 }).passthrough();
 
 /**
