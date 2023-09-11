@@ -77,7 +77,7 @@ const interactionSchema = z.object({
   sortKey: z.string(),
 });
 
-const cachedInteractionSchema = z.object({
+export const cachedInteractionSchema = z.object({
   /**
    * The sort key of the interaction
    */
@@ -348,6 +348,13 @@ export const dbWith = ({ dbClient }) => {
       .bichain(Resolved, Resolved);
   }
 
+  function saveInteraction(interaction) {
+    return saveInteractions([interaction]);
+  }
+
+  /**
+   * TODO: expose publicly? For now, keep internal
+   */
   function saveInteractions(interactions) {
     return of(interactions)
       .map(
@@ -404,6 +411,6 @@ export const dbWith = ({ dbClient }) => {
 
   return {
     findLatestInteraction,
-    saveInteractions,
+    saveInteraction,
   };
 };

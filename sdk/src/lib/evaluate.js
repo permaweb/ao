@@ -1,168 +1,106 @@
-import {
-  __,
-  assoc,
-  last,
-  path,
-  pipe,
-  pipeWith,
-  prop,
-  reduce,
-  unapply,
-} from "ramda";
-import { fromPromise, of } from "hyper-async";
+import { __, assoc, assocPath, prop, reduce, reduced } from "ramda";
+import { fromPromise, of, Rejected, Resolved } from "hyper-async";
 import HyperbeamLoader from "@permaweb/hyperbeam-loader";
+import { z } from "zod";
+
+const outputSchema = z.object({
+  output: z.record(z.any()),
+});
 
 /**
- * @param  {...() => Promise<any>} fns - variadic args of functions
- * @returns a pipeP function that can be used to compose Promise returning functions,
- * similar to calling .then or .chain
- */
-const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)));
-
-/**
- * @callback Evaluate
- * @param {string} id - the id of the transaction
- * @returns {Async<z.infer<typeof inputSchema>}
- *
  * @typedef Env
- * @property {Evaluate} loadInteractions
+ * @property {any} db
  */
 
 function addHandler(ctx) {
   return of(ctx.src)
-    .chain(fromPromise(HyperbeamLoader))
+    .map(HyperbeamLoader)
     .map((handle) => ({ handle, ...ctx }));
 }
 
-function cacheInteractionsWith({ db }) {
-  return (interactions) => db.saveInteractions(interactions);
+function cacheInteractionWith({ db }) {
+  return (interactions) => db.saveInteraction(interactions);
 }
 
 /**
- * @callback LoadInteractions
- * @param {string} id - the id of the contract whose src is being loaded
- * @returns {Async<string>}
+ * @typedef EvaluateArgs
+ * @property {string} id - the contract id
+ * @property {Record<string, any>} state - the initial state
+ * @property {string} from - the initial state sortKey
+ * @property {ArrayBuffer} src - the contract wasm as an array buffer
+ * @property {Record<string, any>[]} action - an array of interactions to apply
+ * @property {any} SWGlobal
+ *
+ * @callback Evaluate
+ * @param {EvaluateArgs} args
+ * @returns {Async<z.infer<typeof outputSchema>}
  *
  * @param {Env} env
  * @returns {Evaluate}
  */
 export function evaluateWith(env) {
-  const cacheInteractions = cacheInteractionsWith(env);
+  const cacheInteraction = cacheInteractionWith(env);
 
   return (ctx) =>
-    of({
-      id: ctx.id,
-      from: ctx.from,
-      state: ctx.state,
-      createdAt: ctx.createdAt,
-      actions: ctx.actions,
-      src: ctx.src,
-    })
+    of(ctx)
       .chain(addHandler)
-      .chain(fromPromise(
-        (
-          {
-            id: contractId,
-            from: initialSortKey,
-            state: initialState,
-            createdAt,
-            actions,
-            handle,
-          },
-        ) =>
-          reduce(
-            /**
-             * See load-actions for incoming shape
-             */
-            async (interactions, { action, sortKey }) =>
-              pipeP(
-                /**
-                 * Extract the last interaction applied
-                 *
-                 * [..., { id, output, ... }]
-                 */
-                last,
-                /**
-                 * Extract the state from the output
-                 *
-                 * TODO: what if the output of the interaction
-                 * is only messages and no state? Should evaluation use the state
-                 * from the previous interaction? Doesn't that break encapsulation?
-                 *
-                 * I'm thinking that state will always need to be returned from an interaction,
-                 * and then potentially messages. This way, when the messages are processed by a separate contract
-                 * and produce interactions with this contract being evaluated, the fold can be performed.
-                 *
-                 * If an interaction only produces messages, then it should
-                 * effectively act as an identity function for state (this can be abstracted away
-                 * by messages lib).
-                 *
-                 * For now, we will assume state is always output. This ensures
-                 * the evaluation can continue.
-                 *
-                 * { output: { state, result } }
-                 */
-                path(["output", "state"]),
-                /**
-                 * Perform the current interaction
-                 *
-                 * { input: '...', ... }
-                 */
-                (state) => handle(state, action, ctx.SWGlobal),
-                /**
-                 * Create a new interaction to be cached in the local db
-                 *
-                 * { state, result }
-                 */
-                (output) => ({
+      .chain((ctx) =>
+        reduce(
+          /**
+           * See load-actions for incoming shape
+           */
+          ($output, { action, sortKey }) =>
+            $output
+              .map(prop("state"))
+              .chain((state) =>
+                of(state)
+                  .chain(fromPromise((state) =>
+                    ctx.handle(state, action, ctx.SWGlobal)
+                  ))
+                  .bichain(
+                    /**
+                     * Map thrown error to a result.error
+                     */
+                    (err) =>
+                      Resolved(assocPath(["result", "error"], err, {})),
+                    Resolved,
+                  )
+                  .chain((output) => {
+                    if (output.result && output.result.error) {
+                      return Rejected(output);
+                    }
+                    /**
+                     * if output contains state, then the input state will
+                     * simply be overwritten
+                     */
+                    return Resolved({ state, ...output });
+                  })
+              )
+              /**
+               * Create a new interaction to be cached in the local db
+               */
+              .chain((output) =>
+                cacheInteraction({
                   id: sortKey,
-                  contractId,
+                  contractId: ctx.id,
                   output,
                   createdAt: new Date(),
-                }),
+                }).map(() => output)
+              )
+              .bichain(
                 /**
-                 * We purposefully do not create a new array every time here,
-                 * and instead mutate a single array.
-                 *
-                 * Because we could potentially be evaluating lots of interactions,
-                 * additional GC churn could slow down this process, non-trivially.
+                 * An error was encountered, so stop reduce and return the output
                  */
-                (interaction) => {
-                  interactions.push(interaction);
-                  return interactions;
-                },
+                (err) => Resolved(reduced(err)),
+                /**
+                 * Return the output
+                 */
+                Resolved,
               ),
-            /**
-             * We initialize the reduce with the initial state
-             * we are starting our fold, either the initial contract state
-             * retrieved from Arweave, or the most recent state cached.
-             *
-             * (See load-state.js)
-             */
-            Promise.resolve([{
-              id: initialSortKey,
-              contractId,
-              output: initialState,
-              /**
-               * Depending on whether this initial state was already cached in the local db
-               * set the createdAt
-               */
-              createdAt: createdAt || new Date(),
-            }]),
-            actions,
-          ),
-      ))
-      /**
-       * Cache all interactions in the local db,
-       * so we won't need to evaluate them again
-       */
-      .chain(cacheInteractions)
-      /**
-       * [..., { id, output, ... }]
-       */
-      .map(pipe(
-        last,
-        prop("output"),
-        assoc("output", __, ctx),
-      ));
+          of({ state: ctx.state }),
+          ctx.actions,
+        )
+      )
+      .map(assoc("output", __, ctx))
+      .map(outputSchema.parse);
 }
