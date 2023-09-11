@@ -1,10 +1,11 @@
-import { of } from "hyper-async";
+import { fromPromise, of } from "hyper-async";
+import { z } from "zod";
 
 import {
-  dbWith,
-  loadInteractionsWith,
+  dbClientSchema,
   loadTransactionDataWith,
   loadTransactionMetaWith,
+  sequencerClientSchema,
 } from "./dal.js";
 import { loadSourceWith } from "./lib/load-src.js";
 import { loadStateWith } from "./lib/load-state.js";
@@ -15,7 +16,8 @@ import { evaluateWith } from "./lib/evaluate.js";
  * @typedef Env
  * @property {fetch} fetch
  * @property {string} GATEWAY_URL
- * @property {string} SEQUENCER_URL
+ * @property {z.infer<typeof sequencerClientSchema>} sequencer
+ * @property {z.infer<typeof dbClientSchema>} db
  *
  * @typedef ContractResult
  * @property {any} state
@@ -29,14 +31,12 @@ import { evaluateWith } from "./lib/evaluate.js";
  * @param {Env} - the environment
  * @returns {ReadState}
  */
-export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
+export function readStateWith({ fetch, GATEWAY_URL, sequencer, db }) {
   /**
    * build dal, injecting bottom lvl deps
    */
   const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
   const loadTransactionData = loadTransactionDataWith({ fetch, GATEWAY_URL });
-  const loadInteractions = loadInteractionsWith({ fetch, SEQUENCER_URL });
-  const db = dbWith({ dbClient });
 
   /**
    * build the domain, injecting various dal deps as the env
@@ -44,8 +44,11 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
   const env = {
     loadTransactionMeta,
     loadTransactionData,
-    loadInteractions,
-    db,
+    loadInteractions: fromPromise(sequencer.loadInteractions),
+    db: {
+      findLatestInteraction: fromPromise(db.findLatestInteraction),
+      saveInteraction: fromPromise(db.saveInteraction),
+    },
   };
   const loadSource = loadSourceWith(env);
   const loadState = loadStateWith(env);
@@ -68,7 +71,7 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
 /**
  * @typedef Env1
  * @property {fetch} fetch
- * @property {string} SEQUENCER_URL
+ * @property {z.infer<typeof sequencerClientSchema>} sequencerClient
  *
  * @typedef WriteInteractionResult
  * @property {string} id - the id of the transaction that represents this interaction
@@ -81,7 +84,7 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith({ fetch, SEQUENCER_URL }) {
+export function writeInteractionWith({ fetch, sequencerClient }) {
   const writeInteraction = writeInteractionWith;
 
   return (contractId, input) => {
