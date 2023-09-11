@@ -13,7 +13,7 @@ describe("load-state", () => {
         findLatestInteraction: ({ id, _to }) =>
           Resolved({
             id: "123_sortkey",
-            resultantState: { foo: "bar" },
+            output: { state: { foo: "bar" } }
           }),
       },
       loadTransactionData: (_id) => Resolved(assert.fail("unreachable")),
