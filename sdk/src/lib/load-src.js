@@ -14,6 +14,13 @@ const contractSrcIdSchema = z.string().min(
   { message: "Contract-Src tag was not present on the transaction" },
 );
 
+/**
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
 const srcSchema = z.object({
   src: z.any().refine((val) => !!val),
 }).passthrough();

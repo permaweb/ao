@@ -2,6 +2,13 @@ import { of } from "hyper-async";
 import { __, assoc } from "ramda";
 import { z } from "zod";
 
+/**
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
 const actionsSchema = z.object({
   actions: z.array(
     z.object({
@@ -14,8 +21,13 @@ const actionsSchema = z.object({
 }).passthrough();
 
 /**
+ * @typedef LoadInteractionsArgs
+ * @property {string} id - the contract id
+ * @property {string} [from] - the lowermost sortKey
+ * @property {string} [to] - the highest sortKey
+ *
  * @callback LoadInteractions
- * @param {string} id - the id of the transaction
+ * @param {LoadInteractionsArgs} args
  * @returns {Async<z.infer<typeof inputSchema>}
  *
  * @typedef Env
@@ -23,12 +35,17 @@ const actionsSchema = z.object({
  */
 
 /**
- * @callback LoadInteractions
- * @param {string} id - the id of the contract whose src is being loaded
- * @returns {Async<string>}
+ * @typedef LoadActionArgs
+ * @property {string} id - the contract id
+ * @property {string} [from] - the lowermost sortKey
+ * @property {string} [to] - the highest sortKey
+ *
+ * @callback LoadActions
+ * @param {LoadActionArgs} args
+ * @returns {Async<LoadActionArgs & z.infer<typeof actionsSchema>>}
  *
  * @param {Env} env
- * @returns {LoadInteractions}
+ * @returns {LoadActions}
  */
 export function loadActionsWith({ loadInteractions }) {
   return (ctx) =>

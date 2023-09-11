@@ -27,8 +27,33 @@ const transactionSchema = z.object({
   }),
 });
 
+/**
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
 const stateSchema = z.object({
+  /**
+   * The most recent state. This could be the most recent
+   * cached state, or potentially the initial state
+   * if no interactions are cached
+   */
   state: z.record(z.any()),
+  /**
+   * When the cache record was created in the local db. If the initial state had to be retrieved
+   * from Arweave, due to no state being cached in the local db, then this will be undefined.
+   */
+  createdAt: z.date().optional(),
+  /**
+   * The most recent interaction sortKey. This could be the most recent
+   * cached interaction, or potentially the initial state sort key,
+   * if no interactions were cached
+   *
+   * This will be used to subsequently determine which interactions
+   * need to be fetched from the network in order to perform the evaluation
+   */
   from: z.coerce.string(),
 }).passthrough();
 
@@ -137,7 +162,9 @@ function getMostRecentStateWith({ db }) {
       .chain((interaction) => {
         if (!interaction) return Rejected({ id, to });
         return Resolved({
-          state: interaction.resultantState,
+          state: interaction.output.state,
+          // TODO: probably a better way to do this
+          createdAt: interaction.createdAt,
           from: interaction.id,
         });
       });
@@ -167,29 +194,32 @@ export function loadStateWith(env) {
     return of({ id: ctx.id, to: ctx.to })
       .bichain(Rejected, getMostRecentState)
       .bichain(
+        /**
+         * No recent state was found in the local db, so we need
+         * to resolve the initial state from Arweave.
+         */
         ({ id }) =>
           getSourceInitStateTags({ id })
             .chain((meta) => resolveState(meta).map(assoc("state", __, meta))),
+        /**
+         * A recent resultant state was found in the local db,
+         * so do nothing
+         */
         Resolved,
       )
-      .map((res) =>
-        mergeRight(ctx, {
-          /**
-           * The most recent state. This could be the most recent
-           * cached state, or potentially the initial state
-           * if no interactions are cached
-           */
-          state: res.state,
-          /**
-           * The most recent interaction sortKey. This could be the most recent
-           * cached interaction, or potentially the initial state sort key,
-           * if no interactions were cached
-           *
-           * This will be used to subsequently determine which interactions
-           * need to be fetched from the network in order to perform the evaluation
-           */
-          from: res.from,
-        })
-      ).map(stateSchema.parse);
+      .bimap(
+        (err) => {
+          console.error(err);
+          throw new Error("initial state could not be found");
+        },
+        (res) => mergeRight(
+          ctx,
+          stateSchema.parse({
+            state: res.state,
+            createdAt: res.createdAt,
+            from: res.from,
+          })
+        )
+      );
   };
 }

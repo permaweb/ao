@@ -99,17 +99,16 @@ const cachedInteractionSchema = z.object({
     z.date(),
   ),
   /**
-   * The sort key of the previous interaction.
+   * The output received after applying the interaction
+   * to the previous state.
    *
-   * If the interaction is the initial state, then this will
-   * be undefined
+   * See https://github.com/ArweaveTeam/SmartWeave/blob/master/CONTRACT-GUIDE.md#contract-format-and-interface
+   * for shape
    */
-  parent: z.string().optional(),
-  /**
-   * The state resolved after applying the interaction
-   * to the previous state
-   */
-  resultantState: z.record(z.any()),
+  output: z.object({
+    state: z.record(z.any()).optional(),
+    result: z.record(z.any()).optional(),
+  }),
 });
 
 const cachedInteractionDocSchema = cachedInteractionSchema.omit({ id: true })
@@ -304,14 +303,21 @@ export const dbWith = ({ dbClient }) => {
     return of([])
       .map(head)
       .chain((doc) => doc ? Resolved(doc) : Rejected(doc))
+      /**
+       * Ensure the input matches the expected
+       * shape
+       */
       .map(cachedInteractionDocSchema.parse)
       .map(applySpec({
         id: prop("_id"),
         contractId: prop("contractId"),
-        parent: prop("parent"),
-        resultantState: prop("resultantState"),
+        output: prop("output"),
         createdAt: prop("createdAt"),
       }))
+      /**
+       * Ensure the output matches the expected
+       * shape
+       */
       .map(cachedInteractionSchema.parse)
       .bichain(Resolved, Resolved);
   }
@@ -320,18 +326,43 @@ export const dbWith = ({ dbClient }) => {
     return of(interactions)
       .map(
         (interactions) =>
+          /**
+           * Because we could potentially be transforming many interactions,
+           * iterating the array multiple times could have a non-trivial
+           * performance impact
+           *
+           * So we use a transducer which allows us to iterate the array
+           * only once, performing all the transformations, per element, sequentially.
+           *
+           * Reduce + Transform => Transduce
+           */
           transduce(
             compose(
+              /**
+               * Ensure the input matches the expected
+               * shape
+               */
               map(cachedInteractionSchema.parse),
               map(applySpec({
                 _id: prop("id"),
                 contractId: prop("contractId"),
-                parent: prop("parent"),
-                resultantState: prop("resultantState"),
+                output: prop("output"),
                 createdAt: prop("createdAt"),
                 type: always("interaction"),
               })),
+              /**
+               * Ensure the output matches the expected
+               * shape
+               */
+              map(cachedInteractionDocSchema.parse),
             ),
+            /**
+             * We purposefully do not create a new array every time here,
+             * and instead mutate a single array.
+             *
+             * Because we could potentially be saving lots of interactions, so
+             * additional GC churn could slow down this process, non-trivially.
+             */
             (acc, input) => {
               acc.unshift(input);
               return acc;
