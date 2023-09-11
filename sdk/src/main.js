@@ -9,6 +9,7 @@ import {
 import { loadSourceWith } from "./lib/load-src.js";
 import { loadStateWith } from "./lib/load-state.js";
 import { loadActionsWith } from "./lib/load-actions.js";
+import { evaluateWith } from "./lib/evaluate.js";
 
 /**
  * @typedef ContractResult
@@ -51,6 +52,7 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
   const loadSource = loadSourceWith(env);
   const loadState = loadStateWith(env);
   const loadActions = loadActionsWith(env);
+  const evaluate = evaluateWith(env);
 
   // TODO: add debug logging
 
@@ -59,8 +61,8 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
       .chain(loadSource)
       .chain(loadState)
       .chain(loadActions)
-      // evaluate and cache result
-      // return result
+      // .chain(evaluate)
+      // .map(ctx => ctx.output.state)
       .toPromise();
   };
 }

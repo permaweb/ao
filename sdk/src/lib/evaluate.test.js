@@ -1,5 +1,4 @@
 import test from "node:test";
-import assert from "node:assert/strict";
 
 test("evaluate state", async () => {
   // context should have
