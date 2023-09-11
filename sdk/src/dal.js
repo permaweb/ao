@@ -297,6 +297,32 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
       ));
 }
 
+/**
+ * @typedef Env3
+ * @property {fetch} fetch
+ * @property {string} SEQUENCER_URL
+ *
+ * @typedef LoadInteractionsArgs
+ * @property {string} id - the contract id
+ * @property {string} from - the lower-most block height
+ * @property {string} to - the upper-most block height
+ *
+ * @callback LoadInteractions
+ * @param {LoadInteractionsArgs} args
+ * @returns {Async<Record<string, any>}
+ *
+ * @param {Env3} env
+ * @returns {LoadInteractions}
+ */
+export function writeInteractionWith({ fetch, SEQUENCER_URL }) {
+  return (transaction) => {
+    // verify input
+    // construct request to sequencer ie. url, body, headers
+    // make call
+    // return shape that we care about
+  };
+}
+
 export const dbWith = ({ dbClient }) => {
   function findLatestInteraction({ id, to }) {
     // TODO: implement to fetch from PouchDB. Mock for now
