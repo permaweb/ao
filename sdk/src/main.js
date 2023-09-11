@@ -60,7 +60,7 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
       .chain(loadState)
       .chain(loadActions)
       // .chain(evaluate)
-      // .map(ctx => ctx.output)
+      // .map((ctx) => ctx.output)
       .toPromise();
   };
 }
