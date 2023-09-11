@@ -2,6 +2,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
+const baseRoute = require('./routes/base');
 const crankRoute = require('./routes/crank');
 const errors = require('./errors/errors')
 
@@ -11,6 +12,7 @@ const PORT = 3004;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+app.use('/', baseRoute);
 app.use('/crank', crankRoute);
 
 app.listen(PORT, () => {
