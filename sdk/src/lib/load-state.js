@@ -212,14 +212,15 @@ export function loadStateWith(env) {
           console.error(err);
           throw new Error("initial state could not be found");
         },
-        (res) => mergeRight(
-          ctx,
-          stateSchema.parse({
-            state: res.state,
-            createdAt: res.createdAt,
-            from: res.from,
-          })
-        )
+        (res) =>
+          mergeRight(
+            ctx,
+            stateSchema.parse({
+              state: res.state,
+              createdAt: res.createdAt,
+              from: res.from,
+            }),
+          ),
       );
   };
 }
