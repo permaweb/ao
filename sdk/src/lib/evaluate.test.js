@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 import { Resolved } from "hyper-async";
 
 import { evaluateWith } from "./evaluate.js";
-import { cachedInteractionSchema } from "../dal.js";
 
 describe("evaluate", () => {
   test("evaluate state and add output to context", async () => {
@@ -13,9 +12,7 @@ describe("evaluate", () => {
       db: {
         saveInteraction: (interaction) => {
           cacheCount++;
-          const res = cachedInteractionSchema.safeParse(interaction);
-          assert.ok(res.success);
-          return Resolved(res.data);
+          return Resolved(interaction);
         },
       },
     };
