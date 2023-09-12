@@ -8,13 +8,14 @@ import { z } from "zod";
 
 const cachedInteractionDocSchema = z.object({
   _id: z.string().min(1),
-  contractId: z.string().min(1),
+  parent: z.string().min(1),
   createdAt: z.preprocess(
     (
       arg,
     ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
     z.date(),
   ),
+  action: z.record(z.any()),
   output: z.object({
     state: z.record(z.any()).optional(),
     result: z.record(z.any()).optional(),
@@ -34,7 +35,8 @@ export function findLatestInteraction({ id, to }) {
     .map(cachedInteractionDocSchema.parse)
     .map(applySpec({
       id: prop("_id"),
-      contractId: prop("contractId"),
+      parent: prop("parent"),
+      action: prop("action"),
       output: prop("output"),
       createdAt: prop("createdAt"),
     }))
@@ -51,7 +53,8 @@ export function saveInteraction(interaction) {
     .map(cachedInteractionDocSchema.parse)
     .map(applySpec({
       _id: prop("id"),
-      contractId: prop("contractId"),
+      parent: prop("parent"),
+      action: prop("action"),
       output: prop("output"),
       createdAt: prop("createdAt"),
       type: always("interaction"),
