@@ -2,11 +2,8 @@ import { dbClientSchema, sequencerClientSchema } from "./dal.js";
 import { readStateWith, writeInteractionWith } from "./main.js";
 
 // Precanned clients to use for OOTB apis
-import { findLatestInteraction, saveInteraction } from "./client/pouchdb.js";
-import {
-  loadInteractionsWith,
-  writeInteractionWith,
-} from "./client/warp-sequencer.js";
+import * as PouchDbClient from "./client/pouchdb.js";
+import * as WarpSequencerClient from "./client/warp-sequencer.js";
 
 const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || "https://gw.warp.cc";
@@ -28,10 +25,19 @@ export const readState = readStateWith({
   fetch,
   GATEWAY_URL,
   sequencer: sequencerClientSchema.parse({
-    loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL }),
-    writeInteraction: writeInteractionWith({ fetch, SEQUENCER_URL }),
+    loadInteractions: WarpSequencerClient.loadInteractionsWith({
+      fetch,
+      SEQUENCER_URL,
+    }),
+    writeInteraction: WarpSequencerClient.writeInteractionWith({
+      fetch,
+      SEQUENCER_URL,
+    }),
   }),
-  db: dbClientSchema.parse({ findLatestInteraction, saveInteraction }),
+  db: dbClientSchema.parse({
+    findLatestInteraction: PouchDbClient.findLatestInteraction,
+    saveInteraction: PouchDbClient.saveInteraction,
+  }),
 });
 
 /**
@@ -43,7 +49,13 @@ export const writeInteraction = writeInteractionWith({
   fetch,
   GATEWAY_URL,
   sequencer: sequencerClientSchema.parse({
-    loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL }),
-    writeInteraction: writeInteractionWith({ fetch, SEQUENCER_URL }),
+    loadInteractions: WarpSequencerClient.loadInteractionsWith({
+      fetch,
+      SEQUENCER_URL,
+    }),
+    writeInteraction: WarpSequencerClient.writeInteractionWith({
+      fetch,
+      SEQUENCER_URL,
+    }),
   }),
 });
