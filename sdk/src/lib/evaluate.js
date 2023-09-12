@@ -70,8 +70,13 @@ export function evaluateWith(env) {
                       return Rejected(output);
                     }
                     /**
-                     * if output contains state, then the input state will
-                     * simply be overwritten
+                     * We default to state to the previous state,
+                     * but it will be overwritten by the spread
+                     * if output contains state.
+                     *
+                     * This ensures the new interaction in the chain has state to
+                     * operate on, even if the previous interaction only produced
+                     * messages and no state change.
                      */
                     return Resolved({ state, ...output });
                   })
@@ -81,7 +86,7 @@ export function evaluateWith(env) {
                */
               .chain((output) =>
                 cacheInteraction({
-                  id: sortKey,
+                  sortKey,
                   parent: ctx.id,
                   action,
                   output,

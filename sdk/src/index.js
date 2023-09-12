@@ -35,8 +35,8 @@ export const readState = readStateWith({
     }),
   }),
   db: dbClientSchema.parse({
-    findLatestInteraction: PouchDbClient.findLatestInteraction,
-    saveInteraction: PouchDbClient.saveInteraction,
+    findLatestInteraction: PouchDbClient.findLatestInteractionWith(),
+    saveInteraction: PouchDbClient.saveInteractionWith(),
   }),
 });
 
