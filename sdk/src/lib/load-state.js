@@ -136,11 +136,16 @@ function getSourceInitStateTagsWith({ loadTransactionMeta }) {
           pick([INIT_STATE_TAG, INIT_STATE_TX_TAG]),
         ),
         /**
-         * Use the block height as the sort key
+         * Use the block height as the initial state sort key, left padding to 12 characters with '0'
+         *
+         * This enables to fetch any interactions from the sequencer using this as the lower bound sort key
          *
          * See https://academy.warp.cc/docs/sdk/advanced/bundled-interaction#how-it-works
          */
-        from: path(["block", "height"]),
+        from: pipe(
+          path(["block", "height"]),
+          (height) => String(height).padStart(12, "0"),
+        ),
       }));
   };
 }
@@ -166,7 +171,7 @@ function getMostRecentStateWith({ db }) {
           state: interaction.output.state,
           // TODO: probably a better way to do this
           createdAt: interaction.createdAt,
-          from: interaction.id,
+          from: interaction.sortKey,
         });
       });
 }

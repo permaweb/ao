@@ -45,7 +45,7 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
-    assert.equal(result.from, "123");
+    assert.equal(result.from, "000000000123");
   });
 
   test("add the initial state from Init-State-Tx", async () => {
@@ -73,7 +73,7 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
-    assert.equal(result.from, "123");
+    assert.equal(result.from, "000000000123");
   });
 
   test("add the initial state from transaction data", async () => {
@@ -99,6 +99,6 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
-    assert.equal(result.from, "123");
+    assert.equal(result.from, "000000000123");
   });
 });
