@@ -7,13 +7,9 @@ import { evaluateWith } from "./evaluate.js";
 
 describe("evaluate", () => {
   test("evaluate state and add output to context", async () => {
-    let cacheCount = 0;
     const env = {
       db: {
-        saveInteraction: (interaction) => {
-          cacheCount++;
-          return Resolved(interaction);
-        },
+        saveInteraction: (interaction) => Resolved(interaction),
       },
     };
 
@@ -22,28 +18,16 @@ describe("evaluate", () => {
     const ctx = {
       id: "ctr-1234",
       from: "sort-key-start",
-      src: readFileSync("./test/state-contract.wasm"),
-      state: { balances: { "1": 1 } },
+      src: readFileSync("./test/e2e/contract.wasm"),
+      state: {},
       actions: [
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "hello" } },
           sortKey: "a",
         },
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "world" } },
           sortKey: "b",
-        },
-        {
-          action: { caller: "1", input: { function: "balance" } },
-          sortKey: "c",
-        },
-        {
-          action: { caller: "1", input: { function: "balance" } },
-          sortKey: "d",
-        },
-        {
-          action: { caller: "1", input: { function: "balance" } },
-          sortKey: "e",
         },
       ],
       SWGlobal: {},
@@ -51,8 +35,10 @@ describe("evaluate", () => {
 
     const res = await evaluate(ctx).toPromise();
     console.log(res);
-    assert.equal(cacheCount, 5);
     assert.ok(res.output);
+    assert.deepStrictEqual(res.output, {
+      state: { heardHello: true, heardWorld: true, happy: true },
+    });
   });
 
   test("save each interaction", async () => {
