@@ -40,6 +40,8 @@ jobs:
 
       - name: ⚡ Run Tests
         run: |
+          echo "TEMPORARILY BUILDING LOADER UNTIL WE CAN PUBLISH A NEW VERSION TO NPM"
+          cd ../loader && npm i && npm run build && cd ../sdk
           npm i
           npm test
         env:

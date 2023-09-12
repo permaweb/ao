@@ -69,6 +69,7 @@ const stateSchema = z.object({
  * @typedef Env
  * @property {LoadTransactionMeta} loadTransactionMeta
  * @property {LoadTransaction} loadTransactionData
+ * @property {any} db
  */
 
 /**
