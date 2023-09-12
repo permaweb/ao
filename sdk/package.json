@@ -4,11 +4,12 @@
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "yarn build:types && yarn build:src",
-    "build:src": "esbuild src/index.js --platform=node --format=esm --bundle --outdir=dist",
+    "build": "npm run build:types && npm run build:src",
+    "build:src": "node esbuild.js",
     "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
     "test": "node --test"
   },
