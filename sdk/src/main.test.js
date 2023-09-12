@@ -18,7 +18,10 @@ test("readState", async () => {
     fetch,
     GATEWAY_URL,
     // TODO: we should stub these for the test
-    db: pouchDb,
+    db: {
+      findLatestInteraction: pouchDb.findLatestInteractionWith(),
+      saveInteraction: pouchDb.saveInteractionWith(),
+    },
     sequencer: {
       loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL }),
       writeInteractionWith: writeInteractionWith({ fetch, SEQUENCER_URL }),

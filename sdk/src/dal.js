@@ -13,7 +13,7 @@ const cachedInteractionSchema = z.object({
   /**
    * The sort key of the interaction
    */
-  id: z.string().min(1),
+  sortKey: z.string().min(1),
   /**
    * the id of the contract that the interaction was performed upon
    */
