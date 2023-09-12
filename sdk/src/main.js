@@ -10,6 +10,9 @@ import { loadSourceWith } from "./lib/load-src.js";
 import { loadStateWith } from "./lib/load-state.js";
 import { loadActionsWith } from "./lib/load-actions.js";
 import { evaluateWith } from "./lib/evaluate.js";
+import { verifyContractWith } from "./lib/verify-contract.js";
+import { verifyInputWith } from "./lib/verify-input.js";
+import { buildTxWith } from "./lib/build-tx.js";
 
 /**
  * @typedef Env
@@ -81,14 +84,30 @@ export function readStateWith({ fetch, GATEWAY_URL, SEQUENCER_URL, dbClient }) {
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith({ fetch, SEQUENCER_URL }) {
+export function writeInteractionWith({ fetch, GATEWAY_URL, SEQUENCER_URL }) {
   const writeInteraction = writeInteractionWith;
+
+  /**
+   * build dal, injecting bottom lvl deps
+   */
+  const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
+
+  /**
+   * build the domain, injecting various dal deps as the env
+   */
+  const env = {
+    loadTransactionMeta,
+  };
+
+  const verifyContract = verifyContractWith(env);
+  const verifyInput = verifyInputWith(env);
+  const buildTx = buildTxWith(env);
 
   return (contractId, input) => {
     return of({ id: contractId, input })
-      // .chain() // verify contract (is TX a smart contract)
-      // .chain() // verify input shape
-      // .chain() // construct interaction to send ie. add tags, etc.
+      .chain(verifyContract) // verify contract (is TX a smart contract)
+      .chain(verifyInput) // verify input shape
+      .chain(buildTx) // construct interaction to send ie. add tags, etc.
       // .chain(writeInteraction)
       // .map(ctx => ({ id: ctx.id }))
       .toPromise();
