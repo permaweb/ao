@@ -1,67 +1,130 @@
-import { of, Rejected, Resolved } from "hyper-async";
+import { fromPromise, of, Rejected, Resolved } from "hyper-async";
 import { __, always, applySpec, head, prop } from "ramda";
 import { z } from "zod";
+
+import PouchDb from "pouchdb";
+import PouchDbFind from "pouchdb-find";
+import NodeWebSql from "pouchdb-adapter-node-websql";
+import WebSql from "pouchdb-adapter-websql";
 
 /**
  * An implementation of the db client using pouchDB
  */
 
+/**
+ * Build a pouchDB instance based on the environment
+ *
+ * we inject this as part of the entrypoint, but injection
+ * allows use to test business logic above using stubs
+ */
+const isBrowser = typeof window !== "undefined" &&
+  typeof window.document !== "undefined";
+
+const isNode = typeof process !== "undefined" &&
+  process.versions != null &&
+  process.versions.node != null;
+let adapter;
+if (isNode) adapter = NodeWebSql;
+else if (isBrowser) adapter = WebSql;
+else throw new Error("environment not supported");
+PouchDb.plugin(adapter);
+PouchDb.plugin(PouchDbFind);
+const internalPouchDb = new PouchDb("ao-cache", { adapter: "websql" });
+
+export { internalPouchDb as pouchDb };
+
 const cachedInteractionDocSchema = z.object({
   _id: z.string().min(1),
+  sortKey: z.string().min(1),
   parent: z.string().min(1),
+  action: z.record(z.any()),
+  output: z.object({
+    state: z.record(z.any()).optional(),
+    result: z.record(z.any()).optional(),
+  }),
   createdAt: z.preprocess(
     (
       arg,
     ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
     z.date(),
   ),
-  action: z.record(z.any()),
-  output: z.object({
-    state: z.record(z.any()).optional(),
-    result: z.record(z.any()).optional(),
-  }),
-  type: z.literal("interaction"),
 });
 
-export function findLatestInteraction({ id, to }) {
-  // TODO: implement to fetch from PouchDB. Mock for now
-  return of([])
-    .map(head)
-    .chain((doc) => doc ? Resolved(doc) : Rejected(doc))
-    /**
-     * Ensure the input matches the expected
-     * shape
-     */
-    .map(cachedInteractionDocSchema.parse)
-    .map(applySpec({
-      id: prop("_id"),
-      parent: prop("parent"),
-      action: prop("action"),
-      output: prop("output"),
-      createdAt: prop("createdAt"),
-    }))
-    .bichain(Resolved, Resolved)
-    .toPromise();
+function createRangeKey({ contractId, sortKey }) {
+  return [contractId, sortKey || ""].join("");
 }
 
-export function saveInteraction(interaction) {
-  return of(interaction)
-    /**
-     * Ensure the output matches the expected
-     * shape
-     */
-    .map(cachedInteractionDocSchema.parse)
-    .map(applySpec({
-      _id: prop("id"),
-      parent: prop("parent"),
-      action: prop("action"),
-      output: prop("output"),
-      createdAt: prop("createdAt"),
-      type: always("interaction"),
-    }))
-    .chain((interactionDocs) => {
-      // TODO: implement bulk save to PouchDB, mock for now
-      return Resolved(interactionDocs);
-    })
-    .toPromise();
+export function findLatestInteractionWith(
+  { pouchDb } = { pouchDb: internalPouchDb },
+) {
+  return ({ id, to }) => {
+    return of({ contractId: id, sortKey: to })
+      .map(createRangeKey)
+      .chain(fromPromise((rangeKey) => {
+        /**
+         * Find the most recent interaction that produced state:
+         * - sort key less than or equal to the sort key we're interested in
+         *
+         * This will give us the cached most recent interaction that produced a state change
+         */
+        return pouchDb.find({
+          selector: { _id: { $lte: rangeKey } },
+          sort: [{ _id: "desc" }],
+          limit: 1,
+        }).then((res) => {
+          if (res.warning) console.warn(res.warning);
+          return res.docs;
+        });
+      }))
+      .map(head)
+      .chain((doc) => doc ? Resolved(doc) : Rejected(doc))
+      /**
+       * Ensure the input matches the expected
+       * shape
+       */
+      .map(cachedInteractionDocSchema.parse)
+      .map(applySpec({
+        sortKey: prop("sortKey"),
+        parent: prop("parent"),
+        action: prop("action"),
+        output: prop("output"),
+        createdAt: prop("createdAt"),
+      }))
+      .bichain(Resolved, Resolved)
+      .toPromise();
+  };
+}
+
+export function saveInteractionWith(
+  { pouchDb } = { pouchDb: internalPouchDb },
+) {
+  return (interaction) => {
+    return of(interaction)
+      .map(applySpec({
+        /**
+         * The contractId concatenated with the sortKey
+         * is used as the _id for the record
+         */
+        _id: (interaction) =>
+          createRangeKey({
+            contractId: interaction.parent,
+            sortKey: interaction.sortKey,
+          }),
+        sortKey: prop("sortKey"),
+        parent: prop("parent"),
+        action: prop("action"),
+        output: prop("output"),
+        createdAt: prop("createdAt"),
+      }))
+      /**
+       * Ensure the expected shape before writing to the db
+       */
+      .map(cachedInteractionDocSchema.parse)
+      .chain(fromPromise((doc) => {
+        return pouchDb.get(doc._id)
+          .then((found) => found || pouchDb.put(doc))
+          .then(always(doc._id));
+      }))
+      .toPromise();
+  };
 }
