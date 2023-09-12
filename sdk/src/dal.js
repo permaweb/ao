@@ -17,7 +17,7 @@ const cachedInteractionSchema = z.object({
   /**
    * the id of the contract that the interaction was performed upon
    */
-  contractId: z.string().min(1),
+  parent: z.string().min(1),
   /**
    * The date when this record was created, effectively
    * when this record was cached
@@ -30,6 +30,10 @@ const cachedInteractionSchema = z.object({
     ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
     z.date(),
   ),
+  /**
+   * The action performed by the interaction
+   */
+  action: z.record(z.any()),
   /**
    * The output received after applying the interaction
    * to the previous state.

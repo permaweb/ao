@@ -82,7 +82,8 @@ export function evaluateWith(env) {
               .chain((output) =>
                 cacheInteraction({
                   id: sortKey,
-                  contractId: ctx.id,
+                  parent: ctx.id,
+                  action,
                   output,
                   createdAt: new Date(),
                 }).map(() => output)
