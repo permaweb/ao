@@ -21,7 +21,7 @@ test("readState", async () => {
     db: pouchDb,
     sequencer: {
       loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL }),
-      writeInteraction: writeInteractionWith({ fetch, SEQUENCER_URL }),
+      writeInteractionWith: writeInteractionWith({ fetch, SEQUENCER_URL }),
     },
   })(
     CONTRACT,

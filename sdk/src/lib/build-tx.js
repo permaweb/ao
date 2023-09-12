@@ -6,8 +6,12 @@ const inputSchema = z.object({
 });
 
 export function buildTxWith(env) {
-    return (input) => {
+    return (input, tags) => {
         return of(input)
+            //.chain() create tags
+            //.chain() generate random number as data item
+            //.chain() sign with bundlr
             .map(inputSchema.parse);
+
     };
 }
