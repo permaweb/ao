@@ -19,21 +19,14 @@ const contractTagsSchema = z.object({
 })
 
 /**
- * @callback LoadTransactionMeta
- * @param {string} id - the id of the transaction
- * @returns {Async<z.infer<typeof transactionSchema>>}
- *
- * @typedef Env
- * @property {LoadTransactionMeta} loadTransactionMeta
- */
-
-/**
- * @callback ContractId
- * @param {string} id - the id of the contract being verified
- * @returns {Async<string>}
- *
- * @param {Env} env
- * @returns {ContractId}
+ * @typedef Env5
+ * @property {any} loadTransactionMeta
+ * 
+ * @callback VerifyTags
+ * @param {string} id - contract tx id
+ * 
+ * @param {Env5} env 
+ * @returns {any} VerifyTags
  */
 function verfiyTagsWith({ loadTransactionMeta }) {
     return (id) => {
@@ -46,23 +39,31 @@ function verfiyTagsWith({ loadTransactionMeta }) {
 }
 
 /**
- * @typedef Args
+ * @typedef Tag2
+ * @property {string} name 
+ * @property {any} value
+ * 
+ * @typedef Context
  * @property {string} id - the transaction id to be verified
- *
- * @typedef Result
- * @property {string} id - the transaction id to be verified
+ * @property {any} input 
+ * @property {any} wallet 
+ * @property {Tag2[]} tags
  *
  * @callback VerifyContract
- * @param {Args} args
- * @returns {Async<Result>}
+ * @param {Context} ctx
+ * @returns {Async<Context>}
+ * 
+ * @typedef Env6 
+ * @property {any} loadTransactionMeta
  *
- * @param {Env} env
+ * @param {Env6} env
  * @returns {VerifyContract}
  */
 export function verifyContractWith(env) {
     const verfiyTags = verfiyTagsWith(env);
     return (ctx) => {
         return of(ctx.id)
-            .chain(verfiyTags);
+            .chain(verfiyTags)
+            .map(() => ctx);
     };
 }

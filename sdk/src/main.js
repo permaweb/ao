@@ -74,22 +74,24 @@ export function readStateWith({ fetch, GATEWAY_URL, sequencer, db }) {
 /**
  * @typedef Env1
  * @property {fetch} fetch
- * @property {z.infer<typeof sequencerClientSchema>} sequencerClient
+ * @property {z.infer<typeof sequencerClientSchema>} sequencer
+ * @property {string} GATEWAY_URL
  *
  * @typedef WriteInteractionResult
- * @property {string} id - the id of the transaction that represents this interaction
+ * @property {string} originalTxId - the id of the transaction that represents this interaction
+ * @property {any} bundlrResponse - bundlr response from the gatewy
  *
  * @callback WriteInteraction
  * @param {string} contractId
  * @param {Record<string, any>} input
+ * @param {any} wallet
+ * @param {any[]} tags
  * @returns {Promise<WriteInteractionResult>} result
  *
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith({ fetch, GATEWAY_URL, SEQUENCER_URL }) {
-  const writeInteraction = writeInteractionWith;
-
+export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
   /**
    * build dal, injecting bottom lvl deps
    */
@@ -100,19 +102,20 @@ export function writeInteractionWith({ fetch, GATEWAY_URL, SEQUENCER_URL }) {
    */
   const env = {
     loadTransactionMeta,
+    sequencer
   };
 
   const verifyContract = verifyContractWith(env);
   const verifyInput = verifyInputWith(env);
   const buildTx = buildTxWith(env);
 
-  return (contractId, input) => {
-    return of({ id: contractId, input })
+  return (contractId, input, wallet, tags) => {
+    return of({ id: contractId, input, wallet, tags })
       .chain(verifyContract) // verify contract (is TX a smart contract)
       .chain(verifyInput) // verify input shape
       .chain(buildTx) // construct interaction to send ie. add tags, etc.
-      // .chain(writeInteraction)
-      // .map(ctx => ({ id: ctx.id }))
+      .chain(fromPromise(sequencer.writeInteraction)) // write to the sequencer
+      .map(ctx => ctx)
       .toPromise();
   };
 }

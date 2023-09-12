@@ -33,6 +33,9 @@ export const readState = readStateWith({
       fetch,
       SEQUENCER_URL,
     }),
+    signInteraction: WarpSequencerClient.signInteractionWith({
+      createDataItem: WarpSequencerClient.createData
+    }),
   }),
   db: dbClientSchema.parse({
     findLatestInteraction: PouchDbClient.findLatestInteraction,
@@ -44,6 +47,7 @@ export const readState = readStateWith({
  * default writeInteraction that works OOTB
  * - Uses Warp Sequencer
  * - Use arweave.net gateway
+ * - use arbundles createData for signing
  */
 export const writeInteraction = writeInteractionWith({
   fetch,
@@ -56,6 +60,9 @@ export const writeInteraction = writeInteractionWith({
     writeInteraction: WarpSequencerClient.writeInteractionWith({
       fetch,
       SEQUENCER_URL,
+    }),
+    signInteraction: WarpSequencerClient.signInteractionWith({
+      createDataItem: WarpSequencerClient.createData
     }),
   }),
 });

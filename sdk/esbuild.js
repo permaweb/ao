@@ -9,7 +9,6 @@ import manifest from "./package.json" assert { type: "json" };
 await esbuild.build({
   entryPoints: ["src/index.js"],
   platform: "node",
-  packages: "external",
   format: "cjs",
   bundle: true,
   outfile: manifest.main,
@@ -19,7 +18,6 @@ await esbuild.build({
 await esbuild.build({
   entryPoints: ["src/index.js"],
   platform: "node",
-  packages: "external",
   format: "esm",
   bundle: true,
   outfile: manifest.module,

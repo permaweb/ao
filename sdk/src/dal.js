@@ -64,6 +64,9 @@ export const sequencerClientSchema = z.object({
   writeInteraction: z.function()
     .args(z.record(z.any()))
     .returns(z.promise(z.any())),
+  signInteraction: z.function()
+    .args(z.record(z.any()))
+    .returns(z.promise(z.any())),
 });
 
 /**

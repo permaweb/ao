@@ -8,9 +8,22 @@ const inputSchema = z.object({
     ),
 });
 
+/**
+ * @typedef Context2 
+ * @property {string} id - the transaction id to be verified
+ * @property {any} input 
+ * @property {any} wallet 
+ * @property {Tag2[]} tags
+ * 
+ * @callback VerifyInput
+ * @param {Context2} ctx
+ * 
+ * @returns VerifyInput
+ */
 export function verifyInputWith() {
-    return (input) => {
-        return of(input)
-            .map(inputSchema.parse);
+    return (ctx) => {
+        return of(ctx.input)
+            .map(inputSchema.parse)
+            .map(() => ctx);
     };
 }
