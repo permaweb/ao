@@ -21,6 +21,7 @@
     "pouchdb-adapter-websql": "^7.0.0",
     "pouchdb-find": "^8.0.1",
     "ramda": "^0.29.0",
+    "warp-arbundles": "^1.0.4",
     "zod": "^3.22.2"
   },
   "devDependencies": {

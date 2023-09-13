@@ -11,6 +11,9 @@ import { loadSourceWith } from "./lib/load-src.js";
 import { loadStateWith } from "./lib/load-state.js";
 import { loadActionsWith } from "./lib/load-actions.js";
 import { evaluateWith } from "./lib/evaluate.js";
+import { verifyContractWith } from "./lib/verify-contract.js";
+import { verifyInputWith } from "./lib/verify-input.js";
+import { buildTxWith } from "./lib/build-tx.js";
 
 /**
  * @typedef Env
@@ -71,29 +74,48 @@ export function readStateWith({ fetch, GATEWAY_URL, sequencer, db }) {
 /**
  * @typedef Env1
  * @property {fetch} fetch
- * @property {z.infer<typeof sequencerClientSchema>} sequencerClient
+ * @property {z.infer<typeof sequencerClientSchema>} sequencer
+ * @property {string} GATEWAY_URL
  *
  * @typedef WriteInteractionResult
- * @property {string} id - the id of the transaction that represents this interaction
+ * @property {string} originalTxId - the id of the transaction that represents this interaction
+ * @property {any} bundlrResponse - bundlr response from the gatewy
  *
  * @callback WriteInteraction
  * @param {string} contractId
  * @param {Record<string, any>} input
+ * @param {any} wallet
+ * @param {any[]} tags
  * @returns {Promise<WriteInteractionResult>} result
  *
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith({ fetch, sequencerClient }) {
-  const writeInteraction = writeInteractionWith;
+export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
+  /**
+   * build dal, injecting bottom lvl deps
+   */
+  const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
 
-  return (contractId, input) => {
-    return of({ id: contractId, input })
-      // .chain() // verify contract (is TX a smart contract)
-      // .chain() // verify input shape
-      // .chain() // construct interaction to send ie. add tags, etc.
-      // .chain(writeInteraction)
-      // .map(ctx => ({ id: ctx.id }))
+  /**
+   * build the domain, injecting various dal deps as the env
+   */
+  const env = {
+    loadTransactionMeta,
+    sequencer
+  };
+
+  const verifyContract = verifyContractWith(env);
+  const verifyInput = verifyInputWith(env);
+  const buildTx = buildTxWith(env);
+
+  return (contractId, input, wallet, tags) => {
+    return of({ id: contractId, input, wallet, tags })
+      .chain(verifyContract) // verify contract (is TX a smart contract)
+      .chain(verifyInput) // verify input shape
+      .chain(buildTx) // construct interaction to send ie. add tags, etc.
+      .chain(fromPromise(sequencer.writeInteraction)) // write to the sequencer
+      .map(ctx => ctx)
       .toPromise();
   };
 }

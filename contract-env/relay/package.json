@@ -13,7 +13,7 @@
         "body-parser": "^1.20.2",
         "cors": "^2.8.5",
         "express": "^4.17.1",
-        "warp-contracts": "file:../warp-dre-node/warp"
+        "warp-contracts": "1.4.14"
     },
     "devDependencies": {
         "nodemon": "^3.0.1"
