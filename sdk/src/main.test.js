@@ -6,10 +6,11 @@ import {
   loadInteractionsWith,
   writeInteractionWith,
 } from "./client/warp-sequencer.js";
+import { createLogger } from "./logger.js";
 
 const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || "https://gw.warp.cc";
-const CONTRACT = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
+const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
 
 test("readState", async () => {
   const { readStateWith } = await import("./main.js");
@@ -26,6 +27,7 @@ test("readState", async () => {
       loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL }),
       writeInteractionWith: writeInteractionWith({ fetch, SEQUENCER_URL }),
     },
+    logger: createLogger("@permaweb/ao-sdk"),
   })(
     CONTRACT,
   );

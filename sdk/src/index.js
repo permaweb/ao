@@ -1,5 +1,6 @@
 import { dbClientSchema, sequencerClientSchema } from "./dal.js";
 import { readStateWith, writeInteractionWith } from "./main.js";
+import { createLogger } from "./logger.js";
 
 // Precanned clients to use for OOTB apis
 import * as PouchDbClient from "./client/pouchdb.js";
@@ -7,6 +8,8 @@ import * as WarpSequencerClient from "./client/warp-sequencer.js";
 
 const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || "https://gw.warp.cc";
+
+const logger = createLogger("@permaweb/ao-sdk");
 
 /**
  * TODO: export a 'connect' that allows providing
@@ -41,6 +44,7 @@ export const readState = readStateWith({
     findLatestInteraction: PouchDbClient.findLatestInteractionWith(),
     saveInteraction: PouchDbClient.saveInteractionWith(),
   }),
+  logger,
 });
 
 /**
@@ -65,4 +69,5 @@ export const writeInteraction = writeInteractionWith({
       createDataItem: WarpSequencerClient.createData,
     }),
   }),
+  logger,
 });

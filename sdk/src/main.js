@@ -38,12 +38,24 @@ import { buildTxWith } from "./lib/writeInteraction/build-tx.js";
  * @param {Env} - the environment
  * @returns {ReadState}
  */
-export function readStateWith({ fetch, GATEWAY_URL, sequencer, db }) {
+export function readStateWith(
+  { fetch, GATEWAY_URL, sequencer, db, logger: _logger },
+) {
+  const logger = _logger.child("readState");
+
   /**
    * build dal, injecting bottom lvl deps
    */
-  const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
-  const loadTransactionData = loadTransactionDataWith({ fetch, GATEWAY_URL });
+  const loadTransactionMeta = loadTransactionMetaWith({
+    fetch,
+    GATEWAY_URL,
+    logger,
+  });
+  const loadTransactionData = loadTransactionDataWith({
+    fetch,
+    GATEWAY_URL,
+    logger,
+  });
 
   /**
    * build the domain, injecting various dal deps as the env
@@ -56,21 +68,23 @@ export function readStateWith({ fetch, GATEWAY_URL, sequencer, db }) {
       findLatestInteraction: fromPromise(db.findLatestInteraction),
       saveInteraction: fromPromise(db.saveInteraction),
     },
+    logger,
   };
   const loadSource = loadSourceWith(env);
   const loadState = loadStateWith(env);
   const loadActions = loadActionsWith(env);
   const evaluate = evaluateWith(env);
 
-  // TODO: add debug logging
-
   return (contractId, sortKeyHeight) => {
-    return of({ id: contractId, to: sortKeyHeight })
+    return of({ id: contractId, to: sortKeyHeight, SWGlobal: {} })
       .chain(loadSource)
       .chain(loadState)
       .chain(loadActions)
+      .map(logger.tap("AFTER loadActions %O"))
       .chain(evaluate)
+      .map(logger.tap("AFTER loadActions %O"))
       .map((ctx) => ctx.output)
+      .map(logger.tap("AFTER output %O"))
       .toPromise();
   };
 }
