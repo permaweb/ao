@@ -2,9 +2,11 @@ import { describe, test } from "node:test";
 import * as assert from "node:assert";
 import { Resolved } from "hyper-async";
 
+import { createLogger } from "../../logger.js";
 import { loadSourceWith } from "./load-src.js";
 
-const CONTRACT = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
+const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
+const logger = createLogger("@permaweb/ao-sdk:readState");
 
 describe("load-src", () => {
   test("return contract source and contract id", async () => {
@@ -13,6 +15,7 @@ describe("load-src", () => {
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
         Resolved({ tags: [{ name: "Contract-Src", value: "foobar" }] }),
+      logger,
     });
 
     const result = await loadSource({ id: CONTRACT }).toPromise();
@@ -26,6 +29,7 @@ describe("load-src", () => {
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
         Resolved({ tags: [{ name: "Not-Contract-Src", value: "foobar" }] }),
+      logger,
     });
 
     await loadSource({ id: CONTRACT }).toPromise()

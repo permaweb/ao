@@ -2,9 +2,11 @@ import { describe, test } from "node:test";
 import * as assert from "node:assert";
 import { Resolved } from "hyper-async";
 
+import { createLogger } from "../../logger.js";
 import { loadStateWith } from "./load-state.js";
 
-const CONTRACT = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
+const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
+const logger = createLogger("@permaweb/ao-sdk:readState");
 
 describe("load-state", () => {
   test("add the most recent state from cache", async () => {
@@ -18,6 +20,7 @@ describe("load-state", () => {
       },
       loadTransactionData: (_id) => Resolved(assert.fail("unreachable")),
       loadTransactionMeta: (_id) => Resolved(assert.fail("unreachable")),
+      logger,
     });
 
     const result = await loadState({ id: CONTRACT }).toPromise();
@@ -40,6 +43,7 @@ describe("load-state", () => {
             timestamp: new Date().getTime(),
           },
         }),
+      logger,
     });
 
     const result = await loadState({ id: CONTRACT }).toPromise();
@@ -68,6 +72,7 @@ describe("load-state", () => {
             timestamp: new Date().getTime(),
           },
         }),
+      logger,
     });
 
     const result = await loadState({ id: CONTRACT }).toPromise();
@@ -94,6 +99,7 @@ describe("load-state", () => {
             timestamp: new Date().getTime(),
           },
         }),
+      logger,
     });
 
     const result = await loadState({ id: CONTRACT }).toPromise();

@@ -4,8 +4,11 @@ import {
   always,
   applySpec,
   assoc,
+  defaultTo,
+  identity,
+  ifElse,
   mergeRight,
-  path,
+  pathOr,
   pick,
   pipe,
   prop,
@@ -80,7 +83,9 @@ const stateSchema = z.object({
  * @param {Env} env
  * @returns {ResolveInitialState}
  */
-function resolveStateWith({ loadTransactionData }) {
+function resolveStateWith({ loadTransactionData, logger: _logger }) {
+  const logger = _logger.child("resolveState");
+
   function maybeInitState(ctx) {
     if (!ctx.tags[INIT_STATE_TAG]) {
       return Rejected(ctx);
@@ -107,9 +112,19 @@ function resolveStateWith({ loadTransactionData }) {
    */
   return (ctx) =>
     of(ctx)
+      .map(logger.tap(`Resolving initial state for ctx %O`))
       .bichain(Rejected, maybeInitState)
+      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`))
       .bichain(maybeInitStateTx, Resolved)
-      .bichain(maybeData, Resolved);
+      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TX_TAG}" %O`))
+      .bichain(maybeData, Resolved)
+      .map(logger.tap(`Found initial state in transaction data %O`))
+      .bimap(
+        logger.tap(
+          `ERROR: Could not find the initial state of the transaction`,
+        ),
+        identity,
+      );
 }
 
 /**
@@ -123,7 +138,9 @@ function resolveStateWith({ loadTransactionData }) {
  * @param {Env} env
  * @returns {LoadInitialStateTags}
  */
-function getSourceInitStateTagsWith({ loadTransactionMeta }) {
+function getSourceInitStateTagsWith({ loadTransactionMeta, logger: _logger }) {
+  const logger = _logger.child("getSourceInitStateTags");
+
   return ({ id }) => {
     return loadTransactionMeta(id)
       .map(transactionSchema.parse)
@@ -143,7 +160,22 @@ function getSourceInitStateTagsWith({ loadTransactionMeta }) {
          * See https://academy.warp.cc/docs/sdk/advanced/bundled-interaction#how-it-works
          */
         from: pipe(
-          path(["block", "height"]),
+          pathOr(undefined, ["block", "height"]),
+          ifElse(
+            identity,
+            logger.tap(`Retrieved transaction meta for contract ${id}: %s`),
+            logger.tap(
+              `No block yet found for transaction ${id}. Defaulting to null block`,
+            ),
+          ),
+          /**
+           * Sometimes, when fetching the transaction meta, the block
+           * might not yet be on Arweave.
+           *
+           * If this is the case, we use the null block (0000000000)
+           * as our left bound for interactions
+           */
+          defaultTo(""),
           (height) => String(height).padStart(12, "0"),
         ),
       }));
@@ -162,9 +194,16 @@ function getSourceInitStateTagsWith({ loadTransactionMeta }) {
  * @param {Env} env
  * @returns {LoadMostRecentState}
  */
-function getMostRecentStateWith({ db }) {
+function getMostRecentStateWith({ db, logger: _logger }) {
+  const logger = _logger.child("getMostRecentState");
+
   return ({ id, to }) =>
     db.findLatestInteraction({ id, to })
+      .map(
+        logger.tap(
+          `Checked for cached interaction for contract "${id}" to sortKey "${to}"`,
+        ),
+      )
       .chain((interaction) => {
         if (!interaction) return Rejected({ id, to });
         return Resolved({
@@ -173,7 +212,15 @@ function getMostRecentStateWith({ db }) {
           createdAt: interaction.createdAt,
           from: interaction.sortKey,
         });
-      });
+      })
+      .bimap(
+        logger.tap(
+          `No cached interaction found for contract "${id}" to sortKey "${to}"`,
+        ),
+        logger.tap(
+          `Found cached interaction for contract "${id}" to sortKey "${to}": %O`,
+        ),
+      );
 }
 
 /**
@@ -192,6 +239,9 @@ function getMostRecentStateWith({ db }) {
  * @returns {LoadSource}
  */
 export function loadStateWith(env) {
+  const logger = env.logger.child("loadState");
+  env = { ...env, logger };
+
   const getMostRecentState = getMostRecentStateWith(env);
   const getSourceInitStateTags = getSourceInitStateTagsWith(env);
   const resolveState = resolveStateWith(env);
@@ -227,6 +277,7 @@ export function loadStateWith(env) {
               from: res.from,
             }),
           ),
-      );
+      )
+      .map(logger.tap(`Added state, createdAt, and from to ctx %O`));
   };
 }
