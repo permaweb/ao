@@ -53,6 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: release
+    defaults:
+      run:
+        working-directory: '.'
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -92,6 +95,7 @@ jobs:
           git push
       
       - name: 🦠 Publish to NPM
+        working-directory: sdk
         run: |
           npm i
           npm run build
