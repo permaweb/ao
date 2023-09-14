@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import * as pouchDb from "./client/pouchdb.js";
+import * as pouchDbClient from "./client/pouchdb.js";
 import {
   loadInteractionsWith,
   writeInteractionWith,
@@ -12,6 +12,8 @@ const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || "https://gw.warp.cc";
 const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
 
+const logger = createLogger("@permaweb/ao-sdk");
+
 test("readState", async () => {
   const { readStateWith } = await import("./main.js");
 
@@ -20,14 +22,20 @@ test("readState", async () => {
     GATEWAY_URL,
     // TODO: we should stub these for the test
     db: {
-      findLatestInteraction: pouchDb.findLatestInteractionWith(),
-      saveInteraction: pouchDb.saveInteractionWith(),
+      findLatestInteraction: pouchDbClient.findLatestInteractionWith({
+        pouchDb: pouchDbClient.pouchDb,
+        logger,
+      }),
+      saveInteraction: pouchDbClient.saveInteractionWith({
+        pouchDb: pouchDbClient.pouchDb,
+        logger,
+      }),
     },
     sequencer: {
       loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL }),
       writeInteractionWith: writeInteractionWith({ fetch, SEQUENCER_URL }),
     },
-    logger: createLogger("@permaweb/ao-sdk"),
+    logger,
   })(
     CONTRACT,
   );

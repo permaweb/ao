@@ -1,8 +1,11 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
 
-import { findLatestInteractionWith, saveInteractionWith } from "./pouchdb.js";
+import { createLogger } from "../logger.js";
 import { dbClientSchema } from "../dal.js";
+import { findLatestInteractionWith, saveInteractionWith } from "./pouchdb.js";
+
+const logger = createLogger("db");
 
 describe("pouchdb", () => {
   describe("findLatestInteraction", () => {
@@ -13,14 +16,14 @@ describe("pouchdb", () => {
           pouchDb: {
             find: async (op) => {
               assert.deepStrictEqual(op, {
-                selector: { _id: { $lte: "contract-123sortkey-910" } },
+                selector: { _id: { $lte: "contract-123,sortkey-910" } },
                 sort: [{ _id: "desc" }],
                 limit: 1,
               });
               return {
                 docs: [
                   {
-                    _id: "contract-123sortkey-890",
+                    _id: "contract-123,sortkey-890",
                     sortKey: "sortkey-890",
                     parent: "contract-123",
                     action: { input: { function: "noop" } },
@@ -31,6 +34,7 @@ describe("pouchdb", () => {
               };
             },
           },
+          logger,
         }));
 
       const res = await findLatestInteraction({
@@ -51,6 +55,7 @@ describe("pouchdb", () => {
         pouchDb: {
           find: async () => ({ docs: [] }),
         },
+        logger,
       });
       await findLatestInteraction({ id: "contract-123", to: "sortkey-910" })
         .then(assert.fail)
@@ -66,7 +71,7 @@ describe("pouchdb", () => {
           pouchDb: {
             get: async () => undefined,
             put: (doc) => {
-              assert.equal(doc._id, "contract-123sortkey-890");
+              assert.equal(doc._id, "contract-123,sortkey-890");
               assert.equal(doc.sortKey, "sortkey-890");
               assert.equal(doc.parent, "contract-123");
               assert.deepStrictEqual(doc.action, {
@@ -77,6 +82,7 @@ describe("pouchdb", () => {
               return Promise.resolve(true);
             },
           },
+          logger,
         }),
       );
 
@@ -94,7 +100,7 @@ describe("pouchdb", () => {
         saveInteractionWith({
           pouchDb: {
             get: async () => ({
-              _id: "contract-123sortkey-890",
+              _id: "contract-123,sortkey-890",
               sortKey: "sortkey-890",
               parent: "contract-123",
               action: { input: { function: "noop" } },
@@ -103,6 +109,7 @@ describe("pouchdb", () => {
             }),
             put: assert.fail,
           },
+          logger,
         }),
       );
 

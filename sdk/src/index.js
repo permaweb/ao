@@ -41,8 +41,14 @@ export const readState = readStateWith({
     }),
   }),
   db: dbClientSchema.parse({
-    findLatestInteraction: PouchDbClient.findLatestInteractionWith(),
-    saveInteraction: PouchDbClient.saveInteractionWith(),
+    findLatestInteraction: PouchDbClient.findLatestInteractionWith({
+      pouchDb: PouchDbClient.pouchDb,
+      logger: logger.child("readState:db"),
+    }),
+    saveInteraction: PouchDbClient.saveInteractionWith({
+      pouchDb: PouchDbClient.pouchDb,
+      logger: logger.child("readState:db"),
+    }),
   }),
   logger,
 });
