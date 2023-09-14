@@ -22,7 +22,9 @@ const contractSrcIdSchema = z.string().min(
  * is always added to context
  */
 const srcSchema = z.object({
-  src: z.any().refine((val) => !!val),
+  src: z.any().refine((val) => !!val, {
+    message: "contract source must be defined",
+  }),
 }).passthrough();
 
 /**
@@ -62,14 +64,15 @@ function getSourceBufferWith({ loadTransactionData }) {
  * @param {Env} env
  * @returns {LoadContractSrcId}
  */
-function getSourceIdWith({ loadTransactionMeta }) {
+function getSourceIdWith({ loadTransactionMeta, logger }) {
   return (id) => {
     return loadTransactionMeta(id)
       .map(transactionSchema.parse)
       .map(path(["tags"]))
       .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
       .map(prop("Contract-Src"))
-      .map(contractSrcIdSchema.parse);
+      .map(contractSrcIdSchema.parse)
+      .map(logger.tap("Loaded Contract-Src for contract %s"));
   };
 }
 
@@ -89,6 +92,9 @@ function getSourceIdWith({ loadTransactionMeta }) {
  * @returns {LoadSource}
  */
 export function loadSourceWith(env) {
+  const logger = env.logger.child("loadSource");
+  env = { ...env, logger };
+
   const getSourceId = getSourceIdWith(env);
   const getSourceBuffer = getSourceBufferWith(env);
 
@@ -97,6 +103,7 @@ export function loadSourceWith(env) {
       .chain(getSourceId)
       .chain(getSourceBuffer)
       .map(assoc("src", __, ctx))
-      .map(srcSchema.parse);
+      .map(srcSchema.parse)
+      .map(logger.tap('Added "src" to ctx'));
   };
 }
