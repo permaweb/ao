@@ -72,7 +72,7 @@ function getSourceIdWith({ loadTransactionMeta, logger }) {
       .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
       .map(prop("Contract-Src"))
       .map(contractSrcIdSchema.parse)
-      .map(logger.tap("Loaded Contract-Src for contract %s"));
+      .map(logger.tap("Loaded Contract-Src %s"));
   };
 }
 
