@@ -22,7 +22,6 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: sdk
 
 jobs:
 
@@ -39,6 +38,7 @@ jobs:
           node-version: 18
 
       - name: ⚡ Run Tests
+        working-directory: sdk
         run: |
           echo "TEMPORARILY BUILDING LOADER UNTIL WE CAN PUBLISH A NEW VERSION TO NPM"
           cd ../loader && npm i && npm run build && cd ../sdk
@@ -53,9 +53,6 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: release
-    defaults:
-      run:
-        working-directory: '.'
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3

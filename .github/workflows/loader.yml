@@ -22,7 +22,6 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: loader
 
 jobs:
 
@@ -39,6 +38,7 @@ jobs:
           node-version: 18
 
       - name: ⚡ Run Tests
+        working-directory: loader
         run: |
           npm i
           npm test
@@ -58,6 +58,7 @@ jobs:
           node-version: 18
 
       - name: ⚡ Run Tests
+        working-directory: loader
         run: |
           npm i
           npm run test:integration
@@ -70,9 +71,6 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: release
-    defaults:
-      run:
-        working-directory: '.'
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
