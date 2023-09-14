@@ -1,5 +1,5 @@
 {
-  "name": "@permaweb/ao-loader",
+  "name": "@permaweb/hyperbeam-loader",
   "version": "0.0.2",
   "type": "module",
   "main": "./dist/index.cjs",
