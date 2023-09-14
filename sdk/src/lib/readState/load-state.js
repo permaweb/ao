@@ -45,6 +45,12 @@ const stateSchema = z.object({
    */
   state: z.record(z.any()),
   /**
+   * The most recent result. This could be the most recent
+   * cached result, or potentially nothing
+   * if no interactions are cached
+   */
+  result: z.record(z.any()).optional(),
+  /**
    * When the cache record was created in the local db. If the initial state had to be retrieved
    * from Arweave, due to no state being cached in the local db, then this will be undefined.
    */
@@ -211,6 +217,7 @@ function getMostRecentStateWith({ db, logger: _logger }) {
         if (!interaction) return Rejected({ id, to });
         return Resolved({
           state: interaction.output.state,
+          result: interaction.output.result,
           // TODO: probably a better way to do this
           createdAt: interaction.createdAt,
           from: interaction.sortKey,
@@ -280,11 +287,12 @@ export function loadStateWith(env) {
             ctx,
             stateSchema.parse({
               state: res.state,
+              result: res.result,
               createdAt: res.createdAt,
               from: res.from,
             }),
           ),
       )
-      .map(logger.tap(`Added state, createdAt, and from to ctx %O`));
+      .map(logger.tap(`Added state, result, createdAt, and from to ctx %O`));
   };
 }

@@ -90,7 +90,7 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
     from: padBlockHeight,
     to: pipe(
       /**
-       * Potentially increment the block height by 1, so
+       * Potentially add a comma to the end of the block height, so
        * the sequencer will include any interactions in that block
        */
       (sortKey) => {
@@ -103,11 +103,10 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
 
         /**
          * only the block height is being used as the sort key
+         * so append a ',' so that transactions in that block are included
          */
         const [height] = parts;
-        if (!height) return height;
-        const num = parseInt(height);
-        return String(num + 1);
+        return `${height},`;
       },
       /**
        * Still ensure the proper padding is added
@@ -135,8 +134,8 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
          *
          * - 'from' is inclusive
          *
-         * - 'to' is non-inclusive IF only the block height is used at the sort key, so if we want to include interactions in the block at 'to', then we need to increment the block height by 1
-         *    (see mapBounds above where we increment to block height by one)
+         * - 'to' is non-inclusive IF only the block height is used at the sort key, so if we want to include interactions in the block at 'to', then we need to add a comma to the block height
+         *    (see mapBounds above where we add the comma). I believe this is just because of the way the range query is implemented underneath the hood in Warp Sequencer
          */
         fetch(
           // TODO: need to be able to load multiple pages until all interactions are fetched

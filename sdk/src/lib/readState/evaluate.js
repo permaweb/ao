@@ -134,7 +134,7 @@ export function evaluateWith(env) {
                  */
                 Resolved,
               ),
-          of({ state: ctx.state }),
+          of({ state: ctx.state, result: ctx.result }),
           ctx.actions,
         )
       )
