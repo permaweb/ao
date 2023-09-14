@@ -9,7 +9,7 @@ const { ArweaveSigner } = require('warp-arbundles');
 
 const { writeInteraction, readState } = require('@permaweb/ao-sdk');
 
-const CONTRACT_TX_ID = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
+const CONTRACT_TX_ID = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
 
 (async function () {
     console.log('Testing ao...');
