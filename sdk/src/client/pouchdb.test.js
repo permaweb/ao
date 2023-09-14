@@ -14,7 +14,7 @@ const logger = createLogger("db");
 describe("pouchdb", () => {
   describe("findLatestInteraction", () => {
     test("return the lastest interaction", async () => {
-      const createdAt = new Date().toISOString();
+      const cachedAt = new Date().toISOString();
       const findLatestInteraction = dbClientSchema.shape.findLatestInteraction
         .parse(findLatestInteractionWith({
           pouchDb: {
@@ -37,7 +37,7 @@ describe("pouchdb", () => {
                     parent: "contract-123",
                     action: { input: { function: "noop" } },
                     output: { state: { foo: "bar" } },
-                    createdAt,
+                    cachedAt,
                   },
                 ],
               };
@@ -56,11 +56,11 @@ describe("pouchdb", () => {
       assert.equal(res.parent, "contract-123");
       assert.deepStrictEqual(res.action, { input: { function: "noop" } });
       assert.deepStrictEqual(res.output, { state: { foo: "bar" } });
-      assert.equal(res.createdAt.toISOString(), createdAt);
+      assert.equal(res.cachedAt.toISOString(), cachedAt);
     });
 
     test("without 'to', return the lastest interaction using collation sequence max char", async () => {
-      const createdAt = new Date().toISOString();
+      const cachedAt = new Date().toISOString();
       const findLatestInteraction = dbClientSchema.shape.findLatestInteraction
         .parse(findLatestInteractionWith({
           pouchDb: {
@@ -83,7 +83,7 @@ describe("pouchdb", () => {
                     parent: "contract-123",
                     action: { input: { function: "noop" } },
                     output: { state: { foo: "bar" } },
-                    createdAt,
+                    cachedAt,
                   },
                 ],
               };
@@ -101,7 +101,7 @@ describe("pouchdb", () => {
       assert.equal(res.parent, "contract-123");
       assert.deepStrictEqual(res.action, { input: { function: "noop" } });
       assert.deepStrictEqual(res.output, { state: { foo: "bar" } });
-      assert.equal(res.createdAt.toISOString(), createdAt);
+      assert.equal(res.cachedAt.toISOString(), cachedAt);
     });
 
     test("rejects if no interaction is found", async () => {
@@ -119,7 +119,7 @@ describe("pouchdb", () => {
 
   describe("saveInteraction", () => {
     test("save the interaction to pouchdb", async () => {
-      const createdAt = new Date().toISOString();
+      const cachedAt = new Date().toISOString();
       const saveInteraction = dbClientSchema.shape.saveInteraction.parse(
         saveInteractionWith({
           pouchDb: {
@@ -132,7 +132,7 @@ describe("pouchdb", () => {
                 input: { function: "noop" },
               });
               assert.deepStrictEqual(doc.output, { state: { foo: "bar" } });
-              assert.equal(doc.createdAt.toISOString(), createdAt);
+              assert.equal(doc.cachedAt.toISOString(), cachedAt);
               return Promise.resolve(true);
             },
           },
@@ -145,7 +145,7 @@ describe("pouchdb", () => {
         parent: "contract-123",
         action: { input: { function: "noop" } },
         output: { state: { foo: "bar" } },
-        createdAt,
+        cachedAt,
       });
     });
 
@@ -159,7 +159,7 @@ describe("pouchdb", () => {
               parent: "contract-123",
               action: { input: { function: "noop" } },
               output: { state: { foo: "bar" } },
-              createdAt: new Date(),
+              cachedAt: new Date(),
             }),
             put: assert.fail,
           },
@@ -172,7 +172,7 @@ describe("pouchdb", () => {
         parent: "contract-123",
         action: { input: { function: "noop" } },
         output: { state: { foo: "bar" } },
-        createdAt: new Date(),
+        cachedAt: new Date(),
       });
     });
   });

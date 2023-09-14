@@ -42,7 +42,7 @@ const cachedInteractionDocSchema = z.object({
     state: z.record(z.any()).optional(),
     result: z.record(z.any()).optional(),
   }),
-  createdAt: z.preprocess(
+  cachedAt: z.preprocess(
     (
       arg,
     ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
@@ -118,7 +118,7 @@ export function findLatestInteractionWith(
         parent: prop("parent"),
         action: prop("action"),
         output: prop("output"),
-        createdAt: prop("createdAt"),
+        cachedAt: prop("cachedAt"),
       }))
       .bichain(Resolved, Resolved)
       .toPromise();
@@ -145,7 +145,7 @@ export function saveInteractionWith(
         parent: prop("parent"),
         action: prop("action"),
         output: prop("output"),
-        createdAt: prop("createdAt"),
+        cachedAt: prop("cachedAt"),
       }))
       /**
        * Ensure the expected shape before writing to the db

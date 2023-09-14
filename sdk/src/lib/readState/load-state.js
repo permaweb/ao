@@ -54,7 +54,7 @@ const stateSchema = z.object({
    * When the cache record was created in the local db. If the initial state had to be retrieved
    * from Arweave, due to no state being cached in the local db, then this will be undefined.
    */
-  createdAt: z.date().optional(),
+  cachedAt: z.date().optional(),
   /**
    * The most recent interaction sortKey. This could be the most recent
    * cached interaction, or potentially the initial state sort key,
@@ -208,8 +208,7 @@ function getMostRecentStateWith({ db, logger: _logger }) {
     db.findLatestInteraction({ id, to })
       .map(
         logger.tap(
-          `Checked for cached interaction for contract "${id}" to sortKey "${
-            to || "latest"
+          `Checked for cached interaction for contract "${id}" to sortKey "${to || "latest"
           }"`,
         ),
       )
@@ -219,19 +218,17 @@ function getMostRecentStateWith({ db, logger: _logger }) {
           state: interaction.output.state,
           result: interaction.output.result,
           // TODO: probably a better way to do this
-          createdAt: interaction.createdAt,
+          cachedAt: interaction.cachedAt,
           from: interaction.sortKey,
         });
       })
       .bimap(
         logger.tap(
-          `No cached interaction found for contract "${id}" to sortKey "${
-            to || "latest"
+          `No cached interaction found for contract "${id}" to sortKey "${to || "latest"
           }"`,
         ),
         logger.tap(
-          `Found cached interaction for contract "${id}" to sortKey "${
-            to || "latest"
+          `Found cached interaction for contract "${id}" to sortKey "${to || "latest"
           }": %O`,
         ),
       );
@@ -288,11 +285,11 @@ export function loadStateWith(env) {
             stateSchema.parse({
               state: res.state,
               result: res.result,
-              createdAt: res.createdAt,
+              cachedAt: res.cachedAt,
               from: res.from,
             }),
           ),
       )
-      .map(logger.tap(`Added state, result, createdAt, and from to ctx %O`));
+      .map(logger.tap(`Added state, result, cachedAt, and from to ctx %O`));
   };
 }

@@ -24,7 +24,7 @@ const cachedInteractionSchema = z.object({
    *
    * not to be confused with when the transaction was placed on chain
    */
-  createdAt: z.preprocess(
+  cachedAt: z.preprocess(
     (
       arg,
     ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),

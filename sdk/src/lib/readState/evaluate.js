@@ -121,7 +121,7 @@ export function evaluateWith(env) {
                   parent: ctx.id,
                   action,
                   output,
-                  createdAt: new Date(),
+                  cachedAt: new Date(),
                 }).map(() => output)
               )
               .bichain(
