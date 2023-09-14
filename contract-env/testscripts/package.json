@@ -39,8 +39,6 @@
         "ts-node": "^10.9.1",
         "twitter-api-v2": "^1.12.0",
         "warp-arbundles": "^1.0.4",
-        "warp-contracts": "file:../warp-dre-node/warp",
-        "warp-contracts-plugin-deploy": "file:../warp-dre-node/warp-contracts-plugin-deploy",
         "websocket-polyfill": "^0.0.3",
         "wikijs": "^6.3.3"
     },

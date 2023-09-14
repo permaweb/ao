@@ -65,8 +65,8 @@ export function readStateWith({ fetch, GATEWAY_URL, sequencer, db }) {
       .chain(loadSource)
       .chain(loadState)
       .chain(loadActions)
-      // .chain(evaluate)
-      // .map((ctx) => ctx.output)
+      .chain(evaluate)
+      .map((ctx) => ctx.output)
       .toPromise();
   };
 }
