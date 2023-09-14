@@ -93,21 +93,21 @@ jobs:
           VER=`node --version`; echo "Node ver:   $VER"
           VER=`npm --version`; echo "npm ver:    $VER"
 
-      - name: 🤓 Set Git User
-        run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+      # - name: 🤓 Set Git User
+      #   run: |
+      #     git config --global user.name "${{ github.actor }}"
+      #     git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: ✊ Bump
-        id: bump
-        uses: hyper63/hyper-ci-bump@v2.0.2
-        with:
-          bump-to: ${{ github.event.inputs.version }}
-          package: loader
+      # - name: ✊ Bump
+      #   id: bump
+      #   uses: hyper63/hyper-ci-bump@v2.0.2
+      #   with:
+      #     bump-to: ${{ github.event.inputs.version }}
+      #     package: loader
 
-      - name: ⬆️ Push
-        run: |
-          git push
+      # - name: ⬆️ Push
+      #   run: |
+      #     git push
       
       - name: 🦠 Publish to NPM
         working-directory: loader
