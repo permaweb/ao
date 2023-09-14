@@ -99,7 +99,7 @@ jobs:
 
       - name: ✊ Bump
         id: bump
-        uses: hyper63/hyper-ci-bump@2
+        uses: hyper63/hyper-ci-bump@v2
         with:
           bump-to: ${{ github.event.inputs.version }}
           package: loader
