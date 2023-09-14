@@ -90,19 +90,21 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
     if (!ctx.tags[INIT_STATE_TAG]) {
       return Rejected(ctx);
     }
-    return Resolved(JSON.parse(ctx.tags[INIT_STATE_TAG]));
+    return Resolved(JSON.parse(ctx.tags[INIT_STATE_TAG])).map(logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`));
   }
 
   function maybeInitStateTx(ctx) {
     if (!ctx.tags[INIT_STATE_TX_TAG]) return Rejected(ctx);
 
     return loadTransactionData(ctx.tags[INIT_STATE_TX_TAG])
-      .chain(fromPromise((res) => res.json()));
+      .chain(fromPromise((res) => res.json()))
+      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TX_TAG}" %O`));
   }
 
   function maybeData(ctx) {
     return loadTransactionData(ctx.id)
-      .chain(fromPromise((res) => res.json()));
+      .chain(fromPromise((res) => res.json()))
+      .map(logger.tap(`Found initial state in transaction data %O`));
   }
 
   /**
@@ -114,11 +116,8 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
     of(ctx)
       .map(logger.tap(`Resolving initial state for ctx %O`))
       .bichain(Rejected, maybeInitState)
-      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`))
       .bichain(maybeInitStateTx, Resolved)
-      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TX_TAG}" %O`))
       .bichain(maybeData, Resolved)
-      .map(logger.tap(`Found initial state in transaction data %O`))
       .bimap(
         logger.tap(
           `ERROR: Could not find the initial state of the transaction`,

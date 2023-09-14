@@ -51,11 +51,11 @@ const cachedInteractionDocSchema = z.object({
 });
 
 function createRangeKey({ contractId, sortKey }) {
-  return [contractId, sortKey || ""].join("");
+  return [contractId, sortKey || ""].join(",");
 }
 
 export function findLatestInteractionWith(
-  { pouchDb } = { pouchDb: internalPouchDb },
+  { pouchDb },
 ) {
   return ({ id, to }) => {
     return of({ contractId: id, sortKey: to })
@@ -96,8 +96,9 @@ export function findLatestInteractionWith(
 }
 
 export function saveInteractionWith(
-  { pouchDb } = { pouchDb: internalPouchDb },
+  { pouchDb, logger: _logger },
 ) {
+  const logger = _logger.child("saveInteraction");
   return (interaction) => {
     return of(interaction)
       .map(applySpec({
@@ -120,11 +121,36 @@ export function saveInteractionWith(
        * Ensure the expected shape before writing to the db
        */
       .map(cachedInteractionDocSchema.parse)
-      .chain(fromPromise((doc) => {
-        return pouchDb.get(doc._id)
-          .then((found) => found || pouchDb.put(doc))
-          .then(always(doc._id));
-      }))
+      .chain((doc) =>
+        of(doc)
+          .chain(fromPromise((doc) => pouchDb.get(doc._id)))
+          .bichain(
+            (err) => {
+              // No cached document found
+              if (err.status === 404) {
+                logger(
+                  `No cached document found with _id %s. Caching interaction %O`,
+                  doc._id,
+                  doc,
+                );
+                return Resolved(undefined);
+              }
+              return Rejected(err);
+            },
+            Resolved,
+          )
+          .chain((found) =>
+            found
+              ? of(found)
+              : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
+                .bimap(
+                  logger.tap(`Encountered an error when caching interaction`),
+                  logger.tap(`Cached interaction`),
+                )
+                .bichain(Resolved, Resolved)
+          )
+          .map(always(doc._id))
+      )
       .toPromise();
   };
 }
