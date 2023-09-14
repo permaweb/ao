@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const outputSchema = z.object({
   output: z.record(z.any()),
-});
+}).passthrough();
 
 /**
  * @typedef Env
