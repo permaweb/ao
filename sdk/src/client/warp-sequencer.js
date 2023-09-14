@@ -1,4 +1,4 @@
-import { fromPromise, of, Resolved } from "hyper-async";
+import { fromPromise, of } from "hyper-async";
 import {
   __,
   applySpec,
