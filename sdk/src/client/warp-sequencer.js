@@ -1,4 +1,4 @@
-import { fromPromise, of, Resolved} from "hyper-async";
+import { fromPromise, of, Resolved } from "hyper-async";
 import {
   __,
   applySpec,
@@ -13,7 +13,7 @@ import {
   transduce,
 } from "ramda";
 import { z } from "zod";
-import { createData } from 'warp-arbundles';
+import { createData } from "warp-arbundles";
 export { createData };
 
 import { interactionSchema } from "../dal.js";
@@ -180,7 +180,7 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
  * @typedef Env3
  * @property {fetch} fetch
  * @property {string} SEQUENCER_URL
- * 
+ *
  * @typedef WriteInteractionTx
  * @property { any } signedData - DataItem returned from arbundles createData
  *
@@ -197,23 +197,23 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
 export function writeInteractionWith({ fetch, SEQUENCER_URL }) {
   return (transaction) => {
     return of(transaction)
-      .chain(fromPromise(async transaction => {
+      .chain(fromPromise(async (transaction) => {
         let dataItem = await transaction.signedData;
         const response = await fetch(
           `${SEQUENCER_URL}/gateway/v2/sequencer/register`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/octet-stream',
-              Accept: 'application/json'
+              "Content-Type": "application/octet-stream",
+              Accept: "application/json",
             },
-            body: dataItem.getRaw()
-          }
+            body: dataItem.getRaw(),
+          },
         );
 
         return {
           bundlrResponse: await getJsonResponse(response),
-          originalTxId: await dataItem.id
+          originalTxId: await dataItem.id,
         };
       })).toPromise();
   };
@@ -222,35 +222,34 @@ export function writeInteractionWith({ fetch, SEQUENCER_URL }) {
 /**
  * @typedef Env4
  * @property {any} createDataItem
- * 
- * @typedef Tag 
- * @property {string} name 
+ *
+ * @typedef Tag
+ * @property {string} name
  * @property {any} value
- * 
+ *
  * @typedef SignInteractionArgs
- * @property {any} data 
+ * @property {any} data
  * @property {Tag[]} tags
- * 
+ *
  * @callback SignInteraction
  * @param {SignInteractionArgs} args
  * @returns {Async<Record<string, any>}
- * 
- * @param {Env4} env 
+ *
+ * @param {Env4} env
  * @returns {SignInteraction}
  */
 export function signInteractionWith({ createDataItem }) {
   return (transaction) => {
     return of(transaction)
-      .chain(fromPromise(async transaction => {
+      .chain(fromPromise(async (transaction) => {
         const { data, tags, wallet } = transaction;
         /**
          * if in the browser the user must pass
          *   - warp-contracts-plugin-signature InjectedArweaveSigner as wallet
          * if in node.js the user must pass
          *   - warp-arbundles ArweaveSigner as wallet
-         * 
+         *
          * TODO: this is temporary until we can rebuild the signature piece
-         * 
          */
         let interactionDataItem;
         if (isBrowser() && wallet.signer?.signDataItem) {
@@ -262,21 +261,24 @@ export function signInteractionWith({ createDataItem }) {
 
         return interactionDataItem;
       })).toPromise();
-  }
-};
-
+  };
+}
 
 /**
  * some utilities used by the above functions pulled from warp sdk
  */
-const isBrowser = new Function('try {return this===window;}catch(e){ return false;}');
+const isBrowser = new Function(
+  "try {return this===window;}catch(e){ return false;}",
+);
 
-export async function getJsonResponse(response){
+export async function getJsonResponse(response) {
   let r;
   try {
     r = await response;
   } catch (e) {
-    throw new Error(`Error while communicating with gateway: ${JSON.stringify(e)}`);
+    throw new Error(
+      `Error while communicating with gateway: ${JSON.stringify(e)}`,
+    );
   }
 
   if (!r?.ok) {

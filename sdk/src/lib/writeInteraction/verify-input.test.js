@@ -7,7 +7,9 @@ describe("verify-input", () => {
   test("verify input to a writeInteraction", async () => {
     const verifyInput = verifyInputWith();
 
-    await verifyInput({input: { function: 'FUNCTION_STRING', data: {test: 'test'} }}).toPromise()
+    await verifyInput({
+      input: { function: "FUNCTION_STRING", data: { test: "test" } },
+    }).toPromise()
       .then(assert.ok)
       .catch(assert.fail);
   });
@@ -15,7 +17,7 @@ describe("verify-input", () => {
   test("fail to provide a function to a write interaction", async () => {
     const verifyInput = verifyInputWith();
 
-    await verifyInput({ data: {test: 'test'} }).toPromise()
+    await verifyInput({ data: { test: "test" } }).toPromise()
       .then(() => assert("unreachable. Should have failed"))
       .catch(assert.ok);
   });
