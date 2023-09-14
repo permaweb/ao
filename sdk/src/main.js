@@ -106,7 +106,7 @@ export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
    */
   const env = {
     loadTransactionMeta,
-    sequencer
+    sequencer,
   };
 
   const verifyContract = verifyContractWith(env);
@@ -119,7 +119,7 @@ export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
       .chain(verifyInput) // verify input shape
       .chain(buildTx) // construct interaction to send ie. add tags, etc.
       .chain(fromPromise(sequencer.writeInteraction)) // write to the sequencer
-      .map(ctx => ctx)
+      .map((ctx) => ctx)
       .toPromise();
   };
 }

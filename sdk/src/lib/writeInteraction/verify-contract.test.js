@@ -12,11 +12,13 @@ describe("verify-contract", () => {
       loadTransactionData: (_id) =>
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
-        Resolved({ tags: [
+        Resolved({
+          tags: [
             { name: "Contract-Src", value: "foobar" },
             { name: "App-Name", value: "SmartWeaveContract" },
             { name: "App-Version", value: "0.3.0" },
-        ] }),
+          ],
+        }),
     });
 
     await verifyContract({ id: CONTRACT }).toPromise()
@@ -29,10 +31,12 @@ describe("verify-contract", () => {
       loadTransactionData: (_id) =>
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
-        Resolved({ tags: [
+        Resolved({
+          tags: [
             { name: "App-Name", value: "SmartWeaveContract" },
             { name: "App-Version", value: "0.3.0" },
-        ] }),
+          ],
+        }),
     });
 
     await verifyContract({ id: CONTRACT }).toPromise()
@@ -45,10 +49,12 @@ describe("verify-contract", () => {
       loadTransactionData: (_id) =>
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
-        Resolved({ tags: [
+        Resolved({
+          tags: [
             { name: "Contract-Src", value: "foobar" },
             { name: "App-Version", value: "0.3.0" },
-        ] }),
+          ],
+        }),
     });
 
     await verifyContract({ id: CONTRACT }).toPromise()
@@ -61,9 +67,11 @@ describe("verify-contract", () => {
       loadTransactionData: (_id) =>
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
-        Resolved({ tags: [
+        Resolved({
+          tags: [
             { name: "App-Version", value: "0.3.0" },
-        ] }),
+          ],
+        }),
     });
 
     await verifyContract({ id: CONTRACT }).toPromise()

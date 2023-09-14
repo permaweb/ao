@@ -34,7 +34,7 @@ export const readState = readStateWith({
       SEQUENCER_URL,
     }),
     signInteraction: WarpSequencerClient.signInteractionWith({
-      createDataItem: WarpSequencerClient.createData
+      createDataItem: WarpSequencerClient.createData,
     }),
   }),
   db: dbClientSchema.parse({
@@ -62,7 +62,7 @@ export const writeInteraction = writeInteractionWith({
       SEQUENCER_URL,
     }),
     signInteraction: WarpSequencerClient.signInteractionWith({
-      createDataItem: WarpSequencerClient.createData
+      createDataItem: WarpSequencerClient.createData,
     }),
   }),
 });
