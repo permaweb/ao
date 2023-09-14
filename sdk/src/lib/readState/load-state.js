@@ -90,7 +90,9 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
     if (!ctx.tags[INIT_STATE_TAG]) {
       return Rejected(ctx);
     }
-    return Resolved(JSON.parse(ctx.tags[INIT_STATE_TAG])).map(logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`));
+    return Resolved(JSON.parse(ctx.tags[INIT_STATE_TAG])).map(
+      logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`),
+    );
   }
 
   function maybeInitStateTx(ctx) {
@@ -200,7 +202,9 @@ function getMostRecentStateWith({ db, logger: _logger }) {
     db.findLatestInteraction({ id, to })
       .map(
         logger.tap(
-          `Checked for cached interaction for contract "${id}" to sortKey "${to}"`,
+          `Checked for cached interaction for contract "${id}" to sortKey "${
+            to || "latest"
+          }"`,
         ),
       )
       .chain((interaction) => {
@@ -214,10 +218,14 @@ function getMostRecentStateWith({ db, logger: _logger }) {
       })
       .bimap(
         logger.tap(
-          `No cached interaction found for contract "${id}" to sortKey "${to}"`,
+          `No cached interaction found for contract "${id}" to sortKey "${
+            to || "latest"
+          }"`,
         ),
         logger.tap(
-          `Found cached interaction for contract "${id}" to sortKey "${to}": %O`,
+          `Found cached interaction for contract "${id}" to sortKey "${
+            to || "latest"
+          }": %O`,
         ),
       );
 }

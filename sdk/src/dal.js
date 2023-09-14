@@ -49,7 +49,7 @@ const cachedInteractionSchema = z.object({
 
 export const dbClientSchema = z.object({
   findLatestInteraction: z.function()
-    .args(z.object({ id: z.string(), to: z.string() }))
+    .args(z.object({ id: z.string(), to: z.string().optional() }))
     .returns(z.promise(cachedInteractionSchema)),
   saveInteraction: z.function()
     .args(cachedInteractionSchema)

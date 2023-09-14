@@ -3,7 +3,11 @@ import assert from "node:assert";
 
 import { createLogger } from "../logger.js";
 import { dbClientSchema } from "../dal.js";
-import { findLatestInteractionWith, saveInteractionWith } from "./pouchdb.js";
+import {
+  COLLATION_SEQUENCE_MAX_CHAR,
+  findLatestInteractionWith,
+  saveInteractionWith,
+} from "./pouchdb.js";
 
 const logger = createLogger("db");
 
@@ -16,7 +20,12 @@ describe("pouchdb", () => {
           pouchDb: {
             find: async (op) => {
               assert.deepStrictEqual(op, {
-                selector: { _id: { $lte: "contract-123,sortkey-910" } },
+                selector: {
+                  _id: {
+                    $gte: "contract-123",
+                    $lte: "contract-123,sortkey-910",
+                  },
+                },
                 sort: [{ _id: "desc" }],
                 limit: 1,
               });
@@ -40,6 +49,51 @@ describe("pouchdb", () => {
       const res = await findLatestInteraction({
         id: "contract-123",
         to: "sortkey-910",
+      });
+
+      assert.equal(res.sortKey, "sortkey-890");
+      assert.equal(res.parent, "contract-123");
+      assert.equal(res.parent, "contract-123");
+      assert.deepStrictEqual(res.action, { input: { function: "noop" } });
+      assert.deepStrictEqual(res.output, { state: { foo: "bar" } });
+      assert.equal(res.createdAt.toISOString(), createdAt);
+    });
+
+    test("without 'to', return the lastest interaction using collation sequence max char", async () => {
+      const createdAt = new Date().toISOString();
+      const findLatestInteraction = dbClientSchema.shape.findLatestInteraction
+        .parse(findLatestInteractionWith({
+          pouchDb: {
+            find: async (op) => {
+              assert.deepStrictEqual(op, {
+                selector: {
+                  _id: {
+                    $gte: "contract-123",
+                    $lte: `contract-123,${COLLATION_SEQUENCE_MAX_CHAR}`,
+                  },
+                },
+                sort: [{ _id: "desc" }],
+                limit: 1,
+              });
+              return {
+                docs: [
+                  {
+                    _id: "contract-123,sortkey-890",
+                    sortKey: "sortkey-890",
+                    parent: "contract-123",
+                    action: { input: { function: "noop" } },
+                    output: { state: { foo: "bar" } },
+                    createdAt,
+                  },
+                ],
+              };
+            },
+          },
+          logger,
+        }));
+
+      const res = await findLatestInteraction({
+        id: "contract-123",
       });
 
       assert.equal(res.sortKey, "sortkey-890");

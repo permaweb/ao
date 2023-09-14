@@ -1,5 +1,5 @@
 import { fromPromise, of, Rejected, Resolved } from "hyper-async";
-import { __, always, applySpec, head, prop } from "ramda";
+import { __, always, applySpec, head, prop, tap } from "ramda";
 import { z } from "zod";
 
 import PouchDb from "pouchdb";
@@ -50,17 +50,47 @@ const cachedInteractionDocSchema = z.object({
   ),
 });
 
-function createRangeKey({ contractId, sortKey }) {
-  return [contractId, sortKey || ""].join(",");
+/**
+ * PouchDB does Comparison of string using ICU which implements the Unicode Collation Algorithm,
+ * giving a dictionary sorting of keys.
+ *
+ * This can give surprising results if you were expecting ASCII ordering.
+ * See https://docs.couchdb.org/en/stable/ddocs/views/collation.html#collation-specification
+ *
+ * So we use a high value unicode character to terminate a range query prefix.
+ * This will cause only string with a given prefix to match a range query
+ */
+export const COLLATION_SEQUENCE_MAX_CHAR = "\ufff0";
+
+function createDocId({ contractId, sortKey }) {
+  return [contractId, sortKey].join(",");
+}
+
+function createSelector({ contractId, to }) {
+  /**
+   * By using the max collation sequence, this will give us all docs whose _id
+   * is prefixed with the contract id
+   */
+  const selector = {
+    _id: {
+      $gte: contractId,
+      $lte: createDocId({ contractId, sortKey: COLLATION_SEQUENCE_MAX_CHAR }),
+    },
+  };
+  /**
+   * overwrite upper range with actual sortKey, since we have it
+   */
+  if (to) selector._id.$lte = createDocId({ contractId, sortKey: to });
+  return selector;
 }
 
 export function findLatestInteractionWith(
   { pouchDb },
 ) {
   return ({ id, to }) => {
-    return of({ contractId: id, sortKey: to })
-      .map(createRangeKey)
-      .chain(fromPromise((rangeKey) => {
+    return of({ contractId: id, to })
+      .map(createSelector)
+      .chain(fromPromise((selector) => {
         /**
          * Find the most recent interaction that produced state:
          * - sort key less than or equal to the sort key we're interested in
@@ -68,7 +98,7 @@ export function findLatestInteractionWith(
          * This will give us the cached most recent interaction that produced a state change
          */
         return pouchDb.find({
-          selector: { _id: { $lte: rangeKey } },
+          selector,
           sort: [{ _id: "desc" }],
           limit: 1,
         }).then((res) => {
@@ -107,7 +137,7 @@ export function saveInteractionWith(
          * is used as the _id for the record
          */
         _id: (interaction) =>
-          createRangeKey({
+          createDocId({
             contractId: interaction.parent,
             sortKey: interaction.sortKey,
           }),

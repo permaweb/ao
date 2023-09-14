@@ -81,9 +81,12 @@ export function readStateWith(
       .chain(loadState)
       .chain(loadActions)
       .chain(evaluate)
-      .map(logger.tap("AFTER loadActions %O"))
       .map((ctx) => ctx.output)
-      .map(logger.tap("AFTER output %O"))
+      .map(
+        logger.tap(
+          `readState result for contract ${contractId} to sortKey ${sortKeyHeight}: %O`,
+        ),
+      )
       .toPromise();
   };
 }
