@@ -47,10 +47,13 @@ const actionsSchema = z.object({
  * @param {Env} env
  * @returns {LoadActions}
  */
-export function loadActionsWith({ loadInteractions }) {
+export function loadActionsWith({ loadInteractions, logger: _logger }) {
+  const logger = _logger.child("loadActions");
+
   return (ctx) =>
     of({ id: ctx.id, from: ctx.from, to: ctx.to })
       .chain(({ id, to, from }) => loadInteractions({ id, from, to }))
       .map(assoc("actions", __, ctx))
-      .map(actionsSchema.parse);
+      .map(actionsSchema.parse)
+      .map(logger.tap(`Adding actions to ctx %O`));
 }
