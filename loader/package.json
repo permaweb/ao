@@ -13,6 +13,9 @@
     "esbuild": "^0.19.2",
     "typescript": "^5.2.2"
   },
+  "files": [
+    "./dist"
+  ],
   "scripts": {
     "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
     "build:src": "node esbuild.js",
