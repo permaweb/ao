@@ -3,7 +3,10 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { Resolved } from "hyper-async";
 
+import { createLogger } from "../../logger.js";
 import { evaluateWith } from "./evaluate.js";
+
+const logger = createLogger("@permaweb/ao-sdk:readState");
 
 describe("evaluate", () => {
   test("evaluate state and add output to context", async () => {
@@ -11,6 +14,7 @@ describe("evaluate", () => {
       db: {
         saveInteraction: (interaction) => Resolved(interaction),
       },
+      logger,
     };
 
     const evaluate = evaluateWith(env);
@@ -50,6 +54,7 @@ describe("evaluate", () => {
           return Resolved();
         },
       },
+      logger,
     };
 
     const evaluate = evaluateWith(env);
@@ -94,6 +99,7 @@ describe("evaluate", () => {
         saveInteraction: (interaction) =>
           assert.fail("cache should not be interacted with on a noop of state"),
       },
+      logger,
     };
 
     const evaluate = evaluateWith(env);

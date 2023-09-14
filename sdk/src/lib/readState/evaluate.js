@@ -1,4 +1,4 @@
-import { __, assoc, assocPath, prop, reduce, reduced } from "ramda";
+import { __, assoc, assocPath, identity, prop, reduce, reduced } from "ramda";
 import { fromPromise, of, Rejected, Resolved } from "hyper-async";
 import HyperbeamLoader from "@permaweb/hyperbeam-loader";
 import { z } from "zod";
@@ -18,8 +18,11 @@ function addHandler(ctx) {
     .map((handle) => ({ handle, ...ctx }));
 }
 
-function cacheInteractionWith({ db }) {
-  return (interactions) => db.saveInteraction(interactions);
+function cacheInteractionWith({ db, logger }) {
+  return (interaction) =>
+    of(interaction)
+      .map(logger.tap(`Caching interaction %O`))
+      .chain(db.saveInteraction);
 }
 
 /**
@@ -39,7 +42,9 @@ function cacheInteractionWith({ db }) {
  * @returns {Evaluate}
  */
 export function evaluateWith(env) {
-  const cacheInteraction = cacheInteractionWith(env);
+  const logger = env.logger.child("evaluate");
+
+  const cacheInteraction = cacheInteractionWith({ ...env, logger });
 
   return (ctx) =>
     of(ctx)
@@ -51,6 +56,24 @@ export function evaluateWith(env) {
            */
           ($output, { action, sortKey }) =>
             $output
+              /**
+               * When an error occurs, we short circuit the reduce using
+               * ramda's 'reduced()' function, but since our accumulator is an Async,
+               * ramda's 'reduce' cannot natively short circuit the reduction.
+               *
+               * So we do it ourselves by unwrapping the output, and if the value
+               * is the 'reduced()' shape, then we immediatley reject, short circuiting the reduction
+               *
+               * See https://ramdajs.com/docs/#reduced
+               * check copied from ramda's internal reduced check impl:
+               * https://github.com/ramda/ramda/blob/afe98b03c322fc4d22742869799c9f2796c79744/source/internal/_xReduce.js#L10C11-L10C11
+               */
+              .chain((output) => {
+                if (output && output["@@transducer/reduced"]) {
+                  return Rejected(output["@@transducer/value"]);
+                }
+                return Resolved(output);
+              })
               .map(prop("state"))
               .chain((state) =>
                 of(state)
@@ -80,6 +103,14 @@ export function evaluateWith(env) {
                      */
                     return Resolved({ state, ...output });
                   })
+              )
+              .bimap(
+                logger.tap(
+                  `Error occurred when applying interaction with sortKey "${sortKey}" to contract "${ctx.id}"`,
+                ),
+                logger.tap(
+                  `Applied interaction with sortKey "${sortKey}" to contract "${ctx.id}"`,
+                ),
               )
               /**
                * Create a new interaction to be cached in the local db

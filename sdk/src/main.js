@@ -80,7 +80,6 @@ export function readStateWith(
       .chain(loadSource)
       .chain(loadState)
       .chain(loadActions)
-      .map(logger.tap("AFTER loadActions %O"))
       .chain(evaluate)
       .map(logger.tap("AFTER loadActions %O"))
       .map((ctx) => ctx.output)
