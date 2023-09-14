@@ -1,10 +1,10 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { Resolved } from "hyper-async";
 
 const CONTRACT = "SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY";
 
 import { loadActionsWith } from "./load-actions.js";
-import { Resolved } from "hyper-async";
 
 describe("load-actions", () => {
   test("return actions", async () => {

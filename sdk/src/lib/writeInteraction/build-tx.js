@@ -1,4 +1,4 @@
-import { of, fromPromise} from "hyper-async";
+import { of } from "hyper-async";
 import { z } from "zod";
 import { append, assoc, __ } from "ramda";
 
@@ -32,14 +32,14 @@ const tagSchema = z.array(z.object({
  */
 function buildTagsWith() {
     return (ctx) => {
-      return of(ctx.tags)
-        .map(append({name: "App-Name", value: "SmartWeaveAction"}))
-        .map(append({name: "App-Version", value: "0.3.0"}))
-        .map(append({name: "Contract", value: ctx.id}))
-        .map(append({name: "Input", value: JSON.stringify(ctx.input)}))
-        .map(append({name: "SDK", value: "ao"}))
-        .map(tagSchema.parse)
-        .map(assoc('tags', __, ctx));
+        return of(ctx.tags)
+            .map(append({ name: "App-Name", value: "SmartWeaveAction" }))
+            .map(append({ name: "App-Version", value: "0.3.0" }))
+            .map(append({ name: "Contract", value: ctx.id }))
+            .map(append({ name: "Input", value: JSON.stringify(ctx.input) }))
+            .map(append({ name: "SDK", value: "ao" }))
+            .map(tagSchema.parse)
+            .map(assoc('tags', __, ctx));
     };
 }
 
@@ -52,9 +52,9 @@ function buildTagsWith() {
  */
 function buildDataWith() {
     return (ctx) => {
-      return of(ctx)
-        .map(() => Math.random().toString().slice(-4))
-        .map(assoc('data', __, ctx));
+        return of(ctx)
+            .map(() => Math.random().toString().slice(-4))
+            .map(assoc('data', __, ctx));
     };
 }
 
@@ -68,9 +68,9 @@ function buildDataWith() {
  */
 function signWith(env) {
     return (ctx) => {
-      return of(ctx)
-        .map(env.sequencer.signInteraction)
-        .map(assoc('signedData', __, ctx))
+        return of(ctx)
+            .map(env.sequencer.signInteraction)
+            .map(assoc('signedData', __, ctx))
     };
 }
 

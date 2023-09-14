@@ -1,8 +1,8 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
+import { Resolved } from "hyper-async";
 
 import { loadStateWith } from "./load-state.js";
-import { Resolved } from "hyper-async";
 
 const CONTRACT = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
 

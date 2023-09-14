@@ -7,13 +7,17 @@ import {
   loadTransactionMetaWith,
   sequencerClientSchema,
 } from "./dal.js";
-import { loadSourceWith } from "./lib/load-src.js";
-import { loadStateWith } from "./lib/load-state.js";
-import { loadActionsWith } from "./lib/load-actions.js";
-import { evaluateWith } from "./lib/evaluate.js";
-import { verifyContractWith } from "./lib/verify-contract.js";
-import { verifyInputWith } from "./lib/verify-input.js";
-import { buildTxWith } from "./lib/build-tx.js";
+
+// readState
+import { loadSourceWith } from "./lib/readState/load-src.js";
+import { loadStateWith } from "./lib/readState/load-state.js";
+import { loadActionsWith } from "./lib/readState/load-actions.js";
+import { evaluateWith } from "./lib/readState/evaluate.js";
+
+// writeInteraction
+import { verifyContractWith } from "./lib/writeInteraction/verify-contract.js";
+import { verifyInputWith } from "./lib/writeInteraction/verify-input.js";
+import { buildTxWith } from "./lib/writeInteraction/build-tx.js";
 
 /**
  * @typedef Env
