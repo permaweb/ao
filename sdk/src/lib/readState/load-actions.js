@@ -2,7 +2,7 @@ import { of } from "hyper-async";
 import { __, assoc } from "ramda";
 import { z } from "zod";
 
-import { interactionSchema } from "../../model.js";
+import { interactionSchema } from "../../dal.js";
 
 /**
  * The result that is produced from this step

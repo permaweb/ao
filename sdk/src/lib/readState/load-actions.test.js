@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { Resolved } from "hyper-async";
 
-import { interactionSchema } from "../../model.js";
+import { interactionSchema } from "../../dal.js";
 import { createLogger } from "../../logger.js";
 import { loadActionsWith } from "./load-actions.js";
 
