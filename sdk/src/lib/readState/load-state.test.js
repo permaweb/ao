@@ -12,7 +12,7 @@ describe("load-state", () => {
   test("add the most recent state from cache", async () => {
     const loadState = loadStateWith({
       db: {
-        findLatestInteraction: ({ id, _to }) =>
+        findLatestEvaluation: ({ id, _to }) =>
           Resolved({
             id: "123_sortkey",
             output: { state: { foo: "bar" } },
@@ -31,7 +31,7 @@ describe("load-state", () => {
   test("add the initial state from Init-State", async () => {
     const loadState = loadStateWith({
       db: {
-        findLatestInteraction: ({ _id, _to }) => Resolved(undefined),
+        findLatestEvaluation: ({ _id, _to }) => Resolved(undefined),
       },
       loadTransactionData: (_id) => Resolved(assert.fail("unreachable")),
       loadTransactionMeta: (_id) =>
@@ -57,7 +57,7 @@ describe("load-state", () => {
 
     const loadState = loadStateWith({
       db: {
-        findLatestInteraction: ({ _id, _to }) => Resolved(undefined),
+        findLatestEvaluation: ({ _id, _to }) => Resolved(undefined),
       },
       loadTransactionData: (id) => {
         assert.equal(id, initStateTx);
@@ -84,7 +84,7 @@ describe("load-state", () => {
   test("add the initial state from transaction data", async () => {
     const loadState = loadStateWith({
       db: {
-        findLatestInteraction: ({ _id, _to }) => Resolved(undefined),
+        findLatestEvaluation: ({ _id, _to }) => Resolved(undefined),
       },
       loadTransactionData: (id) => {
         assert.equal(id, CONTRACT);

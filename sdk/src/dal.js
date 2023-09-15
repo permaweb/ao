@@ -2,57 +2,14 @@ import { fromPromise, of } from "hyper-async";
 import { __, path } from "ramda";
 import { z } from "zod";
 
-export const interactionSchema = z.object({
-  action: z.object({
-    function: z.string(),
-  }).passthrough(),
-  sortKey: z.string(),
-});
-
-const cachedInteractionSchema = z.object({
-  /**
-   * The sort key of the interaction
-   */
-  sortKey: z.string().min(1),
-  /**
-   * the id of the contract that the interaction was performed upon
-   */
-  parent: z.string().min(1),
-  /**
-   * The date when this record was created, effectively
-   * when this record was cached
-   *
-   * not to be confused with when the transaction was placed on chain
-   */
-  cachedAt: z.preprocess(
-    (
-      arg,
-    ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
-    z.date(),
-  ),
-  /**
-   * The action performed by the interaction
-   */
-  action: z.record(z.any()),
-  /**
-   * The output received after applying the interaction
-   * to the previous state.
-   *
-   * See https://github.com/ArweaveTeam/SmartWeave/blob/master/CONTRACT-GUIDE.md#contract-format-and-interface
-   * for shape
-   */
-  output: z.object({
-    state: z.record(z.any()).optional(),
-    result: z.record(z.any()).optional(),
-  }),
-});
+import { evaluationSchema, interactionSchema } from "./model.js";
 
 export const dbClientSchema = z.object({
-  findLatestInteraction: z.function()
+  findLatestEvaluation: z.function()
     .args(z.object({ id: z.string(), to: z.string().optional() }))
-    .returns(z.promise(cachedInteractionSchema.or(z.undefined()))),
-  saveInteraction: z.function()
-    .args(cachedInteractionSchema)
+    .returns(z.promise(evaluationSchema.or(z.undefined()))),
+  saveEvaluation: z.function()
+    .args(evaluationSchema)
     .returns(z.promise(z.any())),
 });
 

@@ -65,8 +65,8 @@ export function readStateWith(
     loadTransactionData,
     loadInteractions: fromPromise(sequencer.loadInteractions),
     db: {
-      findLatestInteraction: fromPromise(db.findLatestInteraction),
-      saveInteraction: fromPromise(db.saveInteraction),
+      findLatestEvaluation: fromPromise(db.findLatestEvaluation),
+      saveEvaluation: fromPromise(db.saveEvaluation),
     },
     logger,
   };

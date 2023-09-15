@@ -22,11 +22,12 @@ test("readState", async () => {
     GATEWAY_URL,
     // TODO: we should stub these for the test
     db: {
-      findLatestInteraction: pouchDbClient.findLatestInteractionWith({
-        pouchDb: pouchDbClient.pouchDb,
-        logger,
-      }),
-      saveInteraction: pouchDbClient.saveInteractionWith({
+      findLatestEvaluation: pouchDbClient
+        .findLatestEvaluationWith({
+          pouchDb: pouchDbClient.pouchDb,
+          logger,
+        }),
+      saveEvaluation: pouchDbClient.saveEvaluationWith({
         pouchDb: pouchDbClient.pouchDb,
         logger,
       }),

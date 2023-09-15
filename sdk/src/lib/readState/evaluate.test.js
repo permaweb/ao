@@ -12,7 +12,7 @@ describe("evaluate", () => {
   test("evaluate state and add output to context", async () => {
     const env = {
       db: {
-        saveInteraction: (interaction) => Resolved(interaction),
+        saveEvaluation: (interaction) => Resolved(interaction),
       },
       logger,
     };
@@ -28,13 +28,14 @@ describe("evaluate", () => {
         {
           action: { input: { function: "hello" } },
           sortKey: "a",
+          SWGlobal: {},
         },
         {
           action: { input: { function: "world" } },
           sortKey: "b",
+          SWGlobal: {},
         },
       ],
-      SWGlobal: {},
     };
 
     const res = await evaluate(ctx).toPromise();
@@ -49,7 +50,7 @@ describe("evaluate", () => {
     let cacheCount = 0;
     const env = {
       db: {
-        saveInteraction: (interaction) => {
+        saveEvaluation: (interaction) => {
           cacheCount++;
           return Resolved();
         },
@@ -68,25 +69,29 @@ describe("evaluate", () => {
         {
           action: { caller: "1", input: { function: "balance" } },
           sortKey: "a",
+          SWGlobal: {},
         },
         {
           action: { caller: "1", input: { function: "balance" } },
           sortKey: "b",
+          SWGlobal: {},
         },
         {
           action: { caller: "1", input: { function: "balance" } },
           sortKey: "c",
+          SWGlobal: {},
         },
         {
           action: { caller: "1", input: { function: "balance" } },
           sortKey: "d",
+          SWGlobal: {},
         },
         {
           action: { caller: "1", input: { function: "balance" } },
           sortKey: "e",
+          SWGlobal: {},
         },
       ],
-      SWGlobal: {},
     };
 
     const res = await evaluate(ctx).toPromise();
@@ -96,7 +101,7 @@ describe("evaluate", () => {
   test("noop the initial state", async () => {
     const env = {
       db: {
-        saveInteraction: (interaction) =>
+        saveEvaluation: (interaction) =>
           assert.fail("cache should not be interacted with on a noop of state"),
       },
       logger,
@@ -110,7 +115,6 @@ describe("evaluate", () => {
       src: readFileSync("./test/state-contract.wasm"),
       state: { balances: { "1": 1 } },
       actions: [],
-      SWGlobal: {},
     };
 
     const { output } = await evaluate(ctx).toPromise();

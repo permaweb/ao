@@ -16,8 +16,6 @@ import { z } from "zod";
 import { createData } from "warp-arbundles";
 export { createData };
 
-import { interactionSchema } from "../dal.js";
-
 /**
  * An implementation of the Sequencer client using
  * the Warp Sequencer
@@ -43,25 +41,51 @@ import { interactionSchema } from "../dal.js";
 export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
   // TODO: create a dataloader and use that to batch load interactions
 
+  /**
+   * Some values are coming back from the sequencer as strings,
+   * despite the values actually being numbers when pulled from the gateway
+   *
+   * We treat the Arweave gateway as the ultimate truth for data integrity,
+   * so we will coerce those values to numbers, when encountered, using this schema
+   */
+  const stringfiedNumberSchema = z.coerce.number();
+
   const interactionsPageSchema = z.object({
     paging: z.record(z.any()),
     interactions: z.array(z.object({
+      /**
+       * The interaction coming from the sequencer is to used
+       * to not only retrieve the interaction performed (via the 'Input' tag)
+       *
+       * but also to construct the SWGlobal object passed as the 3rd argument
+       * to the Contract handle function
+       *
+       * @see {@link toSwGlobal} for mapping of sequencer interaction -> SWGlobal
+       */
       interaction: z.object({
+        id: z.string(),
+        owner: z.object({
+          address: z.string(),
+        }),
+        /**
+         * This was sometimes null on the sequencer response,
+         * so default to empty string
+         */
+        recipient: z.string().default(""),
+        quantity: z.object({
+          winston: stringfiedNumberSchema,
+        }),
+        fee: z.object({
+          winston: stringfiedNumberSchema,
+        }),
         tags: z.array(z.object({
           name: z.string(),
           value: z.string(),
         })),
         block: z.object({
           id: z.string(),
-          /**
-           * These come back as strings from the sequencer
-           * despite the values actually being numbers
-           * on the graph
-           *
-           * So we will coerce them to a number
-           */
-          height: z.coerce.number(),
-          timestamp: z.coerce.number(),
+          height: stringfiedNumberSchema,
+          timestamp: stringfiedNumberSchema,
         }),
         sortKey: z.string(),
       }),
@@ -116,6 +140,28 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
   });
 
   /**
+   * Reference shape pulled from
+   * https://github.com/ArweaveTeam/SmartWeave/blob/master/CONTRACT-GUIDE.md#smartweave-global-api
+   *
+   * But without the function apis
+   */
+  const toSwGlobal = (interaction) => ({
+    transaction: applySpec({
+      id: path(["id"]),
+      owner: path(["owner", "address"]),
+      target: path(["recipient"]),
+      quantity: path(["quantity", "winston"]),
+      reward: path(["fee", "winston"]),
+      tags: path(["tags"]),
+    })(interaction),
+    block: applySpec({
+      height: path(["block", "height"]),
+      indep_hash: path(["block", "id"]),
+      timestamp: path(["block", "timestamp"]),
+    })(interaction),
+  });
+
+  /**
    * See https://academy.warp.cc/docs/gateway/http/get/interactions
    */
   return (ctx) =>
@@ -146,10 +192,14 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
           .then(prop("interactions"))
           .then((interactions) =>
             transduce(
-              // { interaction: { tags: [ { name, value }] } }
+              // { interaction: { ..., tags: [ { name, value }] } }
               compose(
                 // [ { name, value } ]
                 map(path(["interaction"])),
+                /**
+                 * Build the actual expected shape
+                 * of an action
+                 */
                 map(applySpec({
                   sortKey: prop("sortKey"),
                   action: pipe(
@@ -161,6 +211,13 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
                     // { function: "balance" }
                     (input) => JSON.parse(input),
                   ),
+                  /**
+                   * TODO: is this the right layer to be mapping this?
+                   * Should it be done in BL, or is it the responsibility of the client?
+                   *
+                   * For now, we will keep it a responsibility of the client impl
+                   */
+                  SWGlobal: toSwGlobal,
                 })),
               ),
               (acc, input) => {
@@ -171,7 +228,6 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
               interactions,
             )
           )
-          .then(z.array(interactionSchema).parse)
       )).toPromise();
 }
 

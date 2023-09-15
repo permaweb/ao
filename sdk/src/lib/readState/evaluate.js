@@ -1,8 +1,15 @@
-import { __, assoc, assocPath, identity, prop, reduce, reduced } from "ramda";
+import { __, assoc, assocPath, prop, reduce, reduced } from "ramda";
 import { fromPromise, of, Rejected, Resolved } from "hyper-async";
 import HyperbeamLoader from "@permaweb/hyperbeam-loader";
 import { z } from "zod";
 
+/**
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
 const outputSchema = z.object({
   output: z.record(z.any()),
 }).passthrough();
@@ -22,7 +29,7 @@ function cacheInteractionWith({ db, logger }) {
   return (interaction) =>
     of(interaction)
       .map(logger.tap(`Caching interaction %O`))
-      .chain(db.saveInteraction);
+      .chain(db.saveEvaluation);
 }
 
 /**
@@ -54,7 +61,7 @@ export function evaluateWith(env) {
           /**
            * See load-actions for incoming shape
            */
-          ($output, { action, sortKey }) =>
+          ($output, { action, sortKey, SWGlobal }) =>
             $output
               /**
                * When an error occurs, we short circuit the reduce using
@@ -77,15 +84,14 @@ export function evaluateWith(env) {
               .map(prop("state"))
               .chain((state) =>
                 of(state)
-                  .chain(fromPromise((state) =>
-                    ctx.handle(state, action, ctx.SWGlobal)
-                  ))
+                  .chain(
+                    fromPromise((state) => ctx.handle(state, action, SWGlobal)),
+                  )
                   .bichain(
                     /**
                      * Map thrown error to a result.error
                      */
-                    (err) =>
-                      Resolved(assocPath(["result", "error"], err, {})),
+                    (err) => Resolved(assocPath(["result", "error"], err, {})),
                     Resolved,
                   )
                   .chain((output) => {

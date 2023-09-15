@@ -9,11 +9,6 @@ const transactionSchema = z.object({
   })),
 });
 
-const contractSrcIdSchema = z.string().min(
-  1,
-  { message: "Contract-Src tag was not present on the transaction" },
-);
-
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -71,7 +66,12 @@ function getSourceIdWith({ loadTransactionMeta, logger }) {
       .map(path(["tags"]))
       .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
       .map(prop("Contract-Src"))
-      .map(contractSrcIdSchema.parse)
+      .map(
+        z.string().min(
+          1,
+          { message: "Contract-Src tag was not present on the transaction" },
+        ).parse,
+      )
       .map(logger.tap("Loaded Contract-Src %s"));
   };
 }

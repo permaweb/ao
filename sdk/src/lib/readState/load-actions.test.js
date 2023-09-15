@@ -2,19 +2,46 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { Resolved } from "hyper-async";
 
+import { interactionSchema } from "../../model.js";
 import { createLogger } from "../../logger.js";
 import { loadActionsWith } from "./load-actions.js";
 
 const CONTRACT = "SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY";
 const logger = createLogger("@permaweb/ao-sdk:readState");
 
+const SWGlobal = {
+  transaction: {
+    id: "tx-123",
+    owner: "owner-123",
+    target: "target-123",
+    quantity: 123,
+    reward: 123,
+    tags: [
+      { name: "foo", value: "bar" },
+    ],
+  },
+  block: {
+    height: 123,
+    indep_hash: "hash-123",
+    timestamp: new Date().getTime(),
+  },
+};
+
 describe("load-actions", () => {
-  test("return actions", async () => {
+  test("return actions in correct shape", async () => {
     const loadActions = loadActionsWith({
       loadInteractions: ({ id, from, to }) =>
         Resolved([
-          { action: { function: "createOrder" }, sortKey: "abcd,123,fsdf" },
-          { action: { function: "createOrder" }, sortKey: "fdsa,456,cdskjfs" },
+          {
+            action: { function: "createOrder" },
+            sortKey: "abcd,123,fsdf",
+            SWGlobal,
+          },
+          {
+            action: { function: "createOrder" },
+            sortKey: "fdsa,456,cdskjfs",
+            SWGlobal,
+          },
         ]),
       logger,
     });
@@ -23,8 +50,7 @@ describe("load-actions", () => {
     assert.ok(result.id);
 
     const [firstInteraction] = result.actions;
-    assert.ok(firstInteraction.action);
-    assert.ok(firstInteraction.sortKey);
+    assert.ok(interactionSchema.safeParse(firstInteraction).success);
   });
 
   test("throw if actions are not in expected shape", async () => {

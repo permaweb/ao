@@ -27,7 +27,7 @@ const transactionSchema = z.object({
     id: z.string(),
     height: z.coerce.number(),
     timestamp: z.coerce.number(),
-  }),
+  }).optional(),
 });
 
 /**
@@ -205,13 +205,7 @@ function getMostRecentStateWith({ db, logger: _logger }) {
   const logger = _logger.child("getMostRecentState");
 
   return ({ id, to }) =>
-    db.findLatestInteraction({ id, to })
-      .map(
-        logger.tap(
-          `Checked for cached interaction for contract "${id}" to sortKey "${to || "latest"
-          }"`,
-        ),
-      )
+    db.findLatestEvaluation({ id, to })
       .chain((interaction) => {
         if (!interaction) return Rejected({ id, to });
         return Resolved({
@@ -224,12 +218,14 @@ function getMostRecentStateWith({ db, logger: _logger }) {
       })
       .bimap(
         logger.tap(
-          `No cached interaction found for contract "${id}" to sortKey "${to || "latest"
-          }"`,
+          `No cached interaction found for contract "%s" to sortKey "%s"`,
+          id,
+          to || "latest",
         ),
         logger.tap(
-          `Found cached interaction for contract "${id}" to sortKey "${to || "latest"
-          }": %O`,
+          `Found cached interaction for contract "%s" to sortKey "%s": %O`,
+          id,
+          to || "latest",
         ),
       );
 }

@@ -2,6 +2,8 @@ import { of } from "hyper-async";
 import { __, assoc } from "ramda";
 import { z } from "zod";
 
+import { interactionSchema } from "../../model.js";
+
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -10,14 +12,7 @@ import { z } from "zod";
  * is always added to context
  */
 const actionsSchema = z.object({
-  actions: z.array(
-    z.object({
-      action: z.object({
-        function: z.string(),
-      }).passthrough(),
-      sortKey: z.string(),
-    }),
-  ),
+  actions: z.array(interactionSchema),
 }).passthrough();
 
 /**

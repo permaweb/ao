@@ -84,7 +84,7 @@ function createSelector({ contractId, to }) {
   return selector;
 }
 
-export function findLatestInteractionWith(
+export function findLatestEvaluationWith(
   { pouchDb },
 ) {
   return ({ id, to }) => {
@@ -125,10 +125,10 @@ export function findLatestInteractionWith(
   };
 }
 
-export function saveInteractionWith(
+export function saveEvaluationWith(
   { pouchDb, logger: _logger },
 ) {
-  const logger = _logger.child("saveInteraction");
+  const logger = _logger.child("saveEvaluation");
   return (interaction) => {
     return of(interaction)
       .map(applySpec({
