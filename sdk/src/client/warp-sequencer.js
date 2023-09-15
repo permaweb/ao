@@ -25,6 +25,8 @@ export { createData };
  * @typedef Env3
  * @property {fetch} fetch
  * @property {string} SEQUENCER_URL
+ * @property {any} logger
+ * @property {number} pageSize
  *
  * @typedef LoadInteractionsArgs
  * @property {string} id - the contract id
@@ -38,9 +40,11 @@ export { createData };
  * @param {Env3} env
  * @returns {LoadInteractions}
  */
-export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
+export function loadInteractionsWith(
+  { fetch, SEQUENCER_URL, logger: _logger, pageSize },
+) {
   // TODO: create a dataloader and use that to batch load interactions
-
+  const logger = _logger.child("loadInteractions");
   /**
    * Some values are coming back from the sequencer as strings,
    * despite the values actually being numbers when pulled from the gateway
@@ -161,35 +165,61 @@ export function loadInteractionsWith({ fetch, SEQUENCER_URL }) {
     })(interaction),
   });
 
+  const fetchAllPages = ({ id, from, to, limit }) => {
+    return async function fetchPage({ paging, interactions }) {
+      /**
+       * Either have reached the end and resolve, or fetch the next page and recurse
+       */
+      // deno-fmt-ignore-start
+      return paging.page >= paging.pages ? { paging, interactions } : Promise.resolve(paging.page + 1)
+        .then(logger.tap(`Loading next page of %s interactions for contract "%s" from "%s" to "%s" - page %s`, limit, id, from, to || 'latest'))
+        .then((nextPage) => fetch(`${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=${nextPage}&limit=${limit}`))
+        .then(res => res.json())
+        .then(fetchPage)
+        .then(({ paging, interactions: i }) => ({ paging, interactions: interactions.concat(i) }))
+      // deno-fmt-ignore-end
+    };
+  };
+
   /**
    * See https://academy.warp.cc/docs/gateway/http/get/interactions
+   * A couple quirks to highlight here:
+   *
+   * - The sequencer returns interactions sorted by block height, DESCENDING order
+   *   so in order to fold interactions, chronologically, we need to reverse the order of interactions
+   *   prior to returning (see unshift instead of push in trasducer below)
+   *
+   * - The block height included in both to and from need to be left padded with 0's to reach 12 characters (See https://academy.warp.cc/docs/sdk/advanced/bundled-interaction#how-it-works)
+   *   (see padBlockHeight above or impl)
+   *
+   * - 'from' is inclusive
+   *
+   * - 'to' is non-inclusive IF only the block height is used at the sort key, so if we want to include interactions in the block at 'to', then we need to add a comma to the block height
+   *    (see mapBounds above where we add the comma). I believe this is just because of the way the range query is implemented underneath the hood in Warp Sequencer
    */
   return (ctx) =>
     of({ id: ctx.id, from: ctx.from, to: ctx.to })
       .map(mapBounds)
       .chain(fromPromise(({ id, from, to }) =>
         /**
-         * A couple quirks to highlight here:
-         *
-         * - The sequencer returns interactions sorted by block height, DESCENDING order
-         *   so in order to fold interactions, chronologically, we need to reverse the order of interactions
-         *   prior to returning (see unshift instead of push in trasducer below)
-         *
-         * - The block height included in both to and from need to be left padded with 0's to reach 12 characters (See https://academy.warp.cc/docs/sdk/advanced/bundled-interaction#how-it-works)
-         *   (see padBlockHeight above or impl)
-         *
-         * - 'from' is inclusive
-         *
-         * - 'to' is non-inclusive IF only the block height is used at the sort key, so if we want to include interactions in the block at 'to', then we need to add a comma to the block height
-         *    (see mapBounds above where we add the comma). I believe this is just because of the way the range query is implemented underneath the hood in Warp Sequencer
+         * Start by fetching the first page
          */
         fetch(
-          // TODO: need to be able to load multiple pages until all interactions are fetched
-          `${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}`,
-        )
-          .then((res) => res.json())
+          `${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=1&limit=${pageSize}`,
+        ).then((res) => res.json())
+          .then(fetchAllPages({ id, from, to, limit: pageSize }))
           .then(interactionsPageSchema.parse)
           .then(prop("interactions"))
+          .then((interactions) => {
+            logger(
+              `loaded %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
+              interactions.length,
+              id,
+              from,
+              to || "latest",
+            );
+            return interactions;
+          })
           .then((interactions) =>
             transduce(
               // { interaction: { ..., tags: [ { name, value }] } }

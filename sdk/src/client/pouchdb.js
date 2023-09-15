@@ -159,7 +159,7 @@ export function saveEvaluationWith(
               // No cached document found
               if (err.status === 404) {
                 logger(
-                  `No cached document found with _id %s. Caching interaction %O`,
+                  `No cached document found with _id %s. Caching evaluation %O`,
                   doc._id,
                   doc,
                 );
