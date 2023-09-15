@@ -25,10 +25,10 @@ function addHandler(ctx) {
     .map((handle) => ({ handle, ...ctx }));
 }
 
-function cacheInteractionWith({ db, logger }) {
-  return (interaction) =>
-    of(interaction)
-      .map(logger.tap(`Caching interaction %O`))
+function cacheEvaluationWith({ db, logger }) {
+  return (evaluation) =>
+    of(evaluation)
+      .map(logger.tap(`Caching evaluation %O`))
       .chain(db.saveEvaluation);
 }
 
@@ -39,7 +39,6 @@ function cacheInteractionWith({ db, logger }) {
  * @property {string} from - the initial state sortKey
  * @property {ArrayBuffer} src - the contract wasm as an array buffer
  * @property {Record<string, any>[]} action - an array of interactions to apply
- * @property {any} SWGlobal
  *
  * @callback Evaluate
  * @param {EvaluateArgs} args
@@ -51,7 +50,7 @@ function cacheInteractionWith({ db, logger }) {
 export function evaluateWith(env) {
   const logger = env.logger.child("evaluate");
 
-  const cacheInteraction = cacheInteractionWith({ ...env, logger });
+  const cacheEvaluation = cacheEvaluationWith({ ...env, logger });
 
   return (ctx) =>
     of(ctx)
@@ -122,7 +121,7 @@ export function evaluateWith(env) {
                * Create a new interaction to be cached in the local db
                */
               .chain((output) =>
-                cacheInteraction({
+                cacheEvaluation({
                   sortKey,
                   parent: ctx.id,
                   action,

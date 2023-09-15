@@ -201,29 +201,29 @@ function getSourceInitStateTagsWith({ loadTransactionMeta, logger: _logger }) {
  * @param {Env} env
  * @returns {LoadMostRecentState}
  */
-function getMostRecentStateWith({ db, logger: _logger }) {
+function getMostRecentEvaluationWith({ db, logger: _logger }) {
   const logger = _logger.child("getMostRecentState");
 
   return ({ id, to }) =>
     db.findLatestEvaluation({ id, to })
-      .chain((interaction) => {
-        if (!interaction) return Rejected({ id, to });
+      .chain((evaluation) => {
+        if (!evaluation) return Rejected({ id, to });
         return Resolved({
-          state: interaction.output.state,
-          result: interaction.output.result,
+          state: evaluation.output.state,
+          result: evaluation.output.result,
           // TODO: probably a better way to do this
-          cachedAt: interaction.cachedAt,
-          from: interaction.sortKey,
+          cachedAt: evaluation.cachedAt,
+          from: evaluation.sortKey,
         });
       })
       .bimap(
         logger.tap(
-          `No cached interaction found for contract "%s" to sortKey "%s"`,
+          `No cached evaluation found for contract "%s" at or below sortKey "%s"`,
           id,
           to || "latest",
         ),
         logger.tap(
-          `Found cached interaction for contract "%s" to sortKey "%s": %O`,
+          `Found a cached evaluation for contract "%s" at or below sortKey "%s": %O`,
           id,
           to || "latest",
         ),
@@ -249,13 +249,13 @@ export function loadStateWith(env) {
   const logger = env.logger.child("loadState");
   env = { ...env, logger };
 
-  const getMostRecentState = getMostRecentStateWith(env);
+  const getMostRecentEvaluation = getMostRecentEvaluationWith(env);
   const getSourceInitStateTags = getSourceInitStateTagsWith(env);
   const resolveState = resolveStateWith(env);
 
   return (ctx) => {
     return of({ id: ctx.id, to: ctx.to })
-      .bichain(Rejected, getMostRecentState)
+      .bichain(Rejected, getMostRecentEvaluation)
       .bichain(
         /**
          * No recent state was found in the local db, so we need
