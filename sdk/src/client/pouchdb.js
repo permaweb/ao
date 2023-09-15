@@ -33,7 +33,7 @@ const internalPouchDb = new PouchDb("ao-cache", { adapter: "websql" });
 
 export { internalPouchDb as pouchDb };
 
-const cachedInteractionDocSchema = z.object({
+const cachedEvaluationDocSchema = z.object({
   _id: z.string().min(1),
   sortKey: z.string().min(1),
   parent: z.string().min(1),
@@ -95,7 +95,7 @@ export function findLatestEvaluationWith(
          * Find the most recent interaction that produced state:
          * - sort key less than or equal to the sort key we're interested in
          *
-         * This will give us the cached most recent interaction that produced a state change
+         * This will give us the cached most recent interaction evaluation that produced a state change
          */
         return pouchDb.find({
           selector,
@@ -112,7 +112,7 @@ export function findLatestEvaluationWith(
        * Ensure the input matches the expected
        * shape
        */
-      .map(cachedInteractionDocSchema.parse)
+      .map(cachedEvaluationDocSchema.parse)
       .map(applySpec({
         sortKey: prop("sortKey"),
         parent: prop("parent"),
@@ -129,17 +129,17 @@ export function saveEvaluationWith(
   { pouchDb, logger: _logger },
 ) {
   const logger = _logger.child("saveEvaluation");
-  return (interaction) => {
-    return of(interaction)
+  return (evaluation) => {
+    return of(evaluation)
       .map(applySpec({
         /**
          * The contractId concatenated with the sortKey
          * is used as the _id for the record
          */
-        _id: (interaction) =>
+        _id: (evaluation) =>
           createDocId({
-            contractId: interaction.parent,
-            sortKey: interaction.sortKey,
+            contractId: evaluation.parent,
+            sortKey: evaluation.sortKey,
           }),
         sortKey: prop("sortKey"),
         parent: prop("parent"),
@@ -150,7 +150,7 @@ export function saveEvaluationWith(
       /**
        * Ensure the expected shape before writing to the db
        */
-      .map(cachedInteractionDocSchema.parse)
+      .map(cachedEvaluationDocSchema.parse)
       .chain((doc) =>
         of(doc)
           .chain(fromPromise((doc) => pouchDb.get(doc._id)))
@@ -174,8 +174,8 @@ export function saveEvaluationWith(
               ? of(found)
               : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
                 .bimap(
-                  logger.tap(`Encountered an error when caching interaction`),
-                  logger.tap(`Cached interaction`),
+                  logger.tap(`Encountered an error when caching evaluation`),
+                  logger.tap(`Cached evaluation`),
                 )
                 .bichain(Resolved, Resolved)
           )
