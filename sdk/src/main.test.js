@@ -33,7 +33,12 @@ test("readState", async () => {
       }),
     },
     sequencer: {
-      loadInteractions: loadInteractionsWith({ fetch, SEQUENCER_URL, logger, pageSize: 2500 }),
+      loadInteractions: loadInteractionsWith({
+        fetch,
+        SEQUENCER_URL,
+        logger,
+        pageSize: 2500,
+      }),
       writeInteractionWith: writeInteractionWith({ fetch, SEQUENCER_URL }),
     },
     logger,

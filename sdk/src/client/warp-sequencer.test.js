@@ -15,7 +15,7 @@ describe("warp-sequencer", () => {
         fetch,
         SEQUENCER_URL,
         logger: logger.child("readState:sequencer"),
-        pageSize: 2500
+        pageSize: 2500,
       });
 
       const res = await loadInteractions({

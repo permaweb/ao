@@ -165,15 +165,15 @@ export function loadInteractionsWith(
     })(interaction),
   });
 
-  const fetchAllPages = ({ id, from, to, limit }) => {
+  const fetchAllPages = ({ id, from, to }) => {
     return async function fetchPage({ paging, interactions }) {
       /**
        * Either have reached the end and resolve, or fetch the next page and recurse
        */
       // deno-fmt-ignore-start
       return paging.page >= paging.pages ? { paging, interactions } : Promise.resolve(paging.page + 1)
-        .then(logger.tap(`Loading next page of %s interactions for contract "%s" from "%s" to "%s" - page %s`, limit, id, from, to || 'latest'))
-        .then((nextPage) => fetch(`${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=${nextPage}&limit=${limit}`))
+        .then(logger.tap(`Loading next page of %s interactions for contract "%s" from "%s" to "%s" - page %s`, pageSize, id, from, to || 'latest'))
+        .then((nextPage) => fetch(`${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=${nextPage}&limit=${pageSize}`))
         .then(res => res.json())
         .then(fetchPage)
         .then(({ paging, interactions: i }) => ({ paging, interactions: interactions.concat(i) }))
@@ -207,7 +207,7 @@ export function loadInteractionsWith(
         fetch(
           `${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=1&limit=${pageSize}`,
         ).then((res) => res.json())
-          .then(fetchAllPages({ id, from, to, limit: pageSize }))
+          .then(fetchAllPages({ id, from, to }))
           .then(interactionsPageSchema.parse)
           .then(prop("interactions"))
           .then((interactions) => {
