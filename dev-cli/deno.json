@@ -8,16 +8,11 @@
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
     "toc": "deno run -A npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",
     "install-script": "deno run -A tools/create-install-script.js",
-    "install-locall": "./tools/local-install.sh"
+    "install-local": "./tools/local-install.sh"
   },
   "fmt": {
-    "include": [
-      "./"
-    ],
-    "exclude": [
-      "./src/icons",
-      "./example2"
-    ]
+    "include": ["./"],
+    "exclude": ["./src/icons", "./example2"]
   },
   "txMappings": {
     "binaries": {
