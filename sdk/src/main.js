@@ -85,9 +85,9 @@ export function readStateWith(
       .map((ctx) => ctx.output)
       .map(
         logger.tap(
-          `readState result for contract ${contractId} to sortKey ${
-            sortKeyHeight || "latest"
-          }: %O`,
+          `readState result for contract "%s" to sortKey "%s": %O`,
+          contractId,
+          sortKeyHeight || "latest",
         ),
       )
       .toPromise();

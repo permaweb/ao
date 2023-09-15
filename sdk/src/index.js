@@ -31,6 +31,8 @@ export const readState = readStateWith({
     loadInteractions: WarpSequencerClient.loadInteractionsWith({
       fetch,
       SEQUENCER_URL,
+      pageSize: 2500,
+      logger: logger.child("readState:sequencer"),
     }),
     writeInteraction: WarpSequencerClient.writeInteractionWith({
       fetch,
@@ -66,6 +68,8 @@ export const writeInteraction = writeInteractionWith({
     loadInteractions: WarpSequencerClient.loadInteractionsWith({
       fetch,
       SEQUENCER_URL,
+      pageSize: 2500,
+      logger: logger.child("writeInteraction:sequencer"),
     }),
     writeInteraction: WarpSequencerClient.writeInteractionWith({
       fetch,
