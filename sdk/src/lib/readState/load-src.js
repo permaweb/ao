@@ -2,16 +2,6 @@ import { fromPromise, of } from "hyper-async";
 import { __, applySpec, assoc, path, pick, pipe, prop, reduce } from "ramda";
 import { z } from "zod";
 
-const transactionSchema = z.object({
-  owner: z.object({
-    address: z.string(),
-  }),
-  tags: z.array(z.object({
-    name: z.string(),
-    value: z.string(),
-  })),
-});
-
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -19,7 +9,7 @@ const transactionSchema = z.object({
  * This is used to parse the output to ensure the correct shape
  * is always added to context
  */
-const srcSchema = z.object({
+const ctxSchema = z.object({
   owner: z.string(),
   src: z.any().refine((val) => !!val, {
     message: "contract source must be defined",
@@ -29,7 +19,7 @@ const srcSchema = z.object({
 /**
  * @callback LoadTransactionMeta
  * @param {string} id - the id of the transaction
- * @returns {Async<z.infer<typeof transactionSchema>>}
+ * @returns {Async<any>}
  *
  * @callback LoadTransaction
  * @param {string} id - the id of the transaction
@@ -66,7 +56,6 @@ function getSourceBufferWith({ loadTransactionData }) {
 function getContractMetaWith({ loadTransactionMeta, logger }) {
   return (id) => {
     return loadTransactionMeta(id)
-      .map(transactionSchema.parse)
       .map(pick(["owner", "tags"]))
       .map(applySpec({
         srcId: pipe(
@@ -112,7 +101,7 @@ export function loadSourceWith(env) {
       .chain(({ owner, srcId }) =>
         getSourceBuffer(srcId).map((src) => ({ ...ctx, src, owner }))
       )
-      .map(srcSchema.parse)
+      .map(ctxSchema.parse)
       .map(logger.tap('Added "src" and "owner" to ctx'));
   };
 }

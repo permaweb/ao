@@ -15,13 +15,6 @@ import { z } from "zod";
 
 const [INIT_STATE_TAG, INIT_STATE_TX_TAG] = ["Init-State", "Init-State-TX"];
 
-const transactionSchema = z.object({
-  tags: z.array(z.object({
-    name: z.string(),
-    value: z.string(),
-  })),
-});
-
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -29,7 +22,7 @@ const transactionSchema = z.object({
  * This is used to parse the output to ensure the correct shape
  * is always added to context
  */
-const stateSchema = z.object({
+const ctxSchema = z.object({
   /**
    * The most recent state. This could be the most recent
    * cached state, or potentially the initial state
@@ -60,7 +53,7 @@ const stateSchema = z.object({
 /**
  * @callback LoadTransactionMeta
  * @param {string} id - the id of the transaction
- * @returns {Async<z.infer<typeof transactionSchema>>}
+ * @returns {Async<any>}
  *
  * @callback LoadTransaction
  * @param {string} id - the id of the transaction
@@ -139,7 +132,6 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
 function getSourceInitStateTagsWith({ loadTransactionMeta }) {
   return ({ id }) => {
     return loadTransactionMeta(id)
-      .map(transactionSchema.parse)
       .map(pick(["tags", "block"]))
       .map(applySpec({
         id: always(id),
@@ -241,7 +233,7 @@ export function loadStateWith(env) {
         (res) =>
           mergeRight(
             ctx,
-            stateSchema.parse({
+            ctxSchema.parse({
               state: res.state,
               result: res.result,
               cachedAt: res.cachedAt,

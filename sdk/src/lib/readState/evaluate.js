@@ -10,7 +10,7 @@ import { z } from "zod";
  * This is used to parse the output to ensure the correct shape
  * is always added to context
  */
-const outputSchema = z.object({
+const ctxSchema = z.object({
   output: z.record(z.any()),
 }).passthrough();
 
@@ -42,7 +42,7 @@ function cacheEvaluationWith({ db, logger }) {
  *
  * @callback Evaluate
  * @param {EvaluateArgs} args
- * @returns {Async<z.infer<typeof outputSchema>}
+ * @returns {Async<z.infer<typeof ctxSchema>}
  *
  * @param {Env} env
  * @returns {Evaluate}
@@ -144,5 +144,5 @@ export function evaluateWith(env) {
         )
       )
       .map(assoc("output", __, ctx))
-      .map(outputSchema.parse);
+      .map(ctxSchema.parse);
 }

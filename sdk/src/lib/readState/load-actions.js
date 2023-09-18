@@ -11,7 +11,7 @@ import { interactionSchema } from "../../dal.js";
  * This is used to parse the output to ensure the correct shape
  * is always added to context
  */
-const actionsSchema = z.object({
+const ctxSchema = z.object({
   actions: z.array(interactionSchema),
 }).passthrough();
 
@@ -37,7 +37,7 @@ const actionsSchema = z.object({
  *
  * @callback LoadActions
  * @param {LoadActionArgs} args
- * @returns {Async<LoadActionArgs & z.infer<typeof actionsSchema>>}
+ * @returns {Async<LoadActionArgs & z.infer<typeof ctxSchema>>}
  *
  * @param {Env} env
  * @returns {LoadActions}
@@ -49,6 +49,6 @@ export function loadActionsWith({ loadInteractions, logger: _logger }) {
     of(ctx)
       .chain(loadInteractions)
       .map(assoc("actions", __, ctx))
-      .map(actionsSchema.parse)
+      .map(ctxSchema.parse)
       .map(logger.tap(`Adding actions to ctx %O`));
 }
