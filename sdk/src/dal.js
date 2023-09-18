@@ -84,7 +84,7 @@ export const sequencerClientSchema = z.object({
       z.object({
         id: z.string(),
         owner: z.string(),
-        from: z.string(),
+        from: z.string().optional(),
         to: z.string().optional(),
       }),
     )

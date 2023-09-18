@@ -14,8 +14,9 @@ describe("load-state", () => {
       db: {
         findLatestEvaluation: ({ id, _to }) =>
           Resolved({
-            id: "123_sortkey",
+            id: "123-contract,123_sortkey",
             output: { state: { foo: "bar" } },
+            sortKey: "123_sortKey",
           }),
       },
       loadTransactionData: (_id) => Resolved(assert.fail("unreachable")),
@@ -26,6 +27,7 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
+    assert.equal(result.from, "123_sortKey");
   });
 
   test("add the initial state from Init-State", async () => {
@@ -37,11 +39,6 @@ describe("load-state", () => {
       loadTransactionMeta: (_id) =>
         Resolved({
           tags: [{ name: "Init-State", value: JSON.stringify({ foo: "bar" }) }],
-          block: {
-            id: "456",
-            height: 123,
-            timestamp: new Date().getTime(),
-          },
         }),
       logger,
     });
@@ -49,7 +46,7 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
-    assert.equal(result.from, "000000000123");
+    assert.equal(result.from, undefined);
   });
 
   test("add the initial state from Init-State-Tx", async () => {
@@ -66,11 +63,6 @@ describe("load-state", () => {
       loadTransactionMeta: (_id) =>
         Resolved({
           tags: [{ name: "Init-State-Tx", value: initStateTx }],
-          block: {
-            id: "456",
-            height: 123,
-            timestamp: new Date().getTime(),
-          },
         }),
       logger,
     });
@@ -78,7 +70,7 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
-    assert.equal(result.from, "000000000123");
+    assert.equal(result.from, undefined);
   });
 
   test("add the initial state from transaction data", async () => {
@@ -93,11 +85,6 @@ describe("load-state", () => {
       loadTransactionMeta: (_id) =>
         Resolved({
           tags: [{ name: "Title", value: "Foobar" }],
-          block: {
-            id: "456",
-            height: 123,
-            timestamp: new Date().getTime(),
-          },
         }),
       logger,
     });
@@ -105,6 +92,6 @@ describe("load-state", () => {
     const result = await loadState({ id: CONTRACT }).toPromise();
     assert.ok(result.id);
     assert.deepStrictEqual(result.state, { foo: "bar" });
-    assert.equal(result.from, "000000000123");
+    assert.equal(result.from, undefined);
   });
 });
