@@ -1,18 +1,15 @@
 
-
+let { writeInteraction } = require('@permaweb/ao-sdk');
 
 let msgCallStack = require('../dataStore/msgCallStack');
-let warpClient = require('../clients/warp');
 let dreClient = require('../clients/dre');
 let config = require('../config');
 
 const processor = {
     msgCallStack: msgCallStack,
-    warpCli: null,
     dreNode: null,
 
     process: async function(txId, messages, dreNode) {
-        this.warpCli = warpClient.init(dreNode);
         this.dreNode = dreNode;
 
         this.msgCallStack.writeStack(txId, messages, null);
@@ -22,21 +19,19 @@ const processor = {
     },
 
     msgRecurse: async function(message) {
-        let writeTx = await this.warpCli.write(
+        let writeTx = await writeInteraction(
             message.target,
-            config.relayWallet,
             {
                 function: 'handleMessage',
                 message: message.message
-            }
+            },
+            config.relayWallet,
+            []
         );
-
-        // must read state to load the new state/sortKey into the DRE
-        await this.warpCli.read(message.target, config.relayWallet);
         
         let newTxId = writeTx.originalTxId;
 
-        let replyMessages = await dreClient.result(this.dreNode, newTxId);
+        let replyMessages = await dreClient.messages(this.dreNode, newTxId);
 
         if(replyMessages) {
             this.msgCallStack.writeStack(newTxId, replyMessages, message.txId);

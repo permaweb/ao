@@ -10,10 +10,10 @@
         "docker-run": "npm run docker-build && docker run -p 3004:3004 relay-app"
     },
     "dependencies": {
+        "@permaweb/ao-sdk": "file:../../sdk",
         "body-parser": "^1.20.2",
         "cors": "^2.8.5",
-        "express": "^4.17.1",
-        "warp-contracts": "1.4.14"
+        "express": "^4.17.1"
     },
     "devDependencies": {
         "nodemon": "^3.0.1"

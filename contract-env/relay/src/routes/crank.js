@@ -13,7 +13,7 @@ router.post('/:tx', async (req, res) => {
         throw new Error(`Please pass a tx as query parameter`);
     }
 
-    let messages = await dreClient.result(dreNode, txId);
+    let messages = await dreClient.messages(dreNode, txId);
 
     if(!messages) {
         throw new Error(`No messages to crank for this transaction`);
@@ -22,15 +22,15 @@ router.post('/:tx', async (req, res) => {
     // dont wait for cranking process to finish to reply to users crank call
     (async () => {
         return new Promise((resolve) => {
-            msgProcessor.process(txId, messages, dreNode).then(() => {
-                resolve();
-            });
+            // msgProcessor.process(txId, messages, dreNode).then(() => {
+            //     resolve();
+            // });
         });
     })().then(() => {
         console.log(`Finished callstack for txId: ${txId}`);
     });
 
-    res.send(`Cranking messages for tx: ${txId}`);
+    res.send({response: `Cranking messages for tx: ${txId}`});
 });
 
 module.exports = router;

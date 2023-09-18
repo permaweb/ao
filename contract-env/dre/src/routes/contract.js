@@ -3,7 +3,7 @@ const { readState } = require('@permaweb/ao-sdk');
 
 const router = express.Router();
 
-// begin an async task to crank all the messages on an initial interaction
+// read the latest state on the contract
 router.get('/:id', async (req, res) => {
     const contractId = req.params.id;
 
@@ -14,7 +14,7 @@ router.get('/:id', async (req, res) => {
     try {
         res.send(await readState(contractId));
     } catch (e) {
-        throw new Error(`Failed to read state with error: ${e}`)
+        throw new Error(`Failed to read state with error: ${e}`);
     }
 });
 
