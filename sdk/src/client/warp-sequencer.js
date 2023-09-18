@@ -166,19 +166,41 @@ export function loadInteractionsWith(
   });
 
   const fetchAllPages = ({ id, from, to }) => {
-    return async function fetchPage({ paging, interactions }) {
+    async function fetchPage(page) {
+      return Promise.resolve(page)
+        .then(
+          logger.tap(
+            `Loading page of %s interactions for contract "%s" from "%s" to "%s" - page %s`,
+            pageSize,
+            id,
+            from,
+            to || "latest",
+          ),
+        )
+        .then(() =>
+          fetch(
+            `${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=${page}&limit=${pageSize}`,
+          )
+        )
+        .then((res) => res.json());
+    }
+
+    async function maybeFetchNext({ paging, interactions }) {
       /**
        * Either have reached the end and resolve, or fetch the next page and recurse
        */
       // deno-fmt-ignore-start
       return paging.page >= paging.pages ? { paging, interactions } : Promise.resolve(paging.page + 1)
-        .then(logger.tap(`Loading next page of %s interactions for contract "%s" from "%s" to "%s" - page %s`, pageSize, id, from, to || 'latest'))
-        .then((nextPage) => fetch(`${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=${nextPage}&limit=${pageSize}`))
-        .then(res => res.json())
         .then(fetchPage)
+        .then(maybeFetchNext)
         .then(({ paging, interactions: i }) => ({ paging, interactions: interactions.concat(i) }))
       // deno-fmt-ignore-end
-    };
+    }
+
+    /**
+     * Start with the first page, then keep going
+     */
+    return fetchPage(1).then(maybeFetchNext);
   };
 
   /**
@@ -201,13 +223,7 @@ export function loadInteractionsWith(
     of({ id: ctx.id, from: ctx.from, to: ctx.to })
       .map(mapBounds)
       .chain(fromPromise(({ id, from, to }) =>
-        /**
-         * Start by fetching the first page
-         */
-        fetch(
-          `${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=1&limit=${pageSize}`,
-        ).then((res) => res.json())
-          .then(fetchAllPages({ id, from, to }))
+        fetchAllPages({ id, from, to })
           .then(interactionsPageSchema.parse)
           .then(prop("interactions"))
           .then((interactions) => {
