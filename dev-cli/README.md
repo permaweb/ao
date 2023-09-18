@@ -12,6 +12,7 @@ SmartWeaveContracts written in [Lua](https://www.lua.org/).
 
 - [Requirements](#requirements)
 - [Usage](#usage)
+  - [Where's the `ao` Install Script?](#wheres-the-ao-install-script)
   - [Initialize a new Project](#initialize-a-new-project)
   - [Run a Lua Repl](#run-a-lua-repl)
   - [Execute a Lua file](#execute-a-lua-file)
@@ -20,6 +21,8 @@ SmartWeaveContracts written in [Lua](https://www.lua.org/).
   - [Help](#help)
 - [Testing example](#testing-example)
 - [For Developers](#for-developers)
+  - [Contributing](#contributing)
+  - [Publish a new Version of the CLI](#publish-a-new-version-of-the-cli)
 
 <!-- tocstop -->
 
@@ -117,4 +120,45 @@ program, while the `contract.wasm` is your Lua code compiled into Wasm.
 
 This system is built using deno and compiled in to executable binaries, it
 requires docker as the `ao` executable will need to externally invoke docker
-commands to run lua and emscripten as well as build tools
+commands to run lua and emscripten as well as build tools.
+
+### Contributing
+
+You will still need `docker`. Learn how to
+[Install Docker](https://www.docker.com/get-started/)
+
+Run `deno task build-cli` to compile the CLI binaries into the `dist` folder.
+There are 3 binaries built:
+
+- Windows
+- Linux
+- Mac
+
+You can run `deno task install-local` to install the binary directly from the
+`dist` folder, useful for local development on the CLI.
+
+### Publish a new Version of the CLI
+
+We use a Github workflow to build and publish new version of the CLI to Arweave.
+To publish a new version, go to the
+[`ao` CLI workflow](https://github.com/permaweb/ao/actions/workflows/dev-cli.yml)
+and click the `Run Workflow` button. Provide the semver compatible version you
+would like to bump to, and then click `Run Workflow`. This will trigger a
+Workflow Dispatch that will:
+
+- Check that the version is Semver
+- Build the CLI binaries
+- Publish the binaries to Arweave, via Bundlr Node 2
+- Build the install script
+- Publish the install script to Arweave, via Bundlr Node 2
+- Update `version` and `txMappings` in `deno.json`
+- `push` `deno.json` updates back to the remote repo
+
+> Because the binaries are large, ~100MB for the combined 3, we have to fund a
+> Bundlr Node in order to upload them to Arweave. The CLI uses a wallet,
+> `lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps`, that has funded Bundlr Node 2
+> with a very small amount of funds (`CI_WALLET` env variable). If the funds are
+> depleted, then the CLI will no longer be able to publish the CLI to Arweave.
+> For now, if the Bundlr Node needs more funding, contact `@TillaTheHun0`.
+> (Maybe eventually we add a Workflow Dispatch script to automatically fund the
+> Bundlr Node)
