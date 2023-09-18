@@ -4,7 +4,9 @@ import { z } from "zod";
 
 export const interactionSchema = z.object({
   action: z.object({
-    function: z.string(),
+    input: z.object({
+      function: z.string(),
+    }).passthrough(),
   }).passthrough(),
   sortKey: z.string(),
   SWGlobal: z.object({

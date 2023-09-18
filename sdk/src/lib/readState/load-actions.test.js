@@ -37,12 +37,12 @@ describe("load-actions", () => {
       loadInteractions: ({ id, from, to }) =>
         Resolved([
           {
-            action: { function: "createOrder" },
+            action: { input: { function: "createOrder" } },
             sortKey: "abcd,123,fsdf",
             SWGlobal,
           },
           {
-            action: { function: "createOrder" },
+            action: { input: { function: "createOrder" } },
             sortKey: "fdsa,456,cdskjfs",
             SWGlobal,
           },
@@ -61,7 +61,10 @@ describe("load-actions", () => {
     const loadActionsNoAction = loadActionsWith({
       loadInteractions: ({ id, from, to }) =>
         Resolved([
-          { not_action: { function: "createOrder" }, sortKey: "abcd,123,fsdf" },
+          {
+            not_action: { input: { function: "createOrder" } },
+            sortKey: "abcd,123,fsdf",
+          },
         ]),
       logger,
     });
@@ -72,7 +75,10 @@ describe("load-actions", () => {
     const loadActionsNoSortKey = loadActionsWith({
       loadInteractions: ({ id, from, to }) =>
         Resolved([
-          { action: { function: "createOrder" }, noSortKey: "abcd,123,fsdf" },
+          {
+            action: { input: { function: "createOrder" } },
+            noSortKey: "abcd,123,fsdf",
+          },
         ]),
       logger,
     });

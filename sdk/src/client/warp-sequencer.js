@@ -264,6 +264,7 @@ export function loadInteractionsWith(
                       prop("Input"),
                       // { function: "balance" }
                       (input) => JSON.parse(input),
+                      assoc("input", __, {}),
                     ),
                     /**
                      * TODO: is this the right layer to be mapping this?
