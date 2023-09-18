@@ -9,18 +9,22 @@ const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
 const logger = createLogger("@permaweb/ao-sdk:readState");
 
 describe("load-src", () => {
-  test("return contract source and contract id", async () => {
+  test("return contract source and contract id and contract owner", async () => {
     const loadSource = loadSourceWith({
       loadTransactionData: (_id) =>
         Resolved(new Response(JSON.stringify({ hello: "world" }))),
       loadTransactionMeta: (_id) =>
-        Resolved({ tags: [{ name: "Contract-Src", value: "foobar" }] }),
+        Resolved({
+          owner: { address: "woohoo" },
+          tags: [{ name: "Contract-Src", value: "foobar" }],
+        }),
       logger,
     });
 
     const result = await loadSource({ id: CONTRACT }).toPromise();
     assert.equal(result.src.byteLength, 17);
     assert.equal(result.id, CONTRACT);
+    assert.equal(result.owner, "woohoo");
   });
 
   test("throw if the Contract-Src tag is not provided", async () => {

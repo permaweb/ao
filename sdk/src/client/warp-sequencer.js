@@ -149,7 +149,8 @@ export function loadInteractionsWith(
    *
    * But without the function apis
    */
-  const toSwGlobal = (interaction) => ({
+  const toSwGlobal = ({ contract: { id, owner } }) => (interaction) => ({
+    contract: { id, owner },
     transaction: applySpec({
       id: path(["id"]),
       owner: path(["owner", "address"]),
@@ -220,61 +221,63 @@ export function loadInteractionsWith(
    *    (see mapBounds above where we add the comma). I believe this is just because of the way the range query is implemented underneath the hood in Warp Sequencer
    */
   return (ctx) =>
-    of({ id: ctx.id, from: ctx.from, to: ctx.to })
+    of({ id: ctx.id, owner: ctx.owner, from: ctx.from, to: ctx.to })
       .map(mapBounds)
-      .chain(fromPromise(({ id, from, to }) =>
-        fetchAllPages({ id, from, to })
-          .then(interactionsPageSchema.parse)
-          .then(prop("interactions"))
-          .then((interactions) => {
-            logger(
-              `loaded %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
-              interactions.length,
-              id,
-              from,
-              to || "latest",
-            );
-            return interactions;
-          })
-          .then((interactions) =>
-            transduce(
-              // { interaction: { ..., tags: [ { name, value }] } }
-              compose(
-                // [ { name, value } ]
-                map(path(["interaction"])),
-                /**
-                 * Build the actual expected shape
-                 * of an action
-                 */
-                map(applySpec({
-                  sortKey: prop("sortKey"),
-                  action: pipe(
-                    path(["tags"]),
-                    // { first: tag, second: tag }
-                    reduce((a, t) => assoc(t.name, t.value, a), {}),
-                    // "{\"function\": \"balance\"}"
-                    prop("Input"),
-                    // { function: "balance" }
-                    (input) => JSON.parse(input),
-                  ),
+      .chain(
+        fromPromise(({ id, owner, from, to }) =>
+          fetchAllPages({ id, from, to })
+            .then(interactionsPageSchema.parse)
+            .then(prop("interactions"))
+            .then((interactions) => {
+              logger(
+                `loaded %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
+                interactions.length,
+                id,
+                from,
+                to || "latest",
+              );
+              return interactions;
+            })
+            .then((interactions) =>
+              transduce(
+                // { interaction: { ..., tags: [ { name, value }] } }
+                compose(
+                  // [ { name, value } ]
+                  map(path(["interaction"])),
                   /**
-                   * TODO: is this the right layer to be mapping this?
-                   * Should it be done in BL, or is it the responsibility of the client?
-                   *
-                   * For now, we will keep it a responsibility of the client impl
+                   * Build the actual expected shape
+                   * of an action
                    */
-                  SWGlobal: toSwGlobal,
-                })),
-              ),
-              (acc, input) => {
-                acc.unshift(input);
-                return acc;
-              },
-              [],
-              interactions,
+                  map(applySpec({
+                    sortKey: prop("sortKey"),
+                    action: pipe(
+                      path(["tags"]),
+                      // { first: tag, second: tag }
+                      reduce((a, t) => assoc(t.name, t.value, a), {}),
+                      // "{\"function\": \"balance\"}"
+                      prop("Input"),
+                      // { function: "balance" }
+                      (input) => JSON.parse(input),
+                    ),
+                    /**
+                     * TODO: is this the right layer to be mapping this?
+                     * Should it be done in BL, or is it the responsibility of the client?
+                     *
+                     * For now, we will keep it a responsibility of the client impl
+                     */
+                    SWGlobal: toSwGlobal({ contract: { id, owner } }),
+                  })),
+                ),
+                (acc, input) => {
+                  acc.unshift(input);
+                  return acc;
+                },
+                [],
+                interactions,
+              )
             )
-          )
-      )).toPromise();
+        ),
+      ).toPromise();
 }
 
 /**

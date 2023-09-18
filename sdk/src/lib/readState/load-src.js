@@ -1,8 +1,11 @@
 import { fromPromise, of } from "hyper-async";
-import { __, assoc, path, prop, reduce } from "ramda";
+import { __, applySpec, assoc, path, pick, pipe, prop, reduce } from "ramda";
 import { z } from "zod";
 
 const transactionSchema = z.object({
+  owner: z.object({
+    address: z.string(),
+  }),
   tags: z.array(z.object({
     name: z.string(),
     value: z.string(),
@@ -17,6 +20,7 @@ const transactionSchema = z.object({
  * is always added to context
  */
 const srcSchema = z.object({
+  owner: z.string(),
   src: z.any().refine((val) => !!val, {
     message: "contract source must be defined",
   }),
@@ -52,27 +56,31 @@ function getSourceBufferWith({ loadTransactionData }) {
 }
 
 /**
- * @callback LoadContractSrcId
+ * @callback LoadContractMeta
  * @param {string} id - the id of the contract whose src is being loaded
  * @returns {Async<string>}
  *
  * @param {Env} env
- * @returns {LoadContractSrcId}
+ * @returns {LoadContractMeta}
  */
-function getSourceIdWith({ loadTransactionMeta, logger }) {
+function getContractMetaWith({ loadTransactionMeta, logger }) {
   return (id) => {
     return loadTransactionMeta(id)
       .map(transactionSchema.parse)
-      .map(path(["tags"]))
-      .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
-      .map(prop("Contract-Src"))
-      .map(
-        z.string().min(
-          1,
-          { message: "Contract-Src tag was not present on the transaction" },
-        ).parse,
-      )
-      .map(logger.tap("Loaded Contract-Src %s"));
+      .map(pick(["owner", "tags"]))
+      .map(applySpec({
+        srcId: pipe(
+          prop("tags"),
+          reduce((a, t) => assoc(t.name, t.value, a), {}),
+          prop("Contract-Src"),
+          z.string().min(
+            1,
+            { message: "Contract-Src tag was not present on the transaction" },
+          ).parse,
+          logger.tap("Found Contract-Src id: %s"),
+        ),
+        owner: path(["owner", "address"]),
+      }));
   };
 }
 
@@ -95,15 +103,16 @@ export function loadSourceWith(env) {
   const logger = env.logger.child("loadSource");
   env = { ...env, logger };
 
-  const getSourceId = getSourceIdWith(env);
+  const getContractMeta = getContractMetaWith(env);
   const getSourceBuffer = getSourceBufferWith(env);
 
   return (ctx) => {
     return of(ctx.id)
-      .chain(getSourceId)
-      .chain(getSourceBuffer)
-      .map(assoc("src", __, ctx))
+      .chain(getContractMeta)
+      .chain(({ owner, srcId }) =>
+        getSourceBuffer(srcId).map((src) => ({ ...ctx, src, owner }))
+      )
       .map(srcSchema.parse)
-      .map(logger.tap('Added "src" to ctx'));
+      .map(logger.tap('Added "src" and "owner" to ctx'));
   };
 }
