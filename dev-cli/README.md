@@ -37,6 +37,30 @@ Learn how to [Install Docker](https://www.docker.com/get-started/)
 - Once the CLI has been installed, follow the prompts to add the `ao` binary to
   your system `PATH`
 
+### Where's the `ao` Install Script?
+
+All the CLI binaries, as well as the install scripts, are published onto
+Arweave. Until we use something more comprehensive to map versions, we simply
+maintain a map of the `version -> txId` in the
+[`deno.json manifest file`](./deno.json) of this project.
+
+To find the relevant transaction that contains the install script for a
+particular version of the `ao` CLI, check the `txMappings` in the
+[`deno.json`](./deno.json) (you probably just want latest). Then to install that
+CLI version, simply run:
+
+```sh
+curl -L https://arweave.net/{txId} | bash
+```
+
+Then follow the instructions for adding the `ao` binary to your `PATH`. Use
+`ao --help` to confirm the CLI is installed
+
+> If you're contributing to the `ao` CLI directly, you may want to install your
+> locally built binaries out of the `dist` folder. You can run
+> `deno task install-local` to install the binary from the built `dist` folder,
+> for your platform.
+
 ### Initialize a new Project
 
 ```sh
