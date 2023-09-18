@@ -76,8 +76,7 @@ export function readStateWith(
   const evaluate = evaluateWith(env);
 
   return (contractId, sortKeyHeight) => {
-    // TODO: need to build the SWGlobal
-    return of({ id: contractId, to: sortKeyHeight, SWGlobal: {} })
+    return of({ id: contractId, to: sortKeyHeight })
       .chain(loadSource)
       .chain(loadState)
       .chain(loadActions)

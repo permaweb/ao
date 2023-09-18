@@ -10,6 +10,10 @@ const CONTRACT = "SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY";
 const logger = createLogger("@permaweb/ao-sdk:readState");
 
 const SWGlobal = {
+  contract: {
+    id: "ct-123",
+    owner: "owner-123",
+  },
   transaction: {
     id: "tx-123",
     owner: "owner-123",
@@ -61,7 +65,7 @@ describe("load-actions", () => {
         ]),
       logger,
     });
-    await loadActionsNoAction({ id: CONTRACT }).toPromise()
+    await loadActionsNoAction({ id: CONTRACT, owner: "owner-123" }).toPromise()
       .then(() => assert("unreachable. Should have thrown"))
       .catch(assert.ok);
 
@@ -72,7 +76,7 @@ describe("load-actions", () => {
         ]),
       logger,
     });
-    await loadActionsNoSortKey({ id: CONTRACT }).toPromise()
+    await loadActionsNoSortKey({ id: CONTRACT, owner: "owner-123" }).toPromise()
       .then(() => assert("unreachable. Should have thrown"))
       .catch(assert.ok);
   });

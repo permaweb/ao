@@ -8,6 +8,10 @@ export const interactionSchema = z.object({
   }).passthrough(),
   sortKey: z.string(),
   SWGlobal: z.object({
+    contract: z.object({
+      id: z.string(),
+      owner: z.string(),
+    }),
     transaction: z.object({
       id: z.string(),
       owner: z.string(),
@@ -79,6 +83,7 @@ export const sequencerClientSchema = z.object({
     .args(
       z.object({
         id: z.string(),
+        owner: z.string(),
         from: z.string(),
         to: z.string().optional(),
       }),
@@ -113,6 +118,9 @@ export function loadTransactionMetaWith({ fetch, GATEWAY_URL }) {
     transactions(ids: $contractIds) {
       edges {
         node {
+          owner {
+            address
+          }
           tags {
             name
             value

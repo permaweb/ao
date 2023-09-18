@@ -20,6 +20,7 @@ describe("warp-sequencer", () => {
 
       const res = await loadInteractions({
         id: CONTRACT,
+        owner: "owner-123",
         from: "",
         to: "",
       });
@@ -28,6 +29,10 @@ describe("warp-sequencer", () => {
       assert.ok(firstInteraction.action);
       assert.ok(firstInteraction.action.function);
       assert.ok(firstInteraction.sortKey);
+      assert.ok(firstInteraction.SWGlobal);
+      // attach contract meta to SWGlobal
+      assert.equal(firstInteraction.SWGlobal.contract.id, CONTRACT);
+      assert.equal(firstInteraction.SWGlobal.contract.owner, "owner-123");
     });
   });
 
