@@ -4,11 +4,8 @@ import {
   always,
   applySpec,
   assoc,
-  defaultTo,
   identity,
-  ifElse,
   mergeRight,
-  pathOr,
   pick,
   pipe,
   prop,
@@ -23,11 +20,6 @@ const transactionSchema = z.object({
     name: z.string(),
     value: z.string(),
   })),
-  block: z.object({
-    id: z.string(),
-    height: z.coerce.number(),
-    timestamp: z.coerce.number(),
-  }).optional(),
 });
 
 /**
@@ -56,14 +48,13 @@ const stateSchema = z.object({
    */
   cachedAt: z.date().optional(),
   /**
-   * The most recent interaction sortKey. This could be the most recent
-   * cached interaction, or potentially the initial state sort key,
-   * if no interactions were cached
+   * The most recent interaction sortKey. This could be from the most recent
+   * cached evaluation, or undefined, if no evaluations were cached
    *
    * This will be used to subsequently determine which interactions
    * need to be fetched from the network in order to perform the evaluation
    */
-  from: z.coerce.string(),
+  from: z.coerce.string().optional(),
 }).passthrough();
 
 /**
@@ -145,9 +136,7 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
  * @param {Env} env
  * @returns {LoadInitialStateTags}
  */
-function getSourceInitStateTagsWith({ loadTransactionMeta, logger: _logger }) {
-  const logger = _logger.child("getSourceInitStateTags");
-
+function getSourceInitStateTagsWith({ loadTransactionMeta }) {
   return ({ id }) => {
     return loadTransactionMeta(id)
       .map(transactionSchema.parse)
@@ -158,32 +147,6 @@ function getSourceInitStateTagsWith({ loadTransactionMeta, logger: _logger }) {
           prop("tags"),
           reduce((a, t) => assoc(t.name, t.value, a), {}),
           pick([INIT_STATE_TAG, INIT_STATE_TX_TAG]),
-        ),
-        /**
-         * Use the block height as the initial state sort key, left padding to 12 characters with '0'
-         *
-         * This enables to fetch any interactions from the sequencer using this as the lower bound sort key
-         *
-         * See https://academy.warp.cc/docs/sdk/advanced/bundled-interaction#how-it-works
-         */
-        from: pipe(
-          pathOr(undefined, ["block", "height"]),
-          ifElse(
-            identity,
-            logger.tap(`Retrieved transaction meta for contract ${id}: %s`),
-            logger.tap(
-              `No block yet found for transaction ${id}. Defaulting to null block`,
-            ),
-          ),
-          /**
-           * Sometimes, when fetching the transaction meta, the block
-           * might not yet be on Arweave.
-           *
-           * If this is the case, we use the null block (0000000000)
-           * as our left bound for interactions
-           */
-          defaultTo(""),
-          (height) => String(height).padStart(12, "0"),
         ),
       }));
   };
