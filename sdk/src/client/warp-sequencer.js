@@ -3,8 +3,11 @@ import {
   __,
   applySpec,
   assoc,
+  complement,
   compose,
   evolve,
+  filter,
+  isNil,
   map,
   path,
   pipe,
@@ -168,22 +171,25 @@ export function loadInteractionsWith(
 
   const fetchAllPages = ({ id, from, to }) => {
     async function fetchPage(page) {
-      return Promise.resolve(page)
-        .then(
-          logger.tap(
-            `Loading page of %s interactions for contract "%s" from "%s" to "%s" - page %s`,
+      // deno-fmt-ignore-start
+      return Promise.resolve({ contractId: id, from, to, page, limit: pageSize })
+        // filter out all undefined values
+        .then(filter(complement(isNil)))
+        .then(params => new URLSearchParams(params))
+        .then(params => {
+          logger(
+            `Loading page %s of %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
+            page,
             pageSize,
             id,
-            from,
-            to || "latest",
-          ),
-        )
-        .then(() =>
-          fetch(
-            `${SEQUENCER_URL}/gateway/v2/interactions-sort-key?contractId=${id}&from=${from}&to=${to}&page=${page}&limit=${pageSize}`,
+            from || 'initial',
+            to || 'latest'
           )
-        )
+          return params
+        })
+        .then((params) => fetch(`${SEQUENCER_URL}/gateway/v2/interactions-sort-key?${params.toString()}`))
         .then((res) => res.json());
+      // deno-fmt-ignore-end
     }
 
     async function maybeFetchNext({ paging, interactions }) {
@@ -233,7 +239,7 @@ export function loadInteractionsWith(
                 `loaded %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
                 interactions.length,
                 id,
-                from,
+                from || "initial",
                 to || "latest",
               );
               return interactions;
