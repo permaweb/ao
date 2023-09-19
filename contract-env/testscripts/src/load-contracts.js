@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const Bundlr = require('@bundlr-network/client');
 
-// hABxWC4uNAEsLbmOmMtZ5VCYjk_y6TfzPMWWHbN-ks4 beam-contract.js
-// FNTYfkQNk2f4xBsc6gPWQJ5lYHw9Z4gQktuLhGx6xL0 beam-response-contract.js 
+// xt8cgXEUt0Pihyc-5YkrT2udUJpF7BpDaiW42r5s_Go - response contract
+// 3t11is2R8xej38REbRjNV2mFatAbe-vMJ3OpisM1Ew8 - contract
 
 (async function() {
 
@@ -17,7 +17,7 @@ const Bundlr = require('@bundlr-network/client');
 
     const bundlr = new Bundlr('https://node2.bundlr.network', 'arweave', walletKey);
 
-    let CONTRACT_SRC = "lt94Ais2iRoE3l2WVXH0wgKeS4ieluZfsjpYTQTAvFA";
+    let CONTRACT_SRC = "xt8cgXEUt0Pihyc-5YkrT2udUJpF7BpDaiW42r5s_Go";
 
     let contractTags = [
         { name: 'Content-Type', value: 'text/plain' },
@@ -41,7 +41,7 @@ const Bundlr = require('@bundlr-network/client');
 
     console.log(tx);
 
-    CONTRACT_SRC = "eNhqR7FRGWDTYaHxg66qQQuAC6JjDYTLa7KGnQHPjMQ";
+    CONTRACT_SRC = "3t11is2R8xej38REbRjNV2mFatAbe-vMJ3OpisM1Ew8";
 
     contractTags = [
         { name: 'Content-Type', value: 'text/plain' },

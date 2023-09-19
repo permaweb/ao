@@ -5,7 +5,7 @@ const walletPath = process.env.PATH_TO_WALLET;
 let walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'));
 
 let config = {
-    dreWallet: walletKey
+    muWallet: walletKey
 };
 
 module.exports = config;
