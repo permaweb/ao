@@ -69,9 +69,9 @@ export function evaluateWith(env) {
       return With(output["@@transducer/value"]);
     }
     return Resolved(output);
-  }
-  const maybeResolveError = maybeReducedError(Resolved)
-  const maybeRejectError = maybeReducedError(Rejected)
+  };
+  const maybeResolveError = maybeReducedError(Resolved);
+  const maybeRejectError = maybeReducedError(Rejected);
 
   return (ctx) =>
     of(ctx)
@@ -151,7 +151,7 @@ export function evaluateWith(env) {
        * If an error occurred, then it will be wrapped in a reduced,
        * so unwrap it and Resolve, so it can be assigned as output
        * of the evaluation.
-       * 
+       *
        * In other words, this chain should always Resolve
        */
       .chain(maybeResolveError)

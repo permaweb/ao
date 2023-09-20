@@ -123,7 +123,7 @@ describe("evaluate", () => {
     });
   });
 
-  test('error returned in contract result', async () => {
+  test("error returned in contract result", async () => {
     const env = {
       db: { saveEvaluation: assert.fail },
       logger,
@@ -142,7 +142,7 @@ describe("evaluate", () => {
           action: { input: { function: "errorResult" } },
           sortKey: "a",
           SWGlobal: {},
-        }
+        },
       ],
     };
 
@@ -150,12 +150,12 @@ describe("evaluate", () => {
     assert.ok(res.output);
     assert.deepStrictEqual(res.output, {
       result: {
-        error: { code: 123, message: 'a handled error within the contract' }
-      }
+        error: { code: 123, message: "a handled error within the contract" },
+      },
     });
-  })
+  });
 
-  test('error thrown by contract', async () => {
+  test("error thrown by contract", async () => {
     const env = {
       db: { saveEvaluation: assert.fail },
       logger,
@@ -174,7 +174,7 @@ describe("evaluate", () => {
           action: { input: { function: "errorThrow" } },
           sortKey: "a",
           SWGlobal: {},
-        }
+        },
       ],
     };
 
@@ -182,12 +182,12 @@ describe("evaluate", () => {
     assert.ok(res.output);
     assert.deepStrictEqual(res.output, {
       result: {
-        error: { code: 123, message: 'a thrown error within the contract' }
-      }
+        error: { code: 123, message: "a thrown error within the contract" },
+      },
     });
-  })
+  });
 
-  test('error unhandled by contract', async () => {
+  test("error unhandled by contract", async () => {
     const env = {
       db: { saveEvaluation: assert.fail },
       logger,
@@ -206,13 +206,13 @@ describe("evaluate", () => {
           action: { input: { function: "errorUnhandled" } },
           sortKey: "a",
           SWGlobal: {},
-        }
+        },
       ],
     };
 
     const res = await evaluate(ctx).toPromise();
-    console.log(res.output)
+    console.log(res.output);
     assert.ok(res.output);
-    assert.ok(res.output.result.error)
-  })
+    assert.ok(res.output.result.error);
+  });
 });
