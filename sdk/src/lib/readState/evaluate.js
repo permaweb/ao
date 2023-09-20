@@ -1,6 +1,6 @@
 import { __, assoc, assocPath, prop, reduce, reduced } from "ramda";
 import { fromPromise, of, Rejected, Resolved } from "hyper-async";
-import HyperbeamLoader from "@permaweb/hyperbeam-loader";
+import AoLoader from "@permaweb/ao-loader";
 import { z } from "zod";
 
 /**
@@ -21,7 +21,7 @@ const ctxSchema = z.object({
 
 function addHandler(ctx) {
   return of(ctx.src)
-    .map(HyperbeamLoader)
+    .map(AoLoader)
     .map((handle) => ({ handle, ...ctx }));
 }
 
@@ -52,6 +52,27 @@ export function evaluateWith(env) {
 
   const cacheEvaluation = cacheEvaluationWith({ ...env, logger });
 
+  /**
+   * When an error occurs, we short circuit the reduce using
+   * ramda's 'reduced()' function, but since our accumulator is an Async,
+   * ramda's 'reduce' cannot natively short circuit the reduction.
+   *
+   * So we do it ourselves by unwrapping the output, and if the value
+   * is the 'reduced()' shape, then we immediatley reject, short circuiting the reduction
+   *
+   * See https://ramdajs.com/docs/#reduced
+   * check copied from ramda's internal reduced check impl:
+   * https://github.com/ramda/ramda/blob/afe98b03c322fc4d22742869799c9f2796c79744/source/internal/_xReduce.js#L10C11-L10C11
+   */
+  const maybeReducedError = (With) => (output) => {
+    if (output && output["@@transducer/reduced"]) {
+      return With(output["@@transducer/value"]);
+    }
+    return Resolved(output);
+  }
+  const maybeResolveError = maybeReducedError(Resolved)
+  const maybeRejectError = maybeReducedError(Rejected)
+
   return (ctx) =>
     of(ctx)
       .chain(addHandler)
@@ -62,24 +83,7 @@ export function evaluateWith(env) {
            */
           ($output, { action, sortKey, SWGlobal }) =>
             $output
-              /**
-               * When an error occurs, we short circuit the reduce using
-               * ramda's 'reduced()' function, but since our accumulator is an Async,
-               * ramda's 'reduce' cannot natively short circuit the reduction.
-               *
-               * So we do it ourselves by unwrapping the output, and if the value
-               * is the 'reduced()' shape, then we immediatley reject, short circuiting the reduction
-               *
-               * See https://ramdajs.com/docs/#reduced
-               * check copied from ramda's internal reduced check impl:
-               * https://github.com/ramda/ramda/blob/afe98b03c322fc4d22742869799c9f2796c79744/source/internal/_xReduce.js#L10C11-L10C11
-               */
-              .chain((output) => {
-                if (output && output["@@transducer/reduced"]) {
-                  return Rejected(output["@@transducer/value"]);
-                }
-                return Resolved(output);
-              })
+              .chain(maybeRejectError)
               .map(prop("state"))
               .chain((state) =>
                 of(state)
@@ -143,6 +147,14 @@ export function evaluateWith(env) {
           ctx.actions,
         )
       )
+      /**
+       * If an error occurred, then it will be wrapped in a reduced,
+       * so unwrap it and Resolve, so it can be assigned as output
+       * of the evaluation.
+       * 
+       * In other words, this chain should always Resolve
+       */
+      .chain(maybeResolveError)
       .map(assoc("output", __, ctx))
       .map(ctxSchema.parse);
 }
