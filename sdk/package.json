@@ -17,7 +17,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@permaweb/ao-loader": "~0.0.3",
+    "@permaweb/ao-loader": "~0.0.4",
     "debug": "^4.3.4",
     "hyper-async": "^1.1.2",
     "pouchdb": "^8.0.1",
