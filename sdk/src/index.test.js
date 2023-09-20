@@ -11,6 +11,6 @@ const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
 
 test("readState", async () => {
   const result = await readState(CONTRACT);
-  console.log(result);
+  console.log(JSON.stringify(result, null, 2));
   assert.ok(true);
 });
