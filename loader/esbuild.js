@@ -1,9 +1,9 @@
-import * as esbuild from "esbuild";
+import * as esbuild from 'esbuild'
 
 await esbuild.build({
-  entryPoints: ["src/index.cjs"],
-  platform: "node",
-  format: "cjs",
+  entryPoints: ['src/index.cjs'],
+  platform: 'node',
+  format: 'cjs',
   bundle: true,
-  outfile: "dist/index.cjs",
-});
+  outfile: 'dist/index.cjs'
+})
