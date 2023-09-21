@@ -22,7 +22,7 @@ describe("evaluate", () => {
     const ctx = {
       id: "ctr-1234",
       from: "sort-key-start",
-      src: readFileSync("./test/e2e/contract.wasm"),
+      src: readFileSync("./test/contracts/happy/contract.wasm"),
       state: {},
       actions: [
         {
@@ -63,38 +63,38 @@ describe("evaluate", () => {
     const ctx = {
       id: "ctr-1234",
       from: "sort-key-start",
-      src: readFileSync("./test/state-contract.wasm"),
+      src: readFileSync("./test/contracts/happy/contract.wasm"),
       state: { balances: { "1": 1 } },
       actions: [
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "hello" } },
           sortKey: "a",
           SWGlobal: {},
         },
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "world" } },
           sortKey: "b",
           SWGlobal: {},
         },
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "hello" } },
           sortKey: "c",
           SWGlobal: {},
         },
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "world" } },
           sortKey: "d",
           SWGlobal: {},
         },
         {
-          action: { caller: "1", input: { function: "balance" } },
+          action: { input: { function: "hello" } },
           sortKey: "e",
           SWGlobal: {},
         },
       ],
     };
 
-    const res = await evaluate(ctx).toPromise();
+    await evaluate(ctx).toPromise();
     assert.equal(cacheCount, 5);
   });
 
@@ -112,7 +112,7 @@ describe("evaluate", () => {
     const ctx = {
       id: "ctr-1234",
       from: "sort-key-start",
-      src: readFileSync("./test/state-contract.wasm"),
+      src: readFileSync("./test/contracts/happy/contract.wasm"),
       state: { balances: { "1": 1 } },
       actions: [],
     };
@@ -122,4 +122,97 @@ describe("evaluate", () => {
       state: { balances: { "1": 1 } },
     });
   });
+
+  test('error returned in contract result', async () => {
+    const env = {
+      db: { saveEvaluation: assert.fail },
+      logger,
+    };
+
+    const evaluate = evaluateWith(env);
+
+    const ctx = {
+      id: "ctr-1234",
+      from: "sort-key-start",
+      src: readFileSync("./test/contracts/sad/contract.wasm"),
+      state: {},
+      actions: [
+        {
+          // Will include an error in result.error
+          action: { input: { function: "errorResult" } },
+          sortKey: "a",
+          SWGlobal: {},
+        }
+      ],
+    };
+
+    const res = await evaluate(ctx).toPromise();
+    assert.ok(res.output);
+    assert.deepStrictEqual(res.output, {
+      result: {
+        error: { code: 123, message: 'a handled error within the contract' }
+      }
+    });
+  })
+
+  test('error thrown by contract', async () => {
+    const env = {
+      db: { saveEvaluation: assert.fail },
+      logger,
+    };
+
+    const evaluate = evaluateWith(env);
+
+    const ctx = {
+      id: "ctr-1234",
+      from: "sort-key-start",
+      src: readFileSync("./test/contracts/sad/contract.wasm"),
+      state: {},
+      actions: [
+        {
+          // Will intentionally throw from the lua contract
+          action: { input: { function: "errorThrow" } },
+          sortKey: "a",
+          SWGlobal: {},
+        }
+      ],
+    };
+
+    const res = await evaluate(ctx).toPromise();
+    assert.ok(res.output);
+    assert.deepStrictEqual(res.output, {
+      result: {
+        error: { code: 123, message: 'a thrown error within the contract' }
+      }
+    });
+  })
+
+  test('error unhandled by contract', async () => {
+    const env = {
+      db: { saveEvaluation: assert.fail },
+      logger,
+    };
+
+    const evaluate = evaluateWith(env);
+
+    const ctx = {
+      id: "ctr-1234",
+      from: "sort-key-start",
+      src: readFileSync("./test/contracts/sad/contract.wasm"),
+      state: {},
+      actions: [
+        {
+          // Will unintentionally throw from the lua contract
+          action: { input: { function: "errorUnhandled" } },
+          sortKey: "a",
+          SWGlobal: {},
+        }
+      ],
+    };
+
+    const res = await evaluate(ctx).toPromise();
+    console.log(res.output)
+    assert.ok(res.output);
+    assert.ok(res.output.result.error)
+  })
 });

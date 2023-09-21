@@ -11,23 +11,10 @@ const MODULE_PATH = process.env["MODULE_PATH"] || "../src/index.cjs";
 console.log(`${MODULE_PATH}`);
 
 describe("loader", async () => {
-  it("load and execute lua contract", async () => {
-    const { default: hyperbeamLoader } = await import(MODULE_PATH);
-
-    const wasmBinary = fs.readFileSync("./test/contract.wasm");
-    const handle = hyperbeamLoader(wasmBinary);
-    const result = await handle({ balances: { "1": 1 } }, {
-      caller: "1",
-      input: { function: "balance" },
-    }, {});
-    console.log(result);
-    assert.ok(true);
-  });
-
   it("load and execute message passing contract", async () => {
     const { default: hyperbeamLoader } = await import(MODULE_PATH);
 
-    const wasmBinary = fs.readFileSync("./test/contract-message/contract.wasm");
+    const wasmBinary = fs.readFileSync("./test/contracts/message/contract.wasm");
     const mainHandler = hyperbeamLoader(wasmBinary);
     const mainResult = await mainHandler(
       {

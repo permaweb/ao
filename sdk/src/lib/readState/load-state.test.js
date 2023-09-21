@@ -5,7 +5,7 @@ import { Resolved } from "hyper-async";
 import { createLogger } from "../../logger.js";
 import { loadStateWith } from "./load-state.js";
 
-const CONTRACT = "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro";
+const CONTRACT = "contract-123-9HdeqeuYQOgMgWucro";
 const logger = createLogger("@permaweb/ao-sdk:readState");
 
 describe("load-state", () => {
