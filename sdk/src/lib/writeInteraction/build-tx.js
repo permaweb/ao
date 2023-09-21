@@ -68,7 +68,7 @@ function buildDataWith() {
 function signWith(env) {
   return (ctx) => {
     return of(ctx)
-      .map(env.mu.signInteraction)
+      .chain(env.mu.signInteraction)
       .map(assoc("signedData", __, ctx));
   };
 }
