@@ -1,13 +1,16 @@
-import { dbClientSchema, sequencerClientSchema } from "./dal.js";
+import { dbClientSchema, sequencerClientSchema, muClientSchema } from "./dal.js";
 import { readStateWith, writeInteractionWith } from "./main.js";
 import { createLogger } from "./logger.js";
 
 // Precanned clients to use for OOTB apis
 import * as PouchDbClient from "./client/pouchdb.js";
 import * as WarpSequencerClient from "./client/warp-sequencer.js";
+import * as MuClient from "./client/ao-mu.js";
 
 const GATEWAY_URL = globalThis.GATEWAY || "https://arweave.net";
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || "https://gw.warp.cc";
+const MU_URL = globalThis.MU_URL || "https://ao-mu-1.onrender.com";
+const CU_URL = globalThis.CU_URL || "https://ao-cu-1.onrender.com";
 
 const logger = createLogger("@permaweb/ao-sdk");
 
@@ -34,13 +37,6 @@ export const readState = readStateWith({
       pageSize: 2500,
       logger: logger.child("readState:sequencer"),
     }),
-    writeInteraction: WarpSequencerClient.writeInteractionWith({
-      fetch,
-      SEQUENCER_URL,
-    }),
-    signInteraction: WarpSequencerClient.signInteractionWith({
-      createDataItem: WarpSequencerClient.createData,
-    }),
   }),
   db: dbClientSchema.parse({
     findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({
@@ -64,19 +60,14 @@ export const readState = readStateWith({
 export const writeInteraction = writeInteractionWith({
   fetch,
   GATEWAY_URL,
-  sequencer: sequencerClientSchema.parse({
-    loadInteractions: WarpSequencerClient.loadInteractionsWith({
+  mu: muClientSchema.parse({
+    writeInteraction: MuClient.writeInteractionWith({
       fetch,
-      SEQUENCER_URL,
-      pageSize: 2500,
-      logger: logger.child("writeInteraction:sequencer"),
+      MU_URL,
+      CU_URL
     }),
-    writeInteraction: WarpSequencerClient.writeInteractionWith({
-      fetch,
-      SEQUENCER_URL,
-    }),
-    signInteraction: WarpSequencerClient.signInteractionWith({
-      createDataItem: WarpSequencerClient.createData,
+    signInteraction: MuClient.signInteractionWith({
+      createDataItem: MuClient.createData,
     }),
   }),
   logger,

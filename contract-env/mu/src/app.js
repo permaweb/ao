@@ -3,8 +3,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const baseRoute = require('./routes/base');
-const crankRoute = require('./routes/crank');
-const errors = require('./errors/errors')
+const writeRoute = require('./routes/write');
+const errors = require('./errors/errors');
 
 const app = express();
 const PORT = 3004;
@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use('/', baseRoute);
-app.use('/crank', crankRoute);
+app.use('/write', writeRoute);
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

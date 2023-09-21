@@ -35,8 +35,4 @@ describe("warp-sequencer", () => {
       assert.equal(firstInteraction.SWGlobal.contract.owner, "owner-123");
     });
   });
-
-  describe("writeInteraction", () => {
-    // TODO
-  });
 });

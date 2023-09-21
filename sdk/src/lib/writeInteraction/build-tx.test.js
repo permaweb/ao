@@ -6,7 +6,7 @@ import { buildTxWith } from "./build-tx.js";
 describe("build-tx", () => {
   test("build and sign a tx", async () => {
     const buildTx = buildTxWith({
-      sequencer: {
+      mu: {
         signInteraction: () => {
           return {
             createDataItem: async () => {

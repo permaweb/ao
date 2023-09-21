@@ -7,15 +7,11 @@ const path = require('path');
 
 const { ArweaveSigner } = require('warp-arbundles');
 
+globalThis.MU_URL = "http://localhost:3004";
+globalThis.CU_URL = "http://localhost:3005";
 const { writeInteraction, readState } = require('@permaweb/ao-sdk');
 
 const CONTRACT_TX_ID = "4ILANxSL3P4RtbbVamYynK6YLsPNUJ4WX1nYziOB0v4";
-let CU_URL = "http://localhost:3005";
-let CONTRACT_ENDPOINT = '/contract/';
-
-let MU_URL = "http://localhost:3004";
-let CRANK_ENDPOINT = "/crank/";
-
 (async function () {
     console.log('Testing ao...');
 
@@ -37,21 +33,7 @@ let CRANK_ENDPOINT = "/crank/";
         tags
     );
 
-    let txId = writeAoInteraction.originalTxId;
-
     console.log(writeAoInteraction);
-
-    let crankResult = await fetch(`${MU_URL}${CRANK_ENDPOINT}${txId}`,  {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({cu: CU_URL})
-    });
-
-    let crankResultJson = await crankResult.json();
-
-    console.log(crankResultJson);
 
     // let newState = await fetch(`${CU_URL}${CONTRACT_ENDPOINT}${CONTRACT_TX_ID}`);
     // let newStateJson = await newState.json();

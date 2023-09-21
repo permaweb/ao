@@ -1,10 +1,8 @@
 
-const { ArweaveSigner } = require('warp-arbundles');
-let { writeInteraction } = require('@permaweb/ao-sdk');
 
 let msgCallStack = require('../dataStore/msgCallStack');
 let cuClient = require('../clients/cu');
-let config = require('../config');
+let sequencerClient = require('../clients/sequencer');
 
 const processor = {
     msgCallStack: msgCallStack,
@@ -20,19 +18,18 @@ const processor = {
     },
 
     msgRecurse: async function(message) {
-        let signer = new ArweaveSigner(config.muWallet);
-
-        let writeTx = await writeInteraction(
+        let dataItem = await sequencerClient.buildAndSign(
             message.target,
             {
                 function: 'handleMessage',
                 message: message.message
             },
-            signer,
             []
-        );
+        )
+
+        await sequencerClient.writeInteraction(dataItem.getRaw());
         
-        let newTxId = writeTx.originalTxId;
+        let newTxId = await dataItem.id;
 
         let replyMessages = await cuClient.messages(this.cuAddress, newTxId);
 

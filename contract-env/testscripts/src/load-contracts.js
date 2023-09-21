@@ -17,7 +17,7 @@ const Bundlr = require('@bundlr-network/client');
 
     const bundlr = new Bundlr('https://node2.bundlr.network', 'arweave', walletKey);
 
-    let CONTRACT_SRC = "xt8cgXEUt0Pihyc-5YkrT2udUJpF7BpDaiW42r5s_Go";
+    let CONTRACT_SRC = "PaJMeMqxqDIoJ9je6e3SQlSx7neQbfREWpkAeSKPWSs";
 
     let contractTags = [
         { name: 'Content-Type', value: 'text/plain' },
@@ -41,7 +41,7 @@ const Bundlr = require('@bundlr-network/client');
 
     console.log(tx);
 
-    CONTRACT_SRC = "3t11is2R8xej38REbRjNV2mFatAbe-vMJ3OpisM1Ew8";
+    CONTRACT_SRC = "cSpEUZJjo0X-z9tW1uQ7taYxyycPIuBwm2l0ICn2sM4";
 
     contractTags = [
         { name: 'Content-Type', value: 'text/plain' },

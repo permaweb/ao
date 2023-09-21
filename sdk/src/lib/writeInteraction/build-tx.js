@@ -19,7 +19,7 @@ const tagSchema = z.array(z.object({
  * @property {Tag3[]} tags
  *
  * @typedef Env6
- * @property {any} sequencer
+ * @property {any} mu
  */
 
 /**
@@ -68,7 +68,7 @@ function buildDataWith() {
 function signWith(env) {
   return (ctx) => {
     return of(ctx)
-      .map(env.sequencer.signInteraction)
+      .map(env.mu.signInteraction)
       .map(assoc("signedData", __, ctx));
   };
 }

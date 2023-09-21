@@ -91,6 +91,9 @@ export const sequencerClientSchema = z.object({
       }),
     )
     .returns(z.promise(z.array(interactionSchema))),
+});
+
+export const muClientSchema = z.object({
   // TODO: define this shape
   writeInteraction: z.function()
     .args(z.record(z.any()))

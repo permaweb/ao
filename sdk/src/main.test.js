@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import * as pouchDbClient from "./client/pouchdb.js";
 import {
   loadInteractionsWith,
-  writeInteractionWith,
 } from "./client/warp-sequencer.js";
 import { createLogger } from "./logger.js";
 
@@ -39,7 +38,6 @@ test("readState", async () => {
         logger,
         pageSize: 2500,
       }),
-      writeInteractionWith: writeInteractionWith({ fetch, SEQUENCER_URL }),
     },
     logger,
   })(

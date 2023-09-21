@@ -6,6 +6,7 @@ import {
   loadTransactionDataWith,
   loadTransactionMetaWith,
   sequencerClientSchema,
+  muClientSchema
 } from "./dal.js";
 
 // readState
@@ -96,7 +97,7 @@ export function readStateWith(
 /**
  * @typedef Env1
  * @property {fetch} fetch
- * @property {z.infer<typeof sequencerClientSchema>} sequencer
+ * @property {z.infer<typeof muClientSchema>} mu
  * @property {string} GATEWAY_URL
  *
  * @typedef WriteInteractionResult
@@ -113,7 +114,7 @@ export function readStateWith(
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
+export function writeInteractionWith({ fetch, GATEWAY_URL, mu }) {
   /**
    * build dal, injecting bottom lvl deps
    */
@@ -124,7 +125,7 @@ export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
    */
   const env = {
     loadTransactionMeta,
-    sequencer,
+    mu,
   };
 
   const verifyContract = verifyContractWith(env);
@@ -136,7 +137,7 @@ export function writeInteractionWith({ fetch, GATEWAY_URL, sequencer }) {
       .chain(verifyContract) // verify contract (is TX a smart contract)
       .chain(verifyInput) // verify input shape
       .chain(buildTx) // construct interaction to send ie. add tags, etc.
-      .chain(fromPromise(sequencer.writeInteraction)) // write to the sequencer
+      .chain(fromPromise(mu.writeInteraction)) // write to the messenger
       .map((ctx) => ctx)
       .toPromise();
   };
