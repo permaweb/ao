@@ -92,7 +92,7 @@ export function writeInteractionWith(env) {
       .chain(verifyContract) // verify contract (is TX a smart contract)
       .chain(verifyInput) // verify input shape
       .chain(buildTx) // construct interaction to send ie. add tags, etc.
-      .chain(mu.writeInteraction) // write to the messenger
+      .chain(env.mu.writeInteraction) // write to the messenger
       .map((ctx) => ctx)
       .toPromise();
   };
