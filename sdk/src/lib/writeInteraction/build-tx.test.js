@@ -1,19 +1,15 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
+import { Resolved } from "hyper-async";
 
 import { buildTxWith } from "./build-tx.js";
+import { tap } from "ramda";
 
 describe("build-tx", () => {
   test("build and sign a tx", async () => {
     const buildTx = buildTxWith({
       mu: {
-        signInteraction: () => {
-          return {
-            createDataItem: async () => {
-              return { fakeDataItem: "fake" };
-            },
-          };
-        },
+        signInteraction: () => Resolved({ fakeDataItem: "fake" }),
       },
     });
 
