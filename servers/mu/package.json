@@ -13,9 +13,12 @@
         "body-parser": "^1.20.2",
         "cors": "^2.8.5",
         "express": "^4.17.1",
+        "hyper-async": "^1.1.2",
         "pouchdb": "^8.0.1",
         "pouchdb-adapter-node-websql": "^7.0.0",
-        "warp-arbundles": "^1.0.4"
+        "ramda": "^0.29.0",
+        "warp-arbundles": "^1.0.4",
+        "zod": "^3.22.2"
     },
     "devDependencies": {
         "nodemon": "^3.0.1"
