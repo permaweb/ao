@@ -1,7 +1,7 @@
-import { fromPromise, of } from "hyper-async";
+import { fromPromise, of } from 'hyper-async'
 
-import { createData } from "warp-arbundles";
-export { createData };
+import { createData } from 'warp-arbundles'
+export { createData }
 
 /**
  * @typedef Env3
@@ -21,34 +21,34 @@ export { createData };
  * @param {Env3} env
  * @returns {WriteInteraction2}
  */
-export function writeInteractionWith({ fetch, MU_URL, CU_URL }) {
+export function writeInteractionWith ({ fetch, MU_URL, CU_URL }) {
   return (transaction) => {
     return of(transaction)
       .chain(fromPromise(async (transaction) => {
-        let dataItem = transaction.signedData;
+        const dataItem = transaction.signedData
 
         const response = await fetch(
           `${MU_URL}/write`,
           {
-            method: "POST",
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
             },
             body: JSON.stringify({
               id: await dataItem.id,
               data: dataItem.getRaw(),
-              cu: CU_URL,
-            }),
-          },
-        );
+              cu: CU_URL
+            })
+          }
+        )
 
         return {
           muResponse: await getJsonResponse(response),
-          originalTxId: dataItem.id,
-        };
-      })).toPromise();
-  };
+          originalTxId: dataItem.id
+        }
+      })).toPromise()
+  }
 }
 
 /**
@@ -70,11 +70,11 @@ export function writeInteractionWith({ fetch, MU_URL, CU_URL }) {
  * @param {Env4} env
  * @returns {SignInteraction}
  */
-export function signInteractionWith({ createDataItem }) {
+export function signInteractionWith ({ createDataItem }) {
   return (transaction) => {
     return of(transaction)
       .chain(fromPromise(async (transaction) => {
-        const { data, tags, wallet } = transaction;
+        const { data, tags, wallet } = transaction
         /**
          * if in the browser the user must pass
          *   - warp-contracts-plugin-signature InjectedArweaveSigner as wallet
@@ -83,40 +83,41 @@ export function signInteractionWith({ createDataItem }) {
          *
          * TODO: this is temporary until we can rebuild the signature piece
          */
-        let interactionDataItem;
+        let interactionDataItem
         if (isBrowser() && wallet.signer?.signDataItem) {
-          interactionDataItem = await wallet.signDataItem(data, tags);
+          interactionDataItem = await wallet.signDataItem(data, tags)
         } else {
-          interactionDataItem = createDataItem(data, wallet, { tags: tags });
-          await interactionDataItem.sign(wallet);
+          interactionDataItem = createDataItem(data, wallet, { tags })
+          await interactionDataItem.sign(wallet)
         }
 
-        return interactionDataItem;
-      })).toPromise();
-  };
+        return interactionDataItem
+      })).toPromise()
+  }
 }
 
 /**
  * some utilities used by the above functions pulled from warp sdk
  */
+// eslint-disable-next-line
 const isBrowser = new Function(
-  "try {return this===window;}catch(e){ return false;}",
-);
+  'try {return this===window;}catch(e){ return false;}'
+)
 
-export async function getJsonResponse(response) {
-  let r;
+export async function getJsonResponse (response) {
+  let r
   try {
-    r = await response;
+    r = await response
   } catch (e) {
     throw new Error(
-      `Error while communicating with messenger: ${JSON.stringify(e)}`,
-    );
+      `Error while communicating with messenger: ${JSON.stringify(e)}`
+    )
   }
 
   if (!r?.ok) {
-    const text = await r.text();
-    throw new Error(`${r.status}: ${text}`);
+    const text = await r.text()
+    throw new Error(`${r.status}: ${text}`)
   }
-  const result = await r.json();
-  return result;
+  const result = await r.json()
+  return result
 }

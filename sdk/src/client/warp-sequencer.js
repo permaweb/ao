@@ -1,4 +1,4 @@
-import { fromPromise, of } from "hyper-async";
+import { fromPromise, of } from 'hyper-async'
 import {
   __,
   applySpec,
@@ -13,11 +13,11 @@ import {
   pipe,
   prop,
   reduce,
-  transduce,
-} from "ramda";
-import { z } from "zod";
-import { createData } from "warp-arbundles";
-export { createData };
+  transduce
+} from 'ramda'
+import { z } from 'zod'
+import { createData } from 'warp-arbundles'
+export { createData }
 
 /**
  * An implementation of the Sequencer client using
@@ -43,11 +43,11 @@ export { createData };
  * @param {Env3} env
  * @returns {LoadInteractions}
  */
-export function loadInteractionsWith(
-  { fetch, SEQUENCER_URL, logger: _logger, pageSize },
+export function loadInteractionsWith (
+  { fetch, SEQUENCER_URL, logger: _logger, pageSize }
 ) {
   // TODO: create a dataloader and use that to batch load interactions
-  const logger = _logger.child("loadInteractions");
+  const logger = _logger.child('loadInteractions')
   /**
    * Some values are coming back from the sequencer as strings,
    * despite the values actually being numbers when pulled from the gateway
@@ -55,7 +55,7 @@ export function loadInteractionsWith(
    * We treat the Arweave gateway as the ultimate truth for data integrity,
    * so we will coerce those values to numbers, when encountered, using this schema
    */
-  const stringfiedNumberSchema = z.coerce.number();
+  const stringfiedNumberSchema = z.coerce.number()
 
   const interactionsPageSchema = z.object({
     paging: z.record(z.any()),
@@ -72,32 +72,32 @@ export function loadInteractionsWith(
       interaction: z.object({
         id: z.string(),
         owner: z.object({
-          address: z.string(),
+          address: z.string()
         }),
         /**
          * This was sometimes null on the sequencer response,
          * so default to empty string
          */
-        recipient: z.string().default(""),
+        recipient: z.string().default(''),
         quantity: z.object({
-          winston: stringfiedNumberSchema,
+          winston: stringfiedNumberSchema
         }),
         fee: z.object({
-          winston: stringfiedNumberSchema,
+          winston: stringfiedNumberSchema
         }),
         tags: z.array(z.object({
           name: z.string(),
-          value: z.string(),
+          value: z.string()
         })),
         block: z.object({
           id: z.string(),
           height: stringfiedNumberSchema,
-          timestamp: stringfiedNumberSchema,
+          timestamp: stringfiedNumberSchema
         }),
-        sortKey: z.string(),
-      }),
-    })),
-  });
+        sortKey: z.string()
+      })
+    }))
+  })
 
   /**
    * Pad the block height portion of the sortKey to 12 characters
@@ -112,10 +112,10 @@ export function loadInteractionsWith(
    * is added.
    */
   const padBlockHeight = (sortKey) => {
-    if (!sortKey) return sortKey;
-    const [height, ...rest] = String(sortKey).split(",");
-    return [height.padStart(12, "0"), ...rest].join(",");
-  };
+    if (!sortKey) return sortKey
+    const [height, ...rest] = String(sortKey).split(',')
+    return [height.padStart(12, '0'), ...rest].join(',')
+  }
 
   const mapBounds = evolve({
     from: padBlockHeight,
@@ -125,26 +125,26 @@ export function loadInteractionsWith(
        * the sequencer will include any interactions in that block
        */
       (sortKey) => {
-        if (!sortKey) return sortKey;
-        const parts = String(sortKey).split(",");
+        if (!sortKey) return sortKey
+        const parts = String(sortKey).split(',')
         /**
          * Full sort key, so no need to increment
          */
-        if (parts.length > 1) return parts.join(",");
+        if (parts.length > 1) return parts.join(',')
 
         /**
          * only the block height is being used as the sort key
          * so append a ',' so that transactions in that block are included
          */
-        const [height] = parts;
-        return `${height},`;
+        const [height] = parts
+        return `${height},`
       },
       /**
        * Still ensure the proper padding is added
        */
-      padBlockHeight,
-    ),
-  });
+      padBlockHeight
+    )
+  })
 
   /**
    * Reference shape pulled from
@@ -155,22 +155,22 @@ export function loadInteractionsWith(
   const toSwGlobal = ({ contract: { id, owner } }) => (interaction) => ({
     contract: { id, owner },
     transaction: applySpec({
-      id: path(["id"]),
-      owner: path(["owner", "address"]),
-      target: path(["recipient"]),
-      quantity: path(["quantity", "winston"]),
-      reward: path(["fee", "winston"]),
-      tags: path(["tags"]),
+      id: path(['id']),
+      owner: path(['owner', 'address']),
+      target: path(['recipient']),
+      quantity: path(['quantity', 'winston']),
+      reward: path(['fee', 'winston']),
+      tags: path(['tags'])
     })(interaction),
     block: applySpec({
-      height: path(["block", "height"]),
-      indep_hash: path(["block", "id"]),
-      timestamp: path(["block", "timestamp"]),
-    })(interaction),
-  });
+      height: path(['block', 'height']),
+      indep_hash: path(['block', 'id']),
+      timestamp: path(['block', 'timestamp'])
+    })(interaction)
+  })
 
   const fetchAllPages = ({ id, from, to }) => {
-    async function fetchPage(page) {
+    async function fetchPage (page) {
       // deno-fmt-ignore-start
       return Promise.resolve({ contractId: id, from, to, page, limit: pageSize })
         // filter out all undefined values
@@ -178,7 +178,7 @@ export function loadInteractionsWith(
         .then(params => new URLSearchParams(params))
         .then(params => {
           logger(
-            `Loading page %s of %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
+            'Loading page %s of %s interactions from sequencer for contract "%s" from "%s" to "%s"',
             page,
             pageSize,
             id,
@@ -188,27 +188,29 @@ export function loadInteractionsWith(
           return params
         })
         .then((params) => fetch(`${SEQUENCER_URL}/gateway/v2/interactions-sort-key?${params.toString()}`))
-        .then((res) => res.json());
+        .then((res) => res.json())
       // deno-fmt-ignore-end
     }
 
-    async function maybeFetchNext({ paging, interactions }) {
+    async function maybeFetchNext ({ paging, interactions }) {
       /**
        * Either have reached the end and resolve, or fetch the next page and recurse
        */
       // deno-fmt-ignore-start
-      return paging.page >= paging.pages ? { paging, interactions } : Promise.resolve(paging.page + 1)
-        .then(fetchPage)
-        .then(maybeFetchNext)
-        .then(({ paging, interactions: i }) => ({ paging, interactions: interactions.concat(i) }))
+      return paging.page >= paging.pages
+        ? { paging, interactions }
+        : Promise.resolve(paging.page + 1)
+          .then(fetchPage)
+          .then(maybeFetchNext)
+          .then(({ paging, interactions: i }) => ({ paging, interactions: interactions.concat(i) }))
       // deno-fmt-ignore-end
     }
 
     /**
      * Start with the first page, then keep going
      */
-    return fetchPage(1).then(maybeFetchNext);
-  };
+    return fetchPage(1).then(maybeFetchNext)
+  }
 
   /**
    * See https://academy.warp.cc/docs/gateway/http/get/interactions
@@ -233,38 +235,38 @@ export function loadInteractionsWith(
         fromPromise(({ id, owner, from, to }) =>
           fetchAllPages({ id, from, to })
             .then(interactionsPageSchema.parse)
-            .then(prop("interactions"))
+            .then(prop('interactions'))
             .then((interactions) => {
               logger(
-                `loaded %s interactions from sequencer for contract "%s" from "%s" to "%s"`,
+                'loaded %s interactions from sequencer for contract "%s" from "%s" to "%s"',
                 interactions.length,
                 id,
-                from || "initial",
-                to || "latest",
-              );
-              return interactions;
+                from || 'initial',
+                to || 'latest'
+              )
+              return interactions
             })
             .then((interactions) =>
               transduce(
                 // { interaction: { ..., tags: [ { name, value }] } }
                 compose(
                   // [ { name, value } ]
-                  map(path(["interaction"])),
+                  map(path(['interaction'])),
                   /**
                    * Build the actual expected shape
                    * of an action
                    */
                   map(applySpec({
-                    sortKey: prop("sortKey"),
+                    sortKey: prop('sortKey'),
                     action: pipe(
-                      path(["tags"]),
+                      path(['tags']),
                       // { first: tag, second: tag }
                       reduce((a, t) => assoc(t.name, t.value, a), {}),
                       // "{\"function\": \"balance\"}"
-                      prop("Input"),
+                      prop('Input'),
                       // { function: "balance" }
                       (input) => JSON.parse(input),
-                      assoc("input", __, {}),
+                      assoc('input', __, {})
                     ),
                     /**
                      * TODO: is this the right layer to be mapping this?
@@ -272,17 +274,17 @@ export function loadInteractionsWith(
                      *
                      * For now, we will keep it a responsibility of the client impl
                      */
-                    SWGlobal: toSwGlobal({ contract: { id, owner } }),
-                  })),
+                    SWGlobal: toSwGlobal({ contract: { id, owner } })
+                  }))
                 ),
                 (acc, input) => {
-                  acc.unshift(input);
-                  return acc;
+                  acc.unshift(input)
+                  return acc
                 },
                 [],
-                interactions,
+                interactions
               )
             )
-        ),
-      ).toPromise();
+        )
+      ).toPromise()
 }

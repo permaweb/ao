@@ -1,16 +1,16 @@
-import { z } from "zod";
+import { z } from 'zod'
 
 export const interactionSchema = z.object({
   action: z.object({
     input: z.object({
-      function: z.string(),
-    }).passthrough(),
+      function: z.string()
+    }).passthrough()
   }).passthrough(),
   sortKey: z.string(),
   SWGlobal: z.object({
     contract: z.object({
       id: z.string(),
-      owner: z.string(),
+      owner: z.string()
     }),
     transaction: z.object({
       id: z.string(),
@@ -20,16 +20,16 @@ export const interactionSchema = z.object({
       reward: z.number(),
       tags: z.array(z.object({
         name: z.string(),
-        value: z.string(),
-      })),
+        value: z.string()
+      }))
     }),
     block: z.object({
       height: z.number(),
       indep_hash: z.string(),
-      timestamp: z.number(),
-    }),
-  }),
-});
+      timestamp: z.number()
+    })
+  })
+})
 
 export const evaluationSchema = z.object({
   /**
@@ -48,9 +48,9 @@ export const evaluationSchema = z.object({
    */
   cachedAt: z.preprocess(
     (
-      arg,
-    ) => (typeof arg == "string" || arg instanceof Date ? new Date(arg) : arg),
-    z.date(),
+      arg
+    ) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
+    z.date()
   ),
   /**
    * The action performed by the interaction
@@ -65,6 +65,6 @@ export const evaluationSchema = z.object({
    */
   output: z.object({
     state: z.record(z.any()).optional(),
-    result: z.record(z.any()).optional(),
-  }),
-});
+    result: z.record(z.any()).optional()
+  })
+})

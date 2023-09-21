@@ -1,7 +1,7 @@
-import { describe } from "node:test";
+import { describe } from 'node:test'
 
-describe("ao-mu", () => {
-  describe("writeInteraction", () => {
+describe('ao-mu', () => {
+  describe('writeInteraction', () => {
     // TODO
-  });
-});
+  })
+})

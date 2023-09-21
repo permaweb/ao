@@ -1,8 +1,8 @@
-import { fromPromise, of } from "hyper-async";
-import { __, path } from "ramda";
-import { z } from "zod";
+import { fromPromise, of } from 'hyper-async'
+import { path } from 'ramda'
+import { z } from 'zod'
 
-import { evaluationSchema, interactionSchema } from "./model.js";
+import { evaluationSchema, interactionSchema } from './model.js'
 
 export const dbClientSchema = z.object({
   findLatestEvaluation: z.function()
@@ -10,8 +10,8 @@ export const dbClientSchema = z.object({
     .returns(z.promise(evaluationSchema.or(z.undefined()))),
   saveEvaluation: z.function()
     .args(evaluationSchema)
-    .returns(z.promise(z.any())),
-});
+    .returns(z.promise(z.any()))
+})
 
 export const sequencerClientSchema = z.object({
   loadInteractions: z.function()
@@ -20,11 +20,11 @@ export const sequencerClientSchema = z.object({
         id: z.string(),
         owner: z.string(),
         from: z.string().optional(),
-        to: z.string().optional(),
-      }),
+        to: z.string().optional()
+      })
     )
-    .returns(z.promise(z.array(interactionSchema))),
-});
+    .returns(z.promise(z.array(interactionSchema)))
+})
 
 export const muClientSchema = z.object({
   // TODO: define this shape
@@ -33,8 +33,8 @@ export const muClientSchema = z.object({
     .returns(z.promise(z.any())),
   signInteraction: z.function()
     .args(z.record(z.any()))
-    .returns(z.promise(z.any())),
-});
+    .returns(z.promise(z.any()))
+})
 
 /**
  * @typedef Env1
@@ -48,7 +48,7 @@ export const muClientSchema = z.object({
  * @param {Env1} env
  * @returns {LoadTransactionMeta}
  */
-export function loadTransactionMetaWith({ fetch, GATEWAY_URL }) {
+export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_CONTRACTS_QUERY = `
@@ -71,33 +71,33 @@ export function loadTransactionMetaWith({ fetch, GATEWAY_URL }) {
         }
       }
     }
-  }`;
+  }`
 
   const transactionConnectionSchema = z.object({
     data: z.object({
       transactions: z.object({
         edges: z.array(z.object({
-          node: z.record(z.any()),
-        })),
-      }),
-    }),
-  });
+          node: z.record(z.any())
+        }))
+      })
+    })
+  })
 
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
         fetch(`${GATEWAY_URL}/graphql`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query: GET_CONTRACTS_QUERY,
-            variables: { contractIds: [id] },
-          }),
+            variables: { contractIds: [id] }
+          })
         })
           .then((res) => res.json())
           .then(transactionConnectionSchema.parse)
-          .then(path(["data", "transactions", "edges", "0", "node"]))
-      ));
+          .then(path(['data', 'transactions', 'edges', '0', 'node']))
+      ))
 }
 
 /**
@@ -112,10 +112,10 @@ export function loadTransactionMetaWith({ fetch, GATEWAY_URL }) {
  * @param {Env2} env
  * @returns {LoadTransactionData}
  */
-export function loadTransactionDataWith({ fetch, GATEWAY_URL }) {
+export function loadTransactionDataWith ({ fetch, GATEWAY_URL }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   return (id) =>
     of(id)
-      .chain(fromPromise((id) => fetch(`${GATEWAY_URL}/${id}`)));
+      .chain(fromPromise((id) => fetch(`${GATEWAY_URL}/${id}`)))
 }
