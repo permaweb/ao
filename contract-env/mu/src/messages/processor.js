@@ -8,8 +8,12 @@ const processor = {
     msgCallStack: msgCallStack,
     cuAddress: null,
 
-    process: async function(txId, messages, cuAddress) {
+    process: async function(txId, data, cuAddress) {
         this.cuAddress = cuAddress;
+        
+        await sequencerClient.writeInteraction(data);
+
+        let messages = await cuClient.messages(cuAddress, txId);
 
         this.msgCallStack.writeStack(txId, messages, null);
         let initialMessages = this.msgCallStack[txId];

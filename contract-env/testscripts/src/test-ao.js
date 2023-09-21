@@ -26,14 +26,12 @@ const CONTRACT_TX_ID = "4ILANxSL3P4RtbbVamYynK6YLsPNUJ4WX1nYziOB0v4";
     let s = await readState(CONTRACT_TX_ID);
     console.log(s)
 
-    let writeAoInteraction = await writeInteraction(
+    await writeInteraction(
         CONTRACT_TX_ID, 
         input, 
         signer, 
         tags
     );
-
-    console.log(writeAoInteraction);
 
     // let newState = await fetch(`${CU_URL}${CONTRACT_ENDPOINT}${CONTRACT_TX_ID}`);
     // let newStateJson = await newState.json();
