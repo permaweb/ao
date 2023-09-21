@@ -1,7 +1,7 @@
-import { __, assoc, assocPath, prop, reduce, reduced } from "ramda";
-import { fromPromise, of, Rejected, Resolved } from "hyper-async";
-import AoLoader from "@permaweb/ao-loader";
-import { z } from "zod";
+import { __, assoc, assocPath, prop, reduce, reduced } from 'ramda'
+import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
+import AoLoader from '@permaweb/ao-loader'
+import { z } from 'zod'
 
 /**
  * The result that is produced from this step
@@ -11,25 +11,25 @@ import { z } from "zod";
  * is always added to context
  */
 const ctxSchema = z.object({
-  output: z.record(z.any()),
-}).passthrough();
+  output: z.record(z.any())
+}).passthrough()
 
 /**
  * @typedef Env
  * @property {any} db
  */
 
-function addHandler(ctx) {
+function addHandler (ctx) {
   return of(ctx.src)
     .map(AoLoader)
-    .map((handle) => ({ handle, ...ctx }));
+    .map((handle) => ({ handle, ...ctx }))
 }
 
-function cacheEvaluationWith({ db, logger }) {
+function cacheEvaluationWith ({ db, logger }) {
   return (evaluation) =>
     of(evaluation)
-      .map(logger.tap(`Caching evaluation %O`))
-      .chain(db.saveEvaluation);
+      .map(logger.tap('Caching evaluation %O'))
+      .chain(db.saveEvaluation)
 }
 
 /**
@@ -47,10 +47,10 @@ function cacheEvaluationWith({ db, logger }) {
  * @param {Env} env
  * @returns {Evaluate}
  */
-export function evaluateWith(env) {
-  const logger = env.logger.child("evaluate");
+export function evaluateWith (env) {
+  const logger = env.logger.child('evaluate')
 
-  const cacheEvaluation = cacheEvaluationWith({ ...env, logger });
+  const cacheEvaluation = cacheEvaluationWith({ ...env, logger })
 
   /**
    * When an error occurs, we short circuit the reduce using
@@ -65,13 +65,13 @@ export function evaluateWith(env) {
    * https://github.com/ramda/ramda/blob/afe98b03c322fc4d22742869799c9f2796c79744/source/internal/_xReduce.js#L10C11-L10C11
    */
   const maybeReducedError = (With) => (output) => {
-    if (output && output["@@transducer/reduced"]) {
-      return With(output["@@transducer/value"]);
+    if (output && output['@@transducer/reduced']) {
+      return With(output['@@transducer/value'])
     }
-    return Resolved(output);
-  };
-  const maybeResolveError = maybeReducedError(Resolved);
-  const maybeRejectError = maybeReducedError(Rejected);
+    return Resolved(output)
+  }
+  const maybeResolveError = maybeReducedError(Resolved)
+  const maybeRejectError = maybeReducedError(Rejected)
 
   return (ctx) =>
     of(ctx)
@@ -84,22 +84,22 @@ export function evaluateWith(env) {
           ($output, { action, sortKey, SWGlobal }) =>
             $output
               .chain(maybeRejectError)
-              .map(prop("state"))
+              .map(prop('state'))
               .chain((state) =>
                 of(state)
                   .chain(
-                    fromPromise((state) => ctx.handle(state, action, SWGlobal)),
+                    fromPromise((state) => ctx.handle(state, action, SWGlobal))
                   )
                   .bichain(
                     /**
                      * Map thrown error to a result.error
                      */
-                    (err) => Resolved(assocPath(["result", "error"], err, {})),
-                    Resolved,
+                    (err) => Resolved(assocPath(['result', 'error'], err, {})),
+                    Resolved
                   )
                   .chain((output) => {
                     if (output.result && output.result.error) {
-                      return Rejected(output);
+                      return Rejected(output)
                     }
                     /**
                      * We default to state to the previous state,
@@ -110,16 +110,16 @@ export function evaluateWith(env) {
                      * operate on, even if the previous interaction only produced
                      * messages and no state change.
                      */
-                    return Resolved({ state, ...output });
+                    return Resolved({ state, ...output })
                   })
               )
               .bimap(
                 logger.tap(
-                  `Error occurred when applying interaction with sortKey "${sortKey}" to contract "${ctx.id}"`,
+                  `Error occurred when applying interaction with sortKey "${sortKey}" to contract "${ctx.id}"`
                 ),
                 logger.tap(
-                  `Applied interaction with sortKey "${sortKey}" to contract "${ctx.id}"`,
-                ),
+                  `Applied interaction with sortKey "${sortKey}" to contract "${ctx.id}"`
+                )
               )
               /**
                * Create a new interaction to be cached in the local db
@@ -130,7 +130,7 @@ export function evaluateWith(env) {
                   parent: ctx.id,
                   action,
                   output,
-                  cachedAt: new Date(),
+                  cachedAt: new Date()
                 }).map(() => output)
               )
               .bichain(
@@ -141,10 +141,10 @@ export function evaluateWith(env) {
                 /**
                  * Return the output
                  */
-                Resolved,
+                Resolved
               ),
           of({ state: ctx.state, result: ctx.result }),
-          ctx.actions,
+          ctx.actions
         )
       )
       /**
@@ -155,6 +155,6 @@ export function evaluateWith(env) {
        * In other words, this chain should always Resolve
        */
       .chain(maybeResolveError)
-      .map(assoc("output", __, ctx))
-      .map(ctxSchema.parse);
+      .map(assoc('output', __, ctx))
+      .map(ctxSchema.parse)
 }

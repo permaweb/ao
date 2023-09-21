@@ -1,2 +1,10 @@
 image:
   file: .gitpod.Dockerfile
+
+tasks:
+  - name: Init Repo Tooling
+    init: npm i
+
+vscode:
+  extensions:
+    - "standard.vscode-standard"

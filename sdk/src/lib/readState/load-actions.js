@@ -1,8 +1,8 @@
-import { of } from "hyper-async";
-import { __, assoc } from "ramda";
-import { z } from "zod";
+import { of } from 'hyper-async'
+import { __, assoc } from 'ramda'
+import { z } from 'zod'
 
-import { interactionSchema } from "../../model.js";
+import { interactionSchema } from '../../model.js'
 
 /**
  * The result that is produced from this step
@@ -12,8 +12,8 @@ import { interactionSchema } from "../../model.js";
  * is always added to context
  */
 const ctxSchema = z.object({
-  actions: z.array(interactionSchema),
-}).passthrough();
+  actions: z.array(interactionSchema)
+}).passthrough()
 
 /**
  * @typedef LoadInteractionsArgs
@@ -42,13 +42,13 @@ const ctxSchema = z.object({
  * @param {Env} env
  * @returns {LoadActions}
  */
-export function loadActionsWith({ loadInteractions, logger: _logger }) {
-  const logger = _logger.child("loadActions");
+export function loadActionsWith ({ loadInteractions, logger: _logger }) {
+  const logger = _logger.child('loadActions')
 
   return (ctx) =>
     of(ctx)
       .chain(loadInteractions)
-      .map(assoc("actions", __, ctx))
+      .map(assoc('actions', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap(`Adding actions to ctx %O`));
+      .map(logger.tap('Adding actions to ctx %O'))
 }

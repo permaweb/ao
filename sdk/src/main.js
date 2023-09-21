@@ -1,24 +1,15 @@
-import { fromPromise, of } from "hyper-async";
-import { z } from "zod";
-
-import {
-  dbClientSchema,
-  loadTransactionDataWith,
-  loadTransactionMetaWith,
-  muClientSchema,
-  sequencerClientSchema,
-} from "./dal.js";
+import { of } from 'hyper-async'
 
 // readState
-import { loadSourceWith } from "./lib/readState/load-src.js";
-import { loadStateWith } from "./lib/readState/load-state.js";
-import { loadActionsWith } from "./lib/readState/load-actions.js";
-import { evaluateWith } from "./lib/readState/evaluate.js";
+import { loadSourceWith } from './lib/readState/load-src.js'
+import { loadStateWith } from './lib/readState/load-state.js'
+import { loadActionsWith } from './lib/readState/load-actions.js'
+import { evaluateWith } from './lib/readState/evaluate.js'
 
 // writeInteraction
-import { verifyContractWith } from "./lib/writeInteraction/verify-contract.js";
-import { verifyInputWith } from "./lib/writeInteraction/verify-input.js";
-import { buildTxWith } from "./lib/writeInteraction/build-tx.js";
+import { verifyContractWith } from './lib/writeInteraction/verify-contract.js'
+import { verifyInputWith } from './lib/writeInteraction/verify-input.js'
+import { buildTxWith } from './lib/writeInteraction/build-tx.js'
 
 /**
  * @typedef Env
@@ -39,11 +30,11 @@ import { buildTxWith } from "./lib/writeInteraction/build-tx.js";
  * @param {Env} - the environment
  * @returns {ReadState}
  */
-export function readStateWith(env) {
-  const loadSource = loadSourceWith(env);
-  const loadState = loadStateWith(env);
-  const loadActions = loadActionsWith(env);
-  const evaluate = evaluateWith(env);
+export function readStateWith (env) {
+  const loadSource = loadSourceWith(env)
+  const loadState = loadStateWith(env)
+  const loadActions = loadActionsWith(env)
+  const evaluate = evaluateWith(env)
 
   return (contractId, sortKeyHeight) => {
     return of({ id: contractId, to: sortKeyHeight })
@@ -54,19 +45,19 @@ export function readStateWith(env) {
       .map((ctx) => ctx.output)
       .map(
         env.logger.tap(
-          `readState result for contract "%s" to sortKey "%s": %O`,
+          'readState result for contract "%s" to sortKey "%s": %O',
           contractId,
-          sortKeyHeight || "latest",
-        ),
+          sortKeyHeight || 'latest'
+        )
       )
-      .toPromise();
-  };
+      .toPromise()
+  }
 }
 
 /**
  * @typedef Env1
  * @property {any} loadTransactionMeta
- * @property {z.infer<typeof muClientSchema>} mu
+ * @property {any} mu
  *
  * @typedef WriteInteractionResult
  * @property {string} originalTxId - the id of the transaction that represents this interaction
@@ -82,10 +73,10 @@ export function readStateWith(env) {
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith(env) {
-  const verifyContract = verifyContractWith(env);
-  const verifyInput = verifyInputWith(env);
-  const buildTx = buildTxWith(env);
+export function writeInteractionWith (env) {
+  const verifyContract = verifyContractWith(env)
+  const verifyInput = verifyInputWith(env)
+  const buildTx = buildTxWith(env)
 
   return (contractId, input, wallet, tags) => {
     return of({ id: contractId, input, wallet, tags })
@@ -94,6 +85,6 @@ export function writeInteractionWith(env) {
       .chain(buildTx) // construct interaction to send ie. add tags, etc.
       .chain(env.mu.writeInteraction) // write to the messenger
       .map((ctx) => ctx)
-      .toPromise();
-  };
+      .toPromise()
+  }
 }

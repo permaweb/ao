@@ -1,3 +1,4 @@
+/* eslint-disable */
 var Module = (() => {
   var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;
   if (typeof __filename !== 'undefined') _scriptDir = _scriptDir || __filename;
@@ -15,6 +16,7 @@ var Module = (() => {
     }
   );
 })();
+/* eslint-enable */
 
 // load wasm and return handle function
 /**
@@ -39,7 +41,7 @@ module.exports = function (binary) {
     /**
      * An unhandled error was received across the interop, so throw it,
      * causing the Promise to reject.
-     * 
+     *
      * The caller should handle accordingly
      */
     throw response

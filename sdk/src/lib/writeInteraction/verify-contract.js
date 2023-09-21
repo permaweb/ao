@@ -1,22 +1,22 @@
-import { of } from "hyper-async";
-import { assoc, path, reduce } from "ramda";
-import { z } from "zod";
+import { of } from 'hyper-async'
+import { assoc, path, reduce } from 'ramda'
+import { z } from 'zod'
 
 const transactionSchema = z.object({
   tags: z.array(z.object({
     name: z.string(),
-    value: z.string(),
-  })),
-});
+    value: z.string()
+  }))
+})
 
 const contractTagsSchema = z.object({
-  "Contract-Src": z.string().min(
+  'Contract-Src': z.string().min(
     1,
-    { message: "Contract-Src tag was not present on the transaction" },
+    { message: 'Contract-Src tag was not present on the transaction' }
   ),
-  "App-Name": z.literal("SmartWeaveContract"),
-  "App-Version": z.literal("0.3.0"),
-});
+  'App-Name': z.literal('SmartWeaveContract'),
+  'App-Version': z.literal('0.3.0')
+})
 
 /**
  * @typedef Env5
@@ -28,14 +28,14 @@ const contractTagsSchema = z.object({
  * @param {Env5} env
  * @returns {any} VerifyTags
  */
-function verfiyTagsWith({ loadTransactionMeta }) {
+function verfiyTagsWith ({ loadTransactionMeta }) {
   return (id) => {
     return loadTransactionMeta(id)
       .map(transactionSchema.parse)
-      .map(path(["tags"]))
+      .map(path(['tags']))
       .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
-      .map(contractTagsSchema.parse);
-  };
+      .map(contractTagsSchema.parse)
+  }
 }
 
 /**
@@ -59,11 +59,11 @@ function verfiyTagsWith({ loadTransactionMeta }) {
  * @param {Env6} env
  * @returns {VerifyContract}
  */
-export function verifyContractWith(env) {
-  const verfiyTags = verfiyTagsWith(env);
+export function verifyContractWith (env) {
+  const verfiyTags = verfiyTagsWith(env)
   return (ctx) => {
     return of(ctx.id)
       .chain(verfiyTags)
-      .map(() => ctx);
-  };
+      .map(() => ctx)
+  }
 }

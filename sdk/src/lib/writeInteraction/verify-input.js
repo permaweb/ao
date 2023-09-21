@@ -1,12 +1,12 @@
-import { of } from "hyper-async";
-import { z } from "zod";
+import { of } from 'hyper-async'
+import { z } from 'zod'
 
 const inputSchema = z.object({
   function: z.string().min(
     1,
-    { message: "function not provided on input" },
-  ),
-});
+    { message: 'function not provided on input' }
+  )
+})
 
 /**
  * @typedef Context2
@@ -20,10 +20,10 @@ const inputSchema = z.object({
  *
  * @returns VerifyInput
  */
-export function verifyInputWith() {
+export function verifyInputWith () {
   return (ctx) => {
     return of(ctx.input)
       .map(inputSchema.parse)
-      .map(() => ctx);
-  };
+      .map(() => ctx)
+  }
 }

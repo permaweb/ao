@@ -1,0 +1,35 @@
+{
+  "name": "@permaweb/ao",
+  "description": "ao monorepo",
+  "scripts": {
+    "fmt": "standard --fix",
+    "prepare": "husky install",
+    "staged": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "standard --fix"
+    ],
+    "package.json": [
+      "sort-package-json",
+      "deno fmt"
+    ],
+    "README.md": [
+      "markdown-toc-gen insert",
+      "deno fmt"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "lint-staged": "^14.0.1",
+    "sort-package-json": "^2.5.1",
+    "standard": "^17.1.0"
+  },
+  "standard": {
+    "ignore": [
+      "dev-cli",
+      "contract-env",
+      "dist"
+    ]
+  }
+}
