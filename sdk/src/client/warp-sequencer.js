@@ -38,7 +38,7 @@ export { createData };
  *
  * @callback LoadInteractions
  * @param {LoadInteractionsArgs} args
- * @returns {Async<Record<string, any>}
+ * @returns {Promise<Record<string, any>}
  *
  * @param {Env3} env
  * @returns {LoadInteractions}
@@ -226,8 +226,8 @@ export function loadInteractionsWith(
    * - 'to' is non-inclusive IF only the block height is used at the sort key, so if we want to include interactions in the block at 'to', then we need to add a comma to the block height
    *    (see mapBounds above where we add the comma). I believe this is just because of the way the range query is implemented underneath the hood in Warp Sequencer
    */
-  return (ctx) =>
-    of({ id: ctx.id, owner: ctx.owner, from: ctx.from, to: ctx.to })
+  return ({ id, owner, from, to }) =>
+    of({ id, owner, from, to })
       .map(mapBounds)
       .chain(
         fromPromise(({ id, owner, from, to }) =>
