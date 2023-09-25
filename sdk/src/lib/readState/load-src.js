@@ -1,6 +1,6 @@
-import { fromPromise, of } from "hyper-async";
-import { __, applySpec, assoc, path, pick, pipe, prop, reduce } from "ramda";
-import { z } from "zod";
+import { fromPromise, of } from 'hyper-async'
+import { applySpec, assoc, path, pick, pipe, prop, reduce } from 'ramda'
+import { z } from 'zod'
 
 /**
  * The result that is produced from this step
@@ -12,9 +12,9 @@ import { z } from "zod";
 const ctxSchema = z.object({
   owner: z.string(),
   src: z.any().refine((val) => !!val, {
-    message: "contract source must be defined",
-  }),
-}).passthrough();
+    message: 'contract source must be defined'
+  })
+}).passthrough()
 
 /**
  * @callback LoadTransactionMeta
@@ -38,11 +38,11 @@ const ctxSchema = z.object({
  * @param {Env} env
  * @returns {LoadSourceBuffer}
  */
-function getSourceBufferWith({ loadTransactionData }) {
+function getSourceBufferWith ({ loadTransactionData }) {
   return (srcId) => {
     return loadTransactionData(srcId)
-      .chain(fromPromise((res) => res.arrayBuffer()));
-  };
+      .chain(fromPromise((res) => res.arrayBuffer()))
+  }
 }
 
 /**
@@ -53,24 +53,24 @@ function getSourceBufferWith({ loadTransactionData }) {
  * @param {Env} env
  * @returns {LoadContractMeta}
  */
-function getContractMetaWith({ loadTransactionMeta, logger }) {
+function getContractMetaWith ({ loadTransactionMeta, logger }) {
   return (id) => {
     return loadTransactionMeta(id)
-      .map(pick(["owner", "tags"]))
+      .map(pick(['owner', 'tags']))
       .map(applySpec({
         srcId: pipe(
-          prop("tags"),
+          prop('tags'),
           reduce((a, t) => assoc(t.name, t.value, a), {}),
-          prop("Contract-Src"),
+          prop('Contract-Src'),
           z.string().min(
             1,
-            { message: "Contract-Src tag was not present on the transaction" },
+            { message: 'Contract-Src tag was not present on the transaction' }
           ).parse,
-          logger.tap("Found Contract-Src id: %s"),
+          logger.tap('Found Contract-Src id: %s')
         ),
-        owner: path(["owner", "address"]),
-      }));
-  };
+        owner: path(['owner', 'address'])
+      }))
+  }
 }
 
 /**
@@ -88,12 +88,12 @@ function getContractMetaWith({ loadTransactionMeta, logger }) {
  * @param {Env} env
  * @returns {LoadSource}
  */
-export function loadSourceWith(env) {
-  const logger = env.logger.child("loadSource");
-  env = { ...env, logger };
+export function loadSourceWith (env) {
+  const logger = env.logger.child('loadSource')
+  env = { ...env, logger }
 
-  const getContractMeta = getContractMetaWith(env);
-  const getSourceBuffer = getSourceBufferWith(env);
+  const getContractMeta = getContractMetaWith(env)
+  const getSourceBuffer = getSourceBufferWith(env)
 
   return (ctx) => {
     return of(ctx.id)
@@ -102,6 +102,6 @@ export function loadSourceWith(env) {
         getSourceBuffer(srcId).map((src) => ({ ...ctx, src, owner }))
       )
       .map(ctxSchema.parse)
-      .map(logger.tap('Added "src" and "owner" to ctx'));
-  };
+      .map(logger.tap('Added "src" and "owner" to ctx'))
+  }
 }

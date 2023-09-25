@@ -1,11 +1,11 @@
-import { of } from "hyper-async";
-import { z } from "zod";
-import { __, append, assoc } from "ramda";
+import { of } from 'hyper-async'
+import { z } from 'zod'
+import { __, append, assoc } from 'ramda'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
-  value: z.string(),
-}));
+  value: z.string()
+}))
 
 /**
  * @typedef Tag3
@@ -29,17 +29,17 @@ const tagSchema = z.array(z.object({
  *
  * @returns { BuildTags }
  */
-function buildTagsWith() {
+function buildTagsWith () {
   return (ctx) => {
     return of(ctx.tags)
-      .map(append({ name: "App-Name", value: "SmartWeaveAction" }))
-      .map(append({ name: "App-Version", value: "0.3.0" }))
-      .map(append({ name: "Contract", value: ctx.id }))
-      .map(append({ name: "Input", value: JSON.stringify(ctx.input) }))
-      .map(append({ name: "SDK", value: "ao" }))
+      .map(append({ name: 'App-Name', value: 'SmartWeaveAction' }))
+      .map(append({ name: 'App-Version', value: '0.3.0' }))
+      .map(append({ name: 'Contract', value: ctx.id }))
+      .map(append({ name: 'Input', value: JSON.stringify(ctx.input) }))
+      .map(append({ name: 'SDK', value: 'ao' }))
       .map(tagSchema.parse)
-      .map(assoc("tags", __, ctx));
-  };
+      .map(assoc('tags', __, ctx))
+  }
 }
 
 /**
@@ -49,12 +49,12 @@ function buildTagsWith() {
  *
  * @returns { BuildData }
  */
-function buildDataWith() {
+function buildDataWith () {
   return (ctx) => {
     return of(ctx)
       .map(() => Math.random().toString().slice(-4))
-      .map(assoc("data", __, ctx));
-  };
+      .map(assoc('data', __, ctx))
+  }
 }
 
 /**
@@ -65,12 +65,12 @@ function buildDataWith() {
  * @param {Env6}
  * @returns { SignWith }
  */
-function signWith(env) {
+function signWith (env) {
   return (ctx) => {
     return of(ctx)
-      .map(env.mu.signInteraction)
-      .map(assoc("signedData", __, ctx));
-  };
+      .chain(env.mu.signInteraction)
+      .map(assoc('signedData', __, ctx))
+  }
 }
 
 /**
@@ -81,15 +81,15 @@ function signWith(env) {
  * @param {Env6} env
  * @returns {BuildTx}
  */
-export function buildTxWith(env) {
-  let buildTags = buildTagsWith();
-  let buildData = buildDataWith();
-  let sign = signWith(env);
+export function buildTxWith (env) {
+  const buildTags = buildTagsWith()
+  const buildData = buildDataWith()
+  const sign = signWith(env)
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTags) // create tags
       .chain(buildData) // generate random number as data item
-      .chain(sign); // sign with sequencer client
-  };
+      .chain(sign) // sign with sequencer client
+  }
 }

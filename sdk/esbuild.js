@@ -1,9 +1,10 @@
-import * as esbuild from "esbuild";
+import { readFileSync } from 'node:fs'
+import * as esbuild from 'esbuild'
 
 /**
  * By importing from manifest, build will always be in sync with the manifest
  */
-import manifest from "./package.json" assert { type: "json" };
+const manifest = JSON.parse(readFileSync('./package.json'))
 
 /**
  * Some dependencies are ESM only, and so cannot be required from a CJS project.
@@ -12,28 +13,28 @@ import manifest from "./package.json" assert { type: "json" };
  *
  * ie. hyper-async
  */
-function allDepsExcept(excluded = []) {
+function allDepsExcept (excluded = []) {
   return Object.keys(manifest.dependencies).filter((dep) =>
     !excluded.includes(dep)
-  );
+  )
 }
 
 // CJS
 await esbuild.build({
-  entryPoints: ["src/index.js"],
-  platform: "node",
-  format: "cjs",
-  external: allDepsExcept(["hyper-async"]),
+  entryPoints: ['src/index.js'],
+  platform: 'node',
+  format: 'cjs',
+  external: allDepsExcept(['hyper-async']),
   bundle: true,
-  outfile: manifest.main,
-});
+  outfile: manifest.main
+})
 
 // ESM
 await esbuild.build({
-  entryPoints: ["src/index.js"],
-  platform: "node",
-  format: "esm",
-  external: allDepsExcept(["hyper-async"]),
+  entryPoints: ['src/index.js'],
+  platform: 'node',
+  format: 'esm',
+  external: allDepsExcept(['hyper-async']),
   bundle: true,
-  outfile: manifest.module,
-});
+  outfile: manifest.module
+})

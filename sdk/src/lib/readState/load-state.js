@@ -1,4 +1,4 @@
-import { fromPromise, of, Rejected, Resolved } from "hyper-async";
+import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import {
   __,
   always,
@@ -9,11 +9,11 @@ import {
   pick,
   pipe,
   prop,
-  reduce,
-} from "ramda";
-import { z } from "zod";
+  reduce
+} from 'ramda'
+import { z } from 'zod'
 
-const [INIT_STATE_TAG, INIT_STATE_TX_TAG] = ["Init-State", "Init-State-TX"];
+const [INIT_STATE_TAG, INIT_STATE_TX_TAG] = ['Init-State', 'Init-State-TX']
 
 /**
  * The result that is produced from this step
@@ -47,8 +47,8 @@ const ctxSchema = z.object({
    * This will be used to subsequently determine which interactions
    * need to be fetched from the network in order to perform the evaluation
    */
-  from: z.coerce.string().optional(),
-}).passthrough();
+  from: z.coerce.string().optional()
+}).passthrough()
 
 /**
  * @callback LoadTransactionMeta
@@ -73,30 +73,30 @@ const ctxSchema = z.object({
  * @param {Env} env
  * @returns {ResolveInitialState}
  */
-function resolveStateWith({ loadTransactionData, logger: _logger }) {
-  const logger = _logger.child("resolveState");
+function resolveStateWith ({ loadTransactionData, logger: _logger }) {
+  const logger = _logger.child('resolveState')
 
-  function maybeInitState(ctx) {
+  function maybeInitState (ctx) {
     if (!ctx.tags[INIT_STATE_TAG]) {
-      return Rejected(ctx);
+      return Rejected(ctx)
     }
     return Resolved(JSON.parse(ctx.tags[INIT_STATE_TAG])).map(
-      logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`),
-    );
+      logger.tap(`Found initial state in tag "${INIT_STATE_TAG}" %O`)
+    )
   }
 
-  function maybeInitStateTx(ctx) {
-    if (!ctx.tags[INIT_STATE_TX_TAG]) return Rejected(ctx);
+  function maybeInitStateTx (ctx) {
+    if (!ctx.tags[INIT_STATE_TX_TAG]) return Rejected(ctx)
 
     return loadTransactionData(ctx.tags[INIT_STATE_TX_TAG])
       .chain(fromPromise((res) => res.json()))
-      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TX_TAG}" %O`));
+      .map(logger.tap(`Found initial state in tag "${INIT_STATE_TX_TAG}" %O`))
   }
 
-  function maybeData(ctx) {
+  function maybeData (ctx) {
     return loadTransactionData(ctx.id)
       .chain(fromPromise((res) => res.json()))
-      .map(logger.tap(`Found initial state in transaction data %O`));
+      .map(logger.tap('Found initial state in transaction data %O'))
   }
 
   /**
@@ -106,16 +106,16 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
    */
   return (ctx) =>
     of(ctx)
-      .map(logger.tap(`Resolving initial state for ctx %O`))
+      .map(logger.tap('Resolving initial state for ctx %O'))
       .bichain(Rejected, maybeInitState)
       .bichain(maybeInitStateTx, Resolved)
       .bichain(maybeData, Resolved)
       .bimap(
         logger.tap(
-          `ERROR: Could not find the initial state of the transaction`,
+          'ERROR: Could not find the initial state of the transaction'
         ),
-        identity,
-      );
+        identity
+      )
 }
 
 /**
@@ -129,19 +129,19 @@ function resolveStateWith({ loadTransactionData, logger: _logger }) {
  * @param {Env} env
  * @returns {LoadInitialStateTags}
  */
-function getSourceInitStateTagsWith({ loadTransactionMeta }) {
+function getSourceInitStateTagsWith ({ loadTransactionMeta }) {
   return ({ id }) => {
     return loadTransactionMeta(id)
-      .map(pick(["tags", "block"]))
+      .map(pick(['tags', 'block']))
       .map(applySpec({
         id: always(id),
         tags: pipe(
-          prop("tags"),
+          prop('tags'),
           reduce((a, t) => assoc(t.name, t.value, a), {}),
-          pick([INIT_STATE_TAG, INIT_STATE_TX_TAG]),
-        ),
-      }));
-  };
+          pick([INIT_STATE_TAG, INIT_STATE_TX_TAG])
+        )
+      }))
+  }
 }
 
 /**
@@ -156,33 +156,33 @@ function getSourceInitStateTagsWith({ loadTransactionMeta }) {
  * @param {Env} env
  * @returns {LoadMostRecentState}
  */
-function getMostRecentEvaluationWith({ db, logger: _logger }) {
-  const logger = _logger.child("getMostRecentState");
+function getMostRecentEvaluationWith ({ db, logger: _logger }) {
+  const logger = _logger.child('getMostRecentState')
 
   return ({ id, to }) =>
     db.findLatestEvaluation({ id, to })
       .chain((evaluation) => {
-        if (!evaluation) return Rejected({ id, to });
+        if (!evaluation) return Rejected({ id, to })
         return Resolved({
           state: evaluation.output.state,
           result: evaluation.output.result,
           // TODO: probably a better way to do this
           cachedAt: evaluation.cachedAt,
-          from: evaluation.sortKey,
-        });
+          from: evaluation.sortKey
+        })
       })
       .bimap(
         logger.tap(
-          `No cached evaluation found for contract "%s" at or below sortKey "%s"`,
+          'No cached evaluation found for contract "%s" at or below sortKey "%s"',
           id,
-          to || "latest",
+          to || 'latest'
         ),
         logger.tap(
-          `Found a cached evaluation for contract "%s" at or below sortKey "%s": %O`,
+          'Found a cached evaluation for contract "%s" at or below sortKey "%s": %O',
           id,
-          to || "latest",
-        ),
-      );
+          to || 'latest'
+        )
+      )
 }
 
 /**
@@ -200,13 +200,13 @@ function getMostRecentEvaluationWith({ db, logger: _logger }) {
  * @param {Env} env
  * @returns {LoadSource}
  */
-export function loadStateWith(env) {
-  const logger = env.logger.child("loadState");
-  env = { ...env, logger };
+export function loadStateWith (env) {
+  const logger = env.logger.child('loadState')
+  env = { ...env, logger }
 
-  const getMostRecentEvaluation = getMostRecentEvaluationWith(env);
-  const getSourceInitStateTags = getSourceInitStateTagsWith(env);
-  const resolveState = resolveStateWith(env);
+  const getMostRecentEvaluation = getMostRecentEvaluationWith(env)
+  const getSourceInitStateTags = getSourceInitStateTagsWith(env)
+  const resolveState = resolveStateWith(env)
 
   return (ctx) => {
     return of({ id: ctx.id, to: ctx.to })
@@ -218,17 +218,17 @@ export function loadStateWith(env) {
          */
         ({ id }) =>
           getSourceInitStateTags({ id })
-            .chain((meta) => resolveState(meta).map(assoc("state", __, meta))),
+            .chain((meta) => resolveState(meta).map(assoc('state', __, meta))),
         /**
          * A recent resultant state was found in the local db,
          * so do nothing
          */
-        Resolved,
+        Resolved
       )
       .bimap(
         (err) => {
-          console.error(err);
-          throw new Error("initial state could not be found");
+          console.error(err)
+          throw new Error('initial state could not be found')
         },
         (res) =>
           mergeRight(
@@ -237,10 +237,10 @@ export function loadStateWith(env) {
               state: res.state,
               result: res.result,
               cachedAt: res.cachedAt,
-              from: res.from,
-            }),
-          ),
+              from: res.from
+            })
+          )
       )
-      .map(logger.tap(`Added state, result, cachedAt, and from to ctx %O`));
-  };
+      .map(logger.tap('Added state, result, cachedAt, and from to ctx %O'))
+  }
 }

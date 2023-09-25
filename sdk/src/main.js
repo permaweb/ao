@@ -1,31 +1,22 @@
-import { fromPromise, of } from "hyper-async";
-import { z } from "zod";
-
-import {
-  dbClientSchema,
-  loadTransactionDataWith,
-  loadTransactionMetaWith,
-  sequencerClientSchema,
-  muClientSchema
-} from "./dal.js";
+import { of } from 'hyper-async'
 
 // readState
-import { loadSourceWith } from "./lib/readState/load-src.js";
-import { loadStateWith } from "./lib/readState/load-state.js";
-import { loadActionsWith } from "./lib/readState/load-actions.js";
-import { evaluateWith } from "./lib/readState/evaluate.js";
+import { loadSourceWith } from './lib/readState/load-src.js'
+import { loadStateWith } from './lib/readState/load-state.js'
+import { loadActionsWith } from './lib/readState/load-actions.js'
+import { evaluateWith } from './lib/readState/evaluate.js'
 
 // writeInteraction
-import { verifyContractWith } from "./lib/writeInteraction/verify-contract.js";
-import { verifyInputWith } from "./lib/writeInteraction/verify-input.js";
-import { buildTxWith } from "./lib/writeInteraction/build-tx.js";
+import { verifyContractWith } from './lib/writeInteraction/verify-contract.js'
+import { verifyInputWith } from './lib/writeInteraction/verify-input.js'
+import { buildTxWith } from './lib/writeInteraction/build-tx.js'
 
 /**
  * @typedef Env
- * @property {fetch} fetch
- * @property {string} GATEWAY_URL
- * @property {z.infer<typeof sequencerClientSchema>} sequencer
- * @property {z.infer<typeof dbClientSchema>} db
+ * @property {any} loadTransactionData
+ * @property {any} loadTransactionMeta
+ * @property {any} sequencer
+ * @property {any} db
  *
  * @typedef ContractResult
  * @property {any} state
@@ -39,42 +30,11 @@ import { buildTxWith } from "./lib/writeInteraction/build-tx.js";
  * @param {Env} - the environment
  * @returns {ReadState}
  */
-export function readStateWith(
-  { fetch, GATEWAY_URL, sequencer, db, logger: _logger },
-) {
-  const logger = _logger.child("readState");
-
-  /**
-   * build dal, injecting bottom lvl deps
-   */
-  const loadTransactionMeta = loadTransactionMetaWith({
-    fetch,
-    GATEWAY_URL,
-    logger,
-  });
-  const loadTransactionData = loadTransactionDataWith({
-    fetch,
-    GATEWAY_URL,
-    logger,
-  });
-
-  /**
-   * build the domain, injecting various dal deps as the env
-   */
-  const env = {
-    loadTransactionMeta,
-    loadTransactionData,
-    loadInteractions: fromPromise(sequencer.loadInteractions),
-    db: {
-      findLatestEvaluation: fromPromise(db.findLatestEvaluation),
-      saveEvaluation: fromPromise(db.saveEvaluation),
-    },
-    logger,
-  };
-  const loadSource = loadSourceWith(env);
-  const loadState = loadStateWith(env);
-  const loadActions = loadActionsWith(env);
-  const evaluate = evaluateWith(env);
+export function readStateWith (env) {
+  const loadSource = loadSourceWith(env)
+  const loadState = loadStateWith(env)
+  const loadActions = loadActionsWith(env)
+  const evaluate = evaluateWith(env)
 
   return (contractId, sortKeyHeight) => {
     return of({ id: contractId, to: sortKeyHeight })
@@ -84,21 +44,20 @@ export function readStateWith(
       .chain(evaluate)
       .map((ctx) => ctx.output)
       .map(
-        logger.tap(
-          `readState result for contract "%s" to sortKey "%s": %O`,
+        env.logger.tap(
+          'readState result for contract "%s" to sortKey "%s": %O',
           contractId,
-          sortKeyHeight || "latest",
-        ),
+          sortKeyHeight || 'latest'
+        )
       )
-      .toPromise();
-  };
+      .toPromise()
+  }
 }
 
 /**
  * @typedef Env1
- * @property {fetch} fetch
- * @property {z.infer<typeof muClientSchema>} mu
- * @property {string} GATEWAY_URL
+ * @property {any} loadTransactionMeta
+ * @property {any} mu
  *
  * @typedef WriteInteractionResult
  * @property {string} originalTxId - the id of the transaction that represents this interaction
@@ -114,31 +73,18 @@ export function readStateWith(
  * @param {Env1} - the environment
  * @returns {WriteInteraction}
  */
-export function writeInteractionWith({ fetch, GATEWAY_URL, mu }) {
-  /**
-   * build dal, injecting bottom lvl deps
-   */
-  const loadTransactionMeta = loadTransactionMetaWith({ fetch, GATEWAY_URL });
-
-  /**
-   * build the domain, injecting various dal deps as the env
-   */
-  const env = {
-    loadTransactionMeta,
-    mu,
-  };
-
-  const verifyContract = verifyContractWith(env);
-  const verifyInput = verifyInputWith(env);
-  const buildTx = buildTxWith(env);
+export function writeInteractionWith (env) {
+  const verifyContract = verifyContractWith(env)
+  const verifyInput = verifyInputWith(env)
+  const buildTx = buildTxWith(env)
 
   return (contractId, input, wallet, tags) => {
     return of({ id: contractId, input, wallet, tags })
       .chain(verifyContract) // verify contract (is TX a smart contract)
       .chain(verifyInput) // verify input shape
       .chain(buildTx) // construct interaction to send ie. add tags, etc.
-      .chain(fromPromise(mu.writeInteraction)) // write to the messenger
+      .chain(env.mu.writeInteraction) // write to the messenger
       .map((ctx) => ctx)
-      .toPromise();
-  };
+      .toPromise()
+  }
 }

@@ -6,7 +6,7 @@ export async function run(_, f) {
       "--platform",
       "linux/amd64",
       "-v",
-      ".:/src",
+      "${PWD}/:/src",
       "-a",
       "stdout",
       "-a",
