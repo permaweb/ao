@@ -6,7 +6,7 @@ export async function repl() {
       "--platform",
       "linux/amd64",
       "-v",
-      "${PWD}/:/src",
+      "${PWD}:/src",
       "-it",
       "p3rmaw3b/ao",
       "lua",
