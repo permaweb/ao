@@ -1,4 +1,5 @@
 export async function build() {
+  const pwd = Deno.cwd()
   const p = Deno.run({
     cmd: [
       "docker",
@@ -6,7 +7,7 @@ export async function build() {
       "--platform",
       "linux/amd64",
       "-v",
-      "${PWD}:/src",
+      `${pwd}:/src`,
       "p3rmaw3b/ao",
       "emcc-lua",
     ],
