@@ -6,7 +6,7 @@ export async function build() {
       "--platform",
       "linux/amd64",
       "-v",
-      "${PWD}/:/src",
+      "/src",
       "p3rmaw3b/ao",
       "emcc-lua",
     ],
