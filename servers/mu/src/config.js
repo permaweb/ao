@@ -1,12 +1,12 @@
-const path = require('path');
-const fs = require('fs');
-
-const walletPath = process.env.PATH_TO_WALLET;
-let walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'));
+if (!process.env.WALLET) {
+  console.error(
+    "Please pass a WALLET into the environment. eg. process.env.WALLET should be your JWK string."
+  );
+}
 
 let config = {
-    muWallet: walletKey,
-    sequencerUrl: 'https://gw.warp.cc'
+  muWallet: JSON.parse(process.env.WALLET || ""),
+  sequencerUrl: "https://gw.warp.cc",
 };
 
 module.exports = config;
