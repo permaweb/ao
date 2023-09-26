@@ -1,8 +1,6 @@
-function error(err, req, res, next) {
-    console.error(err.stack);
-  
-    res.status(500);
-    res.send(`${err.message}`);
-}
+export default function error (err, req, res, next) {
+  console.error(err.stack)
 
-module.exports = error;
+  res.status(500)
+  res.send(`${err.message}`)
+}

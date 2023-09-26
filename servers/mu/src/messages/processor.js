@@ -1,48 +1,126 @@
-
-
-let msgCallStack = require('../dataStore/msgCallStack');
-let cuClient = require('../clients/cu');
-let sequencerClient = require('../clients/sequencer');
+import cuClient from '../clients/cu.js'
+import sequencerClient from '../clients/sequencer.js'
 
 const processor = {
-    msgCallStack: msgCallStack,
-    cuAddress: null,
+  ongoingCalls: 0,
+  db: null,
+  initialTxId: null,
 
-    process: async function(txId, data, cuAddress) {
-        this.cuAddress = cuAddress;
-        
-        await sequencerClient.writeInteraction(data);
+  init: function () {
+    return {
+      ...this,
+      ongoingCalls: 0,
+      db: null,
+      initialTxId: null
+    }
+  },
 
-        let messages = await cuClient.messages(cuAddress, txId);
+  checkCompletion: function () {
+    if (this.ongoingCalls === 0) {
+      console.log('All recursive calls completed.')
+      this.cleanProcess()
+    }
+  },
 
-        this.msgCallStack.writeStack(txId, messages, null);
-        let initialMessages = this.msgCallStack[txId];
+  cleanProcess: function () {
+    console.log(`Cleaning process for txId ${this.initialTxId}`)
+  },
 
-        await Promise.all(initialMessages.map(msg => this.msgRecurse(msg)));
-    },
+  // process a single transaction
+  process: async function (tx, db) {
+    this.db = db
+    this.initialTxId = tx.txId
 
-    msgRecurse: async function(message) {
-        let dataItem = await sequencerClient.buildAndSign(
-            message.target,
-            {
-                function: 'handleMessage',
-                message: message.message
-            },
-            []
+    await this.checkAndWriteTx(tx)
+
+    const cuAddress = await cuClient.selectNode(tx.contractId)
+
+    const msgs = await this.fetchAndSaveMsgs(tx.txId, cuAddress)
+    msgs.forEach(msg => this.msgRecurse(msg, cuAddress))
+  },
+
+  // we recurse on a saved database message
+  msgRecurse: async function (msg, cuAddress) {
+    this.ongoingCalls++
+
+    try {
+      let newTxId
+
+      // if theres no toTxId it was never sent to the sequencer, so send it
+      if (!msg.toTxId) {
+        const message = msg.msg
+
+        const dataItem = await sequencerClient.buildAndSign(
+          message.target,
+          {
+            function: 'handleMessage',
+            message: message.message
+          }
         )
 
-        await sequencerClient.writeInteraction(dataItem.getRaw());
-        
-        let newTxId = await dataItem.id;
+        newTxId = await dataItem.id
 
-        let replyMessages = await cuClient.messages(this.cuAddress, newTxId);
+        await this.checkAndWriteTx({
+          txId: newTxId,
+          data: dataItem.getRaw(),
+          contractId: message.target
+        })
 
-        if(replyMessages) {
-            this.msgCallStack.writeStack(newTxId, replyMessages, message.txId);
-            let moreMsgs = this.msgCallStack[newTxId];
-            await Promise.all(moreMsgs.map(msg => this.msgRecurse(msg)));
-        }
+        await this.db.updateMsg({ _id: msg.id, toTxId: newTxId })
+      } else {
+        newTxId = msg.toTxId
+      }
+
+      const msgs = await this.fetchAndSaveMsgs(newTxId, cuAddress)
+      msgs.forEach(msg => this.msgRecurse(msg, cuAddress))
+    } catch (err) {
+      console.error('Error in msgRecurse:', err)
+    } finally {
+      this.ongoingCalls--
+      this.checkCompletion()
     }
+  },
+
+  // fetch messages from the cu and save them if not already saved
+  fetchAndSaveMsgs: async function (txId, cuAddress) {
+    const existingMsgs = await this.db.findLatestMsgs({ fromTxId: txId })
+
+    if (existingMsgs.length === 0) {
+      const msgs = await cuClient.messages(cuAddress, txId)
+
+      // save all the messages for the initial tx
+      await Promise.all(
+        msgs.map(async (msg) => {
+          await this.db.saveMsg({
+            id: Math.floor(Math.random() * 1e18).toString(),
+            fromTxId: txId,
+            msg,
+            cachedAt: new Date()
+          })
+        })
+      )
+    }
+
+    return await this.db.findLatestMsgs({ fromTxId: txId })
+  },
+
+  checkAndWriteTx: async function (tx) {
+    const existingTx = await this.db.findLatestTx({ id: tx.txId })
+
+    if (!existingTx) {
+      await this.db.saveTx({
+        txId: tx.txId,
+        contractId: tx.contractId,
+        data: tx.data.toString('base64'),
+        cachedAt: new Date()
+      })
+    }
+
+    const exists = await sequencerClient.txExists(tx.txId)
+    if (!exists) {
+      await sequencerClient.writeInteraction(tx.data)
+    }
+  }
 }
 
-module.exports = processor;
+export default processor

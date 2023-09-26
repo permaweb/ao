@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express'
+const router = express.Router()
 
 router.get('', async (req, res) => {
-    res.send(`ao messenger unit`);
-});
+  res.send('ao messenger unit')
+})
 
-module.exports = router;
+export default router

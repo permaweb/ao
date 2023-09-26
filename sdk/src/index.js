@@ -18,7 +18,6 @@ import * as MuClient from './client/ao-mu.js'
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || 'https://gw.warp.cc'
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
-const CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
 
 const logger = createLogger('@permaweb/ao-sdk')
 
@@ -76,8 +75,7 @@ export const writeInteraction = writeInteractionWith({
       muClientSchema.shape.writeInteraction.implement(
         MuClient.writeInteractionWith({
           fetch,
-          MU_URL,
-          CU_URL
+          MU_URL
         })
       )
     ),

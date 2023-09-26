@@ -1,30 +1,38 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express'
 
-const msgProcessor = require('../messages/processor');
-const validate = require('../validation/write')
+import msgProcessor from '../messages/processor.js'
+import validate from '../validation/write.js'
+
+import pouchDbClient from '../clients/pouchdb.js'
+import createLogger from '../logger.js'
+const router = express.Router()
+
+const logger = createLogger('@permaweb/ao/servers/mu')
 
 // begin an async task to crank all the messages on an initial interaction
 router.post('', async (req, res) => {
-    validate(req.body);
-    const { id, data, cu } = req.body;
+  validate(req.body)
+  const { txid, cid, data } = req.body
 
-    // dont wait for cranking process to finish to reply to users crank call
-    (async () => {
-        return new Promise((resolve) => {
-            msgProcessor.process(id, data, cu).then(() => {
-                resolve();
-            });
-        });
-    })().then(() => {
-        console.log(`Finished callstack for txId: ${id}`);
-    });
+  const db = {
+    saveTx: pouchDbClient.saveTxWith({ pouchDb: pouchDbClient.pouchDb, logger }),
+    findLatestTx: pouchDbClient.findLatestTxWith({ pouchDb: pouchDbClient.pouchDb }),
+    saveMsg: pouchDbClient.saveMsgWith({ pouchDb: pouchDbClient.pouchDb, logger }),
+    findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: pouchDbClient.pouchDb }),
+    updateMsg: pouchDbClient.updateMsgWith({ pouchDb: pouchDbClient.pouchDb, logger })
+  }
 
-    res.send({
-        response: {
-            message: `Processing tx: ${id}`
-        }
-    });
-});
+  const tx = { txId: txid, contractId: cid, data }
 
-module.exports = router;
+  // dont wait for cranking process to finish to reply to users crank call
+  const instance = msgProcessor.init()
+  instance.process(tx, db)
+
+  res.send({
+    response: {
+      message: `Processing tx: ${txid}`
+    }
+  })
+})
+
+export default router

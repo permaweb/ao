@@ -12,7 +12,7 @@ export { createData }
  * @property { any } signedData - DataItem returned from arbundles createData
  *
  * @typedef WriteInteraction2Args
- * @property {WriteInteractionTx} transaction - the contract id
+ * @property {WriteInteractionTx} transaction
  *
  * @callback WriteInteraction2
  * @param {WriteInteraction2Args} args
@@ -21,7 +21,7 @@ export { createData }
  * @param {Env3} env
  * @returns {WriteInteraction2}
  */
-export function writeInteractionWith ({ fetch, MU_URL, CU_URL }) {
+export function writeInteractionWith ({ fetch, MU_URL }) {
   return (transaction) => {
     return of(transaction)
       .chain(fromPromise(async (transaction) => {
@@ -36,9 +36,9 @@ export function writeInteractionWith ({ fetch, MU_URL, CU_URL }) {
               Accept: 'application/json'
             },
             body: JSON.stringify({
-              id: await dataItem.id,
-              data: dataItem.getRaw(),
-              cu: CU_URL
+              txid: await dataItem.id,
+              cid: transaction.id,
+              data: dataItem.getRaw()
             })
           }
         )
