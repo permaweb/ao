@@ -1,30 +1,29 @@
 {
-    "name": "mu",
-    "version": "1.0.0",
-    "description": "A basic Express.js application",
-    "main": "src/app.js",
-    "scripts": {
-        "start": "node src/app.js",
-        "start:local": "nodemon src/app.js",
-        "docker-build": "docker build -t cu-app .",
-        "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app"
-    },
-    "dependencies": {
-        "body-parser": "^1.20.2",
-        "cors": "^2.8.5",
-        "express": "^4.17.1",
-        "pouchdb": "^8.0.1",
-        "pouchdb-adapter-node-websql": "^7.0.0",
-        "warp-arbundles": "^1.0.4"
-    },
-    "devDependencies": {
-        "nodemon": "^3.0.1"
-    },
-    "keywords": [
-        "express",
-        "web",
-        "server"
-    ],
-    "author": "VinceJuliano",
-    "license": "MIT"
+  "name": "mu",
+  "version": "1.0.0",
+  "description": "A basic Express.js application",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "start:local": "nodemon src/app.js",
+    "docker-build": "docker build -t mu-app .",
+    "docker-run": "npm run docker-build && docker run -e WALLET=$WALLET_STRING -p 3004:3004 mu-app"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "pouchdb": "^8.0.1",
+    "warp-arbundles": "^1.0.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "express",
+    "web",
+    "server"
+  ],
+  "author": "VinceJuliano",
+  "license": "MIT"
 }
