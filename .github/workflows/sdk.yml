@@ -40,10 +40,28 @@ jobs:
       - name: ⚡ Run Tests
         working-directory: sdk
         run: |
-          echo "TEMPORARILY BUILDING LOADER UNTIL WE CAN PUBLISH A NEW VERSION TO NPM"
-          cd ../loader && npm i && npm run build && cd ../sdk
           npm i
           npm test
+        env:
+          CI: true
+  
+  test-integration:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: ⚡ Run Tests
+        working-directory: sdk
+        run: |
+          npm i
+          npm run test:integration
         env:
           CI: true
 
