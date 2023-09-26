@@ -1,0 +1,11 @@
+{
+  "name": "@permaweb/ao-sdk-e2e",
+  "description": "integration test suites for @permaweb/ao-sdk",
+  "type": "module",
+  "scripts": {
+    "test": "npm run test:node-cjs && npm run test:node-esm",
+    "test:browser": "echo 'NOT IMPLEMENTED' && exit 1",
+    "test:node-cjs": "cd ./node-cjs && npm i && npm start",
+    "test:node-esm": "cd ./node-esm && npm i && npm start"
+  }
+}

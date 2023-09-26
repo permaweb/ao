@@ -1,7 +1,11 @@
-import test from 'node:test'
-import assert from 'node:assert/strict'
+const test = require('node:test')
+const assert = require('node:assert/strict')
 
-import { readState } from './index.js'
+/**
+ * Ensure that npm link has been ran prior to running these tests
+ * (simply running npm run test:integration will ensure npm link is ran)
+ */
+const { readState } = require('@permaweb/ao-sdk')
 
 const CONTRACT = 'VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
 /**
@@ -9,7 +13,7 @@ const CONTRACT = 'VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
  */
 // const CONTRACT = 'SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY'
 
-test('readState', async () => {
+test('integration - readState', async () => {
   const result = await readState(CONTRACT)
   console.log(JSON.stringify(result, null, 2))
   assert.ok(true)
