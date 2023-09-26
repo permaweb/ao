@@ -1,4 +1,4 @@
-# AO Messenger Unit
+# AO Compute Unit
 
 Short description
 
@@ -6,10 +6,10 @@ Short description
 
 ## Usage
 
-In order for the Messenger Unit to work properly, it needs to have a JWK passed to it at run time.
+In order for the Compute Unit to work properly, it needs to have a JWK passed to it at run time.
 
 ```zsh
-docker run -e WALLET=$WALLET_STRING -p 3004:3004 messenger-unit
+docker run -e WALLET=$WALLET_STRING -p 3004:3004 compute-unit
 ```
 
 The `$WALLET_STRING` will be passed into the container and can be accessed by the node program via `process.env.WALLET`
