@@ -14,7 +14,9 @@
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
-    "test": "node --test"
+    "test": "node --test ./src",
+    "pretest:integration": "npm run build && npm link",
+    "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
     "@permaweb/ao-loader": "~0.0.4",
