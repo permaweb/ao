@@ -90,6 +90,7 @@ jobs:
       - name: ⬆️ Push
         run: |
           git push
+          git push --tags
       
       - name: 🦠 Publish to NPM
         working-directory: sdk
