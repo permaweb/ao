@@ -11,17 +11,16 @@
       "standard --fix"
     ],
     "package.json": [
-      "sort-package-json",
-      "deno fmt"
+      "sort-package-json"
     ],
     "README.md": [
-      "markdown-toc-gen insert",
-      "deno fmt"
+      "markdown-toc-gen insert"
     ]
   },
   "devDependencies": {
     "husky": "^8.0.3",
     "lint-staged": "^14.0.1",
+    "markdown-toc-gen": "^1.0.1",
     "sort-package-json": "^2.5.1",
     "standard": "^17.1.0"
   },

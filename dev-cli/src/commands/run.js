@@ -1,4 +1,5 @@
 export async function run(_, f) {
+  const pwd = Deno.cwd()
   const p = Deno.run({
     cmd: [
       "docker",
@@ -6,7 +7,7 @@ export async function run(_, f) {
       "--platform",
       "linux/amd64",
       "-v",
-      ".:/src",
+      `${pwd}:/src`,
       "-a",
       "stdout",
       "-a",

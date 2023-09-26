@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-sdk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
@@ -14,14 +14,16 @@
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
-    "test": "node --test"
+    "test": "node --test ./src",
+    "pretest:integration": "npm run build && npm link",
+    "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
     "@permaweb/ao-loader": "~0.0.4",
     "debug": "^4.3.4",
     "hyper-async": "^1.1.2",
     "pouchdb": "^8.0.1",
-    "pouchdb-adapter-node-websql": "^7.0.0",
+    "pouchdb-adapter-leveldb": "^8.0.1",
     "pouchdb-adapter-websql": "^7.0.0",
     "pouchdb-find": "^8.0.1",
     "ramda": "^0.29.0",
