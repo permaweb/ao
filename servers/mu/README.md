@@ -16,6 +16,6 @@ The `$WALLET_STRING` will be passed into the container and can be accessed by th
 
 See: [Config](./src/config.js)
 
-The point of this is that you don't want to `build` your image with a key file in it.  Let the operators pass their key to the container environment.
+The point of this is that you don't want to `build` your image with a key file in it because...  Let the operators pass their key to the container environment.
 
 ## Resources
