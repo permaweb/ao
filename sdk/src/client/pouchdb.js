@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
 import PouchDbFind from 'pouchdb-find'
-import NodeWebSql from 'pouchdb-adapter-node-websql'
+import LevelDb from 'pouchdb-adapter-leveldb'
 import WebSql from 'pouchdb-adapter-websql'
 
 /**
@@ -24,12 +24,18 @@ const isNode = typeof process !== 'undefined' &&
   process.versions != null &&
   process.versions.node != null
 let adapter
-if (isNode) adapter = NodeWebSql
-else if (isBrowser) adapter = WebSql
-else throw new Error('environment not supported')
+let adatperName
+if (isNode) {
+  adapter = LevelDb
+  adatperName = 'leveldb'
+} else if (isBrowser) {
+  adapter = WebSql
+  adatperName = 'websql'
+} else throw new Error('environment not supported')
 PouchDb.plugin(adapter)
 PouchDb.plugin(PouchDbFind)
-const internalPouchDb = new PouchDb('ao-cache', { adapter: 'websql' })
+const internalPouchDb = new PouchDb('ao-cache', { adapter: adatperName })
+PouchDb.setMaxListeners(50)
 
 export { internalPouchDb as pouchDb }
 
