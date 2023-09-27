@@ -1,21 +1,13 @@
 import express from 'express'
-import bodyParser from 'body-parser'
+import mountMiddlewares from './middleware/index.js'
+import mountRoutes from './routes/index.js'
+import config from './config.js'
 
-import baseRoute from './routes/base.js'
-import writeRoute from './routes/write.js'
-import errors from './errors/errors.js'
+const app = [mountMiddlewares, mountRoutes].reduce(
+  (app, mounter) => mounter(app),
+  express()
+)
 
-const app = express()
-const PORT = 3004
-
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: false }))
-
-app.use('/', baseRoute)
-app.use('/write', writeRoute)
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`)
+app.listen(config.port, () => {
+  console.log(`Server is running on http://localhost:${config.port}`)
 })
-
-app.use(errors)
