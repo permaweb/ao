@@ -1,15 +1,16 @@
 import { fromPromise } from 'hyper-async'
 
 import {
-  loadTransactionMetaWith,
   loadStateSchema,
   writeInteractionSchema,
-  signInteractionSchema
+  signInteractionSchema,
+  loadTransactionMetaSchema
 } from './dal.js'
 import { createLogger } from './logger.js'
 
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
+import * as GatewayClient from './client/gateway.js'
 
 import { readStateWith } from './lib/readState/index.js'
 import { writeInteractionWith } from './lib/writeInteraction/index.js'
@@ -35,7 +36,11 @@ export const readState = readStateWith({
  * - use arbundles createData for signing
  */
 export const writeInteraction = writeInteractionWith({
-  loadTransactionMeta: loadTransactionMetaWith({ fetch, GATEWAY_URL }),
+  loadTransactionMeta: fromPromise(
+    loadTransactionMetaSchema.implement(
+      GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL })
+    )
+  ),
   writeInteraction: fromPromise(
     writeInteractionSchema.implement(
       MuClient.writeInteractionWith({
