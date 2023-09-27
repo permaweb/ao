@@ -28,7 +28,7 @@ const processor = {
   },
 
   // process a single transaction
-  process: async function (tx, db) {
+  process: async function (tx) {
     this.initialTxId = tx.txId
 
     await this.checkAndWriteTx(tx)
