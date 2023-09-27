@@ -1,5 +1,5 @@
 import pkg from 'warp-arbundles'
-import config from '../config.js'
+import config from '../../config.js'
 const { createData, ArweaveSigner } = pkg
 
 const sequencerClient = {

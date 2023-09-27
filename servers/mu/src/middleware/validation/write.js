@@ -1,4 +1,4 @@
-export default function validate (body) {
+export default function validateWrite (body) {
   const { txid, cid, data } = body
 
   if (!txid) {

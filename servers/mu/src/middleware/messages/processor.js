@@ -1,17 +1,18 @@
-import cuClient from '../clients/cu.js'
-import sequencerClient from '../clients/sequencer.js'
-
 const processor = {
   ongoingCalls: 0,
   db: null,
   initialTxId: null,
+  cuClient: null,
+  sequencerClient: null,
 
-  init: function () {
+  init: function (env) {
     return {
       ...this,
       ongoingCalls: 0,
-      db: null,
-      initialTxId: null
+      db: env.db,
+      initialTxId: null,
+      cuClient: env.cuClient,
+      sequencerClient: env.sequencerClient
     }
   },
 
@@ -28,12 +29,11 @@ const processor = {
 
   // process a single transaction
   process: async function (tx, db) {
-    this.db = db
     this.initialTxId = tx.txId
 
     await this.checkAndWriteTx(tx)
 
-    const cuAddress = await cuClient.selectNode(tx.contractId)
+    const cuAddress = await this.cuClient.selectNode(tx.contractId)
 
     const msgs = await this.fetchAndSaveMsgs(tx.txId, cuAddress)
     msgs.forEach(msg => this.msgRecurse(msg, cuAddress))
@@ -50,7 +50,7 @@ const processor = {
       if (!msg.toTxId) {
         const message = msg.msg
 
-        const dataItem = await sequencerClient.buildAndSign(
+        const dataItem = await this.sequencerClient.buildAndSign(
           message.target,
           {
             function: 'handleMessage',
@@ -86,7 +86,7 @@ const processor = {
     const existingMsgs = await this.db.findLatestMsgs({ fromTxId: txId })
 
     if (existingMsgs.length === 0) {
-      const msgs = await cuClient.messages(cuAddress, txId)
+      const msgs = await this.cuClient.messages(cuAddress, txId)
 
       // save all the messages for the initial tx
       await Promise.all(
@@ -116,9 +116,9 @@ const processor = {
       })
     }
 
-    const exists = await sequencerClient.txExists(tx.txId)
+    const exists = await this.sequencerClient.txExists(tx.txId)
     if (!exists) {
-      await sequencerClient.writeInteraction(tx.data)
+      await this.sequencerClient.writeInteraction(tx.data)
     }
   }
 }
