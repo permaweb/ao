@@ -26,15 +26,23 @@ export const sequencerClientSchema = z.object({
     .returns(z.promise(z.array(interactionSchema)))
 })
 
-export const muClientSchema = z.object({
-  // TODO: define this shape
-  writeInteraction: z.function()
-    .args(z.record(z.any()))
-    .returns(z.promise(z.any())),
-  signInteraction: z.function()
-    .args(z.record(z.any()))
-    .returns(z.promise(z.any()))
-})
+export const loadStateSchema = z.function()
+  .args(z.object({
+    id: z.string().min(1, { message: 'contract id is required' }),
+    sortKey: z.string().optional()
+  }))
+  .returns(
+    z.promise(z.record(z.any()))
+  )
+
+// TODO: define this shape
+export const writeInteractionSchema = z.function()
+  .args(z.record(z.any()))
+  .returns(z.promise(z.any()))
+
+export const signInteractionSchema = z.function()
+  .args(z.record(z.any()))
+  .returns(z.promise(z.any()))
 
 /**
  * @typedef Env1

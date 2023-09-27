@@ -6,7 +6,7 @@ export { createData }
 /**
  * @typedef Env3
  * @property {fetch} fetch
- * @property {string} SEQUENCER_URL
+ * @property {string} MU_URL
  *
  * @typedef WriteInteractionTx
  * @property { any } signedData - DataItem returned from arbundles createData
