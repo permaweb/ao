@@ -19,6 +19,7 @@
     "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
+    "buffer": "^6.0.3",
     "debug": "^4.3.4",
     "hyper-async": "^1.1.2",
     "ramda": "^0.29.0",
@@ -26,6 +27,7 @@
     "zod": "^3.22.2"
   },
   "devDependencies": {
+    "arweave": "^1.14.4",
     "esbuild": "^0.19.2",
     "typescript": "^5.2.2"
   },
