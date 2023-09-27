@@ -38,3 +38,29 @@ await esbuild.build({
   bundle: true,
   outfile: manifest.module
 })
+
+// // Browser CJS
+await esbuild.build({
+  entryPoints: ['src/index.browser.js'],
+  platform: 'browser',
+  format: 'cjs',
+  bundle: true,
+  /**
+   * minify for the browser
+   */
+  minify: true,
+  outfile: manifest.browser[manifest.main]
+})
+
+// // Browser ESM
+await esbuild.build({
+  entryPoints: ['src/index.browser.js'],
+  platform: 'browser',
+  format: 'esm',
+  bundle: true,
+  /**
+   * minify for the browser
+   */
+  minify: true,
+  outfile: manifest.browser[manifest.module]
+})
