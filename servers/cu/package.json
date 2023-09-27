@@ -9,6 +9,7 @@
     ],
     "license": "MIT",
     "author": "VinceJuliano",
+    "type": "module",
     "main": "src/app.js",
     "scripts": {
         "docker-build": "docker build -t cu-app .",
@@ -17,10 +18,19 @@
         "start:local": "nodemon src/app.js"
     },
     "dependencies": {
-        "@permaweb/ao-sdk": "file:../../sdk",
+        "@permaweb/ao-loader": "~0.0.4",
         "body-parser": "^1.20.2",
         "cors": "^2.8.5",
-        "express": "^4.17.1"
+        "debug": "^4.3.4",
+        "express": "^4.17.1",
+        "hyper-async": "^1.1.2",
+        "pouchdb": "^8.0.1",
+        "pouchdb-adapter-leveldb": "^8.0.1",
+        "pouchdb-adapter-websql": "^7.0.0",
+        "pouchdb-find": "^8.0.1",
+        "ramda": "^0.29.0",
+        "warp-arbundles": "^1.0.4",
+        "zod": "^3.22.2"
     },
     "devDependencies": {
         "nodemon": "^3.0.1"

@@ -1,11 +1,12 @@
-const path = require('path');
-const fs = require('fs');
+import path from 'path'
+import fs from 'fs'
 
-const walletPath = process.env.PATH_TO_WALLET;
-let walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'));
+const walletPath = process.env.PATH_TO_WALLET
+const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
 
-let config = {
-    cuWallet: walletKey
-};
+const config = {
+  cuWallet: walletKey,
+  port: 3005
+}
 
-module.exports = config;
+export default config
