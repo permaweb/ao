@@ -1,8 +1,11 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
+import { createLogger } from '../logger.js'
 import { loadStateSchema } from '../dal.js'
 import { loadStateWith } from './ao-cu.js'
+
+const logger = createLogger('ao-cu')
 
 describe('ao-cu', () => {
   describe('loadStateWith', () => {
@@ -23,7 +26,8 @@ describe('ao-cu', () => {
               state: { foo: 'bar' },
               result: {}
             }))
-          }
+          },
+          logger
         })
       )
 
@@ -44,7 +48,8 @@ describe('ao-cu', () => {
               state: { foo: 'bar' },
               result: {}
             }))
-          }
+          },
+          logger
         })
       )
 
