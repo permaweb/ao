@@ -5,7 +5,7 @@ const cuClient = {
     const resultJson = await resultResponse.json()
 
     if (!resultJson || !resultJson.messages) {
-      return null
+      return []
     }
 
     return resultJson.messages

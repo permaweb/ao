@@ -7,7 +7,7 @@ globalThis.MU_URL = 'http://localhost:3004'
 globalThis.CU_URL = 'http://localhost:3005'
 const { writeInteraction, readState } = require('@permaweb/ao-sdk')
 
-const CONTRACT_TX_ID = 'tIkcmiXhFNcuu_CDTflIIWVwJ7sCmHR0Jt0x6m_jek8';
+const CONTRACT_TX_ID = 'ATbFRaPkFJkuTXAsWMxlyi7CDuN6xgRTXWmjBvwunTc';
 (async function () {
   console.log('Testing ao...')
 

@@ -3,11 +3,11 @@ import { always, applySpec, head, prop } from 'ramda'
 import z from 'zod'
 import PouchDb from 'pouchdb'
 import PouchDbFind from 'pouchdb-find'
-import NodeWebSql from 'pouchdb-adapter-node-websql'
+import NodeLevelDB from 'pouchdb-adapter-leveldb'
 
-PouchDb.plugin(NodeWebSql)
+PouchDb.plugin(NodeLevelDB)
 PouchDb.plugin(PouchDbFind)
-const internalPouchDb = new PouchDb('ao-cache', { adapter: 'websql' })
+const internalPouchDb = new PouchDb('ao-cache', { adapter: 'leveldb' })
 
 const cachedTxSchema = z.object({
   _id: z.string().min(1),
