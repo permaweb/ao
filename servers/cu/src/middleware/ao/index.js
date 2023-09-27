@@ -4,22 +4,19 @@ import {
   dbClientSchema,
   loadTransactionDataWith,
   loadTransactionMetaWith,
-  muClientSchema,
   sequencerClientSchema
 } from './dal.js'
-import { readStateWith, writeInteractionWith } from './main.js'
+import { readStateWith } from './main.js'
 import { createLogger } from './logger.js'
 
 // Precanned clients to use for OOTB apis
 import * as PouchDbClient from './client/pouchdb.js'
 import * as WarpSequencerClient from './client/warp-sequencer.js'
-import * as MuClient from './client/ao-mu.js'
 
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const SEQUENCER_URL = globalThis.SEQUENCER_URL || 'https://gw.warp.cc'
-const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
 
-const logger = createLogger('@permaweb/ao-sdk')
+const logger = createLogger('ao-middleware')
 
 /**
  * default readState that works OOTB
@@ -60,32 +57,4 @@ export const readState = readStateWith({
     )
   },
   logger: readStateLogger
-})
-
-/**
- * default writeInteraction that works OOTB
- * - Uses Warp Sequencer
- * - Use arweave.net gateway
- * - use arbundles createData for signing
- */
-export const writeInteraction = writeInteractionWith({
-  loadTransactionMeta: loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-  mu: {
-    writeInteraction: fromPromise(
-      muClientSchema.shape.writeInteraction.implement(
-        MuClient.writeInteractionWith({
-          fetch,
-          MU_URL
-        })
-      )
-    ),
-    signInteraction: fromPromise(
-      muClientSchema.shape.signInteraction.implement(
-        MuClient.signInteractionWith({
-          createDataItem: MuClient.createData
-        })
-      )
-    )
-  },
-  logger
 })
