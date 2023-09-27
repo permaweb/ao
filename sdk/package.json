@@ -6,6 +6,10 @@
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
+  "browser": {
+    "./dist/index.cjs": "./dist/browser.cjs",
+    "./dist/index.js": "./dist/browser.js"
+  },
   "types": "./dist/index.d.ts",
   "files": [
     "./dist"

@@ -1,4 +1,4 @@
-import { WalletClient } from './client/node/index.js'
+import { WalletClient } from './client/browser/index.js'
 import { buildSdk } from './index.common.js'
 
 // TODO: export createContract
