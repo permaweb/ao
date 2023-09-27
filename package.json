@@ -7,13 +7,13 @@
     "staged": "lint-staged"
   },
   "lint-staged": {
-    "*.js": [
+    "**/*.js": [
       "standard --fix"
     ],
-    "package.json": [
+    "**/package.json": [
       "sort-package-json"
     ],
-    "README.md": [
+    "**/README.md": [
       "markdown-toc-gen insert"
     ]
   },
