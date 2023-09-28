@@ -24,7 +24,7 @@ describe('upload-contract', () => {
         ])
         assert.ok(signer)
 
-        return Resolved({ id: 'contract-id-123' })
+        return Resolved({ contractId: 'contract-id-123' })
       },
       logger
     })

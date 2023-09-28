@@ -69,6 +69,6 @@ export function uploadContractWith (env) {
       .chain(buildTags)
       .chain(buildData)
       .chain(({ data, tags, signer }) => env.deployContract({ data, tags, signer }))
-      .map(res => assoc('contractId', res.id, ctx))
+      .map(res => assoc('contractId', res.contractId, ctx))
   }
 }

@@ -1,29 +1,34 @@
 import { Rejected, fromPromise, of } from 'hyper-async'
-import { always, append, evolve, filter, pipe } from 'ramda'
-import { Buffer } from 'buffer'
+import { append, evolve, filter, pipe } from 'ramda'
 
-export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger }) {
+/**
+ * Inject dependencies, so they are configurable,
+ * and stubbable for testing
+ */
+export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger, getTime = () => new Date().getTime() }) {
   const logger = _logger.child('deployContract')
 
-  const replaceContentTypeTag = pipe(
-    filter(tag => tag.name !== 'Content-Type'),
-    append({ name: 'Content-Type', value: 'application/x.arweave-manifest+json' }),
+  /**
+   * The endpoint expects the SDK tag to be set to Warp,
+   * so for now, we will overwrite the tag to what the Warp Gateway wants
+   *
+   * Eventually may want to submit a PR to Warp to allow SDK 'ao' 😎
+   */
+  const replaceSdkTag = pipe(
+    filter(tag => tag.name !== 'SDK'),
+    append({ name: 'SDK', value: 'Warp' }),
     logger.tap('New tags being sent to Warp Gateway')
   )
 
   /**
-   * An empty path manifests according to
-   * https://github.com/ArweaveTeam/arweave/blob/master/doc/path-manifest-schema.md
+   * The Warp Gateway expects a Nonce tag, so generate one and append
+   * it to the list of tags
    */
-  const EMPTY_MANIFEST = {
-    manifest: 'arweave/paths',
-    version: '0.1.0',
-    paths: {}
-  }
+  const addNonceTag = append({ name: 'Nonce', value: `${getTime()}` })
 
   return (args) => {
     return of(args)
-      .map(logger.tap('deploying bundled contract via the warp gateway %s', `${WARP_GATEWAY_URL}/gateway/contracts/deploy-bundled`))
+      .map(logger.tap('deploying bundled contract via the warp gateway %s', `${WARP_GATEWAY_URL}/gateway/v2/contracts/deploy`))
       /**
        * The Warp Gateway requires that the Content-Type tag
        * is a 'application/x.arweave-manifest+json'
@@ -34,17 +39,11 @@ export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger }
        * Set 'data' in the data item to a valid, but empty, path manifest
        * and replace the Content-Type flag to be the value Warp Gateway expects
        */
-      .map(evolve({
-        data: always(EMPTY_MANIFEST),
-        tags: replaceContentTypeTag
-      }))
+      .map(evolve({ tags: pipe(replaceSdkTag, addNonceTag) }))
       /**
        * Sign with the provided signer
        */
-      .chain(fromPromise(({ data, tags, signer }) => signer({
-        data: Buffer.from(JSON.stringify(data)),
-        tags
-      })))
+      .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
       /**
        * Upload to Warp
        */
@@ -52,14 +51,17 @@ export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger }
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
             fetch(
-            `${WARP_GATEWAY_URL}/gateway/contracts/deploy-bundled`,
+            `${WARP_GATEWAY_URL}/gateway/v2/contracts/deploy`,
             {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/octet-stream',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Content-Type': 'application/json',
                 Accept: 'application/json'
               },
-              body: signedDataItem.raw
+              body: JSON.stringify({
+                contract: signedDataItem.raw
+              })
             }
             )
           ))
@@ -76,7 +78,11 @@ export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger }
             logger.tap('Error encountered when deploying bundled contract via the warp gateway'),
             logger.tap('Successfully deployed bundled contract via the warp gateway')
           )
-          .map(res => ({ res, dataItemId: signedDataItem.id }))
+          /**
+           * See https://github.com/warp-contracts/gateway/blob/a1192869de24426a973465cf5be0a37b27a4c5ff/src/gateway/router/routes/deployContractRoute_v2.ts#L146
+           * for shape
+           */
+          .map(res => ({ res, contractId: res.contractTxId }))
       )
       .toPromise()
   }
