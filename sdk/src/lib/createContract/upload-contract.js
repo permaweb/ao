@@ -1,4 +1,4 @@
-import { fromPromise, of } from 'hyper-async'
+import { of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat } from 'ramda'
 
@@ -68,12 +68,7 @@ export function uploadContractWith (env) {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
-      /**
-       * We need to wrap signer since it returns a Promise
-       * and is injected by the consumer
-       */
-      .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
-      .chain(env.deployContract)
+      .chain(({ data, tags, signer }) => env.deployContract({ data, tags, signer }))
       .map(res => assoc('contractId', res.id, ctx))
   }
 }

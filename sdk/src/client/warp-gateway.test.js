@@ -9,7 +9,7 @@ const logger = createLogger('@permaweb/ao-sdk:readState')
 
 describe('warp-gateway', () => {
   describe('deplyContractsWith', () => {
-    test('deploy the contract to the warp gateway', async () => {
+    test('sign and deploy the contract, and return the id', async () => {
       const deployContract = deployContractWith({
         WARP_GATEWAY_URL,
         logger,
@@ -21,18 +21,53 @@ describe('warp-gateway', () => {
               'Content-Type': 'application/octet-stream',
               Accept: 'application/json'
             },
-            body: 'raw-123'
+            body: 'raw-buffer'
           })
 
           return new Response(JSON.stringify({ foo: 'bar' }))
         }
       })
 
-      const res = await deployContract({ id: 'data-item-123', raw: 'raw-123' })
+      const res = await deployContract({
+        data: '1234',
+        tags: [],
+        signer: async () => ({ id: 'data-item-123', raw: 'raw-buffer' })
+      })
 
       assert.deepStrictEqual(res, {
         res: { foo: 'bar' },
         dataItemId: 'data-item-123'
+      })
+    })
+
+    test('replace the Content-Type tag and data', async () => {
+      const deployContract = deployContractWith({
+        WARP_GATEWAY_URL,
+        logger,
+        fetch: async (url, options) => new Response(JSON.stringify({ foo: 'bar' }))
+      })
+
+      await deployContract({
+        data: '1234',
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' },
+          { name: 'SDK', value: 'ao' }
+        ],
+        signer: async ({ data, tags }) => {
+          assert.deepStrictEqual(JSON.parse(data.toString()), {
+            manifest: 'arweave/paths',
+            version: '0.1.0',
+            paths: {}
+          })
+          assert.deepStrictEqual(tags, [
+            { name: 'foo', value: 'bar' },
+            { name: 'SDK', value: 'ao' },
+            { name: 'Content-Type', value: 'application/x.arweave-manifest+json' }
+          ])
+
+          return { id: 'contract-id-123', raw: 'raw-buffer' }
+        }
       })
     })
   })
