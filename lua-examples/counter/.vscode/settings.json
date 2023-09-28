@@ -1,0 +1,4 @@
+{
+  "Lua.diagnostics.globals": ["self"],
+  "Lua.diagnostics.disable": ["undefined-field"]
+}
