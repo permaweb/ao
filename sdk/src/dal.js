@@ -10,11 +10,7 @@ export const loadStateSchema = z.function()
   )
 
 // TODO: define this shape
-export const writeInteractionSchema = z.function()
-  .args(z.record(z.any()))
-  .returns(z.promise(z.any()))
-
-export const signInteractionSchema = z.function()
+export const deployInteractionSchema = z.function()
   .args(z.record(z.any()))
   .returns(z.promise(z.any()))
 

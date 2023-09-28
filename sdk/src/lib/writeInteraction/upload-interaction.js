@@ -1,6 +1,6 @@
 import { of } from 'hyper-async'
 import { z } from 'zod'
-import { __, append, assoc } from 'ramda'
+import { __, assoc, concat } from 'ramda'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -32,11 +32,13 @@ const tagSchema = z.array(z.object({
 function buildTagsWith () {
   return (ctx) => {
     return of(ctx.tags)
-      .map(append({ name: 'App-Name', value: 'SmartWeaveAction' }))
-      .map(append({ name: 'App-Version', value: '0.3.0' }))
-      .map(append({ name: 'Contract', value: ctx.id }))
-      .map(append({ name: 'Input', value: JSON.stringify(ctx.input) }))
-      .map(append({ name: 'SDK', value: 'ao' }))
+      .map(concat(__, [
+        { name: 'App-Name', value: 'SmartWeaveAction' },
+        { name: 'App-Version', value: '0.3.0' },
+        { name: 'Contract', value: ctx.id },
+        { name: 'Input', value: JSON.stringify(ctx.input) },
+        { name: 'SDK', value: 'ao' }
+      ]))
       .map(tagSchema.parse)
       .map(assoc('tags', __, ctx))
   }
@@ -58,22 +60,6 @@ function buildDataWith () {
 }
 
 /**
- * @callback SignWith
- * @param {Context3} ctx
- * @returns {Context3}
- *
- * @param {Env6}
- * @returns { SignWith }
- */
-function signWith (env) {
-  return (ctx) => {
-    return of(ctx)
-      .chain(env.mu.signInteraction)
-      .map(assoc('signedData', __, ctx))
-  }
-}
-
-/**
  * @callback BuildTx
  * @param {Context3} ctx
  * @returns {Async<Context3>}
@@ -81,15 +67,15 @@ function signWith (env) {
  * @param {Env6} env
  * @returns {BuildTx}
  */
-export function buildTxWith (env) {
-  const buildTags = buildTagsWith()
-  const buildData = buildDataWith()
-  const sign = signWith(env)
+export function uploadInteractionWith (env) {
+  const buildTags = buildTagsWith(env)
+  const buildData = buildDataWith(env)
 
   return (ctx) => {
     return of(ctx)
-      .chain(buildTags) // create tags
-      .chain(buildData) // generate random number as data item
-      .chain(sign) // sign with sequencer client
+      .chain(buildTags)
+      .chain(buildData)
+      .chain(({ id, data, tags, signer }) => env.deployInteraction({ contractId: id, data, tags, signer }))
+      .map(res => assoc('interactionId', res.interactionId, ctx))
   }
 }

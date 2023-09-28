@@ -1,7 +1,7 @@
 import { WalletClient } from './client/node/index.js'
 import { buildSdk } from './index.common.js'
 
-const { readState, writeInteraction, createContract } = buildSdk({ WalletClient })
+const { readState, writeInteraction, createContract } = buildSdk()
 
 export { readState, writeInteraction, createContract }
 

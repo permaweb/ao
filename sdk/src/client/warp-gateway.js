@@ -6,7 +6,7 @@ import { append, evolve, filter, pipe } from 'ramda'
  * and stubbable for testing
  */
 export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger, getTime = () => new Date().getTime() }) {
-  const logger = _logger.child('deployContract')
+  const logger = _logger.child('warp-gateway:deployContract')
 
   /**
    * The endpoint expects the SDK tag to be set to Warp,

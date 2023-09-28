@@ -37,6 +37,7 @@ export function readStateWith (env) {
           sortKey || 'latest'
         )
       )
+      .map(state => state)
       .toPromise()
   }
 }

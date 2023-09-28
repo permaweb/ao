@@ -2,7 +2,7 @@ import { of } from 'hyper-async'
 
 import { verifyContractWith } from './verify-contract.js'
 import { verifyInputWith } from './verify-input.js'
-import { buildTxWith } from './build-tx.js'
+import { uploadInteractionWith } from './upload-interaction.js'
 
 /**
  * @typedef Env1
@@ -26,15 +26,14 @@ import { buildTxWith } from './build-tx.js'
 export function writeInteractionWith (env) {
   const verifyContract = verifyContractWith(env)
   const verifyInput = verifyInputWith(env)
-  const buildTx = buildTxWith(env)
+  const uploadInteraction = uploadInteractionWith(env)
 
-  return (contractId, input, wallet, tags) => {
-    return of({ id: contractId, input, wallet, tags })
-      .chain(verifyContract) // verify contract (is TX a smart contract)
-      .chain(verifyInput) // verify input shape
-      .chain(buildTx) // construct interaction to send ie. add tags, etc.
-      .chain(env.mu.writeInteraction) // write to the messenger
-      .map((ctx) => ctx)
+  return (contractId, input, signer, tags) => {
+    return of({ id: contractId, input, signer, tags })
+      .chain(verifyContract)
+      .chain(verifyInput)
+      .chain(uploadInteraction)
+      .map((ctx) => ctx.interactionId)
       .toPromise()
   }
 }

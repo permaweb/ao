@@ -2,8 +2,7 @@ import { fromPromise } from 'hyper-async'
 
 import {
   loadStateSchema,
-  writeInteractionSchema,
-  signInteractionSchema,
+  deployInteractionSchema,
   loadTransactionMetaSchema
 } from './dal.js'
 import { createLogger } from './logger.js'
@@ -46,28 +45,19 @@ export function buildSdk () {
    * - Uses Warp Sequencer
    * - Use arweave.net gateway
    */
+  const writeInteractionLogger = logger.child('writeInteraction')
   const writeInteraction = writeInteractionWith({
     loadTransactionMeta: fromPromise(
       loadTransactionMetaSchema.implement(
         GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL })
       )
     ),
-    writeInteraction: fromPromise(
-      writeInteractionSchema.implement(
-        MuClient.writeInteractionWith({
-          fetch,
-          MU_URL
-        })
+    deployInteraction: fromPromise(
+      deployInteractionSchema.implement(
+        MuClient.deployInteractionWith({ fetch, MU_URL, logger: writeInteractionLogger })
       )
     ),
-    signInteraction: fromPromise(
-      signInteractionSchema.implement(
-        MuClient.signInteractionWith({
-          createDataItem: MuClient.createData
-        })
-      )
-    ),
-    logger: logger.child('writeInteraction')
+    logger: writeInteractionLogger
   })
 
   /**
@@ -83,7 +73,7 @@ export function buildSdk () {
       )
     ),
     deployContract: fromPromise(
-      WarpGatewayClient.deployContractWith({ fetch, WARP_GATEWAY_URL, logger: createContractLogger.child('warp-gateway') })
+      WarpGatewayClient.deployContractWith({ fetch, WARP_GATEWAY_URL, logger: createContractLogger })
     ),
     logger: createContractLogger
   })
