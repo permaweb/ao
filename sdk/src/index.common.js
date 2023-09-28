@@ -35,11 +35,10 @@ export function buildSdk ({ WalletClient }) {
   })
 
   /**
-       * default writeInteraction that works OOTB
-       * - Uses Warp Sequencer
-       * - Use arweave.net gateway
-       * - use arbundles createData for signing
-       */
+   * default writeInteraction that works OOTB
+   * - Uses Warp Sequencer
+   * - Use arweave.net gateway
+   */
   const writeInteraction = writeInteractionWith({
     loadTransactionMeta: fromPromise(
       loadTransactionMetaSchema.implement(
@@ -64,6 +63,11 @@ export function buildSdk ({ WalletClient }) {
     logger: logger.child('writeInteraction')
   })
 
+  /**
+   * default createContract that works OOTB
+   * - Uses Warp Gateway to upload contracts
+   * - Use arweave.net gateway
+   */
   const createContractLogger = logger.child('createContract')
   const createContract = createContractWith({
     loadTransactionMeta: fromPromise(

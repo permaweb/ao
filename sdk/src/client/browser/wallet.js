@@ -10,13 +10,10 @@ const { DataItem } = WarpArBundles
  * to unit test this logic using stubs
  */
 
-/**
- * TODO: figure out api to inject, so we can unit test this
- */
 export function createAndSignWith ({ createDataItem = (buf) => new DataItem(buf) }) {
   return async ({ data, tags, wallet }) => {
     const signer = new InjectedArweaveSigner(wallet, createDataItem)
-    return signer.signDataItem(data, tags)
+    return signer.createAndSignDataItem(data, tags)
       .then(async dataItem => ({
         id: await dataItem.id,
         raw: await dataItem.getRaw()
@@ -53,7 +50,7 @@ class InjectedArweaveSigner {
     this.signatureType = 1
   }
 
-  async signDataItem (data, tags) {
+  async createAndSignDataItem (data, tags) {
     const buf = Buffer.from(await this.signer.signDataItem({ data, tags }))
     const dataI = this.createDataItem(buf)
     return dataI
