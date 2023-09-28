@@ -10,9 +10,6 @@ const { createData, ArweaveSigner } = WarpArBundles
  * to unit test this logic using stubs
  */
 
-/**
- * TODO: figure out api to inject, so we can unit test this
- */
 export function createAndSignWith () {
   return async ({ data, tags, wallet }) => {
     const signer = new ArweaveSigner(wallet)
