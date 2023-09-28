@@ -88,3 +88,5 @@ Either = {
   tryCatch = tryCatch,
   fromNullable = fromNullable
 }
+
+return Either;
