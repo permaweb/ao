@@ -1,13 +1,135 @@
 # AO SDK
 
-This sdk will run in a browser or server environment, the purpose is to abstract interacting
-with the infrastructure needed for deploying, evaluating, and interacting with `ao` Smart Contracts.
+This sdk will run in a browser or server environment, the purpose is to abstract
+interacting with the infrastructure needed for deploying, evaluating, and
+interacting with `ao` Smart Contracts.
 
 - Reads state from a `ao` Compute Unit `cu`
 - Writes interactions to an `ao` Message Unit `mu`
 - Deploys Contracts to the `warp` gateway
 
-# Testing
+<!-- toc -->
+
+- [Usage](#usage)
+    - [ESM (Node & Browser) aka type: `module`](#esm-node--browser-aka-type-module)
+    - [CJS (Node & Browser) type: `commonjs`](#cjs-node--browser-type-commonjs)
+  - [API](#api)
+    - [`readState`](#readstate)
+    - [`writeInteraction`](#writeinteraction)
+    - [`createContract`](#createcontract)
+    - [`createDataItemSigner`](#createdataitemsigner)
+- [Testing](#testing)
+
+<!-- tocstop -->
+
+## Usage
+
+This module can be used on the server, as well as the browser:
+
+#### ESM (Node & Browser) aka type: `module`
+
+```js
+import { createContract, readState, writeInteraction } from "@permaweb/ao-sdk";
+```
+
+#### CJS (Node & Browser) type: `commonjs`
+
+```js
+const { readState, writeInteraction, createContract } = require(
+  "@permaweb/ao-sdk",
+);
+```
+
+The duration of this document will use `ESM` for examples
+
+### API
+
+#### `readState`
+
+Read the state of a contract from an `ao` Compute Unit `cu`
+
+```js
+import { readState } from "@permaweb/ao-sdk";
+
+let state = await readState("VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro");
+// or update to certain sort-key
+state = await readState(
+  "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+  "000001262259,1694820900780,7160a8e16721d271f96a24ad007a5f54b7e22ae49363652eb7356464fcbb09ed",
+);
+```
+
+#### `writeInteraction`
+
+write an interaction to an `ao` Message Unit `mu`.
+
+```js
+import { createDataItemSigner, writeInteraction } from "@permaweb/ao-sdk";
+
+const interactionId = await writeInteraction(
+  contractId,
+  input,
+  createDataItemSigner(wallet),
+  tags,
+);
+```
+
+#### `createContract`
+
+Create a contract, registering it with the provided Warp Gateway
+
+```js
+import { createContract, createDataItemSigner } from "@permaweb/ao-sdk";
+
+const contractId = await createContract(
+  srcId,
+  initialState,
+  createDataItemSigner(wallet),
+  tags,
+);
+```
+
+#### `createDataItemSigner`
+
+`writeInteraction` and `createContract` both require signing a data item with a
+wallet.
+
+`createDataItemSigner` is a convenience api that, given a wallet, returns a
+function that can be passed to both `writeInteraction` and `createContract` in
+order to properly sign data items.
+
+The SDK provides a browser compatible and node compatible version that you can
+use OOTB.
+
+The `browser` compatible versions expects an instance of `window.arweaveWallet`
+to be passed to it:
+
+```js
+import { createDataItemSigner } from "@permaweb/ao-sdk";
+
+const signer = createDataItemSigner(globalThis.arweaveWallet);
+```
+
+The `node` compatible versions expects a JWK interface to be passed to it:
+
+```js
+import fs from "node:fs";
+import { createDataItemSigner } from "@permaweb/ao-sdk";
+
+const wallet = JSON.parse(fs.readFileSync(process.env.PATH_TO_WALLET));
+const signer = createDataItemSigner(wallet);
+```
+
+You can also implement your own `createDataItemSigner`, as long as it satisfies
+the api. Here is what the API looks like in TypeScript:
+
+```ts
+type CreateDataItemSigner = (wallet: any):
+  (args: { data: any, tags: { name: string, value: string}[] }):
+    Promise<{ id: string, raw: ArrayBuffer }>
+```
+
+## Testing
 
 Run `npm test` to run the tests.
 
