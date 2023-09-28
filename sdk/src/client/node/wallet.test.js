@@ -1,13 +1,13 @@
 import { describe, test, before } from 'node:test'
 import * as assert from 'node:assert'
 import { tmpdir } from 'node:os'
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 
 import Arweave from 'arweave'
 
-import { createAndSignWith, readWalletWith, walletExistsWith } from './wallet.js'
+import { createDataItemSigner } from './wallet.js'
 
 describe('browser - wallet', () => {
   /**
@@ -24,34 +24,15 @@ describe('browser - wallet', () => {
     )
   })
 
-  describe('walletExistsWith', () => {
-    test('should return whether arweaveWallet is defined', async () => {
-      const walletExists = walletExistsWith()
-      await walletExists(tmpWallet).then(assert.ok)
-
-      await walletExists('./dne.json').then(res => assert.ok(!res))
-    })
-  })
-
-  describe('readWalletWith', () => {
-    test('should return arweaveWallet', async () => {
-      const readWallet = readWalletWith()
-      await readWallet(tmpWallet).then(wallet => assert.equal(wallet.kty, 'RSA'))
-    })
-  })
-
-  describe('createAndSignWith', () => {
-    const readWallet = readWalletWith()
-
+  describe('createDataItemSigner', () => {
     test('should create and sign the data item', async () => {
-      const wallet = await readWallet(tmpWallet)
+      const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const createAndSign = createAndSignWith()
+      const signDataItem = createDataItemSigner(wallet)
 
-      const res = await createAndSign({
+      const res = await signDataItem({
         data: 'foobar',
-        tags: [{ name: 'foo', value: 'bar' }],
-        wallet
+        tags: [{ name: 'foo', value: 'bar' }]
       })
 
       console.log('signedDataItem', res)

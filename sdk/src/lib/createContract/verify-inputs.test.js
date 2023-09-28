@@ -11,7 +11,7 @@ const CONTRACT = 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
 const logger = createLogger('createContract')
 
 describe('verify-input', () => {
-  test('verify source tags and read the wallet', async () => {
+  test('verify source tags and verify signer', async () => {
     const verifyInput = verifyInputsWith({
       loadTransactionMeta: (_id) =>
         Resolved({
@@ -21,26 +21,17 @@ describe('verify-input', () => {
             { name: 'Contract-Type', value: 'ao' }
           ]
         }),
-      walletExists: (path) => {
-        assert.equal(path, '/foo/bar')
-        return Resolved(true)
-      },
-      readWallet: (path) => {
-        assert.equal(path, '/foo/bar')
-        return Resolved({ foo: 'bar' })
-      },
       logger
     })
 
     await verifyInput({
       srcId: CONTRACT,
       initialState: { balances: { foo: 1 } },
-      walletPath: '/foo/bar',
+      signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
       ]
-    }).toPromise()
-      .then(res => assert.deepStrictEqual(res.wallet, { foo: 'bar' }))
+    }).toPromise().then(assert.ok)
   })
 
   test('throw if source is missing correct App-Name', async () => {
@@ -53,15 +44,13 @@ describe('verify-input', () => {
             { name: 'Contract-Type', value: 'ao' }
           ]
         }),
-      walletExists: () => Resolved(true),
-      readWallet: () => Resolved({ foo: 'bar' }),
       logger
     })
 
     await verifyInput({
       srcId: CONTRACT,
       initialState: { balances: { foo: 1 } },
-      walletPath: '/foo/bar',
+      signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -85,15 +74,13 @@ describe('verify-input', () => {
             { name: 'Contract-Type', value: 'ao' }
           ]
         }),
-      walletExists: () => Resolved(true),
-      readWallet: () => Resolved({ foo: 'bar' }),
       logger
     })
 
     await verifyInput({
       srcId: CONTRACT,
       initialState: { balances: { foo: 1 } },
-      walletPath: '/foo/bar',
+      signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -117,15 +104,13 @@ describe('verify-input', () => {
             { name: 'Contract-Type', value: 'something else' }
           ]
         }),
-      walletExists: () => Resolved(true),
-      readWallet: () => Resolved({ foo: 'bar' }),
       logger
     })
 
     await verifyInput({
       srcId: CONTRACT,
       initialState: { balances: { foo: 1 } },
-      walletPath: '/foo/bar',
+      signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -139,7 +124,7 @@ describe('verify-input', () => {
       })
   })
 
-  test('throw if wallet is not found', async () => {
+  test('throw if signer is not found', async () => {
     const verifyInput = verifyInputsWith({
       loadTransactionMeta: (_id) =>
         Resolved({
@@ -149,15 +134,13 @@ describe('verify-input', () => {
             { name: 'Contract-Type', value: 'ao' }
           ]
         }),
-      walletExists: () => Resolved(false),
-      readWallet: () => assert.fail('should never get to readWallet'),
       logger
     })
 
     await verifyInput({
       srcId: CONTRACT,
       initialState: { balances: { foo: 1 } },
-      walletPath: '/foo/bar',
+      signer: undefined,
       tags: [
         { name: 'foo', value: 'bar' }
       ],
@@ -167,7 +150,7 @@ describe('verify-input', () => {
       .catch(err => {
         assert.equal(
           err,
-          'wallet not found'
+          'signer not found'
         )
       })
   })
@@ -182,21 +165,13 @@ describe('verify-input', () => {
             { name: 'Contract-Type', value: 'ao' }
           ]
         }),
-      walletExists: (path) => {
-        assert.equal(path, '/foo/bar')
-        return Resolved(true)
-      },
-      readWallet: (path) => {
-        assert.equal(path, '/foo/bar')
-        return Resolved({ foo: 'bar' })
-      },
       logger
     })
 
     await verifyInput({
       srcId: CONTRACT,
       initialState: 'not an object',
-      walletPath: '/foo/bar',
+      signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
       ]

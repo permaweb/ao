@@ -1,17 +1,16 @@
-import fs from 'node:fs'
 import WarpArBundles from 'warp-arbundles'
 
 const { createData, ArweaveSigner } = WarpArBundles
 
 /**
- * Build a wallet instance based on the node environment
+ * A function that builds a signer using a wallet jwk interface
+ * commonly used in node-based dApps
  *
- * we inject these as part of the entrypoint, which allows us
- * to unit test this logic using stubs
+ * This is provided as a convenience for consumers of the SDK
+ * to use, but consumers can also implement their own signer
  */
-
-export function createAndSignWith () {
-  return async ({ data, tags, wallet }) => {
+export function createDataItemSigner (wallet) {
+  return async ({ data, tags }) => {
     const signer = new ArweaveSigner(wallet)
     const dataItem = createData(data, signer, { tags })
     return dataItem.sign(signer)
@@ -20,18 +19,4 @@ export function createAndSignWith () {
         raw: await dataItem.getRaw()
       }))
   }
-}
-
-/**
- * implement to check the wallet on the file system
- */
-export function walletExistsWith () {
-  return async (wallet) => fs.existsSync(wallet)
-}
-
-/**
- * implement to read the wallet as JSON from the path
- */
-export function readWalletWith () {
-  return async (wallet) => JSON.parse(fs.readFileSync(wallet).toString())
 }

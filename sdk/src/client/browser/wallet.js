@@ -4,38 +4,6 @@ import WarpArBundles from 'warp-arbundles'
 const { DataItem } = WarpArBundles
 
 /**
- * Build a wallet instance based on the browser environment
- *
- * we inject these as part of the entrypoint, which allows us
- * to unit test this logic using stubs
- */
-
-export function createAndSignWith ({ createDataItem = (buf) => new DataItem(buf) }) {
-  return async ({ data, tags, wallet }) => {
-    const signer = new InjectedArweaveSigner(wallet, createDataItem)
-    return signer.createAndSignDataItem(data, tags)
-      .then(async dataItem => ({
-        id: await dataItem.id,
-        raw: await dataItem.getRaw()
-      }))
-  }
-}
-
-/**
- * implement to check if the arweaveWallet exists on window
- */
-export function walletExistsWith ({ walletExists = (wallet = globalThis.arweaveWallet) => !!wallet } = {}) {
-  return async (wallet) => walletExists(wallet)
-}
-
-/**
-   * implement to read the arweaveWallet on window
-   */
-export function readWalletWith ({ readWallet = (wallet = globalThis.arweaveWallet) => wallet } = {}) {
-  return async (wallet) => readWallet(wallet)
-}
-
-/**
  * Adapted from:
  * https://github.com/warp-contracts/warp-contracts-plugins/blob/cacb84e41da8936184ed0d7792feb93d04fec825/warp-contracts-plugin-signature/src/web/arweave/InjectedArweaveSigner.ts#L6
  *
@@ -54,5 +22,27 @@ class InjectedArweaveSigner {
     const buf = Buffer.from(await this.signer.signDataItem({ data, tags }))
     const dataI = this.createDataItem(buf)
     return dataI
+  }
+}
+
+/**
+ * A function that builds a signer using the global arweaveWallet
+ * commonly used in browser-based dApps
+ *
+ * This is provided as a convenience for consumers of the SDK
+ * to use, but consumers can also implement their own signer
+ */
+export function createDataItemSigner (arweaveWallet) {
+  /**
+   * createDataItem can be passed here for the purposes of unit testing
+   * with a stub
+   */
+  return async ({ data, tags, createDataItem = (buf) => new DataItem(buf) }) => {
+    const signer = new InjectedArweaveSigner(arweaveWallet, createDataItem)
+    return signer.createAndSignDataItem(data, tags)
+      .then(async dataItem => ({
+        id: await dataItem.id,
+        raw: await dataItem.getRaw()
+      }))
   }
 }

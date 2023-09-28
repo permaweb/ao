@@ -1,6 +1,6 @@
 import { Rejected, Resolved, of } from 'hyper-async'
 import { z } from 'zod'
-import { __, assoc, equals, prop, reduce } from 'ramda'
+import { assoc, equals, prop, reduce } from 'ramda'
 
 /**
  * @typedef Tag
@@ -14,8 +14,6 @@ import { __, assoc, equals, prop, reduce } from 'ramda'
  * @typedef Env
  * @property {LoadTransactionMeta} loadTransactionMeta
  * @property {any} logger
- * @property {any} readWallet
- * @property {any} walletExists
  */
 
 function verifySourceWith ({ loadTransactionMeta, logger }) {
@@ -42,18 +40,17 @@ function verifyInitialStateWith () {
     .chain(({ success }) => success ? Resolved() : Rejected('initialState was not a valid JSON Object'))
 }
 
-function verifyWalletWith ({ walletExists, readWallet }) {
-  return (wallet) => of(wallet)
-    .chain(walletExists)
-    .chain((exists) => exists ? Resolved(wallet) : Rejected('wallet not found'))
-    .chain(readWallet)
+function verifySignerWith ({ logger }) {
+  return (signer) => of(signer)
+    .map(logger.tap('Checking for signer'))
+    .chain((signer) => signer ? Resolved(signer) : Rejected('signer not found'))
 }
 
 /**
  * @typedef Context
  * @property {string} srcId - the id of the contract source
  * @property {any} initialState - the initial state of the contract
- * @property {string} walletPath - the initial state of the contract
+ * @property {Function} sign - the initial state of the contract
  * @property {Tag[]} tags - the additional tags to add to the contract
  *
  * @typedef Wallet
@@ -74,17 +71,16 @@ export function verifyInputsWith (env) {
 
   const verifySource = verifySourceWith(env)
   const verifyInitialState = verifyInitialStateWith()
-  const verifyWallet = verifyWalletWith(env)
+  const verifySigner = verifySignerWith(env)
 
   return (ctx) => {
     return of(ctx)
       .chain(ctx => verifySource(ctx.srcId).map(() => ctx))
       .chain(ctx => verifyInitialState(ctx.initialState).map(() => ctx))
-      .chain(ctx => verifyWallet(ctx.walletPath))
-      .map(assoc('wallet', __, ctx))
+      .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
       .bimap(
         logger.tap('Error when verify input: %s'),
-        logger.tap('Successfully verified inputs and added wallet to ctx')
+        logger.tap('Successfully verified inputs')
       )
   }
 }

@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat } from 'ramda'
 
@@ -37,7 +37,7 @@ function buildTagsWith () {
   }
 }
 
-function buildDataWith () {
+function buildDataWith ({ logger }) {
   return (ctx) => {
     return of(ctx)
       /**
@@ -45,6 +45,7 @@ function buildDataWith () {
        */
       .map(() => Math.random().toString().slice(-4))
       .map(assoc('data', __, ctx))
+      .map(logger.tap('added pseudo-random data as payload for contract at "data"'))
   }
 }
 
@@ -60,14 +61,18 @@ export function uploadContractWith (env) {
   const logger = env.logger.child('uploadContract')
   env = { ...env, logger }
 
-  const buildTags = buildTagsWith()
-  const buildData = buildDataWith()
+  const buildTags = buildTagsWith(env)
+  const buildData = buildDataWith(env)
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
-      .chain(({ data, tags, wallet }) => env.createAndSignDataItem({ data, tags, wallet }))
+      /**
+       * We need to wrap signer since it returns a Promise
+       * and is injected by the consumer
+       */
+      .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
       .chain(env.deployContract)
       .map(res => assoc('contractId', res.id, ctx))
   }

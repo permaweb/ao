@@ -26,7 +26,14 @@ const logger = createLogger('@permaweb/ao-sdk')
 
 const readStateLogger = logger.child('readState')
 
-export function buildSdk ({ WalletClient }) {
+/**
+ * Any environment specific build-time dependencies
+ * can be passed in here
+ *
+ * Right now, no environment specific build-time dependencies are needed
+ * and instead are provided at runtime by the consumer
+ */
+export function buildSdk () {
   const readState = readStateWith({
     loadState: fromPromise(
       loadStateSchema.implement(CuClient.loadStateWith({ fetch, CU_URL, logger: readStateLogger }))
@@ -78,9 +85,6 @@ export function buildSdk ({ WalletClient }) {
     deployContract: fromPromise(
       WarpGatewayClient.deployContractWith({ fetch, WARP_GATEWAY_URL, logger: createContractLogger.child('warp-gateway') })
     ),
-    createAndSignDataItem: fromPromise(WalletClient.createAndSignWith()),
-    walletExists: fromPromise(WalletClient.walletExistsWith()),
-    readWallet: fromPromise(WalletClient.readWalletWith()),
     logger: createContractLogger
   })
 
