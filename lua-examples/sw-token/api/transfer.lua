@@ -13,8 +13,6 @@ local function validate(payload)
   -- you don't have to check this cause there's bigger problems if this isnt there.
   local caller = payload.action.caller
 
-  print("TEST")
-
   -- Make sure target exists
   if not target then
     return Either.Left('Please specify a target.')
