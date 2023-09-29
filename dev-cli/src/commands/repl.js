@@ -1,5 +1,5 @@
 export async function repl() {
-  const pwd = Deno.cwd()
+  const pwd = Deno.cwd();
   const p = Deno.run({
     cmd: [
       "docker",
