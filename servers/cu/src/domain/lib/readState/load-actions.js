@@ -1,8 +1,9 @@
-import { of } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import { __, assoc } from 'ramda'
 import { z } from 'zod'
 
 import { interactionSchema } from '../../model.js'
+import { loadInteractionsSchema } from '../../dal.js'
 
 /**
  * The result that is produced from this step
@@ -44,6 +45,8 @@ const ctxSchema = z.object({
  */
 export function loadActionsWith ({ loadInteractions, logger: _logger }) {
   const logger = _logger.child('loadActions')
+
+  loadInteractions = fromPromise(loadInteractionsSchema.implement(loadInteractions))
 
   return (ctx) =>
     of(ctx)

@@ -1,23 +1,21 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
-import { Resolved } from 'hyper-async'
 
 import { createLogger } from '../../logger.js'
 import { loadSourceWith } from './load-src.js'
 
 const CONTRACT = 'contract-123-9HdeqeuYQOgMgWucro'
-const logger = createLogger('@permaweb/ao-sdk:readState')
+const logger = createLogger('ao-cu:readState')
 
 describe('load-src', () => {
   test('return contract source and contract id and contract owner', async () => {
     const loadSource = loadSourceWith({
-      loadTransactionData: (_id) =>
-        Resolved(new Response(JSON.stringify({ hello: 'world' }))),
-      loadTransactionMeta: (_id) =>
-        Resolved({
-          owner: { address: 'woohoo' },
-          tags: [{ name: 'Contract-Src', value: 'foobar' }]
-        }),
+      loadTransactionData: async (_id) =>
+        new Response(JSON.stringify({ hello: 'world' })),
+      loadTransactionMeta: async (_id) => ({
+        owner: { address: 'woohoo' },
+        tags: [{ name: 'Contract-Src', value: 'foobar' }]
+      }),
       logger
     })
 
@@ -29,10 +27,11 @@ describe('load-src', () => {
 
   test('throw if the Contract-Src tag is not provided', async () => {
     const loadSource = loadSourceWith({
-      loadTransactionData: (_id) =>
-        Resolved(new Response(JSON.stringify({ hello: 'world' }))),
-      loadTransactionMeta: (_id) =>
-        Resolved({ tags: [{ name: 'Not-Contract-Src', value: 'foobar' }] }),
+      loadTransactionData: async (_id) =>
+        new Response(JSON.stringify({ hello: 'world' })),
+      loadTransactionMeta: async (_id) => ({
+        tags: [{ name: 'Not-Contract-Src', value: 'foobar' }]
+      }),
       logger
     })
 

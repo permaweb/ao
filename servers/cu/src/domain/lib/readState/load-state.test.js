@@ -1,26 +1,24 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
-import { Resolved } from 'hyper-async'
 
 import { createLogger } from '../../logger.js'
 import { loadStateWith } from './load-state.js'
 
 const CONTRACT = 'contract-123-9HdeqeuYQOgMgWucro'
-const logger = createLogger('@permaweb/ao-sdk:readState')
+const logger = createLogger('ao-cu:readState')
 
 describe('load-state', () => {
   test('add the most recent state from cache', async () => {
     const loadState = loadStateWith({
-      db: {
-        findLatestEvaluation: ({ id, _to }) =>
-          Resolved({
-            id: '123-contract,123_sortkey',
-            output: { state: { foo: 'bar' } },
-            sortKey: '123_sortKey'
-          })
-      },
-      loadTransactionData: (_id) => Resolved(assert.fail('unreachable')),
-      loadTransactionMeta: (_id) => Resolved(assert.fail('unreachable')),
+      findLatestEvaluation: async ({ id, _to }) => ({
+        sortKey: '123_sortKey',
+        parent: 'contract-123',
+        cachedAt: new Date(),
+        action: { input: { function: 'noop' } },
+        output: { state: { foo: 'bar' } }
+      }),
+      loadTransactionData: async (_id) => assert.fail('unreachable'),
+      loadTransactionMeta: async (_id) => assert.fail('unreachable'),
       logger
     })
 
@@ -32,14 +30,11 @@ describe('load-state', () => {
 
   test('add the initial state from Init-State', async () => {
     const loadState = loadStateWith({
-      db: {
-        findLatestEvaluation: ({ _id, _to }) => Resolved(undefined)
-      },
-      loadTransactionData: (_id) => Resolved(assert.fail('unreachable')),
-      loadTransactionMeta: (_id) =>
-        Resolved({
-          tags: [{ name: 'Init-State', value: JSON.stringify({ foo: 'bar' }) }]
-        }),
+      findLatestEvaluation: async ({ _id, _to }) => undefined,
+      loadTransactionData: async (_id) => assert.fail('unreachable'),
+      loadTransactionMeta: async (_id) => ({
+        tags: [{ name: 'Init-State', value: JSON.stringify({ foo: 'bar' }) }]
+      }),
       logger
     })
 
@@ -53,17 +48,14 @@ describe('load-state', () => {
     const initStateTx = CONTRACT
 
     const loadState = loadStateWith({
-      db: {
-        findLatestEvaluation: ({ _id, _to }) => Resolved(undefined)
-      },
-      loadTransactionData: (id) => {
+      findLatestEvaluation: async ({ _id, _to }) => undefined,
+      loadTransactionData: async (id) => {
         assert.equal(id, initStateTx)
-        return Resolved(new Response(JSON.stringify({ foo: 'bar' })))
+        return new Response(JSON.stringify({ foo: 'bar' }))
       },
-      loadTransactionMeta: (_id) =>
-        Resolved({
-          tags: [{ name: 'Init-State-Tx', value: initStateTx }]
-        }),
+      loadTransactionMeta: async (_id) => ({
+        tags: [{ name: 'Init-State-Tx', value: initStateTx }]
+      }),
       logger
     })
 
@@ -75,17 +67,14 @@ describe('load-state', () => {
 
   test('add the initial state from transaction data', async () => {
     const loadState = loadStateWith({
-      db: {
-        findLatestEvaluation: ({ _id, _to }) => Resolved(undefined)
-      },
-      loadTransactionData: (id) => {
+      findLatestEvaluation: async ({ _id, _to }) => undefined,
+      loadTransactionData: async (id) => {
         assert.equal(id, CONTRACT)
-        return Resolved(new Response(JSON.stringify({ foo: 'bar' })))
+        return new Response(JSON.stringify({ foo: 'bar' }))
       },
-      loadTransactionMeta: (_id) =>
-        Resolved({
-          tags: [{ name: 'Title', value: 'Foobar' }]
-        }),
+      loadTransactionMeta: async (_id) => ({
+        tags: [{ name: 'Title', value: 'Foobar' }]
+      }),
       logger
     })
 

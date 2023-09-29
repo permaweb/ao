@@ -1,10 +1,9 @@
 import { of } from 'hyper-async'
 
-// readState
-import { loadSourceWith } from './lib/readState/load-src.js'
-import { loadStateWith } from './lib/readState/load-state.js'
-import { loadActionsWith } from './lib/readState/load-actions.js'
-import { evaluateWith } from './lib/readState/evaluate.js'
+import { loadSourceWith } from './load-src.js'
+import { loadStateWith } from './load-state.js'
+import { loadActionsWith } from './load-actions.js'
+import { evaluateWith } from './evaluate.js'
 
 /**
  * @typedef Env

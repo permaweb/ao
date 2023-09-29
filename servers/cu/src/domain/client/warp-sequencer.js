@@ -16,8 +16,6 @@ import {
   transduce
 } from 'ramda'
 import { z } from 'zod'
-import { createData } from 'warp-arbundles'
-export { createData }
 
 /**
  * An implementation of the Sequencer client using

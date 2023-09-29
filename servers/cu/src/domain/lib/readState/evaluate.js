@@ -3,6 +3,8 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
+import { saveEvaluationSchema } from '../../dal.js'
+
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -25,11 +27,13 @@ function addHandler (ctx) {
     .map((handle) => ({ handle, ...ctx }))
 }
 
-function cacheEvaluationWith ({ db, logger }) {
+function cacheEvaluationWith ({ saveEvaluation, logger }) {
+  saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
+
   return (evaluation) =>
     of(evaluation)
       .map(logger.tap('Caching evaluation %O'))
-      .chain(db.saveEvaluation)
+      .chain(saveEvaluation)
 }
 
 /**

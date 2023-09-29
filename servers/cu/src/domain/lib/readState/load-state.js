@@ -13,6 +13,8 @@ import {
 } from 'ramda'
 import { z } from 'zod'
 
+import { findLatestEvaluationSchema, loadTransactionDataSchema, loadTransactionMetaSchema } from '../../dal.js'
+
 const [INIT_STATE_TAG, INIT_STATE_TX_TAG] = ['Init-State', 'Init-State-TX']
 
 /**
@@ -76,6 +78,8 @@ const ctxSchema = z.object({
 function resolveStateWith ({ loadTransactionData, logger: _logger }) {
   const logger = _logger.child('resolveState')
 
+  loadTransactionData = fromPromise(loadTransactionDataSchema.implement(loadTransactionData))
+
   function maybeInitState (ctx) {
     if (!ctx.tags[INIT_STATE_TAG]) {
       return Rejected(ctx)
@@ -130,6 +134,8 @@ function resolveStateWith ({ loadTransactionData, logger: _logger }) {
  * @returns {LoadInitialStateTags}
  */
 function getSourceInitStateTagsWith ({ loadTransactionMeta }) {
+  loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
+
   return ({ id }) => {
     return loadTransactionMeta(id)
       .map(pick(['tags', 'block']))
@@ -156,11 +162,13 @@ function getSourceInitStateTagsWith ({ loadTransactionMeta }) {
  * @param {Env} env
  * @returns {LoadMostRecentState}
  */
-function getMostRecentEvaluationWith ({ db, logger: _logger }) {
+function getMostRecentEvaluationWith ({ findLatestEvaluation, logger: _logger }) {
   const logger = _logger.child('getMostRecentState')
 
+  findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
+
   return ({ id, to }) =>
-    db.findLatestEvaluation({ id, to })
+    findLatestEvaluation({ id, to })
       .chain((evaluation) => {
         if (!evaluation) return Rejected({ id, to })
         return Resolved({
