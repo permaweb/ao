@@ -1,7 +1,9 @@
-import { Buffer } from 'buffer'
+import { Buffer } from 'buffer/index.js'
 import WarpArBundles from 'warp-arbundles'
 
 const { DataItem } = WarpArBundles
+
+if (!globalThis.Buffer) globalThis.Buffer = Buffer
 
 /**
  * Adapted from:
