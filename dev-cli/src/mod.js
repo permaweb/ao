@@ -7,6 +7,7 @@ import { repl } from "./commands/repl.js";
 import { build } from "./commands/build.js";
 import { run } from "./commands/run.js";
 import { publish } from "./commands/publish.js";
+import { contract } from "./commands/contract.js";
 
 await new Command()
   .name("ao")
@@ -41,4 +42,21 @@ await new Command()
   // .option('-n, --node <path:string>', 'the bundlr node that you would like to use to upload your built wasm contract')
   .arguments("<wasmfile:string>")
   .action(publish)
+  // contract
+  .command("contract", "create a contract using a published ao source")
+  .option(
+    "-w, --wallet <path:string>",
+    "the path to the wallet that should be used to sign the transaction",
+  )
+  .option(
+    "-t, --tag <tag:string>",
+    '"name:value" additional tag to add to the transaction',
+    { collect: true },
+  )
+  .option(
+    "-s, --source <txId:string>",
+    "the transaction that contains the contract source",
+  )
+  .arguments("<initialstate:string>")
+  .action(contract)
   .parse(Deno.args);

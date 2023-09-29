@@ -10,7 +10,7 @@ import { AoContractSourceTags } from "../defaults.js";
  * Implement the uploadWith API such to upload a single file
  * to Bundlr
  */
-const uploadHyperbeamContract = uploadWith({
+const uploadHyperbeamContractSource = uploadWith({
   walletExists: async (path) => fs.existsSync(path),
   /**
    * implement to check if single file exists
@@ -36,7 +36,7 @@ const uploadHyperbeamContract = uploadWith({
  * It expects a wallet JWK to be present in the provided directory
  * in order to perform the upload to Arweave via Bundlr
  */
-uploadHyperbeamContract({
+uploadHyperbeamContractSource({
   walletPath: process.env.WALLET_PATH,
   artifactPath: process.env.CONTRACT_WASM_PATH,
   to: process.env.BUNDLR_NODE || "https://node2.bundlr.network",
