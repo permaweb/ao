@@ -1,10 +1,3 @@
-import { fromPromise } from 'hyper-async'
-
-import {
-  loadStateSchema,
-  deployInteractionSchema,
-  loadTransactionMetaSchema
-} from './dal.js'
 import { createLogger } from './logger.js'
 
 import * as MuClient from './client/ao-mu.js'
@@ -34,9 +27,7 @@ const readStateLogger = logger.child('readState')
  */
 export function buildSdk () {
   const readState = readStateWith({
-    loadState: fromPromise(
-      loadStateSchema.implement(CuClient.loadStateWith({ fetch, CU_URL, logger: readStateLogger }))
-    ),
+    loadState: CuClient.loadStateWith({ fetch, CU_URL, logger: readStateLogger }),
     logger: readStateLogger
   })
 
@@ -47,16 +38,8 @@ export function buildSdk () {
    */
   const writeInteractionLogger = logger.child('writeInteraction')
   const writeInteraction = writeInteractionWith({
-    loadTransactionMeta: fromPromise(
-      loadTransactionMetaSchema.implement(
-        GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL })
-      )
-    ),
-    deployInteraction: fromPromise(
-      deployInteractionSchema.implement(
-        MuClient.deployInteractionWith({ fetch, MU_URL, logger: writeInteractionLogger })
-      )
-    ),
+    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
+    deployInteraction: MuClient.deployInteractionWith({ fetch, MU_URL, logger: writeInteractionLogger }),
     logger: writeInteractionLogger
   })
 
@@ -67,14 +50,8 @@ export function buildSdk () {
    */
   const createContractLogger = logger.child('createContract')
   const createContract = createContractWith({
-    loadTransactionMeta: fromPromise(
-      loadTransactionMetaSchema.implement(
-        GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL })
-      )
-    ),
-    deployContract: fromPromise(
-      WarpGatewayClient.deployContractWith({ fetch, WARP_GATEWAY_URL, logger: createContractLogger })
-    ),
+    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
+    deployContract: WarpGatewayClient.deployContractWith({ fetch, WARP_GATEWAY_URL, logger: createContractLogger }),
     logger: createContractLogger
   })
 

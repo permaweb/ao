@@ -1,6 +1,8 @@
-import { of } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat } from 'ramda'
+
+import { deployInteractionSchema, signerSchema } from '../../dal.js'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -71,11 +73,15 @@ export function uploadInteractionWith (env) {
   const buildTags = buildTagsWith(env)
   const buildData = buildDataWith(env)
 
+  const deployInteraction = deployInteractionSchema.implement(env.deployInteraction)
+
   return (ctx) => {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
-      .chain(({ id, data, tags, signer }) => env.deployInteraction({ contractId: id, data, tags, signer }))
+      .chain(fromPromise(({ id, data, tags, signer }) =>
+        deployInteraction({ contractId: id, data, tags, signer: signerSchema.implement(signer) })
+      ))
       .map(res => assoc('interactionId', res.interactionId, ctx))
   }
 }

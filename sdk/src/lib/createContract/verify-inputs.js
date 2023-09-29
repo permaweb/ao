@@ -1,6 +1,8 @@
-import { Rejected, Resolved, of } from 'hyper-async'
+import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { assoc, equals, prop, reduce } from 'ramda'
+
+import { loadTransactionMetaSchema } from '../../dal.js'
 
 /**
  * @typedef Tag
@@ -22,7 +24,7 @@ function verifySourceWith ({ loadTransactionMeta, logger }) {
     : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on contract source`)
 
   return (srcId) => of(srcId)
-    .chain(loadTransactionMeta)
+    .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
     .map(prop('tags'))
     .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
     .chain(checkTag('App-Name', equals('SmartWeaveContractSource')))

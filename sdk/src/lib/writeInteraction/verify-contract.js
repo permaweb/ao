@@ -1,6 +1,8 @@
-import { of } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import { assoc, path, reduce } from 'ramda'
 import { z } from 'zod'
+
+import { loadTransactionMetaSchema } from '../../dal.js'
 
 const transactionSchema = z.object({
   tags: z.array(z.object({
@@ -30,7 +32,8 @@ const contractTagsSchema = z.object({
  */
 function verfiyTagsWith ({ loadTransactionMeta }) {
   return (id) => {
-    return loadTransactionMeta(id)
+    return of(id)
+      .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
       .map(transactionSchema.parse)
       .map(path(['tags']))
       .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
