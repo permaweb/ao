@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.6](https://github.com/permaweb/ao/compare/sdk@v0.0.5...sdk@v0.0.6) (2023-09-29)
+
+
+### Bug Fixes
+
+* **sdk:** polyfill buffer in browser bundle ([40766e7](https://github.com/permaweb/ao/commit/40766e731108d905f1948b39b57f7d03ed9ce28a))
+
 ## [0.0.5](https://github.com/permaweb/ao/compare/sdk@v0.0.4...sdk@v0.0.5) (2023-09-29)
 
 ## 0.0.4 (2023-09-28)
