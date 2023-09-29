@@ -1,13 +1,12 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { Resolved } from 'hyper-async'
 
 import { interactionSchema } from '../../model.js'
 import { createLogger } from '../../logger.js'
 import { loadActionsWith } from './load-actions.js'
 
 const CONTRACT = 'SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY'
-const logger = createLogger('@permaweb/ao-sdk:readState')
+const logger = createLogger('ao-cu:readState')
 
 const SWGlobal = {
   contract: {
@@ -34,22 +33,21 @@ const SWGlobal = {
 describe('load-actions', () => {
   test('return actions in correct shape', async () => {
     const loadActions = loadActionsWith({
-      loadInteractions: ({ id, from, to }) =>
-        Resolved([
-          {
-            action: { input: { function: 'createOrder' } },
-            sortKey: 'abcd,123,fsdf',
-            SWGlobal
-          },
-          {
-            action: { input: { function: 'createOrder' } },
-            sortKey: 'fdsa,456,cdskjfs',
-            SWGlobal
-          }
-        ]),
+      loadInteractions: async ({ id, from, to }) => ([
+        {
+          action: { input: { function: 'createOrder' } },
+          sortKey: 'abcd,123,fsdf',
+          SWGlobal
+        },
+        {
+          action: { input: { function: 'createOrder' } },
+          sortKey: 'fdsa,456,cdskjfs',
+          SWGlobal
+        }
+      ]),
       logger
     })
-    const result = await loadActions({ id: CONTRACT }).toPromise()
+    const result = await loadActions({ id: CONTRACT, owner: 'owner-123' }).toPromise()
     assert.ok(result.actions)
     assert.ok(result.id)
 
@@ -59,13 +57,12 @@ describe('load-actions', () => {
 
   test('throw if actions are not in expected shape', async () => {
     const loadActionsNoAction = loadActionsWith({
-      loadInteractions: ({ id, from, to }) =>
-        Resolved([
-          {
-            not_action: { input: { function: 'createOrder' } },
-            sortKey: 'abcd,123,fsdf'
-          }
-        ]),
+      loadInteractions: async ({ id, from, to }) => ([
+        {
+          not_action: { input: { function: 'createOrder' } },
+          sortKey: 'abcd,123,fsdf'
+        }
+      ]),
       logger
     })
     await loadActionsNoAction({ id: CONTRACT, owner: 'owner-123' }).toPromise()
@@ -73,13 +70,12 @@ describe('load-actions', () => {
       .catch(assert.ok)
 
     const loadActionsNoSortKey = loadActionsWith({
-      loadInteractions: ({ id, from, to }) =>
-        Resolved([
-          {
-            action: { input: { function: 'createOrder' } },
-            noSortKey: 'abcd,123,fsdf'
-          }
-        ]),
+      loadInteractions: async ({ id, from, to }) => ([
+        {
+          action: { input: { function: 'createOrder' } },
+          noSortKey: 'abcd,123,fsdf'
+        }
+      ]),
       logger
     })
     await loadActionsNoSortKey({ id: CONTRACT, owner: 'owner-123' }).toPromise()

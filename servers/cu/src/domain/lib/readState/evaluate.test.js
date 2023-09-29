@@ -1,19 +1,16 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
-import { Resolved } from 'hyper-async'
 
 import { createLogger } from '../../logger.js'
 import { evaluateWith } from './evaluate.js'
 
-const logger = createLogger('@permaweb/ao-sdk:readState')
+const logger = createLogger('ao-cu:readState')
 
 describe('evaluate', () => {
   test('evaluate state and add output to context', async () => {
     const env = {
-      db: {
-        saveEvaluation: (interaction) => Resolved(interaction)
-      },
+      saveEvaluation: async (interaction) => interaction,
       logger
     }
 
@@ -49,11 +46,9 @@ describe('evaluate', () => {
   test('save each interaction', async () => {
     let cacheCount = 0
     const env = {
-      db: {
-        saveEvaluation: (interaction) => {
-          cacheCount++
-          return Resolved()
-        }
+      saveEvaluation: async (interaction) => {
+        cacheCount++
+        return undefined
       },
       logger
     }
@@ -100,10 +95,8 @@ describe('evaluate', () => {
 
   test('noop the initial state', async () => {
     const env = {
-      db: {
-        saveEvaluation: (interaction) =>
-          assert.fail('cache should not be interacted with on a noop of state')
-      },
+      saveEvaluation: async (interaction) =>
+        assert.fail('cache should not be interacted with on a noop of state'),
       logger
     }
 
@@ -125,7 +118,7 @@ describe('evaluate', () => {
 
   test('error returned in contract result', async () => {
     const env = {
-      db: { saveEvaluation: assert.fail },
+      saveEvaluation: async () => assert.fail(),
       logger
     }
 
@@ -157,7 +150,7 @@ describe('evaluate', () => {
 
   test('error thrown by contract', async () => {
     const env = {
-      db: { saveEvaluation: assert.fail },
+      saveEvaluation: async () => assert.fail(),
       logger
     }
 
@@ -189,7 +182,7 @@ describe('evaluate', () => {
 
   test('error unhandled by contract', async () => {
     const env = {
-      db: { saveEvaluation: assert.fail },
+      saveEvaluation: async () => assert.fail(),
       logger
     }
 

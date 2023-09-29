@@ -2,6 +2,8 @@ import { fromPromise, of } from 'hyper-async'
 import { applySpec, assoc, path, pick, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 
+import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../../dal.js'
+
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -39,6 +41,10 @@ const ctxSchema = z.object({
  * @returns {LoadSourceBuffer}
  */
 function getSourceBufferWith ({ loadTransactionData }) {
+  loadTransactionData = fromPromise(
+    loadTransactionDataSchema.implement(loadTransactionData)
+  )
+
   return (srcId) => {
     return loadTransactionData(srcId)
       .chain(fromPromise((res) => res.arrayBuffer()))
@@ -54,6 +60,10 @@ function getSourceBufferWith ({ loadTransactionData }) {
  * @returns {LoadContractMeta}
  */
 function getContractMetaWith ({ loadTransactionMeta, logger }) {
+  loadTransactionMeta = fromPromise(
+    loadTransactionMetaSchema.implement(loadTransactionMeta)
+  )
+
   return (id) => {
     return loadTransactionMeta(id)
       .map(pick(['owner', 'tags']))

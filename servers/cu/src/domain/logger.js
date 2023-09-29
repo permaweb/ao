@@ -1,7 +1,7 @@
 import debug from 'debug'
 import { tap } from 'ramda'
 
-export const createLogger = (name = '@permaweb/ao-sdk') => {
+export const createLogger = (name) => {
   const logger = debug(name)
 
   logger.child = (name) => createLogger(`${logger.namespace}:${name}`)

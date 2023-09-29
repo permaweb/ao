@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { dbClientSchema } from '../dal.js'
+import { findLatestEvaluationSchema, saveEvaluationSchema } from '../dal.js'
 import {
   COLLATION_SEQUENCE_MAX_CHAR,
   findLatestEvaluationWith,
@@ -15,9 +15,8 @@ describe('pouchdb', () => {
   describe('findLatestEvaluation', () => {
     test('return the lastest interaction', async () => {
       const cachedAt = new Date().toISOString()
-      const findLatestEvaluation = dbClientSchema.shape
-        .findLatestEvaluation
-        .parse(findLatestEvaluationWith({
+      const findLatestEvaluation = findLatestEvaluationSchema.implement(
+        findLatestEvaluationWith({
           pouchDb: {
             find: async (op) => {
               assert.deepStrictEqual(op, {
@@ -62,9 +61,8 @@ describe('pouchdb', () => {
 
     test("without 'to', return the lastest interaction using collation sequence max char", async () => {
       const cachedAt = new Date().toISOString()
-      const findLatestEvaluation = dbClientSchema.shape
-        .findLatestEvaluation
-        .parse(findLatestEvaluationWith({
+      const findLatestEvaluation = findLatestEvaluationSchema.implement(
+        findLatestEvaluationWith({
           pouchDb: {
             find: async (op) => {
               assert.deepStrictEqual(op, {
@@ -107,12 +105,14 @@ describe('pouchdb', () => {
     })
 
     test('rejects if no interaction is found', async () => {
-      const findLatestEvaluation = findLatestEvaluationWith({
-        pouchDb: {
-          find: async () => ({ docs: [] })
-        },
-        logger
-      })
+      const findLatestEvaluation = findLatestEvaluationSchema.implement(
+        findLatestEvaluationWith({
+          pouchDb: {
+            find: async () => ({ docs: [] })
+          },
+          logger
+        })
+      )
       await findLatestEvaluation({
         id: 'contract-123',
         to: 'sortkey-910'
@@ -125,26 +125,25 @@ describe('pouchdb', () => {
   describe('saveEvaluation', () => {
     test('save the interaction to pouchdb', async () => {
       const cachedAt = new Date().toISOString()
-      const saveEvaluation = dbClientSchema.shape.saveEvaluation
-        .parse(
-          saveEvaluationWith({
-            pouchDb: {
-              get: async () => undefined,
-              put: (doc) => {
-                assert.equal(doc._id, 'contract-123,sortkey-890')
-                assert.equal(doc.sortKey, 'sortkey-890')
-                assert.equal(doc.parent, 'contract-123')
-                assert.deepStrictEqual(doc.action, {
-                  input: { function: 'noop' }
-                })
-                assert.deepStrictEqual(doc.output, { state: { foo: 'bar' } })
-                assert.equal(doc.cachedAt.toISOString(), cachedAt)
-                return Promise.resolve(true)
-              }
-            },
-            logger
-          })
-        )
+      const saveEvaluation = saveEvaluationSchema.implement(
+        saveEvaluationWith({
+          pouchDb: {
+            get: async () => undefined,
+            put: (doc) => {
+              assert.equal(doc._id, 'contract-123,sortkey-890')
+              assert.equal(doc.sortKey, 'sortkey-890')
+              assert.equal(doc.parent, 'contract-123')
+              assert.deepStrictEqual(doc.action, {
+                input: { function: 'noop' }
+              })
+              assert.deepStrictEqual(doc.output, { state: { foo: 'bar' } })
+              assert.equal(doc.cachedAt.toISOString(), cachedAt)
+              return Promise.resolve(true)
+            }
+          },
+          logger
+        })
+      )
 
       await saveEvaluation({
         sortKey: 'sortkey-890',
@@ -156,23 +155,22 @@ describe('pouchdb', () => {
     })
 
     test('noop if the interaction already exists', async () => {
-      const saveEvaluation = dbClientSchema.shape.saveEvaluation
-        .parse(
-          saveEvaluationWith({
-            pouchDb: {
-              get: async () => ({
-                _id: 'contract-123,sortkey-890',
-                sortKey: 'sortkey-890',
-                parent: 'contract-123',
-                action: { input: { function: 'noop' } },
-                output: { state: { foo: 'bar' } },
-                cachedAt: new Date()
-              }),
-              put: assert.fail
-            },
-            logger
-          })
-        )
+      const saveEvaluation = saveEvaluationSchema.implement(
+        saveEvaluationWith({
+          pouchDb: {
+            get: async () => ({
+              _id: 'contract-123,sortkey-890',
+              sortKey: 'sortkey-890',
+              parent: 'contract-123',
+              action: { input: { function: 'noop' } },
+              output: { state: { foo: 'bar' } },
+              cachedAt: new Date()
+            }),
+            put: assert.fail
+          },
+          logger
+        })
+      )
 
       await saveEvaluation({
         sortKey: 'sortkey-890',
