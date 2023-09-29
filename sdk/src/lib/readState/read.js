@@ -1,5 +1,7 @@
-import { of } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import { defaultTo, pipe, prop } from 'ramda'
+
+import { loadStateSchema } from '../../dal.js'
 
 /**
  * @typedef Env
@@ -19,7 +21,9 @@ import { defaultTo, pipe, prop } from 'ramda'
 export function readWith (env) {
   return (ctx) => {
     return of({ id: ctx.id, sortKey: ctx.sortKey })
-      .chain(env.loadState)
+      .chain(fromPromise(
+        loadStateSchema.implement(env.loadState)
+      ))
       .map(pipe(
         defaultTo({}),
         prop('state')

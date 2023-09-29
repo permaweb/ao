@@ -1,8 +1,6 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { Resolved } from 'hyper-async'
-
 import { createLogger } from '../../logger.js'
 import { verifyInputsWith } from './verify-inputs.js'
 
@@ -13,8 +11,8 @@ const logger = createLogger('createContract')
 describe('verify-input', () => {
   test('verify source tags and verify signer', async () => {
     const verifyInput = verifyInputsWith({
-      loadTransactionMeta: (_id) =>
-        Resolved({
+      loadTransactionMeta: async (_id) =>
+        ({
           tags: [
             { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },
@@ -36,8 +34,8 @@ describe('verify-input', () => {
 
   test('throw if source is missing correct App-Name', async () => {
     const verifyInput = verifyInputsWith({
-      loadTransactionMeta: (_id) =>
-        Resolved({
+      loadTransactionMeta: async (_id) =>
+        ({
           tags: [
             { name: 'App-Name', value: 'NotRightValue' },
             { name: 'Content-Type', value: 'application/wasm' },
@@ -66,8 +64,8 @@ describe('verify-input', () => {
 
   test('throw if missing Content-Type', async () => {
     const verifyInput = verifyInputsWith({
-      loadTransactionMeta: (_id) =>
-        Resolved({
+      loadTransactionMeta: async (_id) =>
+        ({
           tags: [
             { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'No-Content-Type', value: 'application/wasm' },
@@ -96,8 +94,8 @@ describe('verify-input', () => {
 
   test('throw if missing Content-Type', async () => {
     const verifyInput = verifyInputsWith({
-      loadTransactionMeta: (_id) =>
-        Resolved({
+      loadTransactionMeta: async (_id) =>
+        ({
           tags: [
             { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },
@@ -126,8 +124,8 @@ describe('verify-input', () => {
 
   test('throw if signer is not found', async () => {
     const verifyInput = verifyInputsWith({
-      loadTransactionMeta: (_id) =>
-        Resolved({
+      loadTransactionMeta: async (_id) =>
+        ({
           tags: [
             { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },
@@ -157,8 +155,8 @@ describe('verify-input', () => {
 
   test('throw if initial state is not an object', async () => {
     const verifyInput = verifyInputsWith({
-      loadTransactionMeta: (_id) =>
-        Resolved({
+      loadTransactionMeta: async (_id) =>
+        ({
           tags: [
             { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },

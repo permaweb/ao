@@ -1,13 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
-import { Resolved } from 'hyper-async'
 
 import { uploadInteractionWith } from './upload-interaction.js'
 
 describe('upload-interaction', () => {
-  test('add the tafs, sign, and upload the interaction, and return the interactionId', async () => {
+  test('add the tags, sign, and upload the interaction, and return the interactionId', async () => {
     const uploadInteraction = uploadInteractionWith({
-      deployInteraction: ({ contractId, data, tags, signer }) => {
+      deployInteraction: async ({ contractId, data, tags, signer }) => {
         assert.ok(data)
         assert.equal(contractId, 'contract-asdf')
         assert.deepStrictEqual(tags, [
@@ -20,7 +19,7 @@ describe('upload-interaction', () => {
         ])
         assert.ok(signer)
 
-        return Resolved({ interactionId: 'data-item-123' })
+        return { interactionId: 'data-item-123' }
       }
     })
 
