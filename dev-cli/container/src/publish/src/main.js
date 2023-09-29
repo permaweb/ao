@@ -21,20 +21,6 @@ class ArtifactNotFoundError extends Error {
  * @callback ReadWallet
  * @param {string} path the path to the wallet
  * @returns {Promise<any>} the parsed wallet
- *
- * @callback Upload
- * @param {string} path
- * @param {string} to
- * @param {string} wallet
- *
- * @typedef UploaderArgs
- * @property {string} walletPath
- * @property {string} artifactPath
- * @property {string} to
- *
- * @callback Uploader
- * @param {UploaderArgs} args
- * @returns {Promise<string>} the id of the transaction
  */
 
 /**
@@ -59,6 +45,11 @@ export const parseTags = (tagsStr) =>
  * A reusuable upload client to upload any artifact
  * to any destination that implements the api
  *
+ * @callback Upload
+ * @param {string} path
+ * @param {string} to
+ * @param {string} wallet
+ *
  * @typedef Environment
  * @property {WalletExists} walletExists
  * @property {ArtifactExists} artifactExists
@@ -66,6 +57,15 @@ export const parseTags = (tagsStr) =>
  * @property {Upload} upload
  *
  * @param {Environment} env
+ *
+ * @typedef UploaderArgs
+ * @property {string} walletPath
+ * @property {string} artifactPath
+ * @property {string} to
+ *
+ * @callback Uploader
+ * @param {UploaderArgs} args
+ * @returns {Promise<string>} the id of the transaction
  *
  * @returns {Uploader}
  */
@@ -87,4 +87,49 @@ export const uploadWith =
       ...rest,
     });
     return res.id;
+  };
+
+/**
+ * Create a contract
+ *
+ * @callback Create
+ * @param {string} src
+ * @param {string} initialState
+ * @param {Function} signer
+ * @param {Tag[]} tags
+ *
+ * @typedef Environment2
+ * @property {WalletExists} walletExists
+ * @property {ReadWallet} readWallet
+ * @property {Create} create
+ *
+ * @param {Environment2} env
+ *
+ * @typedef CreateContractArgs
+ * @property {string} walletPath
+ * @property {string} src
+ * @property {Tag[]} tags
+ * @property {string} initialState
+ *
+ * @callback CreateContract
+ * @param {CreateContractArgs} args
+ * @returns {Promise<string>} the id of the transaction
+ *
+ * @returns {CreateContract}
+ */
+export const createContractWith =
+  ({ walletExists, readWallet, create }) =>
+  async (
+    { walletPath, src, tags, initialState },
+  ) => {
+    if (!(await walletExists(walletPath))) throw new WalletNotFoundError();
+
+    const wallet = await readWallet(walletPath);
+    const res = await create({
+      src,
+      tags,
+      initialState: JSON.parse(initialState),
+      wallet,
+    });
+    return res.contractId;
   };
