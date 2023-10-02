@@ -1,5 +1,5 @@
 export async function build() {
-  const pwd = Deno.cwd()
+  const pwd = Deno.cwd();
   const p = Deno.run({
     cmd: [
       "docker",

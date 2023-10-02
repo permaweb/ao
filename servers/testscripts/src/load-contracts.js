@@ -10,7 +10,9 @@ const Bundlr = require("@bundlr-network/client");
 
   const walletPath = process.env.PATH_TO_WALLET;
 
-  let walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), "utf8"));
+  const walletKey = JSON.parse(
+    fs.readFileSync(path.resolve(walletPath), "utf8")
+  );
 
   const bundlr = new Bundlr(
     "https://node2.bundlr.network",
@@ -18,7 +20,7 @@ const Bundlr = require("@bundlr-network/client");
     walletKey
   );
 
-  let CONTRACT_SRC = "QowiS9B_6CUK_qQ4gIRH3pdwZrXj0135YtnlbmI5jXI";
+  let CONTRACT_SRC = "BKX3fleHG30xbg0-PzFabp5fD0rlBSHbuYqaI8KDWjw";
 
   let contractTags = [
     { name: "Content-Type", value: "text/plain" },
@@ -40,7 +42,7 @@ const Bundlr = require("@bundlr-network/client");
 
   console.log(tx);
 
-  CONTRACT_SRC = "Td8pA6Nyi-a_dM6KeSAzzEFYqycAi6nBfLdJnli1864";
+  CONTRACT_SRC = "rtlL5l5bPFoVo8FDlRHKmuX1fEmxndaBO4o0qgOZKeQ";
 
   contractTags = [
     { name: "Content-Type", value: "text/plain" },

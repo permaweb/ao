@@ -1,30 +1,30 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express'
 
-const { readState } = require('@permaweb/ao-sdk');
+const router = express.Router()
 
 // read the messages for a given tx id
 router.get('/:tx', async (req, res) => {
-    const txId = req.params.tx;
+  const { readState } = req.domain
+  const txId = req.params.tx
 
-    if(!txId) {
-        throw new Error(`Please pass a tx as query parameter`);
+  if (!txId) {
+    throw new Error('Please pass a tx as query parameter')
+  }
+
+  try {
+    const gatewayFetch = await fetch(`https://gateway.warp.cc/gateway/interactions/${txId}`)
+    const gatewayData = await gatewayFetch.json()
+    const sortkey = gatewayData.sortkey
+    const contractId = gatewayData.contractid
+    const txState = await readState(contractId, sortkey)
+    if ('result' in txState) {
+      res.send(txState.result)
+    } else {
+      res.send({})
     }
+  } catch (e) {
+    throw new Error(`Failed to read messages with error: ${e}`)
+  }
+})
 
-    try {
-        let gatewayFetch = await fetch(`https://gateway.warp.cc/gateway/interactions/${txId}`);
-        let gatewayData = await gatewayFetch.json();
-        let sortkey= gatewayData['sortkey'];
-        let contractId = gatewayData['contractid'];
-        let txState = await readState(contractId, sortkey);
-        if('result' in txState) {
-            res.send(txState['result']);
-        } else {
-            res.send({});
-        }
-    } catch(e) {
-        throw new Error(`Failed to read messages with error: ${e}`);
-    }
-});
-
-module.exports = router;
+export default router

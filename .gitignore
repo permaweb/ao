@@ -2,3 +2,4 @@ wallet.json
 dist
 .VSCodeCounter
 node_modules
+foo.js

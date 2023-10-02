@@ -1,30 +1,32 @@
-const express = require('express');
-const router = express.Router();
-
-const msgProcessor = require('../messages/processor');
-const validate = require('../validation/write')
+import express from 'express'
+const router = express.Router()
 
 // begin an async task to crank all the messages on an initial interaction
 router.post('', async (req, res) => {
-    validate(req.body);
-    const { id, data, cu } = req.body;
+  const {
+    db,
+    msgProcessor,
+    validateWrite,
+    cuClient,
+    sequencerClient
+  } = req.domain
 
-    // dont wait for cranking process to finish to reply to users crank call
-    (async () => {
-        return new Promise((resolve) => {
-            msgProcessor.process(id, data, cu).then(() => {
-                resolve();
-            });
-        });
-    })().then(() => {
-        console.log(`Finished callstack for txId: ${id}`);
-    });
+  const { txid, cid, data } = req.body
 
-    res.send({
-        response: {
-            message: `Processing tx: ${id}`
-        }
-    });
-});
+  validateWrite(req.body)
 
-module.exports = router;
+  const tx = { txId: txid, contractId: cid, data }
+
+  const instance = msgProcessor.init({ db, cuClient, sequencerClient })
+
+  // async process to crank messages
+  instance.process(tx)
+
+  res.send({
+    response: {
+      message: `Processing tx: ${txid}`
+    }
+  })
+})
+
+export default router

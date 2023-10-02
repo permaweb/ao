@@ -1,24 +1,13 @@
+import express from 'express'
+import mountMiddlewares from './middleware/index.js'
+import mountRoutes from './routes/index.js'
+import config from './config.js'
 
-const express = require('express');
-const bodyParser = require('body-parser');
+const app = [mountMiddlewares, mountRoutes].reduce(
+  (app, mounter) => mounter(app),
+  express()
+)
 
-const baseRoute = require('./routes/base');
-const contractRoute = require('./routes/contract');
-const resultRoute = require('./routes/result');
-const errors = require('./errors/errors')
-
-const app = express();
-const PORT = 3005;
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-
-app.use('/', baseRoute);
-app.use('/contract', contractRoute);
-app.use('/result', resultRoute);
-
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
-
-app.use(errors);
+app.listen(config.port, () => {
+  console.log(`Server is running on http://localhost:${config.port}`)
+})

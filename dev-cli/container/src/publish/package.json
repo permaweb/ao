@@ -2,19 +2,21 @@
   "name": "@permaweb/ao-publish",
   "version": "0.0.1",
   "description": "publish ability for the ao CLI",
+  "sideEffects": false,
   "type": "module",
   "main": "src/main.js",
-  "engines": {
-    "node": ">=18"
-  },
-  "sideEffects": false,
   "bin": {
-    "ao-publish": "src/bin/index.js"
+    "ao-contract": "src/bin/contract.js",
+    "ao-source": "src/bin/source.js"
   },
   "scripts": {
     "test": "node --test"
   },
   "dependencies": {
-    "@bundlr-network/client": "0.11.13"
+    "@bundlr-network/client": "0.11.13",
+    "@permaweb/ao-sdk": "0.0.5"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

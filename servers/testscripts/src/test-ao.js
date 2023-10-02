@@ -7,19 +7,21 @@ globalThis.MU_URL = "http://localhost:3004";
 globalThis.CU_URL = "http://localhost:3005";
 const { writeInteraction, readState } = require("@permaweb/ao-sdk");
 
-const CONTRACT_TX_ID = "ECzTzsbsvo_Mbc_54Nn7I6hIeobyvIStdi92r0HPYug";
+const CONTRACT_TX_ID = "ATbFRaPkFJkuTXAsWMxlyi7CDuN6xgRTXWmjBvwunTc";
 (async function () {
   console.log("Testing ao...");
 
   const walletPath = process.env.PATH_TO_WALLET;
 
-  let walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), "utf8"));
-  let signer = new ArweaveSigner(walletKey);
+  const walletKey = JSON.parse(
+    fs.readFileSync(path.resolve(walletPath), "utf8")
+  );
+  const signer = new ArweaveSigner(walletKey);
 
-  let input = { function: "noop" };
-  let tags = [];
+  const input = { function: "noop" };
+  const tags = [];
 
-  let s = await readState(CONTRACT_TX_ID);
+  const s = await readState(CONTRACT_TX_ID);
   console.log(s);
 
   await writeInteraction(CONTRACT_TX_ID, input, signer, tags);
