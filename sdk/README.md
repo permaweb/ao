@@ -12,7 +12,7 @@ interacting with `ao` Smart Contracts.
 
 - [Usage](#usage)
     - [ESM (Node & Browser) aka type: `module`](#esm-node--browser-aka-type-module)
-    - [CJS (Node & Browser) type: `commonjs`](#cjs-node--browser-type-commonjs)
+    - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
   - [API](#api)
     - [`readState`](#readstate)
     - [`writeInteraction`](#writeinteraction)
@@ -32,7 +32,7 @@ This module can be used on the server, as well as the browser:
 import { createContract, readState, writeInteraction } from "@permaweb/ao-sdk";
 ```
 
-#### CJS (Node & Browser) type: `commonjs`
+#### CJS (Node) type: `commonjs`
 
 ```js
 const { readState, writeInteraction, createContract } = require(

@@ -4,12 +4,17 @@
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
+  "exports": {
+    ".": {
+      "browser": "./dist/browser.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
-  "browser": {
-    "./dist/index.cjs": "./dist/browser.cjs",
-    "./dist/index.js": "./dist/browser.js"
-  },
+  "browser": "./dist/browser.js",
   "types": "./dist/index.d.ts",
   "files": [
     "./dist"

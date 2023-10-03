@@ -17,7 +17,7 @@ Some tests for verifying `@permaweb/ao-sdk` works in various environments
 
 - Node CJS
 - Node ESM
-- Browser (TODO)
+- Browser ESM
 
 You can run `npm i && npm test` from here as well, but you must first build the
 SDK at the root of the project using `npm run build`
@@ -25,7 +25,7 @@ SDK at the root of the project using `npm run build`
 ## Background
 
 `@permaweb/ao-sdk` is developed as a Node ESM module, and is then built to
-various targets ie. Node `esm` and `cjs` Browser `esm` and `cjs` using
+various targets ie. Node `esm` and `cjs` Browser `esm` using
 [esbuild](https://esbuild.github.io/).
 
 Part of the build process involves aliasing Node friendly modules for their
@@ -39,10 +39,8 @@ There are a lot of moving parts, so we have a couple things to test:
   project (`type: "module"`)
 - Integration test to ensure `@permaweb/ao-sdk` can be used in a Node CJS
   project (`type: "commonjs"`)
-- (TODO) Integration test to ensure `@permaweb/ao-sdk` can be used in a Browser ESM
+- Integration test to ensure `@permaweb/ao-sdk` can be used in a Browser ESM
   project (ie. Svelte + Vite)
-- (TODO) Integration test to ensure `@permaweb/ao-sdk` can be used in a Browser CJS
-  project (ie. NextJS)
 
 ### Relevant Code
 
