@@ -3,13 +3,13 @@ import bodyParser from 'body-parser'
 import config from '../config.js'
 
 import errors from './errors/errors.js'
-import createLogger from './lib/logger.js'
+import createLogger from '../domain/lib/logger.js'
 
-import pouchDbClient from './clients/pouchdb.js'
-import cuClient from './clients/cu.js'
-import sequencerClient from './clients/sequencer.js'
+import pouchDbClient from '../domain/clients/pouchdb.js'
+import cuClient from '../domain/clients/cu.js'
+import sequencerClient from '../domain/clients/sequencer.js'
 
-import { initMsgsWith, processMsgWith, crankMsgsWith } from './lib/main.js'
+import { initMsgsWith, processMsgWith, crankMsgsWith } from '../domain/lib/main.js'
 
 const logger = createLogger('@permaweb/ao/servers/mu')
 
