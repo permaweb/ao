@@ -7,6 +7,7 @@ if (!process.env.WALLET) {
 let config = {
   muWallet: JSON.parse(process.env.WALLET || ""),
   sequencerUrl: "https://gw.warp.cc",
+  port: 3005,
 };
 
-module.exports = config;
+export default config;
