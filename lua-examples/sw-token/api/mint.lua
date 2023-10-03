@@ -3,7 +3,7 @@ local util = require('common.util')
 
 local M = {}
 
-function M.mint(state, action)
+function M.mint(state, action, SmartWeave)
   return Either.of({
     state = state,
     action = action
