@@ -1,31 +1,57 @@
 import bodyParser from 'body-parser'
 
+import config from '../config.js'
+
 import errors from './errors/errors.js'
-import msgProcessor from './messages/processor.js'
-import validateWrite from './validation/write.js'
-import createLogger from './logger/logger.js'
+import createLogger from './lib/logger.js'
 
 import pouchDbClient from './clients/pouchdb.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
 
+import { initMsgsWith, processMsgWith, crankMsgsWith } from './lib/main.js'
+
 const logger = createLogger('@permaweb/ao/servers/mu')
 
-const db = {
-  saveTx: pouchDbClient.saveTxWith({ pouchDb: pouchDbClient.pouchDb, logger }),
-  findLatestTx: pouchDbClient.findLatestTxWith({ pouchDb: pouchDbClient.pouchDb }),
-  saveMsg: pouchDbClient.saveMsgWith({ pouchDb: pouchDbClient.pouchDb, logger }),
-  findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: pouchDbClient.pouchDb }),
-  updateMsg: pouchDbClient.updateMsgWith({ pouchDb: pouchDbClient.pouchDb, logger })
-}
+const dbInstance = pouchDbClient.pouchDb('ao-cache')
+
+const SEQUENCER_URL = config.sequencerUrl
+
+const initMsgs = initMsgsWith({
+  selectNode: cuClient.selectNode,
+  findLatestCacheTx: pouchDbClient.findLatestTxWith({ pouchDb: dbInstance }),
+  cacheTx: pouchDbClient.saveTxWith({ pouchDb: dbInstance, logger }),
+  findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL }),
+  writeSequencerTx: sequencerClient.writeInteractionWith({ SEQUENCER_URL }),
+  fetchMsgs: cuClient.messages,
+  saveMsg: pouchDbClient.saveMsgWith({ pouchDb: dbInstance, logger }),
+  findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: dbInstance, logger }),
+  logger
+})
+
+const processMsg = processMsgWith({
+  selectNode: cuClient.selectNode,
+  findLatestCacheTx: pouchDbClient.findLatestTxWith({ pouchDb: dbInstance }),
+  cacheTx: pouchDbClient.saveTxWith({ pouchDb: dbInstance, logger }),
+  findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL }),
+  writeSequencerTx: sequencerClient.writeInteractionWith({ SEQUENCER_URL }),
+  buildAndSign: sequencerClient.buildAndSignWith(),
+  fetchMsgs: cuClient.messages,
+  saveMsg: pouchDbClient.saveMsgWith({ pouchDb: dbInstance, logger }),
+  updateMsg: pouchDbClient.updateMsgWith({ pouchDb: dbInstance, logger }),
+  findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: dbInstance, logger }),
+  logger
+})
+
+const crankMsgs = crankMsgsWith({
+  processMsg,
+  logger
+})
 
 function injectDomain (req, _res, next) {
   req.domain = {}
-  req.domain.db = db
-  req.domain.msgProcessor = msgProcessor
-  req.domain.validateWrite = validateWrite
-  req.domain.cuClient = cuClient
-  req.domain.sequencerClient = sequencerClient
+  req.domain.initMsgs = initMsgs
+  req.domain.crankMsgs = crankMsgs
   next()
 }
 

@@ -7,11 +7,11 @@ import NodeLevelDB from 'pouchdb-adapter-leveldb'
 
 PouchDb.plugin(NodeLevelDB)
 PouchDb.plugin(PouchDbFind)
-const internalPouchDb = new PouchDb('ao-cache', { adapter: 'leveldb' })
+const internalPouchDb = (dbFile) => new PouchDb(dbFile, { adapter: 'leveldb' })
 
 const cachedTxSchema = z.object({
   _id: z.string().min(1),
-  data: z.string().min(1),
+  data: z.any(),
   contractId: z.string().min(1),
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
@@ -24,7 +24,7 @@ function saveTxWith ({ pouchDb, logger: _logger }) {
   return (tx) => {
     return of(tx)
       .map(applySpec({
-        _id: prop('txId'),
+        _id: prop('id'),
         data: prop('data'),
         contractId: prop('contractId'),
         cachedAt: prop('cachedAt')
@@ -128,7 +128,7 @@ function saveMsgWith ({ pouchDb, logger: _logger }) {
           .chain(fromPromise((doc) => pouchDb.put(doc)))
           .bimap(
             logger.tap('Encountered an error when caching msg'),
-            logger.tap('Cached tx')
+            logger.tap('Cached msg')
           )
           .bichain(Resolved, Resolved)
           .map(always(doc._id))
@@ -159,9 +159,7 @@ function updateMsgWith ({ pouchDb, logger: _logger }) {
   }
 }
 
-function findLatestMsgsWith (
-  { pouchDb }
-) {
+function findLatestMsgsWith ({ pouchDb }) {
   return ({ fromTxId }) => {
     return of({ fromTxId })
       .chain(fromPromise(() => {
@@ -177,16 +175,21 @@ function findLatestMsgsWith (
           return res.docs
         })
       }))
-      .chain((docs) => docs.length > 0 ? Resolved(docs) : Rejected(docs))
-      .map(docs => docs.map(doc => cachedMsgSchema.parse(doc)))
-      .map(docs => docs.map(doc => ({
-        id: prop('_id', doc),
-        fromTxId: prop('fromTxId', doc),
-        toTxId: prop('toTxId', doc),
-        msg: prop('msg', doc),
-        cachedAt: prop('cachedAt', doc)
-      })))
-      .bichain(Resolved, Resolved)
+      .chain((docs) => {
+        if (docs.length === 0) {
+          return Rejected('No documents found')
+        }
+
+        const parsedDocs = docs.map(doc => cachedMsgSchema.parse(doc))
+
+        return Resolved(parsedDocs.map(doc => ({
+          id: prop('_id', doc),
+          fromTxId: prop('fromTxId', doc),
+          toTxId: prop('toTxId', doc),
+          msg: prop('msg', doc),
+          cachedAt: prop('cachedAt', doc)
+        })))
+      })
       .toPromise()
   }
 }
