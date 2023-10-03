@@ -29,16 +29,6 @@ export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger, 
   return (args) => {
     return of(args)
       .map(logger.tap('deploying bundled contract via the warp gateway %s', `${WARP_GATEWAY_URL}/gateway/v2/contracts/deploy`))
-      /**
-       * The Warp Gateway requires that the Content-Type tag
-       * is a 'application/x.arweave-manifest+json'
-       *
-       * This is a requirement of the Warp Gateway, not SmartWeave,
-       * which is why this code exists here.
-       *
-       * Set 'data' in the data item to a valid, but empty, path manifest
-       * and replace the Content-Type flag to be the value Warp Gateway expects
-       */
       .map(evolve({ tags: pipe(replaceSdkTag, addNonceTag) }))
       /**
        * Sign with the provided signer
