@@ -15,7 +15,8 @@
     "docker-build": "docker build -t cu-app .",
     "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
     "start": "node src/app.js",
-    "start:local": "nodemon src/app.js"
+    "start:local": "nodemon src/app.js",
+    "test": "node --test ./src"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
@@ -31,6 +32,7 @@
     "zod": "^3.22.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.3"
   }
 }

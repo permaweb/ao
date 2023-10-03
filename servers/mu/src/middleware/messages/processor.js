@@ -31,20 +31,23 @@ const processor = {
   process: async function (tx) {
     this.initialTxId = tx.txId
 
-    await this.checkAndWriteTx(tx)
-
     const cuAddress = await this.cuClient.selectNode(tx.contractId)
 
+    await this.checkAndWriteTx(tx)
+
     const msgs = await this.fetchAndSaveMsgs(tx.txId, cuAddress)
-    msgs.forEach(msg => this.msgRecurse(msg, cuAddress))
+
+    msgs.forEach(msg => this.msgRecurse(msg))
   },
 
   // we recurse on a saved database message
-  msgRecurse: async function (msg, cuAddress) {
+  msgRecurse: async function (msg) {
     this.ongoingCalls++
 
     try {
       let newTxId
+
+      const cuAddress = await this.cuClient.selectNode(msg.target)
 
       // if theres no toTxId it was never sent to the sequencer, so send it
       if (!msg.toTxId) {
@@ -72,7 +75,7 @@ const processor = {
       }
 
       const msgs = await this.fetchAndSaveMsgs(newTxId, cuAddress)
-      msgs.forEach(msg => this.msgRecurse(msg, cuAddress))
+      msgs.forEach(msg => this.msgRecurse(msg))
     } catch (err) {
       console.error('Error in msgRecurse:', err)
     } finally {
