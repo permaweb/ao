@@ -19,7 +19,7 @@ function walletArgs(wallet) {
   ];
 }
 
-function contractArgs(contractWasmPath) {
+function contractSourceArgs(contractWasmPath) {
   /**
    * Use contract.wasm in pwd by default
    */
@@ -52,7 +52,7 @@ function tagArg(tags) {
 export async function publish({ wallet, tag }, contractWasmPath) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...contractArgs(contractWasmPath),
+    ...contractSourceArgs(contractWasmPath),
     ...tagArg(tag),
   ];
 
@@ -65,7 +65,7 @@ export async function publish({ wallet, tag }, contractWasmPath) {
       ...cmdArgs,
       "-it",
       "p3rmaw3b/ao",
-      "ao-publish",
+      "ao-source",
     ],
   });
   await p.status();

@@ -26,7 +26,7 @@ await esbuild.build({
   format: 'cjs',
   external: allDepsExcept(['hyper-async']),
   bundle: true,
-  outfile: manifest.main
+  outfile: manifest.exports['.'].require
 })
 
 // ESM
@@ -36,5 +36,15 @@ await esbuild.build({
   format: 'esm',
   external: allDepsExcept(['hyper-async']),
   bundle: true,
-  outfile: manifest.module
+  outfile: manifest.exports['.'].import
+})
+
+// Browser ESM
+await esbuild.build({
+  entryPoints: ['src/index.browser.js'],
+  platform: 'browser',
+  format: 'esm',
+  bundle: true,
+  minify: true,
+  outfile: manifest.exports['.'].browser
 })

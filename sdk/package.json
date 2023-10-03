@@ -1,11 +1,20 @@
 {
   "name": "@permaweb/ao-sdk",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
+  "exports": {
+    ".": {
+      "browser": "./dist/browser.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
+  "browser": "./dist/browser.js",
   "types": "./dist/index.d.ts",
   "files": [
     "./dist"
@@ -19,18 +28,15 @@
     "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
-    "@permaweb/ao-loader": "~0.0.4",
+    "buffer": "^6.0.3",
     "debug": "^4.3.4",
     "hyper-async": "^1.1.2",
-    "pouchdb": "^8.0.1",
-    "pouchdb-adapter-leveldb": "^8.0.1",
-    "pouchdb-adapter-websql": "^7.0.0",
-    "pouchdb-find": "^8.0.1",
     "ramda": "^0.29.0",
     "warp-arbundles": "^1.0.4",
     "zod": "^3.22.2"
   },
   "devDependencies": {
+    "arweave": "^1.14.4",
     "esbuild": "^0.19.2",
     "typescript": "^5.2.2"
   },

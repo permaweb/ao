@@ -1,6 +1,8 @@
 import bodyParser from 'body-parser'
+import cors from 'cors'
+
+import { readState } from '../domain/index.js'
 import errors from './errors/index.js'
-import { readState } from './ao/index.js'
 
 function injectDomain (req, _res, next) {
   req.domain = {}
@@ -9,6 +11,7 @@ function injectDomain (req, _res, next) {
 }
 
 const mountMiddlewares = (app) => [
+  cors(),
   bodyParser.json(),
   bodyParser.urlencoded({ extended: false }),
   injectDomain,

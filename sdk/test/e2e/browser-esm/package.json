@@ -1,0 +1,22 @@
+{
+  "name": "browser-esm",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "postinstall": "npm link @permaweb/ao-sdk",
+    "preview": "vite preview",
+    "start": "vitest && echo '\nBrowser ESM Integration ✅'"
+  },
+  "dependencies": {
+    "@permaweb/ao-sdk": "*"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^2.4.2",
+    "@testing-library/svelte": "^4.0.3",
+    "jsdom": "^22.1.0",
+    "svelte": "^4.0.5",
+    "vite": "^4.4.5",
+    "vitest": "^0.34.6"
+  }
+}
