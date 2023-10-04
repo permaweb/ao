@@ -7,7 +7,7 @@ const ctxSchema = z.object({
     id: z.string(),
     sortKey: z.string(),
     timestamp: z.number(),
-    prevSortKey: z.string()
+    prevSortKey: z.string().nullable()
   })
 }).passthrough()
 

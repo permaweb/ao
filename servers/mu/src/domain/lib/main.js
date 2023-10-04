@@ -105,3 +105,15 @@ export function crankMsgsWith ({
       .chain(crank)
   }
 }
+
+/**
+ * process a spawn that comes from the cu result endpoint
+ */
+export function spawnWith ({
+  logger
+}) {
+  return (ctx) => {
+    return of(ctx)
+      .chain(() => ctx)
+  }
+}
