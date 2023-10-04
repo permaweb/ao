@@ -35,6 +35,7 @@ describe('gateway', () => {
                     edges: [
                       {
                         node: {
+                          owner: { address: 'owner-123' },
                           tags: [
                             {
                               name: 'App-Name',
