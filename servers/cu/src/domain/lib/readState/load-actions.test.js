@@ -35,12 +35,12 @@ describe('load-actions', () => {
     const loadActions = loadActionsWith({
       loadInteractions: async ({ id, from, to }) => ([
         {
-          action: { input: { function: 'createOrder' } },
+          action: { input: { function: 'createOrder' }, caller: 'caller-123' },
           sortKey: 'abcd,123,fsdf',
           SWGlobal
         },
         {
-          action: { input: { function: 'createOrder' } },
+          action: { input: { function: 'createOrder' }, caller: 'caller-456' },
           sortKey: 'fdsa,456,cdskjfs',
           SWGlobal
         }
@@ -72,7 +72,7 @@ describe('load-actions', () => {
     const loadActionsNoSortKey = loadActionsWith({
       loadInteractions: async ({ id, from, to }) => ([
         {
-          action: { input: { function: 'createOrder' } },
+          action: { input: { function: 'createOrder' }, caller: 'caller-123' },
           noSortKey: 'abcd,123,fsdf'
         }
       ]),
