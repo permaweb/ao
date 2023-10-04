@@ -8,8 +8,9 @@ import { evaluateWith } from './evaluate.js'
 const logger = createLogger('ao-cu:readState')
 
 describe('evaluate', () => {
-  describe('output', () => {
+  describe('output - ACCUMULATE_RESULT', () => {
     const evaluate = evaluateWith({
+      ACCUMULATE_RESULT: true,
       saveEvaluation: async (interaction) => interaction,
       logger
     })
@@ -70,6 +71,75 @@ describe('evaluate', () => {
     test('accumulates the result.output', async () => {
       const { output } = await evaluate(ctx).toPromise()
       assert.deepStrictEqual(output.result.output, 'foobar\nfoobar\n')
+    })
+  })
+
+  describe('output - NOT ACCUMULATE_RESULT', () => {
+    const evaluate = evaluateWith({
+      /**
+       * disable accumulation of the result
+       */
+      ACCUMULATE_RESULT: false,
+      saveEvaluation: async (interaction) => interaction,
+      logger
+    })
+
+    const ctx = {
+      id: 'ctr-1234',
+      from: 'sort-key-start',
+      src: readFileSync('./test/contracts/happy/contract.wasm'),
+      state: {},
+      actions: [
+        {
+          action: { input: { function: 'hello' } },
+          sortKey: 'a',
+          SWGlobal: {}
+        },
+        {
+          action: { input: { function: 'world' } },
+          sortKey: 'b',
+          SWGlobal: {}
+        }
+      ]
+    }
+
+    test('adds output to context', async () => {
+      const { output } = await evaluate(ctx).toPromise()
+      assert.ok(output)
+    })
+
+    test('folds the state', async () => {
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.state, { heardHello: true, heardWorld: true, happy: true })
+    })
+
+    test('DOES NOT accumulate the result.messages', async () => {
+      const expectedMessage = {
+        target: 'contract-foo-123',
+        input: { function: 'noop' },
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.result.messages, [expectedMessage])
+    })
+
+    test('DOES NOT accumulate the result.spawns', async () => {
+      const expectedSpawn = {
+        src: 'contract-src-123',
+        initState: { balances: { foo: 0 } },
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.result.spawns, [expectedSpawn])
+    })
+
+    test('DOES NOT accumulates the result.output', async () => {
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.result.output, 'foobar\n')
     })
   })
 
