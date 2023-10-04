@@ -59,10 +59,14 @@ jobs:
         with:
           node-version: 18
 
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: dev-cli/container/src/publish
+
       - name: ⚡ Run Tests
         working-directory: dev-cli/container/src/publish
         run: |
-          npm i
           npm test
         env:
           CI: true
