@@ -55,6 +55,18 @@ describe('evaluate', () => {
       assert.deepStrictEqual(output.result.messages, [expectedMessage, expectedMessage])
     })
 
+    test('accumulates the result.spawns', async () => {
+      const expectedSpawn = {
+        src: 'contract-src-123',
+        initState: { balances: { foo: 0 } },
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.result.spawns, [expectedSpawn, expectedSpawn])
+    })
+
     test('accumulates the result.output', async () => {
       const { output } = await evaluate(ctx).toPromise()
       assert.deepStrictEqual(output.result.output, 'foobar\nfoobar\n')
@@ -133,6 +145,7 @@ describe('evaluate', () => {
       state: { balances: { 1: 1 } },
       result: {
         messages: [],
+        spawns: [],
         output: ''
       }
     })
@@ -168,6 +181,7 @@ describe('evaluate', () => {
       result: {
         error: { code: 123, message: 'a handled error within the contract' },
         messages: [],
+        spawns: [],
         output: ''
       }
     })
@@ -203,6 +217,7 @@ describe('evaluate', () => {
       result: {
         error: { code: 123, message: 'a thrown error within the contract' },
         messages: [],
+        spawns: [],
         output: ''
       }
     })

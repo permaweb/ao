@@ -104,12 +104,23 @@ export function evaluateWith (env) {
        * messages need to accumulated across the evaluation 'range'.
        *
        * It is up the consumer ie. an mu, to keep track of which messages
-       * it has already processed. The cu's responsibility to just evaluate
+       * it has already processed. The cu's responsibility is to just evaluate
        * deterministically for a given range of sequenced interactions
        */
       messages: pipe(
         pathOr([], ['result', 'messages']),
         concat(prev.result.messages)
+      ),
+      /**
+       * spawns need to accumulated across the evaluation 'range'.
+       *
+       * It is up the consumer ie. an mu, to keep track of which spawns
+       * it has already processed. The cu's responsibility is to just evaluate
+       * deterministically for a given range of sequenced interactions
+       */
+      spawns: pipe(
+        pathOr([], ['result', 'spawns']),
+        concat(prev.result.spawns)
       ),
       /**
        * result.output needs to be accumulated across the evaluation 'range'
@@ -205,10 +216,10 @@ export function evaluateWith (env) {
           of({
             state: ctx.state,
             /**
-             * Every evaluation range starts with empty messages
-             * and empty output
+             * Every evaluation range starts with no messages, no output,
+             * and no spawns
              */
-            result: { messages: [], output: '' }
+            result: { messages: [], output: '', spawns: [] }
           }),
           ctx.actions
         )

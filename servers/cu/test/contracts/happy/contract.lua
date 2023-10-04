@@ -51,6 +51,16 @@ function contract.handle(state, action, SmartWeave)
           }
         }
       },
+      -- stub spawns
+      spawns = {
+        {
+          src = 'contract-src-123',
+          initState = { balances = { foo = 0 } },
+          tags = {
+            { name = 'foo', value = 'bar' }
+          }
+        }
+      },
       -- stub output
       output = 'foobar'
     }
