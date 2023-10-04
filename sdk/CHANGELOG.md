@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.8](https://github.com/permaweb/ao/compare/sdk@v0.0.7...sdk@v0.0.8) (2023-10-04)
+
+
+### Bug Fixes
+
+* **sdk:** readState returns the entire output, not just state ([025bed6](https://github.com/permaweb/ao/commit/025bed6a8d035a4879892486cdc943806dfe570a))
+
 ## [0.0.7](https://github.com/permaweb/ao/compare/sdk@v0.0.6...sdk@v0.0.7) (2023-10-03)
 
 ## [0.0.6](https://github.com/permaweb/ao/compare/sdk@v0.0.5...sdk@v0.0.6) (2023-09-29)
