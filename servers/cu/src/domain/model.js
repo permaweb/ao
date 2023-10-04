@@ -4,7 +4,8 @@ export const interactionSchema = z.object({
   action: z.object({
     input: z.object({
       function: z.string()
-    }).passthrough()
+    }).passthrough(),
+    caller: z.string()
   }).passthrough(),
   sortKey: z.string(),
   SWGlobal: z.object({
@@ -64,10 +65,7 @@ export const evaluationSchema = z.object({
    * for shape
    */
   output: z.object({
-    state: z.record(z.any()).optional()
-    /**
-     * TODO: do we need to cache result as well?
-     * For now, caching state
-     */
+    state: z.record(z.any()).optional(),
+    result: z.record(z.any()).optional()
   })
 })

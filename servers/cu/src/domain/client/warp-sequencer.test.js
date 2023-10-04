@@ -31,6 +31,7 @@ describe('warp-sequencer', () => {
       const [firstInteraction] = res
       assert.ok(firstInteraction.action)
       assert.ok(firstInteraction.action.input.function)
+      assert.ok(firstInteraction.action.caller)
       assert.ok(firstInteraction.sortKey)
       assert.ok(firstInteraction.SWGlobal)
       // attach contract meta to SWGlobal

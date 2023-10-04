@@ -1,6 +1,5 @@
 import { fromPromise, of } from 'hyper-async'
 import {
-  __,
   applySpec,
   assoc,
   complement,
@@ -256,16 +255,18 @@ export function loadInteractionsWith (
                    */
                   map(applySpec({
                     sortKey: prop('sortKey'),
-                    action: pipe(
-                      path(['tags']),
-                      // { first: tag, second: tag }
-                      reduce((a, t) => assoc(t.name, t.value, a), {}),
-                      // "{\"function\": \"balance\"}"
-                      prop('Input'),
-                      // { function: "balance" }
-                      (input) => JSON.parse(input),
-                      assoc('input', __, {})
-                    ),
+                    action: applySpec({
+                      input: pipe(
+                        path(['tags']),
+                        // { first: tag, second: tag }
+                        reduce((a, t) => assoc(t.name, t.value, a), {}),
+                        // "{\"function\": \"balance\"}"
+                        prop('Input'),
+                        // { function: "balance" }
+                        (input) => JSON.parse(input)
+                      ),
+                      caller: path(['owner', 'address'])
+                    }),
                     /**
                      * TODO: is this the right layer to be mapping this?
                      * Should it be done in BL, or is it the responsibility of the client?
