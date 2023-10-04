@@ -36,7 +36,25 @@ function contract.handle(state, action, SmartWeave)
     newState = assoc('happy', true, newState)
   end
 
-  return { state = newState }
+  return {
+    state = newState,
+    result = {
+      -- stub messages
+      messages = {
+        {
+          target = 'contract-foo-123',
+          input = {
+            ['function'] = 'noop'
+          },
+          tags = {
+            { name = 'foo', value = 'bar' }
+          }
+        }
+      },
+      -- stub output
+      output = 'foobar'
+    }
+  }
 end
 
 return contract

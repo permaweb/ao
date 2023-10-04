@@ -8,13 +8,11 @@ import { evaluateWith } from './evaluate.js'
 const logger = createLogger('ao-cu:readState')
 
 describe('evaluate', () => {
-  test('evaluate state and add output to context', async () => {
-    const env = {
+  describe('output', () => {
+    const evaluate = evaluateWith({
       saveEvaluation: async (interaction) => interaction,
       logger
-    }
-
-    const evaluate = evaluateWith(env)
+    })
 
     const ctx = {
       id: 'ctr-1234',
@@ -35,11 +33,31 @@ describe('evaluate', () => {
       ]
     }
 
-    const res = await evaluate(ctx).toPromise()
-    console.log(res)
-    assert.ok(res.output)
-    assert.deepStrictEqual(res.output, {
-      state: { heardHello: true, heardWorld: true, happy: true }
+    test('adds output to context', async () => {
+      const { output } = await evaluate(ctx).toPromise()
+      assert.ok(output)
+    })
+
+    test('folds the state', async () => {
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.state, { heardHello: true, heardWorld: true, happy: true })
+    })
+
+    test('accumulates the result.messages', async () => {
+      const expectedMessage = {
+        target: 'contract-foo-123',
+        input: { function: 'noop' },
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.result.messages, [expectedMessage, expectedMessage])
+    })
+
+    test('accumulates the result.output', async () => {
+      const { output } = await evaluate(ctx).toPromise()
+      assert.deepStrictEqual(output.result.output, 'foobar\nfoobar\n')
     })
   })
 
@@ -112,7 +130,11 @@ describe('evaluate', () => {
 
     const { output } = await evaluate(ctx).toPromise()
     assert.deepStrictEqual(output, {
-      state: { balances: { 1: 1 } }
+      state: { balances: { 1: 1 } },
+      result: {
+        messages: [],
+        output: ''
+      }
     })
   })
 
@@ -142,8 +164,11 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
+      state: {},
       result: {
-        error: { code: 123, message: 'a handled error within the contract' }
+        error: { code: 123, message: 'a handled error within the contract' },
+        messages: [],
+        output: ''
       }
     })
   })
@@ -174,8 +199,11 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
+      state: {},
       result: {
-        error: { code: 123, message: 'a thrown error within the contract' }
+        error: { code: 123, message: 'a thrown error within the contract' },
+        messages: [],
+        output: ''
       }
     })
   })

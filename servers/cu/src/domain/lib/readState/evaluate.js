@@ -1,4 +1,7 @@
-import { __, assoc, assocPath, prop, reduce, reduced } from 'ramda'
+import {
+  __, always, applySpec, assoc, assocPath, concat, endsWith, identity,
+  ifElse, isNotNil, path, pathOr, pipe, propOr, reduce, reduced
+} from 'ramda'
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
@@ -77,6 +80,64 @@ export function evaluateWith (env) {
   const maybeResolveError = maybeReducedError(Resolved)
   const maybeRejectError = maybeReducedError(Rejected)
 
+  /**
+   * Given the previous interaction output,
+   * return a function that will merge the next interaction output
+   * with the previous.
+   */
+  const mergeOutput = (prev) => applySpec({
+    /**
+     * We default to 'new' state, from applying an interaction,
+     * to the previous state, but it will be overwritten by the outputs state
+     *
+     * This ensures the new interaction in the chain has state to
+     * operate on, even if the previous interaction only produced
+     * messages and no state change.
+     */
+    state: propOr(prev.state, 'state'),
+    result: {
+      /**
+       * If an interaction produces an error simply pass it through
+       */
+      error: path(['result', 'error']),
+      /**
+       * messages need to accumulated across the evaluation 'range'.
+       *
+       * It is up the consumer ie. an mu, to keep track of which messages
+       * it has already processed. The cu's responsibility to just evaluate
+       * deterministically for a given range of sequenced interactions
+       */
+      messages: pipe(
+        pathOr([], ['result', 'messages']),
+        concat(prev.result.messages)
+      ),
+      /**
+       * result.output needs to be accumulated across the evaluation 'range'
+       *
+       * as concatenated strings, with a newline in between each value
+       */
+      output: pipe(
+        path(['result', 'output']),
+        ifElse(
+          isNotNil,
+          pipe(
+            /**
+             * Ensure the output from the interaction ends with a newline
+             * before accumulating it
+             */
+            ifElse(
+              endsWith('\n'),
+              identity,
+              concat(__, '\n')
+            ),
+            concat(prev.result.output)
+          ),
+          always(prev.result.output)
+        )
+      )
+    }
+  })
+
   return (ctx) =>
     of(ctx)
       .chain(addHandler)
@@ -88,9 +149,8 @@ export function evaluateWith (env) {
           ($output, { action, sortKey, SWGlobal }) =>
             $output
               .chain(maybeRejectError)
-              .map(prop('state'))
-              .chain((state) =>
-                of(state)
+              .chain((prev) =>
+                of(prev.state)
                   .chain(
                     fromPromise((state) => ctx.handle(state, action, SWGlobal))
                   )
@@ -101,20 +161,15 @@ export function evaluateWith (env) {
                     (err) => Resolved(assocPath(['result', 'error'], err, {})),
                     Resolved
                   )
+                  /**
+                   * The the previous interaction output, and merge it
+                   * with the output of the current interaction
+                   */
+                  .map(mergeOutput(prev))
                   .chain((output) => {
-                    if (output.result && output.result.error) {
-                      return Rejected(output)
-                    }
-                    /**
-                     * We default to state to the previous state,
-                     * but it will be overwritten by the spread
-                     * if output contains state.
-                     *
-                     * This ensures the new interaction in the chain has state to
-                     * operate on, even if the previous interaction only produced
-                     * messages and no state change.
-                     */
-                    return Resolved({ state, ...output })
+                    return output.result && output.result.error
+                      ? Rejected(output)
+                      : Resolved(output)
                   })
               )
               .bimap(
@@ -147,7 +202,14 @@ export function evaluateWith (env) {
                  */
                 Resolved
               ),
-          of({ state: ctx.state, result: ctx.result }),
+          of({
+            state: ctx.state,
+            /**
+             * Every evaluation range starts with empty messages
+             * and empty output
+             */
+            result: { messages: [], output: '' }
+          }),
           ctx.actions
         )
       )
