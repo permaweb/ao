@@ -14,7 +14,7 @@ import { uploadContractWith } from './upload-contract.js'
  * @callback CreateContract
  * @param {string} srcId
  * @param {Record<string, any>} initialState
- * @param {string} wallet
+ * @param {string} signer
  * @param {any[]} tags
  * @returns {Promise<CreateContractResult>} result
  *
