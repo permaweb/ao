@@ -57,7 +57,22 @@ function cacheEvaluationWith ({ saveEvaluation, logger }) {
 export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
 
+  const ACCUMULATE_RESULT = env.ACCUMULATE_RESULT
+
   const cacheEvaluation = cacheEvaluationWith({ ...env, logger })
+
+  /**
+   * Whether we need to accumulate certain values during evaluation
+   * is not clear. So we are using an environment variable to toggle
+   * certain functionality related to accumulation.
+   *
+   * TODO: remove once we find out.
+   */
+  const maybeAccumulateResult = (fn) => ifElse(
+    always(ACCUMULATE_RESULT),
+    fn,
+    identity
+  )
 
   /**
    * When an error occurs, we short circuit the reduce using
@@ -101,32 +116,23 @@ export function evaluateWith (env) {
        */
       error: path(['result', 'error']),
       /**
-       * messages need to accumulated across the evaluation 'range'.
-       *
        * It is up the consumer ie. an mu, to keep track of which messages
        * it has already processed. The cu's responsibility is to just evaluate
        * deterministically for a given range of sequenced interactions
        */
       messages: pipe(
         pathOr([], ['result', 'messages']),
-        concat(prev.result.messages)
+        maybeAccumulateResult(concat(prev.result.messages))
       ),
       /**
-       * spawns need to accumulated across the evaluation 'range'.
-       *
        * It is up the consumer ie. an mu, to keep track of which spawns
        * it has already processed. The cu's responsibility is to just evaluate
        * deterministically for a given range of sequenced interactions
        */
       spawns: pipe(
         pathOr([], ['result', 'spawns']),
-        concat(prev.result.spawns)
+        maybeAccumulateResult(concat(prev.result.spawns))
       ),
-      /**
-       * result.output needs to be accumulated across the evaluation 'range'
-       *
-       * as concatenated strings, with a newline in between each value
-       */
       output: pipe(
         path(['result', 'output']),
         ifElse(
@@ -134,14 +140,13 @@ export function evaluateWith (env) {
           pipe(
             /**
              * Ensure the output from the interaction ends with a newline
-             * before accumulating it
              */
             ifElse(
               endsWith('\n'),
               identity,
               concat(__, '\n')
             ),
-            concat(prev.result.output)
+            maybeAccumulateResult(concat(prev.result.output))
           ),
           always(prev.result.output)
         )
