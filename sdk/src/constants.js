@@ -1,0 +1,5 @@
+export const WARP_GATEWAY_URL = globalThis.WARP_GATEWAY_URL || 'https://gw.warp.cc'
+export const IRYS_NODE = globalThis.IRYS_NODE || globalThis.BUNDLR_NODE || 'node2'
+export const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
+export const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
+export const CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
