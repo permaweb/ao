@@ -1,6 +1,7 @@
 import {
-  __, always, applySpec, assoc, assocPath, concat, endsWith, identity,
-  ifElse, isNotNil, path, pathOr, pipe, propOr, reduce, reduced
+  T,
+  __, always, applySpec, assoc, assocPath, concat, cond, endsWith, identity,
+  ifElse, is, isNotNil, path, pathOr, pipe, propOr, reduce, reduced
 } from 'ramda'
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
@@ -138,6 +139,16 @@ export function evaluateWith (env) {
         ifElse(
           isNotNil,
           pipe(
+            /**
+             * Always make sure the output
+             * is a string
+             */
+            cond([
+              [is(String), identity],
+              [is(Number), String],
+              [is(Object), obj => JSON.stringify(obj)],
+              [T, identity]
+            ]),
             /**
              * Ensure the output from the interaction ends with a newline
              */
