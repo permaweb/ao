@@ -125,6 +125,7 @@ the api. Here is what the API looks like in TypeScript:
 
 ```ts
 type CreateDataItemSigner = (wallet: any):
+  _: (): any // should return the raw wallet
   (args: { data: any, tags: { name: string, value: string}[] }):
     Promise<{ id: string, raw: ArrayBuffer }>
 ```
