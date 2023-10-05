@@ -79,9 +79,7 @@ export const signerSchema = {
         })
       )).implement(fn)
 
-    parsed._ = z.function()
-      .returns(z.any())
-      .implement(fn._)
+    parsed._ = fn._
 
     return parsed
   }

@@ -129,7 +129,6 @@ describe('warp-gateway', () => {
           fetch: async () => assert.fail('unreachable')
         }))
         .catch(err => {
-          console.log(err)
           assert.ok(err)
         })
     })

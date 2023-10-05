@@ -9,6 +9,11 @@ const logger = createLogger('@permaweb/ao-sdk:createContract')
 
 describe('browser - wallet', () => {
   describe('createDataItemSigner', () => {
+    test('should expose the wallet on _', () => {
+      const sign = createDataItemSigner('wallet-123')
+      assert.strictEqual(sign._(), 'wallet-123')
+    })
+
     test('should create and sign the data item', async () => {
       /**
        * A mock of an actual arweaveWallet pulled from
