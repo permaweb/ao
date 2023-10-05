@@ -39,6 +39,16 @@ export const deployContractSchema = z.function()
     }).passthrough()
   ))
 
+export const registerContractSchema = z.function()
+  .args(z.object({
+    contractId: z.string()
+  }))
+  .returns(z.promise(
+    z.object({
+      contractId: z.string()
+    }).passthrough()
+  ))
+
 export const loadTransactionMetaSchema = z.function()
   .args(z.string())
   .returns(z.promise(
