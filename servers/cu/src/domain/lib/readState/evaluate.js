@@ -155,7 +155,7 @@ export function evaluateWith (env) {
             ifElse(
               endsWith('\n'),
               identity,
-              concat(__, '\n')
+              maybeAccumulateResult(concat(__, '\n'))
             ),
             maybeAccumulateResult(concat(prev.result.output))
           ),

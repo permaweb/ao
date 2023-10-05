@@ -139,7 +139,7 @@ describe('evaluate', () => {
 
     test('DOES NOT accumulates the result.output', async () => {
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.result.output, 'foobar\n')
+      assert.deepStrictEqual(output.result.output, 'foobar')
     })
   })
 
