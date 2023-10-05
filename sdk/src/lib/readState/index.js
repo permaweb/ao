@@ -14,9 +14,12 @@ import { readWith } from './read.js'
  * @property {any} state
  * @property {any} result
  *
+ * @typedef ReadStateArgs
+ * @property {string} contractId
+ * @property {string} [sortKey]
+ *
  * @callback ReadState
- * @param {string} contractId
- * @param {string} sortKeyHeight
+ * @param {ReadStateArgs} args
  * @returns {Promise<ContractResult>} result
  *
  * @param {Env} - the environment
@@ -26,7 +29,7 @@ export function readStateWith (env) {
   const verifyInput = verifyInputWith(env)
   const read = readWith(env)
 
-  return (contractId, sortKey) => {
+  return ({ contractId, sortKey }) => {
     return of({ id: contractId, sortKey })
       .chain(verifyInput)
       .chain(read)
