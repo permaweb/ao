@@ -28,7 +28,7 @@
     "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
-    "@irys/sdk": "^0.0.2",
+    "@irys/sdk": "0.0.2",
     "buffer": "^6.0.3",
     "debug": "^4.3.4",
     "hyper-async": "^1.1.2",
