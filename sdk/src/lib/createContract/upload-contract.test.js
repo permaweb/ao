@@ -7,7 +7,7 @@ import { uploadContractWith } from './upload-contract.js'
 const logger = createLogger('createContract')
 
 describe('upload-contract', () => {
-  test('add the tags, sign, upload the contract, and return the contractId', async () => {
+  test('add the tags, sign, upload the contract, register the contract, and return the contractId', async () => {
     const uploadContract = uploadContractWith({
       deployContract: async ({ data, tags, signer }) => {
         assert.ok(data)
@@ -23,6 +23,10 @@ describe('upload-contract', () => {
         assert.ok(signer)
 
         return { res: 'foobar', contractId: 'contract-id-123' }
+      },
+      registerContract: async ({ contractId }) => {
+        assert.equal(contractId, 'contract-id-123')
+        return { contractId }
       },
       logger
     })
@@ -52,6 +56,7 @@ describe('upload-contract', () => {
 
         return { res: 'foobar', contractId: 'contract-id-123' }
       },
+      registerContract: async ({ contractId }) => ({ contractId }),
       logger
     })
 

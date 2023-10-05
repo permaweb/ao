@@ -2,7 +2,7 @@ import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat, defaultTo } from 'ramda'
 
-import { deployContractSchema, signerSchema } from '../../dal.js'
+import { deployContractSchema, registerContractSchema, signerSchema } from '../../dal.js'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -68,6 +68,7 @@ export function uploadContractWith (env) {
   const buildData = buildDataWith(env)
 
   const deployContract = deployContractSchema.implement(env.deployContract)
+  const registerContract = registerContractSchema.implement(env.registerContract)
 
   return (ctx) => {
     return of(ctx)
@@ -75,6 +76,9 @@ export function uploadContractWith (env) {
       .chain(buildData)
       .chain(fromPromise(({ data, tags, signer }) =>
         deployContract({ data, tags, signer: signerSchema.implement(signer) })
+      ))
+      .chain(fromPromise(({ contractId }) =>
+        registerContract({ contractId })
       ))
       .map(res => assoc('contractId', res.contractId, ctx))
   }
