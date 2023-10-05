@@ -153,6 +153,8 @@ jobs:
         # 
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
+        #
+        # We also add additional tags in order to mint $U
         run: |
           bundlr balance ${CI_WALLET_ADDRESS} \
             -h ${BUNDLR_NODE} \
@@ -164,6 +166,7 @@ jobs:
 
           BUNDLR_RESULT=$(\
             bundlr upload-dir ${BINARIES_OUTPUT_DIR} \
+              -t "App-Name" "SmartWeaveAction" "App-Version" "0.3.0" "Input" "{\"function\":\"mint\"}" "Contract" "KTzTXT_ANmF84fWEKHzWURD1LWd9QaFR9yfYUwH2Lxw" \
               -h ${BUNDLR_NODE} \
               -w ${WALLET_FILE} \
               -c arweave \
