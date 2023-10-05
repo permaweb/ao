@@ -1,15 +1,18 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createDataItemSigner } from './wallet.js'
+import { createLogger } from '../../logger.js'
+import { deployContractSchema } from '../../dal.js'
+import { createDataItemSigner, deployContractWith } from './wallet.js'
+
+const logger = createLogger('@permaweb/ao-sdk:createContract')
 
 describe('browser - wallet', () => {
   describe('createDataItemSigner', () => {
     test('should create and sign the data item', async () => {
       /**
        * A mock of an actual arweaveWallet pulled from
-       * globalThis or window, using an implementation
-       * that uses the JWKInterface to sign
+       * globalThis or window
        *
        * We only stub signDataItem because it's the only
        * api needed for the trimmed down InjectedArweaveSigner
@@ -39,6 +42,43 @@ describe('browser - wallet', () => {
       console.log('signedDataItem', res)
       assert.ok(res.id)
       assert.ok(res.raw)
+    })
+  })
+
+  describe('deployContractWith', () => {
+    test('should deploy the contract and return the contractId', async () => {
+      /**
+       * A mock of an actual arweaveWallet pulled from
+       * globalThis or window
+       */
+      const stubArweaveWallet = {
+        createTransaction: async (args) => {
+          assert.deepStrictEqual(args, { data: 'foobar' })
+          return {
+            data: args.data,
+            addTag: (name, value) => {
+              assert.deepStrictEqual({ name, value }, { name: 'foo', value: 'bar' })
+            }
+          }
+        },
+        dispatch: async (transaction) => {
+          assert.deepStrictEqual(transaction.data, 'foobar')
+          return { id: 'contract-id-123' }
+        }
+      }
+
+      const deployContract = deployContractSchema.implement(
+        deployContractWith({ logger, arweaveWallet: stubArweaveWallet })
+      )
+
+      const res = await deployContract({
+        data: 'foobar',
+        tags: [{ name: 'foo', value: 'bar' }],
+        // Signer is unused by this implementation
+        signer: async ({ data, tags }) => {}
+      })
+
+      assert.deepStrictEqual(res, { res: { id: 'contract-id-123' }, contractId: 'contract-id-123' })
     })
   })
 })

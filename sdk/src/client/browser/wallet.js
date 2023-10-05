@@ -1,3 +1,4 @@
+import { of, fromPromise } from 'hyper-async'
 import { Buffer } from 'buffer/index.js'
 import WarpArBundles from 'warp-arbundles'
 
@@ -39,12 +40,54 @@ export function createDataItemSigner (arweaveWallet) {
    * createDataItem can be passed here for the purposes of unit testing
    * with a stub
    */
-  return async ({ data, tags, createDataItem = (buf) => new DataItem(buf) }) => {
-    const signer = new InjectedArweaveSigner(arweaveWallet, createDataItem)
-    return signer.createAndSignDataItem(data, tags)
+  const signer = async ({ data, tags, createDataItem = (buf) => new DataItem(buf) }) => {
+    const iSigner = new InjectedArweaveSigner(arweaveWallet, createDataItem)
+    return iSigner.createAndSignDataItem(data, tags)
       .then(async dataItem => ({
         id: await dataItem.id,
         raw: await dataItem.getRaw()
       }))
   }
+
+  signer._ = () => arweaveWallet
+
+  return signer
+}
+
+/**
+ * deploy a contract using the arweaveWallet in the browser
+ *
+ * allow stubbing arweaveWallet for the purpose of testing
+ */
+export function deployContractWith ({ logger: _logger, arweaveWallet = globalThis.arweaveWallet }) {
+  const logger = _logger.child('web-wallet:deployContract')
+
+  return (args) =>
+    of(args)
+      .map(logger.tap('deploying contract via the arweaveWallet'))
+      /**
+       * a signer function is passed as a parameter, but is unused
+       * when deploying a contract in the browser, because we instead
+       *
+       * simply call dispatch() on the arweaveWallet itself, which handles signing
+       */
+      .chain(fromPromise(({ data, tags, signer: _signer }) =>
+        arweaveWallet.createTransaction({ data })
+          .then(transaction => {
+            tags.forEach(({ name, value }) => transaction.addTag(name, value))
+            return transaction
+          })
+          .then(transaction => arweaveWallet.dispatch(transaction))
+      ))
+      .bimap(
+        logger.tap('Error encountered when deploying bundled contract via the arweave web wallet'),
+        logger.tap('Successfully deployed bundled contract via the arweave web wallet')
+      )
+      /**
+       * https://cookbook.g8way.io/guides/posting-transactions/dispatch.html
+       *
+       * for shape
+       */
+      .map(res => ({ res, contractId: res.id }))
+      .toPromise()
 }
