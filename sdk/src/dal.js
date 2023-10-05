@@ -61,14 +61,28 @@ export const loadTransactionDataSchema = z.function()
   .args(z.string())
   .returns(z.promise(z.any()))
 
-export const signerSchema = z.function()
-  .args(z.object({
-    data: z.any(),
-    tags: z.array(tagSchema)
-  }))
-  .returns(z.promise(
-    z.object({
-      id: z.string(),
-      raw: z.any()
-    })
-  ))
+/**
+ * Zod strips away properties on functions when passed to implement,
+ * so we make sure to place _ back on the parsed fn
+ */
+export const signerSchema = {
+  implement: (fn) => {
+    const parsed = z.function()
+      .args(z.object({
+        data: z.any(),
+        tags: z.array(tagSchema)
+      }))
+      .returns(z.promise(
+        z.object({
+          id: z.string(),
+          raw: z.any()
+        })
+      )).implement(fn)
+
+    parsed._ = z.function()
+      .returns(z.any())
+      .implement(fn._)
+
+    return parsed
+  }
+}
