@@ -1,7 +1,17 @@
-import { WalletClient } from './client/node/index.js'
+import { createLogger } from './logger.js'
+import * as Constants from './constants.js'
 import { buildSdk } from './index.common.js'
 
-const { readState, writeInteraction, createContract } = buildSdk()
+import * as IrysClient from './client/irys.js'
+import { WalletClient } from './client/node/index.js'
+
+const logger = createLogger('@permaweb/ao-sdk')
+
+const { readState, writeInteraction, createContract } = buildSdk({
+  ...Constants,
+  logger,
+  deployContractWithLogger: (logger) => IrysClient.deployContractWith({ IRYS_NODE: Constants.IRYS_NODE, logger })
+})
 
 export { readState, writeInteraction, createContract }
 
