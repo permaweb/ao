@@ -18,6 +18,7 @@ interacting with `ao` Smart Contracts.
     - [`writeInteraction`](#writeinteraction)
     - [`createContract`](#createcontract)
     - [`createDataItemSigner`](#createdataitemsigner)
+- [Debug Logging](#debug-logging)
 - [Testing](#testing)
 
 <!-- tocstop -->
@@ -146,11 +147,19 @@ type CreateDataItemSigner = (wallet: any):
     Promise<{ id: string, raw: ArrayBuffer }>
 ```
 
+## Debug Logging
+
+You can enable verbose debug logging on the SDK. All logging is scoped under the
+name `@permaweb/ao-sdk*`. You can use wildcards to enable a subset of logs ie.
+`@permaweb/ao-sdk/readState*`
+
+For Node, set the `DEBUG` environment variable to the logs you're interested in.
+
+For the Browser, set the `localStorage.debug` variable to the logs you're
+interested in.
+
 ## Testing
 
 Run `npm test` to run the tests.
-
-To enable debug logging, set the `DEBUG` environment variable to the logs you're
-interested in. All logging is coped under the name `@permaweb/ao-sdk`
 
 Run `npm run test:integration` to run the integration tests.
