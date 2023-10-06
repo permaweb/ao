@@ -1,16 +1,8 @@
-import { createLogger } from './logger.js'
-import * as Constants from './constants.js'
 import { buildSdk } from './index.common.js'
 
 import { WalletClient } from './client/browser/index.js'
 
-const logger = createLogger('@permaweb/ao-sdk')
-
-const { readState, writeInteraction, createContract } = buildSdk({
-  ...Constants,
-  logger,
-  deployContractWithLogger: (logger) => WalletClient.deployContractWith({ logger })
-})
+const { readState, writeInteraction, createContract } = buildSdk()
 
 export { readState, writeInteraction, createContract }
 /**
