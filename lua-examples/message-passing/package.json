@@ -1,0 +1,24 @@
+{
+  "name": "@permaweb/message-passing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "(cd receiver && ao build) && (cd sender && ao build)",
+    "publish": "(cd receiver && ao publish -w $PATH_TO_WALLET contract.wasm) && (cd receiver && npm run build)",
+    "run": "node ./scripts/run.mjs",
+    "command": "(cd sender && ao publish -w ${PATH_TO_WALLET} contract.wasm)"
+  },
+  "author": "Justin Shaw",
+  "license": "ISC",
+  "dependencies": {
+    "warp-contracts": "1.4.19",
+    "warp-contracts-plugin-deploy": "1.0.9"
+  },
+  "devDependencies": {
+    "@bundlr-network/client": "0.11.17",
+    "@permaweb/ao-sdk": "0.0.10",
+    "hyper-async": "1.1.2"
+  }
+}
