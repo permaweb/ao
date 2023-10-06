@@ -57,6 +57,13 @@ describe('browser - wallet', () => {
        * globalThis or window
        */
       const stubArweaveWallet = {
+        dispatch: async (transaction) => {
+          assert.deepStrictEqual(transaction.data, 'foobar')
+          return { id: 'contract-id-123' }
+        }
+      }
+
+      const stubArweave = {
         createTransaction: async (args) => {
           assert.deepStrictEqual(args, { data: 'foobar' })
           return {
@@ -65,15 +72,11 @@ describe('browser - wallet', () => {
               assert.deepStrictEqual({ name, value }, { name: 'foo', value: 'bar' })
             }
           }
-        },
-        dispatch: async (transaction) => {
-          assert.deepStrictEqual(transaction.data, 'foobar')
-          return { id: 'contract-id-123' }
         }
       }
 
       const deployContract = deployContractSchema.implement(
-        deployContractWith({ logger, arweaveWallet: stubArweaveWallet })
+        deployContractWith({ logger, arweave: stubArweave, arweaveWallet: stubArweaveWallet })
       )
 
       const res = await deployContract({
