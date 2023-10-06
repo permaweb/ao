@@ -10,7 +10,8 @@ const logger = createLogger('@permaweb/ao-sdk')
 const { readState, writeInteraction, createContract } = buildSdk({
   ...Constants,
   logger,
-  deployContractWithLogger: (logger) => IrysClient.deployContractWith({ IRYS_NODE: Constants.IRYS_NODE, logger })
+  deployContractWithLogger: (logger) =>
+    IrysClient.deployContractWith({ fetch, IRYS_NODE: Constants.IRYS_NODE, logger })
 })
 
 export { readState, writeInteraction, createContract }
