@@ -6,7 +6,8 @@ interacting with `ao` Smart Contracts.
 
 - Reads state from a `ao` Compute Unit `cu`
 - Writes interactions to an `ao` Message Unit `mu`
-- Deploys Contracts to the `warp` gateway
+- Deploys Contracts to `Irys` as a Data Item, then registers the contract on the
+  `Warp Gateway`
 
 <!-- toc -->
 
