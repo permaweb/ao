@@ -57,13 +57,20 @@ export function createDataItemSigner (arweaveWallet) {
 /**
  * deploy a contract using the arweaveWallet in the browser
  *
- * allow stubbing arweaveWallet for the purpose of testing
+ * injecting side effects allows stubbing arweave and arweaveWallet
+ * for the purpose of testing
  */
-export function deployContractWith ({ logger: _logger, arweaveWallet = globalThis.arweaveWallet }) {
+export function deployContractWith ({ logger: _logger, arweave, arweaveWallet }) {
   const logger = _logger.child('web-wallet:deployContract')
+  return (args) => {
+    /**
+     * Set at call time, since these globals are often
+     * set programmatically after the browser has loaded all the JS
+     */
+    arweave = arweave || globalThis.arweave
+    arweaveWallet = arweaveWallet || globalThis.arweaveWallet
 
-  return (args) =>
-    of(args)
+    return of(args)
       .map(logger.tap('deploying contract via the arweaveWallet'))
       /**
        * a signer function is passed as a parameter, but is unused
@@ -72,7 +79,7 @@ export function deployContractWith ({ logger: _logger, arweaveWallet = globalThi
        * simply call dispatch() on the arweaveWallet itself, which handles signing
        */
       .chain(fromPromise(({ data, tags, signer: _signer }) =>
-        arweaveWallet.createTransaction({ data })
+        arweave.createTransaction({ data })
           .then(transaction => {
             tags.forEach(({ name, value }) => transaction.addTag(name, value))
             return transaction
@@ -90,4 +97,5 @@ export function deployContractWith ({ logger: _logger, arweaveWallet = globalThi
        */
       .map(res => ({ res, contractId: res.id }))
       .toPromise()
+  }
 }
