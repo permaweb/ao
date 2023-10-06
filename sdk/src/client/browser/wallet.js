@@ -49,8 +49,6 @@ export function createDataItemSigner (arweaveWallet) {
       }))
   }
 
-  signer._ = () => arweaveWallet
-
   return signer
 }
 
