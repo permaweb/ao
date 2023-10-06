@@ -5,27 +5,14 @@
     readState,
   } from "@permaweb/ao-sdk";
 
-  import Arweave from 'arweave'
-
-  import { onMount } from 'svelte'
-
   // contract src
   let srcId = "dfccC-_ih0Xl2_zhj8pTIUZF03QNfV2xu68pVzxSIQ0";
   $: contractId = null;
   $: contractState = null;
 
-
-  onMount(() => {
-    globalThis.arweave = Arweave.init({
-      host: 'arweave.net',
-      port: 443,
-      protocol: 'https'
-    })
-  })
-
   async function doCreateContract(name) {
     if (globalThis.arweaveWallet) {
-      await globalThis.arweaveWallet.connect(["SIGN_TRANSACTION", "DISPATCH"]);
+      await globalThis.arweaveWallet.connect(["SIGN_TRANSACTION"]);
     }
 
     const result = await createContract({

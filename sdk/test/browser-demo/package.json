@@ -8,8 +8,7 @@
     "start": "http-server dist"
   },
   "dependencies": {
-    "@permaweb/ao-sdk": "*",
-    "arweave": "^1.14.4"
+    "@permaweb/ao-sdk": "*"
   },
   "devDependencies": {
     "esbuild": "^0.19.4",
