@@ -1,0 +1,20 @@
+{
+  "name": "browser-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.js",
+    "postinstall": "npm link @permaweb/ao-sdk",
+    "start": "http-server dist"
+  },
+  "dependencies": {
+    "@permaweb/ao-sdk": "*",
+    "arweave": "^1.14.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.4",
+    "esbuild-svelte": "^0.8.0",
+    "http-server": "^14.1.1",
+    "svelte": "^4.2.1"
+  }
+}
