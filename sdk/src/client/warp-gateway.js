@@ -42,18 +42,18 @@ export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger, 
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
             fetch(
-            `${WARP_GATEWAY_URL}/gateway/v2/contracts/deploy`,
-            {
-              method: 'POST',
-              headers: {
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Content-Type': 'application/json',
-                Accept: 'application/json'
-              },
-              body: JSON.stringify({
-                contract: signedDataItem.raw
-              })
-            }
+              `${WARP_GATEWAY_URL}/gateway/v2/contracts/deploy`,
+              {
+                method: 'POST',
+                headers: {
+                  'Accept-Encoding': 'gzip, deflate, br',
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json'
+                },
+                body: JSON.stringify({
+                  contract: signedDataItem.raw
+                })
+              }
             )
           ))
           .bichain(
