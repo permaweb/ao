@@ -15,29 +15,34 @@ describe('irys', () => {
         deployContractWith({
           IRYS_NODE,
           logger,
-          NodeIrys: class StubNodeIrys {
-            constructor ({ url, token, key }) {
-              assert.strictEqual(url, IRYS_NODE)
-              assert.strictEqual(token, 'arweave')
-              assert.strictEqual(key, 'wallet-123')
-            }
+          fetch: async (url, options) => {
+            assert.strictEqual(url, `https://${IRYS_NODE}.irys.xyz/tx/arweave`)
+            assert.deepStrictEqual(options, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body: 'raw-buffer'
+            })
 
-            async upload (data, { tags }) {
-              assert.strictEqual(data, '1234')
-              assert.deepStrictEqual(tags, [{ name: 'foo', value: 'bar' }])
-              return { id: 'contract-id-123', foo: 'bar' }
-            }
+            return new Response(JSON.stringify({ id: 'contract-id-123', foo: 'bar' }))
           }
         })
       )
 
-      const mockSigner = async () => ({ id: 'data-item-123', raw: 'raw-buffer' })
-      mockSigner._ = () => 'wallet-123'
-
       const res = await deployContract({
         data: '1234',
         tags: [{ name: 'foo', value: 'bar' }],
-        signer: signerSchema.implement(mockSigner)
+        signer: signerSchema.implement(
+          async ({ data, tags }) => {
+            assert.ok(data)
+            assert.deepStrictEqual(tags, [
+              { name: 'foo', value: 'bar' }
+            ])
+            return { id: 'data-item-123', raw: 'raw-buffer' }
+          }
+        )
       })
 
       assert.deepStrictEqual(res, {
