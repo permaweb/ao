@@ -33,6 +33,7 @@ describe('load-state', () => {
       findLatestEvaluation: async ({ _id, _to }) => undefined,
       loadTransactionData: async (_id) => assert.fail('unreachable'),
       loadTransactionMeta: async (_id) => ({
+        owner: { address: 'owner-123' },
         tags: [{ name: 'Init-State', value: JSON.stringify({ foo: 'bar' }) }]
       }),
       logger
@@ -54,6 +55,7 @@ describe('load-state', () => {
         return new Response(JSON.stringify({ foo: 'bar' }))
       },
       loadTransactionMeta: async (_id) => ({
+        owner: { address: 'owner-123' },
         tags: [{ name: 'Init-State-Tx', value: initStateTx }]
       }),
       logger
@@ -73,6 +75,7 @@ describe('load-state', () => {
         return new Response(JSON.stringify({ foo: 'bar' }))
       },
       loadTransactionMeta: async (_id) => ({
+        owner: { address: 'owner-123' },
         tags: [{ name: 'Title', value: 'Foobar' }]
       }),
       logger

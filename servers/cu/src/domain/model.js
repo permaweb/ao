@@ -4,7 +4,8 @@ export const interactionSchema = z.object({
   action: z.object({
     input: z.object({
       function: z.string()
-    }).passthrough()
+    }).passthrough(),
+    caller: z.string()
   }).passthrough(),
   sortKey: z.string(),
   SWGlobal: z.object({

@@ -1,5 +1,4 @@
 import { fromPromise, of } from 'hyper-async'
-import { defaultTo, pipe, prop } from 'ramda'
 
 import { loadStateSchema } from '../../dal.js'
 
@@ -23,10 +22,6 @@ export function readWith (env) {
     return of({ id: ctx.id, sortKey: ctx.sortKey })
       .chain(fromPromise(
         loadStateSchema.implement(env.loadState)
-      ))
-      .map(pipe(
-        defaultTo({}),
-        prop('state')
       ))
   }
 }

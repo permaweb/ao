@@ -1,6 +1,6 @@
 import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { __, assoc, concat } from 'ramda'
+import { __, assoc, concat, defaultTo } from 'ramda'
 
 import { deployInteractionSchema, signerSchema } from '../../dal.js'
 
@@ -34,6 +34,7 @@ const tagSchema = z.array(z.object({
 function buildTagsWith () {
   return (ctx) => {
     return of(ctx.tags)
+      .map(defaultTo([]))
       .map(concat(__, [
         { name: 'App-Name', value: 'SmartWeaveAction' },
         { name: 'App-Version', value: '0.3.0' },

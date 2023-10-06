@@ -4,7 +4,7 @@ import * as assert from 'node:assert'
 import { readWith } from './read.js'
 
 describe('read', () => {
-  test('should return the loaded state', async () => {
+  test('should return the output', async () => {
     const read = readWith({
       loadState: async (args) => {
         assert.deepStrictEqual(args, {
@@ -12,37 +12,17 @@ describe('read', () => {
           sortKey: 'sort-key-123'
         })
 
-        return { state: { foo: 'bar' } }
+        return { state: { foo: 'bar' }, messages: [{ foo: 'bar' }] }
       }
     })
 
-    await read({
+    const res = await read({
       id: 'contract-123',
       sortKey: 'sort-key-123'
     }).toPromise()
-  })
 
-  test('should return undefined if no state', async () => {
-    const read = readWith({
-      loadState: async (args) => ({ no_state: { foo: 'bar' } })
+    assert.deepStrictEqual(res, {
+      state: { foo: 'bar' }, messages: [{ foo: 'bar' }]
     })
-
-    await read({
-      id: 'contract-123',
-      sortKey: 'sort-key-123'
-    }).toPromise()
-      .then(state => assert.ok(state === undefined))
-  })
-
-  test('should return undefined if no value', async () => {
-    const read = readWith({
-      loadState: async (args) => undefined
-    })
-
-    await read({
-      id: 'contract-123',
-      sortKey: 'sort-key-123'
-    }).toPromise()
-      .then(state => assert.ok(state === undefined))
   })
 })

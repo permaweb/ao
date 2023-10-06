@@ -13,11 +13,14 @@ import { uploadInteractionWith } from './upload-interaction.js'
  * @property {string} originalTxId - the id of the transaction that represents this interaction
  * @property {any} bundlrResponse - bundlr response from the gatewy
  *
+ * @typedef WriteInteractionArgs
+ * @property {string} contractId
+ * @property {Record<string, any>} input
+ * @property {any} signer
+ * @property {{ name: string, value: string }[]} [tags]
+ *
  * @callback WriteInteraction
- * @param {string} contractId
- * @param {Record<string, any>} input
- * @param {any} wallet
- * @param {any[]} tags
+ * @param {WriteInteractionArgs} args
  * @returns {Promise<WriteInteractionResult>} result
  *
  * @param {Env1} - the environment
@@ -28,7 +31,7 @@ export function writeInteractionWith (env) {
   const verifyInput = verifyInputWith(env)
   const uploadInteraction = uploadInteractionWith(env)
 
-  return (contractId, input, signer, tags) => {
+  return ({ contractId, input, signer, tags }) => {
     return of({ id: contractId, input, signer, tags })
       .chain(verifyContract)
       .chain(verifyInput)

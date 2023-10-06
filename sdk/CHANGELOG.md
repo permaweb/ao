@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.10](https://github.com/permaweb/ao/compare/sdk@v0.0.9...sdk@v0.0.10) (2023-10-06)
+
+## [0.0.9](https://github.com/permaweb/ao/compare/sdk@v0.0.8...sdk@v0.0.9) (2023-10-06)
+
+
+### Features
+
+* **sdk:** add deployContract impl to the browser WalletClient ([d6ee734](https://github.com/permaweb/ao/commit/d6ee734ff6ae673ffe32967b4edd3b379949640f))
+* **sdk:** add irys client impl for deployContract ([178bada](https://github.com/permaweb/ao/commit/178bada4cea4297616f8b457c1c0e19f2a3647c3))
+* **sdk:** add registerContract api impl for Warp Gateway ([54f0982](https://github.com/permaweb/ao/commit/54f0982df8bc9632a53a68fc1bdd9fc1c0dda47a))
+* **sdk:** add step to register contract, as part of createContract ([078c4d9](https://github.com/permaweb/ao/commit/078c4d92d5029100941932b28c8761cc3850e34d))
+* **sdk:** add wallet api on node createDataItemSigner impl ([254f683](https://github.com/permaweb/ao/commit/254f683165571596dd10b37a1ceee6d315ae3db7))
+* **sdk:** use different methods of deploying contract between node and browser ([15cdad5](https://github.com/permaweb/ao/commit/15cdad57f6e852cbb9b36b6ed834fc1ce9b66a15))
+
+
+### Bug Fixes
+
+* **sdk:** browser deployContract use arweave global to create transaction ([3216156](https://github.com/permaweb/ao/commit/32161569651fcfc73a4c28f674de65c1aed2435f))
+
+## [0.0.8](https://github.com/permaweb/ao/compare/sdk@v0.0.7...sdk@v0.0.8) (2023-10-04)
+
+
+### Bug Fixes
+
+* **sdk:** readState returns the entire output, not just state ([025bed6](https://github.com/permaweb/ao/commit/025bed6a8d035a4879892486cdc943806dfe570a))
+
+## [0.0.7](https://github.com/permaweb/ao/compare/sdk@v0.0.6...sdk@v0.0.7) (2023-10-03)
+
 ## [0.0.6](https://github.com/permaweb/ao/compare/sdk@v0.0.5...sdk@v0.0.6) (2023-09-29)
 
 

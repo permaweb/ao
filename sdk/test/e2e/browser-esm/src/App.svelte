@@ -7,7 +7,7 @@
   Promise.resolve()
     .then(() => console.log(`reading state for ${CONTRACT}...`))
     // @ts-ignore
-    .then(() => readState(CONTRACT))
+    .then(() => readState({ contractId: CONTRACT }))
     .then(res => {
       console.log(`read state for ${CONTRACT}:`, res)
       contractState = res

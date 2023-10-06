@@ -37,10 +37,14 @@ jobs:
         with:
           node-version: 18
 
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: loader
+
       - name: ⚡ Run Tests
         working-directory: loader
         run: |
-          npm i
           npm test
         env:
           CI: true
@@ -57,10 +61,14 @@ jobs:
         with:
           node-version: 18
 
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: loader
+
       - name: ⚡ Run Tests
         working-directory: loader
         run: |
-          npm i
           npm run test:integration
         env:
           CI: true
@@ -109,11 +117,15 @@ jobs:
         run: |
           git push
           git push --tags
+
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: loader
       
       - name: 🦠 Publish to NPM
         working-directory: loader
         run: |
-          npm i
           npm run build
           npm publish
         env:

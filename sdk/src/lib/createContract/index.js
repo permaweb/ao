@@ -11,11 +11,14 @@ import { uploadContractWith } from './upload-contract.js'
  * @typedef CreateContractResult
  * @property {string} txId - the id of the newly created contract
  *
+ * @typedef CreateContractArgs
+ * @property {string} srcId
+ * @property {Record<string, any>} initialState
+ * @property {string} signer
+ * @property {{ name: string, value: string }[]} [tags]
+ *
  * @callback CreateContract
- * @param {string} srcId
- * @param {Record<string, any>} initialState
- * @param {string} wallet
- * @param {any[]} tags
+ * @param {CreateContractArgs} args
  * @returns {Promise<CreateContractResult>} result
  *
  * @param {Env1} - the environment
@@ -25,7 +28,7 @@ export function createContractWith (env) {
   const verifyInputs = verifyInputsWith(env)
   const uploadContract = uploadContractWith(env)
 
-  return (srcId, initialState, signer, tags) => {
+  return ({ srcId, initialState, signer, tags }) => {
     return of({ srcId, initialState, signer, tags })
       .chain(verifyInputs)
       .chain(uploadContract)

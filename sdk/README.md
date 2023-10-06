@@ -6,7 +6,8 @@ interacting with `ao` Smart Contracts.
 
 - Reads state from a `ao` Compute Unit `cu`
 - Writes interactions to an `ao` Message Unit `mu`
-- Deploys Contracts to the `warp` gateway
+- Deploys Contracts to `Irys` as a Data Item, then registers the contract on the
+  `Warp Gateway`
 
 <!-- toc -->
 
@@ -18,6 +19,7 @@ interacting with `ao` Smart Contracts.
     - [`writeInteraction`](#writeinteraction)
     - [`createContract`](#createcontract)
     - [`createDataItemSigner`](#createdataitemsigner)
+- [Debug Logging](#debug-logging)
 - [Testing](#testing)
 
 <!-- tocstop -->
@@ -51,12 +53,15 @@ Read the state of a contract from an `ao` Compute Unit `cu`
 ```js
 import { readState } from "@permaweb/ao-sdk";
 
-let state = await readState("VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro");
+let state = await readState({
+  contractId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+});
 // or update to certain sort-key
-state = await readState(
-  "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
-  "000001262259,1694820900780,7160a8e16721d271f96a24ad007a5f54b7e22ae49363652eb7356464fcbb09ed",
-);
+state = await readState({
+  contractId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+  sortKey:
+    "000001262259,1694820900780,7160a8e16721d271f96a24ad007a5f54b7e22ae49363652eb7356464fcbb09ed",
+});
 ```
 
 #### `writeInteraction`
@@ -66,27 +71,27 @@ write an interaction to an `ao` Message Unit `mu`.
 ```js
 import { createDataItemSigner, writeInteraction } from "@permaweb/ao-sdk";
 
-const interactionId = await writeInteraction(
+const interactionId = await writeInteraction({
   contractId,
   input,
-  createDataItemSigner(wallet),
+  signer: createDataItemSigner(wallet),
   tags,
-);
+});
 ```
 
 #### `createContract`
 
-Create a contract, registering it with the provided Warp Gateway
+Create a contract, publishing to Arys, then registering it on the Warp Gateway
 
 ```js
 import { createContract, createDataItemSigner } from "@permaweb/ao-sdk";
 
-const contractId = await createContract(
+const contractId = await createContract({
   srcId,
   initialState,
-  createDataItemSigner(wallet),
+  signer: createDataItemSigner(wallet),
   tags,
-);
+});
 ```
 
 #### `createDataItemSigner`
@@ -129,11 +134,19 @@ type CreateDataItemSigner = (wallet: any):
     Promise<{ id: string, raw: ArrayBuffer }>
 ```
 
+## Debug Logging
+
+You can enable verbose debug logging on the SDK. All logging is scoped under the
+name `@permaweb/ao-sdk*`. You can use wildcards to enable a subset of logs ie.
+`@permaweb/ao-sdk/readState*`
+
+For Node, set the `DEBUG` environment variable to the logs you're interested in.
+
+For the Browser, set the `localStorage.debug` variable to the logs you're
+interested in.
+
 ## Testing
 
 Run `npm test` to run the tests.
-
-To enable debug logging, set the `DEBUG` environment variable to the logs you're
-interested in. All logging is coped under the name `@permaweb/ao-sdk`
 
 Run `npm run test:integration` to run the integration tests.

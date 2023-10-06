@@ -11,6 +11,9 @@ export const loadTransactionMetaSchema = z.function()
   .args(z.string())
   .returns(z.promise(
     z.object({
+      owner: z.object({
+        address: z.string()
+      }),
       tags: z.array(tagSchema)
     }).passthrough()
   ))
