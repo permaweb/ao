@@ -24,13 +24,6 @@ describe('browser - wallet', () => {
     )
   })
 
-  test('should expose the wallet on _', async () => {
-    const wallet = JSON.parse(readFileSync(tmpWallet).toString())
-
-    const signDataItem = createDataItemSigner(wallet)
-    assert.deepStrictEqual(signDataItem._(), wallet)
-  })
-
   describe('createDataItemSigner', () => {
     test('should create and sign the data item', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())

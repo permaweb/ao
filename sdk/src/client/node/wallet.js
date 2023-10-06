@@ -20,15 +20,5 @@ export function createDataItemSigner (wallet) {
       }))
   }
 
-  /**
-   * expose the raw wallet on the signer function,
-   * in the case it is needed by a dependency that handles
-   * its signing internally ie. the irys SDK
-   *
-   * We wrap in a function, so it is not printed as part of
-   * debug logs
-   */
-  signer._ = () => wallet
-
   return signer
 }
