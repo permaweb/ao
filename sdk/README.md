@@ -33,8 +33,9 @@ This module can be used on the server, as well as the browser:
 import { createContract, readState, writeInteraction } from "@permaweb/ao-sdk";
 ```
 
-> You'll need to make sure that `globalThis.arweave` is set to an instance of
-> the `arweave` JS client and that `arweaveWallet` connector is available
+> **In the browser**, You'll need to make sure that `globalThis.arweave` is set
+> to an instance of the `arweave` JS client and that `arweaveWallet` connector
+> is available
 
 ```js
 import Arweave from "arweave";
