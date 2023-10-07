@@ -1,6 +1,6 @@
 import {
-  __, always, applySpec, assoc, assocPath, concat, endsWith, identity,
-  ifElse, isNotNil, path, pathOr, pipe, propOr, reduce, reduced
+  T, __, applySpec, assoc, assocPath, cond, identity,
+  is, pathOr, pipe, propOr, reduce, reduced
 } from 'ramda'
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
@@ -57,22 +57,7 @@ function cacheEvaluationWith ({ saveEvaluation, logger }) {
 export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
 
-  const ACCUMULATE_RESULT = env.ACCUMULATE_RESULT
-
   const cacheEvaluation = cacheEvaluationWith({ ...env, logger })
-
-  /**
-   * Whether we need to accumulate certain values during evaluation
-   * is not clear. So we are using an environment variable to toggle
-   * certain functionality related to accumulation.
-   *
-   * TODO: remove once we find out.
-   */
-  const maybeAccumulateResult = (fn) => ifElse(
-    always(ACCUMULATE_RESULT),
-    fn,
-    identity
-  )
 
   /**
    * When an error occurs, we short circuit the reduce using
@@ -111,45 +96,21 @@ export function evaluateWith (env) {
      */
     state: propOr(prev.state, 'state'),
     result: {
-      /**
-       * If an interaction produces an error simply pass it through
-       */
-      error: path(['result', 'error']),
-      /**
-       * It is up the consumer ie. an mu, to keep track of which messages
-       * it has already processed. The cu's responsibility is to just evaluate
-       * deterministically for a given range of sequenced interactions
-       */
-      messages: pipe(
-        pathOr([], ['result', 'messages']),
-        maybeAccumulateResult(concat(prev.result.messages))
-      ),
-      /**
-       * It is up the consumer ie. an mu, to keep track of which spawns
-       * it has already processed. The cu's responsibility is to just evaluate
-       * deterministically for a given range of sequenced interactions
-       */
-      spawns: pipe(
-        pathOr([], ['result', 'spawns']),
-        maybeAccumulateResult(concat(prev.result.spawns))
-      ),
+      error: pathOr(undefined, ['result', 'error']),
+      messages: pathOr([], ['result', 'messages']),
+      spawns: pathOr([], ['result', 'spawns']),
       output: pipe(
-        path(['result', 'output']),
-        ifElse(
-          isNotNil,
-          pipe(
-            /**
-             * Ensure the output from the interaction ends with a newline
-             */
-            ifElse(
-              endsWith('\n'),
-              identity,
-              concat(__, '\n')
-            ),
-            maybeAccumulateResult(concat(prev.result.output))
-          ),
-          always(prev.result.output)
-        )
+        pathOr('', ['result', 'output']),
+        /**
+         * Always make sure the output
+         * is a string
+         */
+        cond([
+          [is(String), identity],
+          [is(Number), String],
+          [is(Object), obj => JSON.stringify(obj)],
+          [T, identity]
+        ])
       )
     }
   })
@@ -221,10 +182,14 @@ export function evaluateWith (env) {
           of({
             state: ctx.state,
             /**
-             * Every evaluation range starts with no messages, no output,
-             * and no spawns
+             * Ensure all result fields are initialized
+             * to their identity
              */
-            result: { messages: [], output: '', spawns: [] }
+            result: applySpec({
+              messages: pathOr([], ['messages']),
+              output: pathOr('', ['output']),
+              spawns: pathOr([], ['spawns'])
+            })(ctx.result)
           }),
           ctx.actions
         )

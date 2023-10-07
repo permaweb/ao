@@ -1,0 +1,9 @@
+{
+  "watch": ["src"],
+  "exec": "node src/app.js",
+  "ext": "js",
+  "events": {
+    "restart": "npx kill-port 3005"
+  },
+  "delay": "500"
+}

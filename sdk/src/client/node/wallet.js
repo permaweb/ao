@@ -10,7 +10,7 @@ const { createData, ArweaveSigner } = WarpArBundles
  * to use, but consumers can also implement their own signer
  */
 export function createDataItemSigner (wallet) {
-  return async ({ data, tags }) => {
+  const signer = async ({ data, tags }) => {
     const signer = new ArweaveSigner(wallet)
     const dataItem = createData(data, signer, { tags })
     return dataItem.sign(signer)
@@ -19,4 +19,6 @@ export function createDataItemSigner (wallet) {
         raw: await dataItem.getRaw()
       }))
   }
+
+  return signer
 }
