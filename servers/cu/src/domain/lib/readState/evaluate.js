@@ -69,10 +69,10 @@ export function evaluateWith (env) {
    *
    * TODO: remove once we find out.
    */
-  const maybeAccumulateResult = (fn) => ifElse(
+  const maybeAccumulateResult = (fn, elseFn = identity) => ifElse(
     always(ACCUMULATE_RESULT),
     fn,
-    identity
+    elseFn
   )
 
   /**
@@ -235,7 +235,14 @@ export function evaluateWith (env) {
              * Every evaluation range starts with no messages, no output,
              * and no spawns
              */
-            result: { messages: [], output: '', spawns: [] }
+            result: maybeAccumulateResult(
+              always({ messages: [], output: '', spawns: [] }),
+              applySpec({
+                messages: pathOr([], ['messages']),
+                output: pathOr('', ['output']),
+                spawns: pathOr([], ['spawns'])
+              })
+            )(ctx.result)
           }),
           ctx.actions
         )
