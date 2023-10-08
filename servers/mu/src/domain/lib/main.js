@@ -2,9 +2,10 @@ import { of } from 'hyper-async'
 
 import { getCuAddressWith } from './processMsg/get-cu-address.js'
 import { cacheAndWriteTxWith } from './processMsg/cache-and-write-tx.js'
-import { fetchAndSaveMsgsWith } from './processMsg/fetch-and-save-msgs.js'
+import { fetchAndSaveResultWith } from './processMsg/fetch-and-save-result.js'
 import { buildTxWith } from './processMsg/build-tx.js'
-import { crankWith } from './crankMsgs/crank.js'
+import { crankWith } from './crank/crank.js'
+import { createContractWith } from './processSpawn/create-contract.js'
 
 /**
  * write the first transaction and fetch its messages
@@ -15,9 +16,11 @@ export function initMsgsWith ({
   selectNode,
   findSequencerTx,
   writeSequencerTx,
-  fetchMsgs,
+  fetchResult,
   saveMsg,
+  saveSpawn,
   findLatestMsgs,
+  findLatestSpawns,
   logger
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
@@ -30,10 +33,12 @@ export function initMsgsWith ({
     logger
   })
 
-  const fetchAndSaveMsgs = fetchAndSaveMsgsWith({
-    fetchMsgs,
+  const fetchAndSaveResult = fetchAndSaveResultWith({
+    fetchResult,
     saveMsg,
+    saveSpawn,
     findLatestMsgs,
+    findLatestSpawns,
     logger
   })
 
@@ -41,7 +46,7 @@ export function initMsgsWith ({
     return of(ctx)
       .chain(getCuAddress)
       .chain(cacheAndWriteTx)
-      .chain(fetchAndSaveMsgs)
+      .chain(fetchAndSaveResult)
   }
 }
 
@@ -54,11 +59,13 @@ export function processMsgWith ({
   selectNode,
   findSequencerTx,
   writeSequencerTx,
-  fetchMsgs,
+  fetchResult,
   saveMsg,
+  saveSpawn,
   buildAndSign,
   updateMsg,
   findLatestMsgs,
+  findLatestSpawns,
   logger
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
@@ -71,10 +78,12 @@ export function processMsgWith ({
     logger
   })
 
-  const fetchAndSaveMsgs = fetchAndSaveMsgsWith({
-    fetchMsgs,
+  const fetchAndSaveResult = fetchAndSaveResultWith({
+    fetchResult,
     saveMsg,
+    saveSpawn,
     findLatestMsgs,
+    findLatestSpawns,
     logger
   })
 
@@ -88,7 +97,25 @@ export function processMsgWith ({
       .chain(buildTx)
       .chain(getCuAddress)
       .chain(cacheAndWriteTx)
-      .chain(fetchAndSaveMsgs)
+      .chain(fetchAndSaveResult)
+  }
+}
+
+/**
+ * process a spawn that comes from the cu result endpoint
+ */
+export function processSpawnWith ({
+  logger,
+  writeContractTx
+}) {
+  const createContract = createContractWith({
+    logger,
+    writeContractTx
+  })
+
+  return (ctx) => {
+    return of(ctx)
+      .chain(createContract)
   }
 }
 
@@ -97,23 +124,12 @@ export function processMsgWith ({
  */
 export function crankMsgsWith ({
   processMsg,
+  processSpawn,
   logger
 }) {
-  const crank = crankWith({ processMsg, logger })
+  const crank = crankWith({ processMsg, processSpawn, logger })
   return (ctx) => {
     return of(ctx)
       .chain(crank)
-  }
-}
-
-/**
- * process a spawn that comes from the cu result endpoint
- */
-export function spawnWith ({
-  logger
-}) {
-  return (ctx) => {
-    return of(ctx)
-      .chain(() => ctx)
   }
 }
