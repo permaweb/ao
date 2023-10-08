@@ -1,14 +1,18 @@
 const cuClient = {
-  messages: async function (cuAddress, txId) {
+  result: async function (cuAddress, txId) {
     console.log(`${cuAddress}/result/${txId}`)
     const resultResponse = await fetch(`${cuAddress}/result/${txId}`)
     const resultJson = await resultResponse.json()
 
-    if (!resultJson || !resultJson.messages) {
-      return []
+    if (!resultJson) {
+      return {
+        messages: [],
+        spawns: [],
+        output: ''
+      }
     }
 
-    return resultJson.messages
+    return resultJson
   },
 
   selectNode: async function (contractId) {

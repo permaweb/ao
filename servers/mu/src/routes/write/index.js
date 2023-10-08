@@ -20,7 +20,7 @@ router.post('', async (req, res) => {
       of({ tx: { id: txid, contractId: cid, data } })
         .chain(initMsgs)
         .toPromise().then(result => {
-          of({ msgs: result.msgs })
+          of({ msgs: result.msgs, spawns: result.spawns })
             .chain(crankMsgs)
             .toPromise().then(result2 => {
               resolve()

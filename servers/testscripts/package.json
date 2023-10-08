@@ -1,18 +1,18 @@
 {
     "name": "arcenvs",
     "version": "1.0.0",
-    "main": "./bin/index.js",
     "repository": "https://github.com/ArweaveAlex/arc-pools.git",
     "author": "NickJ202",
+    "main": "./bin/index.js",
     "scripts": {
-        "start": "ts-node src/index.ts",
+        "build": "tsc",
         "bundlr-env": "ts-node src/bundlr-env.ts",
-        "build": "tsc"
+        "start": "ts-node src/index.ts"
     },
     "dependencies": {
         "@bundlr-network/client": "0.11.1",
         "@noble/hashes": "^1.1.5",
-        "@permaweb/ao-sdk": "file:../../sdk",
+        "@permaweb/ao-sdk": "0.0.10",
         "@scure/bip32": "^1.1.5",
         "@types/fs-extra": "^8.1.0",
         "arcframework": "^1.1.28",
