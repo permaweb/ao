@@ -1,14 +1,12 @@
 {
-  "name": "@permaweb/message-passing",
+  "name": "message-passing",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "(cd receiver && ao build) && (cd sender && ao build)",
-    "publish": "(cd receiver && ao publish -w $PATH_TO_WALLET contract.wasm) && (cd receiver && npm run build)",
-    "run": "node ./scripts/run.mjs",
-    "command": "(cd sender && ao publish -w ${PATH_TO_WALLET} contract.wasm)"
+    "install": "(cd app && npm i)",
+    "launch": "node ./scripts/launch.mjs",
+    "run": "node ./scripts/run.mjs"
   },
   "author": "Justin Shaw",
   "license": "ISC",
