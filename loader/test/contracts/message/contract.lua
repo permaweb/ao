@@ -28,7 +28,6 @@ local function noop(state, _action, SmartWeave)
 end
 
 function contract.handle(state, action, SmartWeave)
-  print("=============================== Running Receiver Handle! ===============================")
   local handlers = {
     ['handleMessage'] = handleMessage,
     ['noop'] = noop
