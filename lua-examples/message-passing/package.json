@@ -12,10 +12,6 @@
   },
   "author": "Justin Shaw",
   "license": "ISC",
-  "dependencies": {
-    "warp-contracts": "1.4.19",
-    "warp-contracts-plugin-deploy": "1.0.9"
-  },
   "devDependencies": {
     "@bundlr-network/client": "0.11.17",
     "@permaweb/ao-sdk": "0.0.10",
