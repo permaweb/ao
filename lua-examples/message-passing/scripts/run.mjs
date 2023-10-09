@@ -1,9 +1,11 @@
-import { Rejected, fromPromise, of, Resolved } from "hyper-async"
+import { fromPromise, of } from "hyper-async"
+globalThis.MU_URL = "http://localhost:3004"
+globalThis.CU_URL = "http://localhost:3005"
 import { writeInteraction, createDataItemSigner } from "@permaweb/ao-sdk"
 import { readFileSync } from "fs"
 
 // run ao build
-async function main(tx, crankTx) {
+async function main(tx) {
   if (!process.env.PATH_TO_WALLET) {
     console.error("Set PATH_TO_WALLET to your keyfile to run this script.")
     process.exit()
@@ -12,7 +14,7 @@ async function main(tx, crankTx) {
   const signer = () => createDataItemSigner(jwk)
   return of({ tx, signer })
     .chain(fromPromise(interact))
-    .chain(fromPromise(crank)({ tx: crankTx }))
+    .chain(fromPromise(waitForOneSecond))
     .fork(
       (e) => {
         console.error(e)
@@ -24,7 +26,15 @@ async function main(tx, crankTx) {
       }
     )
 }
-
+async function waitForOneSecond(input) {
+  const num = 2
+  console.log(`Waiting ${num} second(s).`)
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(input)
+    }, num * 1000) // 1000 milliseconds = 1 second
+  })
+}
 async function interact({ tx, signer }) {
   const interactionId = await writeInteraction({
     contractId: tx,
@@ -35,21 +45,10 @@ async function interact({ tx, signer }) {
   return interactionId
 }
 
-async function crank({ tx }) {
-  const MU_URL = "https://ao-mu-1.onrender.com"
-  const CRANK_ENDPOINT = "/crank/"
-  const CU_URL = "https://ao-cu-1.onrender.com"
-  const crankResult = await fetch(`${MU_URL}${CRANK_ENDPOINT}${tx}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ cu: CU_URL }),
-  })
-
-  let crankResultJson = await crankResult.json()
-
-  console.log(crankResultJson)
+if (process.env.SENDER) {
+  console.log(
+    "Please run the command like this `SENDER=<tx> node ./scriipts/launch.mjs`"
+  )
 }
 
-main("aY_sRvvLZRg_uhC4fbHZtgZUQXv3yKthC1lzDtz29Ew")
+main(process.env.SENDER)

@@ -1,6 +1,8 @@
 import { execSync } from "child_process"
 import { Rejected, fromPromise, of, Resolved } from "hyper-async"
 import NodeBundlr from "@bundlr-network/client/build/esm/node/bundlr"
+globalThis.MU_URL = "http://localhost:3004"
+globalThis.CU_URL = "http://localhost:3005"
 import { createContract, createDataItemSigner } from "@permaweb/ao-sdk"
 import { readFileSync } from "fs"
 
@@ -13,51 +15,47 @@ async function main() {
   const jwk = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, "utf-8"))
   const signer = () => createDataItemSigner(jwk)
   const bundlr = new NodeBundlr("https://node2.bundlr.network", "arweave", jwk)
-  return (
-    of(undefined)
-      // .chain(() => fromPromise(build)("receiver"))
-      // .chain(() => fromPromise(build)("sender"))
-      .chain(() => fromPromise(publish)({ name: "receiver", bundlr }))
-      .chain(fromPromise(waitForOneSecond))
-      .chain(({ tx }) =>
-        fromPromise(create)({
+  return of(undefined)
+    .chain(() => fromPromise(build)("receiver"))
+    .chain(() => fromPromise(build)("sender"))
+    .chain(() => fromPromise(publish)({ name: "receiver", bundlr }))
+    .chain(fromPromise(waitForOneSecond))
+    .chain(({ tx }) =>
+      fromPromise(create)({
+        signer,
+        name: "receiver",
+        srcTx: tx,
+        extraState: {},
+      })
+    )
+    .chain(({ tx }) => fromPromise(publishSender)({ bundlr, receiver: tx }))
+    .chain(fromPromise(waitForOneSecond))
+    .chain(({ tx, receiver }) =>
+      fromPromise(returnIds)(receiver, () =>
+        create({
           signer,
-          name: "receiver",
+          name: "sender",
           srcTx: tx,
-          extraState: {},
+          extraState: { receiverTx: receiver },
         })
       )
-      .chain(({ tx }) => fromPromise(publishSender)({ bundlr, receiver: tx }))
-      .chain(fromPromise(waitForOneSecond))
-      .chain(({ tx, receiver }) =>
-        fromPromise(returnIds)(receiver, () =>
-          create({
-            signer,
-            name: "sender",
-            srcTx: tx,
-            extraState: { receiverTx: receiver },
-          })
-        )
-      )
-      .map(startApp)
-      .fork(
-        (e) => {
-          console.error(e)
-          process.exit()
-        },
-        (input) => {
-          console.log("Success")
-          console.log(input)
-        }
-      )
-  )
+    )
+    .map(startApp)
+    .fork(
+      (e) => {
+        console.error(e)
+        process.exit()
+      },
+      (input) => {
+        console.log("Success")
+        console.log(input)
+      }
+    )
 }
 
 async function build(name) {
   try {
-    console.log(`${name}: building.`)
     execSync(`(cd ${name} && ao build)`)
-    console.log(`${name}: built.`)
     return Resolved()
   } catch (error) {
     return Rejected(`Error executing command: ${error}`)
@@ -74,7 +72,6 @@ async function build(name) {
  * @return {*}
  */
 async function publish({ name, bundlr }) {
-  console.log(`${name}: publishing.`)
   // Upload with bundlr
   const tags = [
     {
@@ -118,25 +115,17 @@ async function publish({ name, bundlr }) {
  * @return {*}
  */
 async function publishSender({ bundlr, receiver }) {
-  console.log("Receiver", receiver)
   const { tx } = await publish({ name: "sender", bundlr })
   return { tx, receiver }
 }
 
 async function create({ srcTx, name, extraState, signer }) {
-  console.log(`creating ${name}`, srcTx)
-  console.log(
-    `name: ${name} -- extraState: ${JSON.stringify(
-      extraState
-    )} -- name: ${name}`
-  )
   const state = JSON.parse(readFileSync(`./${name}/state.json`, "utf-8"))
   const newExtraState = extraState ? extraState : {}
   const newState = {
     ...state,
     ...newExtraState,
   }
-  console.log("State", JSON.stringify(state))
   const result = await createContract({
     srcId: srcTx,
     initialState: newState,
@@ -148,7 +137,6 @@ async function create({ srcTx, name, extraState, signer }) {
 
 async function returnIds(receiver, funk) {
   const tx = (await funk()).tx
-  console.log("OBJECT", tx)
   return {
     receiver,
     sender: tx,
@@ -156,14 +144,13 @@ async function returnIds(receiver, funk) {
 }
 
 function startApp({ sender, receiver }) {
-  console.log("Starting app")
   console.log({
     sender,
     receiver,
   })
 
-  console.log(`SENDER: http://localhost:3005/contract/${sender}`)
-  console.log(`RECEIVER: http://localhost:3005/contract/${receiver}`)
+  console.log(`Local Sender: http://localhost:3005/contract/${sender}`)
+  console.log(`Local Receiver: http://localhost:3005/contract/${receiver}`)
   execSync(
     `(cd app && VITE_SENDER=${sender} VITE_RECEIVER=${receiver} npx vite --mode production)`,
     {

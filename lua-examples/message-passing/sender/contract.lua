@@ -29,8 +29,7 @@ function contract.handle(state, action, SmartWeave)
     state = state,
     result = {
       messages = {{
-        txId = SmartWeave.transaction.id,
-        target = state.sendToContract,
+        target = state.receiverTx,
         message = {
           type = action.input['function'],
           caller = SmartWeave.contract.id,
