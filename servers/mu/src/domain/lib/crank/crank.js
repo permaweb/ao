@@ -23,13 +23,9 @@ function crankListWith ({ processMsg, processSpawn, logger }) {
       // Process spawns when the recursion terminates
       if (ctx.spawns && ctx.spawns.length > 0) {
         for (const spawn of ctx.spawns) {
-          try {
-            await of({ cachedSpawn: spawn })
-              .chain(processSpawn)
-              .toPromise()
-          } catch (e) {
-
-          }
+          await of({ cachedSpawn: spawn })
+            .chain(processSpawn)
+            .toPromise()
         }
       }
 
