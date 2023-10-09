@@ -28,7 +28,8 @@
     "ignore": [
       "dev-cli",
       "contract-env",
-      "dist"
+      "dist",
+      "**/contract.js"
     ]
   }
 }
