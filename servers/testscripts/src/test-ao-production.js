@@ -7,17 +7,18 @@ const { writeInteraction, readState } = require('@permaweb/ao-sdk')
 
 const CONTRACT_TX_ID = 'WbuuS2YjOq2fHsV4VIB7qI6G6aM3DX5nO8PmAn3LZvQ'
 const CU_URL = 'https://ao-cu-1.onrender.com'
-const CONTRACT_ENDPOINT = '/contract/'
 
 const MU_URL = 'https://ao-mu-1.onrender.com'
-const CRANK_ENDPOINT = '/crank/';
+const CRANK_ENDPOINT = '/crank/'
 
-(async function () {
+;(async function () {
   console.log('Testing ao...')
 
   const walletPath = process.env.PATH_TO_WALLET
 
-  const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
+  const walletKey = JSON.parse(
+    fs.readFileSync(path.resolve(walletPath), 'utf8')
+  )
   const signer = new ArweaveSigner(walletKey)
 
   const input = { function: 'noop' }
