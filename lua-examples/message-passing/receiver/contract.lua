@@ -16,16 +16,32 @@ local function printTable(table, indent)
   end
 end
 
-function contract.handle(state, action, SmartWeave)
-  printTable(SmartWeave)
-  -- do stuff
-  local response = {
-    state = state,
+local function handleMessage(state, _action, _SmartWeave)
+  table.insert(state.received_messages, _action.input)
+
+  return {
+    state,
     result = {
       messages = {}
     }
   }
-  return response
+end
+
+function contract.handle(state, action, SmartWeave)
+  print("Running receiver handle")
+
+  local handlers = {
+    ['handleMessage'] = handleMessage
+  }
+  local handler = handlers[action.input['function']]
+
+  if (handler == nil) then
+    error('No function specified')
+  end
+
+  return handleMessage(state, action, SmartWeave)
+
+  -- do stuff
 end
 
 return contract

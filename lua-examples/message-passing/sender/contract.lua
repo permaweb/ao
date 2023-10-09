@@ -16,14 +16,28 @@ local function printTable(table, indent)
   end
 end
 
-function contract.handle(state, action, SmartWeave)
-  printTable(SmartWeave)
+local function handleMessage(state, _action, _SmartWeave)
+  return {state}
+end
 
+function contract.handle(state, action, SmartWeave)
+  print("Running sender handle")
+
+  state.count = state.count + 1
   -- do stuff
   local response = {
     state = state,
     result = {
-      messages = {}
+      messages = {{
+        txId = SmartWeave.transaction.id,
+        target = state.sendToContract,
+        message = {
+          type = action.input['function'],
+          caller = SmartWeave.contract.id,
+          from = SmartWeave.contract.id,
+          to = state.receiverTx
+        }
+      }}
     }
   }
   return response
