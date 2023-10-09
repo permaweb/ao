@@ -1,4 +1,4 @@
-import config from '../../config'
+import config from '../../config.js'
 
 const cuClient = {
   result: async function (cuAddress, txId) {
