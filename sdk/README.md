@@ -21,6 +21,7 @@ interacting with `ao` Smart Contracts.
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
 - [Testing](#testing)
+- [Project Structure](#project-structure)
 
 <!-- tocstop -->
 
@@ -150,3 +151,32 @@ interested in.
 Run `npm test` to run the tests.
 
 Run `npm run test:integration` to run the integration tests.
+
+## Project Structure
+
+The `ao` SDK project loosely implements the
+[Ports and Adapters](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0)
+Architecture.
+
+All business logic is in `lib` where each public api is implemented and tested.
+
+`dal.js` contains the contracts for the driven adapters aka side-effects.
+Implementations for those contracts are injected into, then parsed and invoked
+by, the business logic. This is how we inject specific integrations for
+providers ie. `Warp`, `Irys`, or even platforms specific implementations like
+`node` and the `browser` while keeping them separated from the business logic --
+the business logic simply consumes a black-box API -- easy to stub, and easy to
+unit test.
+
+Because the contract wrapping is done by the business logic itself, it also
+ensures the stubs we use in our unit tests accurately implement the contract
+API. Thus our unit tests are simoultaneously contract tests.
+
+`client` contains implementations, of the contracts in `dal.js`, for various
+platforms. The unit tests for the implementations in `client` also import
+contracts from `dal.js` to help ensure that the implementation properly
+satisfies the API.
+
+Finally, the entrypoints (`index.js` for Node and `index.browser.js` for the
+Browser) orchestrate everything, choosing the appropriate implementations from
+`client` and injecting them into the business logic from `lib`.

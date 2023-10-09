@@ -57,6 +57,9 @@ export function createDataItemSigner (arweaveWallet) {
  *
  * injecting side effects allows stubbing arweave and arweaveWallet
  * for the purpose of testing
+ *
+ * Currently unused, as the impl instead uses Irys to deploy contracts,
+ * but keeping for posterity (it's tree-shaken out in distribution bundles anyway)
  */
 export function deployContractWith ({ logger: _logger, arweave, arweaveWallet }) {
   const logger = _logger.child('web-wallet:deployContract')
