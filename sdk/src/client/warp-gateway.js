@@ -5,6 +5,9 @@ import { z } from 'zod'
 /**
  * Inject dependencies, so they are configurable,
  * and stubbable for testing
+ *
+ * Currently unused, as the impl instead uses Irys to deploy contracts,
+ * but keeping for posterity (it's tree-shaken out in distribution bundles anyway)
  */
 export function deployContractWith ({ fetch, WARP_GATEWAY_URL, logger: _logger, getTime = () => new Date().getTime() }) {
   const logger = _logger.child('warp-gateway:deployContract')
