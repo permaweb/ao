@@ -1,4 +1,5 @@
 import bodyParser from 'body-parser'
+import cors from 'cors'
 
 import errors from './errors/errors.js'
 
@@ -12,6 +13,7 @@ function injectDomain (req, _res, next) {
 }
 
 const mountMiddlewares = (app) => [
+  cors(),
   bodyParser.json(),
   bodyParser.urlencoded({ extended: false }),
   injectDomain,
