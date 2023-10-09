@@ -1,4 +1,4 @@
-import { NOT_FOUND } from 'redux-first-router'
+import { NOT_FOUND, back } from 'redux-first-router'
 
 const components = {
   FEED: 'Feed',
@@ -42,5 +42,4 @@ export const mapStateToProps = (state, props) => {
   }
 }
 
-export default (state = 'FEED', action = {}) =>
-  components[action.type] || state
+export default (state = 'FEED', action = {}) => components[action.type] || state
