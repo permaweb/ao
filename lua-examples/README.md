@@ -2,9 +2,16 @@
 
 A repository of AO examples written in Lua. (AO only supports Lua)
 
+<!-- toc -->
+
+- [Examples](#examples)
+- [Resources](#resources)
+
+<!-- tocstop -->
+
 ## Examples
 
-- [Counter](./counter/contract.lua)
+- [Message Passing](./message-passing/contract.lua)
 - [Smartweave Token](./sw-token/contract.lua)
 ## Resources
 
