@@ -1,9 +1,9 @@
-import express from "express"
+import express from 'express'
 
 const router = express.Router()
 
 // read the latest state on the contract
-router.get("/:id", async (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
   const { readState } = req.domain
   const contractId = req.params.id
 

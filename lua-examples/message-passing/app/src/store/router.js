@@ -1,36 +1,36 @@
-import { NOT_FOUND } from "redux-first-router";
+import { NOT_FOUND } from 'redux-first-router'
 
 const components = {
-  FEED: "Feed",
-  PLAYER: "Player",
-  [NOT_FOUND]: "Feed",
-};
+  FEED: 'Feed',
+  PLAYER: 'Player',
+  [NOT_FOUND]: 'Feed'
+}
 
 export const routesMap = {
   FEED: {
-    path: "/",
+    path: '/',
     thunk: async (dispatch, getState) => {
-      console.log("Feed thunk.");
-    },
+      console.log('Feed thunk.')
+    }
   },
   PLAYER: {
-    path: "/player/:tx",
+    path: '/player/:tx',
     thunk: async (dispatch, getState) => {
-      console.log("Player thunk.");
-    },
+      console.log('Player thunk.')
+    }
   },
   NOT_FOUND: {
-    path: "/",
-  },
-};
+    path: '/'
+  }
+}
 
 export const router = (dispatch) => {
   return {
     goBack: () => back(),
-    goToFeed: () => dispatch({ type: "FEED" }),
-    goToPlayer: (tx) => dispatch({ type: "PLAYER", payload: { tx } }),
-  };
-};
+    goToFeed: () => dispatch({ type: 'FEED' }),
+    goToPlayer: (tx) => dispatch({ type: 'PLAYER', payload: { tx } })
+  }
+}
 
 export const mapStateToProps = (state, props) => {
   return {
@@ -38,9 +38,9 @@ export const mapStateToProps = (state, props) => {
     page: state.page,
     tx: state?.location?.payload?.tx,
     ticker: state?.location?.payload?.ticker,
-    transaction: state?.location?.payload?.transaction,
-  };
-};
+    transaction: state?.location?.payload?.transaction
+  }
+}
 
-export default (state = "FEED", action = {}) =>
-  components[action.type] || state;
+export default (state = 'FEED', action = {}) =>
+  components[action.type] || state

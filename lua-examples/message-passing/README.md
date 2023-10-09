@@ -28,3 +28,7 @@ Directories
 - `receiver/`: Lua `ao` contract that receives messages and updates state.
 - `scripts/`: The node scripts for using the contracts
 - `app/`: A react app that takes the ID's and fetches their state.
+
+## Bonus
+
+If you click the little `send message` text, that will send another TX.  The styling is terrible though so it won't look like it's working until you refresh the page.

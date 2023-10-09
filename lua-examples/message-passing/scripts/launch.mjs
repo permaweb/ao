@@ -1,31 +1,31 @@
-import { execSync } from "child_process"
-import { Rejected, fromPromise, of, Resolved } from "hyper-async"
-import NodeBundlr from "@bundlr-network/client/build/esm/node/bundlr"
-globalThis.MU_URL = "http://localhost:3004"
-globalThis.CU_URL = "http://localhost:3005"
-import { createContract, createDataItemSigner } from "@permaweb/ao-sdk"
-import { readFileSync } from "fs"
+import { execSync } from 'child_process'
+import { Rejected, fromPromise, of, Resolved } from 'hyper-async'
+import NodeBundlr from '@bundlr-network/client/build/esm/node/bundlr'
+import { createContract, createDataItemSigner } from '@permaweb/ao-sdk'
+import { readFileSync } from 'fs'
+globalThis.MU_URL = 'http://localhost:3004'
+globalThis.CU_URL = 'http://localhost:3005'
 
 // run ao build
-async function main() {
+async function main () {
   if (!process.env.PATH_TO_WALLET) {
-    console.error("Set PATH_TO_WALLET to your keyfile to run this script.")
+    console.error('Set PATH_TO_WALLET to your keyfile to run this script.')
     process.exit()
   }
-  const jwk = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, "utf-8"))
+  const jwk = JSON.parse(readFileSync(process.env.PATH_TO_WALLET, 'utf-8'))
   const signer = () => createDataItemSigner(jwk)
-  const bundlr = new NodeBundlr("https://node2.bundlr.network", "arweave", jwk)
+  const bundlr = new NodeBundlr('https://node2.bundlr.network', 'arweave', jwk)
   return of(undefined)
-    .chain(() => fromPromise(build)("receiver"))
-    .chain(() => fromPromise(build)("sender"))
-    .chain(() => fromPromise(publish)({ name: "receiver", bundlr }))
+    .chain(() => fromPromise(build)('receiver'))
+    .chain(() => fromPromise(build)('sender'))
+    .chain(() => fromPromise(publish)({ name: 'receiver', bundlr }))
     .chain(fromPromise(waitForOneSecond))
     .chain(({ tx }) =>
       fromPromise(create)({
         signer,
-        name: "receiver",
+        name: 'receiver',
         srcTx: tx,
-        extraState: {},
+        extraState: {}
       })
     )
     .chain(({ tx }) => fromPromise(publishSender)({ bundlr, receiver: tx }))
@@ -34,9 +34,9 @@ async function main() {
       fromPromise(returnIds)(receiver, () =>
         create({
           signer,
-          name: "sender",
+          name: 'sender',
           srcTx: tx,
-          extraState: { receiverTx: receiver },
+          extraState: { receiverTx: receiver }
         })
       )
     )
@@ -47,13 +47,13 @@ async function main() {
         process.exit()
       },
       (input) => {
-        console.log("Success")
+        console.log('Success')
         console.log(input)
       }
     )
 }
 
-async function build(name) {
+async function build (name) {
   try {
     execSync(`(cd ${name} && ao build)`)
     return Resolved()
@@ -71,37 +71,37 @@ async function build(name) {
  * @param {PublishInput} options
  * @return {*}
  */
-async function publish({ name, bundlr }) {
+async function publish ({ name, bundlr }) {
   // Upload with bundlr
   const tags = [
     {
-      name: "Content-Type",
-      value: "application/wasm",
+      name: 'Content-Type',
+      value: 'application/wasm'
     },
     {
-      name: "App-Name",
-      value: "SmartWeaveContractSource",
+      name: 'App-Name',
+      value: 'SmartWeaveContractSource'
     },
     {
-      name: "App-Version",
-      value: "0.4.0",
+      name: 'App-Version',
+      value: '0.4.0'
     },
     {
-      name: "Content-Type",
-      value: "application/wasm",
+      name: 'Content-Type',
+      value: 'application/wasm'
     },
     {
-      name: "Contract-Type",
-      value: "ao",
-    },
+      name: 'Contract-Type',
+      value: 'ao'
+    }
   ]
 
   const response = await bundlr.uploadFile(`${name}/contract.wasm`, {
-    tags,
+    tags
   })
 
   return {
-    tx: response.id,
+    tx: response.id
   }
 }
 
@@ -114,39 +114,39 @@ async function publish({ name, bundlr }) {
  * @param {PublishInput} options
  * @return {*}
  */
-async function publishSender({ bundlr, receiver }) {
-  const { tx } = await publish({ name: "sender", bundlr })
+async function publishSender ({ bundlr, receiver }) {
+  const { tx } = await publish({ name: 'sender', bundlr })
   return { tx, receiver }
 }
 
-async function create({ srcTx, name, extraState, signer }) {
-  const state = JSON.parse(readFileSync(`./${name}/state.json`, "utf-8"))
-  const newExtraState = extraState ? extraState : {}
+async function create ({ srcTx, name, extraState, signer }) {
+  const state = JSON.parse(readFileSync(`./${name}/state.json`, 'utf-8'))
+  const newExtraState = extraState || {}
   const newState = {
     ...state,
-    ...newExtraState,
+    ...newExtraState
   }
   const result = await createContract({
     srcId: srcTx,
     initialState: newState,
     signer: signer(),
-    tags: [],
+    tags: []
   })
   return { tx: result }
 }
 
-async function returnIds(receiver, funk) {
+async function returnIds (receiver, funk) {
   const tx = (await funk()).tx
   return {
     receiver,
-    sender: tx,
+    sender: tx
   }
 }
 
-function startApp({ sender, receiver }) {
+function startApp ({ sender, receiver }) {
   console.log({
     sender,
-    receiver,
+    receiver
   })
 
   console.log(`Local Sender: http://localhost:3005/contract/${sender}`)
@@ -154,14 +154,14 @@ function startApp({ sender, receiver }) {
   execSync(
     `(cd app && VITE_SENDER=${sender} VITE_RECEIVER=${receiver} npx vite --mode production)`,
     {
-      encoding: "utf8",
-      stdio: "inherit",
+      encoding: 'utf8',
+      stdio: 'inherit'
     }
   )
   return { sender, receiver }
 }
 
-async function waitForOneSecond(input) {
+async function waitForOneSecond (input) {
   const num = 2
   console.log(`Waiting ${num} second(s).`)
   return new Promise((resolve) => {

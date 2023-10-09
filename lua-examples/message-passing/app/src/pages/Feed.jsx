@@ -1,13 +1,13 @@
-import { connect } from "react-redux"
-import { mapStateToProps, router } from "../store/router"
+import { connect } from 'react-redux'
+import { mapStateToProps, router } from '../store/router'
 import {
   readState,
   writeInteraction,
-  createDataItemSigner,
-} from "@permaweb/ao-sdk"
-import { useEffect, useState } from "react"
+  createDataItemSigner
+} from '@permaweb/ao-sdk'
+import { useEffect, useState } from 'react'
 
-function Feed({ goToPlayer }) {
+function Feed ({ goToPlayer }) {
   const signer = createDataItemSigner(globalThis.arweaveWallet)
   const [interactionId, setInteractionId] = useState()
   const [senderState, setSenderState] = useState()
@@ -15,7 +15,7 @@ function Feed({ goToPlayer }) {
 
   useEffect(() => {
     readState({
-      contractId: import.meta.env.VITE_SENDER,
+      contractId: import.meta.env.VITE_SENDER
     })
       .then(setSenderState)
       .catch((e) => console.log(e))
@@ -23,7 +23,7 @@ function Feed({ goToPlayer }) {
 
   useEffect(() => {
     readState({
-      contractId: import.meta.env.VITE_RECEIVER,
+      contractId: import.meta.env.VITE_RECEIVER
     })
       .then(setReceiverState)
       .catch((e) => console.log(e))
@@ -33,16 +33,16 @@ function Feed({ goToPlayer }) {
     <>
       <h1>Sender TX: {import.meta.env.VITE_SENDER}</h1>
       <h1
-        onClick={() => goToPlayer("<player name>")}
-        className="text-3xl font-bold underline"
+        onClick={() => goToPlayer('<player name>')}
+        className='text-3xl font-bold underline'
       >
         Sender State:
       </h1>
       <p>{JSON.stringify(senderState)}</p>
 
       <h1
-        onClick={() => goToPlayer("<player name>")}
-        className="text-3xl font-bold underline"
+        onClick={() => goToPlayer('<player name>')}
+        className='text-3xl font-bold underline'
       >
         Receiver State:
       </h1>
@@ -51,13 +51,13 @@ function Feed({ goToPlayer }) {
         <button
           onClick={async () => {
             if (globalThis.arweaveWallet) {
-              await globalThis.arweaveWallet.connect(["SIGN_TRANSACTION"])
+              await globalThis.arweaveWallet.connect(['SIGN_TRANSACTION'])
             }
             const interactionId = await writeInteraction({
               contractId: import.meta.env.VITE_SENDER,
-              input: { function: "blah" },
+              input: { function: 'blah' },
               signer,
-              tags: [],
+              tags: []
             })
             setInteractionId(interactionId)
           }}
