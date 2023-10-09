@@ -50,6 +50,9 @@ function Feed({ goToPlayer }) {
       <div>
         <button
           onClick={async () => {
+            if (globalThis.arweaveWallet) {
+              await globalThis.arweaveWallet.connect(["SIGN_TRANSACTION"])
+            }
             const interactionId = await writeInteraction({
               contractId: import.meta.env.VITE_SENDER,
               input: { function: "blah" },
