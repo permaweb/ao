@@ -105,6 +105,7 @@ const cachedMsgSchema = z.object({
   fromTxId: z.string().min(1),
   toTxId: z.string().min(1).nullable().optional(),
   msg: z.any(),
+  type: z.literal('message'),
   _rev: z.string().optional(),
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
@@ -120,6 +121,7 @@ function saveMsgWith ({ pouchDb, logger: _logger }) {
         _id: prop('id'),
         fromTxId: prop('fromTxId'),
         msg: prop('msg'),
+        type: always('message'),
         cachedAt: prop('cachedAt')
       }))
       .map(cachedMsgSchema.parse)
@@ -167,7 +169,8 @@ function findLatestMsgsWith ({ pouchDb }) {
           selector: {
             fromTxId: {
               $eq: fromTxId
-            }
+            },
+            type: 'message'
           },
           sort: [{ _id: 'desc' }]
         }).then((res) => {
@@ -194,6 +197,81 @@ function findLatestMsgsWith ({ pouchDb }) {
   }
 }
 
+const cachedSpawnSchema = z.object({
+  _id: z.string().min(1),
+  fromTxId: z.string().min(1),
+  toTxId: z.string().min(1).nullable().optional(),
+  spawn: z.any(),
+  type: z.literal('spawn'),
+  _rev: z.string().optional(),
+  cachedAt: z.preprocess(
+    (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
+    z.date()
+  )
+})
+
+function saveSpawnWith ({ pouchDb, logger: _logger }) {
+  const logger = _logger.child('spawn')
+  return (spawn) => {
+    return of(spawn)
+      .map(applySpec({
+        _id: prop('id'),
+        fromTxId: prop('fromTxId'),
+        spawn: prop('spawn'),
+        type: always('spawn'),
+        cachedAt: prop('cachedAt')
+      }))
+      .map(cachedSpawnSchema.parse)
+      .chain((doc) =>
+        of(doc)
+          .chain(fromPromise((doc) => pouchDb.put(doc)))
+          .bimap(
+            logger.tap('Encountered an error when caching spawn'),
+            logger.tap('Cached spawn')
+          )
+          .bichain(Resolved, Resolved)
+          .map(always(doc._id))
+      )
+      .toPromise()
+  }
+}
+
+function findLatestSpawnsWith ({ pouchDb }) {
+  return ({ fromTxId }) => {
+    return of({ fromTxId })
+      .chain(fromPromise(() => {
+        return pouchDb.find({
+          selector: {
+            fromTxId: {
+              $eq: fromTxId
+            },
+            type: 'spawn'
+          },
+          sort: [{ _id: 'desc' }]
+        }).then((res) => {
+          if (res.warning) console.warn(res.warning)
+          return res.docs
+        })
+      }))
+      .chain((docs) => {
+        if (docs.length === 0) {
+          return Rejected('No documents found')
+        }
+
+        const parsedDocs = docs.map(doc => cachedSpawnSchema.parse(doc))
+
+        return Resolved(parsedDocs.map(doc => ({
+          id: prop('_id', doc),
+          fromTxId: prop('fromTxId', doc),
+          toTxId: prop('toTxId', doc),
+          spawn: prop('spawn', doc),
+          cachedAt: prop('cachedAt', doc)
+        })))
+      })
+      .toPromise()
+  }
+}
+
 export default {
   pouchDb: internalPouchDb,
   cachedTxSchema,
@@ -201,6 +279,8 @@ export default {
   saveTxWith,
   findLatestTxWith,
   saveMsgWith,
+  saveSpawnWith,
   updateMsgWith,
-  findLatestMsgsWith
+  findLatestMsgsWith,
+  findLatestSpawnsWith
 }

@@ -1,33 +1,28 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require("fs")
+const path = require("path")
 
-const { ArweaveSigner } = require("warp-arbundles");
+globalThis.MU_URL = "http://localhost:3004"
+globalThis.CU_URL = "http://localhost:3005"
+const { writeInteraction, createDataItemSigner } = require("@permaweb/ao-sdk")
 
-globalThis.MU_URL = "http://localhost:3004";
-globalThis.CU_URL = "http://localhost:3005";
-const { writeInteraction, readState } = require("@permaweb/ao-sdk");
+const CONTRACT_TX_ID = "uJFN44vrnt4aLb4hBtfBryY-2z3ag_Us-e896ZaJxHM"
+;(async function () {
+  console.log("Testing ao...")
 
-const CONTRACT_TX_ID = "bUPNPeGqXwj7HtL3iFa0BZzPxNjG4QXHfeXMYCvhV-w";
-(async function () {
-  console.log("Testing ao...");
-
-  const walletPath = process.env.PATH_TO_WALLET;
+  const walletPath = process.env.PATH_TO_WALLET
 
   const walletKey = JSON.parse(
     fs.readFileSync(path.resolve(walletPath), "utf8")
-  );
-  const signer = new ArweaveSigner(walletKey);
+  )
+  const signer = createDataItemSigner(walletKey)
 
-  const input = { function: "noop" };
-  const tags = [];
+  const input = { function: "noop" }
+  const tags = []
 
-  const s = await readState(CONTRACT_TX_ID);
-  console.log(s);
-
-  await writeInteraction(CONTRACT_TX_ID, input, signer, tags);
-
-  // let newState = await fetch(`${CU_URL}${CONTRACT_ENDPOINT}${CONTRACT_TX_ID}`);
-  // let newStateJson = await newState.json();
-
-  // console.log(newStateJson);
-})();
+  await writeInteraction({
+    contractId: CONTRACT_TX_ID,
+    input,
+    signer,
+    tags,
+  })
+})()

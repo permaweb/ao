@@ -20,7 +20,6 @@ const logger = createLogger('ao-cu')
  */
 const readStateLogger = logger.child('readState')
 export const readState = readStateWith({
-  ACCUMULATE_RESULT: process.env.ACCUMULATE_RESULT === 'true',
   loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
   loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch, GATEWAY_URL }),
   loadInteractions: WarpSequencerClient.loadInteractionsWith({

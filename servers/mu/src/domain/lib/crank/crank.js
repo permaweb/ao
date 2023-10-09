@@ -1,6 +1,6 @@
 import { of, fromPromise } from 'hyper-async'
 
-function crankListWith ({ processMsg, logger }) {
+function crankListWith ({ processMsg, processSpawn, logger }) {
   function asyncTrampoline (fn) {
     return async function (...args) {
       let result = fn(...args)
@@ -20,6 +20,19 @@ function crankListWith ({ processMsg, logger }) {
 
   const processMsgsTrampolined = asyncTrampoline(async function processMessages (ctx) {
     if (!ctx.msgs || ctx.msgs.length === 0) {
+      // Process spawns when the recursion terminates
+      if (ctx.spawns && ctx.spawns.length > 0) {
+        for (const spawn of ctx.spawns) {
+          try {
+            await of({ cachedSpawn: spawn })
+              .chain(processSpawn)
+              .toPromise()
+          } catch (e) {
+
+          }
+        }
+      }
+
       return ctx
     }
 
@@ -29,16 +42,19 @@ function crankListWith ({ processMsg, logger }) {
 
     const combinedMsgs = [...(newCtx.msgs || []), ...tail]
 
+    // accumulate spawns for processing at the end
+    const combinedSpawns = [...(newCtx.spawns || []), ...(ctx.spawns || [])]
+
     return async function nextIteration () {
-      return processMessages({ ...ctx, ...newCtx, msgs: combinedMsgs })
+      return processMessages({ ...ctx, ...newCtx, msgs: combinedMsgs, spawns: combinedSpawns })
     }
   })
 
   return processMsgsTrampolined
 }
 
-export function crankWith ({ processMsg, logger }) {
-  const crankList = crankListWith({ processMsg, logger })
+export function crankWith ({ processMsg, processSpawn, logger }) {
+  const crankList = crankListWith({ processMsg, processSpawn, logger })
 
   return (ctx) => {
     return of(ctx)
