@@ -5,7 +5,9 @@ const walletPath = process.env.PATH_TO_WALLET
 const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
 
 const config = {
-  cuWallet: walletKey,
+  muWallet: walletKey,
+  sequencerUrl: 'https://gw.warp.cc',
+  cuUrl: process.env.CU_URL,
   port: 3005
 }
 
