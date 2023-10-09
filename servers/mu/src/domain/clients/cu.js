@@ -1,3 +1,5 @@
+import config from '../../config'
+
 const cuClient = {
   result: async function (cuAddress, txId) {
     console.log(`${cuAddress}/result/${txId}`)
@@ -17,7 +19,7 @@ const cuClient = {
 
   selectNode: async function (contractId) {
     console.log(`Selecting cu for contract ${contractId}`)
-    return 'http://localhost:3005'
+    return config.cuUrl
   }
 }
 
