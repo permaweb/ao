@@ -1,4 +1,4 @@
-# Smartweave Token
+# Smartweave Token (WIP)
 
 An example of a smartweave token with functions:
 
