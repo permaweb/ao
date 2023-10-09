@@ -43,7 +43,6 @@ export const userAdapter = createEntityAdapter()
 export const fetchUser = createAsyncThunk(
   'user/fetchStatus',
   async (input, thunkAPI) => {
-    const { address, strategy } = input
     // Fetch user data here
   }
 )
