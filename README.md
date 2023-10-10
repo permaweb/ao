@@ -23,13 +23,45 @@ communicating with the rest of the environment, if a process/contract is not
 available, the system can spawn that process/contract and then submit the
 message.
 
+<!-- toc -->
+
+- [Getting Started](#getting-started)
+- [Design Documents](#design-documents)
+- [Projects](#projects)
+- [Contributing](#contributing)
+- [License](#license)
+
+<!-- tocstop -->
+
+## Getting Started
+
+> If you use Gitpod, this is all done for you, when spinning up a new workspace
+
+This project uses `npm` to manage repo-wide dependencies, such as
+styling/linting tools, and the toolchain to enforce them as part of committing
+code.
+
+First, run `npm i` at the root to install those dependencies.
+
 ## Design Documents
 
 - [Design](design)
 
 ## Projects
 
-- [Developer CLI](dev-cli)
+- [`ao` CLI](./dev-cli): The `ao` Command Line Interface that can be installed
+  on the command line and used to initialize, build, run, and publish `ao` Lua
+  -> WASM Contracts
+- [`ao` JS Loader](./loader): The `ao` JavaScript Loader that enabled invoking
+  an `ao` Contract, built into WASM, from a JavaScript context.
+- [`ao` JS SDK](./sdk): The `ao` JavaScript SDK that can be used in Node and
+  Browser environment to interact and manage `ao` components
+- [`ao` Compute Unit (`cu`)](./servers/cu): An implementation of the `ao`
+  Compute Unit, aka a `cu` (pronounced "koo" 🦘)
+- [`ao` Messenger Unit (`mu`)](./servers/mu): An implementation of the `ao`
+  Messaenger Unit, aka a `mu` (pronounced "moo" 🐄)
+- [`ao` Lua Examples](./lua-examples): Various examples of projects leveraging
+  `ao` Contracts and components.
 
 ## Contributing
 

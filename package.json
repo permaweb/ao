@@ -1,10 +1,16 @@
 {
   "name": "@permaweb/ao",
   "description": "ao monorepo",
+  "workspaces": [],
   "scripts": {
     "fmt": "standard --fix",
     "prepare": "husky install",
     "staged": "lint-staged"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
   },
   "lint-staged": {
     "**/*.js": [
@@ -13,21 +19,21 @@
     "**/package.json": [
       "sort-package-json"
     ],
-    "**/README.md": [
+    "**/*.md": [
       "markdown-toc-gen insert"
     ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^17.7.2",
+    "@commitlint/config-conventional": "^17.7.0",
     "husky": "^8.0.3",
     "lint-staged": "^14.0.1",
     "markdown-toc-gen": "^1.0.1",
-    "sort-package-json": "^2.5.1",
+    "sort-package-json": "^2.6.0",
     "standard": "^17.1.0"
   },
   "standard": {
     "ignore": [
-      "dev-cli",
-      "contract-env",
       "dist",
       "**/contract.js"
     ]
