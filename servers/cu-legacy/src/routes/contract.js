@@ -2,16 +2,16 @@ import { always, compose } from 'ramda'
 
 import { withMiddleware } from './middleware/index.js'
 
-export const withStateRoutes = (app) => {
+export const withContractRoutes = (app) => {
   // readState
   app.get(
-    '/state/:processId',
+    '/contract/:processId',
     compose(
       withMiddleware,
       always(async (req, res) => {
         const {
           params: { processId },
-          query: { messageId },
+          query: { to: messageId },
           domain: { apis: { readState } }
         } = req
 

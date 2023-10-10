@@ -1,9 +1,6 @@
 # `ao` Compute Unit
 
-> 🚧 This is the old Compute Unit, implemented when `ao` was still SmartWeave
-> based. It is only kept until the new CU and other components are functional
-> and deployed. It should only be modified if the old `ao` needs to be modified
-> ie. a bug fix. See the new cu [here](../cu-legacy).
+> 🚧 Under Construction
 
 This is an spec compliant `ao` Compute Unit, implemented as a Node Express
 Server.

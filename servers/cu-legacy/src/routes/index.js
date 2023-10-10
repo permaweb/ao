@@ -1,9 +1,9 @@
 import { pipe } from 'ramda'
 
-import { withStateRoutes } from './state.js'
+import { withContractRoutes } from './contract.js'
 import { withResultRoutes } from './result.js'
 
 export const withRoutes = pipe(
-  withStateRoutes,
+  withContractRoutes,
   withResultRoutes
 )
