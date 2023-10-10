@@ -5,10 +5,10 @@
   "type": "module",
   "main": "src/app.js",
   "scripts": {
+    "dev": "nodemon",
     "docker-build": "docker build -t cu-app .",
     "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
     "start": "node src/app.js",
-    "start:local": "nodemon",
     "test": "node --test ./src"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "dotenv": "^16.3.1",
     "kill-port": "^2.0.1",
     "nodemon": "^3.0.1"
   }
