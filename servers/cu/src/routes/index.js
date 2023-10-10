@@ -1,14 +1,9 @@
-import baseRoute from './base.js'
-import contractRoute from './contract.js'
-import resultRoute from './result.js'
+import { pipe } from 'ramda'
 
-const mountRoutes = (app) => [
-  ['/', baseRoute],
-  ['/contract', contractRoute],
-  ['/result', resultRoute]
-].reduce(
-  (app, [route, middleware]) => app.use(route, middleware),
-  app
+import { withStateRoutes } from './state.js'
+import { withResultRoutes } from './result.js'
+
+export const withRoutes = pipe(
+  withStateRoutes,
+  withResultRoutes
 )
-
-export default mountRoutes

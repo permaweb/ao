@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+export const domainConfigSchema = z.object({
+  SEQUENCER_URL: z.string().url('SEQUENCER_URL must be a a valid URL'),
+  GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL')
+})
+
 export const interactionSchema = z.object({
   action: z.object({
     input: z.object({

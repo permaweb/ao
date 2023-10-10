@@ -3,3 +3,4 @@ dist
 .VSCodeCounter
 node_modules
 foo.js
+.env
