@@ -7,22 +7,6 @@
     "prepare": "husky install",
     "staged": "lint-staged"
   },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
-  "lint-staged": {
-    "**/*.js": [
-      "standard --fix"
-    ],
-    "**/package.json": [
-      "sort-package-json"
-    ],
-    "**/*.md": [
-      "markdown-toc-gen insert"
-    ]
-  },
   "devDependencies": {
     "@commitlint/cli": "^17.7.2",
     "@commitlint/config-conventional": "^17.7.0",
