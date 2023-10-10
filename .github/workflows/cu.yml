@@ -1,16 +1,16 @@
-name: 🚧 Test & Deploy AO Legacy Compute Unit
+name: 🦘 Test & Deploy AO Compute Unit
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "servers/cu-legacy/**"
+      - "servers/cu/**"
   push:
     branches:
       - main
     paths:
-      - "servers/cu-legacy/**"
+      - "servers/cu/**"
 
 defaults:
   run:
@@ -32,10 +32,10 @@ jobs:
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
         with:
-          working-directory: servers/cu-legacy
+          working-directory: servers/cu
 
       - name: ⚡ Run Tests
-        working-directory: servers/cu-legacy
+        working-directory: servers/cu
         run: |
           npm test
         env:
@@ -44,7 +44,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # Only deploy on main branch
-    if: github.ref == 'refs/heads/main'
+    # disable deploy for now.
+    if: github.ref == 'refs/heads/main' && false
     # Uncomment if we ever start running the release job
     # needs: [test, release]
     needs: [test]
@@ -62,7 +63,7 @@ jobs:
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
         with:
-          working-directory: servers/cu-legacy
+          working-directory: servers/cu
 
       - name: 👀 Env
         run: |
@@ -74,8 +75,8 @@ jobs:
           VER=`npm --version`; echo "npm ver:    $VER"
 
       - name: 🚀 Deploy
-        working-directory: servers/cu-legacy
+        working-directory: servers/cu
         env:
-          DEPLOY_HOOK: ${{ secrets.CU_LEGACY_RENDER_DEPLOY_HOOK }}
+          DEPLOY_HOOK: ${{ secrets.CU_RENDER_DEPLOY_HOOK }}
         run: |
           node deploy.js
