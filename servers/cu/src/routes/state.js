@@ -1,6 +1,12 @@
 import { always, compose } from 'ramda'
+import { z } from 'zod'
 
 import { withMiddleware } from './middleware/index.js'
+
+const inputSchema = z.object({
+  processId: z.string().min(1, 'an ao process id is required'),
+  messageId: z.string().optional()
+})
 
 export const withStateRoutes = (app) => {
   // readState
@@ -11,11 +17,12 @@ export const withStateRoutes = (app) => {
       always(async (req, res) => {
         const {
           params: { processId },
-          query: { messageId },
+          query: { to: messageId },
           domain: { apis: { readState } }
         } = req
 
-        return res.send(await readState(processId, messageId))
+        const input = inputSchema.parse({ processId, messageId })
+        return res.send(await readState(input))
       })
     )()
   )

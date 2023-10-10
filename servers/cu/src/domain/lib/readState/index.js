@@ -12,14 +12,17 @@ import { evaluateWith } from './evaluate.js'
  * @property {any} sequencer
  * @property {any} db
  *
- * @typedef ContractResult
+ * @typedef State
  * @property {any} state
  * @property {any} result
  *
+ * @typedef ReadStateArgs
+ * @property {string} processId
+ * @property {string} messageId
+ *
  * @callback ReadState
- * @param {string} contractId
- * @param {string} sortKeyHeight
- * @returns {Promise<ContractResult>} result
+ * @param {ReadStateArgs} args
+ * @returns {Promise<State>} result
  *
  * @param {Env} - the environment
  * @returns {ReadState}
@@ -30,8 +33,8 @@ export function readStateWith (env) {
   const loadActions = loadActionsWith(env)
   const evaluate = evaluateWith(env)
 
-  return (contractId, sortKeyHeight) => {
-    return of({ id: contractId, to: sortKeyHeight })
+  return ({ processId, messageId }) => {
+    return of({ id: processId, to: messageId })
       .chain(loadSource)
       .chain(loadState)
       .chain(loadActions)
@@ -39,9 +42,9 @@ export function readStateWith (env) {
       .map((ctx) => ctx.output)
       .map(
         env.logger.tap(
-          'readState result for contract "%s" to sortKey "%s": %O',
-          contractId,
-          sortKeyHeight || 'latest'
+          'readState result for process "%s" to message "%s": %O',
+          processId,
+          messageId || 'latest'
         )
       )
       .toPromise()
