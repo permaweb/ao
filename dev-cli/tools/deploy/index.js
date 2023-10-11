@@ -5,6 +5,8 @@ import { WarpFactory, defaultCacheOptions } from 'warp-contracts'
 import Arweave from 'arweave'
 import { z } from 'zod'
 
+console.log(process.env)
+
 function env (key) {
   const res = z.string().min(1).safeParse(process.env[key])
   if (!res.success) {
@@ -26,12 +28,12 @@ function parseWallet (wallet64) {
 /**
  * Add U Tags in order to Mint U as part of CI
  */
-const U_TAGS = {
-  'App-Name': 'SmartWeaveAction',
-  'App-Version': '0.3.0',
-  Input: '{"function":"mint"}',
-  Contract: 'KTzTXT_ANmF84fWEKHzWURD1LWd9QaFR9yfYUwH2Lxw'
-}
+const U_TAGS = [
+  { name: 'App-Name', value: 'SmartWeaveAction' },
+  { name: 'App-Version', value: '0.3.0' },
+  { name: 'Input', value: JSON.stringify({ function: 'mint' }) },
+  { name: 'Contract', value: 'KTzTXT_ANmF84fWEKHzWURD1LWd9QaFR9yfYUwH2Lxw' }
+]
 
 const actions = {
   async UPLOAD_BINARIES () {
