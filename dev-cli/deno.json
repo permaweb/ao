@@ -2,12 +2,14 @@
   "version": "0.0.12",
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
-    "build-cli": "./tools/build.sh",
+    "build-binaries": "./tools/build.sh",
+    "deploy-binaries": "ACTION=UPLOAD_BINARIES node deploy/index.js",
+    "build-install-script": "deno run -A tools/create-install-script.js",
+    "deploy-install-script": "ACTION=UPLOAD_INSTALL_SCRIPT node deploy/index.js",
     "bump": "deno run -A tools/update-version.js",
     "test": "echo 'NOT IMPLEMENTED'",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
     "toc": "deno run -A npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",
-    "install-script": "deno run -A tools/create-install-script.js",
     "install-local": "./tools/local-install.sh"
   },
   "fmt": {
@@ -17,7 +19,9 @@
     "exclude": [
       "./src/icons",
       "./example2"
-    ]
+    ],
+    "semiColons": false,
+    "singleQuote": true
   },
   "txMappings": {
     "binaries": {

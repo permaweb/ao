@@ -92,6 +92,11 @@ jobs:
         with:
           node-version: 18
 
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: dev-cli/tools/deploy
+
       - name: 👀 Env
         run: |
           echo "Event name: ${{ github.event_name }}"
@@ -121,34 +126,25 @@ jobs:
         id: build_binaries
         run: |
           BINARIES_OUTPUT_DIR=$(\
-            deno task build-cli \
+            deno task build-binaries \
             | tail -1
           )
           echo "binaries_output_dir=${BINARIES_OUTPUT_DIR}" >> $GITHUB_OUTPUT
         env:
           CI: true
 
-      # Load the Wallet credentials from the Github secret
-      # This action outputs the filePath, which can be accessed via ${{ steps.wallet_json.outputs.filePath }}
-      - name: 🪪 Load Wallet
-        uses: timheuer/base64-to-file@v1
-        id: wallet_json
-        with:
-          fileName: wallet.json
-          encodedString: ${{ secrets.CI_WALLET }}
-
-      - name: Install Bundlr Client
+      - name: Install Irys Client
         run: |
-          npm i -g @bundlr-network/client@0.11.13
+          npm i -g @irys/sdk@0.0.3
 
       - name: 💾 Publish Binaries to Arweave
         id: publish_binaries
-        # Bundlr may fail to deploy the binaries to Arweave for a number of reasons
+        # Irys may fail to deploy the binaries to Arweave for a number of reasons
         # 
         # So before attempting to extract the transaction id from the output
         # We first check to make sure the success message is output
         # 
-        # If the deploy was successful, bundlr outputs text to stdout, the final line containing
+        # If the deploy was successful, We output text to stdout, the final line containing
         # the url of the transaction. We only need the transaction id
         # 
         # So we tail the output and strip the last part of the printed url
@@ -156,31 +152,24 @@ jobs:
         #
         # We also add additional tags in order to mint $U
         run: |
-          bundlr balance ${CI_WALLET_ADDRESS} \
-            -h ${BUNDLR_NODE} \
+          irys balance ${CI_WALLET_ADDRESS} \
+            -h ${IRYS_NODE} \
             -c arweave
 
-          bundlr price $(du -b "${BINARIES_OUTPUT_DIR}" | cut -f1) \
-            -h ${BUNDLR_NODE} \
+          irys price $(du -b "${BINARIES_OUTPUT_DIR}" | cut -f1) \
+            -h ${IRYS_NODE} \
             -c arweave
 
-          BUNDLR_RESULT=$(\
-            bundlr upload-dir ${BINARIES_OUTPUT_DIR} \
-              -t "App-Name" "SmartWeaveAction" "App-Version" "0.3.0" "Input" "{\"function\":\"mint\"}" "Contract" "KTzTXT_ANmF84fWEKHzWURD1LWd9QaFR9yfYUwH2Lxw" \
-              -h ${BUNDLR_NODE} \
-              -w ${WALLET_FILE} \
-              -c arweave \
-              --no-confirmation
-          )
+          IRYS_RESULT=$(deno task deploy-binaries)
 
-          echo "${BUNDLR_RESULT}"
-          if [[ -z $(echo "${BUNDLR_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
-            echo "Binaries were not successfully deployed to Bundlr! See above logs."
+          echo "${IRYS_RESULT}"
+          if [[ -z $(echo "${IRYS_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
+            echo "Binaries were not successfully deployed to Irys! See above logs."
             exit 1
           fi
 
           TRANSACTION_ID=$(\
-            echo "${BUNDLR_RESULT}" \
+            echo "${IRYS_RESULT}" \
             | tail -1 \
             | awk -F/ '{print $NF}'
           )
@@ -188,43 +177,37 @@ jobs:
         env:
           CI_WALLET_ADDRESS: ${{ secrets.CI_WALLET_ADDRESS }}
           BINARIES_OUTPUT_DIR: ${{ steps.build_binaries.outputs.binaries_output_dir }}
-          BUNDLR_NODE: https://node2.bundlr.network
-          WALLET_FILE: ${{ steps.wallet_json.outputs.filePath }}
+          IRYS_NODE: https://node2.irys.xyz
+          CI_WALLET: ${{ secrets.CI_WALLET }}
 
       - name: 🛠 Publish Install Script to Arweave
         id: publish_install
-        # bundlr outputs text to stdout, the final line containing
+        # We output text to stdout, the final line containing
         # the url of the transaction. We only need the transaction id
         # 
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          INSTALL_SCRIPT=$(deno task install-script --binaries=${BINARIES_TRANSACTION_ID})
+          INSTALL_SCRIPT=$(deno task build-install-script --binaries=${BINARIES_TRANSACTION_ID})
 
-          BUNDLR_RESULT=$(\
-            bundlr upload ${INSTALL_SCRIPT} \
-              -h ${BUNDLR_NODE} \
-              -w ${WALLET_FILE} \
-              -c arweave \
-              --no-confirmation
-          )
+          IRYS_RESULT=$(deno task deploy-install-script)
 
-          echo "${BUNDLR_RESULT}"
-          if [[ -z $(echo "${BUNDLR_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
-            echo "Binaries were not successfully deployed to Bundlr! See above logs."
+          echo "${IRYS_RESULT}"
+          if [[ -z $(echo "${IRYS_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
+            echo "Binaries were not successfully deployed to Irys! See above logs."
             exit 1
           fi
 
           TRANSACTION_ID=$(\
-            echo "${BUNDLR_RESULT}" \
+            echo "${IRYS_RESULT}" \
             | tail -1 \
             | awk -F/ '{print $NF}'
           )
           echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
           BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
-          BUNDLR_NODE: https://node2.bundlr.network
-          WALLET_FILE: ${{ steps.wallet_json.outputs.filePath }}
+          IRYS_NODE: https://node2.irys.xyz
+          CI_WALLET: ${{ secrets.CI_WALLET }}
 
       - name: 🤓 Set Git User
         run: |

@@ -127,12 +127,13 @@ commands to run lua and emscripten as well as build tools.
 You will still need `docker`. Learn how to
 [Install Docker](https://www.docker.com/get-started/)
 
-Run `deno task build-cli` to compile the CLI binaries into the `dist` folder.
-There are 3 binaries built:
+Run `deno task build-binaries` to compile the CLI binaries into the `dist` folder.
+There are 4 binaries built:
 
 - Windows
 - Linux
-- Mac
+- Mac ARM
+- Mac x86_64
 
 You can run `deno task install-local` to install the binary directly from the
 `dist` folder, useful for local development on the CLI.
@@ -148,17 +149,17 @@ Workflow Dispatch that will:
 
 - Check that the version is Semver
 - Build the CLI binaries
-- Publish the binaries to Arweave, via Bundlr Node 2
+- Publish the binaries to Arweave, via Irys Node 2
 - Build the install script
-- Publish the install script to Arweave, via Bundlr Node 2
+- Publish the install script to Arweave, via Irys Node 2
 - Update `version` and `txMappings` in `deno.json`
 - `push` `deno.json` updates back to the remote repo
 
 > Because the binaries are large, ~100MB for the combined 3, we have to fund a
-> Bundlr Node in order to upload them to Arweave. The CLI uses a wallet,
-> `lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps`, that has funded Bundlr Node 2
+> Irys Node in order to upload them to Arweave. The CLI uses a wallet,
+> `lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps`, that has funded Irys Node 2
 > with a very small amount of funds (`CI_WALLET` env variable). If the funds are
 > depleted, then the CLI will no longer be able to publish the CLI to Arweave.
-> For now, if the Bundlr Node needs more funding, contact `@TillaTheHun0`.
+> For now, if the Irys Node needs more funding, contact `@TillaTheHun0`.
 > (Maybe eventually we add a Workflow Dispatch script to automatically fund the
-> Bundlr Node)
+> Irys Node)
