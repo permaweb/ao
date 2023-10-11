@@ -5,8 +5,6 @@ import { WarpFactory, defaultCacheOptions } from 'warp-contracts'
 import Arweave from 'arweave'
 import { z } from 'zod'
 
-console.log(process.env)
-
 function env (key) {
   const res = z.string().min(1).safeParse(process.env[key])
   if (!res.success) {

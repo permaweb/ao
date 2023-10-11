@@ -180,6 +180,15 @@ jobs:
           IRYS_NODE: https://node2.irys.xyz
           CI_WALLET: ${{ secrets.CI_WALLET }}
 
+      - name: 🛠 Build Install Script
+        id: build_install_script
+        run: |
+          INSTALL_SCRIPT=$(deno task build-install-script --binaries=${BINARIES_TRANSACTION_ID})
+          echo "install_script=${INSTALL_SCRIPT}" >> $GITHUB_OUTPUT
+        env:
+          CI: true
+          BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
+
       - name: 🛠 Publish Install Script to Arweave
         id: publish_install
         # We output text to stdout, the final line containing
@@ -188,8 +197,6 @@ jobs:
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          INSTALL_SCRIPT=$(deno task build-install-script --binaries=${BINARIES_TRANSACTION_ID})
-
           IRYS_RESULT=$(deno task deploy-install-script)
 
           echo "${IRYS_RESULT}"
@@ -205,9 +212,9 @@ jobs:
           )
           echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
-          BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
           IRYS_NODE: https://node2.irys.xyz
           CI_WALLET: ${{ secrets.CI_WALLET }}
+          INSTALL_SCRIPT: ${{ steps.build_install_script.outputs.install_script }}
 
       - name: 🤓 Set Git User
         run: |
