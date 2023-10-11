@@ -5,16 +5,11 @@ export const domainConfigSchema = z.object({
   GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL')
 })
 
-export const interactionSchema = z.object({
-  action: z.object({
-    input: z.object({
-      function: z.string()
-    }).passthrough(),
-    caller: z.string()
-  }).passthrough(),
+export const messageSchema = z.object({
+  action: z.record(z.any()),
   sortKey: z.string(),
-  SWGlobal: z.object({
-    contract: z.object({
+  AoGlobal: z.object({
+    process: z.object({
       id: z.string(),
       owner: z.string()
     }),
@@ -23,11 +18,7 @@ export const interactionSchema = z.object({
       owner: z.string(),
       target: z.string(),
       quantity: z.number(),
-      reward: z.number(),
-      tags: z.array(z.object({
-        name: z.string(),
-        value: z.string()
-      }))
+      reward: z.number()
     }),
     block: z.object({
       height: z.number(),
@@ -48,26 +39,24 @@ export const evaluationSchema = z.object({
   parent: z.string().min(1),
   /**
    * The date when this record was created, effectively
-   * when this record was cached
+   * when this record was evaluated
    *
    * not to be confused with when the transaction was placed on chain
    */
-  cachedAt: z.preprocess(
+  evaluatedAt: z.preprocess(
     (
       arg
     ) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
   ),
   /**
-   * The action performed by the interaction
+   * The action applied to the process
    */
   action: z.record(z.any()),
   /**
-   * The output received after applying the interaction
-   * to the previous state.
+   * ao processes return { state, result: { messages, spawns, output, error } }
    *
-   * See https://github.com/ArweaveTeam/SmartWeave/blob/master/CONTRACT-GUIDE.md#contract-format-and-interface
-   * for shape
+   * This is the output of process, after the action was applied
    */
   output: z.object({
     state: z.record(z.any()).optional(),

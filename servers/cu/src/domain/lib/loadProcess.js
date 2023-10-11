@@ -81,6 +81,6 @@ export function loadProcessWith (env) {
       .chain(getProcessMeta)
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded process and appended to ctx'))
+      .map(logger.tap('Loaded process and appended to ctx %j'))
   }
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { evaluationSchema, interactionSchema } from './model.js'
+import { evaluationSchema, messageSchema } from './model.js'
 
 const tagSchema = z.object({
   name: z.string(),
@@ -30,7 +30,7 @@ export const saveEvaluationSchema = z.function()
   .args(evaluationSchema)
   .returns(z.promise(z.any()))
 
-export const loadInteractionsSchema = z.function()
+export const loadMessagesSchema = z.function()
   .args(
     z.object({
       id: z.string(),
@@ -39,4 +39,4 @@ export const loadInteractionsSchema = z.function()
       to: z.string().optional()
     })
   )
-  .returns(z.promise(z.array(interactionSchema)))
+  .returns(z.promise(z.array(messageSchema)))
