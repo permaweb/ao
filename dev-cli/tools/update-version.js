@@ -20,8 +20,6 @@ import { join } from 'https://deno.land/std@0.200.0/path/mod.ts'
 
 import * as semver from 'https://deno.land/x/semver@v1.4.1/mod.ts'
 
-const manifest = JSON.parse(Deno.readTextFile('./deno.json'))
-
 async function main () {
   const { version: inputVersion } = parse(Deno.args)
 
@@ -30,6 +28,8 @@ async function main () {
       'Insufficient arguments. "--version" is required'
     )
   }
+
+  const manifest = JSON.parse(await Deno.readTextFile('./deno.json'))
 
   const version = semver.clean(inputVersion)
 

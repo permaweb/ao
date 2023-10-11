@@ -25,10 +25,10 @@
 import { parse } from 'https://deno.land/std@0.200.0/flags/mod.ts'
 import { join } from 'https://deno.land/std@0.200.0/path/mod.ts'
 
-const manifest = JSON.parse(Deno.readTextFile('./deno.json'))
-
 async function main () {
   const { binaries, install, version, latest } = parse(Deno.args)
+
+  const manifest = JSON.parse(await Deno.readTextFile('./deno.json'))
 
   if (!binaries || !install || !version) {
     throw new Error(
