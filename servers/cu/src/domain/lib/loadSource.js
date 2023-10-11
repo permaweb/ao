@@ -1,8 +1,8 @@
-import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { applySpec, assoc, equals, isNotNil, pipe, prop, reduce } from 'ramda'
+import { fromPromise, of } from 'hyper-async'
+import { mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
-import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
+import { loadTransactionDataSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -47,60 +47,29 @@ function getSourceBufferWith ({ loadTransactionData }) {
     loadTransactionDataSchema.implement(loadTransactionData)
   )
 
-  return (srcId) => {
-    return loadTransactionData(srcId)
-      .chain(fromPromise((res) => res.arrayBuffer()))
-  }
-}
-
-/**
- * @callback LoadProcessMeta
- * @param {string} id - the id of the contract whose src is being loaded
- * @returns {Async<string>}
- *
- * @param {Env} env
- * @returns {LoadProcessMeta}
- */
-function getProcessMetaWith ({ loadTransactionMeta, logger }) {
-  loadTransactionMeta = fromPromise(
-    loadTransactionMetaSchema.implement(loadTransactionMeta)
-  )
-
-  const checkTag = (name, pred) => tags => pred(tags[name])
-    ? Resolved(tags)
-    : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on contract source`)
-
-  return (processId) => {
-    return loadTransactionMeta(processId)
-      .map(prop('tags'))
-      .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
-      .chain(checkTag('Content-Type', equals('application/wasm')))
-      .chain(checkTag('Contract-Type', equals('ao')))
-      .chain(checkTag('Contract-Src', isNotNil))
-      .bimap(
-        logger.tap('Verifying process source failed: %s'),
-        logger.tap('Verified process source')
+  return (tags) => {
+    return of(tags)
+      .map(prop('Contract-Src'))
+      .chain(srcId =>
+        of(srcId)
+          .chain(loadTransactionData)
+          .chain(fromPromise((res) => res.arrayBuffer()))
+          .map(src => ({ src, srcId }))
       )
-      .map(applySpec({
-        srcId: pipe(
-          prop('Contract-Src'),
-          logger.tap('Found Contract-Src id: %s')
-        )
-      }))
   }
 }
 
 /**
  * @typedef Args
- * @property {string} id - the id of the contract
+ * @property {string} id - the id of the process
  *
  * @typedef Result
- * @property {string} id - the id of the contract
+ * @property {string} srcId - the id of the process source
  * @property {ArrayBuffer} src - an array buffer that contains the Contract Wasm Src
  *
  * @callback LoadSource
  * @param {Args} args
- * @returns {Async<Result>}
+ * @returns {Async<Result & Args>}
  *
  * @param {Env} env
  * @returns {LoadSource}
@@ -109,15 +78,12 @@ export function loadSourceWith (env) {
   const logger = env.logger.child('loadProcess')
   env = { ...env, logger }
 
-  const getProcessMeta = getProcessMetaWith(env)
   const getSourceBuffer = getSourceBufferWith(env)
 
   return (ctx) => {
-    return of(ctx.id)
-      .chain(getProcessMeta)
-      .chain(({ srcId }) =>
-        getSourceBuffer(srcId).map((src) => ({ ...ctx, srcId, src }))
-      )
+    return of(ctx.tags)
+      .chain(getSourceBuffer)
+      .map(mergeRight(ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded process source and appended to ctx'))
   }
