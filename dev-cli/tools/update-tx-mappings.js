@@ -1,3 +1,5 @@
+/* global Deno */
+
 /**
  * Add new Canonical Version name -> Transaction id mapping
  * in the manifest file.
@@ -20,34 +22,34 @@
  * Whether these transaction ids should be used as the latest version in the manifest
  * --latest
  */
-import { parse } from "https://deno.land/std@0.200.0/flags/mod.ts";
-import { join } from "https://deno.land/std@0.200.0/path/mod.ts";
+import { parse } from 'https://deno.land/std@0.200.0/flags/mod.ts'
+import { join } from 'https://deno.land/std@0.200.0/path/mod.ts'
 
-import manifest from "../deno.json" assert { type: "json" };
+const manifest = JSON.parse(Deno.readTextFile('./deno.json'))
 
-async function main() {
-  const { binaries, install, version, latest } = parse(Deno.args);
+async function main () {
+  const { binaries, install, version, latest } = parse(Deno.args)
 
   if (!binaries || !install || !version) {
     throw new Error(
-      'Insufficient arguments. "--binaries", "--install", and "--version" are required',
-    );
+      'Insufficient arguments. "--binaries", "--install", and "--version" are required'
+    )
   }
 
   if (latest) {
-    console.log(`Updating latest txMappings to version ${version}...`);
-    manifest.txMappings.binaries.latest = binaries;
-    manifest.txMappings.install.latest = install;
+    console.log(`Updating latest txMappings to version ${version}...`)
+    manifest.txMappings.binaries.latest = binaries
+    manifest.txMappings.install.latest = install
   }
 
-  console.log(`Writing new txMappings for version ${version}...`);
-  manifest.txMappings.binaries[version] = binaries;
-  manifest.txMappings.install[version] = install;
+  console.log(`Writing new txMappings for version ${version}...`)
+  manifest.txMappings.binaries[version] = binaries
+  manifest.txMappings.install[version] = install
 
-  const here = new URL(import.meta.url).pathname;
-  const dest = join(here, "../..", "deno.json");
+  const here = new URL(import.meta.url).pathname
+  const dest = join(here, '../..', 'deno.json')
 
-  await Deno.writeTextFile(dest, JSON.stringify(manifest, null, 2));
+  await Deno.writeTextFile(dest, JSON.stringify(manifest, null, 2))
 }
 
-await main();
+await main()
