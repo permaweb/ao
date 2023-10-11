@@ -17,6 +17,10 @@ deno compile --allow-read --allow-write --allow-run --output "${OUTPUT_DIR}/ao" 
 zip -j "${OUTPUT_DIR}/ao-aarch64-apple-darwin.zip" "${OUTPUT_DIR}/ao"
 rm "${OUTPUT_DIR}/ao"
 
+deno compile --allow-read --allow-write --allow-run --output "${OUTPUT_DIR}/ao" --target x86_64-apple-darwin src/mod.js
+zip -j "${OUTPUT_DIR}/ao-x86_64-apple-darwin.zip" "${OUTPUT_DIR}/ao"
+rm "${OUTPUT_DIR}/ao"
+
 deno compile --allow-read --allow-write --allow-run --output "${OUTPUT_DIR}/ao".exe --target x86_64-pc-windows-msvc src/mod.js
 zip -j "${OUTPUT_DIR}/ao-x86_64-pc-windows-msvc.exe.zip" "${OUTPUT_DIR}/ao.exe"
 rm "${OUTPUT_DIR}/ao.exe"
