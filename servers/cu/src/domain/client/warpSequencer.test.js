@@ -3,7 +3,7 @@ import * as assert from 'node:assert'
 
 import { loadInteractionsSchema } from '../dal.js'
 import { createLogger } from '../logger.js'
-import { loadInteractionsWith } from './warp-sequencer.js'
+import { loadInteractionsWith } from './warpSequencer.js'
 
 const SEQUENCER_URL = 'https://gw.warp.cc'
 const CONTRACT = 'SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY'

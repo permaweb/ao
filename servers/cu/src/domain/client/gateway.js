@@ -8,7 +8,7 @@ import { z } from 'zod'
  * @property {string} GATEWAY_URL
  *
  * @callback LoadTransactionMeta
- * @param {string} id - the id of the contract whose src is being loaded
+ * @param {string} id - the id of the process whose src is being loaded
  * @returns {Async<z.infer<typeof transactionConnectionSchema>['data']['transactions']['edges'][number]['node']>}
  *
  * @param {Env1} env
@@ -17,9 +17,9 @@ import { z } from 'zod'
 export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
   // TODO: create a dataloader and use that to batch load contracts
 
-  const GET_CONTRACTS_QUERY = `
-    query GetContracts ($contractIds: [ID!]!) {
-      transactions(ids: $contractIds) {
+  const GET_PROCESSES_QUERY = `
+    query GetProcesses ($processIds: [ID!]!) {
+      transactions(ids: $processIds) {
         edges {
           node {
             owner {
@@ -56,8 +56,8 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            query: GET_CONTRACTS_QUERY,
-            variables: { contractIds: [id] }
+            query: GET_PROCESSES_QUERY,
+            variables: { processIds: [id] }
           })
         })
           .then((res) => res.json())
@@ -73,14 +73,14 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
    * @property {string} GATEWAY_URL
    *
    * @callback LoadTransactionData
-   * @param {string} id - the id of the contract whose src is being loaded
+   * @param {string} id - the id of the process whose src is being loaded
    * @returns {Async<Response>}
    *
    * @param {Env2} env
    * @returns {LoadTransactionData}
    */
 export function loadTransactionDataWith ({ fetch, GATEWAY_URL }) {
-  // TODO: create a dataloader and use that to batch load contracts
+  // TODO: create a dataloader and use that to batch load processes
 
   return (id) =>
     of(id)
