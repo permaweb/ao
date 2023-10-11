@@ -75,7 +75,7 @@ function getSourceBufferWith ({ loadTransactionData }) {
  * @returns {LoadSource}
  */
 export function loadSourceWith (env) {
-  const logger = env.logger.child('loadProcess')
+  const logger = env.logger.child('loadSource')
   env = { ...env, logger }
 
   const getSourceBuffer = getSourceBufferWith(env)
@@ -85,6 +85,6 @@ export function loadSourceWith (env) {
       .chain(getSourceBuffer)
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded process source and appended to ctx'))
+      .map(logger.tap('Loaded process source and appended to ctx %j'))
   }
 }
