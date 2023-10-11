@@ -154,11 +154,11 @@ jobs:
         run: |
           irys balance ${CI_WALLET_ADDRESS} \
             -h ${IRYS_NODE} \
-            -c arweave
+            -t arweave
 
           irys price $(du -b "${BINARIES_OUTPUT_DIR}" | cut -f1) \
             -h ${IRYS_NODE} \
-            -c arweave
+            -t arweave
 
           IRYS_RESULT=$(deno task deploy-binaries)
 
