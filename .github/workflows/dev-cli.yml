@@ -47,7 +47,7 @@ jobs:
         env:
           CI: true
 
-  test-publish-command:
+  test-node-commands:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -62,10 +62,10 @@ jobs:
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
         with:
-          working-directory: dev-cli/container/src/publish
+          working-directory: dev-cli/container/src/node
 
       - name: ⚡ Run Tests
-        working-directory: dev-cli/container/src/publish
+        working-directory: dev-cli/container/src/node
         run: |
           npm test
         env:
