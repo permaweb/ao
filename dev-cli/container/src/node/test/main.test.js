@@ -4,10 +4,12 @@ import * as assert from 'node:assert'
 import {
   ArtifactNotFoundError,
   BundlerHostNotSupportedError,
+  InvalidFundAmountError,
   SUPPORTED_BUNDLERS,
   WalletNotFoundError,
   checkBalanceWith,
   createContractWith,
+  fundWith,
   uploadWith
 } from '../src/main.js'
 import { DEFAULT_BUNDLER_HOST } from '../src/defaults.js'
@@ -281,6 +283,106 @@ describe('checkBalanceWith', () => {
     await balance({
       walletPath: '/path/to/wallet.json',
       to: 'https://unsupported.bundler'
+    }).then(assert.fail)
+      .catch((err) => assert.equal(err.code, BundlerHostNotSupportedError.code))
+  })
+})
+
+describe('fundWith', () => {
+  const happy = {
+    walletExists: async () => true,
+    readWallet: async () => ({ id: 'id-123' }),
+    funders: {
+      [SUPPORTED_BUNDLERS.IRYS]: async () => ({ id: '123' })
+    }
+  }
+
+  it('should fund the bundler', async () => {
+    const fund = fundWith(happy)
+
+    const res = await fund({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST,
+      amount: 500000000
+    })
+
+    assert.equal(res, '123')
+  })
+
+  it('should default the to if not provided', async () => {
+    const fund = fundWith({
+      ...happy,
+      funders: {
+        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          assert.deepStrictEqual(params, {
+            wallet: { id: 'id-123' },
+            to: DEFAULT_BUNDLER_HOST,
+            amount: 500000000
+          })
+
+          return { id: '123' }
+        }
+      }
+    })
+
+    await fund({
+      walletPath: '/path/to/wallet.json',
+      amount: 500000000
+    })
+  })
+
+  it('should pass the correct args to funder', async () => {
+    const fund = fundWith({
+      ...happy,
+      funders: {
+        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          assert.deepStrictEqual(params, {
+            wallet: { id: 'id-123' },
+            to: DEFAULT_BUNDLER_HOST,
+            amount: 500000000
+          })
+
+          return { id: '123' }
+        }
+      }
+    })
+
+    await fund({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST,
+      amount: 500000000
+    })
+  })
+
+  it('should throw if the amount is not greater than 0', async () => {
+    const fund = fundWith(happy)
+
+    await fund({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST,
+      amount: -20
+    }).then(assert.fail)
+      .catch((err) => assert.equal(err.code, InvalidFundAmountError.code))
+  })
+
+  it('should throw if the wallet does not exist', async () => {
+    const fund = fundWith({ ...happy, walletExists: async () => false })
+
+    await fund({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST,
+      amount: 500000000
+    }).then(assert.fail)
+      .catch((err) => assert.equal(err.code, WalletNotFoundError.code))
+  })
+
+  it('should throw if the bundler is not supported', async () => {
+    const fund = fundWith(happy)
+
+    await fund({
+      walletPath: '/path/to/wallet.json',
+      to: 'https://unsupported.bundler',
+      amount: 500000000
     }).then(assert.fail)
       .catch((err) => assert.equal(err.code, BundlerHostNotSupportedError.code))
   })

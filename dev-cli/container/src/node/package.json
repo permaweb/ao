@@ -7,6 +7,7 @@
   "main": "src/main.js",
   "bin": {
     "ao-bundler-balance": "src/bin/bundler-balance.js",
+    "ao-bundler-fund": "src/bin/bundler-fund.js",
     "ao-contract": "src/bin/ao-contract.js",
     "ao-source": "src/bin/ao-source.js"
   },

@@ -14,6 +14,11 @@ export class BundlerHostNotSupportedError extends Error {
   code = 'BundleHostNotSupported'
 }
 
+export class InvalidFundAmountError extends Error {
+  static code = 'InvalidFundAmount'
+  code = 'InvalidFundAmount'
+}
+
 export const SUPPORTED_BUNDLERS = {
   IRYS: 'IRYS'
 }
@@ -144,7 +149,7 @@ export const createContractWith =
 
 /**
  * @callback Balance
- * @param { wallet: string, to: string, ...rest: Object<string, unknown> } args
+ * @param { wallet: string, to: string } args
  *
  * @typedef BalanceEnvironment
  * @property {WalletExists} walletExists
@@ -178,4 +183,44 @@ export const checkBalanceWith =
       const wallet = await readWallet(walletPath)
       const res = await balance({ wallet, to })
       return res.balance
+    }
+
+/**
+ * @callback Fund
+ * @param { wallet: string, to: string, amount: number } args
+ *
+ * @typedef FundEnvironment
+ * @property {WalletExists} walletExists
+ * @property {ReadWallet} readWallet
+ * @property {Object<string, Fund>} funders
+ *
+ * @param {FundEnvironment} env
+ *
+ * @typedef FunderArgs
+ * @property {string} walletPath
+ * @property {string} to
+ * @property {number} amount
+ *
+ * @callback Funder
+ * @param {FunderArgs} args
+ * @returns {Promise<string>} the transaction id to fund the bundler
+ *
+ * @returns {Funder}
+ */
+export const fundWith =
+  ({ walletExists, readWallet, funders }) =>
+    async ({ walletPath, to, amount }) => {
+      if (!amount || amount < 0) throw new InvalidFundAmountError()
+      if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
+
+      to = to || DEFAULT_BUNDLER_HOST
+
+      const bundlerHost = determineBundlerHost(to)
+      if (!bundlerHost) throw new BundlerHostNotSupportedError()
+
+      const fund = funders[bundlerHost]
+
+      const wallet = await readWallet(walletPath)
+      const res = await fund({ wallet, to, amount })
+      return res.id
     }
