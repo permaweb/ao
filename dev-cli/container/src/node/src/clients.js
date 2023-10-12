@@ -21,3 +21,10 @@ export const BALANCERS = {
     return irys.getLoadedBalance().then(balance => ({ balance }))
   }
 }
+
+export const FUNDERS = {
+  [SUPPORTED_BUNDLERS.IRYS]: ({ wallet, to: irysNode, amount }) => {
+    const irys = new Irys({ url: irysNode, token: 'arweave', key: wallet })
+    return irys.fund(amount).then(res => ({ id: res.id }))
+  }
+}
