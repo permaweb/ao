@@ -8,7 +8,6 @@ import { command as Run } from "./commands/run.js"
 import { command as Build } from "./commands/build.js"
 import { command as Publish } from "./commands/publish.js"
 import { command as Contract } from './commands/contract.js'
-import { command as Process } from "./commands/process.js"
 import { command as Bundler } from "./commands/bundler.js"
 
 const cli = new Command()
@@ -22,7 +21,6 @@ const cli = new Command()
   .command("build", Build)
   .command("publish", Publish)
   .command("contract", Contract)
-  .command("process", Process)
   .command("bundler", Bundler)
 
 await cli.parse(Deno.args)

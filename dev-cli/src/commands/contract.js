@@ -51,7 +51,7 @@ export async function contract ({ wallet, tag, source }, initialState) {
 }
 
 export const command = new Command()
-  .description('<DEPRECATED> Use the process command for ao Processes\nCreate an ao Contract using a published ao Source')
+  .description('Create an ao Contract using a published ao Source')
   .option(
     '-w, --wallet <path:string>',
     'the path to the wallet that should be used to sign the transaction',
