@@ -1,6 +1,6 @@
 import { Command } from "./deps.js"
 
-import manifest from "../deno.json" assert { type: "json" }
+import { VERSION } from "./versions.js"
 
 import { command as Init } from "./commands/init.js"
 import { command as Repl } from "./commands/repl.js"
@@ -12,7 +12,7 @@ import { command as Bundler } from "./commands/bundler.js"
 
 const cli = new Command()
   .name("ao")
-  .version(manifest.version)
+  .version(VERSION.CLI)
   .description("The ao CLI for building and publishing ao Processes")
   .action(() => cli.showHelp())
   .command("init", Init)

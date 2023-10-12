@@ -2,6 +2,7 @@
 
 import { Command } from '../deps.js'
 import { tagsArg, walletArgs } from '../utils.js'
+import { VERSION } from '../versions.js'
 
 function sourceArgs (src) {
   return [
@@ -43,7 +44,7 @@ export async function contract ({ wallet, tag, source }, initialState) {
       'linux/amd64',
       ...cmdArgs,
       '-it',
-      'p3rmaw3b/ao',
+      `p3rmaw3b/ao:${VERSION.IMAGE}`,
       'ao-contract'
     ]
   })
