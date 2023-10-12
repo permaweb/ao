@@ -92,17 +92,17 @@ RUN chmod +x /usr/local/bin/emcc-lua
 ENV CC 'emcc -s WASM=1'
 ENV NM 'llvm-nm'
 
-###############
-### Publish ###
-###############
-# We first create a directory for the publish to be placed
+###########################################
+### Publish, Bundler, Process, Contract ###
+###########################################
+# We first create a directory for the node impls to be placed
 # and dependencies installed
 # 
 # By running npm link, we allow any commands exposed by
-# the publish module to be ran globally within the container
-RUN mkdir -p /opt/publish
-COPY ./src/publish /opt/publish
-RUN cd /opt/publish && \
+# the node module to be ran globally within the container
+RUN mkdir -p /opt/node
+COPY ./src/node /opt/node
+RUN cd /opt/node && \
   npm install && \
   npm link
 
