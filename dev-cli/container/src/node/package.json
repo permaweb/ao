@@ -1,11 +1,12 @@
 {
-  "name": "@permaweb/ao-publish",
+  "name": "@permaweb/ao-cli-node",
   "version": "0.0.1",
-  "description": "publish ability for the ao CLI",
+  "description": "node impls for the CLI",
   "sideEffects": false,
   "type": "module",
   "main": "src/main.js",
   "bin": {
+    "ao-bundler-balance": "src/bin/bundler-balance.js",
     "ao-contract": "src/bin/ao-contract.js",
     "ao-source": "src/bin/ao-source.js"
   },

@@ -27,10 +27,6 @@ export const SUPPORTED_BUNDLERS = {
  * @param {string} path
  * @returns {Promise<boolean>} whether or not the wallet exists at the specified path
  *
- * @callback ArtifactExists
- * @param {string} path
- * @returns {Promise<boolean>} whether or not the artifact exists at the specified path
- *
  * @callback ReadWallet
  * @param {string} path the path to the wallet
  * @returns {Promise<any>} the parsed wallet
@@ -62,16 +58,20 @@ export const parseTags = (tagsStr) =>
  * A reusuable upload client to upload any artifact
  * to any destination that implements the api
  *
+ * @callback ArtifactExists
+ * @param {string} path
+ * @returns {Promise<boolean>} whether or not the artifact exists at the specified path
+ *
  * @callback Upload
  * @param { path: string, wallet: string, to: string, ...rest: Object<string, unknown> } args
  *
- * @typedef Environment
+ * @typedef UploaderEnvironment
  * @property {WalletExists} walletExists
  * @property {ArtifactExists} artifactExists
  * @property {ReadWallet} readWallet
  * @property {Object<string, Upload>} uploaders
  *
- * @param {Environment} env
+ * @param {UploaderEnvironment} env
  *
  * @typedef UploaderArgs
  * @property {string} walletPath
@@ -106,17 +106,14 @@ export const uploadWith =
  * Create a contract
  *
  * @callback Create
- * @param {string} src
- * @param {string} initialState
- * @param {Function} signer
- * @param {Tag[]} tags
+ * @param {{ src: string, tags: Tag[], initialState: Object, wallet: unknown }} args
  *
- * @typedef Environment2
+ * @typedef CreateEnvironment
  * @property {WalletExists} walletExists
  * @property {ReadWallet} readWallet
  * @property {Create} create
  *
- * @param {Environment2} env
+ * @param {CreateEnvironment} env
  *
  * @typedef CreateContractArgs
  * @property {string} walletPath
@@ -143,4 +140,42 @@ export const createContractWith =
         wallet
       })
       return res.contractId
+    }
+
+/**
+ * @callback Balance
+ * @param { wallet: string, to: string, ...rest: Object<string, unknown> } args
+ *
+ * @typedef BalanceEnvironment
+ * @property {WalletExists} walletExists
+ * @property {ReadWallet} readWallet
+ * @property {Object<string, Balance>} balancers
+ *
+ * @param {BalanceEnvironment} env
+ *
+ * @typedef BalancerArgs
+ * @property {string} walletPath
+ * @property {string} to
+ *
+ * @callback Balancer
+ * @param {BalancerArgs} args
+ * @returns {Promise<number>} the balance on the bundler
+ *
+ * @returns {Balancer}
+ */
+export const checkBalanceWith =
+  ({ walletExists, readWallet, balancers }) =>
+    async ({ walletPath, to }) => {
+      if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
+
+      to = to || DEFAULT_BUNDLER_HOST
+
+      const bundlerHost = determineBundlerHost(to)
+      if (!bundlerHost) throw new BundlerHostNotSupportedError()
+
+      const balance = balancers[bundlerHost]
+
+      const wallet = await readWallet(walletPath)
+      const res = await balance({ wallet, to })
+      return res.balance
     }

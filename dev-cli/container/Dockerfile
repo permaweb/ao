@@ -103,6 +103,6 @@ ENV NM 'llvm-nm'
 RUN mkdir -p /opt/node
 COPY ./src/node /opt/node
 RUN cd /opt/node && \
-  npm install && \
+  npm install --omit="dev" && \
   npm link
 
