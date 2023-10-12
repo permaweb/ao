@@ -9,10 +9,11 @@ import { run } from "./commands/run.js";
 import { publish } from "./commands/publish.js";
 import { contract } from "./commands/contract.js";
 
-await new Command()
+const cli = new Command()
   .name("ao")
   .version(manifest.version)
-  .description("Create ao contracts")
+  .description("The ao CLI for building and publishing ao Processes")
+  .action(() => cli.showHelp())
   // init
   .command("init", "create project")
   .arguments("<name:string>")
@@ -59,4 +60,5 @@ await new Command()
   )
   .arguments("<initialstate:string>")
   .action(contract)
-  .parse(Deno.args);
+
+await cli.parse(Deno.args);
