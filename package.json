@@ -19,6 +19,7 @@
   "standard": {
     "ignore": [
       "dist",
+      "mod.js",
       "**/contract.js"
     ]
   }

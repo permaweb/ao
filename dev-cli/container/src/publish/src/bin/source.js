@@ -1,10 +1,10 @@
 #! /usr/bin/env node
 
-import fs from "node:fs";
-import Bundlr from "@bundlr-network/client";
+import fs from 'node:fs'
+import Bundlr from '@bundlr-network/client'
 
-import { parseTags, uploadWith } from "../main.js";
-import { AoContractSourceTags } from "../defaults.js";
+import { parseTags, uploadWith } from '../main.js'
+import { AoContractSourceTags } from '../defaults.js'
 
 /**
  * Implement the uploadWith API such to upload a single file
@@ -24,10 +24,10 @@ const uploadHyperbeamContractSource = uploadWith({
    * implement to upload a single file to Arweave
    */
   upload: ({ path, wallet, to: bundlrNode, ...rest }) => {
-    const bundlr = new Bundlr(bundlrNode, "arweave", wallet);
-    return bundlr.uploadFile(path, rest);
-  },
-});
+    const bundlr = new Bundlr(bundlrNode, 'arweave', wallet)
+    return bundlr.uploadFile(path, rest)
+  }
+})
 
 /**
  * The ao cli publish command ultimately executes this
@@ -39,31 +39,31 @@ const uploadHyperbeamContractSource = uploadWith({
 uploadHyperbeamContractSource({
   walletPath: process.env.WALLET_PATH,
   artifactPath: process.env.CONTRACT_WASM_PATH,
-  to: process.env.BUNDLR_NODE || "https://node2.bundlr.network",
+  to: process.env.BUNDLR_NODE || 'https://node2.bundlr.network',
   tags: [
-    ...parseTags(process.env.TAGS || ""),
+    ...parseTags(process.env.TAGS || ''),
     // Add the proper tags for ao contract source
-    ...AoContractSourceTags,
-  ],
+    ...AoContractSourceTags
+  ]
 })
   // log transaction id
   .then(console.log)
   .catch((err) => {
     switch (err.code) {
-      case "WalletNotFound": {
+      case 'WalletNotFound': {
         console.error(
-          `Wallet not found at the specified path. Make sure to provide the path to your wallet with -w`,
-        );
-        process.exit(1);
+          'Wallet not found at the specified path. Make sure to provide the path to your wallet with -w'
+        )
+        return process.exit(1)
       }
-      case "ArtifactNotFound": {
+      case 'ArtifactNotFound': {
         console.error(
-          "Contract Wasm source not found at the specified path. Make sure to provide the path to your built Wasm",
-        );
-        process.exit(1);
+          'Contract Wasm source not found at the specified path. Make sure to provide the path to your built Wasm'
+        )
+        return process.exit(1)
       }
       default: {
-        throw err;
+        throw err
       }
     }
-  });
+  })

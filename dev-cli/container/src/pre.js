@@ -1,7 +1,9 @@
+/* eslint-disable */
+
 Module.locateFile = (url) => {
-  console.log("file", url);
-  return url;
-};
+  console.log('file', url)
+  return url
+}
 
 // Module.getBinaryPromise = (f) => {
 //   conosle.log(f)
