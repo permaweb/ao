@@ -21,41 +21,41 @@ function walletArgs (wallet) {
   ]
 }
 
-function contractSourceArgs (contractWasmPath) {
-  /**
-   * Use contract.wasm in pwd by default
-   */
-  contractWasmPath = contractWasmPath || 'contract.wasm'
-  const contractName = basename(contractWasmPath)
-  const contractWasmDest = `/src/${contractName}`
+function tagArg (tags) {
+  return tags ? ['-e', `TAGS=${tags.join(',')}`] : []
+}
 
-  const contractWasmSrc = resolve(contractWasmPath)
-
+function sourceArgs (src) {
   return [
-    // mount the wasm contract in pwd to /src
-    '-v',
-    `${contractWasmSrc}:${contractWasmDest}`,
     '-e',
-    `CONTRACT_WASM_PATH=${contractWasmDest}`
+    `CONTRACT_SOURCE_TX=${src}`
   ]
 }
 
-function tagArg (tags) {
-  return tags ? ['-e', `TAGS=${tags.join(',')}`] : []
+function stateArgs (initialStateStr) {
+  try {
+    JSON.parse(initialStateStr)
+    return [
+      '-e',
+      `INITIAL_STATE=${initialStateStr}`
+    ]
+  } catch {
+    throw new Error('initial state must be valid json')
+  }
 }
 
 /**
  * TODO:
  * - Validate existence of wallet
- * - Validate existence of contract wasm
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
-export async function publish ({ wallet, tag }, contractWasmPath) {
+export async function process ({ wallet, tag, source }, initialState) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...contractSourceArgs(contractWasmPath),
-    ...tagArg(tag)
+    ...tagArg(tag),
+    ...sourceArgs(source),
+    ...stateArgs(initialState)
   ]
 
   const p = Deno.run({
@@ -67,23 +67,26 @@ export async function publish ({ wallet, tag }, contractWasmPath) {
       ...cmdArgs,
       '-it',
       'p3rmaw3b/ao',
-      'ao-source'
+      'ao-contract'
     ]
   })
   await p.status()
 }
 
 export const command = new Command()
-  .description('Publish the file to Arweave')
+  .description('Create an ao Process using a published ao Source')
   .option(
     '-w, --wallet <path:string>',
-    'the path to the wallet that should be used to sign the transaction',
-    { required: true }
+    'the path to the wallet that should be used to sign the transaction'
   )
   .option(
     '-t, --tag <tag:string>',
     '"name:value" additional tag to add to the transaction',
     { collect: true }
   )
-  .arguments('<wasmfile:string>')
-  .action(publish)
+  .option(
+    '-s, --source <txId:string>',
+    'the transaction that contains the process source'
+  )
+  .arguments('<initialstate:string>')
+  .action(process)

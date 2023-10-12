@@ -1,5 +1,7 @@
 /* global Deno */
 
+import { Command } from '../deps.js'
+
 export async function repl () {
   const pwd = Deno.cwd()
   const p = Deno.run({
@@ -17,3 +19,7 @@ export async function repl () {
   })
   await p.status()
 }
+
+export const command = new Command()
+  .description('Start a Lua Repl')
+  .action(repl)

@@ -1,5 +1,7 @@
 /* global Deno */
 
+import { Command } from '../deps.js'
+
 export async function run (_, f) {
   const pwd = Deno.cwd()
   const p = Deno.run({
@@ -21,3 +23,8 @@ export async function run (_, f) {
   })
   await p.status()
 }
+
+export const command = new Command()
+  .description('Run a Lua File')
+  .arguments('<file:string>')
+  .action(run)
