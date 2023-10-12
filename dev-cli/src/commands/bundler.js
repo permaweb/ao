@@ -1,14 +1,7 @@
 /* global Deno */
 
 import { Command } from '../deps.js'
-import { walletArgs } from '../utils.js'
-
-function hostArgs (host) {
-  return [
-    '-e',
-    `BUNDLER_HOST=${host}`
-  ]
-}
+import { hostArgs, walletArgs } from '../utils.js'
 
 function amountArgs (amount) {
   return [
@@ -62,28 +55,28 @@ export async function fund ({ wallet, host }, amount) {
 
 const Balance = new Command()
   .description('Check the balance on a bundler')
-  .usage('-w ./wallet.json -h "https://node2.irys.xyz"')
+  .usage('-w ./wallet.json -b "https://node2.irys.xyz"')
   .option(
     '-w, --wallet <path:file>',
     'the path to the wallet that has funded the bundler',
     { required: true }
   )
   .option(
-    '-h, --host <host:string>',
+    '-b, --bundler <bundler:string>',
     'the url of the funded bundler you would like to balance check. Defaults to Irys Node 2'
   )
   .action(balance)
 
 const Fund = new Command()
   .description('Fund the balance on a bundler with the specified amount of winston')
-  .usage('-w ./wallet.json -h "https://node2.irys.xyz" 500000000000')
+  .usage('-w ./wallet.json -h https://node2.irys.xyz 500000000000')
   .option(
     '-w, --wallet <path:file>',
     'the path to the wallet that will be used to fund the bundler',
     { required: true }
   )
   .option(
-    '-h, --host <host:string>',
+    '-b, --bundler <bundler:string>',
     'the url of the bundler you would like to fund. Defaults to Irys Node 2'
   )
   .arguments(
