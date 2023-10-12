@@ -1,45 +1,47 @@
-import { basename, resolve } from "https://deno.land/std@0.200.0/path/mod.ts";
+/* global Deno */
 
-function walletArgs(wallet) {
+import { basename, resolve } from 'https://deno.land/std@0.200.0/path/mod.ts'
+
+function walletArgs (wallet) {
   /**
    * Use wallet in pwd by default
    */
-  wallet = wallet || "wallet.json";
-  const walletName = basename(wallet);
-  const walletDest = `/src/${walletName}`;
+  wallet = wallet || 'wallet.json'
+  const walletName = basename(wallet)
+  const walletDest = `/src/${walletName}`
 
-  const walletSrc = resolve(wallet);
+  const walletSrc = resolve(wallet)
 
   return [
     // mount the wallet to file in /src
-    "-v",
+    '-v',
     `${walletSrc}:${walletDest}`,
-    "-e",
-    `WALLET_PATH=${walletDest}`,
-  ];
+    '-e',
+    `WALLET_PATH=${walletDest}`
+  ]
 }
 
-function contractSourceArgs(contractWasmPath) {
+function contractSourceArgs (contractWasmPath) {
   /**
    * Use contract.wasm in pwd by default
    */
-  contractWasmPath = contractWasmPath || "contract.wasm";
-  const contractName = basename(contractWasmPath);
-  const contractWasmDest = `/src/${contractName}`;
+  contractWasmPath = contractWasmPath || 'contract.wasm'
+  const contractName = basename(contractWasmPath)
+  const contractWasmDest = `/src/${contractName}`
 
-  const contractWasmSrc = resolve(contractWasmPath);
+  const contractWasmSrc = resolve(contractWasmPath)
 
   return [
     // mount the wasm contract in pwd to /src
-    "-v",
+    '-v',
     `${contractWasmSrc}:${contractWasmDest}`,
-    "-e",
-    `CONTRACT_WASM_PATH=${contractWasmDest}`,
-  ];
+    '-e',
+    `CONTRACT_WASM_PATH=${contractWasmDest}`
+  ]
 }
 
-function tagArg(tags) {
-  return tags ? ["-e", `TAGS=${tags.join(",")}`] : [];
+function tagArg (tags) {
+  return tags ? ['-e', `TAGS=${tags.join(',')}`] : []
 }
 
 /**
@@ -49,24 +51,24 @@ function tagArg(tags) {
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
-export async function publish({ wallet, tag }, contractWasmPath) {
+export async function publish ({ wallet, tag }, contractWasmPath) {
   const cmdArgs = [
     ...walletArgs(wallet),
     ...contractSourceArgs(contractWasmPath),
-    ...tagArg(tag),
-  ];
+    ...tagArg(tag)
+  ]
 
   const p = Deno.run({
     cmd: [
-      "docker",
-      "run",
-      "--platform",
-      "linux/amd64",
+      'docker',
+      'run',
+      '--platform',
+      'linux/amd64',
       ...cmdArgs,
-      "-it",
-      "p3rmaw3b/ao",
-      "ao-source",
-    ],
-  });
-  await p.status();
+      '-it',
+      'p3rmaw3b/ao',
+      'ao-source'
+    ]
+  })
+  await p.status()
 }

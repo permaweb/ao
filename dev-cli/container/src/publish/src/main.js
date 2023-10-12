@@ -1,8 +1,8 @@
 class WalletNotFoundError extends Error {
-  code = "WalletNotFound";
+  code = 'WalletNotFound'
 }
 class ArtifactNotFoundError extends Error {
-  code = "ArtifactNotFound";
+  code = 'ArtifactNotFound'
 }
 
 /**
@@ -35,11 +35,11 @@ class ArtifactNotFoundError extends Error {
 export const parseTags = (tagsStr) =>
   tagsStr
     ? tagsStr
-      .split(",")
+      .split(',')
       .map((pairs) => pairs.trim()) // ['foo:bar', 'fizz: buzz']
-      .map((pairs) => pairs.split(":").map((v) => v.trim())) // [['foo', 'bar'], ['fizz', 'buzz']]
+      .map((pairs) => pairs.split(':').map((v) => v.trim())) // [['foo', 'bar'], ['fizz', 'buzz']]
       .map(([name, value]) => ({ name, value }))
-    : []; // TODO: filter out dups?
+    : [] // TODO: filter out dups?
 
 /**
  * A reusuable upload client to upload any artifact
@@ -71,23 +71,23 @@ export const parseTags = (tagsStr) =>
  */
 export const uploadWith =
   ({ walletExists, artifactExists, readWallet, upload }) =>
-  async (
-    { walletPath, artifactPath, to, ...rest },
-  ) => {
-    if (!(await walletExists(walletPath))) throw new WalletNotFoundError();
-    if (!(await artifactExists(artifactPath))) {
-      throw new ArtifactNotFoundError();
-    }
+    async (
+      { walletPath, artifactPath, to, ...rest }
+    ) => {
+      if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
+      if (!(await artifactExists(artifactPath))) {
+        throw new ArtifactNotFoundError()
+      }
 
-    const wallet = await readWallet(walletPath);
-    const res = await upload({
-      path: artifactPath,
-      to,
-      wallet,
-      ...rest,
-    });
-    return res.id;
-  };
+      const wallet = await readWallet(walletPath)
+      const res = await upload({
+        path: artifactPath,
+        to,
+        wallet,
+        ...rest
+      })
+      return res.id
+    }
 
 /**
  * Create a contract
@@ -119,17 +119,17 @@ export const uploadWith =
  */
 export const createContractWith =
   ({ walletExists, readWallet, create }) =>
-  async (
-    { walletPath, src, tags, initialState },
-  ) => {
-    if (!(await walletExists(walletPath))) throw new WalletNotFoundError();
+    async (
+      { walletPath, src, tags, initialState }
+    ) => {
+      if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
 
-    const wallet = await readWallet(walletPath);
-    const res = await create({
-      src,
-      tags,
-      initialState: JSON.parse(initialState),
-      wallet,
-    });
-    return res.contractId;
-  };
+      const wallet = await readWallet(walletPath)
+      const res = await create({
+        src,
+        tags,
+        initialState: JSON.parse(initialState),
+        wallet
+      })
+      return res.contractId
+    }
