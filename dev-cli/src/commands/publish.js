@@ -1,6 +1,7 @@
 /* global Deno */
 
 import { Command, basename, resolve } from '../deps.js'
+import { hostArgs } from '../utils.js'
 
 function walletArgs (wallet) {
   /**
@@ -51,9 +52,10 @@ function tagArg (tags) {
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
-export async function publish ({ wallet, tag }, contractWasmPath) {
+export async function publish ({ wallet, host, tag }, contractWasmPath) {
   const cmdArgs = [
     ...walletArgs(wallet),
+    ...hostArgs(host),
     ...contractSourceArgs(contractWasmPath),
     ...tagArg(tag)
   ]
@@ -79,6 +81,10 @@ export const command = new Command()
     '-w, --wallet <path:string>',
     'the path to the wallet that should be used to sign the transaction',
     { required: true }
+  )
+  .option(
+    '-h, --host <host:string>',
+    'the url of the bundler you would like to fund.'
   )
   .option(
     '-t, --tag <tag:string>',
