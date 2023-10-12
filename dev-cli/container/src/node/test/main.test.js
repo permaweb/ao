@@ -6,6 +6,7 @@ import {
   BundlerHostNotSupportedError,
   SUPPORTED_BUNDLERS,
   WalletNotFoundError,
+  checkBalanceWith,
   createContractWith,
   uploadWith
 } from '../src/main.js'
@@ -122,12 +123,12 @@ describe('uploadWith', () => {
   })
 
   it('should throw if the bundler is not supported', async () => {
-    const upload = uploadWith({ ...happy, uploaders: { NOT_SUPPORTED: async (params) => ({ params, id: '123' }) } })
+    const upload = uploadWith(happy)
 
     await upload({
       walletPath: '/path/to/wallet.json',
       artifactPath: '/path/to/artifact.wasm',
-      to: 'https://fake.place',
+      to: 'https://unsupported.bundler',
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -200,5 +201,87 @@ describe('createContractWith', () => {
       initialState: JSON.stringify({ hello: 'world' })
     }).then(assert.fail)
       .catch((err) => assert.equal(err.code, 'WalletNotFound'))
+  })
+})
+
+describe('checkBalanceWith', () => {
+  const happy = {
+    walletExists: async () => true,
+    readWallet: async () => ({ id: 'id-123' }),
+    balancers: {
+      [SUPPORTED_BUNDLERS.IRYS]: async () => ({ balance: 123 })
+    }
+  }
+
+  it('should retrieve the balance', async () => {
+    const balance = checkBalanceWith(happy)
+
+    const res = await balance({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST
+    })
+
+    assert.equal(res, 123)
+  })
+
+  it('should default the to if not provided', async () => {
+    const balance = checkBalanceWith({
+      ...happy,
+      balancers: {
+        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          assert.deepStrictEqual(params, {
+            wallet: { id: 'id-123' },
+            to: DEFAULT_BUNDLER_HOST
+          })
+
+          return { balance: '123' }
+        }
+      }
+    })
+
+    await balance({
+      walletPath: '/path/to/wallet.json'
+    })
+  })
+
+  it('should pass the correct args to balancer', async () => {
+    const balance = checkBalanceWith({
+      ...happy,
+      balancers: {
+        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          assert.deepStrictEqual(params, {
+            wallet: { id: 'id-123' },
+            to: DEFAULT_BUNDLER_HOST
+          })
+
+          return { balance: '123' }
+        }
+      }
+    })
+
+    await balance({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST
+    })
+  })
+
+  it('should throw if the wallet does not exist', async () => {
+    const balance = checkBalanceWith({ ...happy, walletExists: async () => false })
+
+    await balance({
+      walletPath: '/path/to/wallet.json',
+      to: DEFAULT_BUNDLER_HOST
+    }).then(assert.fail)
+      .catch((err) => assert.equal(err.code, WalletNotFoundError.code))
+  })
+
+  it('should throw if the bundler is not supported', async () => {
+    const balance = checkBalanceWith(happy)
+
+    await balance({
+      walletPath: '/path/to/wallet.json',
+      to: 'https://unsupported.bundler'
+    }).then(assert.fail)
+      .catch((err) => assert.equal(err.code, BundlerHostNotSupportedError.code))
   })
 })

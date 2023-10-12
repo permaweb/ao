@@ -14,3 +14,10 @@ export const UPLOADERS = {
     return irys.uploadFile(path, rest)
   }
 }
+
+export const BALANCERS = {
+  [SUPPORTED_BUNDLERS.IRYS]: ({ wallet, to: irysNode }) => {
+    const irys = new Irys({ url: irysNode, token: 'arweave', key: wallet })
+    return irys.getLoadedBalance().then(balance => ({ balance }))
+  }
+}
