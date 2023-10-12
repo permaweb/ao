@@ -20,6 +20,8 @@ import { join } from 'https://deno.land/std@0.200.0/path/mod.ts'
 
 import * as semver from 'https://deno.land/x/semver@v1.4.1/mod.ts'
 
+import { VERSION } from '../src/versions.js'
+
 async function main () {
   const { version: inputVersion } = parse(Deno.args)
 
@@ -38,11 +40,14 @@ async function main () {
   }
 
   manifest.version = version
+  VERSION.CLI = version
 
   const here = new URL(import.meta.url).pathname
   const dest = join(here, '../..', 'deno.json')
+  const versionDest = join(here, '../..', 'src', 'versions.js')
 
   await Deno.writeTextFile(dest, JSON.stringify(manifest, null, 2))
+  await Deno.writeTextFile(versionDest, `/* eslint-disable */\nexport const VERSION = ${JSON.stringify(VERSION, null, 2)}`)
 
   return version
 }

@@ -247,7 +247,7 @@ jobs:
         # To get around this, we first attempt to push the commit. If it succeeds, the tag is then pushed.
         # If pushing the commit fails, then the step fails and no tag is pushed up, which is what we want.
         run: |
-          git add deno.json
+          git add deno.json src/versions.js
           git commit -m "chore(dev-cli): bump version and update txMappings"
           git push
           git push --tags

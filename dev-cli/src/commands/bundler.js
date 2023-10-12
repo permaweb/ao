@@ -2,6 +2,7 @@
 
 import { Command } from '../deps.js'
 import { hostArgs, walletArgs } from '../utils.js'
+import { VERSION } from '../versions.js'
 
 function amountArgs (amount) {
   return [
@@ -24,7 +25,7 @@ export async function balance ({ wallet, host }) {
       'linux/amd64',
       ...cmdArgs,
       '-it',
-      'p3rmaw3b/ao',
+      `p3rmaw3b/ao:${VERSION.IMAGE}`,
       'ao-bundler-balance'
     ]
   })
@@ -46,7 +47,7 @@ export async function fund ({ wallet, host }, amount) {
       'linux/amd64',
       ...cmdArgs,
       '-it',
-      'p3rmaw3b/ao',
+      `p3rmaw3b/ao:${VERSION.IMAGE}`,
       'ao-bundler-fund'
     ]
   })

@@ -2,6 +2,7 @@
 
 import { Command, basename, resolve } from '../deps.js'
 import { hostArgs } from '../utils.js'
+import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
   /**
@@ -68,7 +69,7 @@ export async function publish ({ wallet, host, tag }, contractWasmPath) {
       'linux/amd64',
       ...cmdArgs,
       '-it',
-      'p3rmaw3b/ao',
+      `p3rmaw3b/ao:${VERSION.IMAGE}`,
       'ao-source'
     ]
   })

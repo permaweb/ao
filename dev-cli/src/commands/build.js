@@ -1,6 +1,7 @@
 /* global Deno */
 
 import { Command } from '../deps.js'
+import { VERSION } from '../versions.js'
 
 export async function build () {
   const pwd = Deno.cwd()
@@ -12,7 +13,7 @@ export async function build () {
       'linux/amd64',
       '-v',
       `${pwd}:/src`,
-      'p3rmaw3b/ao',
+      `p3rmaw3b/ao:${VERSION.IMAGE}`,
       'emcc-lua'
     ]
   })
