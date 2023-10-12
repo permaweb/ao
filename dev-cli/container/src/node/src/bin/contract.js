@@ -15,12 +15,12 @@ const uploadHyperbeamContract = createContractWith({
    * implement to create a contract using the ao SDK
    */
   create: async ({ src, tags, initialState, wallet }) => {
-    return createContract(
-      src,
+    return createContract({
+      srcId: src,
       initialState,
-      createDataItemSigner(wallet),
       tags,
-    ).then((contractId) => ({ contractId }));
+      signer: createDataItemSigner(wallet),
+    }).then((contractId) => ({ contractId }));
   },
 });
 
