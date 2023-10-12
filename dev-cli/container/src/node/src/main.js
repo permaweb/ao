@@ -1,8 +1,21 @@
-class WalletNotFoundError extends Error {
+import { DEFAULT_BUNDLER_HOST } from './defaults.js'
+
+export class WalletNotFoundError extends Error {
+  static code = 'WalletNotFound'
   code = 'WalletNotFound'
 }
-class ArtifactNotFoundError extends Error {
+export class ArtifactNotFoundError extends Error {
+  static code = 'ArtifactNotFound'
   code = 'ArtifactNotFound'
+}
+
+export class BundlerHostNotSupportedError extends Error {
+  static code = 'BundleHostNotSupported'
+  code = 'BundleHostNotSupported'
+}
+
+export const SUPPORTED_BUNDLERS = {
+  IRYS: 'IRYS'
 }
 
 /**
@@ -22,6 +35,10 @@ class ArtifactNotFoundError extends Error {
  * @param {string} path the path to the wallet
  * @returns {Promise<any>} the parsed wallet
  */
+
+export const determineBundlerHost = (host) => {
+  if (host.includes('irys.xyz')) return SUPPORTED_BUNDLERS.IRYS
+}
 
 /**
  * Given a command delimited string of {name}:{value} tags, return an array
@@ -46,15 +63,13 @@ export const parseTags = (tagsStr) =>
  * to any destination that implements the api
  *
  * @callback Upload
- * @param {string} path
- * @param {string} to
- * @param {string} wallet
+ * @param { path: string, wallet: string, to: string, ...rest: Object<string, unknown> } args
  *
  * @typedef Environment
  * @property {WalletExists} walletExists
  * @property {ArtifactExists} artifactExists
  * @property {ReadWallet} readWallet
- * @property {Upload} upload
+ * @property {Object<string, Upload>} uploaders
  *
  * @param {Environment} env
  *
@@ -70,22 +85,20 @@ export const parseTags = (tagsStr) =>
  * @returns {Uploader}
  */
 export const uploadWith =
-  ({ walletExists, artifactExists, readWallet, upload }) =>
-    async (
-      { walletPath, artifactPath, to, ...rest }
-    ) => {
+  ({ walletExists, artifactExists, readWallet, uploaders }) =>
+    async ({ walletPath, artifactPath, to, ...rest }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
-      if (!(await artifactExists(artifactPath))) {
-        throw new ArtifactNotFoundError()
-      }
+      if (!(await artifactExists(artifactPath))) throw new ArtifactNotFoundError()
+
+      to = to || DEFAULT_BUNDLER_HOST
+
+      const bundlerHost = determineBundlerHost(to)
+      if (!bundlerHost) throw new BundlerHostNotSupportedError()
+
+      const upload = uploaders[bundlerHost]
 
       const wallet = await readWallet(walletPath)
-      const res = await upload({
-        path: artifactPath,
-        to,
-        wallet,
-        ...rest
-      })
+      const res = await upload({ path: artifactPath, to, wallet, ...rest })
       return res.id
     }
 
@@ -119,9 +132,7 @@ export const uploadWith =
  */
 export const createContractWith =
   ({ walletExists, readWallet, create }) =>
-    async (
-      { walletPath, src, tags, initialState }
-    ) => {
+    async ({ walletPath, src, tags, initialState }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
 
       const wallet = await readWallet(walletPath)

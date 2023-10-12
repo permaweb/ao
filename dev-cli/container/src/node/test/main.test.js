@@ -1,14 +1,24 @@
 import { describe, it } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createContractWith, uploadWith } from '../src/main.js'
+import {
+  ArtifactNotFoundError,
+  BundlerHostNotSupportedError,
+  SUPPORTED_BUNDLERS,
+  WalletNotFoundError,
+  createContractWith,
+  uploadWith
+} from '../src/main.js'
+import { DEFAULT_BUNDLER_HOST } from '../src/defaults.js'
 
 describe('uploadWith', () => {
   const happy = {
     walletExists: async () => true,
     artifactExists: async () => ({ foo: 'bar' }),
     readWallet: async () => ({ id: 'id-123' }),
-    upload: async (params) => ({ params, id: '123' })
+    uploaders: {
+      [SUPPORTED_BUNDLERS.IRYS]: async (params) => ({ params, id: '123' })
+    }
   }
 
   it('should publish the artifact to arweave', async () => {
@@ -17,7 +27,7 @@ describe('uploadWith', () => {
     const res = await upload({
       walletPath: '/path/to/wallet.json',
       artifactPath: '/path/to/artifact.wasm',
-      to: 'https://fake.place',
+      to: DEFAULT_BUNDLER_HOST,
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -26,27 +36,57 @@ describe('uploadWith', () => {
     assert.equal(res, '123')
   })
 
-  it('should pass the correct args to upload', async () => {
+  it('should default the "to" if not provided', async () => {
     const upload = uploadWith({
       ...happy,
-      upload: (params) => {
-        assert.deepStrictEqual(params, {
-          path: '/path/to/artifact.wasm',
-          wallet: { id: 'id-123' },
-          to: 'https://fake.place',
-          tags: [
-            { name: 'foo', value: 'bar' }
-          ]
-        })
+      uploaders: {
+        [SUPPORTED_BUNDLERS.IRYS]: (params) => {
+          assert.deepStrictEqual(params, {
+            path: '/path/to/artifact.wasm',
+            wallet: { id: 'id-123' },
+            to: DEFAULT_BUNDLER_HOST,
+            tags: [
+              { name: 'foo', value: 'bar' }
+            ]
+          })
 
-        return { id: '123' }
+          return { id: '123' }
+        }
       }
     })
 
     await upload({
       walletPath: '/path/to/wallet.json',
       artifactPath: '/path/to/artifact.wasm',
-      to: 'https://fake.place',
+      tags: [
+        { name: 'foo', value: 'bar' }
+      ]
+    })
+  })
+
+  it('should pass the correct args to upload', async () => {
+    const upload = uploadWith({
+      ...happy,
+      uploaders: {
+        [SUPPORTED_BUNDLERS.IRYS]: (params) => {
+          assert.deepStrictEqual(params, {
+            path: '/path/to/artifact.wasm',
+            wallet: { id: 'id-123' },
+            to: DEFAULT_BUNDLER_HOST,
+            tags: [
+              { name: 'foo', value: 'bar' }
+            ]
+          })
+
+          return { id: '123' }
+        }
+      }
+    })
+
+    await upload({
+      walletPath: '/path/to/wallet.json',
+      artifactPath: '/path/to/artifact.wasm',
+      to: DEFAULT_BUNDLER_HOST,
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -59,16 +99,30 @@ describe('uploadWith', () => {
     await upload({
       walletPath: '/path/to/wallet.json',
       artifactPath: '/path/to/artifact.wasm',
-      to: 'https://fake.place',
+      to: DEFAULT_BUNDLER_HOST,
       tags: [
         { name: 'foo', value: 'bar' }
       ]
     }).then(assert.fail)
-      .catch((err) => assert.equal(err.code, 'WalletNotFound'))
+      .catch((err) => assert.equal(err.code, WalletNotFoundError.code))
   })
 
   it('should throw if the artifact does not exist', async () => {
     const upload = uploadWith({ ...happy, artifactExists: async () => false })
+
+    await upload({
+      walletPath: '/path/to/wallet.json',
+      artifactPath: '/path/to/artifact.wasm',
+      to: DEFAULT_BUNDLER_HOST,
+      tags: [
+        { name: 'foo', value: 'bar' }
+      ]
+    }).then(assert.fail)
+      .catch((err) => assert.equal(err.code, ArtifactNotFoundError.code))
+  })
+
+  it('should throw if the bundler is not supported', async () => {
+    const upload = uploadWith({ ...happy, uploaders: { NOT_SUPPORTED: async (params) => ({ params, id: '123' }) } })
 
     await upload({
       walletPath: '/path/to/wallet.json',
@@ -78,7 +132,7 @@ describe('uploadWith', () => {
         { name: 'foo', value: 'bar' }
       ]
     }).then(assert.fail)
-      .catch((err) => assert.equal(err.code, 'ArtifactNotFound'))
+      .catch((err) => assert.equal(err.code, BundlerHostNotSupportedError.code))
   })
 })
 
