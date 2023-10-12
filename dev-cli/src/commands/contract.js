@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command } from '../deps.js'
-import { tagArg, walletArgs } from '../utils.js'
+import { tagsArg, walletArgs } from '../utils.js'
 
 function sourceArgs (src) {
   return [
@@ -30,8 +30,8 @@ function stateArgs (initialStateStr) {
 export async function contract ({ wallet, tag, source }, initialState) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...tagArg(tag),
     ...sourceArgs(source),
+    ...tagsArg(tag),
     ...stateArgs(initialState)
   ]
 

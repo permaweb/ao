@@ -19,6 +19,6 @@ export function walletArgs (wallet) {
   ]
 }
 
-export function tagArg (tags) {
+export function tagsArg (tags) {
   return tags ? ['-e', `TAGS=${tags.join(',')}`] : []
 }
