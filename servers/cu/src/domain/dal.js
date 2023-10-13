@@ -1,11 +1,6 @@
 import { z } from 'zod'
 
-import { evaluationSchema, messageSchema } from './model.js'
-
-const tagSchema = z.object({
-  name: z.string(),
-  value: z.string()
-})
+import { evaluationSchema, messageSchema, processSchema, rawTagSchema } from './model.js'
 
 export const loadTransactionMetaSchema = z.function()
   .args(z.string())
@@ -14,12 +9,20 @@ export const loadTransactionMetaSchema = z.function()
       owner: z.object({
         address: z.string()
       }),
-      tags: z.array(tagSchema)
+      tags: z.array(rawTagSchema)
     }).passthrough()
   ))
 
 export const loadTransactionDataSchema = z.function()
   .args(z.string())
+  .returns(z.promise(z.any()))
+
+export const findProcessSchema = z.function()
+  .args(z.object({ processId: z.string() }))
+  .returns(z.promise(processSchema))
+
+export const saveProcessSchema = z.function()
+  .args(processSchema)
   .returns(z.promise(z.any()))
 
 export const findLatestEvaluationSchema = z.function()

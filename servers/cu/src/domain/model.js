@@ -5,6 +5,17 @@ export const domainConfigSchema = z.object({
   GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL')
 })
 
+export const rawTagSchema = z.object({
+  name: z.string(),
+  value: z.string()
+})
+
+export const processSchema = z.object({
+  id: z.string().min(1),
+  owner: z.string().min(1),
+  tags: z.array(rawTagSchema)
+})
+
 export const messageSchema = z.object({
   action: z.record(z.any()),
   sortKey: z.string(),
