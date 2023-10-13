@@ -1,9 +1,10 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { equals, isNotNil, mergeRight, prop } from 'ramda'
+import { always, applySpec, equals, isNotNil, mergeRight, path, pick } from 'ramda'
 import { z } from 'zod'
 
-import { loadTransactionMetaSchema } from '../dal.js'
+import { findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
 import { parseTags } from './utils.js'
+import { rawTagSchema } from '../model.js'
 
 /**
  * The result that is produced from this step
@@ -13,46 +14,83 @@ import { parseTags } from './utils.js'
  * is always added to context
  */
 const ctxSchema = z.object({
-  tags: z.record(z.any()),
-  state: z.record(z.any())
+  owner: z.string().min(1),
+  tags: z.array(rawTagSchema)
 }).passthrough()
 
 /**
  * @callback LoadProcessMeta
- * @param {string} id - the id of the contract whose src is being loaded
- * @returns {Async<string>}
+ * @param {string} id - the id of the process
+ * @returns {Async<z.infer<typeof ctxSchema>>}
  *
  * @param {Env} env
  * @returns {LoadProcessMeta}
  */
-function getProcessMetaWith ({ loadTransactionMeta, logger }) {
-  loadTransactionMeta = fromPromise(
-    loadTransactionMetaSchema.implement(loadTransactionMeta)
-  )
+function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, logger }) {
+  loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
+  findProcess = fromPromise(findProcessSchema.implement(findProcess))
+  saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
 
-  const checkTag = (name, pred) => tags => pred(tags[name])
+  const checkTag = (name, pred) => (tags) => pred(tags[name])
     ? Resolved(tags)
     : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on transaction`)
 
-  return (processId) => {
+  /**
+   * Load the process from chain, extracting the metadata,
+   * and then saving to the db
+   */
+  function loadFromChain (processId) {
     return loadTransactionMeta(processId)
-      .map(prop('tags'))
-      .map(parseTags)
-      .chain(checkTag('Data-Protocol', equals('ao')))
-      .chain(checkTag('ao-type', equals('process')))
-      .chain(checkTag('Contract-Src', isNotNil))
-      .bimap(
-        logger.tap('Verifying process failed: %s'),
-        logger.tap('Verified process')
+      .map(pick(['owner', 'tags']))
+      .map(applySpec({
+        owner: path(['owner', 'address']),
+        tags: path(['tags'])
+      }))
+      /**
+       * Verify the process by examining the tags
+       */
+      .chain(ctx =>
+        of(ctx.tags)
+          .map(parseTags)
+          .chain(checkTag('Data-Protocol', equals('ao')))
+          .chain(checkTag('ao-type', equals('process')))
+          .chain(checkTag('Contract-Src', isNotNil))
+          .bimap(
+            logger.tap('Verifying process failed: %s'),
+            logger.tap('Verified process. Saving to db...')
+          )
+          .map(always({ id: processId, ...ctx }))
       )
       /**
-       * In ao, simply the tags on the DataItem are the state.
-       *
-       * So we generate a key-value map of the tags and set them
-       * as state
+       * Attempt to save to the db
        */
-      .map(tags => ({ tags, state: tags }))
+      .chain((process) =>
+        saveProcess(process)
+          .bimap(
+            logger.tap('Could not save process to db. Nooping'),
+            logger.tap('Saved process')
+          )
+          .bichain(
+            always(Resolved(process)),
+            always(Resolved(process))
+          )
+      )
   }
+
+  return (processId) =>
+    findProcess({ processId })
+      .bimap(
+        logger.tap('Could not find process in db. Loading from chain...'),
+        logger.tap('found process in db %j')
+      )
+      .bichain(
+        always(loadFromChain(processId)),
+        Resolved
+      )
+      .map(process => ({
+        owner: process.owner,
+        tags: process.tags
+      }))
 }
 
 /**
