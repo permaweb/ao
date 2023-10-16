@@ -14,6 +14,7 @@ const logger = createLogger('db')
 describe('pouchdb', () => {
   describe('findProcess', () => {
     test('find the process', async () => {
+      const now = Math.floor(new Date().getTime() / 1000)
       const findProcess = findProcessSchema.implement(
         findProcessWith({
           pouchDb: {
@@ -21,6 +22,10 @@ describe('pouchdb', () => {
               _id: 'process-123',
               owner: 'woohoo',
               tags: [{ name: 'foo', value: 'bar' }],
+              block: {
+                height: 123,
+                timestamp: now
+              },
               type: 'process'
             })
           }
@@ -31,7 +36,11 @@ describe('pouchdb', () => {
       assert.deepStrictEqual(res, {
         id: 'process-123',
         owner: 'woohoo',
-        tags: [{ name: 'foo', value: 'bar' }]
+        tags: [{ name: 'foo', value: 'bar' }],
+        block: {
+          height: 123,
+          timestamp: now
+        }
       })
     })
 
@@ -51,6 +60,7 @@ describe('pouchdb', () => {
   })
 
   describe('saveProcess', () => {
+    const now = Math.floor(new Date().getTime() / 1000)
     test('save the process', async () => {
       const saveProcess = saveProcessSchema.implement(
         saveProcessWith({
@@ -61,6 +71,10 @@ describe('pouchdb', () => {
                 _id: 'process-123',
                 owner: 'woohoo',
                 tags: [{ name: 'foo', value: 'bar' }],
+                block: {
+                  height: 123,
+                  timestamp: now
+                },
                 type: 'process'
               })
               return Promise.resolve(true)
@@ -73,7 +87,11 @@ describe('pouchdb', () => {
       await saveProcess({
         id: 'process-123',
         owner: 'woohoo',
-        tags: [{ name: 'foo', value: 'bar' }]
+        tags: [{ name: 'foo', value: 'bar' }],
+        block: {
+          height: 123,
+          timestamp: now
+        }
       })
     })
 
@@ -84,7 +102,11 @@ describe('pouchdb', () => {
             get: async () => ({
               _id: 'process-123',
               owner: 'woohoo',
-              tags: [{ name: 'foo', value: 'bar' }]
+              tags: [{ name: 'foo', value: 'bar' }],
+              block: {
+                height: 123,
+                timestamp: now
+              }
             }),
             put: assert.fail
           },
@@ -95,7 +117,11 @@ describe('pouchdb', () => {
       await saveProcess({
         id: 'process-123',
         owner: 'woohoo',
-        tags: [{ name: 'foo', value: 'bar' }]
+        tags: [{ name: 'foo', value: 'bar' }],
+        block: {
+          height: 123,
+          timestamp: now
+        }
       })
     })
   })

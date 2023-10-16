@@ -1,10 +1,10 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, applySpec, equals, isNotNil, mergeRight, path, pick } from 'ramda'
+import { always, applySpec, equals, isNotNil, mergeRight, path, pick, pipe } from 'ramda'
 import { z } from 'zod'
 
 import { findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
 import { parseTags } from './utils.js'
-import { rawTagSchema } from '../model.js'
+import { rawBlockSchema, rawTagSchema } from '../model.js'
 
 /**
  * The result that is produced from this step
@@ -15,7 +15,8 @@ import { rawTagSchema } from '../model.js'
  */
 const ctxSchema = z.object({
   owner: z.string().min(1),
-  tags: z.array(rawTagSchema)
+  tags: z.array(rawTagSchema),
+  block: rawBlockSchema
 }).passthrough()
 
 /**
@@ -41,10 +42,13 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
    */
   function loadFromChain (processId) {
     return loadTransactionMeta(processId)
-      .map(pick(['owner', 'tags']))
       .map(applySpec({
         owner: path(['owner', 'address']),
-        tags: path(['tags'])
+        tags: path(['tags']),
+        block: pipe(
+          path(['block']),
+          pick(['height', 'timestamp'])
+        )
       }))
       /**
        * Verify the process by examining the tags
@@ -89,7 +93,8 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
       )
       .map(process => ({
         owner: process.owner,
-        tags: process.tags
+        tags: process.tags,
+        block: process.block
       }))
 }
 

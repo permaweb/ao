@@ -9,7 +9,7 @@ const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadProcess', () => {
-  test('appends process owner and tags', async () => {
+  test('appends process owner, tags, and block', async () => {
     const tags = [
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -21,7 +21,8 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
-        tags
+        tags,
+        block: { height: 123, timestamp: 1697574792 }
       }),
       logger
     })
@@ -29,6 +30,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
+    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
     assert.equal(res.id, PROCESS)
   })
 
@@ -43,7 +45,8 @@ describe('loadProcess', () => {
       findProcess: async () => ({
         id: PROCESS,
         owner: 'woohoo',
-        tags
+        tags,
+        block: { height: 123, timestamp: 1697574792 }
       }),
       saveProcess: async () => assert.fail('should not save if found in db'),
       loadTransactionMeta: async (_id) => assert.fail('should not load transaction meta if found in db'),
@@ -53,6 +56,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
+    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
     assert.equal(res.id, PROCESS)
   })
 
@@ -66,20 +70,23 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async (process) => {
-        assert.deepStrictEqual(process, { id: PROCESS, owner: 'woohoo', tags })
+        assert.deepStrictEqual(process, {
+          id: PROCESS,
+          owner: 'woohoo',
+          tags,
+          block: { height: 123, timestamp: 1697574792 }
+        })
         return PROCESS
       },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
-        tags
+        tags,
+        block: { height: 123, timestamp: 1697574792 }
       }),
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS }).toPromise()
-    assert.deepStrictEqual(res.tags, tags)
-    assert.deepStrictEqual(res.owner, 'woohoo')
-    assert.equal(res.id, PROCESS)
+    await loadProcess({ id: PROCESS }).toPromise()
   })
 
   test('gracefully handled failure to save to db', async () => {
@@ -94,7 +101,8 @@ describe('loadProcess', () => {
       saveProcess: async () => { throw { status: 409 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
-        tags
+        tags,
+        block: { height: 123, timestamp: 1697574792 }
       }),
       logger
     })
@@ -102,6 +110,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
+    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
     assert.equal(res.id, PROCESS)
   })
 
@@ -115,7 +124,8 @@ describe('loadProcess', () => {
           { name: 'Not-Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'process' }
-        ]
+        ],
+        block: { height: 123, timestamp: 1697574792 }
       }),
       logger
     })
@@ -135,7 +145,8 @@ describe('loadProcess', () => {
           { name: 'Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
           { name: 'ao-type', value: 'process' }
-        ]
+        ],
+        block: { height: 123, timestamp: 1697574792 }
       }),
       logger
     })
@@ -155,7 +166,8 @@ describe('loadProcess', () => {
           { name: 'Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
           { name: 'ao-type', value: 'message' }
-        ]
+        ],
+        block: { height: 123, timestamp: 1697574792 }
       }),
       logger
     })

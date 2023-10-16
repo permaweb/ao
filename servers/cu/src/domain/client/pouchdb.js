@@ -6,7 +6,7 @@ import PouchDb from 'pouchdb'
 import PouchDbFind from 'pouchdb-find'
 import LevelDb from 'pouchdb-adapter-leveldb'
 
-import { rawTagSchema } from '../model.js'
+import { processSchema } from '../model.js'
 
 /**
  * An implementation of the db client using pouchDB
@@ -20,9 +20,10 @@ PouchDb.setMaxListeners(50)
 export { internalPouchDb as pouchDb }
 
 const processDocSchema = z.object({
-  _id: z.string().min(1),
-  owner: z.string().min(1),
-  tags: z.array(rawTagSchema),
+  _id: processSchema.shape.id,
+  owner: processSchema.shape.owner,
+  tags: processSchema.shape.tags,
+  block: processSchema.shape.block,
   type: z.literal('process')
 })
 
@@ -33,7 +34,8 @@ export function findProcessWith ({ pouchDb }) {
     .map(applySpec({
       id: prop('_id'),
       owner: prop('owner'),
-      tags: prop('tags')
+      tags: prop('tags'),
+      block: prop('block')
     }))
     .toPromise()
 }
@@ -45,6 +47,7 @@ export function saveProcessWith ({ pouchDb }) {
         _id: prop('id'),
         owner: prop('owner'),
         tags: prop('tags'),
+        block: prop('block'),
         type: always('process')
       }))
       /**

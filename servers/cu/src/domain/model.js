@@ -10,42 +10,60 @@ export const rawTagSchema = z.object({
   value: z.string()
 })
 
+export const rawBlockSchema = z.object({
+  height: z.number(),
+  timestamp: z.number()
+})
+
 export const processSchema = z.object({
   id: z.string().min(1),
   owner: z.string().min(1),
-  tags: z.array(rawTagSchema)
+  tags: z.array(rawTagSchema),
+  /**
+   * The block that the process is in.
+   *
+   * Needed in order to calculate implicit messages
+   */
+  block: rawBlockSchema
 })
 
 export const messageSchema = z.object({
-  action: z.record(z.any()),
-  sortKey: z.string(),
+  sortKey: z.string().min(1),
+  owner: z.string().min(1),
+  target: z.string().min(1),
+  anchor: z.string().optional(),
+  from: z.string().min(1),
+  'Forwarded-By': z.string().optional(),
+  tags: z.array(rawTagSchema),
   AoGlobal: z.object({
     process: z.object({
       id: z.string(),
       owner: z.string()
-    }),
-    transaction: z.object({
-      id: z.string(),
-      owner: z.string(),
-      target: z.string(),
-      quantity: z.number(),
-      reward: z.number()
-    }),
-    block: z.object({
-      height: z.number(),
-      indep_hash: z.string(),
-      timestamp: z.number()
     })
+    // TODO: more here
   })
+})
+
+export const scheduleSchema = z.object({
+  name: z.string(),
+  cron: z.string().optional(),
+  blocks: z.number().optional(),
+  message: z.any()
 })
 
 export const evaluationSchema = z.object({
   /**
-   * The sort key of the interaction
+   * The calculated id of the message that produced this evaluation
+   *
+   * See https://hackmd.io/@ao-docs/HkMh4j4W6#ao-message-ID
+   */
+  messageId: z.string().min(1),
+  /**
+   * The sort key of the message
    */
   sortKey: z.string().min(1),
   /**
-   * the id of the contract that the interaction was performed upon
+   * the id of the contract that the message was performed upon
    */
   parent: z.string().min(1),
   /**
