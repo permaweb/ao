@@ -3,12 +3,12 @@ use serde::{Serialize, Deserialize}; // Import Serde traits
 
 use super::binary::{DataItem, DataBundle};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
     pub process_id: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
     pub message: MessageInner,
     pub block: Option<Block>,
@@ -17,23 +17,41 @@ pub struct Message {
     pub process_id: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MessageInner {
     pub id: String,
     pub tags: Vec<(String, String)>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Block {
     pub height: i32,
     pub timestamp: i32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Owner {
     pub address: String,
     pub key: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SortedMessages {
+    pub page_info: PageInfo,
+    pub edges: Vec<Edge>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PageInfo {
+    pub has_next_page: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Edge {
+    pub node: Message,
+    pub cursor: String,
+}
+
 
 impl Process {
     pub fn from_bundle(data_bundle: &DataBundle) -> Self {
@@ -73,3 +91,52 @@ impl Message {
         }
     }
 }
+
+impl SortedMessages {
+    pub fn from_messages(messages: Vec<Message>, from: Option<String>, to: Option<String>) -> Self {
+        let mut sorted_messages = messages.clone();
+        sorted_messages.sort_by(|a, b| {
+            let a_timestamp = extract_timestamp(&a.sort_key);
+            let b_timestamp = extract_timestamp(&b.sort_key);
+            a_timestamp.cmp(&b_timestamp)
+        });
+
+        let from_timestamp = from.as_ref().map(|from_str| extract_timestamp(from_str)).unwrap_or(0);
+        let to_timestamp = to.as_ref().map(|to_str| extract_timestamp(to_str)).unwrap_or(std::i64::MAX);
+
+        let filtered_messages: Vec<Message> = sorted_messages.into_iter().filter(|message| {
+            let message_timestamp = extract_timestamp(&message.sort_key);
+            message_timestamp >= from_timestamp && message_timestamp <= to_timestamp
+        }).collect();
+
+        let page_info = PageInfo { has_next_page: true };
+
+        let edges = filtered_messages.into_iter().map(|message| Edge {
+            node: message.clone(),
+            cursor: message.sort_key.clone(),
+        }).collect();
+
+        SortedMessages { page_info, edges }
+    }
+
+    pub fn empty() -> Self {
+        SortedMessages {
+            page_info: PageInfo { has_next_page: false },
+            edges: vec![],
+        }
+    }
+}
+
+fn extract_timestamp(sort_key: &str) -> i64 {
+    let parts: Vec<&str> = sort_key.split(',').collect();
+    if parts.len() >= 2 {
+        let num: Result<i64, _> = parts[1].parse();
+        if let Ok(timestamp) = num {
+            return timestamp;
+        } else {
+            return -1;
+        }
+    }
+    -1
+}
+

@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 use super::results::{BuildResult, DepError};
 use crate::domain::{UploaderClient, StoreClient};
-use crate::domain::core::json::{Message, Process};
+use crate::domain::core::json::{Message, Process, SortedMessages};
 use crate::domain::core::binary::{DataBundle};
 
 pub struct MessagesPipeline
@@ -24,7 +24,7 @@ impl MessagesPipeline {
 
     pub async fn process(
         &mut self, 
-        process_id: Option<String>, 
+        process_id: String, 
         from: Option<String>, 
         to: Option<String>
     ) -> Result<String, String> {
@@ -34,13 +34,12 @@ impl MessagesPipeline {
 
     pub async fn read_data(
         &mut self, 
-        process_id: Option<String>, 
+        process_id: String, 
         from: Option<String>, 
         to: Option<String>
     ) -> Result<String, String> {
-        let m_r = MessagesReturn {
-            test: "ttttt".to_string()
-        };
-        Ok(serde_json::to_string(&m_r).unwrap())
+        let messages = self.data_store.get_messages(&process_id)?;
+        let sorted_messages = SortedMessages::from_messages(messages, from, to);
+        Ok(serde_json::to_string(&sorted_messages).unwrap())
     }
 }
