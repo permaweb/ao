@@ -79,6 +79,12 @@ describe('gateway', () => {
     })
   })
 
+  describe('loadBlocksMeta', () => {
+    test('load the block data', async () => {
+
+    })
+  })
+
   describe('loadTransactionDataWith', () => {
     test('load transaction data', async () => {
       const loadTransactionData = loadTransactionDataSchema.implement(
