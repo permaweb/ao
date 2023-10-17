@@ -18,6 +18,7 @@ export const createApis = (ctx) => {
   const readState = readStateWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
     loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
+    loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: readStateLogger.child('gateway') }),
     findProcess: PouchDbClient.findProcessWith({ pouchDb: PouchDbClient.pouchDb }),
     saveProcess: PouchDbClient.saveProcessWith({ pouchDb: PouchDbClient.pouchDb }),
     logger: readStateLogger
