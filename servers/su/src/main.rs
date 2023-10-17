@@ -54,7 +54,7 @@ struct ProcessId {
     process_id: String,
 }
 
-async fn messages_route(req: HttpRequest, path: web::Path<ProcessId>, query_params: web::Query<YourQueryParamsStruct>) -> impl Responder {
+async fn messages_route(_req: HttpRequest, path: web::Path<ProcessId>, query_params: web::Query<YourQueryParamsStruct>) -> impl Responder {
     let process_id = path.process_id.clone();
     let from_sort_key = query_params.from.clone();
     let to_sort_key = query_params.to.clone();

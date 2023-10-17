@@ -119,7 +119,7 @@ impl UploaderClient {
             
         // Capture status and headers before consuming the response
         let response_status = response.status();
-        let response_headers = response.headers().clone();
+        // let response_headers = response.headers().clone();
 
         let body_str = match response.text().await {
             Ok(text) => text,
@@ -129,15 +129,14 @@ impl UploaderClient {
             }
         };
 
-        let _msg = format!(
-            "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
-            response_status,
-            response_headers,
-            body_str
-        );
+        // let msg = format!(
+        //     "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
+        //     response_status,
+        //     response_headers,
+        //     body_str
+        // );
 
         if response_status.is_success() {
-            // println!("Response: {:?}", msg);
             let parsed: UploadResult = serde_json::from_str(&body_str).unwrap();
             Ok(parsed)
         } else {

@@ -2,7 +2,6 @@
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::result::Error;
 use dotenv::dotenv;
 use std::env;
 
@@ -41,14 +40,14 @@ impl StoreClient {
             .do_nothing() 
             .execute(conn)
         {
-            Ok(row_count) => {
+            Ok(_) => {
                 Ok(TransactionId(9080))
             },
             Err(e) => Err(DepError::from(e)),
         }
     }
     
-    pub fn save_message(&mut self, message: Message) -> Result<TransactionId, DepError> {
+    pub fn save_message(&mut self, message: &Message) -> Result<TransactionId, DepError> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.connection;
     
@@ -56,7 +55,7 @@ impl StoreClient {
             process_id: &message.process_id,
             message_id: &message.message.id,
             sort_key: &message.sort_key,
-            message_data: serde_json::to_value(&message).expect("Failed to serialize Message"),
+            message_data: serde_json::to_value(message).expect("Failed to serialize Message"),
         };
     
         match diesel::insert_into(messages)
@@ -77,12 +76,12 @@ impl StoreClient {
     }    
 
 
-    pub fn get_messages(&mut self, process_id: &str) -> Result<Vec<Message>, DepError> {
+    pub fn get_messages(&mut self, process_id_in: &str) -> Result<Vec<Message>, DepError> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.connection;
 
         let db_messages_result: Result<Vec<DbMessage>, DieselError> = messages
-            .filter(process_id.eq(process_id))
+            .filter(process_id.eq(process_id_in))
             .load(conn);
 
         match db_messages_result {

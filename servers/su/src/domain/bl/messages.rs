@@ -1,9 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-use super::results::{BuildResult, DepError};
-use crate::domain::{UploaderClient, StoreClient};
-use crate::domain::core::json::{Message, Process, SortedMessages};
-use crate::domain::core::binary::{DataBundle};
+use crate::domain::{StoreClient};
+use crate::domain::core::json::{SortedMessages};
 
 pub struct MessagesPipeline
 {

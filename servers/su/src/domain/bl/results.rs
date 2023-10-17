@@ -13,8 +13,9 @@ pub enum DepError {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UploadResult{
-    id: String,
-    timestamp: u64,
+    pub id: String,
+    pub timestamp: u64,
+    pub block: u64,
 }
 
 pub struct BuildResult{

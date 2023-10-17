@@ -13,37 +13,37 @@ use base64_url;
 
 use arweave_rs::network::NetworkInfoClient;
 
-use jsonwebkey::{JsonWebKey, RsaPrivate, Key, ByteVec};
+use jsonwebkey::{JsonWebKey, Key, ByteVec};
 
 use super::binary::DataItem;
 use super::error::CoreError;
 
 impl From<std::time::SystemTimeError> for CoreError {
-    fn from(error: std::time::SystemTimeError) -> Self {
+    fn from(_error: std::time::SystemTimeError) -> Self {
         CoreError::SequencerError("Sequencer experienced an error obtaining system time".to_string())
     }
 }
 
 impl From<arweave_rs::network::ResponseError> for CoreError {
-    fn from(error: arweave_rs::network::ResponseError) -> Self {
+    fn from(_error: arweave_rs::network::ResponseError) -> Self {
         CoreError::SequencerError("Sequencer experienced an error obtaining network info".to_string())
     }
 }
 
 impl From<std::io::Error> for CoreError {
-    fn from(error: std::io::Error) -> Self {
+    fn from(_error: std::io::Error) -> Self {
         CoreError::SequencerError("Sequencer experienced an io error".to_string())
     }
 }
 
 impl From<serde_json::Error> for CoreError {
-    fn from(error: serde_json::Error) -> Self {
+    fn from(_error: serde_json::Error) -> Self {
         CoreError::SequencerError("Sequencer experienced an error parsing json".to_string())
     }
 }
 
 impl From<base64_url::base64::DecodeError> for CoreError {
-    fn from(error: base64_url::base64::DecodeError) -> Self {
+    fn from(_error: base64_url::base64::DecodeError) -> Self {
         CoreError::SequencerError("Sequencer experienced an error decoding ids".to_string())
     }
 }
@@ -103,11 +103,9 @@ pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, CoreError> {
 fn concat_buffers(buffers: Vec<Vec<u8>>) -> Vec<u8> {
     let total_length: usize = buffers.iter().map(|buffer| buffer.len()).sum();
     let mut temp = Vec::with_capacity(total_length);
-    let mut offset = 0;
 
     for buffer in &buffers {
         temp.extend_from_slice(buffer);
-        offset += buffer.len();
     }
 
     temp

@@ -1,7 +1,7 @@
 
 use serde::{Serialize, Deserialize}; // Import Serde traits
 
-use super::binary::{DataItem, DataBundle};
+use super::binary::{DataBundle};
 use super::sequencer::hash;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -26,8 +26,8 @@ pub struct MessageInner {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Block {
-    pub height: i32,
-    pub timestamp: i32,
+    pub height: u64,
+    pub timestamp: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -122,13 +122,6 @@ impl SortedMessages {
         }).collect();
 
         SortedMessages { page_info, edges }
-    }
-
-    pub fn empty() -> Self {
-        SortedMessages {
-            page_info: PageInfo { has_next_page: false },
-            edges: vec![],
-        }
     }
 }
 
