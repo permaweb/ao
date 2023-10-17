@@ -30,18 +30,19 @@ export const processSchema = z.object({
 export const messageSchema = z.object({
   sortKey: z.string().min(1),
   owner: z.string().min(1),
-  target: z.string().min(1),
+  target: z.string().optional(),
   anchor: z.string().optional(),
-  from: z.string().min(1),
+  from: z.string().optional(),
   'Forwarded-By': z.string().optional(),
   tags: z.array(rawTagSchema),
   AoGlobal: z.object({
     process: z.object({
       id: z.string(),
       owner: z.string()
-    })
+    }),
+    block: rawBlockSchema
     // TODO: more here
-  })
+  }).passthrough() // TODO: remove once AoGlobal is more defined
 })
 
 export const scheduleSchema = z.object({
