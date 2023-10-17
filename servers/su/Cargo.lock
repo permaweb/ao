@@ -2872,6 +2872,8 @@ dependencies = [
  "crypto",
  "diesel",
  "dotenv",
+ "hex",
+ "jsonwebkey",
  "reqwest",
  "serde",
  "serde_derive",

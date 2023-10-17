@@ -10,8 +10,7 @@ use serde::{Serialize, Deserialize};
 
 use super::super::bl::results::{DepError, UploadResult, BuildResult};
 use super::super::core::binary::{DataItem, DataBundle};
-
-use chrono::{Local, TimeZone};
+use super::super::core::sequencer::gen_sort_key;
 
 pub struct UploaderClient {
     node_url: Url,
@@ -62,11 +61,13 @@ impl UploaderClient {
     pub async fn build(&self, tx: Vec<u8>) -> Result<BuildResult, DepError> {
         let wallet_clone = Arc::new(self.wallet.clone());
         let url_clone = Arc::new(self.node_url.clone());
-        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f").to_string();
-        let mut data_bundle = DataBundle::new(timestamp);
+        
         let item = DataItem::from_bytes(tx).unwrap();
+        let sort_key = gen_sort_key(&item).await.unwrap();
+        let mut data_bundle = DataBundle::new(sort_key.clone());
         data_bundle.add_item(item);
         let buffer = data_bundle.to_bytes().unwrap();
+        let process_id = data_bundle.items[0].target().clone();
 
         let currency = ArweaveBuilder::new()
             .keypair_path(wallet_clone.to_path_buf()) // Convert Arc<PathBuf> to PathBuf
@@ -83,6 +84,9 @@ impl UploaderClient {
         let tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
+            Tag::new(&"Sequencer-Sort-Key".to_string(), &sort_key),
+            Tag::new(&"Sequencer-Id".to_string(), &"ao-su-1".to_string()),
+            Tag::new(&"Ao-Process-Id".to_string(), &process_id),
         ];
 
         let mut bundlr_tx = bundlr

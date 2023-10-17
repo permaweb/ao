@@ -1,9 +1,34 @@
+use std::time::{SystemTime, UNIX_EPOCH, SystemTimeError};
+
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest};
 use serde::Deserialize;
+use serde_json::json;
+
 use su::domain::{write_message_pipeline, read_messages_pipeline};
+
+
+fn system_time() -> Result<String, SystemTimeError> {
+    let start_time = SystemTime::now();
+    let duration = start_time.duration_since(UNIX_EPOCH)?;
+    let millis = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
+    let millis_string = millis.to_string();
+    Ok(millis_string)
+}
 
 async fn base() -> impl Responder {
     HttpResponse::Ok().body("ao sequencer unit")
+}
+
+async fn timestamp_route() -> impl Responder {
+    match system_time() {
+        Ok(timestamp) => {
+            let response_json = json!({ "timestamp": timestamp });
+            HttpResponse::Ok()
+                .content_type("application/json")
+                .json(response_json) // Serialize the JSON object as a response
+        }
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
 }
 
 async fn message_route(req_body: web::Bytes) -> impl Responder {
@@ -50,6 +75,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .route("/", web::get().to(base))
+            .route("/timestamp", web::get().to(timestamp_route))
             .route("/message", web::post().to(message_route)) 
             .route("/messages/{process_id}", web::get().to(messages_route))
     })

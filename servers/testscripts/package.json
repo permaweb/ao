@@ -15,6 +15,7 @@
         "@permaweb/ao-sdk": "0.0.10",
         "@scure/bip32": "^1.1.5",
         "@types/fs-extra": "^8.1.0",
+        "arbundles": "^0.10.0",
         "arcframework": "^1.1.28",
         "arweave": "1.14.4",
         "axios": "^0.26.1",
