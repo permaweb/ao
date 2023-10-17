@@ -2,6 +2,7 @@
 use serde::{Serialize, Deserialize}; // Import Serde traits
 
 use super::binary::{DataItem, DataBundle};
+use super::sequencer::hash;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
@@ -75,8 +76,12 @@ impl Message {
             tags: tags,
         };
 
+        let owner_bytes = base64_url::decode(&owner).unwrap();
+        let address_hash = hash(&owner_bytes);
+        let address = base64_url::encode(&address_hash);
+
         let owner = Owner {
-            address: "address".to_string(),
+            address: address,
             key: owner,
         };
 
