@@ -139,15 +139,21 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
               compose(
                 map(applySpec({
                   sortKey: path(['sort_key']),
+                  message: applySpec({
+                    /**
+                     * TODO: Confirm these paths
+                     */
+                    owner: path(['owner', 'address']),
+                    target: path('process_id'),
+                    anchor: path(['message', 'anchor']),
+                    from: mapFrom,
+                    'Forwarded-By': mapForwardedBy,
+                    tags: path(['message', 'tags'])
+                  }),
                   /**
-                   * TODO: Confirm these paths
+                   * We need the block metadata per message,
+                   * so that we can calculate implicit messages
                    */
-                  owner: path(['owner', 'address']),
-                  target: path('process_id'),
-                  anchor: path(['message', 'anchor']),
-                  from: mapFrom,
-                  'Forwarded-By': mapForwardedBy,
-                  tags: path(['message', 'tags']),
                   block: applySpec({
                     height: path(['block', 'height']),
                     timestamp: pipe(
@@ -165,7 +171,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
                 }))
               ),
               (acc, message) => {
-                acc.unshift(message)
+                acc.push(message)
                 return acc
               },
               [],

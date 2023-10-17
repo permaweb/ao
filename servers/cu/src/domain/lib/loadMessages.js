@@ -124,7 +124,14 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta }) {
     })
 }
 
-export function scheduleMessagesWith ({ processId, owner, originBlock, suTime, schedules, blockRange }) {
+export function scheduleMessagesWith ({
+  processId,
+  owner: processOwner,
+  originBlock,
+  suTime,
+  schedules,
+  blockRange
+}) {
   /**
    * This will be added to the CU clock to take into account
    * any difference between the SU (whose generated sortKeys depend on its clock)
@@ -150,11 +157,11 @@ export function scheduleMessagesWith ({ processId, owner, originBlock, suTime, s
     schedules.filter(s => s.unit === 'time')
   )
 
-  function maybeMessages (left, right) {
-    const iMessages = []
+  function maybeScheduledMessages (leftBlock, rightBlock) {
+    const scheduledMessages = []
 
     // No Schedules
-    if (!blockBased.length || timeBased.length) return iMessages
+    if (!blockBased.length || timeBased.length) return scheduledMessages
 
     /**
      * This is the first time in a long time that
@@ -168,7 +175,7 @@ export function scheduleMessagesWith ({ processId, owner, originBlock, suTime, s
      * We must iterate by block, in order to pass the correct block information to the process, as part of
      * the scheduled message payload
      */
-    for (let curHeight = left.height; curHeight < right.height; curHeight++) {
+    for (let curHeight = leftBlock.height; curHeight < rightBlock.height; curHeight++) {
       const curBlock = blockRange.find((b) => b.height === curHeight)
       const nextBlock = blockRange.find((b) => b.height === curHeight + 1)
 
@@ -178,27 +185,31 @@ export function scheduleMessagesWith ({ processId, owner, originBlock, suTime, s
        * Block-based messages will always be pushed onto the sequence of messages
        * before time-based messages, which is predictable and deterministic
        */
-      iMessages.push.apply(
-        iMessages,
+      scheduledMessages.push.apply(
+        scheduledMessages,
         blockBased.reduce(
-          (acc, schedule) => {
+          (acc, schedule, idx) => {
             if (curHeight - originBlock.height % schedule.value === 0) {
-              /**
-               * TODO: build out message shape
-               */
               acc.push({
-                isScheduled: true,
                 /**
                  * TODO: don't know if this is correct, but we need something unique for the sortKey
                  * for the scheduled message
                  */
-                sortKey: `${curBlock.height},${curBlock.timestamp},${processId},${schedule.interval}`,
-                anchor: `${curBlock.height},${curBlock.timestamp},${processId},${schedule.interval}`,
-                owner,
-                block: curBlock,
-                tags: schedule.message,
+                sortKey: `${curBlock.height},${curBlock.timestamp},${processId},${idx}`,
+                message: {
+                  wasScheduled: true,
+                  /**
+                   * TODO: don't know if this is correct, but we need something unique for the anchor
+                   * for the scheduled message
+                   */
+                  anchor: `${curBlock.height},${curBlock.timestamp},${processId},${idx}`,
+                  owner: processOwner,
+                  target: processId,
+                  block: curBlock,
+                  tags: schedule.message
+                },
                 AoGlobal: {
-                  process: { id: processId, owner },
+                  process: { id: processId, owner: processOwner },
                   block: curBlock
                 }
               })
@@ -222,24 +233,31 @@ export function scheduleMessagesWith ({ processId, owner, originBlock, suTime, s
        * schedules need to generate an implicit message
        */
       for (let curEpoch = curBlock.timestamp; curEpoch < nextBlock.timestamp; curEpoch++) {
-        iMessages.push.apply(
-          iMessages,
+        scheduledMessages.push.apply(
+          scheduledMessages,
           timeBased.reduce(
-            (acc, schedule) => {
+            (acc, schedule, idx) => {
               if ((curEpoch - originBlock.timestamp) % schedule.value === 0) {
                 acc.push({
-                  isScheduled: true,
                   /**
                    * TODO: don't know if this is correct, but we need something unique for the sortKey
                    * for the scheduled message
                    */
-                  sortKey: `${curBlock.height},${curBlock.timestamp},${processId},${schedule.interval}`,
-                  anchor: `${curBlock.height},${curBlock.timestamp},${processId},${schedule.interval}`,
-                  owner,
-                  block: curBlock,
-                  tags: schedule.message,
+                  sortKey: `${curBlock.height},${curBlock.timestamp},${processId},${idx}`,
+                  message: {
+                    wasScheduled: true,
+                    /**
+                     * TODO: don't know if this is correct, but we need something unique for the anchor
+                     * for the scheduled message
+                     */
+                    anchor: `${curBlock.height},${curBlock.timestamp},${processId},${idx}`,
+                    target: processId,
+                    owner: processOwner,
+                    block: curBlock,
+                    tags: schedule.message
+                  },
                   AoGlobal: {
-                    process: { id: processId, owner },
+                    process: { id: processId, owner: processOwner },
                     block: curBlock
                   }
                 })
@@ -254,17 +272,17 @@ export function scheduleMessagesWith ({ processId, owner, originBlock, suTime, s
       // TODO implement CRON based schedules
     }
 
-    return iMessages
+    return scheduledMessages
   }
 
-  return ([left, right]) => {
+  return ([leftMessage, rightMessage]) => {
     const messages = []
-    messages.push.apply(messages, maybeMessages(left.block, right.block))
+    messages.push.apply(messages, maybeScheduledMessages(leftMessage.block, rightMessage.block))
     /**
      * Sandwich the scheduled messages between the two actual messages
      */
-    messages.unshift(left)
-    messages.push(right)
+    messages.unshift(leftMessage)
+    messages.push(rightMessage)
     return messages
   }
 }
