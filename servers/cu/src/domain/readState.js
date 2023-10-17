@@ -17,7 +17,7 @@ import { loadMessagesWith } from './lib/loadMessages.js'
  *
  * @typedef ReadStateArgs
  * @property {string} processId
- * @property {string} messageId
+ * @property {string} interactionId
  *
  * @callback ReadState
  * @param {ReadStateArgs} args
@@ -32,8 +32,8 @@ export function readStateWith (env) {
   const loadMessages = loadMessagesWith(env)
   const evaluate = undefined
 
-  return ({ processId, messageId }) => {
-    return of({ id: processId, to: messageId })
+  return ({ processId, interactionId }) => {
+    return of({ id: processId, to: interactionId })
       .chain(loadProcess)
       .chain(loadSource)
       .chain(loadMessages)
@@ -41,9 +41,9 @@ export function readStateWith (env) {
       .map((ctx) => ctx.output)
       .map(
         env.logger.tap(
-          'readState result for process "%s" to message "%s": %O',
+          'readState result for process "%s" to interaction "%s": %O',
           processId,
-          messageId || 'latest'
+          interactionId || 'latest'
         )
       )
       .toPromise()
