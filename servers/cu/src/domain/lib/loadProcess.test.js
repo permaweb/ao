@@ -14,7 +14,8 @@ describe('loadProcess', () => {
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
       { name: 'ao-type', value: 'process' },
-      { name: 'Foo', value: 'Bar' }
+      { name: 'Foo', value: 'Bar' },
+      { name: 'Foo', value: 'Buzz' }
     ]
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },

@@ -20,32 +20,8 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
-/**
- * @callback LoadTransactionMeta
- * @param {string} id - the id of the transaction
- * @returns {Async<any>}
- *
- * @callback LoadTransaction
- * @param {string} id - the id of the transaction
- * @returns {Async<Response>}
- *
- * @typedef Env
- * @property {LoadTransactionMeta} loadTransactionMeta
- * @property {LoadTransaction} loadTransactionData
- */
-
-/**
- * @callback LoadSourceBuffer
- * @param {string} srcId
- * @returns {Async<ArrayBuffer>}
- *
- * @param {Env} env
- * @returns {LoadSourceBuffer}
- */
 function getSourceBufferWith ({ loadTransactionData }) {
-  loadTransactionData = fromPromise(
-    loadTransactionDataSchema.implement(loadTransactionData)
-  )
+  loadTransactionData = fromPromise(loadTransactionDataSchema.implement(loadTransactionData))
 
   return (tags) => {
     return of(tags)
@@ -71,7 +47,7 @@ function getSourceBufferWith ({ loadTransactionData }) {
  * @param {Args} args
  * @returns {Async<Result & Args>}
  *
- * @param {Env} env
+ * @param {any} env
  * @returns {LoadSource}
  */
 export function loadSourceWith (env) {

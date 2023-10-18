@@ -1,13 +1,11 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import {
-  T, __, always, aperture, append, ascend, assoc, cond, defaultTo,
-  equals, head, last, map, mergeRight, pipe, prop, reduce
-} from 'ramda'
+import { T, always, aperture, ascend, cond, equals, head, last, mergeRight, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
 import { messageSchema } from '../model.js'
 import { findLatestEvaluationSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
+import { parseTags } from './utils.js'
 
 /**
  * - { name: 'scheduled-interval', value: 'interval' }
@@ -106,36 +104,6 @@ export const SCHEDULED_MESSAGE = 'scheduled-message'
 function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
 
-  /**
-   * Parse tags into a object with key-value pairs of name -> values.
-   *
-   * If multiple tags with the same name exist, it's value will be the array of tag values
-   * in order of appearance
-   */
-  function tagsToKv (tags) {
-    return pipe(
-      reduce(
-        (map, tag) => pipe(
-          // [value, value, ...] || undefined
-          prop(tag.name),
-          // []
-          defaultTo([]),
-          // [value]
-          append(tag.value),
-          // { [name]: [value, value, ...] }
-          assoc(tag.name, __, map)
-        )(map),
-        {}
-      ),
-      /**
-       * If the field is only a singly list, then extract the one value.
-       *
-       * Otherwise, keep the value as a list.
-       */
-      map((values) => values.length ? values : values[0])
-    )(tags)
-  }
-
   return (ctx) => of(ctx)
     .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
     .bimap(
@@ -147,7 +115,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * Initial Process State
        */
       () => Resolved({
-        state: tagsToKv(ctx.tags),
+        state: parseTags(ctx.tags),
         result: {
           error: undefined,
           messages: [],

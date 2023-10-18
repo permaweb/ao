@@ -1,9 +1,29 @@
-import { assoc, reduce } from 'ramda'
+import { __, append, assoc, map, pipe, propOr, reduce } from 'ramda'
 
 /**
- * TODO: handle parsing multiple tags with the same name as an array
- * Right now, the value is just overwritten with the last tag in the list with that name
- */
+* Parse tags into a object with key-value pairs of name -> values.
+*
+* If multiple tags with the same name exist, it's value will be the array of tag values
+* in order of appearance
+*/
 export function parseTags (rawTags) {
-  return reduce((a, t) => assoc(t.name, t.value, a), {}, rawTags)
+  return pipe(
+    reduce(
+      (map, tag) => pipe(
+        // [value, value, ...] || []
+        propOr([], tag.name),
+        // [value]
+        append(tag.value),
+        // { [name]: [value, value, ...] }
+        assoc(tag.name, __, map)
+      )(map),
+      {}
+    ),
+    /**
+    * If the field is only a singly list, then extract the one value.
+    *
+    * Otherwise, keep the value as a list.
+    */
+    map((values) => values.length > 1 ? values : values[0])
+  )(rawTags)
 }
