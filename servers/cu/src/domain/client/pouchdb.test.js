@@ -133,7 +133,7 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'process-123',
+                    $gte: 'process-123,',
                     $lte: 'process-123,sortkey-910'
                   }
                 },
@@ -178,7 +178,7 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'process-123',
+                    $gte: 'process-123,',
                     $lte: `process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
