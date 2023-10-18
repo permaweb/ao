@@ -1,6 +1,7 @@
 import { fromPromise } from 'hyper-async'
 import { z } from 'zod'
-import { loadMessageMetaSchema } from '../dal'
+
+import { loadMessageMetaSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step

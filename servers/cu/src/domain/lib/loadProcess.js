@@ -6,27 +6,6 @@ import { findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from 
 import { parseTags } from './utils.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
 
-/**
- * The result that is produced from this step
- * and added to ctx.
- *
- * This is used to parse the output to ensure the correct shape
- * is always added to context
- */
-const ctxSchema = z.object({
-  owner: z.string().min(1),
-  tags: z.array(rawTagSchema),
-  block: rawBlockSchema
-}).passthrough()
-
-/**
- * @callback LoadProcessMeta
- * @param {string} id - the id of the process
- * @returns {Async<z.infer<typeof ctxSchema>>}
- *
- * @param {Env} env
- * @returns {LoadProcessMeta}
- */
 function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, logger }) {
   loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
@@ -99,12 +78,27 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
 }
 
 /**
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
+const ctxSchema = z.object({
+  owner: z.string().min(1),
+  tags: z.array(rawTagSchema),
+  block: rawBlockSchema
+}).passthrough()
+
+/**
  * @typedef Args
  * @property {string} id - the id of the contract
  *
  * @typedef Result
  * @property {string} id - the id of the contract
- * @property {ArrayBuffer} src - an array buffer that contains the Contract Wasm Src
+ * @property {string} owner
+ * @property {any} tags
+ * @property {{ height: number, timestamp: number }} block
  *
  * @callback LoadProcess
  * @param {Args} args
