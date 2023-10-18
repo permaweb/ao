@@ -40,7 +40,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
-    SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://gw.warp.cc',
+    SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net'
   },
   production: {
