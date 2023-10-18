@@ -135,7 +135,6 @@ export function findLatestEvaluationWith ({ pouchDb }) {
           sort: [{ _id: 'desc' }],
           limit: 1
         }).then((res) => {
-          console.log({ res })
           if (res.warning) console.warn(res.warning)
           return res.docs
         })
