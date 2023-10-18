@@ -205,26 +205,24 @@ export function saveEvaluationWith ({ pouchDb }) {
   }
 }
 
-export function findScheduledEvaluationsWith ({ pouchDb }) {
+export function findEvaluationsWith ({ pouchDb }) {
   function createSelector ({ processId, from, to }) {
     /**
-     * By using the max collation sequence, this will give us all docs whose _id
-     * is prefixed with the processId plus the from sortKey,
-     *
-     * By adding the comma, this will further only return evaluations that were the result of scheduled messages
-     *
-     * Scheduled Eval _ids look like ${processId},${sortKey},${interval}${counter}
+     * grab all evaluations for the processId, by default
      */
     const selector = {
       _id: {
-        $gte: `${createEvaluationId({ processId, sortKey: from })},`,
-        $lte: `${createEvaluationId({ processId, sortKey: from })},${COLLATION_SEQUENCE_MAX_CHAR}`
+        $gte: `${processId},`,
+        $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
+
     /**
-     * overwrite upper range with to sortKey
+     * trim range using sort keys, if provided
      */
+    if (from) selector._id.$gte = `${createEvaluationId({ processId, sortKey: from })},`
     if (to) selector._id.$lte = `${createEvaluationId({ processId, sortKey: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
+
     return selector
   }
 
@@ -241,11 +239,6 @@ export function findScheduledEvaluationsWith ({ pouchDb }) {
           return res.docs
         })
       }))
-      /**
-       * Ensure the input matches the expected
-       * shape
-       */
-      .map(map(evaluationDocSchema.parse))
       .map(
         map(applySpec({
           sortKey: prop('sortKey'),
