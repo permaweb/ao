@@ -9,8 +9,8 @@ export { createLogger } from './logger.js'
 export const createApis = (ctx) => {
   /**
    * default readState that works OOTB
-   * - Uses PouchDB to cache interactions
-   * - Uses Warp Sequencer
+   * - Uses PouchDB to cache evaluations and processes
+   * - Uses ao Sequencer Unit
    * - Use arweave.net gateway
    */
   const readStateLogger = ctx.logger.child('readState')
@@ -21,6 +21,8 @@ export const createApis = (ctx) => {
     loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: readStateLogger.child('gateway') }),
     findProcess: PouchDbClient.findProcessWith({ pouchDb: PouchDbClient.pouchDb }),
     saveProcess: PouchDbClient.saveProcessWith({ pouchDb: PouchDbClient.pouchDb }),
+    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb: PouchDbClient.pouchDb }),
+    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb: PouchDbClient.pouchDb }),
     logger: readStateLogger
   })
 
