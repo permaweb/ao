@@ -5,7 +5,7 @@ import { withMiddleware } from './middleware/index.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
-  messageId: z.string().optional()
+  to: z.string().optional()
 })
 
 export const withStateRoutes = (app) => {
@@ -17,11 +17,11 @@ export const withStateRoutes = (app) => {
       always(async (req, res) => {
         const {
           params: { processId },
-          query: { to: messageId },
+          query: { to },
           domain: { apis: { readState } }
         } = req
 
-        const input = inputSchema.parse({ processId, messageId })
+        const input = inputSchema.parse({ processId, to })
         return res.send(await readState(input))
       })
     )()

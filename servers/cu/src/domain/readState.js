@@ -18,7 +18,7 @@ import { evaluateWith } from './lib/evaluate.js'
  *
  * @typedef ReadStateArgs
  * @property {string} processId
- * @property {string} interactionId
+ * @property {string} to
  *
  * @callback ReadState
  * @param {ReadStateArgs} args
@@ -33,8 +33,8 @@ export function readStateWith (env) {
   const loadMessages = loadMessagesWith(env)
   const evaluate = evaluateWith(env)
 
-  return ({ processId, interactionId }) => {
-    return of({ id: processId, to: interactionId })
+  return ({ processId, to }) => {
+    return of({ id: processId, to })
       .chain(loadProcess)
       .chain(loadSource)
       .chain(loadMessages)
@@ -44,7 +44,7 @@ export function readStateWith (env) {
         env.logger.tap(
           'readState result for process "%s" to interaction "%s": %O',
           processId,
-          interactionId || 'latest'
+          to || 'latest'
         )
       )
       .toPromise()
