@@ -1,6 +1,11 @@
 import { always, compose } from 'ramda'
 
 import { withMiddleware } from './middleware/index.js'
+import { z } from 'zod'
+
+const inputSchema = z.object({
+  messageTxId: z.string().min(1, 'a message tx id is required')
+})
 
 export const withResultRoutes = app => {
   app.get(
@@ -8,24 +13,13 @@ export const withResultRoutes = app => {
     compose(
       withMiddleware,
       always(async (req, res) => {
-        const { domain: { apis: { readState } } } = req
+        const {
+          params: { interactionId },
+          domain: { apis: { readResult } }
+        } = req
 
-        const txId = req.params.interactionId
-
-        try {
-          const gatewayFetch = await fetch(`https://gateway.warp.cc/gateway/interactions/${txId}`)
-          const gatewayData = await gatewayFetch.json()
-          const sortkey = gatewayData.sortkey
-          const contractId = gatewayData.contractid
-          const txState = await readState(contractId, sortkey)
-          if ('result' in txState) {
-            res.send(txState.result)
-          } else {
-            res.send({})
-          }
-        } catch (e) {
-          throw new Error(`Failed to read messages with error: ${e}`)
-        }
+        const input = inputSchema.parse({ messageTxId: interactionId })
+        return res.send(await readResult(input))
       })
     )()
   )
