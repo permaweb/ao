@@ -114,7 +114,7 @@ impl SortedMessages {
             message_timestamp >= from_timestamp && message_timestamp <= to_timestamp
         }).collect();
 
-        let page_info = PageInfo { has_next_page: true };
+        let page_info = PageInfo { has_next_page: false };
 
         let edges = filtered_messages.into_iter().map(|message| Edge {
             node: message.clone(),
