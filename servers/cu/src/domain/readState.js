@@ -3,6 +3,7 @@ import { of } from 'hyper-async'
 import { loadProcessWith } from './lib/loadProcess.js'
 import { loadSourceWith } from './lib/loadSource.js'
 import { loadMessagesWith } from './lib/loadMessages.js'
+import { evaluateWith } from './lib/evaluate.js'
 
 /**
  * @typedef Env
@@ -30,7 +31,7 @@ export function readStateWith (env) {
   const loadProcess = loadProcessWith(env)
   const loadSource = loadSourceWith(env)
   const loadMessages = loadMessagesWith(env)
-  const evaluate = undefined
+  const evaluate = evaluateWith(env)
 
   return ({ processId, interactionId }) => {
     return of({ id: processId, to: interactionId })
