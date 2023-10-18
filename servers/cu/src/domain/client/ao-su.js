@@ -184,3 +184,14 @@ export const loadTimestampWith = ({ fetch, SU_URL }) => {
   return () => fetch(`${SU_URL}/timestamp`)
     .then(res => new Date(res.text()))
 }
+
+export const loadMessageMetaWith = ({ fetch, SU_URL }) => {
+  return async ({ messageTxId }) => {
+    // TODO: implement fetching from su endpoint (need endpoint from Vince)
+
+    return {
+      processId: 'process-123',
+      sortKey: '000012345667,3423523532,fasdfsdf87slfja3rfaflj'
+    }
+  }
+}

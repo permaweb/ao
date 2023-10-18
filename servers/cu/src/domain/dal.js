@@ -60,3 +60,12 @@ export const loadMessagesSchema = z.function()
 
 export const loadTimestampSchema = z.function()
   .returns(z.promise(z.date()))
+
+export const loadMessageMetaSchema = z.function()
+  .args(z.object({ messageTxId: z.string().min(1) }))
+  .returns(z.promise(
+    z.object({
+      processId: z.string().min(1),
+      sortKey: z.string().min(1)
+    })
+  ))

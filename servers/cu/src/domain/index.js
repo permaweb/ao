@@ -1,6 +1,7 @@
 // Precanned clients to use for OOTB apis
 import * as GatewayClient from './client/gateway.js'
 import * as PouchDbClient from './client/pouchdb.js'
+import { readResultWith } from './readResult.js'
 
 import { readStateWith } from './readState.js'
 
@@ -14,7 +15,6 @@ export const createApis = (ctx) => {
    * - Use arweave.net gateway
    */
   const readStateLogger = ctx.logger.child('readState')
-
   const readState = readStateWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
     loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
@@ -26,5 +26,23 @@ export const createApis = (ctx) => {
     logger: readStateLogger
   })
 
-  return { readState }
+  /**
+   * default readResult that works OOTB
+   * - Uses PouchDB to cache evaluations and processes
+   * - Uses ao Sequencer Unit
+   * - Use arweave.net gateway
+   */
+  const readResultLogger = ctx.logger.child('readResult')
+  const readResult = readResultWith({
+    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
+    loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
+    loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: readStateLogger.child('gateway') }),
+    findProcess: PouchDbClient.findProcessWith({ pouchDb: PouchDbClient.pouchDb }),
+    saveProcess: PouchDbClient.saveProcessWith({ pouchDb: PouchDbClient.pouchDb }),
+    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb: PouchDbClient.pouchDb }),
+    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb: PouchDbClient.pouchDb }),
+    logger: readResultLogger
+  })
+
+  return { readState, readResult }
 }
