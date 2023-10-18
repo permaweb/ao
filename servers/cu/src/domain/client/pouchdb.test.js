@@ -2,14 +2,13 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
-import { findProcessSchema, saveProcessSchema } from '../dal.js'
+import { findLatestEvaluationSchema, findProcessSchema, saveProcessSchema } from '../dal.js'
 import {
+  COLLATION_SEQUENCE_MAX_CHAR,
+  findLatestEvaluationWith,
   findProcessWith,
   saveProcessWith
 } from './pouchdb.js'
-
-const logger = createLogger('db')
 
 describe('pouchdb', () => {
   describe('findProcess', () => {
@@ -79,8 +78,7 @@ describe('pouchdb', () => {
               })
               return Promise.resolve(true)
             }
-          },
-          logger
+          }
         })
       )
 
@@ -109,8 +107,7 @@ describe('pouchdb', () => {
               }
             }),
             put: assert.fail
-          },
-          logger
+          }
         })
       )
 
@@ -124,5 +121,116 @@ describe('pouchdb', () => {
         }
       })
     })
+  })
+
+  describe('findLatestEvaluation', () => {
+    test('return the lastest evaluation', async () => {
+      const evaluatedAt = new Date().toISOString()
+      const findLatestEvaluation = findLatestEvaluationSchema.implement(
+        findLatestEvaluationWith({
+          pouchDb: {
+            find: async (op) => {
+              assert.deepStrictEqual(op, {
+                selector: {
+                  _id: {
+                    $gte: 'process-123',
+                    $lte: 'process-123,sortkey-910'
+                  }
+                },
+                sort: [{ _id: 'desc' }],
+                limit: 1
+              })
+              return {
+                docs: [
+                  {
+                    _id: 'process-123,sortkey-890',
+                    sortKey: 'sortkey-890',
+                    parent: 'process-123',
+                    message: { target: 'process-456', owner: 'owner-123', tags: [] },
+                    output: { state: { foo: 'bar' } },
+                    evaluatedAt,
+                    type: 'evaluation'
+                  }
+                ]
+              }
+            }
+          }
+        }))
+
+      const res = await findLatestEvaluation({
+        processId: 'process-123',
+        to: 'sortkey-910'
+      })
+
+      assert.equal(res.sortKey, 'sortkey-890')
+      assert.equal(res.processId, 'process-123')
+      assert.deepStrictEqual(res.message, { target: 'process-456', owner: 'owner-123', tags: [] })
+      assert.deepStrictEqual(res.output, { state: { foo: 'bar' } })
+      assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
+    })
+
+    test("without 'to', return the lastest interaction using collation sequence max char", async () => {
+      const evaluatedAt = new Date().toISOString()
+      const findLatestEvaluation = findLatestEvaluationSchema.implement(
+        findLatestEvaluationWith({
+          pouchDb: {
+            find: async (op) => {
+              assert.deepStrictEqual(op, {
+                selector: {
+                  _id: {
+                    $gte: 'process-123',
+                    $lte: `process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
+                  }
+                },
+                sort: [{ _id: 'desc' }],
+                limit: 1
+              })
+              return {
+                docs: [
+                  {
+                    _id: 'process-123,sortkey-890',
+                    sortKey: 'sortkey-890',
+                    parent: 'process-123',
+                    message: { target: 'process-456', owner: 'owner-123', tags: [] },
+                    output: { state: { foo: 'bar' } },
+                    evaluatedAt,
+                    type: 'evaluation'
+                  }
+                ]
+              }
+            }
+          }
+        }))
+
+      const res = await findLatestEvaluation({
+        processId: 'process-123'
+      })
+
+      assert.equal(res.sortKey, 'sortkey-890')
+      assert.equal(res.processId, 'process-123')
+      assert.deepStrictEqual(res.message, { target: 'process-456', owner: 'owner-123', tags: [] })
+      assert.deepStrictEqual(res.output, { state: { foo: 'bar' } })
+      assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
+    })
+
+    test('rejects if no interaction is found', async () => {
+      const findLatestEvaluation = findLatestEvaluationSchema.implement(
+        findLatestEvaluationWith({
+          pouchDb: {
+            find: async () => ({ docs: [] })
+          }
+        })
+      )
+      await findLatestEvaluation({
+        processId: 'process-123',
+        to: 'sortkey-910'
+      })
+        .then(assert.fail)
+        .catch(() => assert.ok(true))
+    })
+  })
+
+  describe('saveEvaluation', () => {
+    // TODO: write tests
   })
 })

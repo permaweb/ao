@@ -135,17 +135,21 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
           .then(pluck('node'))
           .then(nodes =>
             transduce(
+              /**
+               * fields from SU are currently snake_case,
+               * so we need to map from those
+               */
               // { message, block, owner, sort_key, process_id }
               compose(
                 map(applySpec({
                   sortKey: path(['sort_key']),
                   message: applySpec({
-                    /**
-                     * TODO: Confirm these paths
-                     */
                     owner: path(['owner', 'address']),
                     target: path('process_id'),
                     anchor: path(['message', 'anchor']),
+                    /**
+                     * TODO: implement from and Forwarded-By
+                     */
                     from: mapFrom,
                     'Forwarded-By': mapForwardedBy,
                     tags: path(['message', 'tags'])
@@ -156,16 +160,10 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
                    */
                   block: applySpec({
                     height: path(['block', 'height']),
-                    timestamp: pipe(
-                      path(['block', 'timestamp']),
-                      /**
-                       * SU is currently sending back timestamp in milliseconds,
-                       * when we actually need Epoch time,
-                       *
-                       * so we divide by 1000 to get Epoch time
-                       */
-                      inMillis => Math.floor(inMillis / 1000)
-                    )
+                    /**
+                     * SU is currently sending back timestamp in milliseconds,
+                     */
+                    timestamp: path(['block', 'timestamp'])
                   }),
                   AoGlobal: mapAoGlobal({ process: { id: processId, owner: processOwner } })
                 }))

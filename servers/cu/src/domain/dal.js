@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { messageSchema, processSchema, rawBlockSchema, rawTagSchema } from './model.js'
+import { evaluationSchema, messageSchema, processSchema, rawBlockSchema, rawTagSchema } from './model.js'
 
 // Gateway
 
@@ -35,6 +35,14 @@ export const findProcessSchema = z.function()
 
 export const saveProcessSchema = z.function()
   .args(processSchema)
+  .returns(z.promise(z.any()))
+
+export const findLatestEvaluationSchema = z.function()
+  .args(z.object({ processId: z.string(), to: z.string().optional() }))
+  .returns(z.promise(evaluationSchema))
+
+export const saveEvaluationSchema = z.function()
+  .args(evaluationSchema)
   .returns(z.promise(z.any()))
 
 // SU
