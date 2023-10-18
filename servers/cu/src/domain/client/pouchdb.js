@@ -1,5 +1,5 @@
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, prop } from 'ramda'
+import { always, applySpec, head, map, prop } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -109,7 +109,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: processId,
+        $gte: `${processId},`,
         $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
@@ -200,6 +200,60 @@ export function saveEvaluationWith ({ pouchDb }) {
               : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
           )
           .map(always(doc._id))
+      )
+      .toPromise()
+  }
+}
+
+export function findScheduledEvaluationsWith ({ pouchDb }) {
+  function createSelector ({ processId, from, to }) {
+    /**
+     * By using the max collation sequence, this will give us all docs whose _id
+     * is prefixed with the processId plus the from sortKey,
+     *
+     * By adding the comma, this will further only return evaluations that were the result of scheduled messages
+     *
+     * Scheduled Eval _ids look like ${processId},${sortKey},${interval}${counter}
+     */
+    const selector = {
+      _id: {
+        $gte: `${createEvaluationId({ processId, sortKey: from })},`,
+        $lte: `${createEvaluationId({ processId, sortKey: from })},${COLLATION_SEQUENCE_MAX_CHAR}`
+      }
+    }
+    /**
+     * overwrite upper range with to sortKey
+     */
+    if (to) selector._id.$lte = `${createEvaluationId({ processId, sortKey: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
+    return selector
+  }
+
+  return ({ processId, from, to }) => {
+    return of({ processId, from, to })
+      .map(createSelector)
+      .chain(fromPromise((selector) => {
+        return pouchDb.find({
+          selector,
+          sort: [{ _id: 'desc' }],
+          limit: Number.MAX_SAFE_INTEGER
+        }).then((res) => {
+          if (res.warning) console.warn(res.warning)
+          return res.docs
+        })
+      }))
+      /**
+       * Ensure the input matches the expected
+       * shape
+       */
+      .map(map(evaluationDocSchema.parse))
+      .map(
+        map(applySpec({
+          sortKey: prop('sortKey'),
+          processId: prop('parent'),
+          message: prop('message'),
+          output: prop('output'),
+          evaluatedAt: prop('evaluatedAt')
+        }))
       )
       .toPromise()
   }

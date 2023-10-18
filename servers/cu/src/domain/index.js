@@ -6,6 +6,7 @@ import * as AoSuClient from './client/ao-su.js'
 import { readResultWith } from './readResult.js'
 
 import { readStateWith } from './readState.js'
+import { readScheduledMessagesWith } from './readScheduledMessages.js'
 
 export { createLogger } from './logger.js'
 
@@ -43,5 +44,11 @@ export const createApis = (ctx) => {
     loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL })
   })
 
-  return { readState, readResult }
+  const readScheduledMessagesLogger = ctx.logger.child('readScheduledMessages')
+  const readScheduledMessages = readScheduledMessagesWith({
+    ...sharedDeps(readScheduledMessagesLogger),
+    findScheduledEvaluations: PouchDbClient.findScheduledEvaluationsWith({ pouchDb: PouchDbClient.pouchDb })
+  })
+
+  return { readState, readResult, readScheduledMessages }
 }
