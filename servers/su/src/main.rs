@@ -79,7 +79,7 @@ async fn main() -> std::io::Result<()> {
             .route("/message", web::post().to(message_route)) 
             .route("/messages/{process_id}", web::get().to(messages_route))
     })
-    .bind(("127.0.0.1", 3005))?
+    .bind(("0.0.0.0", 3005))?
     .run()
     .await
 }
