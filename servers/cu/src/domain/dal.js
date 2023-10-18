@@ -45,10 +45,10 @@ export const saveEvaluationSchema = z.function()
   .args(evaluationSchema)
   .returns(z.promise(z.any()))
 
-export const findScheduledEvaluationsSchema = z.function()
+export const findEvaluationsSchema = z.function()
   .args(z.object({
     processId: z.string(),
-    from: z.string(),
+    from: z.string().optional(),
     to: z.string().optional()
   }))
   .returns(z.promise(z.array(evaluationSchema)))

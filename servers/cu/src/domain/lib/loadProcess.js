@@ -3,8 +3,8 @@ import { always, applySpec, equals, isNotNil, mergeRight, path, pick, pipe } fro
 import { z } from 'zod'
 
 import { findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
-import { parseTags } from './utils.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
+import { parseTags } from './utils.js'
 
 function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, logger }) {
   loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))

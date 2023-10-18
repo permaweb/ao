@@ -1,8 +1,8 @@
-import { fromPromise } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { mergeRight, pathOr } from 'ramda'
+import { compose, filter, map, mergeRight, pathOr, transduce } from 'ramda'
 
-import { findScheduledEvaluationsSchema } from '../dal.js'
+import { findEvaluationsSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -33,11 +33,29 @@ export function gatherScheduledMessagesWith (env) {
   const logger = env.logger.child('loadMessageMeta')
   env = { ...env, logger }
 
-  const findScheduledEvaluations = fromPromise(findScheduledEvaluationsSchema.implement(env.findScheduledEvaluations))
+  const findEvaluations = fromPromise(findEvaluationsSchema.implement(env.findEvaluations))
 
   return (ctx) => {
-    return findScheduledEvaluations({ processId: ctx.processId, from: ctx.from, to: ctx.to })
-      .map(evaluations => evaluations.flatMap(pathOr([], ['output', 'result', 'messages'])))
+    return of(ctx)
+      .chain(ctx => findEvaluations({ processId: ctx.processId, from: ctx.from, to: ctx.to }))
+      .map(evaluations =>
+        transduce(
+          compose(
+            /**
+             * scheduled messages have the interval and idx appended to their "sortKey"
+             * and so can be distinguished by how many parts after splitting on ','
+             */
+            filter(evaluation => evaluation.sortKey.split(',').length > 4),
+            map(pathOr([], 'output', 'result', 'messages'))
+          ),
+          (acc, messages) => {
+            acc.push.apply(acc, messages)
+            return acc
+          },
+          [],
+          evaluations
+        )
+      )
       .map(messages => ({ messages }))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
