@@ -13,11 +13,10 @@ describe('upload-contract', () => {
         assert.ok(data)
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
-          { name: 'App-Name', value: 'SmartWeaveContract' },
-          { name: 'App-Version', value: '0.3.0' },
-          { name: 'Content-Type', value: 'text/plain' },
-          { name: 'Init-State', value: JSON.stringify({ initial: 'state' }) },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'process' },
           { name: 'Contract-Src', value: 'src-id-123' },
+          { name: 'Content-Type', value: 'text/plain' },
           { name: 'SDK', value: 'ao' }
         ])
         assert.ok(signer)
@@ -33,7 +32,6 @@ describe('upload-contract', () => {
 
     await uploadContract({
       srcId: 'src-id-123',
-      initialState: { initial: 'state' },
       tags: [
         { name: 'foo', value: 'bar' }
       ],
@@ -46,11 +44,10 @@ describe('upload-contract', () => {
     const uploadContract = uploadContractWith({
       deployContract: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
-          { name: 'App-Name', value: 'SmartWeaveContract' },
-          { name: 'App-Version', value: '0.3.0' },
-          { name: 'Content-Type', value: 'text/plain' },
-          { name: 'Init-State', value: JSON.stringify({ initial: 'state' }) },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'process' },
           { name: 'Contract-Src', value: 'src-id-123' },
+          { name: 'Content-Type', value: 'text/plain' },
           { name: 'SDK', value: 'ao' }
         ])
 
@@ -62,7 +59,34 @@ describe('upload-contract', () => {
 
     await uploadContract({
       srcId: 'src-id-123',
-      initialState: { initial: 'state' },
+      signer: async () => ({ id: 'contract-id-123', raw: 'raw-buffer' })
+    }).toPromise()
+  })
+
+  test('deduplicates identifying tags', async () => {
+    const uploadContract = uploadContractWith({
+      deployContract: async ({ tags }) => {
+        assert.deepStrictEqual(tags, [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'process' },
+          { name: 'Contract-Src', value: 'src-id-123' },
+          { name: 'Content-Type', value: 'text/plain' },
+          { name: 'SDK', value: 'ao' }
+        ])
+
+        return { res: 'foobar', contractId: 'contract-id-123' }
+      },
+      registerContract: async ({ contractId }) => ({ contractId }),
+      logger
+    })
+
+    await uploadContract({
+      srcId: 'src-id-123',
+      tags: [
+        { name: 'ao-type', value: 'process' },
+        { name: 'ao-type', value: 'process' },
+        { name: 'Contract-Src', value: 'oops-duplicate' }
+      ],
       signer: async () => ({ id: 'contract-id-123', raw: 'raw-buffer' })
     }).toPromise()
   })
