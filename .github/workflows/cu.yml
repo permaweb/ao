@@ -27,7 +27,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -44,8 +44,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # Only deploy on main branch
-    # disable deploy for now.
-    if: github.ref == 'refs/heads/main' && false
+    if: github.ref == 'refs/heads/main'
     # Uncomment if we ever start running the release job
     # needs: [test, release]
     needs: [test]
@@ -58,7 +57,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
