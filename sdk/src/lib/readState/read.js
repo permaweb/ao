@@ -7,7 +7,7 @@ import { loadStateSchema } from '../../dal.js'
  * @property {any} loadState
  *
  * @typedef Context
- * @property {string} id - the id of the contract being read
+ * @property {string} id - the id of the process being read
  * @property {string} [sortKey] - the sortKey to read up to
  *
  * @callback Read

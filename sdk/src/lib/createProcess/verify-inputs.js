@@ -43,9 +43,8 @@ function verifySignerWith ({ logger }) {
 /**
  * @typedef Context
  * @property {string} srcId - the id of the contract source
- * @property {any} initialState - the initial state of the contract
- * @property {Function} sign - the initial state of the contract
- * @property {Tag[]} tags - the additional tags to add to the contract
+ * @property {Function} sign - the signer used to sign the process
+ * @property {Tag[]} tags - the additional tags to add to the process
  *
  * @typedef Wallet
  * @property {any} wallet - the read wallet

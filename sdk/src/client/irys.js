@@ -1,8 +1,8 @@
 import { Rejected, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-export const deployContractWith = ({ fetch, IRYS_NODE, logger: _logger }) => {
-  const logger = _logger.child('irys:deployContract')
+export const deployProcessWith = ({ fetch, IRYS_NODE, logger: _logger }) => {
+  const logger = _logger.child('irys:deployProcess')
 
   const irysNode = z.enum(['node1', 'node2'], {
     errorMap: () => ({ message: 'the irys node must be \'node1\' or \'node2\'' })
@@ -10,7 +10,7 @@ export const deployContractWith = ({ fetch, IRYS_NODE, logger: _logger }) => {
 
   return (args) => {
     return of(args)
-      .map(logger.tap('deploying bundled contract with irys to "%s"', `${irysNode}`))
+      .map(logger.tap('deploying bundled process with irys to "%s"', `${irysNode}`))
       /**
        * Sign with the provided signer
        */
@@ -46,14 +46,14 @@ export const deployContractWith = ({ fetch, IRYS_NODE, logger: _logger }) => {
             )
           )
           .bimap(
-            logger.tap('Error encountered when deploying bundled contract via irys'),
-            logger.tap('Successfully deployed bundled contract via irys')
+            logger.tap('Error encountered when deploying bundled process via irys'),
+            logger.tap('Successfully deployed bundled process via irys')
           )
           /**
            * See https://docs.irys.xyz/developer-docs/irys-sdk/api/upload
            * for shape
            */
-          .map(res => ({ res, contractId: res.id }))
+          .map(res => ({ res, processId: res.id }))
       )
       .toPromise()
   }

@@ -17,9 +17,9 @@ import { z } from 'zod'
 export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
   // TODO: create a dataloader and use that to batch load contracts
 
-  const GET_CONTRACTS_QUERY = `
-    query GetContracts ($contractIds: [ID!]!) {
-      transactions(ids: $contractIds) {
+  const GET_TRANSACTIONS_QUERY = `
+    query GetTransactions ($transactionIds: [ID!]!) {
+      transactions(ids: $transactionIds) {
         edges {
           node {
             owner {
@@ -56,8 +56,8 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            query: GET_CONTRACTS_QUERY,
-            variables: { contractIds: [id] }
+            query: GET_TRANSACTIONS_QUERY,
+            variables: { transactionIds: [id] }
           })
         })
           .then((res) => res.json())
@@ -73,7 +73,7 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
    * @property {string} GATEWAY_URL
    *
    * @callback LoadTransactionData
-   * @param {string} id - the id of the contract whose src is being loaded
+   * @param {string} id - the id of the transaction whose data is being loaded
    * @returns {Async<Response>}
    *
    * @param {Env2} env

@@ -14,7 +14,7 @@ describe('ao-cu', () => {
         loadStateWith({
           CU_URL: 'https://foo.bar',
           fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/contract/contract-123?to=sort-key-123')
+            assert.equal(url, 'https://foo.bar/state/process-123?to=sort-key-123')
             assert.deepStrictEqual(options, {
               method: 'GET',
               headers: {
@@ -31,7 +31,7 @@ describe('ao-cu', () => {
         })
       )
 
-      await loadState({ id: 'contract-123', sortKey: 'sort-key-123' })
+      await loadState({ id: 'process-123', sortKey: 'sort-key-123' })
         .then(res => assert.deepStrictEqual(res, {
           state: { foo: 'bar' },
           result: {}
@@ -43,7 +43,7 @@ describe('ao-cu', () => {
         loadStateWith({
           CU_URL: 'https://foo.bar',
           fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/contract/contract-123')
+            assert.equal(url, 'https://foo.bar/state/process-123')
             return new Response(JSON.stringify({
               state: { foo: 'bar' },
               result: {}
@@ -53,7 +53,7 @@ describe('ao-cu', () => {
         })
       )
 
-      await loadState({ id: 'contract-123' })
+      await loadState({ id: 'process-123' })
     })
   })
 })

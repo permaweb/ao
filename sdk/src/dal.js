@@ -27,7 +27,7 @@ export const deployInteractionSchema = z.function()
     }).passthrough()
   ))
 
-export const deployContractSchema = z.function()
+export const deployProcessSchema = z.function()
   .args(z.object({
     data: z.any(),
     tags: z.array(tagSchema),
@@ -35,17 +35,17 @@ export const deployContractSchema = z.function()
   }))
   .returns(z.promise(
     z.object({
-      contractId: z.string()
+      processId: z.string()
     }).passthrough()
   ))
 
-export const registerContractSchema = z.function()
+export const registerProcessSchema = z.function()
   .args(z.object({
-    contractId: z.string()
+    processId: z.string()
   }))
   .returns(z.promise(
     z.object({
-      contractId: z.string()
+      processId: z.string()
     }).passthrough()
   ))
 
