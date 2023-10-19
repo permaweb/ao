@@ -14,7 +14,6 @@ describe('verify-input', () => {
       loadTransactionMeta: async (_id) =>
         ({
           tags: [
-            { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },
             { name: 'Contract-Type', value: 'ao' }
           ]
@@ -32,42 +31,11 @@ describe('verify-input', () => {
     }).toPromise().then(assert.ok)
   })
 
-  test('throw if source is missing correct App-Name', async () => {
-    const verifyInput = verifyInputsWith({
-      loadTransactionMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'App-Name', value: 'NotRightValue' },
-            { name: 'Content-Type', value: 'application/wasm' },
-            { name: 'Contract-Type', value: 'ao' }
-          ]
-        }),
-      logger
-    })
-
-    await verifyInput({
-      srcId: CONTRACT,
-      initialState: { balances: { foo: 1 } },
-      signer: () => {},
-      tags: [
-        { name: 'foo', value: 'bar' }
-      ]
-    }).toPromise()
-      .then(assert.fail)
-      .catch(err => {
-        assert.equal(
-          err,
-          "Tag 'App-Name' of value 'NotRightValue' was not valid on contract source"
-        )
-      })
-  })
-
   test('throw if missing Content-Type', async () => {
     const verifyInput = verifyInputsWith({
       loadTransactionMeta: async (_id) =>
         ({
           tags: [
-            { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'No-Content-Type', value: 'application/wasm' },
             { name: 'Contract-Type', value: 'ao' }
           ]
@@ -97,7 +65,6 @@ describe('verify-input', () => {
       loadTransactionMeta: async (_id) =>
         ({
           tags: [
-            { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },
             { name: 'Contract-Type', value: 'something else' }
           ]
@@ -127,7 +94,6 @@ describe('verify-input', () => {
       loadTransactionMeta: async (_id) =>
         ({
           tags: [
-            { name: 'App-Name', value: 'SmartWeaveContractSource' },
             { name: 'Content-Type', value: 'application/wasm' },
             { name: 'Contract-Type', value: 'ao' }
           ]
@@ -149,36 +115,6 @@ describe('verify-input', () => {
         assert.equal(
           err,
           'signer not found'
-        )
-      })
-  })
-
-  test('throw if initial state is not an object', async () => {
-    const verifyInput = verifyInputsWith({
-      loadTransactionMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'App-Name', value: 'SmartWeaveContractSource' },
-            { name: 'Content-Type', value: 'application/wasm' },
-            { name: 'Contract-Type', value: 'ao' }
-          ]
-        }),
-      logger
-    })
-
-    await verifyInput({
-      srcId: CONTRACT,
-      initialState: 'not an object',
-      signer: () => {},
-      tags: [
-        { name: 'foo', value: 'bar' }
-      ]
-    }).toPromise()
-      .then(assert.fail)
-      .catch(err => {
-        assert.equal(
-          err,
-          'initialState was not a valid JSON Object'
         )
       })
   })

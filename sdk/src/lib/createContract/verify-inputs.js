@@ -1,5 +1,4 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { z } from 'zod'
 import { assoc, equals, prop, reduce } from 'ramda'
 
 import { loadTransactionMetaSchema } from '../../dal.js'
@@ -27,19 +26,12 @@ function verifySourceWith ({ loadTransactionMeta, logger }) {
     .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
     .map(prop('tags'))
     .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
-    .chain(checkTag('App-Name', equals('SmartWeaveContractSource')))
     .chain(checkTag('Content-Type', equals('application/wasm')))
     .chain(checkTag('Contract-Type', equals('ao')))
     .bimap(
       logger.tap('Verifying contract source failed: %s'),
       logger.tap('Verified contract source')
     )
-}
-
-function verifyInitialStateWith () {
-  return (initialState) => of(initialState)
-    .map(z.record(z.any()).safeParse)
-    .chain(({ success }) => success ? Resolved() : Rejected('initialState was not a valid JSON Object'))
 }
 
 function verifySignerWith ({ logger }) {
@@ -72,13 +64,11 @@ export function verifyInputsWith (env) {
   env = { ...env, logger }
 
   const verifySource = verifySourceWith(env)
-  const verifyInitialState = verifyInitialStateWith()
   const verifySigner = verifySignerWith(env)
 
   return (ctx) => {
     return of(ctx)
       .chain(ctx => verifySource(ctx.srcId).map(() => ctx))
-      .chain(ctx => verifyInitialState(ctx.initialState).map(() => ctx))
       .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
       .bimap(
         logger.tap('Error when verify input: %s'),
