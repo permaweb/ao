@@ -14,7 +14,7 @@ const CONTRACT = 'VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
 // const CONTRACT = 'SFKREVkacx7N64SIfAuNkMOPTocm42qbkKwzRJGfQHY'
 
 test('integration - readState', async () => {
-  const result = await readState({ contractId: CONTRACT })
+  const result = await readState({ processId: CONTRACT })
   console.log(JSON.stringify(result, null, 2))
   assert.ok(true)
 })

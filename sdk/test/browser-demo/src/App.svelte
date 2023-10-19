@@ -5,10 +5,10 @@
     readState,
   } from "@permaweb/ao-sdk";
 
-  // contract src
+  // TODO: neeed a new contract source for new AO process
   let srcId = "dfccC-_ih0Xl2_zhj8pTIUZF03QNfV2xu68pVzxSIQ0";
-  $: contractId = null;
-  $: contractState = null;
+  $: processId = null;
+  $: processState = null;
 
   async function doCreateContract(name) {
     if (globalThis.arweaveWallet) {
@@ -17,24 +17,24 @@
 
     const result = await createContract({
       srcId,
-      initialState: { inbox: [] },
       signer: createDataItemSigner(globalThis.arweaveWallet),
       tags: [
         { name: 'Title', value: 'ao test' },
         { name: 'Description', value: 'createContract' },
         { name: 'Type', value: 'Text' },
-        { name: 'AO Demo Name', value: name }
+        { name: 'AO Demo Name', value: name },
+        { name: 'inbox', value: JSON.stringify([]) }
       ]
     });
     console.log(result);
-    contractId = result
+    processId = result
   }
 
-  async function doReadState(contract) {
-    console.log(contract);
+  async function doReadState(process) {
+    console.log(process);
     try {
-      const result = await readState({ contractId: contract });
-      contractState = result;
+      const result = await readState({ processId: process });
+      processState = result;
     } catch (e) {
       console.log(e);
     }
@@ -49,11 +49,11 @@
 </div>
 <hr />
 <button
-  on:click={() => doReadState(contractId)}
+  on:click={() => doReadState(processId)}
 >
   ReadState
 </button
 >
-{#if contractState}
-  <div>{JSON.stringify(contractState)}</div>
+{#if processState}
+  <div>{JSON.stringify(processState)}</div>
 {/if}
