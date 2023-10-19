@@ -15,8 +15,8 @@ describe('ao-su', () => {
             assert.deepStrictEqual(options, { method: 'GET' })
 
             return new Response(JSON.stringify({
-              processId: 'process-123',
-              sortKey: 'block-123,time-456,hash-789'
+              process_id: 'process-123',
+              sort_key: 'block-123,time-456,hash-789'
             }))
           },
           SU_URL: 'https://ao-su-1.onrender.com'

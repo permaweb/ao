@@ -192,8 +192,8 @@ export const loadMessageMetaWith = ({ fetch, SU_URL }) => {
     return fetch(`${SU_URL}/message/${messageTxId}`, { method: 'GET' })
       .then(res => res.json())
       .then(res => ({
-        processId: res.processId,
-        sortKey: res.sortKey
+        processId: res.process_id,
+        sortKey: res.sort_key
       }))
   }
 }
