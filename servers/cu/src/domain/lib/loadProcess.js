@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, applySpec, equals, isNotNil, mergeRight, path, pick, pipe } from 'ramda'
+import { always, anyPass, applySpec, equals, includes, isNotNil, mergeRight, path, pick, pipe } from 'ramda'
 import { z } from 'zod'
 
 import { findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
@@ -35,7 +35,11 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
       .chain(ctx =>
         of(ctx.tags)
           .map(parseTags)
-          .chain(checkTag('Data-Protocol', equals('ao')))
+          /**
+           * The process could implement multiple Data-Protocols,
+           * so check in the case of a single value or an array of values
+           */
+          .chain(checkTag('Data-Protocol', anyPass([equals('ao'), includes('ao')])))
           .chain(checkTag('ao-type', equals('process')))
           .chain(checkTag('Contract-Src', isNotNil))
           .bimap(
