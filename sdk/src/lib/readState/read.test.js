@@ -8,7 +8,7 @@ describe('read', () => {
     const read = readWith({
       loadState: async (args) => {
         assert.deepStrictEqual(args, {
-          id: 'contract-123',
+          id: 'process-123',
           sortKey: 'sort-key-123'
         })
 
@@ -17,7 +17,7 @@ describe('read', () => {
     })
 
     const res = await read({
-      id: 'contract-123',
+      id: 'process-123',
       sortKey: 'sort-key-123'
     }).toPromise()
 

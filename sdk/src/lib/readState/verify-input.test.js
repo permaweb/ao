@@ -8,19 +8,19 @@ describe('verify-input', () => {
     const verifyInput = verifyInputWith()
 
     await verifyInput({
-      id: 'contract-123',
+      id: 'process-123',
       sortKey: 'sort-key-123'
     }).toPromise()
       .then(res => assert.deepStrictEqual(res, {
-        id: 'contract-123',
+        id: 'process-123',
         sortKey: 'sort-key-123'
       }))
 
     await verifyInput({
-      id: 'contract-123'
+      id: 'process-123'
     }).toPromise()
       .then(res => assert.deepStrictEqual(res, {
-        id: 'contract-123'
+        id: 'process-123'
       }))
   })
 
@@ -31,11 +31,11 @@ describe('verify-input', () => {
       .then(() => assert('unreachable. Should have failed'))
       .catch(assert.ok)
 
-    await verifyInput({ id: 'contract-123', sortKey: 123 }).toPromise()
+    await verifyInput({ id: 'process-123', sortKey: 123 }).toPromise()
       .then(() => assert('unreachable. Should have failed'))
       .catch(assert.ok)
 
-    await verifyInput('contract-123').toPromise()
+    await verifyInput('process-123').toPromise()
       .then(() => assert('unreachable. Should have failed'))
       .catch(assert.ok)
   })

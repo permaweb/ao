@@ -2,14 +2,14 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../../logger.js'
-import { uploadContractWith } from './upload-contract.js'
+import { uploadProcessWith } from './upload-process.js'
 
-const logger = createLogger('createContract')
+const logger = createLogger('createProcess')
 
-describe('upload-contract', () => {
-  test('add the tags, sign, upload the contract, register the contract, and return the contractId', async () => {
-    const uploadContract = uploadContractWith({
-      deployContract: async ({ data, tags, signer }) => {
+describe('upload-process', () => {
+  test('add the tags, sign, upload the process, register the process, and return the processId', async () => {
+    const uploadProcess = uploadProcessWith({
+      deployProcess: async ({ data, tags, signer }) => {
         assert.ok(data)
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
@@ -21,28 +21,28 @@ describe('upload-contract', () => {
         ])
         assert.ok(signer)
 
-        return { res: 'foobar', contractId: 'contract-id-123' }
+        return { res: 'foobar', processId: 'process-id-123' }
       },
-      registerContract: async ({ contractId }) => {
-        assert.equal(contractId, 'contract-id-123')
-        return { contractId }
+      registerProcess: async ({ processId }) => {
+        assert.equal(processId, 'process-id-123')
+        return { processId }
       },
       logger
     })
 
-    await uploadContract({
+    await uploadProcess({
       srcId: 'src-id-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ],
-      signer: async () => ({ id: 'contract-id-123', raw: 'raw-buffer' })
+      signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
-      .then(res => assert.equal(res.contractId, 'contract-id-123'))
+      .then(res => assert.equal(res.processId, 'process-id-123'))
   })
 
   test('defaults tags if none are provided', async () => {
-    const uploadContract = uploadContractWith({
-      deployContract: async ({ tags }) => {
+    const uploadProcess = uploadProcessWith({
+      deployProcess: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'process' },
@@ -51,21 +51,21 @@ describe('upload-contract', () => {
           { name: 'SDK', value: 'ao' }
         ])
 
-        return { res: 'foobar', contractId: 'contract-id-123' }
+        return { res: 'foobar', processId: 'process-id-123' }
       },
-      registerContract: async ({ contractId }) => ({ contractId }),
+      registerProcess: async ({ processId }) => ({ processId }),
       logger
     })
 
-    await uploadContract({
+    await uploadProcess({
       srcId: 'src-id-123',
-      signer: async () => ({ id: 'contract-id-123', raw: 'raw-buffer' })
+      signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
   })
 
   test('deduplicates identifying tags', async () => {
-    const uploadContract = uploadContractWith({
-      deployContract: async ({ tags }) => {
+    const uploadProcess = uploadProcessWith({
+      deployProcess: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'process' },
@@ -74,20 +74,20 @@ describe('upload-contract', () => {
           { name: 'SDK', value: 'ao' }
         ])
 
-        return { res: 'foobar', contractId: 'contract-id-123' }
+        return { res: 'foobar', processId: 'process-id-123' }
       },
-      registerContract: async ({ contractId }) => ({ contractId }),
+      registerProcess: async ({ processId }) => ({ processId }),
       logger
     })
 
-    await uploadContract({
+    await uploadProcess({
       srcId: 'src-id-123',
       tags: [
         { name: 'ao-type', value: 'process' },
         { name: 'ao-type', value: 'process' },
         { name: 'Contract-Src', value: 'oops-duplicate' }
       ],
-      signer: async () => ({ id: 'contract-id-123', raw: 'raw-buffer' })
+      signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
   })
 })

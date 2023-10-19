@@ -15,7 +15,7 @@ import { readWith } from './read.js'
  * @property {any} result
  *
  * @typedef ReadStateArgs
- * @property {string} contractId
+ * @property {string} processId
  * @property {string} [sortKey]
  *
  * @callback ReadState
@@ -29,14 +29,14 @@ export function readStateWith (env) {
   const verifyInput = verifyInputWith(env)
   const read = readWith(env)
 
-  return ({ contractId, sortKey }) => {
-    return of({ id: contractId, sortKey })
+  return ({ processId, sortKey }) => {
+    return of({ id: processId, sortKey })
       .chain(verifyInput)
       .chain(read)
       .map(
         env.logger.tap(
-          'readState result for contract "%s" to sortKey "%s": %O',
-          contractId,
+          'readState result for process "%s" to sortKey "%s": %O',
+          processId,
           sortKey || 'latest'
         )
       )

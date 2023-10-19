@@ -5,7 +5,7 @@ import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { loadTransactionDataWith, loadTransactionMetaWith } from './gateway.js'
 
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
-const CONTRACT = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
+const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 
 describe('gateway', () => {
   describe('loadTransactionMetaWith', () => {
@@ -16,7 +16,7 @@ describe('gateway', () => {
           GATEWAY_URL
         })
       )
-      const result = await loadTransactionMeta(CONTRACT)
+      const result = await loadTransactionMeta(PROCESS)
       assert.ok(result.tags)
     })
 
@@ -27,7 +27,7 @@ describe('gateway', () => {
           fetch: async (url, options) => {
             if (url.endsWith('/graphql')) {
               const body = JSON.parse(options.body)
-              assert.deepStrictEqual(body.variables, { contractIds: [CONTRACT] })
+              assert.deepStrictEqual(body.variables, { transactionIds: [PROCESS] })
 
               return new Response(JSON.stringify({
                 data: {
@@ -37,29 +37,12 @@ describe('gateway', () => {
                         node: {
                           tags: [
                             {
-                              name: 'App-Name',
-                              value: 'SmartWeaveContract'
-                            },
-                            {
-                              name: 'App-Version',
-                              value: '0.3.0'
-                            },
-                            {
                               name: 'Contract-Src',
-                              value:
-                              'gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w'
+                              value: 'gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w'
                             },
                             {
                               name: 'SDK',
-                              value: 'Warp'
-                            },
-                            {
-                              name: 'Nonce',
-                              value: '1693579974165'
-                            },
-                            {
-                              name: 'Content-Type',
-                              value: 'application/json'
+                              value: 'ao'
                             }
                           ]
                         }
@@ -74,7 +57,7 @@ describe('gateway', () => {
           }
         }))
 
-      await loadTransactionMeta(CONTRACT)
+      await loadTransactionMeta(PROCESS)
     })
   })
 
@@ -86,7 +69,7 @@ describe('gateway', () => {
           GATEWAY_URL
         })
       )
-      const result = await loadTransactionData(CONTRACT)
+      const result = await loadTransactionData(PROCESS)
       assert.ok(result.arrayBuffer)
       assert.ok(result.json)
       assert.ok(result.text)

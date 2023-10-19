@@ -1,11 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
-import { deployContractSchema } from '../../dal.js'
-import { createDataItemSigner, deployContractWith } from './wallet.js'
-
-const logger = createLogger('@permaweb/ao-sdk:createContract')
+import { createDataItemSigner } from './wallet.js'
 
 describe('browser - wallet', () => {
   describe('createDataItemSigner', () => {
@@ -42,46 +38,6 @@ describe('browser - wallet', () => {
       console.log('signedDataItem', res)
       assert.ok(res.id)
       assert.ok(res.raw)
-    })
-  })
-
-  describe('deployContractWith', () => {
-    test('should deploy the contract and return the contractId', async () => {
-      /**
-       * A mock of an actual arweaveWallet pulled from
-       * globalThis or window
-       */
-      const stubArweaveWallet = {
-        dispatch: async (transaction) => {
-          assert.deepStrictEqual(transaction.data, 'foobar')
-          return { id: 'contract-id-123' }
-        }
-      }
-
-      const stubArweave = {
-        createTransaction: async (args) => {
-          assert.deepStrictEqual(args, { data: 'foobar' })
-          return {
-            data: args.data,
-            addTag: (name, value) => {
-              assert.deepStrictEqual({ name, value }, { name: 'foo', value: 'bar' })
-            }
-          }
-        }
-      }
-
-      const deployContract = deployContractSchema.implement(
-        deployContractWith({ logger, arweave: stubArweave, arweaveWallet: stubArweaveWallet })
-      )
-
-      const res = await deployContract({
-        data: 'foobar',
-        tags: [{ name: 'foo', value: 'bar' }],
-        // Signer is unused by this implementation
-        signer: async ({ data, tags }) => {}
-      })
-
-      assert.deepStrictEqual(res, { res: { id: 'contract-id-123' }, contractId: 'contract-id-123' })
     })
   })
 })

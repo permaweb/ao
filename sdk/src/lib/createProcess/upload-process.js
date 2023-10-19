@@ -2,7 +2,7 @@ import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat, defaultTo, propEq, reject } from 'ramda'
 
-import { deployContractSchema, registerContractSchema, signerSchema } from '../../dal.js'
+import { deployProcessSchema, registerProcessSchema, signerSchema } from '../../dal.js'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -69,26 +69,26 @@ function buildDataWith ({ logger }) {
  * @param {Env6} env
  * @returns {UploadContract}
  */
-export function uploadContractWith (env) {
-  const logger = env.logger.child('uploadContract')
+export function uploadProcessWith (env) {
+  const logger = env.logger.child('uploadProcess')
   env = { ...env, logger }
 
   const buildTags = buildTagsWith(env)
   const buildData = buildDataWith(env)
 
-  const deployContract = deployContractSchema.implement(env.deployContract)
-  const registerContract = registerContractSchema.implement(env.registerContract)
+  const deployProcess = deployProcessSchema.implement(env.deployProcess)
+  const registerProcess = registerProcessSchema.implement(env.registerProcess)
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
       .chain(fromPromise(({ data, tags, signer }) =>
-        deployContract({ data, tags, signer: signerSchema.implement(signer) })
+        deployProcess({ data, tags, signer: signerSchema.implement(signer) })
       ))
-      .chain(fromPromise(({ contractId }) =>
-        registerContract({ contractId })
+      .chain(fromPromise(({ processId }) =>
+        registerProcess({ processId })
       ))
-      .map(res => assoc('contractId', res.contractId, ctx))
+      .map(res => assoc('processId', res.processId, ctx))
   }
 }

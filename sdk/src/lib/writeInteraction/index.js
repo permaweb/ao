@@ -14,7 +14,7 @@ import { uploadInteractionWith } from './upload-interaction.js'
  * @property {any} bundlrResponse - bundlr response from the gatewy
  *
  * @typedef WriteInteractionArgs
- * @property {string} contractId
+ * @property {string} processId
  * @property {Record<string, any>} input
  * @property {any} signer
  * @property {{ name: string, value: string }[]} [tags]
@@ -31,8 +31,8 @@ export function writeInteractionWith (env) {
   const verifyInput = verifyInputWith(env)
   const uploadInteraction = uploadInteractionWith(env)
 
-  return ({ contractId, input, signer, tags }) => {
-    return of({ id: contractId, input, signer, tags })
+  return ({ processId, input, signer, tags }) => {
+    return of({ id: processId, input, signer, tags })
       .chain(verifyContract)
       .chain(verifyInput)
       .chain(uploadInteraction)

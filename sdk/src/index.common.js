@@ -1,16 +1,14 @@
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as GatewayClient from './client/gateway.js'
-import * as WarpGatewayClient from './client/warp-gateway.js'
 import * as IrysClient from './client/irys.js'
 
 import { createLogger } from './logger.js'
 
 import { readStateWith } from './lib/readState/index.js'
 import { writeInteractionWith } from './lib/writeInteraction/index.js'
-import { createContractWith } from './lib/createContract/index.js'
+import { createProcessWith } from './lib/createProcess/index.js'
 
-const WARP_GATEWAY_URL = globalThis.WARP_GATEWAY_URL || 'https://gw.warp.cc'
 const IRYS_NODE = globalThis.IRYS_NODE || globalThis.BUNDLR_NODE || 'node2'
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
@@ -50,13 +48,17 @@ export function buildSdk () {
    *   - On server, uses Irys Node to upload contracts to Irys
    * - Registers the Contract with Warp
    */
-  const createContractLogger = logger.child('createContract')
-  const createContract = createContractWith({
+  const createProcessLogger = logger.child('createProcess')
+  const createProcess = createProcessWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-    deployContract: IrysClient.deployContractWith({ fetch, IRYS_NODE, logger }),
-    registerContract: WarpGatewayClient.registerContractWith({ fetch, WARP_GATEWAY_URL, IRYS_NODE, logger: createContractLogger }),
-    logger: createContractLogger
+    deployProcess: IrysClient.deployProcessWith({ fetch, IRYS_NODE, logger }),
+    /**
+     * No need to register in new ao architecture, so just stubbing with an identity
+     * function for now
+     */
+    registerProcess: async ({ processId }) => ({ processId }),
+    logger: createProcessLogger
   })
 
-  return { readState, writeInteraction, createContract }
+  return { readState, writeInteraction, createProcess }
 }
