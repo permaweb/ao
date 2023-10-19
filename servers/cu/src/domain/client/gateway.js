@@ -1,5 +1,5 @@
 import { fromPromise, of } from 'hyper-async'
-import { last, path, pipe, pluck, prop } from 'ramda'
+import { last, map, path, pipe, pluck, prop } from 'ramda'
 import { z } from 'zod'
 
 /**
@@ -164,6 +164,14 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
         fetchAllPages({ min, max })
           .then(prop('edges'))
           .then(pluck('node'))
+          .then(map(block => ({
+            ...block,
+            /**
+             * Timestamp from gateway is in seconds,
+             * but we need milliseconds
+             */
+            timestamp: block.timestamp * 1000
+          })))
       ))
       .toPromise()
 }

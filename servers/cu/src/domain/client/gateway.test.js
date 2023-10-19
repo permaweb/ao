@@ -87,6 +87,7 @@ describe('gateway', () => {
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({ fetch, GATEWAY_URL, pageSize: 10, logger }))
 
       const res = await loadBlocksMeta({ min: 1276343, max: 1276343 + 50 })
+      assert.equal(res[0].timestamp, 1696627369 * 1000)
       assert.equal(res.length, 51)
       assert.equal(res.length, uniqBy(prop('height'), res).length)
     })
