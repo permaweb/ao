@@ -30,9 +30,6 @@ const ctxSchema = z.object({
  * @returns {GatherScheduledMessages}
  */
 export function gatherScheduledMessagesWith (env) {
-  const logger = env.logger.child('loadMessageMeta')
-  env = { ...env, logger }
-
   const findEvaluations = fromPromise(findEvaluationsSchema.implement(env.findEvaluations))
 
   return (ctx) => {
@@ -45,8 +42,8 @@ export function gatherScheduledMessagesWith (env) {
              * scheduled messages have the interval and idx appended to their "sortKey"
              * and so can be distinguished by how many parts after splitting on ','
              */
-            filter(evaluation => evaluation.sortKey.split(',').length > 4),
-            map(pathOr([], 'output', 'result', 'messages'))
+            filter(evaluation => evaluation.sortKey.split(',').length > 3),
+            map(pathOr([], ['output', 'result', 'messages']))
           ),
           (acc, messages) => {
             acc.push.apply(acc, messages)

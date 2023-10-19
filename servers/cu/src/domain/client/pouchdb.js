@@ -178,7 +178,7 @@ export function saveEvaluationWith ({ pouchDb }) {
         message: prop('message'),
         output: prop('output'),
         evaluatedAt: prop('evaluatedAt'),
-        type: z.literal('evaluation')
+        type: always('evaluation')
       }))
       /**
        * Ensure the expected shape before writing to the db

@@ -1,11 +1,14 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
-import { loadTransactionDataWith, loadTransactionMetaWith } from './gateway.js'
+import { createLogger } from '../logger.js'
+import { loadBlocksMetaSchema, loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
+import { loadBlocksMetaWith, loadTransactionDataWith, loadTransactionMetaWith } from './gateway.js'
+import { prop, uniqBy } from 'ramda'
 
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
+const logger = createLogger('ao-cu:readState')
 
 describe('gateway', () => {
   describe('loadTransactionMetaWith', () => {
@@ -80,8 +83,12 @@ describe('gateway', () => {
   })
 
   describe('loadBlocksMeta', () => {
-    test('load the block data', async () => {
+    test('load the block data across multiple pages', async () => {
+      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({ fetch, GATEWAY_URL, pageSize: 10, logger }))
 
+      const res = await loadBlocksMeta({ min: 1276343, max: 1276343 + 50 })
+      assert.equal(res.length, 51)
+      assert.equal(res.length, uniqBy(prop('height'), res).length)
     })
   })
 
