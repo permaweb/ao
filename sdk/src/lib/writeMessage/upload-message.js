@@ -38,6 +38,8 @@ function buildTagsWith () {
       .map(concat(__, [
         // TODO: where to place the target? aka processId
         // { name: 'Contract', value: ctx.id },
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'ao-type', value: 'message' },
         { name: 'SDK', value: 'ao' }
       ]))
       .map(tagSchema.parse)
