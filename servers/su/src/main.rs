@@ -4,7 +4,7 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest};
 use serde::Deserialize;
 use serde_json::json;
 
-use su::domain::{write_message_pipeline, read_messages_pipeline};
+use su::domain::{write_message_pipeline, read_messages_pipeline, read_message_pipeline};
 
 
 fn system_time() -> Result<String, SystemTimeError> {
@@ -70,6 +70,25 @@ async fn messages_route(_req: HttpRequest, path: web::Path<ProcessId>, query_par
     }
 }
 
+#[derive(Deserialize)]
+struct MessageId {
+    message_id: String,
+}
+
+async fn read_message_route(_req: HttpRequest, path: web::Path<MessageId>, query_params: web::Query<YourQueryParamsStruct>) -> impl Responder {
+    let message_id = path.message_id.clone();
+
+    let result = read_message_pipeline()
+        .process(message_id).await;
+        
+    match result {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
@@ -78,8 +97,9 @@ async fn main() -> std::io::Result<()> {
             .route("/timestamp", web::get().to(timestamp_route))
             .route("/message", web::post().to(message_route)) 
             .route("/messages/{process_id}", web::get().to(messages_route))
+            .route("/message/{message_id}", web::get().to(read_message_route))
     })
-    .bind(("0.0.0.0", 3005))?
+    .bind(("0.0.0.0", 9000))?
     .run()
     .await
 }

@@ -26,6 +26,8 @@ impl From<DepError> for String {
             },
             DepError::SaveTxError(_) => "Save transaction error occurred.".to_string(),
             DepError::DatabaseError(_) => "Database error occurred.".to_string(),
+            DepError::JsonError(_) => "Json parsing error.".to_string(),
+            DepError::NotFound(_) => "Record not found in the database.".to_string(),
         }
     }
 }
