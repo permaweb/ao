@@ -121,7 +121,7 @@ export function scheduleMessagesBetweenWith ({
    */
   // eslint-disable-next-line
   const suSecondsCorrection = Math.floor(
-    (suTime.getTime() - new Date().getTime()) / 1000
+    (suTime - new Date().getTime()) / 1000
   )
 
   const blockBased = schedules.filter(s => s.unit === 'block' || s.unit === 'blocks')

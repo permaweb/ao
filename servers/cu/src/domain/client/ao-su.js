@@ -182,7 +182,8 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
 
 export const loadTimestampWith = ({ fetch, SU_URL }) => {
   return () => fetch(`${SU_URL}/timestamp`)
-    .then(res => new Date(res.text()))
+    .then(res => res.json())
+    .then(res => parseInt(res.timestamp))
 }
 
 export const loadMessageMetaWith = ({ fetch, SU_URL }) => {
