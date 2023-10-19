@@ -1,4 +1,4 @@
-import { __, append, assoc, map, pipe, propOr, reduce } from 'ramda'
+import { __, append, assoc, defaultTo, map, pipe, propOr, reduce } from 'ramda'
 
 /**
 * Parse tags into a object with key-value pairs of name -> values.
@@ -8,6 +8,7 @@ import { __, append, assoc, map, pipe, propOr, reduce } from 'ramda'
 */
 export function parseTags (rawTags) {
   return pipe(
+    defaultTo([]),
     reduce(
       (map, tag) => pipe(
         // [value, value, ...] || []

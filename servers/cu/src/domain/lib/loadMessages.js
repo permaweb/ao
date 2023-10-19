@@ -101,6 +101,184 @@ export function parseSchedules ({ tags }) {
 export const SCHEDULED_INTERVAL = 'scheduled-interval'
 export const SCHEDULED_MESSAGE = 'scheduled-message'
 
+export function scheduleMessagesBetweenWith ({
+  processId,
+  owner: processOwner,
+  originBlock,
+  suTime,
+  schedules,
+  blockRange
+}) {
+  /**
+   * This will be added to the CU clock to take into account
+   * any difference between the SU (whose generated sortKeys depend on its clock)
+   * and the CU determining where implicit messages need to be evaluated
+   *
+   * The number of seconds difference between the SU clock and the CU clock
+   *
+   * TODO: don't think we need this since CU never instantiates a date, and
+   * were only adding seconds to the timestamp as part of the block
+   */
+  // eslint-disable-next-line
+  const suSecondsCorrection = Math.floor(
+    (suTime.getTime() - new Date().getTime()) / 1000
+  )
+
+  const blockBased = schedules.filter(s => s.unit === 'block' || s.unit === 'blocks')
+  /**
+   * sort time based schedules from most granualar to least granular. This will ensure
+   * time based messages are ordered consistently w.r.t each other.
+   */
+  const timeBased = ascend(
+    prop('value'),
+    schedules.filter(s => s.unit === 'time')
+  )
+
+  /**
+   * { sortKey, block, message }
+   */
+  function maybeScheduledMessages (left, right) {
+    const scheduledMessages = []
+
+    /**
+     * {blockHeight},{timestampMillis},{txIdHash}
+     */
+    const leftHash = left.sortKey.split(',').pop()
+    /**
+     * { height, timestamp }
+     */
+    const leftBlock = left.block
+    const rightBlock = right.block
+
+    // No Schedules
+    if (!blockBased.length || timeBased.length) return scheduledMessages
+
+    /**
+     * This is the first time in a long time that
+     * i've written a vanilla for-loop lol
+     *
+     * Start at left's block height, incrementing 1 block per iteration until we get to right's block height
+     *  - for each block-based schedule, check if any illicits a scheduled message being produced
+     *  - for each second between this block and the next,
+     *    check if any time-based schedules illicit a scheduled message being produced
+     *
+     * We must iterate by block, in order to pass the correct block information to the process
+     */
+    for (let curHeight = leftBlock.height; curHeight < rightBlock.height; curHeight++) {
+      const curBlock = blockRange.find((b) => b.height === curHeight)
+      const nextBlock = blockRange.find((b) => b.height === curHeight + 1)
+      /**
+       * The timestamp for blocks meta from the gateway is currently in seconds
+       * while the SU uses a millisecond timestamp, so we convert the seconds
+       * into milliseconds for each block
+       *
+       * TODO: probably should be done as part of the gateway?
+       */
+      const curBlockMills = curBlock.timestamp * 1000
+      const nextBlockMillis = nextBlock.timestamp * 1000
+
+      /**
+       * Block-based schedule messages
+       *
+       * Block-based messages will always be pushed onto the sequence of messages
+       * before time-based messages, which is predictable and deterministic
+       */
+      scheduledMessages.push.apply(
+        scheduledMessages,
+        blockBased.reduce(
+          (acc, schedule, idx) => {
+            if (curHeight - originBlock.height % schedule.value === 0) {
+              acc.push({
+                message: {
+                  owner: processOwner,
+                  target: processId,
+                  tags: schedule.message
+                },
+                /**
+                 * TODO: don't know if this is correct, but we need something unique for the sortKey
+                 * for the scheduled message
+                 *
+                 * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
+                 * It will also enable performing range queries to fetch all scheduled messages by simply
+                 * appending a ',' to any sortKey
+                 */
+                sortKey: `${curBlock.height},${curBlockMills},${leftHash},${schedule.interval}${idx}`,
+                AoGlobal: {
+                  process: { id: processId, owner: processOwner },
+                  block: curBlock
+                }
+              })
+            }
+            return acc
+          },
+          []
+        )
+      )
+
+      /**
+       * If there are no time-based schedules, then there is no reason to tick
+       * through epochs, so simply skip to the next block
+       */
+      if (!timeBased.length) continue
+
+      /**
+       * Time based scheduled messages.
+       *
+       * For each second between the current block and the next block, check if any time-based
+       * schedules need to generate an implicit message
+       */
+      for (let curEpoch = curBlockMills; curEpoch < nextBlockMillis; curEpoch += 1000) {
+        scheduledMessages.push.apply(
+          scheduledMessages,
+          timeBased.reduce(
+            (acc, schedule, idx) => {
+              if ((curEpoch - originBlock.timestamp) % schedule.value === 0) {
+                acc.push({
+                  message: {
+                    target: processId,
+                    owner: processOwner,
+                    tags: schedule.message
+                  },
+                  /**
+                   * TODO: don't know if this is correct, but we need something unique for the sortKey
+                   * for the scheduled message
+                   *
+                   * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
+                   * It will also enable performing range queries to fetch all scheduled messages by simply
+                   * appending a ',' to any sortKey
+                   */
+                  sortKey: `${curBlock.height},${curBlockMills},${leftHash},${schedule.interval}${idx}`,
+                  AoGlobal: {
+                    process: { id: processId, owner: processOwner },
+                    block: curBlock
+                  }
+                })
+              }
+              return acc
+            },
+            []
+          )
+        )
+      }
+
+      // TODO implement CRON based schedules
+    }
+
+    return scheduledMessages
+  }
+
+  return ([left, right]) => {
+    const messages = []
+    messages.push.apply(messages, maybeScheduledMessages(left, right))
+    /**
+     * Sandwich the scheduled messages between the two actual messages
+     */
+    messages.unshift(left)
+    messages.push(right)
+    return messages
+  }
+}
+
 function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
 
@@ -163,184 +341,6 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta }) {
 
 function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
-
-  function scheduleMessagesBetweenWith ({
-    processId,
-    owner: processOwner,
-    originBlock,
-    suTime,
-    schedules,
-    blockRange
-  }) {
-    /**
-     * This will be added to the CU clock to take into account
-     * any difference between the SU (whose generated sortKeys depend on its clock)
-     * and the CU determining where implicit messages need to be evaluated
-     *
-     * The number of seconds difference between the SU clock and the CU clock
-     *
-     * TODO: don't think we need this since CU never instantiates a date, and
-     * were only adding seconds to the timestamp as part of the block
-     */
-    // eslint-disable-next-line
-    const suSecondsCorrection = Math.floor(
-      (suTime.getTime() - new Date().getTime()) / 1000
-    )
-
-    const blockBased = schedules.filter(s => s.unit === 'block' || s.unit === 'blocks')
-    /**
-     * sort time based schedules from most granualar to least granular. This will ensure
-     * time based messages are ordered consistently w.r.t each other.
-     */
-    const timeBased = ascend(
-      prop('value'),
-      schedules.filter(s => s.unit === 'time')
-    )
-
-    /**
-     * { sortKey, block, message }
-     */
-    function maybeScheduledMessages (left, right) {
-      const scheduledMessages = []
-
-      /**
-       * {blockHeight},{timestamp_millis},{txId_hash}
-       */
-      const leftHash = left.sortKey.split(',').pop()
-      /**
-       * { height, timestamp }
-       */
-      const leftBlock = left.block
-      const rightBlock = right.block
-
-      // No Schedules
-      if (!blockBased.length || timeBased.length) return scheduledMessages
-
-      /**
-       * This is the first time in a long time that
-       * i've written a vanilla for-loop lol
-       *
-       * Start at left's block height, incrementing 1 block per iteration until we get to right's block height
-       *  - for each block-based schedule, check if any illicits a scheduled message being produced
-       *  - for each second between this block and the next,
-       *    check if any time-based schedules illicit a scheduled message being produced
-       *
-       * We must iterate by block, in order to pass the correct block information to the process
-       */
-      for (let curHeight = leftBlock.height; curHeight < rightBlock.height; curHeight++) {
-        const curBlock = blockRange.find((b) => b.height === curHeight)
-        const nextBlock = blockRange.find((b) => b.height === curHeight + 1)
-        /**
-         * The timestamp for blocks meta from the gateway is currently in seconds
-         * while the SU uses a millisecond timestamp, so we convert the seconds
-         * into milliseconds for each block
-         *
-         * TODO: probably should be done as part of the gateway?
-         */
-        const curBlockMills = curBlock.timestamp * 1000
-        const nextBlockMillis = nextBlock.timestamp * 1000
-
-        /**
-         * Block-based schedule messages
-         *
-         * Block-based messages will always be pushed onto the sequence of messages
-         * before time-based messages, which is predictable and deterministic
-         */
-        scheduledMessages.push.apply(
-          scheduledMessages,
-          blockBased.reduce(
-            (acc, schedule, idx) => {
-              if (curHeight - originBlock.height % schedule.value === 0) {
-                acc.push({
-                  message: {
-                    owner: processOwner,
-                    target: processId,
-                    tags: schedule.message
-                  },
-                  /**
-                   * TODO: don't know if this is correct, but we need something unique for the sortKey
-                   * for the scheduled message
-                   *
-                   * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
-                   * It will also enable performing range queries to fetch all scheduled messages by simply
-                   * appending a ',' to any sortKey
-                   */
-                  sortKey: `${curBlock.height},${curBlockMills},${leftHash},${schedule.interval}${idx}`,
-                  AoGlobal: {
-                    process: { id: processId, owner: processOwner },
-                    block: curBlock
-                  }
-                })
-              }
-              return acc
-            },
-            []
-          )
-        )
-
-        /**
-         * If there are no time-based schedules, then there is no reason to tick
-         * through epochs, so simply skip to the next block
-         */
-        if (!timeBased.length) continue
-
-        /**
-         * Time based scheduled messages.
-         *
-         * For each second between the current block and the next block, check if any time-based
-         * schedules need to generate an implicit message
-         */
-        for (let curEpoch = curBlockMills; curEpoch < nextBlockMillis; curEpoch += 1000) {
-          scheduledMessages.push.apply(
-            scheduledMessages,
-            timeBased.reduce(
-              (acc, schedule, idx) => {
-                if ((curEpoch - originBlock.timestamp) % schedule.value === 0) {
-                  acc.push({
-                    message: {
-                      target: processId,
-                      owner: processOwner,
-                      tags: schedule.message
-                    },
-                    /**
-                     * TODO: don't know if this is correct, but we need something unique for the sortKey
-                     * for the scheduled message
-                     *
-                     * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
-                     * It will also enable performing range queries to fetch all scheduled messages by simply
-                     * appending a ',' to any sortKey
-                     */
-                    sortKey: `${curBlock.height},${curBlockMills},${leftHash},${schedule.interval}${idx}`,
-                    AoGlobal: {
-                      process: { id: processId, owner: processOwner },
-                      block: curBlock
-                    }
-                  })
-                }
-                return acc
-              },
-              []
-            )
-          )
-        }
-
-        // TODO implement CRON based schedules
-      }
-
-      return scheduledMessages
-    }
-
-    return ([left, right]) => {
-      const messages = []
-      messages.push.apply(messages, maybeScheduledMessages(left, right))
-      /**
-       * Sandwich the scheduled messages between the two actual messages
-       */
-      messages.unshift(left)
-      messages.push(right)
-      return messages
-    }
-  }
 
   /**
    * - find all schedule tags on the process

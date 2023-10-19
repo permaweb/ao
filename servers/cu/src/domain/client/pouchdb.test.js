@@ -2,11 +2,13 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { findLatestEvaluationSchema, findProcessSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationsSchema, findLatestEvaluationSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
 import {
   COLLATION_SEQUENCE_MAX_CHAR,
+  findEvaluationsWith,
   findLatestEvaluationWith,
   findProcessWith,
+  saveEvaluationWith,
   saveProcessWith
 } from './pouchdb.js'
 
@@ -231,6 +233,144 @@ describe('pouchdb', () => {
   })
 
   describe('saveEvaluation', () => {
-    // TODO: write tests
+    test('save the evaluation to pouchdb', async () => {
+      const evaluatedAt = new Date().toISOString()
+      const saveEvaluation = saveEvaluationSchema.implement(
+        saveEvaluationWith({
+          pouchDb: {
+            get: async () => undefined,
+            put: (doc) => {
+              assert.equal(doc._id, 'process-123,sortkey-890')
+              assert.equal(doc.sortKey, 'sortkey-890')
+              assert.equal(doc.parent, 'process-123')
+              assert.deepStrictEqual(doc.message, { target: 'process-456', owner: 'owner-123', tags: [] })
+              assert.deepStrictEqual(doc.output, { state: { foo: 'bar' } })
+              assert.equal(doc.evaluatedAt.toISOString(), evaluatedAt)
+              return Promise.resolve(true)
+            }
+          }
+        })
+      )
+
+      await saveEvaluation({
+        sortKey: 'sortkey-890',
+        processId: 'process-123',
+        message: { target: 'process-456', owner: 'owner-123', tags: [] },
+        output: { state: { foo: 'bar' } },
+        evaluatedAt
+      })
+    })
+
+    test('noop if the interaction already exists', async () => {
+      const saveEvaluation = saveEvaluationSchema.implement(
+        saveEvaluationWith({
+          pouchDb: {
+            get: async () => ({
+              _id: 'process-123,sortkey-890',
+              sortKey: 'sortkey-890',
+              parent: 'process-123',
+              message: { target: 'process-456', owner: 'owner-123', tags: [] },
+              output: { state: { foo: 'bar' } },
+              evaluatedAt: new Date()
+            }),
+            put: assert.fail
+          }
+        })
+      )
+
+      await saveEvaluation({
+        sortKey: 'sortkey-890',
+        processId: 'process-123',
+        message: { target: 'process-456', owner: 'owner-123', tags: [] },
+        output: { state: { foo: 'bar' } },
+        evaluatedAt: new Date()
+      })
+    })
+  })
+
+  describe('findEvaluations', () => {
+    test('return the list of all evaluations', async () => {
+      const evaluatedAt = new Date().toISOString()
+      const mockEval = {
+        _id: 'process-123,sortkey-890',
+        sortKey: 'sortkey-890',
+        parent: 'process-123',
+        message: { target: 'process-456', owner: 'owner-123', tags: [] },
+        output: { state: { foo: 'bar' } },
+        evaluatedAt,
+        type: 'evaluation'
+      }
+      const findEvaluations = findEvaluationsSchema.implement(
+        findEvaluationsWith({
+          pouchDb: {
+            find: async (op) => {
+              assert.deepStrictEqual(op, {
+                selector: {
+                  _id: {
+                    $gte: 'process-123,',
+                    $lte: `process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
+                  }
+                },
+                sort: [{ _id: 'desc' }],
+                limit: Number.MAX_SAFE_INTEGER
+              })
+              return {
+                docs: [
+                  mockEval,
+                  mockEval
+                ]
+              }
+            }
+          }
+        }))
+
+      const res = await findEvaluations({ processId: 'process-123' })
+
+      assert.equal(res.length, 2)
+    })
+
+    test("return the evaluations between 'from' and 'to'", async () => {
+      const evaluatedAt = new Date().toISOString()
+      const mockEval = {
+        _id: 'process-123,sortkey-890',
+        sortKey: 'sortkey-890',
+        parent: 'process-123',
+        message: { target: 'process-456', owner: 'owner-123', tags: [] },
+        output: { state: { foo: 'bar' } },
+        evaluatedAt,
+        type: 'evaluation'
+      }
+      const findEvaluations = findEvaluationsSchema.implement(
+        findEvaluationsWith({
+          pouchDb: {
+            find: async (op) => {
+              assert.deepStrictEqual(op, {
+                selector: {
+                  _id: {
+                    $gte: 'process-123,sortkey-123,',
+                    $lte: `process-123,sortkey-456,${COLLATION_SEQUENCE_MAX_CHAR}`
+                  }
+                },
+                sort: [{ _id: 'desc' }],
+                limit: Number.MAX_SAFE_INTEGER
+              })
+              return {
+                docs: [
+                  mockEval,
+                  mockEval
+                ]
+              }
+            }
+          }
+        }))
+
+      const res = await findEvaluations({
+        processId: 'process-123',
+        from: 'sortkey-123',
+        to: 'sortkey-456'
+      })
+
+      assert.equal(res.length, 2)
+    })
   })
 })

@@ -4,7 +4,7 @@ import { fromPromise, of } from 'hyper-async'
 import { always, applySpec, compose, evolve, filter, isNotNil, last, map, path, pipe, pluck, prop, transduce } from 'ramda'
 
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
-  const logger = _logger.child('loadSequencedMessages')
+  const logger = _logger.child('ao-su:loadMessages')
 
   /**
    * Pad the block height portion of the sortKey to 12 characters
@@ -187,11 +187,12 @@ export const loadTimestampWith = ({ fetch, SU_URL }) => {
 
 export const loadMessageMetaWith = ({ fetch, SU_URL }) => {
   return async ({ messageTxId }) => {
-    // TODO: implement fetching from su endpoint (need endpoint from Vince)
-
-    return {
-      processId: 'process-123',
-      sortKey: '000012345667,3423523532,fasdfsdf87slfja3rfaflj'
-    }
+    // TODO: implement fetching from su endpoint (need endpoint and shape from Vince)
+    return fetch(`${SU_URL}/message/${messageTxId}`, { method: 'GET' })
+      .then(res => res.json())
+      .then(res => ({
+        processId: res.processId,
+        sortKey: res.sortKey
+      }))
   }
 }

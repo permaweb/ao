@@ -20,7 +20,7 @@ export const loadTransactionDataSchema = z.function()
   .returns(z.promise(z.any()))
 
 export const loadBlocksMetaSchema = z.function()
-  .args(z.object({ left: z.number(), right: z.number() }))
+  .args(z.object({ min: z.number(), max: z.number() }))
   .returns(z.promise(
     z.array(
       rawBlockSchema.passthrough()
