@@ -2,7 +2,7 @@ import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat, defaultTo } from 'ramda'
 
-import { deployInteractionSchema, signerSchema } from '../../dal.js'
+import { deployMessageSchema, signerSchema } from '../../dal.js'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -36,10 +36,8 @@ function buildTagsWith () {
     return of(ctx.tags)
       .map(defaultTo([]))
       .map(concat(__, [
-        { name: 'App-Name', value: 'SmartWeaveAction' },
-        { name: 'App-Version', value: '0.3.0' },
-        { name: 'Contract', value: ctx.id },
-        { name: 'Input', value: JSON.stringify(ctx.input) },
+        // TODO: where to place the target? aka processId
+        // { name: 'Contract', value: ctx.id },
         { name: 'SDK', value: 'ao' }
       ]))
       .map(tagSchema.parse)
@@ -70,19 +68,19 @@ function buildDataWith () {
  * @param {Env6} env
  * @returns {BuildTx}
  */
-export function uploadInteractionWith (env) {
+export function uploadMessageWith (env) {
   const buildTags = buildTagsWith(env)
   const buildData = buildDataWith(env)
 
-  const deployInteraction = deployInteractionSchema.implement(env.deployInteraction)
+  const deployMessage = deployMessageSchema.implement(env.deployMessage)
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
       .chain(fromPromise(({ id, data, tags, signer }) =>
-        deployInteraction({ contractId: id, data, tags, signer: signerSchema.implement(signer) })
+        deployMessage({ processId: id, data, tags, signer: signerSchema.implement(signer) })
       ))
-      .map(res => assoc('interactionId', res.interactionId, ctx))
+      .map(res => assoc('messageId', res.messageId, ctx))
   }
 }

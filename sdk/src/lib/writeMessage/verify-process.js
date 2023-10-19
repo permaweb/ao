@@ -11,13 +11,13 @@ const transactionSchema = z.object({
   }))
 })
 
-const contractTagsSchema = z.object({
+const processTagsSchema = z.object({
   'Contract-Src': z.string().min(
     1,
     { message: 'Contract-Src tag was not present on the transaction' }
   ),
-  'App-Name': z.literal('SmartWeaveContract'),
-  'App-Version': z.literal('0.3.0')
+  'Data-Protocol': z.literal('ao'),
+  'ao-type': z.literal('process')
 })
 
 /**
@@ -37,7 +37,7 @@ function verfiyTagsWith ({ loadTransactionMeta }) {
       .map(transactionSchema.parse)
       .map(path(['tags']))
       .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
-      .map(contractTagsSchema.parse)
+      .map(processTagsSchema.parse)
   }
 }
 
@@ -52,7 +52,7 @@ function verfiyTagsWith ({ loadTransactionMeta }) {
  * @property {any} wallet
  * @property {Tag2[]} tags
  *
- * @callback VerifyContract
+ * @callback VerifyProcess
  * @param {Context} ctx
  * @returns {Async<Context>}
  *
@@ -60,9 +60,9 @@ function verfiyTagsWith ({ loadTransactionMeta }) {
  * @property {any} loadTransactionMeta
  *
  * @param {Env6} env
- * @returns {VerifyContract}
+ * @returns {VerifyProcess}
  */
-export function verifyContractWith (env) {
+export function verifyProcessWith (env) {
   const verfiyTags = verfiyTagsWith(env)
   return (ctx) => {
     return of(ctx.id)

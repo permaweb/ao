@@ -6,7 +6,7 @@ import * as IrysClient from './client/irys.js'
 import { createLogger } from './logger.js'
 
 import { readStateWith } from './lib/readState/index.js'
-import { writeInteractionWith } from './lib/writeInteraction/index.js'
+import { writeInteractionWith } from './lib/writeMessage/index.js'
 import { createProcessWith } from './lib/createProcess/index.js'
 
 const IRYS_NODE = globalThis.IRYS_NODE || globalThis.BUNDLR_NODE || 'node2'
@@ -33,11 +33,11 @@ export function buildSdk () {
    * default writeInteraction that works OOTB
    * - writes signed data item for interaction to the MU
    */
-  const writeInteractionLogger = logger.child('writeInteraction')
-  const writeInteraction = writeInteractionWith({
+  const writeMessageLogger = logger.child('writeMessage')
+  const writeMessage = writeInteractionWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-    deployInteraction: MuClient.deployInteractionWith({ fetch, MU_URL, logger: writeInteractionLogger }),
-    logger: writeInteractionLogger
+    deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: writeMessageLogger }),
+    logger: writeMessageLogger
   })
 
   /**
@@ -60,5 +60,5 @@ export function buildSdk () {
     logger: createProcessLogger
   })
 
-  return { readState, writeInteraction, createProcess }
+  return { readState, writeMessage, createProcess }
 }
