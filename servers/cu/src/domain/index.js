@@ -47,7 +47,7 @@ export const createApis = (ctx) => {
   const readScheduledMessagesLogger = ctx.logger.child('readScheduledMessages')
   const readScheduledMessages = readScheduledMessagesWith({
     ...sharedDeps(readScheduledMessagesLogger),
-    findScheduledEvaluations: PouchDbClient.findScheduledEvaluationsWith({ pouchDb: PouchDbClient.pouchDb })
+    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb: PouchDbClient.pouchDb })
   })
 
   return { readState, readResult, readScheduledMessages }

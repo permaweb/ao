@@ -1,5 +1,5 @@
-import { gatherScheduledMessagesWith } from './lib/gatherScheduledMessages.js'
 import { readStateWith } from './readState.js'
+import { gatherScheduledMessagesWith } from './lib/gatherScheduledMessages.js'
 
 /**
  * @typedef Env
@@ -27,7 +27,7 @@ export function readScheduledMessagesWith (env) {
       .chain(() => gatherScheduledMessages({ processId, from, to }))
       .map(output => output.messages)
       .map(env.logger.tap(
-        'Loaded scheduled messages for process %s from "%s" to "%s" and appended to ctx %j',
+        'readScheduledMessages result for process %s from "%s" to "%s" and appended to ctx %j',
         processId,
         from,
         to || 'latest'
