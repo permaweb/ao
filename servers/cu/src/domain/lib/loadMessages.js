@@ -221,7 +221,7 @@ export function scheduleMessagesBetweenWith ({
                  * It will also enable performing range queries to fetch all scheduled messages by simply
                  * appending a ',' to any sortKey
                  */
-                sortKey: `${curBlock.height},${curBlock.timestamp},${leftHash},${schedule.interval}${idx}`,
+                sortKey: `${curBlock.height},${curBlock.timestamp},${leftHash},${idx}${schedule.interval}`,
                 AoGlobal: {
                   process: { id: processId, owner: processOwner },
                   block: curBlock
@@ -266,7 +266,7 @@ export function scheduleMessagesBetweenWith ({
                    * It will also enable performing range queries to fetch all scheduled messages by simply
                    * appending a ',' to any sortKey
                    */
-                  sortKey: `${curHeight},${curTimestamp},${leftHash},${schedule.interval}${idx}`,
+                  sortKey: `${curHeight},${curTimestamp},${leftHash},${idx}${schedule.interval}`,
                   AoGlobal: {
                     process: { id: processId, owner: processOwner },
                     block: curBlock
