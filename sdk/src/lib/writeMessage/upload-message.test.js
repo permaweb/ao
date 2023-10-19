@@ -11,6 +11,8 @@ describe('upload-message', () => {
         assert.equal(processId, 'process-asdf')
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'message' },
           { name: 'SDK', value: 'ao' }
         ])
         assert.ok(signer)
