@@ -8,7 +8,9 @@ pub enum DepError {
     BuildError(String),
     UploadError(String),
     SaveTxError(String),
-    DatabaseError(String)
+    DatabaseError(String),
+    JsonError(String),
+    NotFound(String)
 }
 
 #[derive(Debug, Deserialize, Serialize)]

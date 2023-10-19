@@ -97,6 +97,25 @@ impl StoreClient {
             Err(e) => Err(DepError::from(e)),
         }
     }
+
+    pub fn get_message(&mut self, message_id_in: &str) -> Result<Message, DepError> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.connection;
+    
+        let db_message_result: Result<Option<DbMessage>, DieselError> = messages
+            .filter(message_id.eq(message_id_in))
+            .first(conn)
+            .optional();
+    
+        match db_message_result {
+            Ok(Some(db_message)) => {
+                let message: Message = serde_json::from_value(db_message.message_data.clone())?;
+                Ok(message)
+            },
+            Ok(None) => Err(DepError::NotFound("Message not found".to_string())), // Adjust this error type as needed
+            Err(e) => Err(DepError::from(e)),
+        }
+    }
     
 }
 
@@ -107,6 +126,13 @@ impl From<DieselError> for DepError {
         let e = format!("{:?}", diesel_error);
         println!("{}", e);
         DepError::DatabaseError(e)
+    }
+}
+
+impl From<serde_json::Error> for DepError {
+    fn from(error: serde_json::Error) -> Self {
+        // You can create a custom error variant here if needed
+        DepError::JsonError(format!("JSON error: {}", error))
     }
 }
 
