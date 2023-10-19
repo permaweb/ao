@@ -6,7 +6,7 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
-import { saveEvaluationSchema } from '../../dal.js'
+import { saveEvaluationSchema } from '../dal.js'
 
 /**
    * The result that is produced from this step
@@ -195,7 +195,7 @@ export function evaluateWith (env) {
               spawns: pathOr([], ['spawns'])
             })(ctx.result)
           }),
-          ctx.actions
+          ctx.messages
         )
       )
       /**

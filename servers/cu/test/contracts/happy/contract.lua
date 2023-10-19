@@ -4,7 +4,6 @@
 -- create a new contract and interactions
 
 -- Corresponding local wasm at ./contract.wasm
--- Published source as: 9TVItobwHX4HXuKoHYzCJcXC2JIeeyOXdgV-X6Sf4aQ
 
 local contract = { _version = "0.0.1" }
 
@@ -15,6 +14,15 @@ local function assoc(prop, val, obj)
   end
   result[prop] = val
   return result
+end
+
+local function find(predicate, table) -- find element v of l satisfying f(v)
+  for _, v in ipairs(table) do
+    if predicate(v) then
+      return v
+    end
+  end
+  return nil
 end
 
 local function hello(state)
@@ -29,8 +37,18 @@ local actions = {}
 actions['hello'] = hello
 actions['world'] = world
 
-function contract.handle(state, action, SmartWeave)
-  local newState = actions[action.input['function']](state, action, SmartWeave)
+function contract.handle(state, message, AoGlobal)
+  local func = find(
+    function (value)
+      return value.name == 'function'
+    end,
+    message.tags
+  )
+  if func == nil then return error({ code = 500, message = 'no function tag in the message'}) end
+
+  local newState = actions[func.value](state, message, AoGlobal)
+
+  newState = assoc('lastMessage', message, newState)
 
   if (newState.heardHello and newState.heardWorld) then
     newState = assoc('happy', true, newState)
@@ -42,22 +60,20 @@ function contract.handle(state, action, SmartWeave)
       -- stub messages
       messages = {
         {
-          target = 'contract-foo-123',
-          input = {
-            ['function'] = 'noop'
-          },
+          target = 'process-foo-123',
           tags = {
-            { name = 'foo', value = 'bar' }
+            { name = 'foo', value = 'bar' },
+            { name = 'function', value = 'noop' }
           }
         }
       },
       -- stub spawns
       spawns = {
         {
-          src = 'contract-src-123',
-          initState = { balances = { foo = 0 } },
+          owner = 'owner-123',
           tags = {
-            { name = 'foo', value = 'bar' }
+            { name = 'foo', value = 'bar' },
+            { name = 'balances', value = "{\"myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc\": 1000 }" }
           }
         }
       },

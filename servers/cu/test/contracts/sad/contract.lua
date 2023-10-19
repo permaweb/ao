@@ -16,6 +16,15 @@ local function assoc(prop, val, obj)
   return result
 end
 
+local function find(predicate, table) -- find element v of l satisfying f(v)
+  for _, v in ipairs(table) do
+    if predicate(v) then
+      return v
+    end
+  end
+  return nil
+end
+
 local function result(res)
   return assoc('error', { code = 123, message = "a handled error within the contract" }, res)
 end
@@ -33,10 +42,17 @@ actions['errorResult'] = result
 actions['errorThrow'] = throw
 actions['errorUnhandled'] = unhandled
 
-function contract.handle(_state, action, SmartWeave)
-  local res = actions[action.input['function']]({}, action, SmartWeave)
+function contract.handle(state, message, AoGlobal)
+  local func = find(
+    function (value)
+      return value.name == 'function'
+    end,
+    message.tags
+  )
 
-  return { result = res }
+  if func == nil then return error({ code = 500, message = 'no function tag in the message'}) end
+
+  return { result = actions[func.value](state, message, AoGlobal) }
 end
 
 return contract
