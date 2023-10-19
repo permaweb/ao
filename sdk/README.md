@@ -16,8 +16,8 @@ interacting with `ao` Smart Contracts.
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
   - [API](#api)
     - [`readState`](#readstate)
-    - [`writeInteraction`](#writeinteraction)
-    - [`createContract`](#createcontract)
+    - [`writeMessage`](#writemessage)
+    - [`createProcess`](#createprocess)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
 - [Testing](#testing)
@@ -32,13 +32,13 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { createContract, readState, writeInteraction } from "@permaweb/ao-sdk";
+import { createProcess, readState, writeMessage } from "@permaweb/ao-sdk";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { readState, writeInteraction, createContract } = require(
+const { readState, writeMessage, createProcess } = require(
   "@permaweb/ao-sdk",
 );
 ```
@@ -55,41 +55,40 @@ Read the state of a contract from an `ao` Compute Unit `cu`
 import { readState } from "@permaweb/ao-sdk";
 
 let state = await readState({
-  contractId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+  processId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
 });
 // or update to certain sort-key
 state = await readState({
-  contractId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+  processId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
   sortKey:
     "000001262259,1694820900780,7160a8e16721d271f96a24ad007a5f54b7e22ae49363652eb7356464fcbb09ed",
 });
 ```
 
-#### `writeInteraction`
+#### `writeMessage`
 
-write an interaction to an `ao` Message Unit `mu`.
+write a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
-import { createDataItemSigner, writeInteraction } from "@permaweb/ao-sdk";
+import { createDataItemSigner, writeMessage } from "@permaweb/ao-sdk";
 
-const interactionId = await writeInteraction({
-  contractId,
+const messageId = await writeMessage({
+  processId,
   input,
   signer: createDataItemSigner(wallet),
   tags,
 });
 ```
 
-#### `createContract`
+#### `createProcess`
 
 Create a contract, publishing to Arys, then registering it on the Warp Gateway
 
 ```js
-import { createContract, createDataItemSigner } from "@permaweb/ao-sdk";
+import { createProcess, createDataItemSigner } from "@permaweb/ao-sdk";
 
-const contractId = await createContract({
+const processId = await createProcess({
   srcId,
-  initialState,
   signer: createDataItemSigner(wallet),
   tags,
 });
@@ -97,11 +96,11 @@ const contractId = await createContract({
 
 #### `createDataItemSigner`
 
-`writeInteraction` and `createContract` both require signing a data item with a
+`writeMessage` and `createProcess` both require signing a data item with a
 wallet.
 
 `createDataItemSigner` is a convenience api that, given a wallet, returns a
-function that can be passed to both `writeInteraction` and `createContract` in
+function that can be passed to both `writeMessage` and `createProcess` in
 order to properly sign data items.
 
 The SDK provides a browser compatible and node compatible version that you can

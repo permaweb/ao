@@ -5,21 +5,21 @@ import { Rejected, fromPromise, of } from 'hyper-async'
  * @property {fetch} fetch
  * @property {string} MU_URL
  *
- * @typedef WriteInteractionTx
+ * @typedef WriteMessageTx
  * @property { any } signedData - DataItem returned from arbundles createData
  *
- * @typedef WriteInteraction2Args
- * @property {WriteInteractionTx} transaction
+ * @typedef WriteMessage2Args
+ * @property {WriteMessageTx} transaction
  *
- * @callback WriteInteraction2
- * @param {WriteInteraction2Args} args
+ * @callback WriteMessage2
+ * @param {WriteMessage2Args} args
  * @returns {Promise<Record<string, any>}
  *
  * @param {Env3} env
- * @returns {WriteInteraction2}
+ * @returns {WriteMessage2}
  */
-export function deployInteractionWith ({ fetch, MU_URL, logger: _logger }) {
-  const logger = _logger.child('writeInteraction')
+export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('deployMessage')
 
   return (args) => {
     return of(args)
@@ -30,24 +30,28 @@ export function deployInteractionWith ({ fetch, MU_URL, logger: _logger }) {
       .chain(
         args => of(args)
           .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
-          .map(signedDataItem => ({ contractId: args.contractId, signedDataItem }))
+          .map(signedDataItem => ({ processId: args.processId, signedDataItem }))
       )
-      .chain(({ contractId, signedDataItem }) =>
-        of({ contractId, signedDataItem })
-          .chain(fromPromise(async ({ contractId, signedDataItem }) =>
+      .chain(({ processId, signedDataItem }) =>
+        of({ processId, signedDataItem })
+          .chain(fromPromise(async ({ processId, signedDataItem }) =>
             fetch(
-              `${MU_URL}/write`,
+              `${MU_URL}/message`,
               {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                   Accept: 'application/json'
                 },
-                body: JSON.stringify({
-                  cid: contractId,
-                  txid: signedDataItem.id,
-                  data: signedDataItem.raw
-                })
+                /**
+                 * TODO: this should be a data item,
+                 * but how to pass the:
+                 *
+                 * - target ie. processId
+                 *
+                 * is it part of the data item?
+                 */
+                body: signedDataItem.raw
               }
             )
           )).bichain(
@@ -60,14 +64,10 @@ export function deployInteractionWith ({ fetch, MU_URL, logger: _logger }) {
             )
           )
           .bimap(
-            logger.tap('Error encountered when writing interaction via MU'),
-            logger.tap('Successfully wrote interaction via MU')
+            logger.tap('Error encountered when writing message via MU'),
+            logger.tap('Successfully wrote message via MU')
           )
-          /**
-           * See https://github.com/warp-contracts/gateway/blob/a1192869de24426a973465cf5be0a37b27a4c5ff/src/gateway/router/routes/deployContractRoute_v2.ts#L146
-           * for shape
-           */
-          .map(res => ({ res, interactionId: signedDataItem.id }))
+          .map(res => ({ res, messageId: signedDataItem.id }))
       )
       .toPromise()
   }
