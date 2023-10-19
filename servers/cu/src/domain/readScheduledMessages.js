@@ -6,17 +6,17 @@ import { gatherScheduledMessagesWith } from './lib/gatherScheduledMessages.js'
  *
  * @typedef Result
  *
- * @typedef ReadResultArgs
+ * @typedef ReadScheduledMessagesArgs
  * @property {string} processId
  * @property {string} from
  * @property {string} to
  *
- * @callback ReadResult
- * @param {ReadResultArgs} args
+ * @callback ReadScheduledMessages
+ * @param {ReadScheduledMessagesArgs} args
  * @returns {Promise<Result>} result
  *
  * @param {Env} - the environment
- * @returns {ReadResult}
+ * @returns {ReadScheduledMessages}
  */
 export function readScheduledMessagesWith (env) {
   const gatherScheduledMessages = gatherScheduledMessagesWith(env)
