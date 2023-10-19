@@ -1,6 +1,6 @@
 import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { __, assoc, concat, defaultTo } from 'ramda'
+import { __, assoc, concat, defaultTo, propEq, reject } from 'ramda'
 
 import { deployContractSchema, registerContractSchema, signerSchema } from '../../dal.js'
 
@@ -24,15 +24,24 @@ const tagSchema = z.array(z.object({
  */
 
 function buildTagsWith () {
+  function removeTagsByName (name) {
+    return (tags) => reject(propEq(name, 'name'), tags)
+  }
+
   return (ctx) => {
     return of(ctx.tags)
       .map(defaultTo([]))
+      /**
+       * Remove any reserved tags, so that the sdk
+       * can properly set them
+       */
+      .map(removeTagsByName('ao-type'))
+      .map(removeTagsByName('Contract-Src'))
       .map(concat(__, [
-        { name: 'App-Name', value: 'SmartWeaveContract' },
-        { name: 'App-Version', value: '0.3.0' },
-        { name: 'Content-Type', value: 'text/plain' },
-        { name: 'Init-State', value: JSON.stringify(ctx.initialState) },
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'ao-type', value: 'process' },
         { name: 'Contract-Src', value: ctx.srcId },
+        { name: 'Content-Type', value: 'text/plain' },
         { name: 'SDK', value: 'ao' }
       ]))
       .map(tagSchema.parse)

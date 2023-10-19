@@ -28,8 +28,8 @@ export function createContractWith (env) {
   const verifyInputs = verifyInputsWith(env)
   const uploadContract = uploadContractWith(env)
 
-  return ({ srcId, initialState, signer, tags }) => {
-    return of({ srcId, initialState, signer, tags })
+  return ({ srcId, signer, tags }) => {
+    return of({ srcId, signer, tags })
       .chain(verifyInputs)
       .chain(uploadContract)
       .map((ctx) => ctx.contractId)
