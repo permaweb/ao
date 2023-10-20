@@ -11,29 +11,16 @@ function sourceArgs (src) {
   ]
 }
 
-function stateArgs (initialStateStr) {
-  try {
-    JSON.parse(initialStateStr)
-    return [
-      '-e',
-      `INITIAL_STATE=${initialStateStr}`
-    ]
-  } catch {
-    throw new Error('initial state must be valid json')
-  }
-}
-
 /**
  * TODO:
  * - Validate existence of wallet
  * - require confirmation and bypass with --yes
  */
-export async function contract ({ wallet, tag, source }, initialState) {
+export async function process ({ wallet, tag, source }) {
   const cmdArgs = [
     ...walletArgs(wallet),
     ...sourceArgs(source),
-    ...tagsArg(tag),
-    ...stateArgs(initialState)
+    ...tagsArg(tag)
   ]
 
   const p = Deno.run({
@@ -52,7 +39,7 @@ export async function contract ({ wallet, tag, source }, initialState) {
 }
 
 export const command = new Command()
-  .description('Create an ao Contract using a published ao Source')
+  .description('Create an ao Process using a published ao Source')
   .option(
     '-w, --wallet <path:string>',
     'the path to the wallet that should be used to sign the transaction',
@@ -68,5 +55,4 @@ export const command = new Command()
     '"name:value" additional tag to add to the transaction',
     { collect: true }
   )
-  .arguments('<initialstate:string>')
   .action(process)

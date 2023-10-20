@@ -111,7 +111,7 @@ export const uploadWith =
  * Create a contract
  *
  * @callback Create
- * @param {{ src: string, tags: Tag[], initialState: Object, wallet: unknown }} args
+ * @param {{ src: string, tags: Tag[], wallet: unknown }} args
  *
  * @typedef CreateEnvironment
  * @property {WalletExists} walletExists
@@ -120,31 +120,29 @@ export const uploadWith =
  *
  * @param {CreateEnvironment} env
  *
- * @typedef CreateContractArgs
+ * @typedef CreateProcessArgs
  * @property {string} walletPath
  * @property {string} src
  * @property {Tag[]} tags
- * @property {string} initialState
  *
- * @callback CreateContract
- * @param {CreateContractArgs} args
+ * @callback CreateProcess
+ * @param {CreateProcessArgs} args
  * @returns {Promise<string>} the id of the transaction
  *
- * @returns {CreateContract}
+ * @returns {CreateProcess}
  */
-export const createContractWith =
+export const createProcessWith =
   ({ walletExists, readWallet, create }) =>
-    async ({ walletPath, src, tags, initialState }) => {
+    async ({ walletPath, src, tags }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
 
       const wallet = await readWallet(walletPath)
       const res = await create({
         src,
         tags,
-        initialState: JSON.parse(initialState),
         wallet
       })
-      return res.contractId
+      return res.processId
     }
 
 /**
