@@ -1,14 +1,11 @@
-import baseRoute from './base/index.js'
-import writeRoute from './write/index.js'
-import traceRoute from './trace/index.js'
+import { pipe } from 'ramda'
 
-const mountRoutes = (app) => [
-  ['/', baseRoute],
-  ['/write', writeRoute],
-  ['/trace', traceRoute]
-].reduce(
-  (app, [route, middleware]) => app.use(route, middleware),
-  app
+import { withMessageRoutes } from './message.js'
+import { withSpawnRoutes } from './spawn.js'
+import { withMonitorRoutes } from './monitor.js'
+
+export const withRoutes = pipe(
+  withMessageRoutes,
+  withSpawnRoutes,
+  withMonitorRoutes
 )
-
-export default mountRoutes

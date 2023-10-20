@@ -1,5 +1,4 @@
 import pkg from 'warp-arbundles'
-import config from '../../config.js'
 
 import { createContract, createDataItemSigner } from '@permaweb/ao-sdk'
 const { createData, ArweaveSigner } = pkg
@@ -42,10 +41,10 @@ async function getJsonResponse (response) {
   return result
 }
 
-function buildAndSignWith () {
+function buildAndSignWith ({ MU_WALLET }) {
   return async (contractId, input) => {
     const data = Math.random().toString().slice(-4)
-    const signer = new ArweaveSigner(config.muWallet)
+    const signer = new ArweaveSigner(MU_WALLET)
 
     const tags = []
     tags.push({ name: 'App-Name', value: 'SmartWeaveAction' })
@@ -75,7 +74,7 @@ function findTxWith ({ SEQUENCER_URL }) {
 }
 
 // TODO: inject createContract dep
-function writeContractTxWith ({ SEQUENCER_URL }) {
+function writeContractTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   return async ({ initState, src, tags }) => {
     const transformedList = Object.entries(tags).map(([key, value]) => ({
       name: key,
@@ -85,7 +84,7 @@ function writeContractTxWith ({ SEQUENCER_URL }) {
     const contractId = await createContract({
       srcId: src,
       initialState: initState,
-      signer: createDataItemSigner(config.muWallet),
+      signer: createDataItemSigner(MU_WALLET),
       transformedList
     })
 

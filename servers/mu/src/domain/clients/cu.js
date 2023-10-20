@@ -1,26 +1,25 @@
-import config from '../../config.js'
+function resultWith ({ fetch, CU_URL, logger }) {
+  return async (txId) => {
+    logger(`${CU_URL}/result/${txId}`)
 
-const cuClient = {
-  result: async function (cuAddress, txId) {
-    console.log(`${cuAddress}/result/${txId}`)
-    const resultResponse = await fetch(`${cuAddress}/result/${txId}`)
-    const resultJson = await resultResponse.json()
-
-    if (!resultJson) {
-      return {
+    return fetch(`${CU_URL}/result/${txId}`)
+      .then(res => res.json())
+      .then(res => res || {
         messages: [],
         spawns: [],
         output: ''
-      }
-    }
-
-    return resultJson
-  },
-
-  selectNode: async function (contractId) {
-    console.log(`Selecting cu for contract ${contractId}`)
-    return config.cuUrl
+      })
   }
 }
 
-export default cuClient
+function selectNodeWith ({ CU_URL, logger }) {
+  return (processId) => {
+    logger(`Selecting cu for process ${processId}`)
+    return CU_URL
+  }
+}
+
+export default {
+  resultWith,
+  selectNodeWith
+}
