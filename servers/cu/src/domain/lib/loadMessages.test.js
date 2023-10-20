@@ -31,8 +31,8 @@ describe('loadMessages', () => {
        */
       const tags = [
         { name: 'Foo', value: 'Bar' },
-        { name: SCHEDULED_INTERVAL, value: '10_blocks' },
-        { name: SCHEDULED_INTERVAL, value: ' 10_minutes ' },
+        { name: SCHEDULED_INTERVAL, value: '10-blocks' },
+        { name: SCHEDULED_INTERVAL, value: ' 10-minutes ' },
         {
           name: SCHEDULED_MESSAGE,
           value: action1
@@ -42,7 +42,7 @@ describe('loadMessages', () => {
           name: SCHEDULED_MESSAGE,
           value: action2
         },
-        { name: SCHEDULED_INTERVAL, value: '* 1 * * *_cron' },
+        { name: SCHEDULED_INTERVAL, value: '* 1 * * *-cron' },
         { name: 'Another', value: 'Tag' },
         {
           name: SCHEDULED_MESSAGE,
@@ -57,28 +57,28 @@ describe('loadMessages', () => {
         value: 10,
         unit: 'blocks',
         message: JSON.parse(action1),
-        interval: '10_blocks'
+        interval: '10-blocks'
       })
 
       assert.deepStrictEqual(staticTime, {
         value: 600,
         unit: 'seconds',
         message: JSON.parse(action2),
-        interval: ' 10_minutes '
+        interval: ' 10-minutes '
       })
 
       assert.deepStrictEqual(cron, {
         value: '* 1 * * *',
         unit: 'cron',
         message: JSON.parse(action3),
-        interval: '* 1 * * *_cron'
+        interval: '* 1 * * *-cron'
       })
     })
 
     test('throw if time-based schedule is less than 1 second', async () => {
       await parseSchedules({
         tags: [
-          { name: SCHEDULED_INTERVAL, value: '500_Milliseconds' },
+          { name: SCHEDULED_INTERVAL, value: '500-Milliseconds' },
           {
             name: SCHEDULED_MESSAGE,
             value: action3
@@ -98,7 +98,7 @@ describe('loadMessages', () => {
           height: 125000,
           originHeight: 123455,
           schedule: {
-            interval: '5_blocks',
+            interval: '5-blocks',
             unit: 'blocks',
             value: 5
           }
@@ -111,7 +111,7 @@ describe('loadMessages', () => {
           height: 125000,
           originHeight: 123457,
           schedule: {
-            interval: '5_blocks',
+            interval: '5-blocks',
             unit: 'blocks',
             value: 5
           }
@@ -136,7 +136,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond,
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '15_seconds',
+            interval: '15-seconds',
             unit: 'seconds',
             value: 15
           }
@@ -149,7 +149,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('3m'),
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '15_seconds',
+            interval: '15-seconds',
             unit: 'seconds',
             value: 15
           }
@@ -162,7 +162,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('2m'),
           originTimestamp: nowSecond - ms('3m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -175,7 +175,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('10s'), // 5 seconds off schedule
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '15_seconds',
+            interval: '15-seconds',
             unit: 'seconds',
             value: 15
           }
@@ -188,7 +188,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond,
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -201,7 +201,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('10m'),
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -214,7 +214,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('59s'), // 1 second off schedule
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -227,7 +227,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('3m'), // 2 minutes off schedule
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -240,7 +240,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('6m'), // 1 minute off schedule
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -253,7 +253,7 @@ describe('loadMessages', () => {
           timestamp: nowSecond + ms('10s'), // 10 seconds off schedule
           originTimestamp: nowSecond - ms('5m'),
           schedule: {
-            interval: '5_minutes',
+            interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
           }
@@ -291,25 +291,25 @@ describe('loadMessages', () => {
     const suTime = originTime - ms('1m') // 1 minute behind
     const schedules = [
       {
-        interval: '10_minutes',
+        interval: '10-minutes',
         unit: 'seconds',
         value: ms('10m') / 1000,
         message: mockMessage
       },
       {
-        interval: '2_blocks',
+        interval: '2-blocks',
         unit: 'blocks',
         value: 2,
         message: mockMessage
       },
       {
-        interval: '15_minutes',
+        interval: '15-minutes',
         unit: 'seconds',
         value: ms('15m') / 1000,
         message: mockMessage
       },
       {
-        interval: '2_blocks',
+        interval: '2-blocks',
         unit: 'blocks',
         value: 2,
         message: mockMessage

@@ -11,7 +11,7 @@ import { parseTags } from './utils.js'
  * - { name: 'Scheduled-Interval', value: 'interval' }
  * - { name: 'Scheduled-Message', value: 'JSON' }
  *
- * Interval Format: 'X_Y'
+ * Interval Format: 'X-Y'
  *
  * Where X is the value
  * Where Y is the unit:
@@ -19,14 +19,14 @@ import { parseTags } from './utils.js'
  * - 'cron' (X is cron string)
  * - time unit ie. 'seconds' 'minutes' 'hours' 'days' 'weeks' 'months' 'years'
  *
- * - '10_blocks'
- * - '10_seconds'
- * - '* * * * *_cron'
+ * - '10-blocks'
+ * - '10-seconds'
+ * - '* * * * *-cron'
  */
 export function parseSchedules ({ tags }) {
   function parseInterval (interval = '') {
     const [value, unit] = interval
-      .split('_')
+      .split('-')
       .map(s => s.trim())
 
     return cond([
@@ -58,8 +58,8 @@ export function parseSchedules ({ tags }) {
        *
        * [
           { name: 'Foo', value: 'Bar' },
-          { name: 'Scheduled-Interval', value: '10_blocks' },
-          { name: 'Scheduled-Interval', value: ' 20_seconds ' },
+          { name: 'Scheduled-Interval', value: '10-blocks' },
+          { name: 'Scheduled-Interval', value: ' 20-seconds ' },
           {
             name: 'Scheduled-Message',
             value: action1
@@ -69,7 +69,7 @@ export function parseSchedules ({ tags }) {
             name: 'Scheduled-Message',
             value: action2
           },
-          { name: 'Scheduled-Interval', value: '* 1 * * *_cron' },
+          { name: 'Scheduled-Interval', value: '* 1 * * *-cron' },
           { name: 'Another', value: 'Tag' },
           {
             name: 'Scheduled-Message',
