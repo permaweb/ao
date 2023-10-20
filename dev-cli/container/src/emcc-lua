@@ -66,13 +66,13 @@ def main():
     local_include_prefix_re = re.compile(re.escape(local_include_dir + '/'))
 
     # Detect bundles
-    bundle_files = [os.path.abspath('contract.lua')]
+    bundle_files = glob.glob('/src/**/*.lua', recursive=True)
+    
     # Optional dependencies
     bundle_files += glob.glob(local_include_dir + '/**/*.lua', recursive=True)
     bundle_files += glob.glob(local_include_dir + '/**/*.so', recursive=True)
     bundle_files += glob.glob(LUAROCKS_LOCAL_MODULE_DIR + '/lib/lua/**/*.so', recursive=True)
     bundle_files += glob.glob(LUAROCKS_LOCAL_MODULE_DIR + '/share/lua/**/*.lua', recursive=True)
-
     debug_print('Start to factory and distinguish module files')
 
     for bundle in bundle_files:
