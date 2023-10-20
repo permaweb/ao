@@ -2,12 +2,11 @@
 
 This sdk will run in a browser or server environment, the purpose is to abstract
 interacting with the infrastructure needed for deploying, evaluating, and
-interacting with `ao` Smart Contracts.
+interacting with `ao` Processes.
 
-- Reads state from a `ao` Compute Unit `cu`
-- Writes interactions to an `ao` Message Unit `mu`
-- Deploys Contracts to `Irys` as a Data Item, then registers the contract on the
-  `Warp Gateway`
+- Reads state of an `ao` Process from a `ao` Compute Unit `cu`
+- Write Message targeting an `ao` Process to an `ao` Message Unit `mu`
+- Deploy an `ao` Process to `Irys` as a Data Item
 
 <!-- toc -->
 
@@ -49,7 +48,7 @@ The duration of this document will use `ESM` for examples
 
 #### `readState`
 
-Read the state of a contract from an `ao` Compute Unit `cu`
+Read the state of a process from an `ao` Compute Unit `cu`
 
 ```js
 import { readState } from "@permaweb/ao-sdk";
@@ -80,9 +79,11 @@ const messageId = await writeMessage({
 });
 ```
 
+> You can pass a 32 byte `anchor` to `writeMessage` which will be set on the DataItem
+
 #### `createProcess`
 
-Create a contract, publishing to Arys, then registering it on the Warp Gateway
+Create an `ao` process, publishing to Arys.
 
 ```js
 import { createProcess, createDataItemSigner } from "@permaweb/ao-sdk";
@@ -96,12 +97,12 @@ const processId = await createProcess({
 
 #### `createDataItemSigner`
 
-`writeMessage` and `createProcess` both require signing a data item with a
+`writeMessage` and `createProcess` both require signing a DataItem with a
 wallet.
 
 `createDataItemSigner` is a convenience api that, given a wallet, returns a
 function that can be passed to both `writeMessage` and `createProcess` in
-order to properly sign data items.
+order to properly sign DataItems.
 
 The SDK provides a browser compatible and node compatible version that you can
 use OOTB.
@@ -130,7 +131,7 @@ the api. Here is what the API looks like in TypeScript:
 
 ```ts
 type CreateDataItemSigner = (wallet: any):
-  (args: { data: any, tags: { name: string, value: string}[] }):
+  (args: { data: any, tags?: { name: string, value: string}[], target?: string, anchor?: string }):
     Promise<{ id: string, raw: ArrayBuffer }>
 ```
 
