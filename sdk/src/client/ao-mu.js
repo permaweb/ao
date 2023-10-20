@@ -45,7 +45,7 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
               {
                 method: 'POST',
                 headers: {
-                  'Content-Type': 'application/json',
+                  'Content-Type': 'application/octet-stream',
                   Accept: 'application/json'
                 },
                 body: signedDataItem.raw
