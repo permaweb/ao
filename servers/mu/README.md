@@ -1,21 +1,47 @@
-# AO Messenger Unit
+# `ao` Messanger Unit
+
+> 🚧 Under Construction
+
+This is an spec compliant `ao` Messenger Unit, implemented as a Node Express
+Server.
 
 <!-- toc -->
 
 - [Usage](#usage)
+- [Environment Variables](#environment-variables)
+- [Tests](#tests)
+- [Debug Logging](#debug-logging)
 
 <!-- tocstop -->
 
 ## Usage
 
-You need to set the path to your wallet as an environment variable called `PATH_TO_WALLET`.
+First install dependencies using `npm i`
 
-eg. `export PATH_TO_WALLET=/path/to/wallet.json`
+Then simply start the server using `npm start` or `npm run dev` if you are
+working on the project locally. This will start a hot-reload process listening
+on port `3005` by default.
 
-Install Packages:
+## Environment Variables
 
-`npm i`
+There are a few environment variables that you can set:
 
-Run server:
+- `CU_URL`: Which `ao` Compute Unit to use (defaults to `https://ao-cu-2.onrender.com` in
+  development mode)
+- `SEQUENCER_URL`: Which Sequencer to use (defaults to `https://ao-su-1.onrender.com` in
+  development mode)
+- `PORT`: Which port the web server should listen on (defaults to port `3005`)
+- `PATH_TO_WALLET`: the path to the wallet JWK interface you would like the `mu` to use to sign messages
+that it is cranking (defaults to `./wallet.json` in development mode)
 
-`npm start`
+> You can also use a `.env` file to set environment variables when running in development mode, See the `.env.example` for an example `.env` 
+## Tests
+
+You can execute unit tests by running `npm test`
+
+## Debug Logging
+
+You can enable verbose debug logging on the Web Server, by setting the `DEBUG`
+environment variable to the scope of logs you're interested in
+
+All logging is scoped under the name `ao-mu*`
