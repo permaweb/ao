@@ -8,3 +8,6 @@ tasks:
 vscode:
   extensions:
     - "standard.vscode-standard"
+    - "rust-lang.rust-analyzer"
+    - "graphql.vscode-graphql"
+    - "svelte.svelte-vscode"

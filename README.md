@@ -45,7 +45,7 @@ First, run `npm i` at the root to install those dependencies.
 
 ## Design Documents
 
-- [Design](design)
+- [Design](./design)
 
 ## Projects
 
@@ -60,6 +60,8 @@ First, run `npm i` at the root to install those dependencies.
   Compute Unit, aka a `cu` (pronounced "koo" 🦘)
 - [`ao` Messenger Unit (`mu`)](./servers/mu): An implementation of the `ao`
   Messaenger Unit, aka a `mu` (pronounced "moo" 🐄)
+- [`ao` Sequencer Unit (`su`)](./servers/su): An implementation of the `ao`
+  Sequencer Unit, aka a `su` (pronounced "soo" 👧)
 - [`ao` Lua Examples](./lua-examples): Various examples of projects leveraging
   `ao` Contracts and components.
 
