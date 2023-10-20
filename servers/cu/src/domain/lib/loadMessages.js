@@ -8,8 +8,8 @@ import { findLatestEvaluationSchema, loadMessagesSchema, loadTimestampSchema } f
 import { parseTags } from './utils.js'
 
 /**
- * - { name: 'scheduled-interval', value: 'interval' }
- * - { name: 'scheduled-message', value: 'JSON' }
+ * - { name: 'Scheduled-Interval', value: 'interval' }
+ * - { name: 'Scheduled-Message', value: 'JSON' }
  *
  * Interval Format: 'X_Y'
  *
@@ -58,21 +58,21 @@ export function parseSchedules ({ tags }) {
        *
        * [
           { name: 'Foo', value: 'Bar' },
-          { name: 'scheduled-interval', value: '10_blocks' },
-          { name: 'scheduled-interval', value: ' 20_seconds ' },
+          { name: 'Scheduled-Interval', value: '10_blocks' },
+          { name: 'Scheduled-Interval', value: ' 20_seconds ' },
           {
-            name: 'scheduled-message',
+            name: 'Scheduled-Message',
             value: action1
           },
           { name: 'Random', value: 'Tag' },
           {
-            name: 'scheduled-message',
+            name: 'Scheduled-Message',
             value: action2
           },
-          { name: 'scheduled-interval', value: '* 1 * * *_cron' },
+          { name: 'Scheduled-Interval', value: '* 1 * * *_cron' },
           { name: 'Another', value: 'Tag' },
           {
-            name: 'scheduled-message',
+            name: 'Scheduled-Message',
             value: action3
           }
         ]
@@ -104,8 +104,8 @@ export function parseSchedules ({ tags }) {
     })
 }
 
-export const SCHEDULED_INTERVAL = 'scheduled-interval'
-export const SCHEDULED_MESSAGE = 'scheduled-message'
+export const SCHEDULED_INTERVAL = 'Scheduled-Interval'
+export const SCHEDULED_MESSAGE = 'Scheduled-Message'
 
 /**
  * Whether the block height, relative to the origin block height,
