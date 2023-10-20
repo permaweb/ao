@@ -188,7 +188,6 @@ export const loadTimestampWith = ({ fetch, SU_URL }) => {
 
 export const loadMessageMetaWith = ({ fetch, SU_URL }) => {
   return async ({ messageTxId }) => {
-    // TODO: implement fetching from su endpoint (need endpoint and shape from Vince)
     return fetch(`${SU_URL}/message/${messageTxId}`, { method: 'GET' })
       .then(res => res.json())
       .then(res => ({
