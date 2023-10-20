@@ -20,7 +20,7 @@ describe('ao-mu', () => {
             assert.deepStrictEqual(options, {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
               body: 'raw-buffer'
