@@ -32,7 +32,9 @@ describe('browser - wallet', () => {
 
       const res = await signDataItem({
         data: 'foobar',
-        tags: [{ name: 'foo', value: 'bar' }]
+        tags: [{ name: 'foo', value: 'bar' }],
+        target: 'xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw',
+        anchor: randomBytes(32)
       })
 
       console.log('signedDataItem', res)

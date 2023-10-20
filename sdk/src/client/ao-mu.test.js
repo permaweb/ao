@@ -32,23 +32,26 @@ describe('ao-mu', () => {
       )
 
       const res = await deployMessage({
-        processId: 'contract-asdf',
+        processId: 'process-123',
         data: 'data-123',
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' }
+        ],
+        anchor: 'idempotent-123',
         signer: signerSchema.implement(
-          async ({ data, tags }) => {
+          async ({ data, tags, target, anchor }) => {
             assert.ok(data)
             assert.deepStrictEqual(tags, [
               { name: 'foo', value: 'bar' },
               { name: 'Content-Type', value: 'text/plain' }
             ])
+            assert.equal(target, 'process-123')
+            assert.equal(anchor, 'idempotent-123')
 
             return { id: 'data-item-123', raw: 'raw-buffer' }
           }
-        ),
-        tags: [
-          { name: 'foo', value: 'bar' },
-          { name: 'Content-Type', value: 'text/plain' }
-        ]
+        )
       })
 
       assert.deepStrictEqual(res, {

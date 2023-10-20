@@ -2,9 +2,9 @@ import { buildSdk } from './index.common.js'
 
 import { WalletClient } from './client/node/index.js'
 
-const { readState, writeInteraction, createProcess } = buildSdk()
+const { readState, writeMessage, createProcess } = buildSdk()
 
-export { readState, writeInteraction, createProcess }
+export { readState, writeMessage, createProcess }
 
 /**
  * A function that builds a signer using a wallet jwk interface
