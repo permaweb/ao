@@ -9,16 +9,16 @@ const inputSchema = z.object({
 
 export const withResultRoutes = app => {
   app.get(
-    '/result/:interactionId',
+    '/result/:messageTxId',
     compose(
       withMiddleware,
       always(async (req, res) => {
         const {
-          params: { interactionId },
+          params: { messageTxId },
           domain: { apis: { readResult } }
         } = req
 
-        const input = inputSchema.parse({ messageTxId: interactionId })
+        const input = inputSchema.parse({ messageTxId })
         return res.send(await readResult(input))
       })
     )()
