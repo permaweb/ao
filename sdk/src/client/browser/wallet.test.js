@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
+import { randomBytes } from 'node:crypto'
 
 import { createDataItemSigner } from './wallet.js'
 
@@ -14,8 +15,8 @@ describe('browser - wallet', () => {
        * api needed for the trimmed down InjectedArweaveSigner
        */
       const stubArweaveWallet = {
-        async signDataItem ({ data, tags }) {
-          return Buffer.from(JSON.stringify({ data, tags }))
+        async signDataItem ({ data, tags, target, anchor }) {
+          return Buffer.from(JSON.stringify({ data, tags, target, anchor }))
         }
       }
 
@@ -24,6 +25,8 @@ describe('browser - wallet', () => {
       const res = await sign({
         data: 'foobar',
         tags: [{ name: 'foo', value: 'bar' }],
+        target: 'xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw',
+        anchor: randomBytes(32),
         /**
          * stub createDataItem
          */

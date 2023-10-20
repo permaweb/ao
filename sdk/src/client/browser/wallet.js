@@ -20,8 +20,13 @@ class InjectedArweaveSigner {
     this.signatureType = 1
   }
 
-  async createAndSignDataItem (data, tags) {
-    const buf = Buffer.from(await this.signer.signDataItem({ data, tags }))
+  async createAndSignDataItem ({ data, tags, target, anchor }) {
+    /**
+     * signDataItem interface according to ArweaveWalletConnector
+     *
+     * https://github.com/jfbeats/ArweaveWalletConnector/blob/7c167f79cd0cf72b6e32e1fe5f988a05eed8f794/src/Arweave.ts#L46C23-L46C23
+     */
+    const buf = Buffer.from(await this.signer.signDataItem({ data, tags, target, anchor }))
     const dataI = this.createDataItem(buf)
     return dataI
   }
@@ -39,9 +44,9 @@ export function createDataItemSigner (arweaveWallet) {
    * createDataItem can be passed here for the purposes of unit testing
    * with a stub
    */
-  const signer = async ({ data, tags, createDataItem = (buf) => new DataItem(buf) }) => {
+  const signer = async ({ data, tags, target, anchor, createDataItem = (buf) => new DataItem(buf) }) => {
     const iSigner = new InjectedArweaveSigner(arweaveWallet, createDataItem)
-    return iSigner.createAndSignDataItem(data, tags)
+    return iSigner.createAndSignDataItem({ data, tags, target, anchor })
       .then(async dataItem => ({
         id: await dataItem.id,
         raw: await dataItem.getRaw()

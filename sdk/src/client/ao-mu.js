@@ -29,12 +29,17 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
        */
       .chain(
         args => of(args)
-          .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
-          .map(signedDataItem => ({ processId: args.processId, signedDataItem }))
+          .chain(fromPromise(({ processId, data, tags, anchor, signer }) =>
+            /**
+             * The processId is the target set on the data item
+             * See https://specs.g8way.io/?tx=xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw
+             */
+            signer({ data, tags, target: processId, anchor }))
+          )
       )
-      .chain(({ processId, signedDataItem }) =>
-        of({ processId, signedDataItem })
-          .chain(fromPromise(async ({ processId, signedDataItem }) =>
+      .chain(signedDataItem =>
+        of(signedDataItem)
+          .chain(fromPromise(async (signedDataItem) =>
             fetch(
               `${MU_URL}/message`,
               {
@@ -43,14 +48,6 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
                   'Content-Type': 'application/json',
                   Accept: 'application/json'
                 },
-                /**
-                 * TODO: this should be a data item,
-                 * but how to pass the:
-                 *
-                 * - target ie. processId
-                 *
-                 * is it part of the data item?
-                 */
                 body: signedDataItem.raw
               }
             )

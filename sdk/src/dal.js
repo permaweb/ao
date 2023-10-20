@@ -19,6 +19,7 @@ export const deployMessageSchema = z.function()
     processId: z.string(),
     data: z.any(),
     tags: z.array(tagSchema),
+    anchor: z.string().optional(),
     signer: z.any()
   }))
   .returns(z.promise(
@@ -64,7 +65,13 @@ export const loadTransactionDataSchema = z.function()
 export const signerSchema = z.function()
   .args(z.object({
     data: z.any(),
-    tags: z.array(tagSchema)
+    tags: z.array(tagSchema),
+    /**
+     * target must be set with writeMessage,
+     * but not for createProcess
+     */
+    target: z.string().optional(),
+    anchor: z.string().optional()
   }))
   .returns(z.promise(
     z.object({
