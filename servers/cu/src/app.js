@@ -1,6 +1,5 @@
 import { pipe } from 'ramda'
 import express from 'express'
-import bodyParser from 'body-parser'
 import cors from 'cors'
 
 import { logger } from './logger.js'
@@ -9,8 +8,7 @@ import { withRoutes } from './routes/index.js'
 
 export const server = pipe(
   (app) => app.use(cors()),
-  (app) => app.use(bodyParser.json()),
-  (app) => app.use(bodyParser.urlencoded({ extended: false })),
+  (app) => app.use(express.json({ type: 'application/json' })),
   (app) => app.get('/', (_req, res) => res.send('ao compute unit')),
   withRoutes,
   app => {
