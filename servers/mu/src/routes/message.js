@@ -30,7 +30,7 @@ export const withMessageRoutes = (app) => {
           )
           .toPromise()
 
-        return res.status(501).send('Processing message')
+        return res.status(202).send('Processing message')
       })
     )()
   )
