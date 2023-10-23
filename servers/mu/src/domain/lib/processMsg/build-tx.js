@@ -9,13 +9,12 @@ const ctxSchema = z.object({
 export function buildTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
     return of(ctx)
-      .chain(fromPromise(() => buildAndSign(
-        ctx.cachedMsg.msg.target,
-        {
-          function: 'handleMessage',
-          message: ctx.cachedMsg.msg.message
-        }
-      )))
+      .chain(fromPromise(() => buildAndSign({
+        data: ctx.cachedMsg.data,
+        processId: ctx.cachedMsg.target,
+        tags: ctx.cachedMsg.tags,
+        anchor: ctx.cachedMsg.anchor
+      })))
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Added tx to ctx'))

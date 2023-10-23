@@ -12,7 +12,7 @@ const internalPouchDb = (dbFile) => new PouchDb(dbFile, { adapter: 'leveldb' })
 const cachedTxSchema = z.object({
   _id: z.string().min(1),
   data: z.any(),
-  contractId: z.string().min(1),
+  processId: z.string().min(1),
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
@@ -20,13 +20,14 @@ const cachedTxSchema = z.object({
 })
 
 function saveTxWith ({ pouchDb, logger: _logger }) {
-  const logger = _logger.child('saveInitialTx')
+  const logger = _logger.child('saveTx')
+
   return (tx) => {
     return of(tx)
       .map(applySpec({
         _id: prop('id'),
         data: prop('data'),
-        contractId: prop('contractId'),
+        processId: prop('processId'),
         cachedAt: prop('cachedAt')
       }))
       .map(cachedTxSchema.parse)
@@ -92,7 +93,7 @@ function findLatestTxWith (
       .map(applySpec({
         id: prop('_id'),
         data: prop('data'),
-        contractId: prop('contractId'),
+        processId: prop('processId'),
         cachedAt: prop('cachedAt')
       }))
       .bichain(Resolved, Resolved)

@@ -6,12 +6,13 @@ import { fetchAndSaveResultWith } from './processMsg/fetch-and-save-result.js'
 import { buildTxWith } from './processMsg/build-tx.js'
 import { crankWith } from './crank/crank.js'
 import { createContractWith } from './processSpawn/create-contract.js'
+import { parseDataItemWith } from './processMsg/parse-data-item.js'
 
 /**
  * write the first transaction and fetch its messages
  */
 export function initMsgsWith ({
-  findLatestCacheTx,
+  createDataItem,
   cacheTx,
   selectNode,
   findSequencerTx,
@@ -23,27 +24,14 @@ export function initMsgsWith ({
   findLatestSpawns,
   logger
 }) {
+  const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-
-  const cacheAndWriteTx = cacheAndWriteTxWith({
-    findLatestCacheTx,
-    cacheTx,
-    findSequencerTx,
-    writeSequencerTx,
-    logger
-  })
-
-  const fetchAndSaveResult = fetchAndSaveResultWith({
-    fetchResult,
-    saveMsg,
-    saveSpawn,
-    findLatestMsgs,
-    findLatestSpawns,
-    logger
-  })
+  const cacheAndWriteTx = cacheAndWriteTxWith({ cacheTx, findSequencerTx, writeSequencerTx, logger })
+  const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
 
   return (ctx) => {
     return of(ctx)
+      .chain(parseDataItem)
       .chain(getCuAddress)
       .chain(cacheAndWriteTx)
       .chain(fetchAndSaveResult)
@@ -55,6 +43,7 @@ export function initMsgsWith ({
  */
 export function processMsgWith ({
   findLatestCacheTx,
+  createDataItem,
   cacheTx,
   selectNode,
   findSequencerTx,
@@ -68,17 +57,14 @@ export function processMsgWith ({
   findLatestSpawns,
   logger
 }) {
-  const getCuAddress = getCuAddressWith({ selectNode, logger })
+  const buildTx = buildTxWith({ buildAndSign, logger })
 
-  const cacheAndWriteTx = cacheAndWriteTxWith({
-    findLatestCacheTx,
+  const initMsgs = initMsgsWith({
+    createDataItem,
     cacheTx,
+    selectNode,
     findSequencerTx,
     writeSequencerTx,
-    logger
-  })
-
-  const fetchAndSaveResult = fetchAndSaveResultWith({
     fetchResult,
     saveMsg,
     saveSpawn,
@@ -87,17 +73,10 @@ export function processMsgWith ({
     logger
   })
 
-  const buildTx = buildTxWith({
-    buildAndSign,
-    logger
-  })
-
   return (ctx) => {
     return of(ctx)
       .chain(buildTx)
-      .chain(getCuAddress)
-      .chain(cacheAndWriteTx)
-      .chain(fetchAndSaveResult)
+      .chain(initMsgs)
   }
 }
 
