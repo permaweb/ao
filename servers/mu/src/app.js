@@ -1,5 +1,4 @@
 import express from 'express'
-import bodyParser from 'body-parser'
 import cors from 'cors'
 import { pipe } from 'ramda'
 
@@ -9,7 +8,7 @@ import { withRoutes } from './routes/index.js'
 
 export const server = pipe(
   (app) => app.use(cors()),
-  (app) => app.use(bodyParser.json({ type: 'application/json' })),
+  (app) => app.use(express.json({ type: 'application/json' })),
   (app) => app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' })),
   (app) => app.get('/', (_req, res) => res.send('ao messenger unit')),
   withRoutes,
