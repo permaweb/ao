@@ -8,7 +8,7 @@ const ctxSchema = z.object({
 
 export function getCuAddressWith ({ selectNode, logger }) {
   return (ctx) => {
-    return of(ctx.tx.contractId)
+    return of(ctx.tx.processId)
       .chain(fromPromise(selectNode))
       .map(assoc('cuAddress', __, ctx))
       .map(ctxSchema.parse)

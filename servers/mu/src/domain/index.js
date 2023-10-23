@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import warpArBundles from 'warp-arbundles'
 
 import pouchDbClient from './clients/pouchdb.js'
 import cuClient from './clients/cu.js'
@@ -6,7 +7,10 @@ import sequencerClient from './clients/sequencer.js'
 
 import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith } from './lib/main.js'
 
+const { DataItem } = warpArBundles
+
 const dbInstance = pouchDbClient.pouchDb('ao-cache')
+const createDataItem = (raw) => new DataItem(raw)
 
 export { createLogger } from './logger.js'
 
@@ -24,45 +28,49 @@ export const createApis = (ctx) => {
   const logger = ctx.logger
   const fetch = ctx.fetch
 
-  const processMsg = processMsgWith({
-    selectNode: cuClient.selectNodeWith({ CU_URL, logger }),
-    findLatestCacheTx: pouchDbClient.findLatestTxWith({ pouchDb: dbInstance }),
-    cacheTx: pouchDbClient.saveTxWith({ pouchDb: dbInstance, logger }),
+  const initMsgsLogger = logger.child('initMsgs')
+  const initMsgs = initMsgsWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: initMsgsLogger }),
+    createDataItem,
+    cacheTx: pouchDbClient.saveTxWith({ pouchDb: dbInstance, logger: initMsgsLogger }),
     findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL }),
-    writeSequencerTx: sequencerClient.writeInteractionWith({ SEQUENCER_URL }),
+    writeSequencerTx: sequencerClient.writeMessageWith({ SEQUENCER_URL }),
+    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: initMsgsLogger }),
+    saveMsg: pouchDbClient.saveMsgWith({ pouchDb: dbInstance, logger: initMsgsLogger }),
+    saveSpawn: pouchDbClient.saveSpawnWith({ pouchDb: dbInstance, logger: initMsgsLogger }),
+    findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: dbInstance, logger: initMsgsLogger }),
+    findLatestSpawns: pouchDbClient.findLatestSpawnsWith({ pouchDb: dbInstance, logger: initMsgsLogger }),
+    logger: initMsgsLogger
+  })
+
+  const processMsgLogger = logger.child('processMsg')
+  const processMsg = processMsgWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
+    createDataItem,
+    cacheTx: pouchDbClient.saveTxWith({ pouchDb: dbInstance, logger: processMsgLogger }),
+    findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL }),
+    writeSequencerTx: sequencerClient.writeMessageWith({ SEQUENCER_URL }),
     buildAndSign: sequencerClient.buildAndSignWith({ MU_WALLET }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger }),
-    saveMsg: pouchDbClient.saveMsgWith({ pouchDb: dbInstance, logger }),
-    saveSpawn: pouchDbClient.saveSpawnWith({ pouchDb: dbInstance, logger }),
-    updateMsg: pouchDbClient.updateMsgWith({ pouchDb: dbInstance, logger }),
-    findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: dbInstance, logger }),
-    findLatestSpawns: pouchDbClient.findLatestSpawnsWith({ pouchDb: dbInstance, logger }),
+    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
+    saveMsg: pouchDbClient.saveMsgWith({ pouchDb: dbInstance, logger: processMsgLogger }),
+    saveSpawn: pouchDbClient.saveSpawnWith({ pouchDb: dbInstance, logger: processMsgLogger }),
+    updateMsg: pouchDbClient.updateMsgWith({ pouchDb: dbInstance, logger: processMsgLogger }),
+    findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: dbInstance, logger: processMsgLogger }),
+    findLatestSpawns: pouchDbClient.findLatestSpawnsWith({ pouchDb: dbInstance, logger: processMsgLogger }),
     logger
   })
 
+  const processSpawnLogger = logger.child('processSpawn')
   const processSpawn = processSpawnWith({
-    logger,
+    logger: processSpawnLogger,
     writeContractTx: sequencerClient.writeContractTxWith({ SEQUENCER_URL, MU_WALLET })
   })
 
-  const initMsgs = initMsgsWith({
-    selectNode: cuClient.selectNodeWith({ CU_URL, logger }),
-    findLatestCacheTx: pouchDbClient.findLatestTxWith({ pouchDb: dbInstance }),
-    cacheTx: pouchDbClient.saveTxWith({ pouchDb: dbInstance, logger }),
-    findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL }),
-    writeSequencerTx: sequencerClient.writeInteractionWith({ SEQUENCER_URL }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger }),
-    saveMsg: pouchDbClient.saveMsgWith({ pouchDb: dbInstance, logger }),
-    saveSpawn: pouchDbClient.saveSpawnWith({ pouchDb: dbInstance, logger }),
-    findLatestMsgs: pouchDbClient.findLatestMsgsWith({ pouchDb: dbInstance, logger }),
-    findLatestSpawns: pouchDbClient.findLatestSpawnsWith({ pouchDb: dbInstance, logger }),
-    logger
-  })
-
+  const crankMsgsLogger = logger.child('crankMsgs')
   const crankMsgs = crankMsgsWith({
     processMsg,
     processSpawn,
-    logger
+    logger: crankMsgsLogger
   })
 
   return { initMsgs, crankMsgs }

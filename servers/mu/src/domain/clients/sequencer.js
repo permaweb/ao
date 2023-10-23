@@ -1,64 +1,62 @@
+import { identity } from 'ramda'
 import pkg from 'warp-arbundles'
+import { of, fromPromise, Rejected } from 'hyper-async'
 
 import { createContract, createDataItemSigner } from '@permaweb/ao-sdk'
+
 const { createData, ArweaveSigner } = pkg
 
-function writeInteractionWith ({ SEQUENCER_URL }) {
+function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   return async (data) => {
-    const rawDataBuffer = Buffer.from(data, 'base64')
-
-    const response = await fetch(
-                `${SEQUENCER_URL}/gateway/v2/sequencer/register`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/octet-stream',
-                    Accept: 'application/json'
-                  },
-                  body: rawDataBuffer
-                }
-    )
-
-    return await getJsonResponse(response)
+    return of(Buffer.from(data, 'base64'))
+      .map(logger.tap(`Forwarding message to SU ${SEQUENCER_URL}`))
+      .chain(fromPromise((body) => {
+        fetch(`${SEQUENCER_URL}/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Accept: 'application/json'
+          },
+          body
+        })
+      }))
+      .bimap(
+        logger.tap('Error while communicating with SU:'),
+        identity
+      )
+      .bichain(
+        (err) => Rejected(JSON.stringify(err)),
+        fromPromise(async (res) => {
+          if (!res?.ok) {
+            const text = await res.text()
+            throw new Error(`${res.status}: ${text}`)
+          }
+          return res.json()
+        })
+      )
+      .map(logger.tap('Successfully forwarded DataItem to SU'))
+      .toPromise()
   }
-}
-
-async function getJsonResponse (response) {
-  let r
-  try {
-    r = await response
-  } catch (e) {
-    throw new Error(
-          `Error while communicating with sequencer: ${JSON.stringify(e)}`
-    )
-  }
-
-  if (!r?.ok) {
-    const text = await r.text()
-    throw new Error(`${r.status}: ${text}`)
-  }
-  const result = await r.json()
-  return result
 }
 
 function buildAndSignWith ({ MU_WALLET }) {
-  return async (contractId, input) => {
-    const data = Math.random().toString().slice(-4)
+  return async ({ processId, data, tags, anchor }) => {
+    data = data || Math.random().toString().slice(-4)
     const signer = new ArweaveSigner(MU_WALLET)
 
-    const tags = []
-    tags.push({ name: 'App-Name', value: 'SmartWeaveAction' })
-    tags.push({ name: 'App-Version', value: '0.3.0' })
-    tags.push({ name: 'Contract', value: contractId })
-    tags.push({ name: 'Input', value: JSON.stringify(input) })
-    tags.push({ name: 'SDK', value: 'ao' })
+    const allTags = [
+      ...tags,
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'ao-type', value: 'message' },
+      { name: 'SDK', value: 'ao' }
+    ]
 
-    const interactionDataItem = createData(data, signer, { tags })
+    const interactionDataItem = createData(data, signer, { target: processId, anchor, tags: allTags })
     await interactionDataItem.sign(signer)
     return {
       id: await interactionDataItem.id,
       data: interactionDataItem.getRaw(),
-      contractId
+      processId
     }
   }
 }
@@ -92,7 +90,7 @@ function writeContractTxWith ({ SEQUENCER_URL, MU_WALLET }) {
 }
 
 export default {
-  writeInteractionWith,
+  writeMessageWith,
   buildAndSignWith,
   findTxWith,
   writeContractTxWith

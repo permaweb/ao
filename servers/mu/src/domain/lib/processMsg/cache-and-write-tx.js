@@ -12,26 +12,36 @@ const ctxSchema = z.object({
 }).passthrough()
 
 function findAndCacheTxWith ({ cacheTx, logger }) {
+  cacheTx = fromPromise(cacheTx)
+
   return (tx) => {
     return of(tx)
-      .map(assoc('cachedAt', new Date()))
-      .map(fromPromise(cacheTx))
-      .map(() => tx)
-      .map(logger.tap('cached tx'))
+      .map(tx => ({
+        id: tx.id,
+        processId: tx.processId,
+        data: tx.data,
+        cachedAt: new Date()
+      }))
+      .chain((tx) =>
+        cacheTx(tx)
+          .map(logger.tap('cached tx'))
+          .map(() => tx)
+      )
   }
 }
 
 function findAndWriteSeqTxWith ({ findSequencerTx, writeSequencerTx, logger }) {
-  const doFindSequencerTx = fromPromise(findSequencerTx)
-  const doWriteSequencerTx = fromPromise(writeSequencerTx)
+  findSequencerTx = fromPromise(findSequencerTx)
+  writeSequencerTx = fromPromise(writeSequencerTx)
 
-  const maybeSequencerTx = (tx) => doFindSequencerTx(tx.id)
+  const maybeSequencerTx = (tx) => findSequencerTx(tx.id)
     .bichain(_ => Resolved(tx), Rejected)
 
-  const writeTx = (tx) => doWriteSequencerTx(tx.data)
-
   return (tx) => maybeSequencerTx(tx)
-    .bichain(Resolved, writeTx)
+    .bichain(
+      Resolved,
+      (tx) => writeSequencerTx(tx.data)
+    )
     .map(logger.tap('wrote tx to sequencer'))
 }
 
