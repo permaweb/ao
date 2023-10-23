@@ -9,6 +9,7 @@ import { createApis, domainConfigSchema } from '../../domain/index.js'
  * This allows routes to be encapsulated and easily testable with unit tests
  */
 export const withDomain = (handler) => (req, res) => {
+  req.logger = logger
   req.domain = {
     /**
      * Ensure server lvl config is never exposed to domain,

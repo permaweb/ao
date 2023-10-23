@@ -65,7 +65,6 @@ function buildAndSignWith ({ MU_WALLET }) {
 
 // TODO: implement find query
 function findTxWith ({ SEQUENCER_URL }) {
-  console.log(SEQUENCER_URL)
   return async (txId) => {
     console.log('Searching for tx on sequencer')
     console.log(txId)
