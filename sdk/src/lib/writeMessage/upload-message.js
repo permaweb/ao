@@ -1,6 +1,6 @@
 import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { __, assoc, concat, defaultTo } from 'ramda'
+import { __, assoc, concat, defaultTo, propEq, reject } from 'ramda'
 
 import { deployMessageSchema, signerSchema } from '../../dal.js'
 
@@ -32,9 +32,18 @@ const tagSchema = z.array(z.object({
  * @returns { BuildTags }
  */
 function buildTagsWith () {
+  function removeTagsByName (name) {
+    return (tags) => reject(propEq(name, 'name'), tags)
+  }
+
   return (ctx) => {
     return of(ctx.tags)
       .map(defaultTo([]))
+      /**
+       * Remove any reserved tags, so that the sdk
+       * can properly set them
+       */
+      .map(removeTagsByName('ao-type'))
       .map(concat(__, [
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'ao-type', value: 'message' },
