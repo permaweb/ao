@@ -1,23 +1,15 @@
-import { fromPromise, of } from 'hyper-async'
-import { assoc, path, reduce } from 'ramda'
+import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+import { anyPass, equals, includes, isNotNil, path } from 'ramda'
 import { z } from 'zod'
 
 import { loadTransactionMetaSchema } from '../../dal.js'
+import { parseTags } from '../utils.js'
 
 const transactionSchema = z.object({
   tags: z.array(z.object({
     name: z.string(),
     value: z.string()
   }))
-})
-
-const processTagsSchema = z.object({
-  'Contract-Src': z.string().min(
-    1,
-    { message: 'Contract-Src tag was not present on the transaction' }
-  ),
-  'Data-Protocol': z.literal('ao'),
-  'ao-type': z.literal('process')
 })
 
 /**
@@ -31,13 +23,23 @@ const processTagsSchema = z.object({
  * @returns {any} VerifyTags
  */
 function verfiyTagsWith ({ loadTransactionMeta }) {
+  const checkTag = (name, pred) => tags => pred(tags[name])
+    ? Resolved(tags)
+    : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on contract source`)
+
   return (id) => {
     return of(id)
       .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
       .map(transactionSchema.parse)
       .map(path(['tags']))
-      .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
-      .map(processTagsSchema.parse)
+      .map(parseTags)
+      /**
+       * The process could implement multiple Data-Protocols,
+       * so check in the case of a single value or an array of values
+       */
+      .chain(checkTag('Data-Protocol', anyPass([equals('ao'), includes('ao')])))
+      .chain(checkTag('ao-type', equals('process')))
+      .chain(checkTag('Contract-Src', isNotNil))
   }
 }
 

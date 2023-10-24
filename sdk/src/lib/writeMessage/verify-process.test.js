@@ -13,6 +13,8 @@ describe('verify-process', () => {
           tags: [
             { name: 'Contract-Src', value: 'foobar' },
             { name: 'Data-Protocol', value: 'ao' },
+            // Implements multiple Data-Protocols
+            { name: 'Data-Protocol', value: 'foo' },
             { name: 'ao-type', value: 'process' }
           ]
         })

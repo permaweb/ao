@@ -1,7 +1,8 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { assoc, equals, prop, reduce } from 'ramda'
+import { equals, prop } from 'ramda'
 
 import { loadTransactionMetaSchema } from '../../dal.js'
+import { parseTags } from '../utils.js'
 
 /**
  * @typedef Tag
@@ -25,7 +26,7 @@ function verifySourceWith ({ loadTransactionMeta, logger }) {
   return (srcId) => of(srcId)
     .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
     .map(prop('tags'))
-    .map(reduce((a, t) => assoc(t.name, t.value, a), {}))
+    .map(parseTags)
     .chain(checkTag('Content-Type', equals('application/wasm')))
     .chain(checkTag('Contract-Type', equals('ao')))
     .bimap(
