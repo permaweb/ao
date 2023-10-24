@@ -7,6 +7,7 @@ import { buildTxWith } from './processMsg/build-tx.js'
 import { crankWith } from './crank/crank.js'
 import { createContractWith } from './processSpawn/create-contract.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
+import { saveWith } from './monitorProcess/saveProcess.js'
 
 /**
  * write the first transaction and fetch its messages
@@ -110,5 +111,20 @@ export function crankMsgsWith ({
   return (ctx) => {
     return of(ctx)
       .chain(crank)
+  }
+}
+
+
+export function monitorProcessWith({
+  logger,
+  createDataItem,
+  saveProcessToMonitor
+}) {
+  const parse = parseDataItemWith({ createDataItem, logger })
+  const save = saveWith({ logger, saveProcessToMonitor })
+  return (ctx) => {
+    return of(ctx)
+      .chain(parse)
+      .chain(save)
   }
 }
