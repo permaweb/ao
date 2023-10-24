@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 /**
  * This scrupt uses the local SDK build, so make sure to run `npm run build` in '/sdk'
  */
-import { createProcess, createDataItemSigner } from '../../sdk/dist'
+import { createProcess, createDataItemSigner } from '../../sdk/dist/index.js'
 
 /**
  * Use this script to create new ao processes using the published wasm from contract.wasm
