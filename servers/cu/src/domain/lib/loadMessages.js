@@ -4,7 +4,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { messageSchema } from '../model.js'
-import { findLatestEvaluationSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
+import { loadMessagesSchema, loadTimestampSchema } from '../dal.js'
 
 /**
  * - { name: 'Scheduled-Interval', value: 'interval' }
@@ -297,42 +297,6 @@ export function scheduleMessagesBetweenWith ({
   }
 }
 
-function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
-  findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
-
-  return (ctx) => of(ctx)
-    .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
-    .bimap(
-      logger.tap('Could not find latest evaluation in db. Using intial process as state'),
-      logger.tap('found evaluation in db %j. Using as state and starting point to load messages')
-    )
-    .bichain(
-      /**
-       * Initial Process State
-       */
-      () => Resolved({
-        state: ctx.tags || {},
-        result: {
-          error: undefined,
-          messages: [],
-          output: [],
-          spawns: []
-        },
-        from: undefined,
-        evaluatedAt: undefined
-      }),
-      /**
-       * State from evaluation we found in cache
-       */
-      (evaluation) => Resolved({
-        state: evaluation.output.state,
-        result: evaluation.output.result,
-        from: evaluation.sortKey,
-        evaluatedAt: evaluation.evaluatedAt
-      })
-    )
-}
-
 function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
 
@@ -390,7 +354,7 @@ function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
                 const scheduleMessagesBetween = scheduleMessagesBetweenWith({
                   processId: ctx.id,
                   owner: ctx.owner,
-                  originBlock: ctx.originBlock,
+                  originBlock: ctx.block,
                   blockRange: ctx.blockRange,
                   schedules,
                   suTime
@@ -428,32 +392,7 @@ const ctxSchema = z.object({
   /**
    * Messages to be evaluated
    */
-  messages: z.array(messageSchema),
-  /**
-   * The most recent state. This could be the most recent
-   * cached state, or potentially the initial state
-   * if no interactions are cached
-   */
-  state: z.record(z.any()),
-  /**
-   * The most recent result. This could be the most recent
-   * cached result, or potentially nothing
-   * if no interactions are cached
-   */
-  result: z.record(z.any()).optional(),
-  /**
-   * The most recent message sortKey. This could be from the most recent
-   * cached evaluation, or undefined, if no evaluations were cached
-   *
-   * This will be used to subsequently determine which messaged
-   * need to be fetched from the SU in order to perform the evaluation
-   */
-  from: z.coerce.string().optional(),
-  /**
-   * When the evaluation record was created in the local db. If the initial state had to be retrieved
-   * from Arweave, due to no state being cached in the local db, then this will be undefined.
-   */
-  evaluatedAt: z.date().optional()
+  messages: z.array(messageSchema)
 }).passthrough()
 
 /**
@@ -481,22 +420,19 @@ export function loadMessagesWith (env) {
   const logger = env.logger.child('loadMessages')
   env = { ...env, logger }
 
-  const loadLatestEvaluation = loadLatestEvaluationWith(env)
   const loadSequencedMessages = loadSequencedMessagesWith(env)
   const loadScheduledMessages = loadScheduledMessagesWith(env)
 
+  // { id, owner, block, tags ... }
   return (ctx) =>
     of(ctx)
-      .chain(loadLatestEvaluation)
-      // { id, owner, ..., state, result, from, evaluatedAt }
-      .map(mergeRight(ctx))
-      .chain(ctx =>
-        loadSequencedMessages(ctx)
-          // { sequenced, blockRange }
-          .chain(loadScheduledMessages)
-          // { messages }
-          .map(mergeRight(ctx))
+      .chain(loadSequencedMessages)
+      // { sequenced, blockRange }
+      .chain(({ sequenced, blockRange }) =>
+        loadScheduledMessages({ ...ctx, sequenced, blockRange })
       )
+      // { messages }
+      .map(mergeRight(ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded messages and appended to context %j'))
 }

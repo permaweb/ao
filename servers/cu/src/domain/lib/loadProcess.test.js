@@ -9,7 +9,7 @@ const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadProcess', () => {
-  test('appends process owner, tags, and block', async () => {
+  test('appends process owner, tags, block, state, result, from, and evaluatedAt to ctx', async () => {
     const tags = [
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -20,6 +20,7 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
         tags,
@@ -28,14 +29,22 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS }).toPromise()
+    const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
+    assert.deepStrictEqual(res.state, { tags })
+    assert.deepStrictEqual(res.result, {
+      messages: [],
+      output: [],
+      spawns: []
+    })
+    assert.equal(res.from, undefined)
+    assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
   })
 
-  test('use process from db', async () => {
+  test('use process from db to set owner, tags, and block', async () => {
     const tags = [
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -50,6 +59,7 @@ describe('loadProcess', () => {
         block: { height: 123, timestamp: 1697574792 }
       }),
       saveProcess: async () => assert.fail('should not save if found in db'),
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => assert.fail('should not load transaction meta if found in db'),
       logger
     })
@@ -58,6 +68,63 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
+    assert.equal(res.id, PROCESS)
+  })
+
+  test('use latest evaluation from db to set state, result, from, and evaluatedAt on ctx', async () => {
+    const cachedEvaluation = {
+      sortKey: 'sortkey-123',
+      processId: PROCESS,
+      evaluatedAt: new Date(),
+      message: {
+        tags: [
+          { name: 'message', value: 'tags' }
+        ]
+      },
+      output: {
+        state: { foo: 'bar' },
+        result: {
+          messages: [
+            {
+              target: 'foobar',
+              tags: [
+                { name: 'foo', value: 'bar' }
+              ]
+            }
+          ],
+          output: [],
+          spawns: []
+        }
+      }
+    }
+
+    const tags = [
+      { name: 'Contract-Src', value: 'foobar' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'ao-type', value: 'process' },
+      { name: 'Foo', value: 'Bar' }
+    ]
+    const loadProcess = loadProcessWith({
+      findProcess: async () => { throw { status: 404 } },
+      saveProcess: async () => PROCESS,
+      findLatestEvaluation: async ({ processId, to }) => {
+        assert.equal(processId, PROCESS)
+        assert.equal(to, 'sortkey-123')
+        return cachedEvaluation
+      },
+      loadTransactionMeta: async (_id) => ({
+        owner: { address: 'woohoo' },
+        tags,
+        block: { height: 123, timestamp: 1697574792 }
+      }),
+      logger
+    })
+
+    const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
+    assert.deepStrictEqual(res.state, cachedEvaluation.output.state)
+    assert.deepStrictEqual(res.result, cachedEvaluation.output.result)
+    assert.deepStrictEqual(res.from, cachedEvaluation.sortKey)
+    assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)
   })
 
@@ -79,6 +146,7 @@ describe('loadProcess', () => {
         })
         return PROCESS
       },
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
         tags,
@@ -100,6 +168,7 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
         tags,
@@ -119,6 +188,7 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
         tags: [
@@ -132,14 +202,15 @@ describe('loadProcess', () => {
     })
 
     await loadProcess({ id: PROCESS }).toPromise()
-      .then(() => assert('unreachable. Should have thrown'))
-      .catch(assert.ok)
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.equal(err, "Tag 'Contract-Src' of value 'undefined' was not valid on transaction"))
   })
 
   test('throw if the Data-Protocol tag is not "ao"', async () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
         tags: [
@@ -153,19 +224,20 @@ describe('loadProcess', () => {
     })
 
     await loadProcess({ id: PROCESS }).toPromise()
-      .then(() => assert('unreachable. Should have thrown'))
-      .catch(assert.ok)
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.equal(err, "Tag 'Data-Protocol' of value 'not_ao' was not valid on transaction"))
   })
 
   test('throw if the ao-type tag is not "process"', async () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
+      findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
         tags: [
           { name: 'Contract-Src', value: 'foobar' },
-          { name: 'Data-Protocol', value: 'not_ao' },
+          { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'message' }
         ],
         block: { height: 123, timestamp: 1697574792 }
@@ -174,7 +246,7 @@ describe('loadProcess', () => {
     })
 
     await loadProcess({ id: PROCESS }).toPromise()
-      .then(() => assert('unreachable. Should have thrown'))
-      .catch(assert.ok)
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.equal(err, "Tag 'ao-type' of value 'message' was not valid on transaction"))
   })
 })

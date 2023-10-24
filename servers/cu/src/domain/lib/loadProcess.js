@@ -1,8 +1,8 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, anyPass, applySpec, equals, includes, isNotNil, mergeRight, path, pick, pipe } from 'ramda'
+import { F, T, always, applySpec, cond, equals, includes, is, isNotNil, mergeRight, path, pick, pipe } from 'ramda'
 import { z } from 'zod'
 
-import { findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
+import { findLatestEvaluationSchema, findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
 import { parseTags } from './utils.js'
 
@@ -39,7 +39,11 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
            * The process could implement multiple Data-Protocols,
            * so check in the case of a single value or an array of values
            */
-          .chain(checkTag('Data-Protocol', anyPass([equals('ao'), includes('ao')])))
+          .chain(checkTag('Data-Protocol', cond([
+            [is(String), equals('ao')],
+            [is(Array), includes('ao')],
+            [T, F]
+          ])))
           .chain(checkTag('ao-type', equals('process')))
           .chain(checkTag('Contract-Src', isNotNil))
           .bimap(
@@ -81,6 +85,42 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
       }))
 }
 
+function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
+  findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
+
+  return (ctx) => of(ctx)
+    .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
+    .bimap(
+      logger.tap('Could not find latest evaluation in db. Using intial process as state'),
+      logger.tap('found evaluation in db %j. Using as state and starting point to load messages')
+    )
+    .bichain(
+      /**
+       * Initial Process State
+       */
+      () => Resolved({
+        state: { tags: ctx.tags || [] },
+        result: {
+          error: undefined,
+          messages: [],
+          output: [],
+          spawns: []
+        },
+        from: undefined,
+        evaluatedAt: undefined
+      }),
+      /**
+       * State from evaluation we found in cache
+       */
+      (evaluation) => Resolved({
+        state: evaluation.output.state,
+        result: evaluation.output.result,
+        from: evaluation.sortKey,
+        evaluatedAt: evaluation.evaluatedAt
+      })
+    )
+}
+
 /**
  * The result that is produced from this step
  * and added to ctx.
@@ -91,7 +131,32 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
 const ctxSchema = z.object({
   owner: z.string().min(1),
   tags: z.array(rawTagSchema),
-  block: rawBlockSchema
+  block: rawBlockSchema,
+  /**
+   * The most recent state. This could be the most recent
+   * cached state, or potentially the initial state
+   * if no interactions are cached
+   */
+  state: z.record(z.any()),
+  /**
+   * The most recent result. This could be the most recent
+   * cached result, or potentially nothing
+   * if no interactions are cached
+   */
+  result: z.record(z.any()),
+  /**
+   * The most recent message sortKey. This could be from the most recent
+   * cached evaluation, or undefined, if no evaluations were cached
+   *
+   * This will be used to subsequently determine which messaged
+   * need to be fetched from the SU in order to perform the evaluation
+   */
+  from: z.coerce.string().optional(),
+  /**
+   * When the evaluation record was created in the local db. If the initial state had to be retrieved
+   * from Arweave, due to no state being cached in the local db, then this will be undefined.
+   */
+  evaluatedAt: z.date().optional()
 }).passthrough()
 
 /**
@@ -116,11 +181,18 @@ export function loadProcessWith (env) {
   env = { ...env, logger }
 
   const getProcessMeta = getProcessMetaWith(env)
+  const loadLatestEvaluation = loadLatestEvaluationWith(env)
 
   return (ctx) => {
     return of(ctx.id)
       .chain(getProcessMeta)
       .map(mergeRight(ctx))
+      // { state, result, from, evaluatedAt }
+      .chain(ctx =>
+        loadLatestEvaluation(ctx)
+          .map(mergeRight(ctx))
+          // { id, owner, ..., state, result, from, evaluatedAt }
+      )
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded process and appended to ctx %j'))
   }
