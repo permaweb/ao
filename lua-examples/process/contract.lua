@@ -2,6 +2,7 @@ local JSON = require("json")
 local ao = { _version = "0.0.1" }
 
 -- Published WASM at Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no
+-- See createContract where it is used as the contract source
 
 function ao.send(input, target, AO) 
   local message = {
