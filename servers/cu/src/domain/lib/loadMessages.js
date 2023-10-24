@@ -5,7 +5,6 @@ import ms from 'ms'
 
 import { messageSchema } from '../model.js'
 import { findLatestEvaluationSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
-import { parseTags } from './utils.js'
 
 /**
  * - { name: 'Scheduled-Interval', value: 'interval' }
@@ -312,7 +311,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * Initial Process State
        */
       () => Resolved({
-        state: parseTags(ctx.tags),
+        state: ctx.tags || {},
         result: {
           error: undefined,
           messages: [],
@@ -334,7 +333,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
     )
 }
 
-function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta }) {
+function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
 
   return (ctx) => of(ctx)
@@ -347,13 +346,14 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta }) {
     .chain((sequenced) => {
       const min = head(sequenced)
       const max = last(sequenced)
-
       /**
        * We have to load the metadata for all the blocks between
        * the earliest and latest message being evaluated, so that we
        * can generate the scheduled messages that occur on each block
        */
-      return loadBlocksMeta({ min: min.block.height, max: max.block.height })
+      return of({ min, max })
+        .map(logger.tap('loading blocks meta for sequenced messages in range: %j'))
+        .chain(({ min, max }) => loadBlocksMeta({ min: min.block.height, max: max.block.height }))
         .map(blockRange => ({ sequenced, blockRange }))
     })
 }
@@ -398,7 +398,14 @@ function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
 
                 return reduce(
                   (merged, [left, right]) => {
-                    merged.push.apply(merged, scheduleMessagesBetween(left, right))
+                    const scheduled = scheduleMessagesBetween(left, right)
+                    logger(
+                      'Loaded %s scheduled messages between messages %j and %j',
+                      scheduled.length,
+                      left,
+                      right
+                    )
+                    merged.push.apply(merged, scheduled)
                     return merged
                   },
                   [],
