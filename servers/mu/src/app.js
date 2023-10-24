@@ -1,3 +1,4 @@
+import { Worker } from 'worker_threads';
 import express from 'express'
 import cors from 'cors'
 import { pipe } from 'ramda'
@@ -5,6 +6,8 @@ import { pipe } from 'ramda'
 import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
+
+import { runScheduled } from './domain/index.js';
 
 export const server = pipe(
   (app) => app.use(cors()),
@@ -21,6 +24,8 @@ export const server = pipe(
       logger('Recevied SIGTERM. Gracefully shutting down server...')
       server.close(() => logger('Server Shut Down'))
     })
+
+    setInterval(() => runScheduled(), 1000)
 
     return server
   }

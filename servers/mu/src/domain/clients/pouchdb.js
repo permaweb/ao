@@ -273,6 +273,79 @@ function findLatestSpawnsWith ({ pouchDb }) {
   }
 }
 
+
+const monitoredProcessSchema = z.object({
+  _id: z.string().min(1),
+  // is this monitored process authorized to run by the server (is it funded)
+  authorized: z.boolean(),
+  lastFromSortKey: z.string().optional().nullable(),
+  type: z.literal('monitor'),
+  _rev: z.string().optional(),
+  createdAt: z.preprocess(
+    (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
+    z.date()
+  )
+})
+
+function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
+  const logger = _logger.child('saveMonitoredProcess')
+  return (process) => {
+    return of(process)
+      .map(applySpec({
+        _id: prop('id'),
+        authorized: prop('authorized'),
+        lastFromSortKey: prop('lastFromSortKey'),
+        type: always('monitor'),
+        createdAt: prop('createdAt')
+      }))
+      .map(monitoredProcessSchema.parse)
+      .chain((doc) =>
+        of(doc)
+          .chain(fromPromise((doc) => pouchDb.put(doc)))
+          .bimap(
+            logger.tap('Encountered an error when caching monitored process'),
+            logger.tap('Cached spawn')
+          )
+          .bichain(Resolved, Resolved)
+          .map(always(doc._id))
+      )
+      .toPromise()
+  }
+}
+
+function findLatestMonitorsWith ({ pouchDb }) {
+  return () => {
+    return of({})
+      .chain(fromPromise(() => {
+        return pouchDb.find({
+          selector: {
+            type: 'monitor'
+          }
+        }).then((res) => {
+          if (res.warning) console.warn(res.warning)
+          return res.docs
+        })
+      }))
+      .chain((docs) => {
+        if (docs.length === 0) {
+          return Rejected('No documents found')
+        }
+
+        const parsedDocs = docs.map(doc => monitoredProcessSchema.parse(doc))
+
+        return Resolved(parsedDocs.map(doc => ({
+          id: prop('_id', doc),
+          authorized: prop('authorized', doc),
+          lastFromSortKey: prop('lastFromSortKey', doc),
+          type: prop('type', doc),
+          createdAt: prop('createdAt', doc)
+        })))
+      })
+      .toPromise()
+  }
+}
+
+
 export default {
   pouchDb: internalPouchDb,
   cachedTxSchema,
@@ -283,5 +356,7 @@ export default {
   saveSpawnWith,
   updateMsgWith,
   findLatestMsgsWith,
-  findLatestSpawnsWith
+  findLatestSpawnsWith,
+  findLatestMonitorsWith,
+  saveMonitoredProcessWith
 }

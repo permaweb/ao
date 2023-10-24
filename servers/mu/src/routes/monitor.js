@@ -1,12 +1,7 @@
 import { always, compose } from 'ramda'
-import { z } from 'zod'
+import { of } from 'hyper-async'
 
 import { withMiddleware } from './middleware/index.js'
-
-const inputSchema = z.object({
-  processId: z.string().min(1, 'an ao process id is required')
-  // Anymore inputs? ie. from the body?
-})
 
 export const withMonitorRoutes = (app) => {
   app.post(
@@ -15,17 +10,22 @@ export const withMonitorRoutes = (app) => {
       withMiddleware,
       always(async (req, res) => {
         const {
-          params: { processId },
+          body,
           logger,
-          domain: { apis }
+          domain: { apis: { monitorProcess } }
         } = req
 
-        const input = inputSchema.parse({ processId })
+        if (!body) return res.status(400).send('Signed data item is required')
 
         // call appropriate domain api here
-        logger(apis, input)
+        logger(monitorProcess, body)
 
-        return res.status(501).send('Not Implemented')
+        await of({ raw: body })
+          .chain(monitorProcess)
+          .toPromise()
+
+
+        return res.status(200).send('Monitoring process')
       })
     )()
   )

@@ -5,11 +5,16 @@ import pouchDbClient from './clients/pouchdb.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
 
-import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith } from './lib/main.js'
+import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith } from './lib/main.js'
+
+import runScheduled from './lib/monitorProcess/scheduler.js'
+
+export { runScheduled }
 
 const { DataItem } = warpArBundles
 
 const dbInstance = pouchDbClient.pouchDb('ao-cache')
+
 const createDataItem = (raw) => new DataItem(raw)
 
 export { createLogger } from './logger.js'
@@ -73,5 +78,12 @@ export const createApis = (ctx) => {
     logger: crankMsgsLogger
   })
 
-  return { initMsgs, crankMsgs }
+  const monitorProcessLogger = logger.child('monitorProcess')
+  const monitorProcess = monitorProcessWith({
+    saveProcessToMonitor: pouchDbClient.saveMonitoredProcessWith({pouchDb: dbInstance, logger: monitorProcessLogger}),
+    createDataItem,
+    logger: monitorProcessLogger
+  })
+
+  return { initMsgs, crankMsgs, monitorProcess }
 }

@@ -36,8 +36,7 @@ const MU_URL = 'http://localhost:3005';
       }
   )
 
-  console.log(response)
-  const responseJson = await response.json()
+  const responseJson = await response.text()
   console.log(responseJson)
 
   
