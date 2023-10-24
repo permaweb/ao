@@ -99,7 +99,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * Initial Process State
        */
       () => Resolved({
-        state: { tags: ctx.tags || [] },
+        state: { owner: ctx.owner, tags: ctx.tags || [] },
         result: {
           error: undefined,
           messages: [],
