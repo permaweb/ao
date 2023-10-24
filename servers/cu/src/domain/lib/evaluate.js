@@ -1,6 +1,6 @@
 import {
-  T, __, applySpec, assoc, assocPath, cond, identity,
-  is, pathOr, pipe, propOr, reduce, reduced
+  T, applySpec, assocPath, cond, identity,
+  is, mergeRight, pathOr, pipe, propOr, reduce, reduced
 } from 'ramda'
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
@@ -221,6 +221,8 @@ export function evaluateWith (env) {
        * In other words, this chain should always Resolve
        */
       .chain(maybeResolveError)
-      .map(assoc('output', __, ctx))
+      .map(output => ({ output }))
+      .map(mergeRight(ctx))
       .map(ctxSchema.parse)
+      .map(logger.tap('Appended eval output to ctx'))
 }
