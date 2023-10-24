@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.11](https://github.com/permaweb/ao/compare/sdk@v0.0.10...sdk@v0.0.11) (2023-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sdk:** writeInteraction is renamed to writeMessage. writeMessage
+accepts processId instead of contractId
+* **sdk:** instead of contractId, public apis will instead accept
+processId. createContract has been renamed to createProcess. readState
+now accepts processId instead of contractId
+
+### Features
+
+* **sdk:** add ao tags on writeMessage [#93](https://github.com/permaweb/ao/issues/93) ([f0e4117](https://github.com/permaweb/ao/commit/f0e41177dbad676e0063976c4327767f5e25e279))
+* **sdk:** add new ao tags and dedupe crucial tags [#93](https://github.com/permaweb/ao/issues/93) ([4cc762d](https://github.com/permaweb/ao/commit/4cc762dd504af345c228bf37d3e1ea119f5010ee))
+* **sdk:** ensure ao-type tag only exists once when uploading message to prevent dups ([f851dd0](https://github.com/permaweb/ao/commit/f851dd0459c3e5dac4f87b1c34185a3bacd4fdd6))
+* **sdk:** remove need to check certain source tags when creating contract [#93](https://github.com/permaweb/ao/issues/93) ([1a89a9c](https://github.com/permaweb/ao/commit/1a89a9c8bac37313232cf235db05791ca86c35b1))
+* **sdk:** rename writeInteraction to writeMessage [#93](https://github.com/permaweb/ao/issues/93) ([40352bb](https://github.com/permaweb/ao/commit/40352bb3ca4e8734d12c2e91d3951d84047e5dc6))
+* **sdk:** replace usage of contract with process on apis ([fec0753](https://github.com/permaweb/ao/commit/fec07535977c25851d1c3346d2a8cfc04a8acf8c))
+* **sdk:** set target on data item and allow passing anchor [#93](https://github.com/permaweb/ao/issues/93) ([5f0a7e4](https://github.com/permaweb/ao/commit/5f0a7e4680abb05b0603e212e4bf3fe568e93056))
+
+
+### Bug Fixes
+
+* **sdk:** send correct headers to MU when posting a message [#93](https://github.com/permaweb/ao/issues/93) ([aa176ff](https://github.com/permaweb/ao/commit/aa176ffddd40482530eb9ec94d59bfa46e297b36))
+
 ## [0.0.10](https://github.com/permaweb/ao/compare/sdk@v0.0.9...sdk@v0.0.10) (2023-10-06)
 
 ## [0.0.9](https://github.com/permaweb/ao/compare/sdk@v0.0.8...sdk@v0.0.9) (2023-10-06)
