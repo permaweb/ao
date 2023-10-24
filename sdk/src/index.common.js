@@ -11,8 +11,8 @@ import { createProcessWith } from './lib/createProcess/index.js'
 
 const IRYS_NODE = globalThis.IRYS_NODE || globalThis.BUNDLR_NODE || 'node2'
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
-const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
-const CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
+const MU_URL = globalThis.MU_URL || 'https://ao-mu-2.onrender.com'
+const CU_URL = globalThis.CU_URL || 'https://ao-cu-2.onrender.com'
 
 /**
  * Any environment specific build-time dependencies
