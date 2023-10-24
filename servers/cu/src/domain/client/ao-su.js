@@ -1,9 +1,7 @@
 /* eslint-disable camelcase */
 
 import { fromPromise, of } from 'hyper-async'
-import { always, applySpec, compose, evolve, filter, isNotNil, last, map, path, pathOr, pipe, pluck, prop, transduce } from 'ramda'
-
-import { parseTags } from '../lib/utils.js'
+import { always, applySpec, assoc, compose, evolve, filter, isNotNil, last, map, path, pathOr, pipe, pluck, prop, reduce, transduce } from 'ramda'
 
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
@@ -157,7 +155,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
                     tags: pipe(
                       pathOr([], ['message', 'tags']),
                       // Parse into a key-value pair
-                      parseTags
+                      reduce((a, t) => assoc(t.name, t.value, a), {})
                     )
                   }),
                   /**
