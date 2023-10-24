@@ -10,20 +10,20 @@ import { SCHEDULED_INTERVAL, SCHEDULED_MESSAGE, isBlockOnSchedule, isTimestampOn
 describe('loadMessages', () => {
   describe('parseSchedules', () => {
     const [action1, action2, action3] = [
-      JSON.stringify([
-        { name: 'function', value: 'notify' },
-        { name: 'notify-function', value: 'transfer' },
-        { name: 'from', value: 'SIGNERS_WALLET_ADDRESS' },
-        { name: 'qty', value: '1000' }
-      ]),
-      JSON.stringify([
-        { name: 'function', value: 'notify' },
-        { name: 'notify-function', value: 'transfer' }
-      ]),
-      JSON.stringify([
-        { name: 'function', value: 'transfer' },
-        { name: 'qty', value: '1000' }
-      ])
+      JSON.stringify({
+        function: 'notify',
+        'notify-function': 'transfer',
+        from: 'SIGNERS_WALLET_ADDRESS',
+        qty: '1000'
+      }),
+      JSON.stringify({
+        function: 'notify',
+        'notify-function': 'transfer'
+      }),
+      JSON.stringify({
+        function: 'transfer',
+        qty: '1000'
+      })
     ]
     test('parses the schedules from the tags', async () => {
       /**
@@ -274,13 +274,13 @@ describe('loadMessages', () => {
 
     const originHeight = 125000
     const originTime = nowSecond - ms('30d')
-    const mockMessage = [
-      { name: 'ao-type', value: 'message' },
-      { name: 'function', value: 'notify' },
-      { name: 'notify-function', value: 'transfer' },
-      { name: 'from', value: 'SIGNERS_WALLET_ADDRESS' },
-      { name: 'qty', value: '1000' }
-    ]
+    const mockScheduledMessage = {
+      'ao-type': 'message',
+      function: 'notify',
+      'notify-function': 'transfer',
+      from: 'SIGNERS_WALLET_ADDRESS',
+      qty: '1000'
+    }
 
     const processId = 'process-123'
     const owner = 'owner-123'
@@ -294,25 +294,25 @@ describe('loadMessages', () => {
         interval: '10-minutes',
         unit: 'seconds',
         value: ms('10m') / 1000,
-        message: mockMessage
+        message: mockScheduledMessage
       },
       {
         interval: '2-blocks',
         unit: 'blocks',
         value: 2,
-        message: mockMessage
+        message: mockScheduledMessage
       },
       {
         interval: '15-minutes',
         unit: 'seconds',
         value: ms('15m') / 1000,
-        message: mockMessage
+        message: mockScheduledMessage
       },
       {
         interval: '2-blocks',
         unit: 'blocks',
         value: 2,
-        message: mockMessage
+        message: mockScheduledMessage
       }
     ]
 

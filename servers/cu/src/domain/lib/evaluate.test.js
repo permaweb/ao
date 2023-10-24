@@ -24,9 +24,9 @@ describe('evaluate', () => {
         {
           message: {
             owner: 'owner-123',
-            tags: [
-              { name: 'function', value: 'hello' }
-            ]
+            tags: {
+              function: 'hello'
+            }
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -34,9 +34,9 @@ describe('evaluate', () => {
         {
           message: {
             owner: 'owner-456',
-            tags: [
-              { name: 'function', value: 'world' }
-            ]
+            tags: {
+              function: 'world'
+            }
           },
           sortKey: 'b',
           AoGlobal: {}
@@ -60,9 +60,9 @@ describe('evaluate', () => {
           happy: true,
           lastMessage: {
             owner: 'owner-456',
-            tags: [
-              { name: 'function', value: 'world' }
-            ]
+            tags: {
+              function: 'world'
+            }
           }
         }
       )
@@ -119,9 +119,9 @@ describe('evaluate', () => {
         {
           message: {
             owner: 'owner-123',
-            tags: [
-              { name: 'function', value: 'hello' }
-            ]
+            tags: {
+              function: 'hello'
+            }
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -129,9 +129,9 @@ describe('evaluate', () => {
         {
           message: {
             owner: 'owner-456',
-            tags: [
-              { name: 'function', value: 'world' }
-            ]
+            tags: {
+              function: 'world'
+            }
           },
           sortKey: 'b',
           AoGlobal: {}
@@ -189,9 +189,9 @@ describe('evaluate', () => {
           // Will include an error in result.error
           message: {
             owner: 'owner-456',
-            tags: [
-              { name: 'function', value: 'errorResult' }
-            ]
+            tags: {
+              function: 'errorResult'
+            }
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -230,9 +230,9 @@ describe('evaluate', () => {
           // Will intentionally throw from the lua contract
           message: {
             owner: 'owner-456',
-            tags: [
-              { name: 'function', value: 'errorThrow' }
-            ]
+            tags: {
+              function: 'errorThrow'
+            }
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -271,9 +271,9 @@ describe('evaluate', () => {
           // Will unintentionally throw from the lua contract
           message: {
             owner: 'owner-456',
-            tags: [
-              { name: 'function', value: 'errorUnhandled' }
-            ]
+            tags: {
+              function: 'errorUnhandled'
+            }
           },
           sortKey: 'a',
           AoGlobal: {}

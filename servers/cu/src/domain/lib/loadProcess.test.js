@@ -4,6 +4,7 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
+import { parseTags } from './utils.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
@@ -14,8 +15,7 @@ describe('loadProcess', () => {
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
       { name: 'ao-type', value: 'process' },
-      { name: 'Foo', value: 'Bar' },
-      { name: 'Foo', value: 'Buzz' }
+      { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
@@ -33,7 +33,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
-    assert.deepStrictEqual(res.state, { tags })
+    assert.deepStrictEqual(res.state, { tags: parseTags(tags) })
     assert.deepStrictEqual(res.result, {
       messages: [],
       output: [],

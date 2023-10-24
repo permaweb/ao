@@ -16,15 +16,6 @@ local function assoc(prop, val, obj)
   return result
 end
 
-local function find(predicate, table) -- find element v of l satisfying f(v)
-  for _, v in ipairs(table) do
-    if predicate(v) then
-      return v
-    end
-  end
-  return nil
-end
-
 local function hello(state)
   return assoc('heardHello', true, state)
 end
@@ -38,15 +29,10 @@ actions['hello'] = hello
 actions['world'] = world
 
 function contract.handle(state, message, AoGlobal)
-  local func = find(
-    function (value)
-      return value.name == 'function'
-    end,
-    message.tags
-  )
+  local func = message.tags['function']
   if func == nil then return error({ code = 500, message = 'no function tag in the message'}) end
 
-  local newState = actions[func.value](state, message, AoGlobal)
+  local newState = actions[func](state, message, AoGlobal)
 
   newState = assoc('lastMessage', message, newState)
 

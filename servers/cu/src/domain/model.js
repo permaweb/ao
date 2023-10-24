@@ -10,6 +10,8 @@ export const rawTagSchema = z.object({
   value: z.string()
 })
 
+export const parsedTagSchema = z.record(z.string())
+
 export const rawBlockSchema = z.object({
   height: z.number(),
   timestamp: z.number()
@@ -35,7 +37,7 @@ export const messageSchema = z.object({
     anchor: z.string().optional(),
     from: z.string().optional(),
     'Forwarded-By': z.string().optional(),
-    tags: z.array(rawTagSchema)
+    tags: z.array(parsedTagSchema)
   }),
   AoGlobal: z.object({
     process: z.object({

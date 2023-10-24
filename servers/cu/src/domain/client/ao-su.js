@@ -1,7 +1,9 @@
 /* eslint-disable camelcase */
 
 import { fromPromise, of } from 'hyper-async'
-import { always, applySpec, compose, evolve, filter, isNotNil, last, map, path, pipe, pluck, prop, transduce } from 'ramda'
+import { always, applySpec, compose, evolve, filter, isNotNil, last, map, path, pathOr, pipe, pluck, prop, transduce } from 'ramda'
+
+import { parseTags } from '../lib/utils.js'
 
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
@@ -152,7 +154,11 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
                      */
                     from: mapFrom,
                     'Forwarded-By': mapForwardedBy,
-                    tags: path(['message', 'tags'])
+                    tags: pipe(
+                      pathOr([], ['message', 'tags']),
+                      // Parse into a key-value pair
+                      parseTags
+                    )
                   }),
                   /**
                    * We need the block metadata per message,
