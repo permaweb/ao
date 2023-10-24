@@ -33,7 +33,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
-    assert.deepStrictEqual(res.state, { tags, owner: 'woohoo' })
+    assert.deepStrictEqual(res.state, { tags })
     assert.deepStrictEqual(res.result, {
       messages: [],
       output: [],
