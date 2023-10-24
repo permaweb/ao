@@ -4,18 +4,18 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
-import { parseTags } from './utils.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadProcess', () => {
-  test('appends process owner, tags, block, state, result, from, and evaluatedAt to ctx', async () => {
+  test('appends process owner, tags, block, state as process tags parsed as JSON, result, from, and evaluatedAt to ctx', async () => {
     const tags = [
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
       { name: 'ao-type', value: 'process' },
-      { name: 'Foo', value: 'Bar' }
+      { name: 'inbox', value: JSON.stringify([]) },
+      { name: 'balances', value: JSON.stringify({ 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc': 1000 }) }
     ]
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
@@ -33,7 +33,17 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
-    assert.deepStrictEqual(res.state, { tags: parseTags(tags) })
+    // The initial state will be parsed as JSON from the original tags
+    assert.deepStrictEqual(
+      res.state,
+      {
+        'Contract-Src': 'foobar',
+        'Data-Protocol': 'ao',
+        'ao-type': 'process',
+        inbox: [],
+        balances: { 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc': 1000 }
+      }
+    )
     assert.deepStrictEqual(res.result, {
       messages: [],
       output: [],

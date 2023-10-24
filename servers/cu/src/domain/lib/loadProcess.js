@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { F, T, always, applySpec, cond, equals, includes, is, isNotNil, mergeRight, path, pick, pipe } from 'ramda'
+import { F, T, always, applySpec, assoc, cond, equals, includes, is, isNotNil, mergeRight, path, pick, pipe, reduce } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
@@ -88,6 +88,18 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
 function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
 
+  function maybeJson (str) {
+    try {
+      return JSON.parse(str)
+    } catch (e) {
+      return str
+    }
+  }
+
+  function tagsToJson (tags) {
+    return reduce((a, t) => assoc(t.name, maybeJson(t.value), a), {})(tags)
+  }
+
   return (ctx) => of(ctx)
     .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
     .bimap(
@@ -99,7 +111,15 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * Initial Process State
        */
       () => Resolved({
-        state: { tags: parseTags(ctx.tags || []) },
+        /**
+         * Since this is the first initial state,
+         * we have to parse the process tag _values_
+         * into JSON
+         *
+         * TODO: not really sure how to get around the CU needing to do this,
+         * but will have to do for now.
+         */
+        state: tagsToJson(ctx.tags || []),
         result: {
           error: undefined,
           messages: [],
