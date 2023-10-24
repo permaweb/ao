@@ -22,11 +22,17 @@ export const withMessageRoutes = (app) => {
          */
         of({ raw: body })
           .chain(initMsgs)
-          .map(res => ({ msgs: res.msgs, spawns: res.spawns }))
-          .chain(crankMsgs)
           .bimap(
-            logger.tap('Failed to crank messages'),
-            logger.tap('Successfully cranked messages')
+            logger.tap('Failed to forward initial message to the SU and read result from the CU'),
+            logger.tap('Successfully forwarded initial message to the SU and read result from the CU. Beginning to crank...')
+          )
+          .map(res => ({ msgs: res.msgs, spawns: res.spawns }))
+          .chain(res =>
+            crankMsgs(res)
+              .bimap(
+                logger.tap('Failed to crank messages'),
+                logger.tap('Successfully cranked messages')
+              )
           )
           .toPromise()
 
