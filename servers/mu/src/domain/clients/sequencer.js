@@ -10,7 +10,7 @@ function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   return async (data) => {
     return of(Buffer.from(data, 'base64'))
       .map(logger.tap(`Forwarding message to SU ${SEQUENCER_URL}`))
-      .chain(fromPromise((body) => {
+      .chain(fromPromise((body) =>
         fetch(`${SEQUENCER_URL}/message`, {
           method: 'POST',
           headers: {
@@ -19,7 +19,7 @@ function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
           },
           body
         })
-      }))
+      ))
       .bimap(
         logger.tap('Error while communicating with SU:'),
         identity

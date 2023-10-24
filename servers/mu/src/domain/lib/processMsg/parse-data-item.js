@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { of, fromPromise } from 'hyper-async'
 import { mergeRight } from 'ramda'
 
 /**
@@ -14,7 +14,9 @@ export function parseDataItemWith ({ createDataItem, logger }) {
       /**
        * Everything downstream expects a tx field, so construct it and add to context
        */
-      .map(dataItem => ({ tx: { id: dataItem.id, processId: dataItem.target, data: ctx.raw } }))
+      .chain(fromPromise(
+        async (dataItem) => ({ tx: { id: await dataItem.id, processId: dataItem.target, data: ctx.raw } })
+      ))
       .map(mergeRight(ctx))
       .map(logger.tap('Successfully parsed data item and added as "tx" to ctx'))
 }

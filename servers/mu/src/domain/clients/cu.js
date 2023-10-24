@@ -13,7 +13,7 @@ function resultWith ({ fetch, CU_URL, logger }) {
 }
 
 function selectNodeWith ({ CU_URL, logger }) {
-  return (processId) => {
+  return async (processId) => {
     logger(`Selecting cu for process ${processId}`)
     return CU_URL
   }
