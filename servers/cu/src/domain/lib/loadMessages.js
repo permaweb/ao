@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, aperture, ascend, cond, equals, head, last, mergeRight, pipe, prop, reduce } from 'ramda'
+import { T, always, aperture, ascend, cond, equals, head, ifElse, last, length, mergeRight, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -98,7 +98,7 @@ export function parseSchedules ({ tags }) {
 
       if (queue.length) return Rejected(`Unmatched Schedules found: ${queue.join(', ')}`)
 
-      if (!schedules.length) return Rejected('No schedules found')
+      if (!schedules.length) return Resolved([])
       return Resolved(schedules)
     })
 }
@@ -300,26 +300,35 @@ export function scheduleMessagesBetweenWith ({
 function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
 
-  return (ctx) => of(ctx)
-    .chain(args => loadMessages({
-      processId: args.id,
-      owner: args.owner,
-      from: args.from, // could be undefined
-      to: args.to // could be undefined
-    }))
-    .chain((sequenced) => {
-      const min = head(sequenced)
-      const max = last(sequenced)
-      /**
+  return (ctx) =>
+    of(ctx)
+      .chain(args => loadMessages({
+        processId: args.id,
+        owner: args.owner,
+        from: args.from, // could be undefined
+        to: args.to // could be undefined
+      }))
+      .bimap(
+        logger.tap('Error occurred when loading sequenced messages from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest'),
+        ifElse(
+          length,
+          logger.tap('Successfully loaded sequenced messages from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest'),
+          logger.tap('No sequenced messages found from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest')
+        )
+      )
+      .chain((sequenced) => {
+        if (!sequenced.length) return of({ sequenced, blockRange: [] })
+
+        /**
        * We have to load the metadata for all the blocks between
        * the earliest and latest message being evaluated, so that we
        * can generate the scheduled messages that occur on each block
        */
-      return of({ min, max })
-        .map(logger.tap('loading blocks meta for sequenced messages in range: %j'))
-        .chain(({ min, max }) => loadBlocksMeta({ min: min.block.height, max: max.block.height }))
-        .map(blockRange => ({ sequenced, blockRange }))
-    })
+        return of({ min: head(sequenced), max: last(sequenced) })
+          .map(logger.tap('loading blocks meta for sequenced messages in range: %j'))
+          .chain(({ min, max }) => loadBlocksMeta({ min: min.block.height, max: max.block.height }))
+          .map(blockRange => ({ sequenced, blockRange }))
+      })
 }
 
 function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
@@ -336,19 +345,28 @@ function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
    */
   return (ctx) => of(ctx)
     .chain(parseSchedules)
-    .bichain(
-      logger.tap('Could not parse schedules:'),
-      /**
-       * Some schedules were found, so potentially generate messages from them
-       */
-      (schedules) =>
-        loadTimestamp()
+    .bimap(
+      logger.tap('Failed to parse schedules:'),
+      ifElse(
+        length,
+        logger.tap('Schedules found'),
+        logger.tap('No schedules found. No scheduled messages to generate')
+      )
+    )
+    .chain(
+      (schedules) => {
+        if (!schedules.length) return of(ctx.sequenced)
+
+        /**
+         * Some schedules were found, so potentially generate messages from them
+         */
+        return loadTimestamp()
           .chain((suTime) =>
             of(ctx.sequenced)
-              /**
-               * Split our list of sequenced messages into binary Tuples
-               * of consecutive messages
-               */
+            /**
+             * Split our list of sequenced messages into binary Tuples
+             * of consecutive messages
+             */
               .map(aperture(2))
               .map(pairs => {
                 const scheduleMessagesBetween = scheduleMessagesBetweenWith({
@@ -377,6 +395,7 @@ function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
                 )
               })
           )
+      }
     )
     .map(messages => ({ messages }))
 }

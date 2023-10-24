@@ -3,6 +3,7 @@ import { mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
 import { loadTransactionDataSchema } from '../dal.js'
+import { parseTags } from './utils.js'
 
 /**
  * The result that is produced from this step
@@ -25,6 +26,7 @@ function getSourceBufferWith ({ loadTransactionData }) {
 
   return (tags) => {
     return of(tags)
+      .map(parseTags)
       .map(prop('Contract-Src'))
       .chain(srcId =>
         of(srcId)

@@ -15,7 +15,7 @@ describe('loadSource', () => {
       logger
     })
 
-    const result = await loadSource({ id: PROCESS, tags: { 'Contract-Src': 'foobar' } }).toPromise()
+    const result = await loadSource({ id: PROCESS, tags: [{ name: 'Contract-Src', value: 'foobar' }] }).toPromise()
     assert.equal(result.src.byteLength, 17)
     assert.equal(result.srcId, 'foobar')
     assert.equal(result.id, PROCESS)

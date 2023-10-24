@@ -12,15 +12,15 @@ export { createLogger } from './logger.js'
 
 export const createApis = (ctx) => {
   const sharedDeps = (logger) => ({
-    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
-    loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL }),
+    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+    loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: logger.child('gateway') }),
-    findProcess: PouchDbClient.findProcessWith({ pouchDb: PouchDbClient.pouchDb }),
-    saveProcess: PouchDbClient.saveProcessWith({ pouchDb: PouchDbClient.pouchDb }),
-    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb: PouchDbClient.pouchDb }),
-    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb: PouchDbClient.pouchDb }),
-    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL }),
-    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, pageSize: 50 }),
+    findProcess: PouchDbClient.findProcessWith({ pouchDb: PouchDbClient.pouchDb, logger }),
+    saveProcess: PouchDbClient.saveProcessWith({ pouchDb: PouchDbClient.pouchDb, logger }),
+    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb: PouchDbClient.pouchDb, logger }),
+    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb: PouchDbClient.pouchDb, logger }),
+    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
+    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, pageSize: 50, logger }),
     logger
   })
   /**
@@ -41,13 +41,13 @@ export const createApis = (ctx) => {
   const readResultLogger = ctx.logger.child('readResult')
   const readResult = readResultWith({
     ...sharedDeps(readResultLogger),
-    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL })
+    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger: readResultLogger })
   })
 
   const readScheduledMessagesLogger = ctx.logger.child('readScheduledMessages')
   const readScheduledMessages = readScheduledMessagesWith({
     ...sharedDeps(readScheduledMessagesLogger),
-    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb: PouchDbClient.pouchDb })
+    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb: PouchDbClient.pouchDb, logger: readScheduledMessagesLogger })
   })
 
   return { readState, readResult, readScheduledMessages }

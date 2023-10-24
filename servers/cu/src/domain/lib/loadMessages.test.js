@@ -75,6 +75,14 @@ describe('loadMessages', () => {
       })
     })
 
+    test('return an empty array of no schedules are found', async () => {
+      const schedules = await parseSchedules({
+        tags: []
+      }).toPromise()
+
+      assert.deepStrictEqual(schedules, [])
+    })
+
     test('throw if time-based schedule is less than 1 second', async () => {
       await parseSchedules({
         tags: [

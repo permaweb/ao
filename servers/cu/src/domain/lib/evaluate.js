@@ -118,6 +118,21 @@ export function evaluateWith (env) {
   return (ctx) =>
     of(ctx)
       .chain(addHandler)
+      .map(ctx => {
+        if (!ctx.messages.length) {
+          logger('No Messages to evaluate. Returning latest evaled state')
+        } else {
+          logger(
+            'Evaluating %s messages for process %s from "%s" to "%s',
+            ctx.messages.length,
+            ctx.id,
+            ctx.from || 'initial',
+            ctx.to || 'latest'
+          )
+        }
+
+        return ctx
+      })
       .chain((ctx) =>
         reduce(
           /**

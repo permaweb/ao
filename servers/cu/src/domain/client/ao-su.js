@@ -61,11 +61,11 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
     async function fetchPage ({ from: newFrom }) {
       // deno-fmt-ignore-start
       return Promise.resolve({ from: newFrom, to, limit: pageSize })
-        .then(map(filter(isNotNil)))
+        .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
         .then(params => {
           logger(
-            'Loading messages page of size %s for process %s from %s to $s',
+            'Loading messages page of size %s for process %s from %s to %s',
             pageSize,
             processId,
             newFrom || 'initial',
