@@ -47,6 +47,5 @@ export function readStateWith (env) {
           to || 'latest'
         )
       )
-      .toPromise()
   }
 }

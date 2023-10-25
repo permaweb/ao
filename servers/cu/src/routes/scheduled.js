@@ -22,7 +22,7 @@ export const withScheduledRoutes = app => {
         } = req
 
         const input = inputSchema.parse({ processId, from, to })
-        return res.send(await readScheduledMessages(input))
+        return res.send(await readScheduledMessages(input).toPromise())
       })
     )()
   )

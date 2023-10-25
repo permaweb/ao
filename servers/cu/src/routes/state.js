@@ -22,7 +22,7 @@ export const withStateRoutes = (app) => {
         } = req
 
         const input = inputSchema.parse({ processId, to })
-        return res.send(await readState(input))
+        return res.send(await readState(input).toPromise())
       })
     )()
   )

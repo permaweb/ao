@@ -33,6 +33,5 @@ export function readResultWith (env) {
           messageTxId
         )
       )
-      .toPromise()
   }
 }

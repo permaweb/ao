@@ -32,6 +32,5 @@ export function readScheduledMessagesWith (env) {
         from,
         to || 'latest'
       ))
-      .toPromise()
   }
 }

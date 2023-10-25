@@ -19,7 +19,7 @@ export const withResultRoutes = app => {
         } = req
 
         const input = inputSchema.parse({ messageTxId })
-        return res.send(await readResult(input))
+        return res.send(await readResult(input).toPromise())
       })
     )()
   )
