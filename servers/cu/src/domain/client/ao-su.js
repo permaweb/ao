@@ -145,7 +145,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
                   sortKey: path(['sort_key']),
                   message: applySpec({
                     owner: path(['owner', 'address']),
-                    target: path('process_id'),
+                    target: path(['process_id']),
                     anchor: path(['message', 'anchor']),
                     /**
                      * TODO: implement from and Forwarded-By

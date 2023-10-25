@@ -10,7 +10,7 @@ export const rawTagSchema = z.object({
   value: z.string()
 })
 
-export const parsedTagSchema = z.record(z.string())
+export const parsedTagSchema = z.record(z.any())
 
 export const rawBlockSchema = z.object({
   height: z.number(),
@@ -33,11 +33,11 @@ export const messageSchema = z.object({
   sortKey: z.string().min(1),
   message: z.object({
     owner: z.string().min(1),
-    target: z.string().optional(),
+    target: z.string().min(1),
     anchor: z.string().optional(),
     from: z.string().optional(),
     'Forwarded-By': z.string().optional(),
-    tags: z.array(parsedTagSchema)
+    tags: parsedTagSchema
   }),
   AoGlobal: z.object({
     process: z.object({
