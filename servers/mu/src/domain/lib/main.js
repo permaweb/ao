@@ -8,6 +8,7 @@ import { crankWith } from './crank/crank.js'
 import { createContractWith } from './processSpawn/create-contract.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
 import { saveWith } from './monitorProcess/saveProcess.js'
+import { appendGatewayDataWith } from './monitorProcess/appendGatewayData.js'
 
 /**
  * write the first transaction and fetch its messages
@@ -118,13 +119,16 @@ export function crankMsgsWith ({
 export function monitorProcessWith({
   logger,
   createDataItem,
-  saveProcessToMonitor
+  saveProcessToMonitor,
+  fetchGatewayProcess
 }) {
   const parse = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
+  const appendGatewayData = appendGatewayDataWith({logger, fetchGatewayProcess})
   return (ctx) => {
     return of(ctx)
       .chain(parse)
+      .chain(appendGatewayData)
       .chain(save)
   }
 }
