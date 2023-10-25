@@ -167,12 +167,12 @@ export function evaluateWith (env) {
                     logger.tap(
                       'Error occurred when applying message with sortKey "%s" to process "%s"',
                       sortKey,
-                      ctx.processId
+                      ctx.id
                     ),
                     logger.tap(
                       'Applied message with sortKey "%s" to process "%s"',
                       sortKey,
-                      ctx.processId
+                      ctx.id
                     )
                   )
               )

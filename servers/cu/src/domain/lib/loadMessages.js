@@ -4,7 +4,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { messageSchema } from '../model.js'
-import { loadMessagesSchema, loadTimestampSchema } from '../dal.js'
+import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
 
 /**
  * - { name: 'Scheduled-Interval', value: 'interval' }
@@ -299,6 +299,7 @@ export function scheduleMessagesBetweenWith ({
 
 function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
+  loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
 
   return (ctx) =>
     of(ctx)
