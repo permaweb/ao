@@ -4,6 +4,10 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest};
 use serde::Deserialize;
 use serde_json::json;
 
+use reqwest::{Url};
+
+use arweave_rs::network::NetworkInfoClient;
+
 use su::domain::{write_message_pipeline, read_messages_pipeline, read_message_pipeline};
 
 
@@ -22,10 +26,25 @@ async fn base() -> impl Responder {
 async fn timestamp_route() -> impl Responder {
     match system_time() {
         Ok(timestamp) => {
-            let response_json = json!({ "timestamp": timestamp });
-            HttpResponse::Ok()
-                .content_type("application/json")
-                .json(response_json) // Serialize the JSON object as a response
+            let gateway_url = "https://arweave.net".to_string();
+            let url = Url::parse(&gateway_url).unwrap();
+
+            let network_client = NetworkInfoClient::new(url);
+            let network_info = network_client.network_info().await;
+            match network_info {
+                Ok(info) => {
+                    let height = info.height.clone();
+                    let height_string = format!("{:0>12}", height);
+                    let response_json = json!({ "timestamp": timestamp, "block_height": height_string });
+                    HttpResponse::Ok()
+                        .content_type("application/json")
+                        .json(response_json) // Serialize the JSON object as a response
+                },
+                Err(_) => {
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+            
         }
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
