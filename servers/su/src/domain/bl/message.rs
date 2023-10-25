@@ -94,12 +94,13 @@ impl MessagePipeline {
 
         let uploaded_tx = self.uploader.upload(build_data.to_vec()).await?;
 
-        let block = Block {
+        let bundle_block = Block {
             height: uploaded_tx.block,
             timestamp: uploaded_tx.timestamp
         };
 
-        message.block = Some(block);
+        message.bundle_block = Some(bundle_block);
+
         self.data_store.save_message(&message)?;
         
         Ok(serde_json::to_string(&uploaded_tx).unwrap())

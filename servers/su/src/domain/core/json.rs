@@ -14,6 +14,7 @@ pub struct Process {
 pub struct Message {
     pub message: MessageInner,
     pub block: Option<Block>,
+    pub bundle_block: Option<Block>,
     pub owner: Owner,
     pub sort_key: String,
     pub process_id: String,
@@ -88,9 +89,22 @@ impl Message {
 
         let process_id = target;
 
+        let mut parts = sort_key_clone.split(',');
+        let height_str = parts.next().unwrap_or_default();
+        let height = height_str.parse::<u64>().unwrap_or_default();
+
+        let timestamp_str = parts.next().unwrap_or_default();
+        let timestamp = timestamp_str.parse::<u64>().unwrap_or_default(); 
+
+        let block = Block {
+            height: height,
+            timestamp: timestamp
+        };
+
         Message {
             message: message_inner,
-            block: None,
+            block: Some(block),
+            bundle_block: None,
             owner,
             sort_key: sort_key_clone,
             process_id,

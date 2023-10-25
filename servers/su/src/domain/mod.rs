@@ -1,5 +1,7 @@
 use std::env;
 
+use dotenv::dotenv;
+
 mod bl;
 mod clients;
 mod core;
@@ -12,6 +14,7 @@ use clients::uploader::{UploaderClient};
 use clients::store::{StoreClient};
 
 pub fn write_message_pipeline() -> MessagePipeline {
+    dotenv().ok();
     // Get the wallet path from the environment variable.
     let wallet_path = env::var("SU_WALLET_PATH").expect("SU_WALLET_PATH must be set");
     let uploader = UploaderClient::new("https://node2.irys.xyz", &wallet_path);
