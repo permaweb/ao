@@ -4,6 +4,7 @@ import warpArBundles from 'warp-arbundles'
 import pouchDbClient from './clients/pouchdb.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
+import gatewayClient from './clients/gateway.js'
 
 import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith } from './lib/main.js'
 
@@ -82,6 +83,7 @@ export const createApis = (ctx) => {
   const monitorProcess = monitorProcessWith({
     saveProcessToMonitor: pouchDbClient.saveMonitoredProcessWith({pouchDb: dbInstance, logger: monitorProcessLogger}),
     createDataItem,
+    fetchGatewayProcess: gatewayClient.fetchGatewayProcessWith({logger: monitorProcessLogger, GATEWAY_URL: "https://arweave.net"}),
     logger: monitorProcessLogger
   })
 

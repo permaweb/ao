@@ -29,7 +29,7 @@ async function runScheduled() {
         let monitors = await findLatestMonitors()
         console.log(monitors)
     } catch(e) {
-        console.log(e)
+        // console.log(e)
     }
 }
 

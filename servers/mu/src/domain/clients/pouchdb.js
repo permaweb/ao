@@ -280,6 +280,7 @@ const monitoredProcessSchema = z.object({
   authorized: z.boolean(),
   lastFromSortKey: z.string().optional().nullable(),
   type: z.literal('monitor'),
+  interval: z.string().min(1),
   _rev: z.string().optional(),
   createdAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
@@ -296,6 +297,7 @@ function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
         authorized: prop('authorized'),
         lastFromSortKey: prop('lastFromSortKey'),
         type: always('monitor'),
+        interval: prop('interval'),
         createdAt: prop('createdAt')
       }))
       .map(monitoredProcessSchema.parse)
@@ -304,7 +306,7 @@ function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
           .chain(fromPromise((doc) => pouchDb.put(doc)))
           .bimap(
             logger.tap('Encountered an error when caching monitored process'),
-            logger.tap('Cached spawn')
+            logger.tap('Cached monitor')
           )
           .bichain(Resolved, Resolved)
           .map(always(doc._id))
@@ -338,6 +340,7 @@ function findLatestMonitorsWith ({ pouchDb }) {
           authorized: prop('authorized', doc),
           lastFromSortKey: prop('lastFromSortKey', doc),
           type: prop('type', doc),
+          interval: prop('interval'),
           createdAt: prop('createdAt', doc)
         })))
       })
