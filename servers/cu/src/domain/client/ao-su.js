@@ -3,26 +3,10 @@
 import { fromPromise, of } from 'hyper-async'
 import { always, applySpec, assoc, compose, evolve, filter, isNotNil, last, map, path, pathOr, pipe, pluck, prop, reduce, transduce } from 'ramda'
 
+import { padBlockHeight } from '../lib/utils.js'
+
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
-
-  /**
-   * Pad the block height portion of the sortKey to 12 characters
-   *
-   * This should work to increment and properly pad any sort key:
-   * - 000001257294,1694181441598,fb1ebd7d621d1398acc03e108b7a593c6960c6e522772c974cd21c2ba7ac11d5 (full Sequencer sort key)
-   * - 000001257294,fb1ebd7d621d1398acc03e108b7a593c6960c6e522772c974cd21c2ba7ac11d5 (Smartweave protocol sort key)
-   * - 1257294,1694181441598,fb1ebd7d621d1398acc03e108b7a593c6960c6e522772c974cd21c2ba7ac11d5 (missing padding)
-   * - 1257294 (just block height)
-   *
-   * @param {string} sortKey - the sortKey to be padded. If the sortKey is of sufficient length, then no padding
-   * is added.
-   */
-  function padBlockHeight (sortKey) {
-    if (!sortKey) return sortKey
-    const [height, ...rest] = String(sortKey).split(',')
-    return [height.padStart(12, '0'), ...rest].join(',')
-  }
 
   function mapBounds (args) {
     return evolve({
@@ -141,6 +125,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
                */
               // { message, block, owner, sort_key, process_id }
               compose(
+                map(logger.tap('transforming message retrieved from the SU')),
                 map(applySpec({
                   sortKey: path(['sort_key']),
                   message: applySpec({
@@ -187,7 +172,10 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
 export const loadTimestampWith = ({ fetch, SU_URL }) => {
   return () => fetch(`${SU_URL}/timestamp`)
     .then(res => res.json())
-    .then(res => parseInt(res.timestamp))
+    .then(res => ({
+      timestamp: parseInt(res.timestamp),
+      height: parseInt(res.block_height)
+    }))
 }
 
 export const loadMessageMetaWith = ({ fetch, SU_URL }) => {

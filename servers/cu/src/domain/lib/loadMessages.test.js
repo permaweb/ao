@@ -3,9 +3,10 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import ms from 'ms'
-import { prop, uniqBy } from 'ramda'
+import { countBy, prop, uniqBy } from 'ramda'
 
 import { SCHEDULED_INTERVAL, SCHEDULED_MESSAGE, isBlockOnSchedule, isTimestampOnSchedule, parseSchedules, scheduleMessagesBetweenWith } from './loadMessages.js'
+import { padBlockHeight } from './utils.js'
 
 describe('loadMessages', () => {
   describe('parseSchedules', () => {
@@ -408,7 +409,7 @@ describe('loadMessages', () => {
           height: originHeight + 12,
           timestamp: blockRangeStartTime
         },
-        sortKey: `${originHeight + 12},${blockRangeStartTime},hash-123`
+        sortKey: padBlockHeight(`${originHeight + 12},${blockRangeStartTime},hash-123`)
         // AoGlobal,
         // message
       },
@@ -418,13 +419,14 @@ describe('loadMessages', () => {
           height: originHeight + 16,
           timestamp: blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
         },
-        sortKey: `${originHeight + 16},${blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`
+        sortKey: padBlockHeight(`${originHeight + 16},${blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`)
         // AoGlobal,
         // message
       }
     )
 
     test('should create scheduled message according to the schedules', async () => {
+      console.log(countBy(prop('sortKey'), messages))
       assert.equal(messages.length, 17)
     })
 

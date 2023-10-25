@@ -5,6 +5,7 @@ import ms from 'ms'
 
 import { messageSchema } from '../model.js'
 import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
+import { padBlockHeight } from './utils.js'
 
 /**
  * - { name: 'Scheduled-Interval', value: 'interval' }
@@ -136,6 +137,7 @@ export function scheduleMessagesBetweenWith ({
   owner: processOwner,
   originBlock,
   suTime,
+  suHeight,
   schedules,
   blockRange
 }) {
@@ -169,7 +171,7 @@ export function scheduleMessagesBetweenWith ({
     const scheduledMessages = []
 
     /**
-     * {blockHeight},{timestampMillis},{txIdHash}
+     * {blockHeight},{timestampMillis},{txIdHash}[,{idx}{intervalName}]
      */
     const leftHash = left.sortKey.split(',').pop()
     /**
@@ -177,6 +179,8 @@ export function scheduleMessagesBetweenWith ({
      */
     const leftBlock = left.block
     const rightBlock = right.block
+
+    console.log({ leftBlock, rightBlock, blockRange })
 
     // No Schedules
     if (!blockBased.length && !timeBased.length) return scheduledMessages
@@ -220,7 +224,7 @@ export function scheduleMessagesBetweenWith ({
                  * It will also enable performing range queries to fetch all scheduled messages by simply
                  * appending a ',' to any sortKey
                  */
-                sortKey: `${curBlock.height},${curBlock.timestamp},${leftHash},${idx}${schedule.interval}`,
+                sortKey: padBlockHeight(`${curBlock.height},${curBlock.timestamp},${leftHash},idx${idx}-${schedule.interval}`),
                 AoGlobal: {
                   process: { id: processId, owner: processOwner },
                   block: curBlock
@@ -245,6 +249,7 @@ export function scheduleMessagesBetweenWith ({
        * For each second between the current block and the next block, check if any time-based
        * schedules need to generate an implicit message
        */
+      console.log(curBlock)
       for (let curTimestamp = curBlock.timestamp; curTimestamp < nextBlock.timestamp; curTimestamp += 1000) {
         scheduledMessages.push.apply(
           scheduledMessages,
@@ -265,7 +270,7 @@ export function scheduleMessagesBetweenWith ({
                    * It will also enable performing range queries to fetch all scheduled messages by simply
                    * appending a ',' to any sortKey
                    */
-                  sortKey: `${curHeight},${curTimestamp},${leftHash},${idx}${schedule.interval}`,
+                  sortKey: padBlockHeight(`${curHeight},${curTimestamp},${leftHash},idx${idx}-${schedule.interval}`),
                   AoGlobal: {
                     process: { id: processId, owner: processOwner },
                     block: curBlock
@@ -313,18 +318,17 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
         logger.tap('Error occurred when loading sequenced messages from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest'),
         ifElse(
           length,
-          logger.tap('Successfully loaded sequenced messages from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest'),
+          (messages) => logger.tap('Successfully loaded %s sequenced messages from "%s" to "%s"...', messages.length, ctx.from || 'initial', ctx.to || 'latest')(messages),
           logger.tap('No sequenced messages found from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest')
         )
       )
       .chain((sequenced) => {
         if (!sequenced.length) return of({ sequenced, blockRange: [] })
-
         /**
-       * We have to load the metadata for all the blocks between
-       * the earliest and latest message being evaluated, so that we
-       * can generate the scheduled messages that occur on each block
-       */
+         * We have to load the metadata for all the blocks between
+         * the earliest and latest message being evaluated, so that we
+         * can generate the scheduled messages that occur on each block
+         */
         return of({ min: head(sequenced), max: last(sequenced) })
           .map(logger.tap('loading blocks meta for sequenced messages in range: %j'))
           .chain(({ min, max }) => loadBlocksMeta({ min: min.block.height, max: max.block.height }))
@@ -362,7 +366,7 @@ function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
          * Some schedules were found, so potentially generate messages from them
          */
         return loadTimestamp()
-          .chain((suTime) =>
+          .chain(({ height, timestamp }) =>
             of(ctx.sequenced)
             /**
              * Split our list of sequenced messages into binary Tuples
@@ -376,7 +380,8 @@ function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
                   originBlock: ctx.block,
                   blockRange: ctx.blockRange,
                   schedules,
-                  suTime
+                  suTime: timestamp,
+                  suHeight: height
                 })
 
                 return reduce(

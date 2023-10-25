@@ -67,7 +67,10 @@ export const loadMessagesSchema = z.function()
   .returns(z.promise(z.array(messageSchema)))
 
 export const loadTimestampSchema = z.function()
-  .returns(z.promise(z.number()))
+  .returns(z.promise(z.object({
+    height: z.number(),
+    timestamp: z.number()
+  })))
 
 export const loadMessageMetaSchema = z.function()
   .args(z.object({ messageTxId: z.string().min(1) }))
