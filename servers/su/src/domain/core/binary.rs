@@ -300,5 +300,9 @@ impl DataItem {
 
         tag_tuples
     }
+
+    pub fn tags(&self) -> Vec<Tag> {
+        self.tags.clone()
+    }
     
 }

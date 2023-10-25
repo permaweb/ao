@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize}; // Import Serde traits
 
 use super::binary::{DataBundle};
 use super::sequencer::hash;
+use bundlr_sdk::{tags::*};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
@@ -21,7 +22,7 @@ pub struct Message {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MessageInner {
     pub id: String,
-    pub tags: Vec<(String, String)>,
+    pub tags: Vec<Tag>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -67,7 +68,7 @@ impl Message {
     pub fn from_bundle(data_bundle: &DataBundle) -> Self {
         let id = data_bundle.items[0].id().clone();
         let sort_key_clone = data_bundle.sort_key.clone();
-        let tags = data_bundle.items[0].tags_as_tuples().clone();
+        let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
         let target = data_bundle.items[0].target().clone();
 
