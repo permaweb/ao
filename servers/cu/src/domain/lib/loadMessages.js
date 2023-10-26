@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, aperture, ascend, cond, equals, head, ifElse, last, length, mergeRight, pipe, prop, reduce } from 'ramda'
+import { T, always, aperture, ascend, cond, equals, head, ifElse, length, mergeRight, path, pick, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -136,26 +136,9 @@ export function scheduleMessagesBetweenWith ({
   processId,
   owner: processOwner,
   originBlock,
-  suTime,
-  suHeight,
   schedules,
-  blockRange
+  blocksMeta
 }) {
-  /**
-   * This will be added to the CU clock to take into account
-   * any difference between the SU (whose generated sortKeys depend on its clock)
-   * and the CU determining where implicit messages need to be evaluated
-   *
-   * The number of seconds difference between the SU clock and the CU clock
-   *
-   * TODO: don't think we need this since CU never instantiates a date, and
-   * were only adding seconds to the timestamp as part of the block
-   */
-  // eslint-disable-next-line
-  const suSecondsCorrection = Math.floor(
-    (suTime - new Date().getTime()) / 1000
-  )
-
   const blockBased = schedules.filter(s => s.unit === 'block' || s.unit === 'blocks')
   /**
    * sort time based schedules from most granualar to least granular. This will ensure
@@ -164,26 +147,31 @@ export function scheduleMessagesBetweenWith ({
   const timeBased = schedules.filter(s => s.unit === 'seconds')
     .sort(ascend(prop('value')))
 
-  /**
-   * { sortKey, block }
-   */
-  function maybeScheduledMessages (left, right) {
-    const scheduledMessages = []
+  return (left, right) => {
+    const messages = []
+    // No Schedules
+    if (!blockBased.length && !timeBased.length) return messages
 
     /**
+     * We extract the hash at the end of the left boundary,
+     * so that any scheduled messages generated between left and right
+     * can simply use that hash as part of their generated sortKey.
+     *
      * {blockHeight},{timestampMillis},{txIdHash}[,{idx}{intervalName}]
+     *
+     * This should always retrieve the hash portion of the sortKey,
+     * regardless if there is an {idx}{intervalName} portion of not
      */
-    const leftHash = left.sortKey.split(',').pop()
+    const leftHash = left.sortKey.split(',')
+      .slice(2)
+      // {txIdHash}[,{idx}{intervalName}]
+      .shift()
+
     /**
      * { height, timestamp }
      */
     const leftBlock = left.block
     const rightBlock = right.block
-
-    console.log({ leftBlock, rightBlock, blockRange })
-
-    // No Schedules
-    if (!blockBased.length && !timeBased.length) return scheduledMessages
 
     /**
      * This is the first time in a long time that
@@ -197,16 +185,16 @@ export function scheduleMessagesBetweenWith ({
      * We must iterate by block, in order to pass the correct block information to the process
      */
     for (let curHeight = leftBlock.height; curHeight < rightBlock.height; curHeight++) {
-      const curBlock = blockRange.find((b) => b.height === curHeight)
-      const nextBlock = blockRange.find((b) => b.height === curHeight + 1)
+      const curBlock = blocksMeta.find((b) => b.height === curHeight)
+      const nextBlock = blocksMeta.find((b) => b.height === curHeight + 1)
       /**
        * Block-based schedule messages
        *
        * Block-based messages will always be pushed onto the sequence of messages
        * before time-based messages, which is predictable and deterministic
        */
-      scheduledMessages.push.apply(
-        scheduledMessages,
+      messages.push.apply(
+        messages,
         blockBased.reduce(
           (acc, schedule, idx) => {
             if (isBlockOnSchedule({ height: curBlock.height, originHeight: originBlock.height, schedule })) {
@@ -249,10 +237,9 @@ export function scheduleMessagesBetweenWith ({
        * For each second between the current block and the next block, check if any time-based
        * schedules need to generate an implicit message
        */
-      console.log(curBlock)
       for (let curTimestamp = curBlock.timestamp; curTimestamp < nextBlock.timestamp; curTimestamp += 1000) {
-        scheduledMessages.push.apply(
-          scheduledMessages,
+        messages.push.apply(
+          messages,
           timeBased.reduce(
             (acc, schedule, idx) => {
               if (isTimestampOnSchedule({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, schedule })) {
@@ -286,18 +273,6 @@ export function scheduleMessagesBetweenWith ({
 
       // TODO implement CRON based schedules
     }
-
-    return scheduledMessages
-  }
-
-  return (left, right) => {
-    const messages = []
-    messages.push.apply(messages, maybeScheduledMessages(left, right))
-    /**
-     * Sandwich the scheduled messages between the two actual messages
-     */
-    messages.unshift(left)
-    messages.push(right)
     return messages
   }
 }
@@ -308,101 +283,201 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
 
   return (ctx) =>
     of(ctx)
+      .map(logger.tap('Loading Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest'))
       .chain(args => loadMessages({
         processId: args.id,
         owner: args.owner,
         from: args.from, // could be undefined
         to: args.to // could be undefined
-      }))
-      .bimap(
-        logger.tap('Error occurred when loading sequenced messages from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest'),
+      }).bimap(
+        logger.tap('Error occurred when loading sequenced messages from "%s" to "%s"', ctx.from || 'initial', ctx.to || 'latest'),
         ifElse(
           length,
           (messages) => logger.tap('Successfully loaded %s sequenced messages from "%s" to "%s"...', messages.length, ctx.from || 'initial', ctx.to || 'latest')(messages),
           logger.tap('No sequenced messages found from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest')
         )
-      )
-      .chain((sequenced) => {
-        if (!sequenced.length) return of({ sequenced, blockRange: [] })
-        /**
-         * We have to load the metadata for all the blocks between
-         * the earliest and latest message being evaluated, so that we
-         * can generate the scheduled messages that occur on each block
-         */
-        return of({ min: head(sequenced), max: last(sequenced) })
-          .map(logger.tap('loading blocks meta for sequenced messages in range: %j'))
-          .chain(({ min, max }) => loadBlocksMeta({ min: min.block.height, max: max.block.height }))
-          .map(blockRange => ({ sequenced, blockRange }))
-      })
+      ))
 }
 
-function loadScheduledMessagesWith ({ loadTimestamp, logger }) {
+function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
+  loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
+
+  function parseSortKeyOrBlock ({ id, sortKey, block }) {
+    if (sortKey) {
+      /**
+       * {blockHeight},{timestampMillis},{txIdHash}[,{idx}{intervalName}]
+       */
+      const [paddedBlockHeight, timestampMillis] = String(sortKey).split(',')
+      return {
+        block: {
+          height: parseInt(paddedBlockHeight),
+          timestamp: parseInt(timestampMillis)
+        },
+        sortKey
+      }
+    }
+
+    return {
+      block,
+      /**
+       * We are masquerading a sortKey in this case, as only the hash portion
+       * is needed as part of any monotonically increasing sort keys
+       * generated for scheduled messages
+       *
+       * (see 'leftHash' in scheduleMessagesBetweenWith())
+       */
+      sortKey: `,,${id}`
+    }
+  }
 
   /**
-   * - find all schedule tags on the process
-   * - if schedules exist:
-   *   - for each pair of messages
-   *     - determine date range and block range
-   *     - generate X number of scheduled messages
-   *     - place in between messages
-   * - else noop
+   * In some cases, messages may be written to a process, before it
+   * has been finalized on chain, and as a result, the messages assigned block height,
+   * according to the SU, may be less than leftMost boundary according to the sortKey and block.
+   *
+   * So we order the apparent leftMost boundary and earliest sequenced message by their block height,
+   * then return the actual leftMost boundary based on the least block height.
    */
+  function findLeftMostBlock ({ sequenced, id, sortKey, originBlock }) {
+    const leftMost = parseSortKeyOrBlock({ id, sortKey, block: originBlock })
+    if (!sequenced.length) return leftMost
+
+    const first = head(sequenced)
+
+    return [leftMost, first]
+      .sort(ascend(path(['block', 'height'])))
+      .shift()
+  }
+
   return (ctx) => of(ctx)
     .chain(parseSchedules)
     .bimap(
       logger.tap('Failed to parse schedules:'),
       ifElse(
         length,
-        logger.tap('Schedules found'),
+        logger.tap('Schedules found. Generating schedule messages accoding to schedules'),
         logger.tap('No schedules found. No scheduled messages to generate')
       )
     )
-    .chain(
-      (schedules) => {
-        if (!schedules.length) return of(ctx.sequenced)
+    .chain((schedules) => {
+      /**
+       * There are no schedules on the process, so no message generation to perform,
+       * so simply return the list of sequenced messsages received from the SU
+       */
+      if (!schedules.length) return of(ctx.sequenced)
 
+      return loadTimestamp()
+        .map(logger.tap('loaded current block and tiemstamp from SU'))
         /**
-         * Some schedules were found, so potentially generate messages from them
+         * In order to generate scheduled messages and merge them with the
+         * sequenced messages, we must first determine our boundaries, which is to say,
+         * the left most 'block' and right most 'block' for the span being evaluated.
+         *
+         * 'block' should be read loosely, as it's really simply a relative height and timestamp derived from the SU,
+         * either parsed from a sortKey, or derived from the SU's claimed current block and timestamp
          */
-        return loadTimestamp()
-          .chain(({ height, timestamp }) =>
-            of(ctx.sequenced)
-            /**
-             * Split our list of sequenced messages into binary Tuples
-             * of consecutive messages
-             */
-              .map(aperture(2))
-              .map(pairs => {
-                const scheduleMessagesBetween = scheduleMessagesBetweenWith({
+        .map((currentBlock) => ({
+          /**
+           * The left most boundary is determined either using the 'from' sortKey,
+           * or, in the case of 'from' not being defined, the origin block of the process.
+           *
+           * But we also have to take into account the sequenced messages (see findLeftMostBlock above)
+           */
+          leftMost: findLeftMostBlock({ sequenced: ctx.sequenced, id: ctx.id, sortKey: ctx.from, originBlock: ctx.block }),
+          /**
+           * The right most boundary is determine either using the 'to' sortKey or,
+           * in the case of 'to' not being defined, the current block according to the SU
+           */
+          rightMost: parseSortKeyOrBlock({ id: ctx.id, sortKey: ctx.to, block: currentBlock })
+        }))
+        .map(logger.tap('loading blocks meta for sequenced messages in range of %o'))
+        .chain(({ leftMost, rightMost }) =>
+          loadBlocksMeta({ min: leftMost.block.height, max: rightMost.block.height })
+            .map(blocksMeta => {
+              /**
+               * Each set of scheduled messages will be generated between a left and right boundary,
+               * So we need to procure a set of boundaries to use, while ALSO merging with the sequenced messages
+               * from the SU.
+               *
+               * Our messages retrieved from the SU are perfect boundaries, as they each have a
+               * sortKey to parse a hash from (for the purpose of generating monotonically increasing sortKeys for generated scheduled messages)
+               * and a block that contains a height and timestamp.
+               *
+               * This will allow the CU to generate scheduled messages with monotonically increasing sortKeys and accurate block metadata,
+               * at least w.r.t the SU's claims.
+               */
+              const boundaries = ctx.sequenced
+              /**
+               * Sandwich the sequenced messages between the leftMost and rightMost boundaries.
+               */
+              boundaries.unshift(leftMost)
+              boundaries.push(rightMost)
+
+              return {
+                boundaries,
+                /**
+                 * Our iterating function that accepts a left and right boundary
+                 * and returns a merged and ordered list of messages sandwiched between
+                 * those boundaries
+                 */
+                scheduleMessagesBetween: scheduleMessagesBetweenWith({
                   processId: ctx.id,
                   owner: ctx.owner,
                   originBlock: ctx.block,
-                  blockRange: ctx.blockRange,
-                  schedules,
-                  suTime: timestamp,
-                  suHeight: height
+                  blocksMeta,
+                  schedules
                 })
-
-                return reduce(
-                  (merged, [left, right]) => {
-                    const scheduled = scheduleMessagesBetween(left, right)
-                    logger(
-                      'Loaded %s scheduled messages between messages %j and %j',
-                      scheduled.length,
-                      left,
-                      right
-                    )
-                    merged.push.apply(merged, scheduled)
-                    return merged
-                  },
-                  [],
-                  pairs
-                )
-              })
+              }
+            })
+        )
+        .map(({ boundaries, scheduleMessagesBetween }) =>
+          reduce(
+            (merged, [left, right]) => {
+              const scheduled = scheduleMessagesBetween(left, right)
+              logger(
+                'Loaded %s scheduled messages between boundaries %o and %o',
+                scheduled.length,
+                pick(['block', 'sortKey'], left),
+                pick(['block', 'sortKey'], right)
+              )
+              merged.push.apply(merged, scheduled)
+              /**
+               * We need to push right boundary onto merged
+               * since it will always be a message, except in the case of the rightMost boundary,
+               * which we will remove at the end
+               *
+               * There is no need to unshift the left boundary, as the left will be the iterations right boundary.
+               * Otherwise, we would end up with duplicates at each boundary
+               */
+              merged.push(right)
+              return merged
+            },
+            [],
+            /**
+             * Split our list of boundaries into binary Tuples
+             *
+             * Since we added our left and right bounds, there should always
+             * be at least two elements in the list, which will account for any time
+             * we have <2 sequenced messages to use as boundaries.
+             *
+             * If our leftMost and rightMost boundary are the only boundaries, this effectively means
+             * that we have no sequenced messages to merge and evaluate, and only scheduled messages to generate
+             *
+             * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
+             */
+            aperture(2, boundaries)
           )
-      }
-    )
+        )
+        /**
+         * Remove the rightMost boundary
+         * that we added at the beginning, leaving only our merged messages
+         */
+        .map((bounaries) => {
+          bounaries.pop()
+          return bounaries
+        })
+    })
     .map(messages => ({ messages }))
 }
 
@@ -448,16 +523,12 @@ export function loadMessagesWith (env) {
   const loadSequencedMessages = loadSequencedMessagesWith(env)
   const loadScheduledMessages = loadScheduledMessagesWith(env)
 
-  // { id, owner, block, tags ... }
   return (ctx) =>
     of(ctx)
       .chain(loadSequencedMessages)
-      // { sequenced, blockRange }
-      .chain(({ sequenced, blockRange }) =>
-        loadScheduledMessages({ ...ctx, sequenced, blockRange })
-      )
+      .chain(sequenced => loadScheduledMessages({ ...ctx, sequenced }))
+      .map(logger.tap('Loaded messages and appending to context'))
       // { messages }
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded messages and appended to context %j'))
 }

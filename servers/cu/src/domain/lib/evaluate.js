@@ -222,7 +222,7 @@ export function evaluateWith (env) {
        */
       .chain(maybeResolveError)
       .map(output => ({ output }))
+      .map(logger.tap('Appended eval output to ctx'))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Appended eval output to ctx'))
 }

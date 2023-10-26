@@ -109,7 +109,7 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
       return Promise.resolve({ min: newMin, max, limit: pageSize })
         .then(variables => {
           logger(
-            'Loading meta for %s blocks after %s up to %s',
+            'Loading page of up to %s blocks after %s up to %s',
             pageSize,
             newMin,
             max
@@ -172,6 +172,7 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
              */
             timestamp: block.timestamp * 1000
           })))
+          .then(logger.tap('Loaded blocks meta after %s up to %s', min, max))
       ))
       .toPromise()
 }

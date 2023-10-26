@@ -274,11 +274,11 @@ describe('loadMessages', () => {
 
   describe('scheduleMessagesBetween', () => {
     /**
-       * Timestamps the CU deals with will always be milliseconds, at the top of the SECOND
-       *
-       * SO in order for the test to be accurate, we truncate to floor second,
-       * then convert back to milliseconds, so that we can compare on the second.
-       */
+     * Timestamps the CU deals with will always be milliseconds, at the top of the SECOND
+     *
+     * SO in order for the test to be accurate, we truncate to floor second,
+     * then convert back to milliseconds, so that we can compare on the second.
+     */
     const nowSecond = Math.floor(new Date().getTime() / 1000) * 1000
 
     const originHeight = 125000
@@ -297,7 +297,6 @@ describe('loadMessages', () => {
       height: originHeight,
       timestamp: originTime
     }
-    const suTime = originTime - ms('1m') // 1 minute behind
     const schedules = [
       {
         interval: '10-minutes',
@@ -331,11 +330,20 @@ describe('loadMessages', () => {
      * Should produce 15 scheduled messages,
      * for a total of 17 including the actual messages
      */
-    const blockRangeStartTime = originTime + ms('35m')
-    const blockRange = [
+    const sequencedMessagesStartTime = originTime + ms('35m')
+    const blocksMeta = [
+      // {
+      //   height: originHeight + 10,
+      //   timestamp: sequencedMessagesStartTime - ms('10m') - ms('10m') // 15m
+      // },
+      // {
+      //   height: originHeight + 11,
+      //   timestamp: sequencedMessagesStartTime - ms('10m') // 25m
+      // },
+      // The first sequenced message is on this block
       {
         height: originHeight + 12,
-        timestamp: blockRangeStartTime
+        timestamp: sequencedMessagesStartTime // 35m
       },
       /**
        * 2 block-based:
@@ -349,7 +357,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 13,
-        timestamp: blockRangeStartTime + ms('16m') // 51m
+        timestamp: sequencedMessagesStartTime + ms('16m') // 51m
       },
       /**
        * 0 block-based
@@ -363,7 +371,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 14,
-        timestamp: blockRangeStartTime + ms('16m') + ms('29m') // 80m
+        timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') // 80m
       },
       /**
        * 2 block-based
@@ -376,7 +384,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 15,
-        timestamp: blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') // 95m
+        timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') // 95m
       },
       /**
        * 0 block-based
@@ -387,7 +395,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 16,
-        timestamp: blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
+        timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
       }
       /**
        * NOT SCHEDULED BECAUSE OUTSIDE BLOCK RANGE
@@ -400,16 +408,16 @@ describe('loadMessages', () => {
        */
     ]
 
-    const scheduleMessagesBetween = scheduleMessagesBetweenWith({ processId, owner, originBlock, suTime, schedules, blockRange })
+    const scheduleMessagesBetween = scheduleMessagesBetweenWith({ processId, owner, originBlock, schedules, blocksMeta })
 
-    const messages = scheduleMessagesBetween(
+    const scheduledMessages = scheduleMessagesBetween(
       // left
       {
         block: {
           height: originHeight + 12,
-          timestamp: blockRangeStartTime
+          timestamp: sequencedMessagesStartTime
         },
-        sortKey: padBlockHeight(`${originHeight + 12},${blockRangeStartTime},hash-123`)
+        sortKey: padBlockHeight(`${originHeight + 12},${sequencedMessagesStartTime},hash-123`)
         // AoGlobal,
         // message
       },
@@ -417,23 +425,24 @@ describe('loadMessages', () => {
       {
         block: {
           height: originHeight + 16,
-          timestamp: blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+          timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
         },
-        sortKey: padBlockHeight(`${originHeight + 16},${blockRangeStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`)
+        sortKey: padBlockHeight(`${originHeight + 16},${sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`)
         // AoGlobal,
         // message
       }
     )
 
     test('should create scheduled message according to the schedules', async () => {
-      console.log(countBy(prop('sortKey'), messages))
-      assert.equal(messages.length, 17)
+      console.log(countBy(prop('sortKey'), scheduledMessages))
+      // Two actual messages + 15 scheduled messages between them
+      assert.equal(scheduledMessages.length + 2, 17)
     })
 
     test('should create a unique pseudo-sortKey for each generated message', async () => {
       assert.equal(
-        messages.length,
-        uniqBy(prop('sortKey'), messages).length
+        scheduledMessages.length,
+        uniqBy(prop('sortKey'), scheduledMessages).length
       )
     })
   })
