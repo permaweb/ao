@@ -214,6 +214,6 @@ export function loadProcessWith (env) {
           // { id, owner, ..., state, result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded process and appended to ctx %j'))
+      .map(logger.tap('Loaded process and appended to ctx %O'))
   }
 }

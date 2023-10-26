@@ -157,7 +157,9 @@ export function findLatestEvaluationWith ({ pouchDb }) {
   }
 }
 
-export function saveEvaluationWith ({ pouchDb }) {
+export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
+  const logger = _logger.child('pouchDb:saveEvaluation')
+
   return (evaluation) => {
     return of(evaluation)
       .map(applySpec({
@@ -197,7 +199,12 @@ export function saveEvaluationWith ({ pouchDb }) {
           .chain((found) =>
             found
               ? of(found)
+                .map(logger.tap('Evaluation already existed in cache. Returning found evaluation'))
               : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
+                .bimap(
+                  logger.tap('Encountered an error when caching evaluation'),
+                  logger.tap('Cached evaluation')
+                )
           )
           .map(always(doc._id))
       )

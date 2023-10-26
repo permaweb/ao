@@ -283,7 +283,10 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
 
   return (ctx) =>
     of(ctx)
-      .map(logger.tap('Loading Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest'))
+      .map(ctx => {
+        logger('Loading Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest')
+        return ctx
+      })
       .chain(args => loadMessages({
         processId: args.id,
         owner: args.owner,

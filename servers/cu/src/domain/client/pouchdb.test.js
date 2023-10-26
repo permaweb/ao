@@ -11,6 +11,9 @@ import {
   saveEvaluationWith,
   saveProcessWith
 } from './pouchdb.js'
+import { createLogger } from '../logger.js'
+
+const logger = createLogger('ao-cu:readState')
 
 describe('pouchdb', () => {
   describe('findProcess', () => {
@@ -29,7 +32,8 @@ describe('pouchdb', () => {
               },
               type: 'process'
             })
-          }
+          },
+          logger
         })
       )
 
@@ -50,7 +54,8 @@ describe('pouchdb', () => {
         findProcessWith({
           pouchDb: {
             get: async () => { throw { status: 404 } }
-          }
+          },
+          logger
         })
       )
 
@@ -80,7 +85,8 @@ describe('pouchdb', () => {
               })
               return Promise.resolve(true)
             }
-          }
+          },
+          logger
         })
       )
 
@@ -109,7 +115,8 @@ describe('pouchdb', () => {
               }
             }),
             put: assert.fail
-          }
+          },
+          logger
         })
       )
 
@@ -156,7 +163,8 @@ describe('pouchdb', () => {
                 ]
               }
             }
-          }
+          },
+          logger
         }))
 
       const res = await findLatestEvaluation({
@@ -201,7 +209,8 @@ describe('pouchdb', () => {
                 ]
               }
             }
-          }
+          },
+          logger
         }))
 
       const res = await findLatestEvaluation({
@@ -220,7 +229,8 @@ describe('pouchdb', () => {
         findLatestEvaluationWith({
           pouchDb: {
             find: async () => ({ docs: [] })
-          }
+          },
+          logger
         })
       )
       await findLatestEvaluation({
@@ -248,7 +258,8 @@ describe('pouchdb', () => {
               assert.equal(doc.evaluatedAt.toISOString(), evaluatedAt)
               return Promise.resolve(true)
             }
-          }
+          },
+          logger
         })
       )
 
@@ -274,7 +285,8 @@ describe('pouchdb', () => {
               evaluatedAt: new Date()
             }),
             put: assert.fail
-          }
+          },
+          logger
         })
       )
 
@@ -321,7 +333,8 @@ describe('pouchdb', () => {
                 ]
               }
             }
-          }
+          },
+          logger
         }))
 
       const res = await findEvaluations({ processId: 'process-123' })
@@ -361,7 +374,8 @@ describe('pouchdb', () => {
                 ]
               }
             }
-          }
+          },
+          logger
         }))
 
       const res = await findEvaluations({
