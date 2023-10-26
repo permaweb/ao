@@ -2,7 +2,7 @@ import {
   T, applySpec, assocPath, cond, identity,
   is, mergeRight, pathOr, pipe, propOr, reduce, reduced
 } from 'ramda'
-import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
@@ -61,7 +61,7 @@ export function evaluateWith (env) {
 
   /**
    * When an error occurs, we short circuit the reduce using
-   * ramda's 'reduced()' function, but since our accumulator is an Async,
+   * ramda's 'reduced()' function, but since our accumulator is a Promise,
    * ramda's 'reduce' cannot natively short circuit the reduction.
    *
    * So we do it ourselves by unwrapping the output, and if the value
@@ -75,10 +75,10 @@ export function evaluateWith (env) {
     if (output && output['@@transducer/reduced']) {
       return With(output['@@transducer/value'])
     }
-    return Resolved(output)
+    return Promise.resolve(output)
   }
-  const maybeResolveError = maybeReducedError(Resolved)
-  const maybeRejectError = maybeReducedError(Rejected)
+  const maybeResolveError = maybeReducedError(Promise.resolve.bind(Promise))
+  const maybeRejectError = maybeReducedError(Promise.reject.bind(Promise))
 
   /**
    * Given the previous interaction output,
@@ -133,42 +133,45 @@ export function evaluateWith (env) {
 
         return ctx
       })
-      .chain((ctx) =>
+      /**
+       * I'd prefer to use Async here, but it is possible to exceed the maximum callstack
+       * when evaluating large numbers of messages because of all of .chain()'d calls on the Async
+       *
+       * So for the fold here, we use vanilla promises, so the fold exists only within a single chain()
+       * in the Async pipeline. It is functionally equivalent, but then/catch on Promises isn't as expressive
+       * as a Bimonad
+       */
+      .chain(fromPromise((ctx) =>
         reduce(
-          /**
-           * See loadMessages for shape
-           */
-          ($output, { message, sortKey, AoGlobal }) =>
-            $output
-              .chain(maybeRejectError)
-              .chain((prev) =>
-                of(prev.state)
-                  .chain(
-                    fromPromise((state) => ctx.handle(state, message, AoGlobal))
-                  )
-                  .bichain(
-                    /**
-                     * Map thrown error to a result.error
-                     */
-                    (err) => Resolved(assocPath(['result', 'error'], err, {})),
-                    Resolved
-                  )
+          async (outputAsync, { message, sortKey, AoGlobal }) =>
+            outputAsync
+              .then(maybeRejectError)
+              .then((prev) =>
+                Promise.resolve(prev.state)
+                  .then((state) => ctx.handle(state, message, AoGlobal))
                   /**
-                   * The the previous interaction output, and merge it
-                   * with the output of the current interaction
+                   * Map thrown error to a result.error
                    */
-                  .map(mergeOutput(prev))
-                  .chain((output) => {
+                  .catch((err) => Promise.resolve(assocPath(['result', 'error'], err, {})))
+                /**
+                 * The the previous interaction output, and merge it
+                 * with the output of the current interaction
+                 */
+                  .then(mergeOutput(prev))
+                  .then((output) => {
                     return output.result && output.result.error
-                      ? Rejected(output)
-                      : Resolved(output)
+                      ? Promise.reject(output)
+                      : Promise.resolve(output)
                   })
-                  .bimap(
+                  .catch(err => {
                     logger.tap(
                       'Error occurred when applying message with sortKey "%s" to process "%s"',
                       sortKey,
                       ctx.id
-                    ),
+                    )(err)
+                    throw err
+                  })
+                  .then(
                     logger.tap(
                       'Applied message with sortKey "%s" to process "%s"',
                       sortKey,
@@ -179,31 +182,31 @@ export function evaluateWith (env) {
               /**
                * Create a new evaluation to be cached in the local db
                */
-              .chain((output) =>
+              .then((output) =>
                 saveEvaluation({
                   sortKey,
                   processId: ctx.id,
                   message,
                   output,
                   evaluatedAt: new Date()
-                }).map(() => output)
+                })
+                  .map(() => output)
+                  .toPromise()
               )
-              .bichain(
-                /**
-                 * An error was encountered, so stop reduce and return the output
-                 */
-                (err) => Resolved(reduced(err)),
-                /**
-                 * Return the output
-                 */
-                Resolved
-              ),
-          of({
+              /**
+               * Return the output
+               */
+              .then((output) => output)
+              /**
+               * An error was encountered, so stop reduce and return the output
+               */
+              .catch(err => Promise.resolve(reduced(err))),
+          Promise.resolve({
             state: ctx.state,
             /**
-             * Ensure all result fields are initialized
-             * to their identity
-             */
+                 * Ensure all result fields are initialized
+                 * to their identity
+                 */
             result: applySpec({
               messages: pathOr([], ['messages']),
               output: pathOr('', ['output']),
@@ -212,7 +215,7 @@ export function evaluateWith (env) {
           }),
           ctx.messages
         )
-      )
+      ))
       /**
        * If an error occurred, then it will be wrapped in a reduced,
        * so unwrap it and Resolve, so it can be assigned as output
@@ -220,7 +223,7 @@ export function evaluateWith (env) {
        *
        * In other words, this chain should always Resolve
        */
-      .chain(maybeResolveError)
+      .chain(fromPromise(maybeResolveError))
       .map(output => ({ output }))
       .map(logger.tap('Appended eval output to ctx'))
       .map(mergeRight(ctx))
