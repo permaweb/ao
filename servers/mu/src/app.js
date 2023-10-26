@@ -25,7 +25,7 @@ export const server = pipe(
       server.close(() => logger('Server Shut Down'))
     })
 
-    setInterval(() => runScheduled(), 1000)
+    runScheduled()
 
     return server
   }
