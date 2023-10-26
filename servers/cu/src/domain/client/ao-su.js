@@ -8,9 +8,24 @@ import { padBlockHeight } from '../lib/utils.js'
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
 
+  /**
+   * The cu will generate sort keys for Scheduled Messages that match SU sort keys,
+   * but appends an additional 4th section that contains Scheduled-Interval information, for uniqueness.
+   *
+   * So in case the sortKey is a CU generated Scheduled Message sortKey, grab only the first 3
+   * sections, dropping the potential 4th section, and use that to query the SU
+   */
+  function suSortKey (sortKey) {
+    if (!sortKey) return sortKey
+    return sortKey.split(',').slice(0, 3).join(',')
+  }
+
   function mapBounds (args) {
     return evolve({
-      from: padBlockHeight,
+      from: pipe(
+        padBlockHeight,
+        suSortKey
+      ),
       to: pipe(
         /**
          * Potentially add a comma to the end of the block height, so
@@ -34,7 +49,8 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
         /**
          * Still ensure the proper padding is added
          */
-        padBlockHeight
+        padBlockHeight,
+        suSortKey
       )
     })(args)
   }
