@@ -8,17 +8,31 @@ import gatewayClient from './clients/gateway.js'
 
 import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith } from './lib/main.js'
 
-import runScheduled from './lib/monitorProcess/scheduler.js'
-
-export { runScheduled }
+import runScheduledWith from './lib/monitor/manager.js'
 
 const { DataItem } = warpArBundles
 
 const dbInstance = pouchDbClient.pouchDb('ao-cache')
 
+dbInstance.createIndex({
+  index: {
+    fields: ['type']
+  }
+}).then(function () {
+  console.log('Index created successfully');
+}).catch(function (err) {
+  console.error('Error creating index:', err);
+});
+
 const createDataItem = (raw) => new DataItem(raw)
 
-export { createLogger } from './logger.js'
+import { createLogger } from './logger.js'
+export { createLogger }
+
+export const batchLogger = createLogger('ao-mu-batch')
+const runScheduledLogger = batchLogger.child('runScheduled')
+const runScheduled = runScheduledWith({dbClient: pouchDbClient, dbInstance, logger: runScheduledLogger})
+export { runScheduled }
 
 export const domainConfigSchema = z.object({
   SEQUENCER_URL: z.string().url('SEQUENCER_URL must be a a valid URL'),

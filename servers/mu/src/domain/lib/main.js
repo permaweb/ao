@@ -7,8 +7,8 @@ import { buildTxWith } from './processMsg/build-tx.js'
 import { crankWith } from './crank/crank.js'
 import { createContractWith } from './processSpawn/create-contract.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
-import { saveWith } from './monitorProcess/saveProcess.js'
-import { appendGatewayDataWith } from './monitorProcess/appendGatewayData.js'
+import { saveWith } from './monitor/saveProcess.js'
+import { appendGatewayDataWith } from './monitor/appendGatewayData.js'
 
 /**
  * write the first transaction and fetch its messages
