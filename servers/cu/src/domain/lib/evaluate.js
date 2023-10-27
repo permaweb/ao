@@ -1,5 +1,6 @@
 import {
-  T, applySpec, assocPath, cond, identity,
+  T, always, applySpec, assocPath, cond, identity,
+  ifElse,
   is, mergeRight, pathOr, pipe, propOr, reduce, reduced
 } from 'ramda'
 import { fromPromise, of } from 'hyper-async'
@@ -93,8 +94,15 @@ export function evaluateWith (env) {
      * This ensures the new interaction in the chain has state to
      * operate on, even if the previous interaction only produced
      * messages and no state change.
+     *
+     * If the output contains an error, ignore its state,
+     * and use the previous message's state
      */
-    state: propOr(prev.state, 'state'),
+    state: ifElse(
+      pathOr(undefined, ['result', 'error']),
+      always(prev.state),
+      propOr(prev.state, 'state')
+    ),
     result: {
       error: pathOr(undefined, ['result', 'error']),
       messages: pathOr([], ['result', 'messages']),
@@ -153,23 +161,15 @@ export function evaluateWith (env) {
                    * Map thrown error to a result.error
                    */
                   .catch((err) => Promise.resolve(assocPath(['result', 'error'], err, {})))
-                /**
-                 * The the previous interaction output, and merge it
-                 * with the output of the current interaction
-                 */
+                  /**
+                   * The the previous interaction output, and merge it
+                   * with the output of the current interaction
+                   */
                   .then(mergeOutput(prev))
                   .then((output) => {
                     return output.result && output.result.error
                       ? Promise.reject(output)
                       : Promise.resolve(output)
-                  })
-                  .catch(err => {
-                    logger.tap(
-                      'Error occurred when applying message with sortKey "%s" to process "%s"',
-                      sortKey,
-                      ctx.id
-                    )(err)
-                    throw err
                   })
                   .then(
                     logger.tap(
@@ -178,25 +178,26 @@ export function evaluateWith (env) {
                       ctx.id
                     )
                   )
+                  /**
+                   * Create a new evaluation to be cached in the local db
+                   */
+                  .then((output) =>
+                    saveEvaluation({
+                      sortKey,
+                      processId: ctx.id,
+                      message,
+                      output,
+                      evaluatedAt: new Date()
+                    })
+                      .map(() => output)
+                      .toPromise()
+                  )
+                  .catch(logger.tap(
+                    'Error occurred when applying message with sortKey "%s" to process "%s"',
+                    sortKey,
+                    ctx.id
+                  ))
               )
-              /**
-               * Create a new evaluation to be cached in the local db
-               */
-              .then((output) =>
-                saveEvaluation({
-                  sortKey,
-                  processId: ctx.id,
-                  message,
-                  output,
-                  evaluatedAt: new Date()
-                })
-                  .map(() => output)
-                  .toPromise()
-              )
-              /**
-               * Return the output
-               */
-              .then((output) => output)
               /**
                * An error was encountered, so stop reduce and return the output
                */
