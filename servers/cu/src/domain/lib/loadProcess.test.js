@@ -21,10 +21,12 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => ({
+      loadTransactionMeta: async (id) => ({
         owner: { address: 'woohoo' },
-        tags,
-        block: { height: 123, timestamp: 1697574792 }
+        tags
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })
@@ -32,7 +34,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
-    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
+    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
     // The initial state will be parsed as JSON from the original tags
     assert.deepStrictEqual(
       res.state,
@@ -71,6 +73,7 @@ describe('loadProcess', () => {
       saveProcess: async () => assert.fail('should not save if found in db'),
       findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => assert.fail('should not load transaction meta if found in db'),
+      loadProcessBlock: async (_id) => assert.fail('should not load process block if found in db'),
       logger
     })
 
@@ -124,8 +127,10 @@ describe('loadProcess', () => {
       },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
-        tags,
-        block: { height: 123, timestamp: 1697574792 }
+        tags
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })
@@ -152,15 +157,17 @@ describe('loadProcess', () => {
           id: PROCESS,
           owner: 'woohoo',
           tags,
-          block: { height: 123, timestamp: 1697574792 }
+          block: { height: 123, timestamp: 1697574792000 }
         })
         return PROCESS
       },
       findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
-        tags,
-        block: { height: 123, timestamp: 1697574792 }
+        tags
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })
@@ -181,8 +188,10 @@ describe('loadProcess', () => {
       findLatestEvaluation: async () => { throw { status: 404 } },
       loadTransactionMeta: async (_id) => ({
         owner: { address: 'woohoo' },
-        tags,
-        block: { height: 123, timestamp: 1697574792 }
+        tags
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })
@@ -190,7 +199,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
-    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
+    assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
     assert.equal(res.id, PROCESS)
   })
 
@@ -205,8 +214,10 @@ describe('loadProcess', () => {
           { name: 'Not-Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'process' }
-        ],
-        block: { height: 123, timestamp: 1697574792 }
+        ]
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })
@@ -227,8 +238,10 @@ describe('loadProcess', () => {
           { name: 'Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
           { name: 'ao-type', value: 'process' }
-        ],
-        block: { height: 123, timestamp: 1697574792 }
+        ]
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })
@@ -249,8 +262,10 @@ describe('loadProcess', () => {
           { name: 'Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'message' }
-        ],
-        block: { height: 123, timestamp: 1697574792 }
+        ]
+      }),
+      loadProcessBlock: async (id) => ({
+        block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
     })

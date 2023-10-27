@@ -1,15 +1,16 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { F, T, always, applySpec, assoc, cond, equals, includes, is, isNotNil, mergeRight, path, pick, pipe, reduce } from 'ramda'
+import { F, T, always, applySpec, assoc, cond, equals, includes, is, isNotNil, mergeRight, path, reduce } from 'ramda'
 import { z } from 'zod'
 
-import { findLatestEvaluationSchema, findProcessSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
+import { findLatestEvaluationSchema, findProcessSchema, loadProcessBlockSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
 import { parseTags } from './utils.js'
 
-function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, logger }) {
+function getProcessMetaWith ({ loadTransactionMeta, loadProcessBlock, findProcess, saveProcess, logger }) {
   loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
+  loadProcessBlock = fromPromise(loadProcessBlockSchema.implement(loadProcessBlock))
 
   const checkTag = (name, pred) => (tags) => pred(tags[name])
     ? Resolved(tags)
@@ -18,16 +19,15 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
   /**
    * Load the process from chain, extracting the metadata,
    * and then saving to the db
+   *
+   * TODO: could we eventually load all of this from the SU?
+   * for now, just loading Block, since that's the only bit that doesn't finalize
    */
-  function loadFromChain (processId) {
+  function loadFromChainAndSu (processId) {
     return loadTransactionMeta(processId)
       .map(applySpec({
         owner: path(['owner', 'address']),
-        tags: path(['tags']),
-        block: pipe(
-          path(['block']),
-          pick(['height', 'timestamp'])
-        )
+        tags: path(['tags'])
       }))
       /**
        * Verify the process by examining the tags
@@ -53,6 +53,14 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
           .map(always({ id: processId, ...ctx }))
       )
       /**
+       * Fetch block metadata from SU
+       * and merge with the process meta from the gateway
+       */
+      .chain(process =>
+        loadProcessBlock({ processId })
+          .map(mergeRight(process))
+      )
+      /**
        * Attempt to save to the db
        */
       .chain((process) =>
@@ -75,7 +83,7 @@ function getProcessMetaWith ({ loadTransactionMeta, findProcess, saveProcess, lo
         logger.tap('found process in db %j')
       )
       .bichain(
-        always(loadFromChain(processId)),
+        always(loadFromChainAndSu(processId)),
         Resolved
       )
       .map(process => ({
