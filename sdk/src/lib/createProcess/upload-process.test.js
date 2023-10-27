@@ -21,11 +21,15 @@ describe('upload-process', () => {
         ])
         assert.ok(signer)
 
-        return { res: 'foobar', processId: 'process-id-123' }
+        return {
+          res: 'foobar',
+          processId: 'process-id-123',
+          signedDataItem: { id: 'process-id-123', raw: 'raw-buffer' }
+        }
       },
-      registerProcess: async ({ processId }) => {
-        assert.equal(processId, 'process-id-123')
-        return { processId }
+      registerProcess: async (signedDataItem) => {
+        assert.deepStrictEqual(signedDataItem, { id: 'process-id-123', raw: 'raw-buffer' })
+        return { foo: 'bar' }
       },
       logger
     })
@@ -53,7 +57,7 @@ describe('upload-process', () => {
 
         return { res: 'foobar', processId: 'process-id-123' }
       },
-      registerProcess: async ({ processId }) => ({ processId }),
+      registerProcess: async () => ({ foo: 'bar' }),
       logger
     })
 
@@ -76,7 +80,7 @@ describe('upload-process', () => {
 
         return { res: 'foobar', processId: 'process-id-123' }
       },
-      registerProcess: async ({ processId }) => ({ processId }),
+      registerProcess: async () => ({ foo: 'bar' }),
       logger
     })
 
