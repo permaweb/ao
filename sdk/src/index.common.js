@@ -1,5 +1,6 @@
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
+import * as SuClient from './client/ao-su.js'
 import * as GatewayClient from './client/gateway.js'
 import * as IrysClient from './client/irys.js'
 
@@ -13,6 +14,7 @@ const IRYS_NODE = globalThis.IRYS_NODE || globalThis.BUNDLR_NODE || 'node2'
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-2.onrender.com'
 const CU_URL = globalThis.CU_URL || 'https://ao-cu-2.onrender.com'
+const SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
 
 /**
  * Any environment specific build-time dependencies
@@ -31,7 +33,7 @@ export function buildSdk () {
 
   /**
    * default writeInteraction that works OOTB
-   * - writes signed data item for interaction to the MU
+   * - writes signed data item for message to the MU
    */
   const writeMessageLogger = logger.child('writeMessage')
   const writeMessage = writeMessageWith({
@@ -43,20 +45,16 @@ export function buildSdk () {
   /**
    * default createContract that works OOTB
    * - Verifies the inputs
-   * - Creates the contract
-   *   - In browser, uses Arweave Wallet to upload contracts to Irys (via dispatch)
-   *   - On server, uses Irys Node to upload contracts to Irys
-   * - Registers the Contract with Warp
+   * - Creates the process
+   *   - In browser, uses Arweave Wallet to upload process to Irys (via dispatch)
+   *   - On server, uses Irys Node to upload process to Irys
+   * - Registers the Process with SU
    */
   const createProcessLogger = logger.child('createProcess')
   const createProcess = createProcessWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-    deployProcess: IrysClient.deployProcessWith({ fetch, IRYS_NODE, logger }),
-    /**
-     * No need to register in new ao architecture, so just stubbing with an identity
-     * function for now
-     */
-    registerProcess: async ({ processId }) => ({ processId }),
+    deployProcess: IrysClient.deployProcessWith({ fetch, IRYS_NODE, logger: createProcessLogger }),
+    registerProcess: SuClient.registerProcessWith({ fetch, SU_URL, logger: createProcessLogger }),
     logger: createProcessLogger
   })
 

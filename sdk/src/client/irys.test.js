@@ -47,7 +47,8 @@ describe('irys', () => {
 
       assert.deepStrictEqual(res, {
         res: { id: 'process-id-123', foo: 'bar' },
-        processId: 'process-id-123'
+        processId: 'process-id-123',
+        signedDataItem: { id: 'data-item-123', raw: 'raw-buffer' }
       })
     })
   })

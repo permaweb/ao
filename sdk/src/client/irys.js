@@ -53,7 +53,7 @@ export const deployProcessWith = ({ fetch, IRYS_NODE, logger: _logger }) => {
            * See https://docs.irys.xyz/developer-docs/irys-sdk/api/upload
            * for shape
            */
-          .map(res => ({ res, processId: res.id }))
+          .map(res => ({ res, processId: res.id, signedDataItem }))
       )
       .toPromise()
   }

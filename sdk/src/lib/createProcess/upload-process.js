@@ -86,9 +86,18 @@ export function uploadProcessWith (env) {
       .chain(fromPromise(({ data, tags, signer }) =>
         deployProcess({ data, tags, signer: signerSchema.implement(signer) })
       ))
-      .chain(fromPromise(({ processId }) =>
-        registerProcess({ processId })
-      ))
+      /**
+       * TODO: don't really like the deployProcess returning the signedDataItem,
+       * and would instead move signing up one level,
+       * but it's the smallest diff, so keeping it for now.
+       */
+      .chain(({ processId, signedDataItem }) =>
+        of(signedDataItem)
+          .chain(fromPromise((signedDataItem) =>
+            registerProcess(signedDataItem)
+          ))
+          .map(() => ({ processId }))
+      )
       .map(res => assoc('processId', res.processId, ctx))
   }
 }
