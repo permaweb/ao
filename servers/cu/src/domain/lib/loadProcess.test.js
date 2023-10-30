@@ -25,9 +25,12 @@ describe('loadProcess', () => {
         owner: { address: 'woohoo' },
         tags
       }),
-      loadProcessBlock: async (id) => ({
-        block: { height: 123, timestamp: 1697574792000 }
-      }),
+      loadProcessBlock: async (id) => {
+        assert.equal(id, PROCESS)
+        return {
+          block: { height: 123, timestamp: 1697574792000 }
+        }
+      },
       logger
     })
 

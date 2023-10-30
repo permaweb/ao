@@ -186,8 +186,8 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
 }
 
 export const loadProcessBlockWith = ({ fetch, SU_URL }) => {
-  return async (id) => {
-    return fetch(`${SU_URL}/processes/${id}`, { method: 'GET' })
+  return async (processId) => {
+    return fetch(`${SU_URL}/processes/${processId}`, { method: 'GET' })
       .then(res => res.json())
       .then(applySpec({
         block: applySpec({
