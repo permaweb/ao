@@ -2,31 +2,31 @@ use serde::{Serialize, Deserialize};
 
 use crate::domain::{StoreClient};
 
-pub struct ReadMessagePipeline
+pub struct ReadProcessPipeline
 {
     data_store: StoreClient
 }
 
-impl ReadMessagePipeline {
+impl ReadProcessPipeline {
     pub fn new(data_store: StoreClient) -> Self {
-        ReadMessagePipeline {
+        ReadProcessPipeline {
             data_store
         }
     }
 
     pub async fn process(
         &mut self, 
-        message_id: String
+        process_id: String
     ) -> Result<String, String> {
-        self.read_data(message_id)
+        self.read_data(process_id)
             .await
     }
 
     pub async fn read_data(
         &mut self, 
-        message_id: String
+        process_id: String
     ) -> Result<String, String> {
-        let message = self.data_store.get_message(&message_id)?;
-        Ok(serde_json::to_string(&message).unwrap())
+        let process = self.data_store.get_process(&process_id)?;
+        Ok(serde_json::to_string(&process).unwrap())
     }
 }

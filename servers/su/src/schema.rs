@@ -18,6 +18,7 @@ diesel::table! {
         row_id -> Int4,
         #[max_length = 255]
         process_id -> Nullable<Varchar>,
+        process -> Nullable<Jsonb>,
     }
 }
 
