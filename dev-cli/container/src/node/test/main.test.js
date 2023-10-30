@@ -8,7 +8,7 @@ import {
   SUPPORTED_BUNDLERS,
   WalletNotFoundError,
   checkBalanceWith,
-  createContractWith,
+  createProcessWith,
   fundWith,
   uploadWith
 } from '../src/main.js'
@@ -143,26 +143,25 @@ describe('createContractWith', () => {
   const happy = {
     walletExists: async () => true,
     readWallet: async () => ({ id: 'id-123' }),
-    create: async (params) => ({ params, contractId: '123' })
+    create: async (params) => ({ params, processId: '123' })
   }
 
   it('should publish the contract', async () => {
-    const contract = createContractWith(happy)
+    const createProcess = createProcessWith(happy)
 
-    const res = await contract({
+    const res = await createProcess({
       walletPath: '/path/to/wallet.json',
       src: 'src-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
-      ],
-      initialState: JSON.stringify({ hello: 'world' })
+      ]
     })
 
     assert.equal(res, '123')
   })
 
   it('should pass the correct args to create', async () => {
-    const contract = createContractWith({
+    const createProcess = createProcessWith({
       ...happy,
       create: (params) => {
         assert.deepStrictEqual(params, {
@@ -170,26 +169,24 @@ describe('createContractWith', () => {
           tags: [
             { name: 'foo', value: 'bar' }
           ],
-          initialState: { hello: 'world' },
           wallet: { id: 'id-123' }
         })
 
-        return { id: '123' }
+        return { processId: '123' }
       }
     })
 
-    await contract({
+    await createProcess({
       walletPath: '/path/to/wallet.json',
       src: 'src-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
-      ],
-      initialState: JSON.stringify({ hello: 'world' })
+      ]
     })
   })
 
   it('should throw if the wallet does not exist', async () => {
-    const contract = createContractWith({
+    const contract = createProcessWith({
       ...happy,
       walletExists: async () => false
     })
@@ -199,8 +196,7 @@ describe('createContractWith', () => {
       src: 'src-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
-      ],
-      initialState: JSON.stringify({ hello: 'world' })
+      ]
     }).then(assert.fail)
       .catch((err) => assert.equal(err.code, 'WalletNotFound'))
   })

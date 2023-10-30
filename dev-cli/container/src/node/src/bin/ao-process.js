@@ -1,11 +1,11 @@
 #! /usr/bin/env node
 
 import fs from 'node:fs'
-import { createContract, createDataItemSigner } from '@permaweb/ao-sdk'
+import { createProcess, createDataItemSigner } from '@permaweb/ao-sdk'
 
-import { parseTags, createContractWith } from '../main.js'
+import { parseTags, createProcessWith } from '../main.js'
 
-const uploadHyperbeamContract = createContractWith({
+const uploadAoProcess = createProcessWith({
   walletExists: async (path) => fs.existsSync(path),
   /**
    * implement to read the wallet as JSON from the path
@@ -14,10 +14,9 @@ const uploadHyperbeamContract = createContractWith({
   /**
    * implement to create a contract using the ao SDK
    */
-  create: async ({ src, tags, initialState, wallet }) => {
-    return createContract({
+  create: async ({ src, tags, wallet }) => {
+    return createProcess({
       srcId: src,
-      initialState,
       tags,
       signer: createDataItemSigner(wallet)
     }).then((contractId) => ({ contractId }))
@@ -25,7 +24,7 @@ const uploadHyperbeamContract = createContractWith({
 })
 
 /**
- * The ao cli contract command ultimately executes this
+ * The ao cli process command ultimately executes this
  * code.
  *
  * It expects a wallet JWK to be present in the provided directory
@@ -33,11 +32,10 @@ const uploadHyperbeamContract = createContractWith({
  */
 Promise.resolve()
   .then(() =>
-    uploadHyperbeamContract({
+    uploadAoProcess({
       walletPath: process.env.WALLET_PATH,
       src: process.env.CONTRACT_SOURCE_TX,
-      tags: parseTags(process.env.TAGS || ''),
-      initialState: process.env.INITIAL_STATE
+      tags: parseTags(process.env.TAGS || '')
     })
   )
   // log transaction id

@@ -8,15 +8,15 @@
   "bin": {
     "ao-bundler-balance": "src/bin/bundler-balance.js",
     "ao-bundler-fund": "src/bin/bundler-fund.js",
-    "ao-contract": "src/bin/ao-contract.js",
+    "ao-process": "src/bin/ao-process.js",
     "ao-source": "src/bin/ao-source.js"
   },
   "scripts": {
     "test": "node --test"
   },
   "dependencies": {
-    "@irys/sdk": "^0.0.3",
-    "@permaweb/ao-sdk": "0.0.10"
+    "@irys/sdk": "^0.0.4",
+    "@permaweb/ao-sdk": "0.0.11"
   },
   "engines": {
     "node": ">=18"
