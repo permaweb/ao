@@ -185,10 +185,30 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
       .toPromise()
 }
 
+export const loadProcessBlock = ({ fetch, SU_URL }) => {
+  return async (id) => {
+    return fetch(`${SU_URL}/processes/${id}`, { method: 'GET' })
+      .then(res => res.json())
+      .then(applySpec({
+        block: applySpec({
+          height: path(['block', 'height']),
+          /**
+           * SU is currently sending back timestamp in milliseconds,
+           */
+          timestamp: path(['block', 'timestamp'])
+        })
+      }))
+  }
+}
+
 export const loadTimestampWith = ({ fetch, SU_URL }) => {
   return () => fetch(`${SU_URL}/timestamp`)
     .then(res => res.json())
     .then(res => ({
+      /**
+       * TODO: SU currently sends these back as strings
+       * so need to parse them to integers
+       */
       timestamp: parseInt(res.timestamp),
       height: parseInt(res.block_height)
     }))

@@ -183,7 +183,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: {},
+      state: { foo: 'bar' },
       messages: [
         {
           // Will include an error in result.error
@@ -202,7 +202,7 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
-      state: {},
+      state: { foo: 'bar' },
       result: {
         error: { code: 123, message: 'a handled error within the contract' },
         messages: [],
@@ -224,7 +224,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: {},
+      state: { foo: 'bar' },
       messages: [
         {
           // Will intentionally throw from the lua contract
@@ -243,7 +243,7 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
-      state: {},
+      state: { foo: 'bar' },
       result: {
         error: { code: 123, message: 'a thrown error within the contract' },
         messages: [],
@@ -265,7 +265,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: {},
+      state: { foo: 'bar' },
       messages: [
         {
           // Will unintentionally throw from the lua contract
@@ -285,5 +285,63 @@ describe('evaluate', () => {
     console.log(res.output)
     assert.ok(res.output)
     assert.ok(res.output.result.error)
+    assert.deepStrictEqual(res.state, { foo: 'bar' })
+  })
+
+  test('continue evaluating, ignoring output of errored message', async () => {
+    let cacheCount = 0
+    const env = {
+      saveEvaluation: async (evaluation) => {
+        cacheCount++
+        return undefined
+      },
+      logger
+    }
+
+    const evaluate = evaluateWith(env)
+
+    const ctx = {
+      id: 'ctr-1234',
+      from: 'sort-key-start',
+      src: readFileSync('./test/contracts/sad/contract.wasm'),
+      state: { counter: 1 },
+      messages: [
+        {
+          // Will include an error in result.error
+          message: {
+            owner: 'owner-456',
+            tags: {
+              function: 'errorResult'
+            }
+          },
+          sortKey: 'a',
+          AoGlobal: {}
+        },
+        {
+          // Will include an error in result.error
+          message: {
+            owner: 'owner-456',
+            tags: {
+              function: 'counter'
+            }
+          },
+          sortKey: 'a',
+          AoGlobal: {}
+        }
+      ]
+    }
+
+    const res = await evaluate(ctx).toPromise()
+    assert.ok(res.output)
+    assert.deepStrictEqual(res.output, {
+      state: { counter: 2 },
+      result: {
+        error: undefined,
+        messages: [],
+        spawns: [],
+        output: ''
+      }
+    })
+    assert.equal(cacheCount, 1)
   })
 })

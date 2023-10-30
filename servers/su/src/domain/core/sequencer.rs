@@ -51,11 +51,13 @@ impl From<base64_url::base64::DecodeError> for CoreError {
 pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, CoreError> {
     dotenv::dotenv().ok();
 
+    // TODO: move time into its own core module
     let start_time = SystemTime::now();
     let duration = start_time.duration_since(UNIX_EPOCH)?;
     let millis = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
     let millis_string = millis.to_string();
 
+    // TODO: move network to a client or its own core module
     let gateway_url = "https://arweave.net".to_string();
     let url = Url::parse(&gateway_url).unwrap();
 

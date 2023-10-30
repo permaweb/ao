@@ -87,10 +87,8 @@ impl MessagePipeline {
             None => return Err("Upload error occurred.".to_string()),
         };
         
-        let process = Process::from_bundle(build_bundle);
+        
         let mut message = Message::from_bundle(build_bundle);
-
-        self.data_store.save_process(process)?;
 
         let uploaded_tx = self.uploader.upload(build_data.to_vec()).await?;
 

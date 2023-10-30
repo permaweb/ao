@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, aperture, ascend, cond, equals, head, ifElse, length, mergeRight, path, pick, pipe, prop, reduce } from 'ramda'
+import { T, always, aperture, ascend, assoc, cond, equals, head, ifElse, length, mergeRight, path, pick, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -48,6 +48,18 @@ export function parseSchedules ({ tags }) {
     ])(unit)
   }
 
+  function maybeJson (str) {
+    try {
+      return JSON.parse(str)
+    } catch (e) {
+      return str
+    }
+  }
+
+  function tagsToJson (tags) {
+    return reduce((a, t) => assoc(t.name, maybeJson(t.value), a), {})(tags)
+  }
+
   return of(tags)
     .chain(tags => {
       /**
@@ -89,7 +101,15 @@ export function parseSchedules ({ tags }) {
            */
           if (tag.name === SCHEDULED_MESSAGE) {
             const { value, unit, interval } = acc[1].shift()
-            acc[0].push({ value, unit, interval, message: JSON.parse(tag.value) })
+            acc[0].push({
+              value,
+              unit,
+              interval,
+              message: pipe(
+                messageStr => JSON.parse(messageStr),
+                message => assoc('tags', tagsToJson(message.tags), message)
+              )(tag.value)
+            })
           }
           return acc
         },

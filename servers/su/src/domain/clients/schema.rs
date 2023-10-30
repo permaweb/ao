@@ -4,6 +4,7 @@ table! {
     processes (row_id) {
         row_id -> Integer,
         process_id -> Varchar,
+        process_data -> Jsonb,
     }
 }
 

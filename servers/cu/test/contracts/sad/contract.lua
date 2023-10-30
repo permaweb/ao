@@ -16,8 +16,12 @@ local function assoc(prop, val, obj)
   return result
 end
 
+local function counter(state)
+  return assoc('counter', state.counter + 1, state), nil
+end
+
 local function result(res)
-  return assoc('error', { code = 123, message = "a handled error within the contract" }, res)
+  return nil, assoc('error', { code = 123, message = "a handled error within the contract" }, res)
 end
 
 local function throw()
@@ -29,6 +33,7 @@ local function unhandled()
 end
 
 local actions = {}
+actions['counter'] = counter
 actions['errorResult'] = result
 actions['errorThrow'] = throw
 actions['errorUnhandled'] = unhandled
@@ -38,7 +43,9 @@ function contract.handle(state, message, AoGlobal)
 
   if func == nil then return error({ code = 500, message = 'no function tag in the message'}) end
 
-  return { result = actions[func](state, message, AoGlobal) }
+  local newState, newResult = actions[func](state, message, AoGlobal)
+
+  return { state = newState, result = newResult }
 end
 
 return contract

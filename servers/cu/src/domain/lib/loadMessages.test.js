@@ -12,18 +12,21 @@ describe('loadMessages', () => {
   describe('parseSchedules', () => {
     const [action1, action2, action3] = [
       JSON.stringify({
-        function: 'notify',
-        'notify-function': 'transfer',
-        from: 'SIGNERS_WALLET_ADDRESS',
-        qty: '1000'
+        tags: [
+          { name: 'function', value: 'notify' },
+          { name: 'notify-function', value: 'transfer' }
+        ]
       }),
       JSON.stringify({
-        function: 'notify',
-        'notify-function': 'transfer'
+        tags: [
+          { name: 'function', value: 'notify' },
+          { name: 'notify-function', value: 'transfer' }
+        ]
       }),
       JSON.stringify({
-        function: 'transfer',
-        qty: '1000'
+        tags: [
+          { name: 'function', value: 'transfer' }
+        ]
       })
     ]
     test('parses the schedules from the tags', async () => {
@@ -57,21 +60,35 @@ describe('loadMessages', () => {
       assert.deepStrictEqual(blocks, {
         value: 10,
         unit: 'blocks',
-        message: JSON.parse(action1),
+        message: {
+          tags: {
+            'notify-function': 'transfer',
+            function: 'notify'
+          }
+        },
         interval: '10-blocks'
       })
 
       assert.deepStrictEqual(staticTime, {
         value: 600,
         unit: 'seconds',
-        message: JSON.parse(action2),
+        message: {
+          tags: {
+            'notify-function': 'transfer',
+            function: 'notify'
+          }
+        },
         interval: ' 10-minutes '
       })
 
       assert.deepStrictEqual(cron, {
         value: '* 1 * * *',
         unit: 'cron',
-        message: JSON.parse(action3),
+        message: {
+          tags: {
+            function: 'transfer'
+          }
+        },
         interval: '* 1 * * *-cron'
       })
     })
