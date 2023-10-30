@@ -23,7 +23,7 @@ parentPort.on('message', (message) => {
         parentPort.postMessage(`Invalid monitor list for start`)
         process.exit(1);
     } 
-    setInterval(() => processMonitors(), 1000)
+    setTimeout(() => processMonitors(), 1000)
     parentPort.postMessage(`Monitor worker started, monitors: ${message.monitors.length}`)
   } else if (message.label === 'addMonitor') {
     const validationResult = monitorsListSchema.safeParse(message.monitor);
@@ -39,18 +39,28 @@ parentPort.on('message', (message) => {
 
 
 async function processMonitors() {
-    // console.log(monitorList)
     monitorList.map((monitor) => {
-        processMonitor(monitor).then((result) => {
-            parentPort.postMessage({monitor: result, label: 'updateMonitor'})
-        })
+        if(shouldRun(monitor)) {
+          processMonitor(monitor).then((result) => {
+              parentPort.postMessage({monitor: result, label: 'updateMonitor'})
+          })
+        }
     })
 }
 
 async function processMonitor(monitor) {
     let updatedMonitor = monitor
 
-    updatedMonitor
+    
+
+    return updatedMonitor
+}
+
+
+// TODO: check if it has been the interval amount 
+// of time since the last run or the processes block
+function shouldRun(_monitor) {
+  return true
 }
 
 

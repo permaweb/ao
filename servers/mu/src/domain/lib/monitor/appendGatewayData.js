@@ -8,14 +8,16 @@ const ctxSchema = z.object({
 
 export function appendGatewayDataWith({ logger, fetchGatewayProcess }) {
   return (ctx) => {
-    return of(ctx.tx.id)
+    return of(ctx.tx.processId)
       .chain(fromPromise(fetchGatewayProcess))
       .map(assoc('gatewayData', __, ctx))
       .map((updatedCtx) => {
-        const scheduledIntervalObj = updatedCtx.gatewayData.tags.find(obj => obj.name === 'Scheduled-Interval');
+        const scheduledIntervalObj = updatedCtx.gatewayData.node.tags.find(obj => obj.name === 'Scheduled-Interval');
         if(scheduledIntervalObj) {
           updatedCtx.tx["interval"] = scheduledIntervalObj.value;
         }
+        const block = updatedCtx.gatewayData.node.block 
+        updatedCtx.tx["block"] = block
         return updatedCtx;
       })
       .map(ctxSchema.parse)

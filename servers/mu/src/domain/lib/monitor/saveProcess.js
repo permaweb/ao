@@ -11,7 +11,6 @@ const ctxSchema = z.object({
 export function saveWith ({ logger, saveProcessToMonitor }) {
   const save = fromPromise(saveProcessToMonitor)
   return (ctx) => {
-    console.log(ctx.tx)
     return of(ctx.tx)
       .map(assoc("authorized", true, __))
       .map(assoc("lastFromSortKey", null, __))

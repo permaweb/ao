@@ -12,7 +12,7 @@ function runScheduledWith({dbClient, dbInstance, logger}) {
             let monitors = await findLatestMonitors()
             genWorker(monitors)
         } catch(e) {
-            logger.error(e)
+            logger.tap(e)
         }
     }
 }
@@ -23,7 +23,7 @@ function genWorker(monitors) {
   worker.postMessage({monitors: monitors, label: 'start'})
 
   worker.on('message', (result) => {
-      console.log(`Received from worker: ${result}`);
+      // console.log(`Received from worker: ${result}`);
   });
 
   worker.on('error', (error) => {

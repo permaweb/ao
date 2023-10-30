@@ -281,6 +281,7 @@ const monitoredProcessSchema = z.object({
   lastFromSortKey: z.string().optional().nullable(),
   type: z.literal('monitor'),
   interval: z.string().min(1),
+  block: z.any(),
   _rev: z.string().optional(),
   createdAt: z.number()
 })
@@ -288,8 +289,6 @@ const monitoredProcessSchema = z.object({
 function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
   const logger = _logger.child('saveMonitoredProcess')
   return (process) => {
-    console.log('process')
-    console.log(process)
     return of(process)
       .map(applySpec({
         _id: prop('id'),
@@ -297,6 +296,7 @@ function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
         lastFromSortKey: prop('lastFromSortKey'),
         type: always('monitor'),
         interval: prop('interval'),
+        block: prop('block'),
         createdAt: prop('createdAt')
       }))
       .map(monitoredProcessSchema.parse)
@@ -340,6 +340,7 @@ function findLatestMonitorsWith ({ pouchDb }) {
           lastFromSortKey: prop('lastFromSortKey', doc),
           type: prop('type', doc),
           interval: prop('interval', doc),
+          block: prop('block', doc),
           createdAt: prop('createdAt', doc)
         })))
       })

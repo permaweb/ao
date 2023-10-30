@@ -5,9 +5,8 @@ import z from 'zod'
 const ctxSchema = z.object({
   sequencerTx: z.object({
     id: z.string(),
-    sortKey: z.string(),
     timestamp: z.number(),
-    prevSortKey: z.string().nullable().optional()
+    block: z.number()
   })
 }).passthrough()
 

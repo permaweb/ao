@@ -37,7 +37,7 @@ function cacheResultWith ({ fetchResult, saveMsg, findLatestMsgs, saveSpawn }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
   const tryFetchAndSave = (ctx) =>
-    fetchResultAsync(ctx.cuAddress, ctx.tx.id)
+    fetchResultAsync(ctx.tx.id)
       .chain(fetchedResult => {
         const savePromises = fetchedResult.messages.map(msg => {
           return saveMsg({
