@@ -185,7 +185,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
       .toPromise()
 }
 
-export const loadProcessBlock = ({ fetch, SU_URL }) => {
+export const loadProcessBlockWith = ({ fetch, SU_URL }) => {
   return async (id) => {
     return fetch(`${SU_URL}/processes/${id}`, { method: 'GET' })
       .then(res => res.json())
