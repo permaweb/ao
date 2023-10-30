@@ -67,7 +67,7 @@ export const loadMessagesSchema = z.function()
   .returns(z.promise(z.array(messageSchema)))
 
 export const loadProcessBlockSchema = z.function()
-  .args(z.object({ processId: z.string() }))
+  .args(z.string().min(1))
   .returns(z.promise(z.object({ block: rawBlockSchema })))
 
 export const loadTimestampSchema = z.function()

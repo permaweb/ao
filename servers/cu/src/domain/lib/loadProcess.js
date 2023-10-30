@@ -46,18 +46,18 @@ function getProcessMetaWith ({ loadTransactionMeta, loadProcessBlock, findProces
           ])))
           .chain(checkTag('ao-type', equals('process')))
           .chain(checkTag('Contract-Src', isNotNil))
+          .map(always({ id: processId, ...ctx }))
           .bimap(
             logger.tap('Verifying process failed: %s'),
             logger.tap('Verified process. Saving to db...')
           )
-          .map(always({ id: processId, ...ctx }))
       )
       /**
        * Fetch block metadata from SU
        * and merge with the process meta from the gateway
        */
       .chain(process =>
-        loadProcessBlock({ processId })
+        loadProcessBlock(processId)
           .map(mergeRight(process))
       )
       /**
