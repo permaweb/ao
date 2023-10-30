@@ -1,2 +1,2 @@
 ALTER TABLE processes
-ADD COLUMN process jsonb;
+ADD COLUMN process_data jsonb;

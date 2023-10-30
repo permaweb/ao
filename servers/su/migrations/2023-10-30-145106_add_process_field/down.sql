@@ -1,2 +1,2 @@
 ALTER TABLE processes
-DROP COLUMN process;
+DROP COLUMN process_data;

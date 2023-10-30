@@ -4,7 +4,7 @@ const path = require('path')
 globalThis.MU_URL = 'http://localhost:3004';
 const { createDataItemSigner, writeMessage } = require("@permaweb/ao-sdk");
 
-const PROCESS_ID = 'KOwLw7wEZyhgfCpFAcAN1U1uZCbZTs2O-eOgq7yc-co';
+const PROCESS_ID = '1nBRvN1Uww3tuqD9KuLIfGpR1bjFF6Fi48tgOWvm1R0';
 
 (async function () {
   console.log('Testing ao...')
