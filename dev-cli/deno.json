@@ -10,7 +10,8 @@
     "test": "echo 'NOT IMPLEMENTED'",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
     "toc": "deno run -A npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",
-    "install-local": "./tools/local-install.sh"
+    "install-local": "./tools/local-install.sh",
+    "install-latest": "curl -fsSL https://install_ao.g8way.io | bash"
   },
   "fmt": {
     "include": [
