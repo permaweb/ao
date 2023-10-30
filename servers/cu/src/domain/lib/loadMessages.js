@@ -220,9 +220,9 @@ export function scheduleMessagesBetweenWith ({
             if (isBlockOnSchedule({ height: curBlock.height, originHeight: originBlock.height, schedule })) {
               acc.push({
                 message: {
+                  ...schedule.message,
                   owner: processOwner,
-                  target: processId,
-                  tags: schedule.message
+                  target: processId
                 },
                 /**
                  * TODO: don't know if this is correct, but we need something unique for the sortKey
@@ -265,9 +265,9 @@ export function scheduleMessagesBetweenWith ({
               if (isTimestampOnSchedule({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, schedule })) {
                 acc.push({
                   message: {
+                    ...schedule.message,
                     target: processId,
-                    owner: processOwner,
-                    tags: schedule.message
+                    owner: processOwner
                   },
                   /**
                    * TODO: don't know if this is correct, but we need something unique for the sortKey
