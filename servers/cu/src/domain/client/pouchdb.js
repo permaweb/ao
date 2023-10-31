@@ -241,7 +241,7 @@ export function findEvaluationsWith ({ pouchDb }) {
       .chain(fromPromise((selector) => {
         return pouchDb.find({
           selector,
-          sort: [{ _id: 'desc' }],
+          sort: [{ _id: 'asc' }],
           limit: Number.MAX_SAFE_INTEGER
         }).then((res) => {
           if (res.warning) console.warn(res.warning)
