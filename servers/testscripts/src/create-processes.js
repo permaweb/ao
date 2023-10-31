@@ -14,7 +14,6 @@ const { createProcess, createDataItemSigner } = require('@permaweb/ao-sdk');
     const message = {
         "tags": [
           { "name": "function", "value": "eval"},
-          { "name": "target", "value": "myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc"},
           { "name": "expression", "value": 'return send("5c2LCPD_n7blpj-5vFwnl1QOpJQ8-Ar2wzdtRueeOik", { body = "Hello World"})'}
         ]
       }
@@ -24,10 +23,8 @@ const { createProcess, createDataItemSigner } = require('@permaweb/ao-sdk');
         { name: 'inbox', value: JSON.stringify([]) },
         { name: 'prompt', value: ':) ' },
         { name: '_fns', value: JSON.stringify({}) },
-        { name: 'Scheduled-Interval', value: '5-seconds' },
+        { name: 'Scheduled-Interval', value: '5-minutes' },
         { name: 'Scheduled-Message', value: JSON.stringify(message) },
-        { name: 'Scheduled-Interval', value: '10-seconds' },
-        { name: 'Scheduled-Message', value: JSON.stringify(message) }
     ]
 
     await createProcess({

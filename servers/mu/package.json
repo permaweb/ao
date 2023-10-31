@@ -25,6 +25,8 @@
     "debug": "^4.3.4",
     "express": "^4.18.2",
     "hyper-async": "^1.1.2",
+    "pg": "^8.11.3",
+    "pg-promise": "^11.5.4",
     "pouchdb": "^8.0.1",
     "pouchdb-adapter-leveldb": "^8.0.1",
     "pouchdb-find": "^8.0.1",

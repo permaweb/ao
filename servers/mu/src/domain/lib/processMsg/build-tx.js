@@ -10,10 +10,9 @@ export function buildTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
     return of(ctx)
       .chain(fromPromise(() => buildAndSign({
-        data: ctx.cachedMsg.data,
-        processId: ctx.cachedMsg.target,
-        tags: ctx.cachedMsg.tags,
-        anchor: ctx.cachedMsg.anchor
+        processId: ctx.cachedMsg.msg.target,
+        tags: ctx.cachedMsg.msg.tags,
+        anchor: ctx.cachedMsg.msg.anchor
       })))
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)

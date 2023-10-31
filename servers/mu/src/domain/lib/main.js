@@ -9,6 +9,7 @@ import { createContractWith } from './processSpawn/create-contract.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
 import { saveWith } from './monitor/saveProcess.js'
 import { appendGatewayDataWith } from './monitor/appendGatewayData.js'
+import { appendSequencerDataWith } from './monitor/appendSequencerData.js'
 
 /**
  * write the first transaction and fetch its messages
@@ -44,8 +45,6 @@ export function initMsgsWith ({
  * process a single message and return its responses
  */
 export function processMsgWith ({
-  findLatestCacheTx,
-  createDataItem,
   cacheTx,
   selectNode,
   findSequencerTx,
@@ -60,25 +59,16 @@ export function processMsgWith ({
   logger
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger })
-
-  const initMsgs = initMsgsWith({
-    createDataItem,
-    cacheTx,
-    selectNode,
-    findSequencerTx,
-    writeSequencerTx,
-    fetchResult,
-    saveMsg,
-    saveSpawn,
-    findLatestMsgs,
-    findLatestSpawns,
-    logger
-  })
+  const getCuAddress = getCuAddressWith({ selectNode, logger })
+  const cacheAndWriteTx = cacheAndWriteTxWith({ cacheTx, findSequencerTx, writeSequencerTx, logger })
+  const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTx)
-      .chain(initMsgs)
+      .chain(getCuAddress)
+      .chain(cacheAndWriteTx)
+      .chain(fetchAndSaveResult)
   }
 }
 
@@ -120,15 +110,18 @@ export function monitorProcessWith({
   logger,
   createDataItem,
   saveProcessToMonitor,
-  fetchGatewayProcess
+  fetchGatewayProcess,
+  fetchSequencerProcess
 }) {
   const parse = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
   const appendGatewayData = appendGatewayDataWith({logger, fetchGatewayProcess})
+  const appendSequencerData = appendSequencerDataWith({logger, fetchSequencerProcess})
   return (ctx) => {
     return of(ctx)
       .chain(parse)
       .chain(appendGatewayData)
+      .chain(appendSequencerData)
       .chain(save)
   }
 }

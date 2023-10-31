@@ -154,6 +154,7 @@ impl Message {
 }
 
 impl SortedMessages {
+
     pub fn from_messages(messages: Vec<Message>, from: Option<String>, to: Option<String>) -> Self {
         let mut sorted_messages = messages.clone();
         sorted_messages.sort_by(|a, b| {
@@ -167,7 +168,7 @@ impl SortedMessages {
 
         let filtered_messages: Vec<Message> = sorted_messages.into_iter().filter(|message| {
             let message_timestamp = extract_timestamp(&message.sort_key);
-            message_timestamp >= from_timestamp && message_timestamp <= to_timestamp
+            message_timestamp > from_timestamp && message_timestamp <= to_timestamp
         }).collect();
 
         let page_info = PageInfo { has_next_page: false };

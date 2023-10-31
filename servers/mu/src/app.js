@@ -1,4 +1,3 @@
-import { Worker } from 'worker_threads';
 import express from 'express'
 import cors from 'cors'
 import { pipe } from 'ramda'

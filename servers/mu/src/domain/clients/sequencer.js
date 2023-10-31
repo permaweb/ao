@@ -51,6 +51,9 @@ function buildAndSignWith ({ MU_WALLET }) {
       { name: 'SDK', value: 'ao' }
     ]
 
+    console.log('tags')
+    console.log(tags)
+
     const interactionDataItem = createData(data, signer, { target: processId, anchor, tags: allTags })
     await interactionDataItem.sign(signer)
     return {
@@ -89,9 +92,20 @@ function writeContractTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   }
 }
 
+function fetchSequencerProcessWith({SEQUENCER_URL, logger}) {
+  return async (processId) => {
+    logger(`${SEQUENCER_URL}/processes/${processId}`)
+
+    return fetch(`${SEQUENCER_URL}/processes/${processId}`)
+      .then(res => res.json())
+      .then(res => res || {})
+  }
+}
+
 export default {
   writeMessageWith,
   buildAndSignWith,
   findTxWith,
-  writeContractTxWith
+  writeContractTxWith,
+  fetchSequencerProcessWith
 }

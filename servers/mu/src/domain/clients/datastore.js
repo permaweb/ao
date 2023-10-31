@@ -1,13 +1,7 @@
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, head, prop } from 'ramda'
 import z from 'zod'
-import PouchDb from 'pouchdb'
-import PouchDbFind from 'pouchdb-find'
-import NodeLevelDB from 'pouchdb-adapter-leveldb'
 
-PouchDb.plugin(NodeLevelDB)
-PouchDb.plugin(PouchDbFind)
-const internalPouchDb = (dbFile) => new PouchDb(dbFile, { adapter: 'leveldb' })
 
 const cachedTxSchema = z.object({
   _id: z.string().min(1),
@@ -19,7 +13,7 @@ const cachedTxSchema = z.object({
   )
 })
 
-function saveTxWith ({ pouchDb, logger: _logger }) {
+function saveTxWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveTx')
 
   return (tx) => {
@@ -33,7 +27,7 @@ function saveTxWith ({ pouchDb, logger: _logger }) {
       .map(cachedTxSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.get(doc._id)))
+          .chain(fromPromise((doc) => dbInstance.getTx(doc._id)))
           .bichain(
             (err) => {
               if (err.status === 404) {
@@ -51,7 +45,7 @@ function saveTxWith ({ pouchDb, logger: _logger }) {
           .chain((found) =>
             found
               ? of(found)
-              : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
+              : of(doc).chain(fromPromise((doc) => dbInstance.putTx(doc)))
                 .bimap(
                   logger.tap('Encountered an error when caching tx'),
                   logger.tap('Cached tx')
@@ -65,20 +59,12 @@ function saveTxWith ({ pouchDb, logger: _logger }) {
 }
 
 function findLatestTxWith (
-  { pouchDb }
+  { dbInstance }
 ) {
   return ({ id }) => {
     return of({ txId: id })
       .chain(fromPromise(() => {
-        return pouchDb.find({
-          selector: {
-            _id: {
-              $eq: id
-            }
-          },
-          sort: [{ _id: 'desc' }],
-          limit: 1
-        }).then((res) => {
+        return dbInstance.findTx(id).then((res) => {
           if (res.warning) console.warn(res.warning)
           return res.docs
         })
@@ -114,7 +100,7 @@ const cachedMsgSchema = z.object({
   )
 })
 
-function saveMsgWith ({ pouchDb, logger: _logger }) {
+function saveMsgWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveMsg')
   return (msg) => {
     return of(msg)
@@ -128,7 +114,7 @@ function saveMsgWith ({ pouchDb, logger: _logger }) {
       .map(cachedMsgSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.put(doc)))
+          .chain(fromPromise((doc) => dbInstance.putMsg(doc)))
           .bimap(
             logger.tap('Encountered an error when caching msg'),
             logger.tap('Cached msg')
@@ -140,17 +126,17 @@ function saveMsgWith ({ pouchDb, logger: _logger }) {
   }
 }
 
-function updateMsgWith ({ pouchDb, logger: _logger }) {
+function updateMsgWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('updateMsg')
 
   return ({ _id, toTxId }) => {
     return of({ _id })
-      .chain(fromPromise(() => pouchDb.get(_id)))
+      .chain(fromPromise(() => dbInstance.getMsg(_id)))
       .map(doc => ({ ...doc, toTxId }))
       .map(cachedMsgSchema.parse)
       .chain(updatedDoc =>
         of(updatedDoc)
-          .chain(fromPromise(() => pouchDb.put(updatedDoc)))
+          .chain(fromPromise(() => dbInstance.putMsg(updatedDoc)))
           .bimap(
             logger.tap('Encountered an error when updating msg'),
             logger.tap('Updated msg')
@@ -162,19 +148,11 @@ function updateMsgWith ({ pouchDb, logger: _logger }) {
   }
 }
 
-function findLatestMsgsWith ({ pouchDb }) {
+function findLatestMsgsWith ({ dbInstance }) {
   return ({ fromTxId }) => {
     return of({ fromTxId })
       .chain(fromPromise(() => {
-        return pouchDb.find({
-          selector: {
-            fromTxId: {
-              $eq: fromTxId
-            },
-            type: 'message'
-          },
-          sort: [{ _id: 'desc' }]
-        }).then((res) => {
+        return dbInstance.findMsgs(fromTxId).then((res) => {
           if (res.warning) console.warn(res.warning)
           return res.docs
         })
@@ -211,7 +189,7 @@ const cachedSpawnSchema = z.object({
   )
 })
 
-function saveSpawnWith ({ pouchDb, logger: _logger }) {
+function saveSpawnWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('spawn')
   return (spawn) => {
     return of(spawn)
@@ -225,7 +203,7 @@ function saveSpawnWith ({ pouchDb, logger: _logger }) {
       .map(cachedSpawnSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.put(doc)))
+          .chain(fromPromise((doc) => dbInstance.putSpawn(doc)))
           .bimap(
             logger.tap('Encountered an error when caching spawn'),
             logger.tap('Cached spawn')
@@ -237,19 +215,11 @@ function saveSpawnWith ({ pouchDb, logger: _logger }) {
   }
 }
 
-function findLatestSpawnsWith ({ pouchDb }) {
+function findLatestSpawnsWith ({ dbInstance }) {
   return ({ fromTxId }) => {
     return of({ fromTxId })
       .chain(fromPromise(() => {
-        return pouchDb.find({
-          selector: {
-            fromTxId: {
-              $eq: fromTxId
-            },
-            type: 'spawn'
-          },
-          sort: [{ _id: 'desc' }]
-        }).then((res) => {
+        return dbInstance.findSpawns(fromTxId).then((res) => {
           if (res.warning) console.warn(res.warning)
           return res.docs
         })
@@ -286,7 +256,7 @@ const monitoredProcessSchema = z.object({
   createdAt: z.number()
 })
 
-function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
+function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveMonitoredProcess')
   return (process) => {
     return of(process)
@@ -302,7 +272,7 @@ function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
       .map(monitoredProcessSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.put(doc)))
+          .chain(fromPromise((doc) => dbInstance.putMonitor(doc)))
           .bimap(
             logger.tap('Encountered an error when caching monitored process'),
             logger.tap('Cached monitor')
@@ -314,15 +284,11 @@ function saveMonitoredProcessWith ({ pouchDb, logger: _logger }) {
   }
 }
 
-function findLatestMonitorsWith ({ pouchDb }) {
+function findLatestMonitorsWith ({ dbInstance }) {
   return () => {
     return of({})
       .chain(fromPromise(() => {
-        return pouchDb.find({
-          selector: {
-            type: 'monitor'
-          }
-        }).then((res) => {
+        return dbInstance.findMonitors().then((res) => {
           if (res.warning) console.warn(res.warning)
           return res.docs
         })
@@ -350,7 +316,6 @@ function findLatestMonitorsWith ({ pouchDb }) {
 
 
 export default {
-  pouchDb: internalPouchDb,
   cachedTxSchema,
   cachedMsgSchema,
   saveTxWith,

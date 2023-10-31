@@ -16,8 +16,6 @@ export function appendGatewayDataWith({ logger, fetchGatewayProcess }) {
         if(scheduledIntervalObj) {
           updatedCtx.tx["interval"] = scheduledIntervalObj.value;
         }
-        const block = updatedCtx.gatewayData.node.block 
-        updatedCtx.tx["block"] = block
         return updatedCtx;
       })
       .map(ctxSchema.parse)

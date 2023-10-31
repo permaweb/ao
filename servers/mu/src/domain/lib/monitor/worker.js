@@ -1,6 +1,18 @@
 import { parentPort } from 'worker_threads';
 
 import { z } from 'zod';
+import { createApis, domainConfigSchema, createLogger } from '../../index.js';
+import { config } from '../../../config.js'
+
+const logger = createLogger('ao-mu-worker')
+
+const apiCtx = {
+  ...(domainConfigSchema.parse(config)),
+  fetch,
+  logger
+}
+
+let apis = createApis(apiCtx)
 
 const monitorSchema = z.object({
   id: z.string(),
@@ -51,7 +63,8 @@ async function processMonitors() {
 async function processMonitor(monitor) {
     let updatedMonitor = monitor
 
-    
+    console.log(monitor)
+    console.log(apis)
 
     return updatedMonitor
 }
