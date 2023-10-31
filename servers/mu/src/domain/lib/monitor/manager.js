@@ -5,22 +5,20 @@
 
 import { Worker } from 'worker_threads'
 
-function runScheduledWith({dbClient, dbInstance, logger}) {
-    const findLatestMonitors = dbClient.findLatestMonitorsWith({pouchDb: dbInstance, logger})
+function runScheduledWith() {
     return async () => {
         try{
-            let monitors = await findLatestMonitors()
-            genWorker(monitors)
+            genWorker()
         } catch(e) {
-            logger.tap(e)
+            console.log(e)
         }
     }
 }
 
-function genWorker(monitors) {
+function genWorker() {
   const worker = new Worker('./src/domain/lib/monitor/worker.js');
 
-  worker.postMessage({monitors: monitors, label: 'start'})
+  worker.postMessage({label: 'start'})
 
   worker.on('message', (result) => {
       // console.log(`Received from worker: ${result}`);

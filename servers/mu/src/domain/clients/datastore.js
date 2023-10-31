@@ -92,7 +92,6 @@ const cachedMsgSchema = z.object({
   fromTxId: z.string().min(1),
   toTxId: z.string().min(1).nullable().optional(),
   msg: z.any(),
-  type: z.literal('message'),
   _rev: z.string().optional(),
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
@@ -108,7 +107,6 @@ function saveMsgWith ({ dbInstance, logger: _logger }) {
         _id: prop('id'),
         fromTxId: prop('fromTxId'),
         msg: prop('msg'),
-        type: always('message'),
         cachedAt: prop('cachedAt')
       }))
       .map(cachedMsgSchema.parse)
@@ -181,7 +179,6 @@ const cachedSpawnSchema = z.object({
   fromTxId: z.string().min(1),
   toTxId: z.string().min(1).nullable().optional(),
   spawn: z.any(),
-  type: z.literal('spawn'),
   _rev: z.string().optional(),
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
@@ -197,7 +194,6 @@ function saveSpawnWith ({ dbInstance, logger: _logger }) {
         _id: prop('id'),
         fromTxId: prop('fromTxId'),
         spawn: prop('spawn'),
-        type: always('spawn'),
         cachedAt: prop('cachedAt')
       }))
       .map(cachedSpawnSchema.parse)
@@ -249,7 +245,6 @@ const monitoredProcessSchema = z.object({
   // is this monitored process authorized to run by the server (is it funded)
   authorized: z.boolean(),
   lastFromSortKey: z.string().optional().nullable(),
-  type: z.literal('monitor'),
   interval: z.string().min(1),
   block: z.any(),
   _rev: z.string().optional(),
@@ -264,7 +259,6 @@ function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
         _id: prop('id'),
         authorized: prop('authorized'),
         lastFromSortKey: prop('lastFromSortKey'),
-        type: always('monitor'),
         interval: prop('interval'),
         block: prop('block'),
         createdAt: prop('createdAt')
@@ -304,7 +298,6 @@ function findLatestMonitorsWith ({ dbInstance }) {
           id: prop('_id', doc),
           authorized: prop('authorized', doc),
           lastFromSortKey: prop('lastFromSortKey', doc),
-          type: prop('type', doc),
           interval: prop('interval', doc),
           block: prop('block', doc),
           createdAt: prop('createdAt', doc)

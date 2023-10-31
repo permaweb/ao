@@ -1,8 +1,11 @@
-import { parentPort } from 'worker_threads';
+import { parentPort } from 'worker_threads'
+import { of } from 'hyper-async'
+import { z } from 'zod'
 
-import { z } from 'zod';
-import { createApis, domainConfigSchema, createLogger } from '../../index.js';
+import { createApis, domainConfigSchema, createLogger } from '../../index.js'
 import { config } from '../../../config.js'
+import { dataStoreClient } from '../../index.js'
+import { dbInstance } from '../../index.js'
 
 const logger = createLogger('ao-mu-worker')
 
@@ -18,32 +21,21 @@ const monitorSchema = z.object({
   id: z.string(),
   authorized: z.boolean(),
   lastFromSortKey: z.nullable(z.string()), 
-  type: z.literal('monitor'), 
   interval: z.string(), 
+  block: z.any(),
   createdAt: z.number(), 
 });
 
-const monitorsListSchema = z.array(monitorSchema);
+const monitorsListSchema = z.array(monitorSchema)
 
-let monitorList = []
+const findLatestMonitors = dataStoreClient.findLatestMonitorsWith({dbInstance, logger})
+const saveMsg = dataStoreClient.saveMsgWith({dbInstance, logger})
+const findLatestMsgs = dataStoreClient.findLatestMsgsWith({dbInstance, logger})
 
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    monitorList = message.monitors
-    const validationResult = monitorsListSchema.safeParse(monitorList);
-    if (!validationResult.success) {
-        parentPort.postMessage(`Invalid monitor list for start`)
-        process.exit(1);
-    } 
     setTimeout(() => processMonitors(), 1000)
-    parentPort.postMessage(`Monitor worker started, monitors: ${message.monitors.length}`)
-  } else if (message.label === 'addMonitor') {
-    const validationResult = monitorsListSchema.safeParse(message.monitor);
-    if (!validationResult.success) {
-        parentPort.postMessage(`Invalid monitor added to worker`)
-    } 
-    monitorList.push(message.monitor)
-    parentPort.postMessage(`New monitor added to worker: ${message.monitor.id}`)
+    parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
   }
@@ -51,22 +43,60 @@ parentPort.on('message', (message) => {
 
 
 async function processMonitors() {
-    monitorList.map((monitor) => {
-        if(shouldRun(monitor)) {
-          processMonitor(monitor).then((result) => {
-              parentPort.postMessage({monitor: result, label: 'updateMonitor'})
-          })
-        }
-    })
+  let monitorList = await findLatestMonitors()
+  const validationResult = monitorsListSchema.safeParse(monitorList);
+  if (!validationResult.success) {
+    console.log(`Invalid monitor list for start`)
+    parentPort.postMessage(`Invalid monitor list for start`)
+    process.exit(1);
+  } 
+  monitorList.map((monitor) => {
+      if(shouldRun(monitor)) {
+        processMonitor(monitor).then((result) => {
+            console.log(result)
+        })
+      }
+  })
+}
+
+async function fetchScheduled(monitor) {
+  let lastFromSortKey = monitor.lastFromSortKey;
+    let requestUrl =`${config.CU_URL}/scheduled/${monitor.id}`
+    if(lastFromSortKey) {
+      requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromSortKey}`
+    }
+    let scheduled = await (await fetch(requestUrl)).json()
+    return scheduled
 }
 
 async function processMonitor(monitor) {
-    let updatedMonitor = monitor
+    let scheduled = await fetchScheduled(monitor)
+    let fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
 
-    console.log(monitor)
-    console.log(apis)
+    const savePromises = scheduled.map(msg => {
+      return saveMsg({
+        id: Math.floor(Math.random() * 1e18).toString(),
+        fromTxId: fromTxId,
+        msg,
+        cachedAt: new Date()
+      })
+    })
 
-    return updatedMonitor
+    await Promise.all(savePromises)
+    let dbMsgs = await findLatestMsgs({fromTxId})
+
+    await of(dbMsgs)
+      .map(dbMsgs => ({ msgs: dbMsgs, spawns: [] }))
+      .chain(res =>
+        apis.crankMsgs(res)
+          .bimap(
+            logger.tap('Failed to crank messages'),
+            logger.tap('Successfully cranked messages')
+          )
+      )
+      .toPromise()
+
+    return {status: 'ok'}
 }
 
 

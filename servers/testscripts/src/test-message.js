@@ -7,7 +7,7 @@ globalThis.SU_URL = "http://localhost:9000"
 
 const { createDataItemSigner, writeMessage } = require("@permaweb/ao-sdk")
 
-const PROCESS_ID = 'PLlYObtosMR0IhAGtNnsybcVetDH8WOoyBKLveCvDO0';
+const PROCESS_ID = 'WQzqTZuL40YOa7gQYo1SwABuNkGuBtmBLEHaL_ZWXrw';
 
 (async function () {
   console.log('Testing ao...')
@@ -23,7 +23,7 @@ const PROCESS_ID = 'PLlYObtosMR0IhAGtNnsybcVetDH8WOoyBKLveCvDO0';
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'ao-type', value: 'message' },
         { name: 'function', value: 'eval' },
-        { name: 'expression', value: 'return send("8XaMBQMi_76qnj0631Io4UVgZql58D9rI6l2d4SYxNQ", { body = "Hello World"})' }
+        { name: 'expression', value: 'return send("feOEvFn5N8KxXjmHTGWQ26l_39Cm1_uEo4SiSil7cZU", { body = "Hello World"})' }
       ],
       signer: createDataItemSigner(wallet)
     }).then(console.log)

@@ -59,8 +59,13 @@ async function fetchById(id) {
 
     const response = await arweave.api.post('/graphql', query)
 
+    console.log(query)
+    console.log(response)
+
     if(response.data.data) {
+        console.log(response.data.data)
         if(response.data.data.transactions.edges.length > 0) {
+            console.log(response.data.data.transactions)
             return response.data.data.transactions.edges[0]
         }
     }

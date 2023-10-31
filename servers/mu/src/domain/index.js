@@ -13,6 +13,9 @@ import runScheduledWith from './lib/monitor/manager.js'
 
 const { DataItem } = warpArBundles
 
+export { dataStoreClient }
+export { dbInstance }
+
 const createDataItem = (raw) => new DataItem(raw)
 
 import { createLogger } from './logger.js'

@@ -3,11 +3,9 @@ import pgPromise from 'pg-promise';
 const pgp = pgPromise();
 const db = pgp(process.env.MU_DATABASE_URL);
 
-console.log('db url')
-console.log(process.env.MU_DATABASE_URL)
 export async function getTx(id) {
     try {
-      const result = await db.oneOrNone('SELECT * FROM transactions WHERE _id = $1', [id]);
+      const result = await db.oneOrNone('SELECT * FROM "transactions" WHERE "_id" = $1', [id]);
       if (result) {
         return result;
       }
@@ -20,7 +18,7 @@ export async function getTx(id) {
 export async function putTx(doc) {
     try {
       await db.none(
-        'INSERT INTO transactions (_id, data, processId, cachedAt) VALUES ($1, $2, $3, $4)',
+        'INSERT INTO "transactions" ("_id", "data", "processId", "cachedAt") VALUES ($1, $2, $3, $4)',
         [doc._id, JSON.stringify(doc.data), doc.processId, doc.cachedAt]
       );
       return doc;
@@ -28,22 +26,20 @@ export async function putTx(doc) {
       throw error;
     }
 }
-  
 
 export async function findTx(id) {
     try {
-        const docs = await db.any('SELECT * FROM transactions WHERE _id = $1', [id]);
+        const docs = await db.any('SELECT * FROM "transactions" WHERE "_id" = $1', [id]);
         return { docs };
     } catch (error) {
         throw error;
     }
 }
 
-
 export async function putMsg(doc) {
     try {
         await db.none(
-            'INSERT INTO messages (_id, fromTxId, toTxId, msg, cachedAt) VALUES ($1, $2, $3, $4, $5)',
+            'INSERT INTO "messages" ("_id", "fromTxId", "toTxId", "msg", "cachedAt") VALUES ($1, $2, $3, $4, $5)',
             [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.msg), doc.cachedAt]
         );
         return doc;
@@ -52,10 +48,9 @@ export async function putMsg(doc) {
     }
 }
 
-
 export async function getMsg(id) {
     try {
-        const result = await db.oneOrNone('SELECT * FROM messages WHERE _id = $1', [id]);
+        const result = await db.oneOrNone('SELECT * FROM "messages" WHERE "_id" = $1', [id]);
         if (result) {
             return result;
         }
@@ -65,11 +60,20 @@ export async function getMsg(id) {
     }
 }
 
+export async function findMsgs(fromTxId) {
+    try {
+        const docs = await db.any('SELECT * FROM "messages" WHERE "fromTxId" = $1', [fromTxId]);
+        return { docs };
+    } catch (error) {
+        throw error;
+    }
+}
+
 
 export async function putSpawn(doc) {
     try {
         await db.none(
-            'INSERT INTO spawns (_id, fromTxId, toTxId, spawn, cachedAt) VALUES ($1, $2, $3, $4, $5)',
+            'INSERT INTO "spawns" ("_id", "fromTxId", "toTxId", "spawn", "cachedAt") VALUES ($1, $2, $3, $4, $5)',
             [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.spawn), doc.cachedAt]
         );
         return doc;
@@ -78,21 +82,19 @@ export async function putSpawn(doc) {
     }
 }
 
-
 export async function findSpawns(fromTxId) {
     try {
-        const docs = await db.any('SELECT * FROM spawns WHERE fromTxId = $1', [fromTxId]);
+        const docs = await db.any('SELECT * FROM "spawns" WHERE "fromTxId" = $1', [fromTxId]);
         return { docs };
     } catch (error) {
         throw error;
     }
 }
 
-
 export async function putMonitor(doc) {
     try {
         await db.none(
-            'INSERT INTO monitored_processes (_id, authorized, lastFromSortKey, interval, block, createdAt) VALUES ($1, $2, $3, $4, $5, $6)',
+            'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromSortKey", "interval", "block", "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
             [doc._id, doc.authorized, doc.lastFromSortKey, doc.interval, JSON.stringify(doc.block), doc.createdAt]
         );
         return doc;
@@ -101,11 +103,16 @@ export async function putMonitor(doc) {
     }
 }
 
-
 export async function findMonitors() {
     try {
-        const docs = await db.any('SELECT * FROM monitored_processes');
-        return { docs };
+        const docs = await db.any('SELECT * FROM "monitored_processes"');
+        
+        const convertedDocs = docs.map(doc => ({
+            ...doc,
+            createdAt: parseInt(doc.createdAt)
+        }));
+        
+        return { docs: convertedDocs };
     } catch (error) {
         throw error;
     }
@@ -117,6 +124,7 @@ export default {
   findTx,
   putMsg,
   getMsg,
+  findMsgs,
   putSpawn,
   findSpawns,
   putMonitor,

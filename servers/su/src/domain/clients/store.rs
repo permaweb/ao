@@ -70,6 +70,8 @@ impl StoreClient {
     pub fn save_message(&mut self, message: &Message) -> Result<TransactionId, DepError> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.connection;
+
+        println!("{:?}", message);
     
         let new_message = NewMessage {
             process_id: &message.process_id,
