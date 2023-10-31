@@ -65,19 +65,26 @@ async function fetchScheduled(monitor) {
     if(lastFromSortKey) {
       requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromSortKey}`
     }
+    console.log(requestUrl)
     let scheduled = await (await fetch(requestUrl)).json()
     return scheduled
 }
 
 async function processMonitor(monitor) {
-    let scheduled = await fetchScheduled(monitor)
+    let scheduledList = await fetchScheduled(monitor)
+    let scheduled = scheduledList.reverse()
+
+    if(scheduled.length < 1) return;
+
     let fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
 
     const savePromises = scheduled.map(msg => {
+      const msgWithoutScheduledSortKey = { ...msg };
+      delete msgWithoutScheduledSortKey.scheduledSortKey;
       return saveMsg({
         id: Math.floor(Math.random() * 1e18).toString(),
         fromTxId: fromTxId,
-        msg,
+        msg: msgWithoutScheduledSortKey,
         cachedAt: new Date()
       })
     })
@@ -95,6 +102,12 @@ async function processMonitor(monitor) {
           )
       )
       .toPromise()
+
+    let lastScheduled = scheduled[scheduled.length - 1]
+
+    monitor.lastFromSortKey = lastScheduled.scheduledSortKey
+
+    console.log(monitor)
 
     return {status: 'ok'}
 }
