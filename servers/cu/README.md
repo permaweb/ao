@@ -31,6 +31,8 @@ There are a few environment variables that you can set:
 - `SEQUENCER_URL`: Which Sequencer to use (defaults to the `Warp` Gateway in
   development mode)
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
+- `DB_PATH`: where on the local filesystem to place the PouchDB, which is used for persistence. Defaults to `./ao-cache`
+- `DB_MAX_LISTENERS`: the maximum number of event listeners for DB events. Defaults to `100`
 
 ## Tests
 

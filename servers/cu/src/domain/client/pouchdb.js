@@ -12,12 +12,14 @@ import { evaluationSchema, processSchema } from '../model.js'
  * An implementation of the db client using pouchDB
  */
 
-PouchDb.plugin(LevelDb)
-PouchDb.plugin(PouchDbFind)
-const internalPouchDb = new PouchDb('ao-cache', { adapter: 'leveldb' })
-PouchDb.setMaxListeners(50)
+export function createPouchDbClient ({ maxListeners, path }) {
+  PouchDb.plugin(LevelDb)
+  PouchDb.plugin(PouchDbFind)
+  const internalPouchDb = new PouchDb(path, { adapter: 'leveldb' })
+  PouchDb.setMaxListeners(maxListeners)
 
-export { internalPouchDb as pouchDb }
+  return internalPouchDb
+}
 
 const processDocSchema = z.object({
   _id: processSchema.shape.id,
@@ -239,7 +241,7 @@ export function findEvaluationsWith ({ pouchDb }) {
       .chain(fromPromise((selector) => {
         return pouchDb.find({
           selector,
-          sort: [{ _id: 'desc' }],
+          sort: [{ _id: 'asc' }],
           limit: Number.MAX_SAFE_INTEGER
         }).then((res) => {
           if (res.warning) console.warn(res.warning)

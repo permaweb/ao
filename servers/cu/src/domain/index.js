@@ -11,14 +11,16 @@ import { readScheduledMessagesWith } from './readScheduledMessages.js'
 export { createLogger } from './logger.js'
 
 export const createApis = (ctx) => {
+  const pouchDb = PouchDbClient.createPouchDbClient({ maxListeners: ctx.DB_MAX_LISTENERS, path: ctx.DB_PATH })
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: logger.child('gateway') }),
-    findProcess: PouchDbClient.findProcessWith({ pouchDb: PouchDbClient.pouchDb, logger }),
-    saveProcess: PouchDbClient.saveProcessWith({ pouchDb: PouchDbClient.pouchDb, logger }),
-    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb: PouchDbClient.pouchDb, logger }),
-    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb: PouchDbClient.pouchDb, logger }),
+    findProcess: PouchDbClient.findProcessWith({ pouchDb, logger }),
+    saveProcess: PouchDbClient.saveProcessWith({ pouchDb, logger }),
+    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb, logger }),
+    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
     loadProcessBlock: AoSuClient.loadProcessBlockWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, pageSize: 50, logger }),
@@ -48,7 +50,7 @@ export const createApis = (ctx) => {
   const readScheduledMessagesLogger = ctx.logger.child('readScheduledMessages')
   const readScheduledMessages = readScheduledMessagesWith({
     ...sharedDeps(readScheduledMessagesLogger),
-    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb: PouchDbClient.pouchDb, logger: readScheduledMessagesLogger })
+    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readScheduledMessagesLogger })
   })
 
   return { readState, readResult, readScheduledMessages }
