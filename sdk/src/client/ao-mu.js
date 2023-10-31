@@ -25,17 +25,15 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
     return of(args)
       /**
        * Sign with the provided signer
-       * and attach to context
        */
       .chain(
-        args => of(args)
-          .chain(fromPromise(({ processId, data, tags, anchor, signer }) =>
-            /**
-             * The processId is the target set on the data item
-             * See https://specs.g8way.io/?tx=xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw
-             */
-            signer({ data, tags, target: processId, anchor }))
-          )
+        fromPromise(({ processId, data, tags, anchor, signer }) =>
+        /**
+         * The processId is the target set on the data item
+         * See https://specs.g8way.io/?tx=xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw
+         */
+          signer({ data, tags, target: processId, anchor }))
+
       )
       .chain(signedDataItem =>
         of(signedDataItem)

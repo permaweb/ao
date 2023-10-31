@@ -2,15 +2,12 @@ import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as SuClient from './client/ao-su.js'
 import * as GatewayClient from './client/gateway.js'
-import * as IrysClient from './client/irys.js'
-
 import { createLogger } from './logger.js'
 
 import { readStateWith } from './lib/readState/index.js'
 import { writeMessageWith } from './lib/writeMessage/index.js'
 import { createProcessWith } from './lib/createProcess/index.js'
 
-const IRYS_NODE = globalThis.IRYS_NODE || globalThis.BUNDLR_NODE || 'node2'
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-2.onrender.com'
 const CU_URL = globalThis.CU_URL || 'https://ao-cu-2.onrender.com'
@@ -53,8 +50,7 @@ export function buildSdk () {
   const createProcessLogger = logger.child('createProcess')
   const createProcess = createProcessWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-    deployProcess: IrysClient.deployProcessWith({ fetch, IRYS_NODE, logger: createProcessLogger }),
-    registerProcess: SuClient.registerProcessWith({ fetch, SU_URL, logger: createProcessLogger }),
+    deployProcess: SuClient.deployProcessWith({ fetch, SU_URL, logger: createProcessLogger }),
     logger: createProcessLogger
   })
 

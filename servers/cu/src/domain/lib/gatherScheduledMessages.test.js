@@ -5,8 +5,8 @@ import assert from 'node:assert'
 import { gatherScheduledMessagesWith } from './gatherScheduledMessages.js'
 
 describe('gatherScheduledMessages', () => {
-  test('should filter down to only the scheduled messages and append to ctx', async () => {
-    const scheduledSortKey = 'block-123,time-456,hash-789,10_blocks1'
+  test('should filter down to only the scheduled outbox messages, attach the scheduledSortKey to each outbox message, and append to ctx', async () => {
+    const scheduledSortKey = 'block-123,time-456,hash-789,idx1-10-blocks'
     const notScheduledSortKey = 'block-123,time-456,hash-789'
 
     const mockEval = {
@@ -59,8 +59,11 @@ describe('gatherScheduledMessages', () => {
     assert(res.messages)
     assert.equal(res.messages.length, 3)
     const [one, two, five] = res.messages
+    assert.equal(one.scheduledSortKey, scheduledSortKey)
     assert.equal(one.foo, '1')
+    assert.equal(two.scheduledSortKey, scheduledSortKey)
     assert.equal(two.fizz, '2')
     assert.equal(five.foo, '5')
+    assert.equal(five.scheduledSortKey, scheduledSortKey)
   })
 })

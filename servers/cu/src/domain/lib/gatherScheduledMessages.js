@@ -1,6 +1,6 @@
 import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { compose, filter, map, mergeRight, pathOr, transduce } from 'ramda'
+import { assoc, compose, filter, map, mergeRight, pathOr, pipe, transduce } from 'ramda'
 
 import { findEvaluationsSchema } from '../dal.js'
 
@@ -43,7 +43,18 @@ export function gatherScheduledMessagesWith (env) {
              * and so can be distinguished by how many parts after splitting on ','
              */
             filter(evaluation => evaluation.sortKey.split(',').length > 3),
-            map(pathOr([], ['output', 'result', 'messages']))
+            map(evaluation => pipe(
+              /**
+               * Extract the Outbox Messages as a result of evaluating the Scheduled Message
+               */
+              pathOr([], ['output', 'result', 'messages']),
+              /**
+               * The MU will need to know where to start from, so we attach the Scheduled Message's
+               * "sortKey" to each of its Outbox Messages, for the MU to keep track of where it has subscribed
+               * up to
+               */
+              map(assoc('scheduledSortKey', evaluation.sortKey))
+            )(evaluation))
           ),
           (acc, messages) => {
             acc.push.apply(acc, messages)

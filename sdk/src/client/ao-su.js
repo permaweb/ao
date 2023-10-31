@@ -14,11 +14,15 @@ import { Rejected, fromPromise, of } from 'hyper-async'
  * @param {Env3} env
  * @returns {RegisterProcess}
  */
-export function registerProcessWith ({ fetch, SU_URL, logger: _logger }) {
-  const logger = _logger.child('deployMessage')
+export function deployProcessWith ({ fetch, SU_URL, logger: _logger }) {
+  const logger = _logger.child('deployProcess')
 
   return (args) => {
     return of(args)
+      /**
+       * Sign with the provided signer
+       */
+      .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
       .chain(signedDataItem =>
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
@@ -34,7 +38,7 @@ export function registerProcessWith ({ fetch, SU_URL, logger: _logger }) {
               }
             )
           )).bichain(
-            err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
+            err => Rejected(new Error(`Error while communicating with SU: ${JSON.stringify(err)}`)),
             fromPromise(
               async res => {
                 if (res.ok) return res.json()
@@ -43,10 +47,10 @@ export function registerProcessWith ({ fetch, SU_URL, logger: _logger }) {
             )
           )
           .bimap(
-            logger.tap('Error encountered when writing message via MU'),
-            logger.tap('Successfully wrote message via MU')
+            logger.tap('Error encountered when deploying process via SU'),
+            logger.tap('Successfully deployed process via SU')
           )
-          .map(res => ({ res }))
+          .map(res => ({ res, processId: signedDataItem.id }))
       )
       .toPromise()
   }

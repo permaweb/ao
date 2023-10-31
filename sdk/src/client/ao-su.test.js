@@ -2,17 +2,17 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { registerProcessSchema } from '../dal.js'
-import { registerProcessWith } from './ao-su.js'
+import { deployProcessWith } from './ao-su.js'
+import { deployProcessSchema, signerSchema } from '../dal.js'
 
 const SU_URL = globalThis.SU_URL || 'https://su.foo'
 const logger = createLogger('@permaweb/ao-sdk:createProcess')
 
 describe('ao-su', () => {
-  describe('registerContractWith', () => {
+  describe('deployProcessWith', () => {
     test('register the contract, and return the id', async () => {
-      const registerProcess = registerProcessSchema.implement(
-        registerProcessWith({
+      const deployProcess = deployProcessSchema.implement(
+        deployProcessWith({
           SU_URL,
           logger,
           fetch: async (url, options) => {
@@ -31,7 +31,19 @@ describe('ao-su', () => {
         })
       )
 
-      await registerProcess({ id: 'process-123', raw: 'raw-buffer' })
+      await deployProcess({
+        data: '1234',
+        tags: [{ name: 'foo', value: 'bar' }],
+        signer: signerSchema.implement(
+          async ({ data, tags }) => {
+            assert.ok(data)
+            assert.deepStrictEqual(tags, [
+              { name: 'foo', value: 'bar' }
+            ])
+            return { id: 'data-item-123', raw: 'raw-buffer' }
+          }
+        )
+      })
     })
   })
 })
