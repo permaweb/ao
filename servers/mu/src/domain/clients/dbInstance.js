@@ -93,11 +93,38 @@ export async function findSpawns(fromTxId) {
 
 export async function putMonitor(doc) {
     try {
-        await db.none(
-            'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromSortKey", "interval", "block", "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
-            [doc._id, doc.authorized, doc.lastFromSortKey, doc.interval, JSON.stringify(doc.block), doc.createdAt]
-        );
-        return doc;
+        const { _id, lastFromSortKey } = doc;
+
+        const existingMonitor = await db.oneOrNone('SELECT * FROM "monitored_processes" WHERE "_id" = $1', [_id]);
+
+        if (existingMonitor) {
+            await db.none(
+                'UPDATE "monitored_processes" SET "lastFromSortKey" = $1 WHERE "_id" = $2',
+                [lastFromSortKey, _id]
+            );
+            return doc;
+        } else {
+            await db.none(
+                'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromSortKey", "interval", "block", "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
+                [doc._id, doc.authorized, doc.lastFromSortKey, doc.interval, JSON.stringify(doc.block), doc.createdAt]
+            );
+            return doc;
+        }
+    } catch (error) {
+        throw error;
+    }
+}
+
+export async function getMonitor(id) {
+    try {
+        const result = await db.oneOrNone('SELECT * FROM "monitored_processes" WHERE "_id" = $1', [id]);
+        if (result) {
+            return {
+                ...result,
+                createdAt: parseInt(result.createdAt)
+            };
+        }
+        throw { status: 404, message: 'Monitored process not found' };
     } catch (error) {
         throw error;
     }
@@ -124,6 +151,7 @@ export default {
   findTx,
   putMsg,
   getMsg,
+  getMonitor,
   findMsgs,
   putSpawn,
   findSpawns,

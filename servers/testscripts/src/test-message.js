@@ -7,7 +7,7 @@ globalThis.SU_URL = "http://localhost:9000"
 
 const { createDataItemSigner, writeMessage } = require("@permaweb/ao-sdk")
 
-const PROCESS_ID = 'WQzqTZuL40YOa7gQYo1SwABuNkGuBtmBLEHaL_ZWXrw';
+const PROCESS_ID = '8mSD-DQd8Kac6vfMQhoQSfaibIeEtD9yAujPHBVxlx4';
 
 (async function () {
   console.log('Testing ao...')

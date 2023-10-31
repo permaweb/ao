@@ -31,6 +31,7 @@ const monitorsListSchema = z.array(monitorSchema)
 const findLatestMonitors = dataStoreClient.findLatestMonitorsWith({dbInstance, logger})
 const saveMsg = dataStoreClient.saveMsgWith({dbInstance, logger})
 const findLatestMsgs = dataStoreClient.findLatestMsgsWith({dbInstance, logger})
+const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
 
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
@@ -43,20 +44,19 @@ parentPort.on('message', (message) => {
 
 
 async function processMonitors() {
-  let monitorList = await findLatestMonitors()
-  const validationResult = monitorsListSchema.safeParse(monitorList);
-  if (!validationResult.success) {
-    console.log(`Invalid monitor list for start`)
-    parentPort.postMessage(`Invalid monitor list for start`)
-    process.exit(1);
-  } 
-  monitorList.map((monitor) => {
-      if(shouldRun(monitor)) {
-        processMonitor(monitor).then((result) => {
-            console.log(result)
-        })
-      }
-  })
+  try {
+    let monitorList = await findLatestMonitors()
+  
+    monitorList.map((monitor) => {
+        if(shouldRun(monitor)) {
+          processMonitor(monitor).then((result) => {
+              console.log(result)
+          })
+        }
+    })
+  } catch(e) {
+    console.log(e)
+  }
 }
 
 async function fetchScheduled(monitor) {
@@ -71,8 +71,7 @@ async function fetchScheduled(monitor) {
 }
 
 async function processMonitor(monitor) {
-    let scheduledList = await fetchScheduled(monitor)
-    let scheduled = scheduledList.reverse()
+    let scheduled = await fetchScheduled(monitor)
 
     if(scheduled.length < 1) return;
 
@@ -107,7 +106,7 @@ async function processMonitor(monitor) {
 
     monitor.lastFromSortKey = lastScheduled.scheduledSortKey
 
-    console.log(monitor)
+    await updateMonitor(monitor)
 
     return {status: 'ok'}
 }

@@ -307,6 +307,29 @@ function findLatestMonitorsWith ({ dbInstance }) {
   }
 }
 
+function updateMonitorWith ({ dbInstance, logger: _logger }) {
+  const logger = _logger.child('updateMonitor')
+
+  return ({ id, lastFromSortKey }) => {
+    console.log(id)
+    return of({ id })
+      .chain(fromPromise(() => dbInstance.getMonitor(id)))
+      .map(doc => ({ ...doc, lastFromSortKey }))
+      .map(monitoredProcessSchema.parse)
+      .chain(updatedDoc =>
+        of(updatedDoc)
+          .chain(fromPromise(() => dbInstance.putMonitor(updatedDoc)))
+          .bimap(
+            logger.tap('Encountered an error when updating monitor'),
+            logger.tap('Updated monitor')
+          )
+          .bichain(Resolved, Resolved)
+          .map(always(updatedDoc._id))
+      )
+      .toPromise()
+  }
+}
+
 
 export default {
   cachedTxSchema,
@@ -316,6 +339,7 @@ export default {
   saveMsgWith,
   saveSpawnWith,
   updateMsgWith,
+  updateMonitorWith,
   findLatestMsgsWith,
   findLatestSpawnsWith,
   findLatestMonitorsWith,
