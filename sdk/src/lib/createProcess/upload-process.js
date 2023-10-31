@@ -2,7 +2,7 @@ import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { __, assoc, concat, defaultTo, propEq, reject } from 'ramda'
 
-import { deployProcessSchema, registerProcessSchema, signerSchema } from '../../dal.js'
+import { deployProcessSchema, signerSchema } from '../../dal.js'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -77,7 +77,6 @@ export function uploadProcessWith (env) {
   const buildData = buildDataWith(env)
 
   const deployProcess = deployProcessSchema.implement(env.deployProcess)
-  const registerProcess = registerProcessSchema.implement(env.registerProcess)
 
   return (ctx) => {
     return of(ctx)
@@ -86,18 +85,6 @@ export function uploadProcessWith (env) {
       .chain(fromPromise(({ data, tags, signer }) =>
         deployProcess({ data, tags, signer: signerSchema.implement(signer) })
       ))
-      /**
-       * TODO: don't really like the deployProcess returning the signedDataItem,
-       * and would instead move signing up one level,
-       * but it's the smallest diff, so keeping it for now.
-       */
-      .chain(({ processId, signedDataItem }) =>
-        of(signedDataItem)
-          .chain(fromPromise((signedDataItem) =>
-            registerProcess(signedDataItem)
-          ))
-          .map(() => ({ processId }))
-      )
       .map(res => assoc('processId', res.processId, ctx))
   }
 }

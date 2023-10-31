@@ -36,14 +36,9 @@ export const deployProcessSchema = z.function()
   }))
   .returns(z.promise(
     z.object({
-      processId: z.string(),
-      signedDataItem: z.any()
+      processId: z.string()
     }).passthrough()
   ))
-
-export const registerProcessSchema = z.function()
-  .args(z.any())
-  .returns(z.promise(z.any()))
 
 export const loadTransactionMetaSchema = z.function()
   .args(z.string())
