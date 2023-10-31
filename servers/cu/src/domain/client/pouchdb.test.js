@@ -323,7 +323,7 @@ describe('pouchdb', () => {
                     $lte: `process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
-                sort: [{ _id: 'desc' }],
+                sort: [{ _id: 'asc' }],
                 limit: Number.MAX_SAFE_INTEGER
               })
               return {
@@ -364,7 +364,7 @@ describe('pouchdb', () => {
                     $lte: `process-123,sortkey-456,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
-                sort: [{ _id: 'desc' }],
+                sort: [{ _id: 'asc' }],
                 limit: Number.MAX_SAFE_INTEGER
               })
               return {
