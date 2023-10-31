@@ -2,6 +2,8 @@ import { of, fromPromise } from 'hyper-async'
 import z from 'zod'
 import { __, assoc } from 'ramda'
 
+// TODO: remove this we have the data on the sequencer
+
 const ctxSchema = z.object({
    
 }).passthrough()

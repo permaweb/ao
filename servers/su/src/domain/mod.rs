@@ -36,8 +36,11 @@ pub fn read_message_pipeline() -> ReadMessagePipeline {
 }
 
 pub fn write_process_pipeline() -> ProcessPipeline {
+    dotenv().ok();
+    let wallet_path = env::var("SU_WALLET_PATH").expect("SU_WALLET_PATH must be set");
+    let uploader = UploaderClient::new("https://node2.irys.xyz", &wallet_path);
     let data_store = StoreClient::connect();
-    ProcessPipeline::new(data_store)
+    ProcessPipeline::new(uploader, data_store)
 }
 
 pub fn read_process_pipeline() -> ReadProcessPipeline {

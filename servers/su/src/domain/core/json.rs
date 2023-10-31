@@ -33,6 +33,8 @@ pub struct Process {
     pub process_id: String,
     pub block: Option<Block>,
     pub owner: Owner,
+    pub sort_key: String,
+    pub tags: Vec<Tag>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -64,28 +66,23 @@ pub struct Edge {
 
 
 impl Process {
-    pub async fn from_data_item(data_item: &DataItem) -> Self {
-        let id = data_item.id().clone();
-        let owner = data_item.owner().clone();
+    pub fn from_bundle(data_bundle: &DataBundle) -> Self {
+        let id = data_bundle.items[0].id().clone();
+        let sort_key_clone = data_bundle.sort_key.clone();
+        let tags = data_bundle.items[0].tags();
+        let owner = data_bundle.items[0].owner().clone();
+       
+        // TODO: move this into a function
+        let mut parts = sort_key_clone.split(',');
+        let height_str = parts.next().unwrap_or_default();
+        let height = height_str.parse::<u64>().unwrap_or_default();
 
-        // TODO: move network to a client or its own core module
-        // TODO: remove unwrap() calls and handle errors
-        let gateway_url = "https://arweave.net".to_string();
-        let url = Url::parse(&gateway_url).unwrap();
-
-        let network_client = NetworkInfoClient::new(url);
-        let network_info = network_client.network_info().await.unwrap();
-
-        let height: u64 = network_info.height.clone() as u64;
-
-        // TODO: move time into its own core module
-        let start_time = SystemTime::now();
-        let duration = start_time.duration_since(UNIX_EPOCH).unwrap();
-        let millis = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
+        let timestamp_str = parts.next().unwrap_or_default();
+        let timestamp = timestamp_str.parse::<u64>().unwrap_or_default(); 
 
         let block = Block {
             height: height,
-            timestamp: millis
+            timestamp: timestamp
         };
 
         // TODO: implement a from on the owner struct
@@ -101,7 +98,9 @@ impl Process {
         Process {
             process_id: id,
             block: Some(block),
-            owner: owner
+            owner: owner,
+            tags: tags,
+            sort_key: sort_key_clone
         }
     }
 }
