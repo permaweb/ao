@@ -3,7 +3,7 @@ import {
   ifElse,
   is, mergeRight, pathOr, pipe, propOr, reduce, reduced
 } from 'ramda'
-import { fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
@@ -38,6 +38,11 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
     of(evaluation)
       .map(logger.tap('Caching evaluation %O'))
       .chain(saveEvaluation)
+      /**
+       * Always ensure this Async resolves
+       */
+      .bichain(Resolved, Resolved)
+      .map(() => evaluation)
 }
 
 /**
