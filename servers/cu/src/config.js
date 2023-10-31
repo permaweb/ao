@@ -41,13 +41,17 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 3005,
     SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
-    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net'
+    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    DB_PATH: process.env.DB_PATH || 'ao-cache',
+    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100')
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
     SEQUENCER_URL: process.env.SEQUENCER_URL,
-    GATEWAY_URL: process.env.GATEWAY_URL
+    GATEWAY_URL: process.env.GATEWAY_URL,
+    DB_PATH: process.env.DB_PATH || 'ao-cache',
+    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100')
   }
 }
 
