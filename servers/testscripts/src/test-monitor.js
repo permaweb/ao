@@ -5,7 +5,7 @@ const WarpArBundles = require('warp-arbundles');
 
 const { createData, ArweaveSigner } = WarpArBundles
 
-const CONTRACT_TX_ID = 'HLSiLzjY4Mc7jldLV1jccN5T2TxzhD6N6k9HQaZ9PP8';
+const CONTRACT_TX_ID = 'aZGVE8Y_TSCcjYnYGOSmdTI98FZQWKCdiy40beqSy3w';
 const MU_URL = 'http://localhost:3004';
 
 (async function () {

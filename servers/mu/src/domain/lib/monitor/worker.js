@@ -35,13 +35,14 @@ const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
 
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    setTimeout(() => processMonitors(), 1000)
+    setInterval(() => processMonitors(), 1000)
     parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
   }
 })
 
+let runningMonitorList = []
 
 async function processMonitors() {
   try {
@@ -50,7 +51,12 @@ async function processMonitors() {
     monitorList.map((monitor) => {
         if(shouldRun(monitor)) {
           processMonitor(monitor).then((result) => {
-              console.log(result)
+            const indexToRemove = runningMonitorList.findIndex(item => item.id === monitor.id);
+            if (indexToRemove !== -1) {
+              console.log('monitor complete')
+              console.log(monitor)
+              runningMonitorList.splice(indexToRemove, 1);
+            }
           })
         }
     })
@@ -71,6 +77,7 @@ async function fetchScheduled(monitor) {
 }
 
 async function processMonitor(monitor) {
+    runningMonitorList.push(monitor)
     let scheduled = await fetchScheduled(monitor)
 
     if(scheduled.length < 1) return;
@@ -112,10 +119,14 @@ async function processMonitor(monitor) {
 }
 
 
-// TODO: check if it has been the interval amount 
-// of time since the last run or the processes block
-function shouldRun(_monitor) {
-  return true
+function shouldRun(monitor) {
+  const index = runningMonitorList.findIndex(item => item.id === monitor.id);
+  
+  if (index !== -1) {
+    return false; 
+  }
+
+  return true; 
 }
 
 
