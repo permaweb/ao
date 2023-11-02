@@ -1,12 +1,7 @@
 import pgPromise from 'pg-promise';
 
 const pgp = pgPromise();
-const db = pgp({
-    connectionString: process.env.MU_DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
-});
+const db = pgp(process.env.MU_DATABASE_URL);
 
 export async function getTx(id) {
     try {
