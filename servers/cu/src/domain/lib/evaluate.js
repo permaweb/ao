@@ -161,7 +161,6 @@ export function evaluateWith (env) {
               .then(maybeRejectError)
               .then((prev) =>
                 Promise.resolve(prev.state)
-                  .then((state) => {console.log('before eval'); console.log(message); return state})
                   .then((state) => ctx.handle(state, message, AoGlobal))
 
                   /**
