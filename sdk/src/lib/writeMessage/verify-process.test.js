@@ -8,7 +8,7 @@ const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 describe('verify-process', () => {
   test('verify process is an ao process', async () => {
     const verifyProcess = verifyProcessWith({
-      loadTransactionMeta: async (_id) =>
+      loadProcessMeta: async (_id) =>
         ({
           tags: [
             { name: 'Contract-Src', value: 'foobar' },
@@ -27,7 +27,7 @@ describe('verify-process', () => {
 
   test('throw if the Contract-Src tag is not provided', async () => {
     const verifyProcess = verifyProcessWith({
-      loadTransactionMeta: async (_id) =>
+      loadProcessMeta: async (_id) =>
         ({
           tags: [
             { name: 'Data-Protocol', value: 'ao' },
@@ -42,7 +42,7 @@ describe('verify-process', () => {
 
   test('throw if the Data-Protocol tag is not provided', async () => {
     const verifyProcess = verifyProcessWith({
-      loadTransactionMeta: async (_id) =>
+      loadProcessMeta: async (_id) =>
         ({
           tags: [
             { name: 'Contract-Src', value: 'foobar' },
@@ -57,7 +57,7 @@ describe('verify-process', () => {
 
   test('throw if multiple tags not provided', async () => {
     const verifyProcess = verifyProcessWith({
-      loadTransactionMeta: async (_id) =>
+      loadProcessMeta: async (_id) =>
         ({
           tags: [
             { name: 'Data-Protocol', value: 'ao' }

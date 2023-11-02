@@ -5,6 +5,8 @@ const tagSchema = z.object({
   value: z.string()
 })
 
+// CU
+
 export const loadStateSchema = z.function()
   .args(z.object({
     id: z.string().min(1, { message: 'process id is required' }),
@@ -13,6 +15,8 @@ export const loadStateSchema = z.function()
   .returns(
     z.promise(z.any())
   )
+
+// MU
 
 export const deployMessageSchema = z.function()
   .args(z.object({
@@ -28,6 +32,8 @@ export const deployMessageSchema = z.function()
     }).passthrough()
   ))
 
+// SU
+
 export const deployProcessSchema = z.function()
   .args(z.object({
     data: z.any(),
@@ -40,7 +46,7 @@ export const deployProcessSchema = z.function()
     }).passthrough()
   ))
 
-export const loadTransactionMetaSchema = z.function()
+export const loadProcessMetaSchema = z.function()
   .args(z.string())
   .returns(z.promise(
     z.object({
@@ -48,9 +54,14 @@ export const loadTransactionMetaSchema = z.function()
     }).passthrough()
   ))
 
-export const loadTransactionDataSchema = z.function()
+// Gateway
+export const loadTransactionMetaSchema = z.function()
   .args(z.string())
-  .returns(z.promise(z.any()))
+  .returns(z.promise(
+    z.object({
+      tags: z.array(tagSchema)
+    }).passthrough()
+  ))
 
 export const signerSchema = z.function()
   .args(z.object({

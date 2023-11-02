@@ -66,24 +66,3 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
       ))
       .toPromise()
 }
-
-/**
-   * @typedef Env2
-   * @property {fetch} fetch
-   * @property {string} GATEWAY_URL
-   *
-   * @callback LoadTransactionData
-   * @param {string} id - the id of the transaction whose data is being loaded
-   * @returns {Async<Response>}
-   *
-   * @param {Env2} env
-   * @returns {LoadTransactionData}
-   */
-export function loadTransactionDataWith ({ fetch, GATEWAY_URL }) {
-  // TODO: create a dataloader and use that to batch load contracts
-
-  return (id) =>
-    of(id)
-      .chain(fromPromise((id) => fetch(`${GATEWAY_URL}/${id}`)))
-      .toPromise()
-}

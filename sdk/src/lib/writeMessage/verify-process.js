@@ -1,20 +1,12 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { anyPass, equals, includes, isNotNil, path } from 'ramda'
-import { z } from 'zod'
 
-import { loadTransactionMetaSchema } from '../../dal.js'
+import { loadProcessMetaSchema } from '../../dal.js'
 import { parseTags } from '../utils.js'
-
-const transactionSchema = z.object({
-  tags: z.array(z.object({
-    name: z.string(),
-    value: z.string()
-  }))
-})
 
 /**
  * @typedef Env5
- * @property {any} loadTransactionMeta
+ * @property {any} loadProcessMeta
  *
  * @callback VerifyTags
  * @param {string} id - contract tx id
@@ -22,15 +14,16 @@ const transactionSchema = z.object({
  * @param {Env5} env
  * @returns {any} VerifyTags
  */
-function verfiyTagsWith ({ loadTransactionMeta }) {
+function verfiyTagsWith ({ loadProcessMeta }) {
   const checkTag = (name, pred) => tags => pred(tags[name])
     ? Resolved(tags)
     : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on contract source`)
 
+  loadProcessMeta = fromPromise(loadProcessMetaSchema.implement(loadProcessMeta))
+
   return (id) => {
     return of(id)
-      .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
-      .map(transactionSchema.parse)
+      .chain(loadProcessMeta)
       .map(path(['tags']))
       .map(parseTags)
       /**
@@ -59,7 +52,7 @@ function verfiyTagsWith ({ loadTransactionMeta }) {
  * @returns {Async<Context>}
  *
  * @typedef Env6
- * @property {any} loadTransactionMeta
+ * @property {any} loadProcessMeta
  *
  * @param {Env6} env
  * @returns {VerifyProcess}
