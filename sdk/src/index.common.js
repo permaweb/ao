@@ -9,8 +9,8 @@ import { writeMessageWith } from './lib/writeMessage/index.js'
 import { createProcessWith } from './lib/createProcess/index.js'
 
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
-const MU_URL = globalThis.MU_URL || 'https://ao-mu-2.onrender.com'
-const CU_URL = globalThis.CU_URL || 'https://ao-cu-2.onrender.com'
+const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
+const CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
 const SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
 
 /**
