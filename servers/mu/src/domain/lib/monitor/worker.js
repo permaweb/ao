@@ -53,15 +53,15 @@ async function processMonitors() {
           processMonitor(monitor).then((result) => {
             const indexToRemove = runningMonitorList.findIndex(item => item.id === monitor.id);
             if (indexToRemove !== -1) {
-              console.log('monitor complete')
-              console.log(monitor)
+              //console.log('monitor complete')
+              //console.log(monitor)
               runningMonitorList.splice(indexToRemove, 1);
             }
           })
         }
     })
   } catch(e) {
-    console.log(e)
+    //console.log(e)
   }
 }
 
@@ -71,7 +71,7 @@ async function fetchScheduled(monitor) {
     if(lastFromSortKey) {
       requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromSortKey}`
     }
-    console.log(requestUrl)
+    //console.log(requestUrl)
     let scheduled = await (await fetch(requestUrl)).json()
     return scheduled
 }
