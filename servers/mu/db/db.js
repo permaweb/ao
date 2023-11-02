@@ -4,5 +4,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const pgp = pgPromise()
-const db = pgp(process.env.MU_DATABASE_URL)
+const db = pgp({
+    connectionString: process.env.MU_DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+});
 export default db
