@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.14](https://github.com/permaweb/ao/compare/sdk@v0.0.13...sdk@v0.0.14) (2023-11-02)
+
+
+### Features
+
+* **sdk:** add registering the process with the SU, after deploying to Irys ([ee9ae88](https://github.com/permaweb/ao/commit/ee9ae88719e01c060122b6001e6a8609ce962597))
+
 ## [0.0.13](https://github.com/permaweb/ao/compare/sdk@v0.0.12...sdk@v0.0.13) (2023-10-31)
 
 
