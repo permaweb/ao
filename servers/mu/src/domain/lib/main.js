@@ -8,7 +8,6 @@ import { crankWith } from './crank/crank.js'
 import { createContractWith } from './processSpawn/create-contract.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
 import { saveWith } from './monitor/saveProcess.js'
-import { appendGatewayDataWith } from './monitor/appendGatewayData.js'
 import { appendSequencerDataWith } from './monitor/appendSequencerData.js'
 
 /**
@@ -110,17 +109,14 @@ export function monitorProcessWith({
   logger,
   createDataItem,
   saveProcessToMonitor,
-  fetchGatewayProcess,
   fetchSequencerProcess
 }) {
   const parse = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
-  const appendGatewayData = appendGatewayDataWith({logger, fetchGatewayProcess})
   const appendSequencerData = appendSequencerDataWith({logger, fetchSequencerProcess})
   return (ctx) => {
     return of(ctx)
       .chain(parse)
-      .chain(appendGatewayData)
       .chain(appendSequencerData)
       .chain(save)
   }

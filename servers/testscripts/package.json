@@ -4,6 +4,7 @@
     "repository": "https://github.com/ArweaveAlex/arc-pools.git",
     "author": "NickJ202",
     "main": "./bin/index.js",
+    "type": "module",
     "scripts": {
         "build": "tsc",
         "bundlr-env": "ts-node src/bundlr-env.ts",
@@ -12,7 +13,7 @@
     "dependencies": {
         "@bundlr-network/client": "0.11.1",
         "@noble/hashes": "^1.1.5",
-        "@permaweb/ao-sdk": "file:../../sdk",
+        "@permaweb/ao-sdk": "0.0.15",
         "@scure/bip32": "^1.1.5",
         "@types/fs-extra": "^8.1.0",
         "arbundles": "^0.10.0",

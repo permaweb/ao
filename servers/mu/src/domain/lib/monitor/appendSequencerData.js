@@ -13,6 +13,12 @@ export function appendSequencerDataWith({ logger, fetchSequencerProcess }) {
       .map(assoc('sequencerData', __, ctx))
       .map((updatedCtx) => {
         updatedCtx.tx["block"] = updatedCtx.sequencerData.block
+        let tags = updatedCtx.sequencerData.tags;
+        const scheduledIntervalObj = tags.find(obj => obj.name === 'Scheduled-Interval');
+        if(scheduledIntervalObj) {
+          updatedCtx.tx["interval"] = scheduledIntervalObj.value;
+        }
+        console.log(updatedCtx)
         return updatedCtx
       })
       .map(ctxSchema.parse)

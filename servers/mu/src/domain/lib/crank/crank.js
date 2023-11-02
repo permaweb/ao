@@ -56,7 +56,6 @@ export function crankWith ({ processMsg, processSpawn, logger }) {
   const crankList = crankListWith({ processMsg, processSpawn, logger })
 
   return (ctx) => {
-    console.log('hello')
     return of(ctx)
       .chain(fromPromise(crankList))
       .map(logger.tap('Cranked msgs'))

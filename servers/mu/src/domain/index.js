@@ -5,7 +5,6 @@ import dataStoreClient from './clients/datastore.js'
 import dbInstance from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
-import gatewayClient from './clients/gateway.js'
 
 import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith } from './lib/main.js'
 
@@ -89,7 +88,6 @@ export const createApis = (ctx) => {
   const monitorProcess = monitorProcessWith({
     saveProcessToMonitor: dataStoreClient.saveMonitoredProcessWith({dbInstance, logger: monitorProcessLogger}),
     createDataItem,
-    fetchGatewayProcess: gatewayClient.fetchGatewayProcessWith({logger: monitorProcessLogger, GATEWAY_URL: "https://arweave.net"}),
     fetchSequencerProcess: sequencerClient.fetchSequencerProcessWith({logger: monitorProcessLogger, SEQUENCER_URL}),
     logger: monitorProcessLogger
   })
