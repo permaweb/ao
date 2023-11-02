@@ -55,3 +55,10 @@ export function deployProcessWith ({ fetch, SU_URL, logger: _logger }) {
       .toPromise()
   }
 }
+
+export const loadProcessMetaWith = ({ fetch, SU_URL }) => {
+  return async (processId) => {
+    return fetch(`${SU_URL}/processes/${processId}`, { method: 'GET' })
+      .then(res => res.json())
+  }
+}

@@ -1,8 +1,8 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
-import { loadTransactionDataWith, loadTransactionMetaWith } from './gateway.js'
+import { loadTransactionMetaSchema } from '../dal.js'
+import { loadTransactionMetaWith } from './gateway.js'
 
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
@@ -58,22 +58,6 @@ describe('gateway', () => {
         }))
 
       await loadTransactionMeta(PROCESS)
-    })
-  })
-
-  describe('loadTransactionDataWith', () => {
-    test('load transaction data', async () => {
-      const loadTransactionData = loadTransactionDataSchema.implement(
-        loadTransactionDataWith({
-          fetch,
-          GATEWAY_URL
-        })
-      )
-      const result = await loadTransactionData(PROCESS)
-      assert.ok(result.arrayBuffer)
-      assert.ok(result.json)
-      assert.ok(result.text)
-      assert.ok(result.ok)
     })
   })
 })

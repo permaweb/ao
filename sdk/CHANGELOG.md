@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.15](https://github.com/permaweb/ao/compare/sdk@v0.0.14...sdk@v0.0.15) (2023-11-02)
+
+
+### Bug Fixes
+
+* **sdk:** load process meta from SU to prevent race condition on gateway ([bafd07f](https://github.com/permaweb/ao/commit/bafd07febdec82dc4e5a471df89daab9edd97791))
+
 ## [0.0.14](https://github.com/permaweb/ao/compare/sdk@v0.0.13...sdk@v0.0.14) (2023-11-02)
 
 
