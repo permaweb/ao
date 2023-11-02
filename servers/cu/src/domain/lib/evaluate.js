@@ -162,7 +162,6 @@ export function evaluateWith (env) {
               .then((prev) =>
                 Promise.resolve(prev.state)
                   .then((state) => ctx.handle(state, message, AoGlobal))
-
                   /**
                    * Map thrown error to a result.error
                    */
