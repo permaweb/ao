@@ -34,7 +34,7 @@ export function buildSdk () {
    */
   const writeMessageLogger = logger.child('writeMessage')
   const writeMessage = writeMessageWith({
-    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
+    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch, SU_URL }),
     deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: writeMessageLogger }),
     logger: writeMessageLogger
   })
