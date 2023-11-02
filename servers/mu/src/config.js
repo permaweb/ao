@@ -48,14 +48,16 @@ const CONFIG_ENVS = {
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
     SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
-    CU_URL: process.env.CU_URL || 'https://ao-cu-2.onrender.com'
+    CU_URL: process.env.CU_URL || 'https://ao-cu-2.onrender.com',
+    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net'
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
     SEQUENCER_URL: process.env.SEQUENCER_URL,
-    CU_URL: process.env.CU_URL
+    CU_URL: process.env.CU_URL,
+    GATEWAY_URL: process.env.GATEWAY_URL
   }
 }
 

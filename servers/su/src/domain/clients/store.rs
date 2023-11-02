@@ -26,12 +26,13 @@ impl StoreClient {
         }
     }
 
-    pub fn save_process(&mut self, process: Process) -> Result<TransactionId, DepError> {
+    pub fn save_process(&mut self, process: &Process) -> Result<TransactionId, DepError> {
         use super::schema::processes::dsl::*;
         let conn = &mut self.connection;
     
         let new_process = NewProcess {
             process_id: &process.process_id,
+            process_data: serde_json::to_value(process).expect("Failed to serialize Process"),
         };
     
         match diesel::insert_into(processes)
@@ -43,6 +44,25 @@ impl StoreClient {
             Ok(_) => {
                 Ok(TransactionId(9080))
             },
+            Err(e) => Err(DepError::from(e)),
+        }
+    }
+
+    pub fn get_process(&mut self, process_id_in: &str) -> Result<Process, DepError> {
+        use super::schema::processes::dsl::*;
+        let conn = &mut self.connection;
+    
+        let db_process_result: Result<Option<DbProcess>, DieselError> = processes
+            .filter(process_id.eq(process_id_in))
+            .first(conn)
+            .optional();
+    
+        match db_process_result {
+            Ok(Some(db_process)) => {
+                let process: Process = serde_json::from_value(db_process.process_data.clone())?;
+                Ok(process)
+            },
+            Ok(None) => Err(DepError::NotFound("Process not found".to_string())), 
             Err(e) => Err(DepError::from(e)),
         }
     }
@@ -143,6 +163,7 @@ impl From<serde_json::Error> for DepError {
 pub struct DbProcess {
     pub row_id: i32,
     pub process_id: String,
+    pub process_data: serde_json:: Value,
 }
 
 #[derive(Queryable, Selectable)]
@@ -171,6 +192,7 @@ pub struct NewMessage<'a> {
 #[diesel(table_name = super::schema::processes)]
 pub struct NewProcess<'a> {
     pub process_id: &'a str,
+    pub process_data: serde_json::Value,
 }
 
 

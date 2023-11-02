@@ -6,9 +6,12 @@ mod bl;
 mod clients;
 mod core;
 
+// TODO: name these to be less confusing
 use bl::message::{MessagePipeline};
 use bl::messages::{MessagesPipeline};
 use bl::read_message::{ReadMessagePipeline};
+use bl::process::{ProcessPipeline};
+use bl::read_process::{ReadProcessPipeline};
 
 use clients::uploader::{UploaderClient};
 use clients::store::{StoreClient};
@@ -30,4 +33,17 @@ pub fn read_messages_pipeline() -> MessagesPipeline {
 pub fn read_message_pipeline() -> ReadMessagePipeline {
     let data_store = StoreClient::connect();
     ReadMessagePipeline::new(data_store)
+}
+
+pub fn write_process_pipeline() -> ProcessPipeline {
+    dotenv().ok();
+    let wallet_path = env::var("SU_WALLET_PATH").expect("SU_WALLET_PATH must be set");
+    let uploader = UploaderClient::new("https://node2.irys.xyz", &wallet_path);
+    let data_store = StoreClient::connect();
+    ProcessPipeline::new(uploader, data_store)
+}
+
+pub fn read_process_pipeline() -> ReadProcessPipeline {
+    let data_store = StoreClient::connect();
+    ReadProcessPipeline::new(data_store)
 }

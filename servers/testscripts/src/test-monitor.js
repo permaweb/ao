@@ -5,8 +5,8 @@ const WarpArBundles = require('warp-arbundles');
 
 const { createData, ArweaveSigner } = WarpArBundles
 
-const CONTRACT_TX_ID = 'cFB-UpcJ6biV_xzDM5R4VnOZ2GxWzb7-HBsmkeGM70Y';
-const MU_URL = 'http://localhost:3005';
+const CONTRACT_TX_ID = 'aZGVE8Y_TSCcjYnYGOSmdTI98FZQWKCdiy40beqSy3w';
+const MU_URL = 'http://localhost:3004';
 
 (async function () {
   console.log('Testing ao...')
@@ -17,10 +17,7 @@ const MU_URL = 'http://localhost:3005';
 
   const data = Math.random().toString().slice(-4)
   const tags = [
-    { name: 'Data-Protocol', value: 'ao' },
-    { name: 'ao-type', value: 'message' },
-    { name: 'function', value: 'eval' },
-    { name: 'expression', value: "return sendMsg('cFB-UpcJ6biV_xzDM5R4VnOZ2GxWzb7-HBsmkeGM70Y', 'this is your message')" }
+    { name: 'Contract', value: 'asdf' }
   ]
 
   const signer = new ArweaveSigner(walletKey)
@@ -28,7 +25,7 @@ const MU_URL = 'http://localhost:3005';
   await dataItem.sign(signer)
 
   const response = await fetch(
-      `${MU_URL}/message`,
+      `${MU_URL}/monitor/${CONTRACT_TX_ID}`,
       {
         method: 'POST',
         headers: {
@@ -41,6 +38,4 @@ const MU_URL = 'http://localhost:3005';
 
   const responseJson = await response.text()
   console.log(responseJson)
-
-  
 })()

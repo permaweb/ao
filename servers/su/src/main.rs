@@ -8,7 +8,7 @@ use reqwest::{Url};
 
 use arweave_rs::network::NetworkInfoClient;
 
-use su::domain::{write_message_pipeline, read_messages_pipeline, read_message_pipeline};
+use su::domain::{write_message_pipeline, read_messages_pipeline, read_message_pipeline, write_process_pipeline, read_process_pipeline};
 
 
 fn system_time() -> Result<String, SystemTimeError> {
@@ -63,7 +63,7 @@ async fn message_route(req_body: web::Bytes) -> impl Responder {
 }
 
 #[derive(Deserialize)]
-struct YourQueryParamsStruct {
+struct FromTo {
     from: Option<String>,
     to: Option<String>,
 }
@@ -73,7 +73,7 @@ struct ProcessId {
     process_id: String,
 }
 
-async fn messages_route(_req: HttpRequest, path: web::Path<ProcessId>, query_params: web::Query<YourQueryParamsStruct>) -> impl Responder {
+async fn messages_route(_req: HttpRequest, path: web::Path<ProcessId>, query_params: web::Query<FromTo>) -> impl Responder {
     let process_id = path.process_id.clone();
     let from_sort_key = query_params.from.clone();
     let to_sort_key = query_params.to.clone();
@@ -94,11 +94,37 @@ struct MessageId {
     message_id: String,
 }
 
-async fn read_message_route(_req: HttpRequest, path: web::Path<MessageId>, query_params: web::Query<YourQueryParamsStruct>) -> impl Responder {
+async fn read_message_route(_req: HttpRequest, path: web::Path<MessageId>, query_params: web::Query<FromTo>) -> impl Responder {
     let message_id = path.message_id.clone();
 
     let result = read_message_pipeline()
         .process(message_id).await;
+        
+    match result {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
+}
+
+async fn process_route(req_body: web::Bytes) -> impl Responder {
+    let result = write_process_pipeline()
+        .process_data(req_body.to_vec()).await;
+
+    match result {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
+}
+
+async fn read_process_route(_req: HttpRequest, path: web::Path<ProcessId>) -> impl Responder {
+    let process_id = path.process_id.clone();
+
+    let result = read_process_pipeline()
+        .process(process_id).await;
         
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -117,6 +143,8 @@ async fn main() -> std::io::Result<()> {
             .route("/message", web::post().to(message_route)) 
             .route("/messages/{process_id}", web::get().to(messages_route))
             .route("/message/{message_id}", web::get().to(read_message_route))
+            .route("/process", web::post().to(process_route)) 
+            .route("/processes/{process_id}", web::get().to(read_process_route))
     })
     .bind(("0.0.0.0", 9000))?
     .run()

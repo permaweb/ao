@@ -3,7 +3,7 @@ use crate::domain::{UploaderClient, StoreClient};
 use crate::domain::core::json::{Message, Process, Block};
 use crate::domain::core::binary::{DataBundle};
 
-pub struct MessagePipeline
+pub struct ProcessPipeline
 {
     data: Option<Vec<u8>>,
     build_data: Option<Vec<u8>>,
@@ -14,27 +14,9 @@ pub struct MessagePipeline
     data_store: StoreClient
 }
 
-impl From<DepError> for String {
-    fn from(error: DepError) -> Self {
-        println!("{:?}", error);
-        match error {
-            DepError::BuildError(_) => "Build transaction error occurred.".to_string(),
-            DepError::UploadError(m) => {
-                //TODO: save specific erros to database log
-                println!("upload error - {}", m);
-                "Upload error occurred.".to_string()
-            },
-            DepError::SaveTxError(_) => "Save transaction error occurred.".to_string(),
-            DepError::DatabaseError(_) => "Database error occurred.".to_string(),
-            DepError::JsonError(_) => "Json parsing error.".to_string(),
-            DepError::NotFound(_) => "Record not found in the database.".to_string(),
-        }
-    }
-}
-
-impl MessagePipeline {
+impl ProcessPipeline {
     pub fn new(uploader: UploaderClient, data_store: StoreClient) -> Self {
-        MessagePipeline {
+        ProcessPipeline {
             data: None,
             build_data: None,
             build_bundle: None,
@@ -55,7 +37,6 @@ impl MessagePipeline {
     }
 
     pub async fn read_data(&mut self, input: Vec<u8>) -> &mut Self {
-        self.sort_key = Some("1234567".to_string());
         self.data = Some(input);
         self
     }
@@ -88,18 +69,11 @@ impl MessagePipeline {
         };
         
         
-        let mut message = Message::from_bundle(build_bundle);
+        let mut process = Process::from_bundle(build_bundle);
 
         let uploaded_tx = self.uploader.upload(build_data.to_vec()).await?;
 
-        let bundle_block = Block {
-            height: uploaded_tx.block,
-            timestamp: uploaded_tx.timestamp
-        };
-
-        message.bundle_block = Some(bundle_block);
-
-        self.data_store.save_message(&message)?;
+        self.data_store.save_process(&process)?;
         
         Ok(serde_json::to_string(&uploaded_tx).unwrap())
     }
