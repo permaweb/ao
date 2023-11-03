@@ -26,8 +26,6 @@ const monitorSchema = z.object({
   createdAt: z.number(), 
 });
 
-const monitorsListSchema = z.array(monitorSchema)
-
 const findLatestMonitors = dataStoreClient.findLatestMonitorsWith({dbInstance, logger})
 const saveMsg = dataStoreClient.saveMsgWith({dbInstance, logger})
 const findLatestMsgs = dataStoreClient.findLatestMsgsWith({dbInstance, logger})
@@ -49,73 +47,96 @@ async function processMonitors() {
     let monitorList = await findLatestMonitors()
   
     monitorList.map((monitor) => {
-        if(shouldRun(monitor)) {
+      const validationResult = monitorSchema.safeParse(monitor);
+
+      if (validationResult.success) {
+        if (shouldRun(monitor)) {
           processMonitor(monitor).then((result) => {
-            const indexToRemove = runningMonitorList.findIndex(item => item.id === monitor.id);
+            const indexToRemove = runningMonitorList.findIndex(
+              (item) => item.id === monitor.id
+            );
             if (indexToRemove !== -1) {
-              //console.log('monitor complete')
-              //console.log(monitor)
               runningMonitorList.splice(indexToRemove, 1);
             }
-          })
+          });
         }
+      } else {
+        console.error('Invalid monitor:', validationResult.error);
+      }
     })
   } catch(e) {
-    //console.log(e)
+    if(e !== 'No documents found') {
+      console.log(e)
+    }
   }
 }
 
 async function fetchScheduled(monitor) {
   let lastFromSortKey = monitor.lastFromSortKey;
-    let requestUrl =`${config.CU_URL}/scheduled/${monitor.id}`
-    if(lastFromSortKey) {
-      requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromSortKey}`
-    }
-    //console.log(requestUrl)
-    let scheduled = await (await fetch(requestUrl)).json()
-    return scheduled
+  let requestUrl = `${config.CU_URL}/scheduled/${monitor.id}`;
+
+  if (lastFromSortKey) {
+    requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromSortKey}`;
+  }
+
+  try {
+    let response = await fetch(requestUrl);
+    let scheduled = await response.json();
+    return scheduled;
+  } catch (error) {
+    console.error('Error in fetchScheduled:', error);
+    throw error; 
+  }
 }
+
 
 async function processMonitor(monitor) {
     runningMonitorList.push(monitor)
-    let scheduled = await fetchScheduled(monitor)
 
-    if(scheduled.length < 1) return;
+    try {
+      let scheduled = await fetchScheduled(monitor)
 
-    let fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
-
-    const savePromises = scheduled.map(msg => {
-      const msgWithoutScheduledSortKey = { ...msg };
-      delete msgWithoutScheduledSortKey.scheduledSortKey;
-      return saveMsg({
-        id: Math.floor(Math.random() * 1e18).toString(),
-        fromTxId: fromTxId,
-        msg: msgWithoutScheduledSortKey,
-        cachedAt: new Date()
+      if(scheduled.length < 1) return;
+  
+      let fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
+  
+      const savePromises = scheduled.map(msg => {
+        const msgWithoutScheduledSortKey = { ...msg };
+        delete msgWithoutScheduledSortKey.scheduledSortKey;
+        return saveMsg({
+          id: Math.floor(Math.random() * 1e18).toString(),
+          fromTxId: fromTxId,
+          msg: msgWithoutScheduledSortKey,
+          cachedAt: new Date()
+        })
       })
-    })
-
-    await Promise.all(savePromises)
-    let dbMsgs = await findLatestMsgs({fromTxId})
-
-    await of(dbMsgs)
-      .map(dbMsgs => ({ msgs: dbMsgs, spawns: [] }))
-      .chain(res =>
-        apis.crankMsgs(res)
-          .bimap(
-            logger.tap('Failed to crank messages'),
-            logger.tap('Successfully cranked messages')
-          )
-      )
-      .toPromise()
-
-    let lastScheduled = scheduled[scheduled.length - 1]
-
-    monitor.lastFromSortKey = lastScheduled.scheduledSortKey
-
-    await updateMonitor(monitor)
-
-    return {status: 'ok'}
+  
+      await Promise.all(savePromises)
+      let dbMsgs = await findLatestMsgs({fromTxId})
+  
+      await of(dbMsgs)
+        .map(dbMsgs => ({ msgs: dbMsgs, spawns: [] }))
+        .chain(res =>
+          apis.crankMsgs(res)
+            .bimap(
+              logger.tap('Failed to crank messages'),
+              logger.tap('Successfully cranked messages')
+            )
+        )
+        .toPromise()
+  
+      let lastScheduled = scheduled[scheduled.length - 1]
+  
+      monitor.lastFromSortKey = lastScheduled.scheduledSortKey
+  
+      await updateMonitor(monitor)
+  
+      return {status: 'ok'}
+    } catch(e) {
+      console.error('Error in processMonitor:', error);
+      throw error; 
+    }
+    
 }
 
 

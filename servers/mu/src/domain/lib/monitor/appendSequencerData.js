@@ -18,7 +18,6 @@ export function appendSequencerDataWith({ logger, fetchSequencerProcess }) {
         if(scheduledIntervalObj) {
           updatedCtx.tx["interval"] = scheduledIntervalObj.value;
         }
-        console.log(updatedCtx)
         return updatedCtx
       })
       .map(ctxSchema.parse)

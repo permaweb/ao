@@ -15,8 +15,6 @@ export const withMonitorRoutes = (app) => {
           domain: { apis: { monitorProcess } }
         } = req
 
-        console.log('hello')
-
         if (!body) return res.status(400).send('Signed data item is required')
 
         // call appropriate domain api here
