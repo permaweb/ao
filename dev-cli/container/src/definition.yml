@@ -4,7 +4,6 @@ functions:
     args:
       - string
       - string
-      - string
 
 entry_file: loader.lua
-output_file: contract.js
+output_file: process.js

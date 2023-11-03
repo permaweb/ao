@@ -18,32 +18,85 @@ var Module = (() => {
 })();
 /* eslint-enable */
 
-// load wasm and return handle function
+/** 
+ * @typedef Tag
+ * @property {string} name
+ * @property {string} value
+ */
+
+/**
+ * @typedef Message
+ * @property {string} owner
+ * @property {string} target
+ * @property {Tag[]} tags
+ * @property {DataItem} data
+ */
+
+/** 
+ * @typedef Environment
+ * @property {{id: string, owner: string, tags: Tag[]}} process
+ * @property {{id: string, owner: string, tags: Tag[]}} message
+ * @property {{height: string, timestamp: string}} block
+ */
+
 /**
  * @callback handleFunction
- * @param {unknown} state
- * @param {unknown} action
- * @param {unknown} SmartWeave
+ * @param {Message} msg
+ * @param {Environment} env
+ */
+
+/**
+ * @callback pauseFunction
+ * @returns {ArrayBuffer}
+ */
+
+/**
+ * @callback resumeFunction
+ * @param {ArrayBuffer} buffer
+ * @returns {null}
+ */
+
+/**
+ * @typedef LoaderResponse
+ * @property {handleFunction} handle
+ * @property {pauseFunction} pause
+ * @property {resumeFunction} resume
  */
 
 /**
  * @param {ArrayBuffer} binary
- * @returns {handleFunction}
+ * @param {boolean} spawn
+ * @returns {LoaderResponse}
  */
-module.exports = function (binary) {
-  // execute handle function
-  return (state, action, SmartWeave) => Module(binary).then(i => {
-    const handle = i.cwrap('handle', 'string', ['string', 'string', 'string'])
+module.exports = async function (binary, spawn = false) {
+  const instance = await Module(binary)
+  const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
+  const canCallResume = !spawn
+  let canCallHandle = spawn
+  let canCallPause = false
 
-    const { ok, response } = JSON.parse(handle(JSON.stringify(state), JSON.stringify(action), JSON.stringify(SmartWeave)))
-
-    if (ok) return response
-    /**
-     * An unhandled error was received across the interop, so throw it,
-     * causing the Promise to reject.
-     *
-     * The caller should handle accordingly
-     */
-    throw response
-  })
+  return {
+    handle: (msg, env) => {
+      if (canCallHandle) {
+        const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
+        if (ok) {
+          canCallPause = true
+          return response
+        }
+      } else {
+        return { ok: false, msg: 'Cant call handle' }
+      }
+    },
+    pause: () => {
+      if (canCallPause) {
+        return instance.HEAPU8.slice()
+      }
+    },
+    resume: (buffer) => {
+      if (canCallResume) {
+        instance.HEAPU8.set(buffer)
+        canCallHandle = true
+      }
+    }
+  }
 }
