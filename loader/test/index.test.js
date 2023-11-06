@@ -32,18 +32,21 @@ describe('loader', async () => {
     )
     assert.equal(mainResult.output, 'Hello World')
 
-    // const { result: { messages: [message] } } = mainResult
-    // assert.deepStrictEqual(message, {
-    //   target: 'ctr-id-123',
-    //   txId: 'tx-id-123',
-    //   message: {
-    //     caller: 'ctr-id-456',
-    //     qty: 10,
-    //     type: 'transfer',
-    //     from: 'ctr-id-456',
-    //     to: 'ctr-id-123'
-    //   }
-    // })
+    assert.ok(true)
+  })
+
+  it('should load previous memory', async () => {
+    const { default: hyperbeamLoader } = await import(MODULE_PATH)
+
+    const wasmBinary = fs.readFileSync('./test/contracts/process2.wasm')
+    const mainHandler = await hyperbeamLoader(wasmBinary)
+
+    const result = await mainHandler(null, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
+    assert.equal(result.output, 'count: 1')
+
+    const nextHandler = await hyperbeamLoader(wasmBinary)
+    const result2 = await nextHandler(result.buffer, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
+    assert.equal(result2.output, 'count: 2')
     assert.ok(true)
   })
 })
