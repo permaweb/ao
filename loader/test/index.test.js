@@ -40,7 +40,7 @@ describe('loader', async () => {
 
     const wasmBinary = fs.readFileSync('./test/contracts/process2.wasm')
     const mainHandler = await hyperbeamLoader(wasmBinary)
-
+    // spawn
     const result = await mainHandler(null, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
     assert.equal(result.output, 'count: 1')
 
