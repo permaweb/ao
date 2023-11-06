@@ -78,9 +78,6 @@ module.exports = async function (binary) {
         spawns: response.spawns
       }
     }
-    return {
-      buffer: null,
-      error: response.error
-    }
+    throw response
   }
 }
