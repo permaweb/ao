@@ -1,9 +1,15 @@
 # ao Wasm Loader
 
 This module takes an `ao` Wasm `ArrayBuffer` and returns a `handle` function,
-that given `SmartWeaveContract` inputs, will produce a `result`.
+that given `ao-process` message, will produce a `result`.
 
-The handle function can be invoked just like any other `SmartWeaveContract`
+<!-- toc -->
+
+- [Usage](#usage)
+  - [Using a File](#using-a-file)
+  - [Using `fetch`](#using-fetch)
+
+<!-- tocstop -->
 
 ## Usage
 
@@ -13,21 +19,45 @@ to be invoked:
 ```js
 import AoLoader from "@permaweb/ao-loader";
 
-/* SmartWeave READ-ONLY Env Variables */
-const SmartWeave = {
-  transaction: {
+/* ao READ-ONLY Env Variables */
+const env = {
+  message: {
     id: "1",
+  },
+  process: {
+    id: "2",
   },
 };
 
 // Create the handle function that executes the Wasm
-const handle = AoLoader(wasmBinary);
+const handle = await AoLoader(wasmBinary);
 
-// Now invoke the handle
-const result = await handle({ balances: 1 }, {
-  caller: "1",
-  input: { function: "balance" },
-}, SmartWeave);
+// To spawn a process, pass null as the buffer
+const result = await handle(null, {
+  owner: "OWNER_ADDRESS",
+  tags: [
+    { name: "function", value: "balance" },
+    { name: "target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
+  ],
+}, env);
+```
+
+// To evaluate a message on an existing process
+
+```js
+const handle = await AoLoader(wasmBinary);
+const buffer = await LoadFromCache();
+
+const result = await handle(buffer, {
+  owner: "OWNER_ADDRESS",
+  tags: [
+    { name: "function", value: "balance" },
+    { name: "target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
+  ],
+}, env);
+
+saveToCache(result.buffer);
+console.log(result.output);
 ```
 
 ### Using a File

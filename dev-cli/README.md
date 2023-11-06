@@ -111,10 +111,10 @@ You can also run `ao [command] --help` for command-lvl help.
 ## Testing example
 
 Once you have built your Lua into Wasm using `ao build`, the output will be a
-`contract.js` and a `contract.wasm` file.
+`process.js` and a `process.wasm` file.
 
-The `contract.js` file is the JS interop that allows invoking Wasm from a JS
-program, while the `contract.wasm` is your Lua code compiled into Wasm.
+The `process.js` file is the JS interop that allows invoking Wasm from a JS
+program, while the `process.wasm` is your Lua code compiled into Wasm.
 
 ## For Developers
 
@@ -127,8 +127,8 @@ commands to run lua and emscripten as well as build tools.
 You will still need `docker`. Learn how to
 [Install Docker](https://www.docker.com/get-started/)
 
-Run `deno task build-binaries` to compile the CLI binaries into the `dist` folder.
-There are 4 binaries built:
+Run `deno task build-binaries` to compile the CLI binaries into the `dist`
+folder. There are 4 binaries built:
 
 - Windows
 - Linux
@@ -160,6 +160,6 @@ Workflow Dispatch that will:
 > `lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps`, that has funded Irys Node 2
 > with a very small amount of funds (`CI_WALLET` env variable). If the funds are
 > depleted, then the CLI will no longer be able to publish the CLI to Arweave.
-> For now, if the Irys Node needs more funding, contact `@TillaTheHun0`.
-> (Maybe eventually we add a Workflow Dispatch script to automatically fund the
-> Irys Node)
+> For now, if the Irys Node needs more funding, contact `@TillaTheHun0`. (Maybe
+> eventually we add a Workflow Dispatch script to automatically fund the Irys
+> Node)
