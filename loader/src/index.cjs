@@ -18,7 +18,7 @@ var Module = (() => {
 })();
 /* eslint-enable */
 
-/** 
+/**
  * @typedef Tag
  * @property {string} name
  * @property {string} value
@@ -32,7 +32,7 @@ var Module = (() => {
  * @property {DataItem} data
  */
 
-/** 
+/**
  * @typedef Environment
  * @property {{id: string, owner: string, tags: Tag[]}} process
  * @property {{id: string, owner: string, tags: Tag[]}} message
@@ -40,63 +40,47 @@ var Module = (() => {
  */
 
 /**
+ * @typedef HandleResponse
+ * @property {ArrayBuffer} buffer
+ * @property {DataItem} output
+ * @property {Message[]} messages
+ * @property {Message[]} spawns
+ */
+
+/**
  * @callback handleFunction
+ * @param {ArrayBuffer | NULL} buffer
  * @param {Message} msg
  * @param {Environment} env
- */
-
-/**
- * @callback pauseFunction
- * @returns {ArrayBuffer}
- */
-
-/**
- * @callback resumeFunction
- * @param {ArrayBuffer} buffer
- * @returns {null}
- */
-
-/**
- * @typedef LoaderResponse
- * @property {handleFunction} handle
- * @property {pauseFunction} pause
- * @property {resumeFunction} resume
+ * @returns {HandleResponse}
  */
 
 /**
  * @param {ArrayBuffer} binary
- * @param {boolean} spawn
- * @returns {LoaderResponse}
+ * @returns {handleFunction}
  */
-module.exports = async function (binary, spawn = false) {
+module.exports = async function (binary) {
   const instance = await Module(binary)
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
-  const canCallResume = !spawn
-  let canCallHandle = spawn
-  let canCallPause = false
+  
+  return (buffer, msg, env) => {
+    if (buffer) {
+      instance.HEAPU8.set(buffer)
+    }
+    const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
 
-  return {
-    handle: (msg, env) => {
-      if (canCallHandle) {
-        const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
-        if (ok) {
-          canCallPause = true
-          return response
-        }
-      } else {
-        return { ok: false, msg: 'Cant call handle' }
+    if (ok) {
+      buffer = instance.HEAPU8.slice()
+      return {
+        buffer,
+        output: response.output,
+        messages: response.messages,
+        spawns: response.spawns
       }
-    },
-    pause: () => {
-      if (canCallPause) {
-        return instance.HEAPU8.slice()
-      }
-    },
-    resume: (buffer) => {
-      if (canCallResume) {
-        instance.HEAPU8.set(buffer)
-        canCallHandle = true
-      }
+    }
+    return {
+      buffer: null,
+      error: response.error
     }
   }
 }

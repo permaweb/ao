@@ -1,24 +1,23 @@
 local json = require "json"
-local contract = require ".src.contract"
+local process = require ".src.process"
 
-function handle(stateJSON, actionJSON, SmartWeaveJSON)
+function handle(msgJSON, aoJSON)
   -- decode inputs
-  local state = json.decode(stateJSON)
-  local action = json.decode(actionJSON)
-  local SmartWeave = json.decode(SmartWeaveJSON)
+  local msg = json.decode(msgJSON)
+  local ao = json.decode(aoJSON)
 
-  -- handle contract
+  -- handle process
   --
-  -- The contract may throw an error, either intentionally or unintentionally
+  -- The process may throw an error, either intentionally or unintentionally
   -- So we need to be able to catch these unhandled errors and bubble them
   -- across the interop with some indication that it was unhandled
   --
-  -- To do this, we wrap the contract.handle with pcall(), and return both the status
+  -- To do this, we wrap the process.handle with pcall(), and return both the status
   -- and response as JSON. The caller can examine the status boolean and decide how to
   -- handle the error
   --
   -- See pcall https://www.lua.org/pil/8.4.html
-  local status, response = pcall(function() return (contract.handle(state, action, SmartWeave)) end)
+  local status, response = pcall(function() return (process.handle(msg, ao)) end)
 
   -- encode output
   local responseJSON = json.encode({ ok = status, response = response })

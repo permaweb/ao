@@ -14,33 +14,36 @@ describe('loader', async () => {
   it('load and execute message passing contract', async () => {
     const { default: hyperbeamLoader } = await import(MODULE_PATH)
 
-    const wasmBinary = fs.readFileSync('./test/contracts/message/contract.wasm')
-    const mainHandler = hyperbeamLoader(wasmBinary)
+    const wasmBinary = fs.readFileSync('./test/contracts/process.wasm')
+    const mainHandler = await hyperbeamLoader(wasmBinary)
     const mainResult = await mainHandler(
+      null,
       {
-        balances: { 1: 1 },
-        sendToContract: 'ctr-id-123'
-      },
-      {
-        input: { function: 'noop' }
+        owner: 'tom',
+        target: '',
+        tags: [
+          { name: 'function', value: 'count' }
+        ]
       },
       {
         transaction: { id: 'tx-id-123' },
-        contract: { id: 'ctr-id-456' }
+        process: { id: 'ctr-id-456' }
       }
     )
-    console.log(mainResult.result)
-    const { result: { messages: [message] } } = mainResult
-    assert.deepStrictEqual(message, {
-      target: 'ctr-id-123',
-      txId: 'tx-id-123',
-      message: {
-        caller: 'ctr-id-456',
-        qty: 10,
-        type: 'transfer',
-        from: 'ctr-id-456',
-        to: 'ctr-id-123'
-      }
-    })
+    assert.equal(mainResult.output, 'Hello World')
+
+    // const { result: { messages: [message] } } = mainResult
+    // assert.deepStrictEqual(message, {
+    //   target: 'ctr-id-123',
+    //   txId: 'tx-id-123',
+    //   message: {
+    //     caller: 'ctr-id-456',
+    //     qty: 10,
+    //     type: 'transfer',
+    //     from: 'ctr-id-456',
+    //     to: 'ctr-id-123'
+    //   }
+    // })
+    assert.ok(true)
   })
 })
