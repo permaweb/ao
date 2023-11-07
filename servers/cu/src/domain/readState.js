@@ -42,7 +42,7 @@ export function readStateWith (env) {
       .map((ctx) => ctx.output)
       .map(
         env.logger.tap(
-          'readState result for process "%s" to interaction "%s": %O',
+          'readState result for process "%s" up to message "%s": %o',
           processId,
           to || 'latest'
         )
