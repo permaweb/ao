@@ -1,5 +1,7 @@
+import { pipeline } from 'node:stream'
+
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, aperture, ascend, assoc, cond, equals, head, ifElse, length, mergeRight, path, pick, pipe, prop, reduce } from 'ramda'
+import { T, always, ascend, assoc, cond, equals, ifElse, length, mergeRight, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -167,11 +169,11 @@ export function scheduleMessagesBetweenWith ({
   const timeBased = schedules.filter(s => s.unit === 'seconds')
     .sort(ascend(prop('value')))
 
-  return (left, right) => {
-    const messages = []
-    // No Schedules
-    if (!blockBased.length && !timeBased.length) return messages
-
+  /**
+   * An async iterable whiose results are each a scheduled message
+   * between the left and right boundaries
+   */
+  return async function * scheduledMessages (left, right) {
     /**
      * We extract the hash at the end of the left boundary,
      * so that any scheduled messages generated between left and right
@@ -213,37 +215,31 @@ export function scheduleMessagesBetweenWith ({
        * Block-based messages will always be pushed onto the sequence of messages
        * before time-based messages, which is predictable and deterministic
        */
-      messages.push.apply(
-        messages,
-        blockBased.reduce(
-          (acc, schedule, idx) => {
-            if (isBlockOnSchedule({ height: curBlock.height, originHeight: originBlock.height, schedule })) {
-              acc.push({
-                message: {
-                  ...schedule.message,
-                  owner: processOwner,
-                  target: processId
-                },
-                /**
-                 * TODO: don't know if this is correct, but we need something unique for the sortKey
-                 * for the scheduled message
-                 *
-                 * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
-                 * It will also enable performing range queries to fetch all scheduled messages by simply
-                 * appending a ',' to any sortKey
-                 */
-                sortKey: padBlockHeight(`${curBlock.height},${curBlock.timestamp},${leftHash},idx${idx}-${schedule.interval}`),
-                AoGlobal: {
-                  process: { id: processId, owner: processOwner },
-                  block: curBlock
-                }
-              })
+      for (let i = 0; i < blockBased.length; i++) {
+        const schedule = blockBased[i]
+        if (isBlockOnSchedule({ height: curBlock.height, originHeight: originBlock.height, schedule })) {
+          yield {
+            message: {
+              ...schedule.message,
+              owner: processOwner,
+              target: processId
+            },
+            /**
+             * TODO: don't know if this is correct, but we need something unique for the sortKey
+             * for the scheduled message
+             *
+             * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
+             * It will also enable performing range queries to fetch all scheduled messages by simply
+             * appending a ',' to any sortKey
+             */
+            sortKey: padBlockHeight(`${curBlock.height},${curBlock.timestamp},${leftHash},idx${i}-${schedule.interval}`),
+            AoGlobal: {
+              process: { id: processId, owner: processOwner },
+              block: curBlock
             }
-            return acc
-          },
-          []
-        )
-      )
+          }
+        }
+      }
 
       /**
        * If there are no time-based schedules, then there is no reason to tick
@@ -258,42 +254,36 @@ export function scheduleMessagesBetweenWith ({
        * schedules need to generate an implicit message
        */
       for (let curTimestamp = curBlock.timestamp; curTimestamp < nextBlock.timestamp; curTimestamp += 1000) {
-        messages.push.apply(
-          messages,
-          timeBased.reduce(
-            (acc, schedule, idx) => {
-              if (isTimestampOnSchedule({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, schedule })) {
-                acc.push({
-                  message: {
-                    ...schedule.message,
-                    target: processId,
-                    owner: processOwner
-                  },
-                  /**
-                   * TODO: don't know if this is correct, but we need something unique for the sortKey
-                   * for the scheduled message
-                   *
-                   * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
-                   * It will also enable performing range queries to fetch all scheduled messages by simply
-                   * appending a ',' to any sortKey
-                   */
-                  sortKey: padBlockHeight(`${curHeight},${curTimestamp},${leftHash},idx${idx}-${schedule.interval}`),
-                  AoGlobal: {
-                    process: { id: processId, owner: processOwner },
-                    block: curBlock
-                  }
-                })
+        for (let i = 0; i < timeBased.length; i++) {
+          const schedule = timeBased[i]
+
+          if (isTimestampOnSchedule({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, schedule })) {
+            yield {
+              message: {
+                ...schedule.message,
+                target: processId,
+                owner: processOwner
+              },
+              /**
+               * TODO: don't know if this is correct, but we need something unique for the sortKey
+               * for the scheduled message
+               *
+               * append ${schedule.interval}${idx} to sortKey to make unique within block/timestamp.
+               * It will also enable performing range queries to fetch all scheduled messages by simply
+               * appending a ',' to any sortKey
+               */
+              sortKey: padBlockHeight(`${curHeight},${curTimestamp},${leftHash},idx${i}-${schedule.interval}`),
+              AoGlobal: {
+                process: { id: processId, owner: processOwner },
+                block: curBlock
               }
-              return acc
-            },
-            []
-          )
-        )
+            }
+          }
+        }
       }
 
       // TODO implement CRON based schedules
     }
-    return messages
   }
 }
 
@@ -304,22 +294,18 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
   return (ctx) =>
     of(ctx)
       .map(ctx => {
-        logger('Loading Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest')
+        logger('Initializing AsyncIterable of Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest')
         return ctx
       })
+      /**
+       * Returns an async iterable whose results are each a sequenced message
+       */
       .chain(args => loadMessages({
         processId: args.id,
         owner: args.owner,
         from: args.from, // could be undefined
         to: args.to // could be undefined
-      }).bimap(
-        logger.tap('Error occurred when loading sequenced messages from "%s" to "%s"', ctx.from || 'initial', ctx.to || 'latest'),
-        ifElse(
-          length,
-          (messages) => logger.tap('Successfully loaded %s sequenced messages from "%s" to "%s"...', messages.length, ctx.from || 'initial', ctx.to || 'latest')(messages),
-          logger.tap('No sequenced messages found from "%s" to "%s"...', ctx.from || 'initial', ctx.to || 'latest')
-        )
-      ))
+      }))
 }
 
 function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
@@ -355,22 +341,38 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
   }
 
   /**
-   * In some cases, messages may be written to a process, before it
-   * has been finalized on chain, and as a result, the messages assigned block height,
-   * according to the SU, may be less than leftMost boundary according to the sortKey and block.
+   * Given a left-most and right-most boundary, return an async generator,
+   * that given a list of values, emits sequential binary tuples dervied from those values,
+   * with an additional element appended and prepended to the list of values.
    *
-   * So we order the apparent leftMost boundary and earliest sequenced message by their block height,
-   * then return the actual leftMost boundary based on the least block height.
+   * This effectively places an tuple aperture on the incoming stream of single values,
+   * and with andditional element at the beginning and end of the list
+   *
+   * Since we added our left and right bounds, there should always
+   * be at least one tuple emitted, which will account for any time
+   * we have <2 sequenced messages to use as boundaries.
+   *
+   * If our leftMost and rightMost boundary are the only boundaries, this effectively means
+   * that we have no sequenced messages to merge and evaluate, and only scheduled messages to generate
+   *
+   * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
    */
-  function findLeftMostBlock ({ sequenced, id, sortKey, originBlock }) {
-    const leftMost = parseSortKeyOrBlock({ id, sortKey, block: originBlock })
-    if (!sequenced.length) return leftMost
+  function genTuplesWithBoundaries ({ left: first, right: last }) {
+    return async function * genTuples (boundaries) {
+    /**
+     * the initial prev is the left-most boundary
+     */
+      let prev = first
+      for await (const boundary of boundaries) {
+        yield [prev, boundary]
+        prev = boundary
+      }
 
-    const first = head(sequenced)
-
-    return [leftMost, first]
-      .sort(ascend(path(['block', 'height'])))
-      .shift()
+      /**
+     * Emit the last boundary
+     */
+      yield [prev, last]
+    }
   }
 
   return (ctx) => of(ctx)
@@ -386,10 +388,14 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
     .chain((schedules) => {
       /**
        * There are no schedules on the process, so no message generation to perform,
-       * so simply return the list of sequenced messsages received from the SU
+       * so simply return the sequenced messages async iterable
        */
-      if (!schedules.length) return of(ctx.sequenced)
+      if (!schedules.length) return of(ctx.$sequenced)
 
+      /**
+       * Merge the sequence messages stream with scheduled messages,
+       * producing a single merged stream
+       */
       return loadTimestamp()
         .map(logger.tap('loaded current block and tiemstamp from SU'))
         /**
@@ -407,7 +413,7 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
            *
            * But we also have to take into account the sequenced messages (see findLeftMostBlock above)
            */
-          leftMost: findLeftMostBlock({ sequenced: ctx.sequenced, id: ctx.id, sortKey: ctx.from, originBlock: ctx.block }),
+          leftMost: parseSortKeyOrBlock({ id: ctx.id, sortKey: ctx.from, block: ctx.block }),
           /**
            * The right most boundary is determine either using the 'to' sortKey or,
            * in the case of 'to' not being defined, the current block according to the SU
@@ -418,33 +424,16 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
         .chain(({ leftMost, rightMost }) =>
           loadBlocksMeta({ min: leftMost.block.height, max: rightMost.block.height })
             .map(blocksMeta => {
-              /**
-               * Each set of scheduled messages will be generated between a left and right boundary,
-               * So we need to procure a set of boundaries to use, while ALSO merging with the sequenced messages
-               * from the SU.
-               *
-               * Our messages retrieved from the SU are perfect boundaries, as they each have a
-               * sortKey to parse a hash from (for the purpose of generating monotonically increasing sortKeys for generated scheduled messages)
-               * and a block that contains a height and timestamp.
-               *
-               * This will allow the CU to generate scheduled messages with monotonically increasing sortKeys and accurate block metadata,
-               * at least w.r.t the SU's claims.
-               */
-              const boundaries = ctx.sequenced
-              /**
-               * Sandwich the sequenced messages between the leftMost and rightMost boundaries.
-               */
-              boundaries.unshift(leftMost)
-              boundaries.push(rightMost)
-
               return {
-                boundaries,
+                leftMost,
+                rightMost,
+                $sequenced: ctx.$sequenced,
                 /**
                  * Our iterating function that accepts a left and right boundary
-                 * and returns a merged and ordered list of messages sandwiched between
-                 * those boundaries
+                 * and returns an async iterable that emits scheduled messages
+                 * that are between those boundaries
                  */
-                scheduleMessagesBetween: scheduleMessagesBetweenWith({
+                genScheduledMessages: scheduleMessagesBetweenWith({
                   processId: ctx.id,
                   owner: ctx.owner,
                   originBlock: ctx.block,
@@ -454,51 +443,56 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
               }
             })
         )
-        .map(({ boundaries, scheduleMessagesBetween }) =>
-          reduce(
-            (merged, [left, right]) => {
-              const scheduled = scheduleMessagesBetween(left, right)
-              logger(
-                'Loaded %s scheduled messages between boundaries %o and %o',
-                scheduled.length,
-                pick(['block', 'sortKey'], left),
-                pick(['block', 'sortKey'], right)
-              )
-              merged.push.apply(merged, scheduled)
-              /**
-               * We need to push right boundary onto merged
-               * since it will always be a message, except in the case of the rightMost boundary,
-               * which we will remove at the end
-               *
-               * There is no need to unshift the left boundary, as the left will be the iterations right boundary.
-               * Otherwise, we would end up with duplicates at each boundary
-               */
-              merged.push(right)
-              return merged
+        .map(logger.tap('Merging Streams of Sequenced and Scheduled Messages...'))
+        .map(({ leftMost, rightMost, $sequenced, genScheduledMessages }) => {
+          /**
+           * Each set of scheduled messages will be generated between a left and right boundary,
+           * So we need to procure a set of boundaries to use, while ALSO merging with the sequenced messages
+           * from the SU.
+           *
+           * Our messages retrieved from the SU are perfect boundaries, as they each have a
+           * sortKey to parse a hash from (for the purpose of generating monotonically increasing sortKeys for generated scheduled messages)
+           * and a block that contains a height and timestamp.
+           *
+           * This will allow the CU to generate scheduled messages with monotonically increasing sortKeys and accurate block metadata,
+           * at least w.r.t the SU's claims.
+           */
+          return pipeline(
+            $sequenced,
+            genTuplesWithBoundaries({ left: leftMost, right: rightMost }),
+            async function * (boundaries) {
+              let tuple = await boundaries.next()
+              while (!tuple.done) {
+                const [left, right] = tuple.value
+                logger('Calculating all scheduled messages between %o and %o', left.block, right.block)
+                /**
+                 * Emit each scheduled message as a top-lvl generated value.
+                 *
+                 * In other words, each tuple can produce an arbitrary number of scheduled
+                 * messages between them, and so emitting them one at a time will respect
+                 * backpressure.
+                 */
+                for await (const message of genScheduledMessages(left, right)) yield messageSchema.parse(message)
+                /**
+                 * We need to emit the right boundary since it will always be a message,
+                 * EXCEPT for final tuple, since THAT right boundary will be our right-most boundary,
+                 * and NOT a message. We will not emit right, if there is no next tuple
+                 *
+                 * There is no need to unshift the left boundary, as the left will be the next iterations right boundary.
+                 * Otherwise, we would end up with duplicates at each boundary
+                 */
+                const next = await boundaries.next()
+                if (!next.done) yield messageSchema.parse(right)
+                /**
+                 * Set up the next boundary to generate scheduled messages between
+                 */
+                tuple = next
+              }
             },
-            [],
-            /**
-             * Split our list of boundaries into binary Tuples
-             *
-             * Since we added our left and right bounds, there should always
-             * be at least two elements in the list, which will account for any time
-             * we have <2 sequenced messages to use as boundaries.
-             *
-             * If our leftMost and rightMost boundary are the only boundaries, this effectively means
-             * that we have no sequenced messages to merge and evaluate, and only scheduled messages to generate
-             *
-             * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
-             */
-            aperture(2, boundaries)
+            (err) => {
+              if (err) logger('Encountered err when merging sequenced and scheduled messages', err)
+            }
           )
-        )
-        /**
-         * Remove the rightMost boundary
-         * that we added at the beginning, leaving only our merged messages
-         */
-        .map((bounaries) => {
-          bounaries.pop()
-          return bounaries
         })
     })
     .map(messages => ({ messages }))
@@ -513,9 +507,9 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
  */
 const ctxSchema = z.object({
   /**
-   * Messages to be evaluated
+   * Messages to be evaluated, as an async generator
    */
-  messages: z.array(messageSchema)
+  messages: z.any()
 }).passthrough()
 
 /**
@@ -549,8 +543,7 @@ export function loadMessagesWith (env) {
   return (ctx) =>
     of(ctx)
       .chain(loadSequencedMessages)
-      .chain(sequenced => loadScheduledMessages({ ...ctx, sequenced }))
-      .map(logger.tap('Loaded messages and appending to context'))
+      .chain($sequenced => loadScheduledMessages({ ...ctx, $sequenced }))
       // { messages }
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)

@@ -1,5 +1,5 @@
 /* eslint-disable no-throw-literal */
-import { describe, test } from 'node:test'
+import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 
@@ -8,6 +8,10 @@ import { evaluateWith } from './evaluate.js'
 
 const logger = createLogger('ao-cu:readState')
 
+async function * toAsyncIterable (iterable) {
+  while (iterable.length) yield iterable.shift()
+}
+
 describe('evaluate', () => {
   describe('output', () => {
     const evaluate = evaluateWith({
@@ -15,34 +19,37 @@ describe('evaluate', () => {
       logger
     })
 
-    const ctx = {
-      id: 'ctr-1234',
-      from: 'sort-key-start',
-      src: readFileSync('./test/contracts/happy/contract.wasm'),
-      state: { foo: 'bar' },
-      messages: [
-        {
-          message: {
-            owner: 'owner-123',
-            tags: {
-              function: 'hello'
-            }
+    let ctx
+    beforeEach(() => {
+      ctx = {
+        id: 'ctr-1234',
+        from: 'sort-key-start',
+        src: readFileSync('./test/contracts/happy/contract.wasm'),
+        state: { foo: 'bar' },
+        messages: toAsyncIterable([
+          {
+            message: {
+              owner: 'owner-123',
+              tags: {
+                function: 'hello'
+              }
+            },
+            sortKey: 'a',
+            AoGlobal: {}
           },
-          sortKey: 'a',
-          AoGlobal: {}
-        },
-        {
-          message: {
-            owner: 'owner-456',
-            tags: {
-              function: 'world'
-            }
-          },
-          sortKey: 'b',
-          AoGlobal: {}
-        }
-      ]
-    }
+          {
+            message: {
+              owner: 'owner-456',
+              tags: {
+                function: 'world'
+              }
+            },
+            sortKey: 'b',
+            AoGlobal: {}
+          }
+        ])
+      }
+    })
 
     test('adds output to context', async () => {
       const { output } = await evaluate(ctx).toPromise()
@@ -115,7 +122,7 @@ describe('evaluate', () => {
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/happy/contract.wasm'),
       state: { balances: { 1: 1 } },
-      messages: [
+      messages: toAsyncIterable([
         {
           message: {
             owner: 'owner-123',
@@ -136,7 +143,7 @@ describe('evaluate', () => {
           sortKey: 'b',
           AoGlobal: {}
         }
-      ]
+      ])
     }
 
     await evaluate(ctx).toPromise()
@@ -157,7 +164,7 @@ describe('evaluate', () => {
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/happy/contract.wasm'),
       state: { balances: { 1: 1 } },
-      messages: []
+      messages: toAsyncIterable([])
     }
 
     const { output } = await evaluate(ctx).toPromise()
@@ -184,7 +191,7 @@ describe('evaluate', () => {
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
       state: { foo: 'bar' },
-      messages: [
+      messages: toAsyncIterable([
         {
           // Will include an error in result.error
           message: {
@@ -196,10 +203,11 @@ describe('evaluate', () => {
           sortKey: 'a',
           AoGlobal: {}
         }
-      ]
+      ])
     }
 
     const res = await evaluate(ctx).toPromise()
+    console.log(res)
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
       state: { foo: 'bar' },
@@ -225,7 +233,7 @@ describe('evaluate', () => {
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
       state: { foo: 'bar' },
-      messages: [
+      messages: toAsyncIterable([
         {
           // Will intentionally throw from the lua contract
           message: {
@@ -237,7 +245,7 @@ describe('evaluate', () => {
           sortKey: 'a',
           AoGlobal: {}
         }
-      ]
+      ])
     }
 
     const res = await evaluate(ctx).toPromise()
@@ -266,7 +274,7 @@ describe('evaluate', () => {
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
       state: { foo: 'bar' },
-      messages: [
+      messages: toAsyncIterable([
         {
           // Will unintentionally throw from the lua contract
           message: {
@@ -278,7 +286,7 @@ describe('evaluate', () => {
           sortKey: 'a',
           AoGlobal: {}
         }
-      ]
+      ])
     }
 
     const res = await evaluate(ctx).toPromise()
@@ -305,7 +313,7 @@ describe('evaluate', () => {
       from: 'sort-key-start',
       src: readFileSync('./test/contracts/sad/contract.wasm'),
       state: { counter: 1 },
-      messages: [
+      messages: toAsyncIterable([
         {
           // Will include an error in result.error
           message: {
@@ -328,7 +336,7 @@ describe('evaluate', () => {
           sortKey: 'a',
           AoGlobal: {}
         }
-      ]
+      ])
     }
 
     const res = await evaluate(ctx).toPromise()

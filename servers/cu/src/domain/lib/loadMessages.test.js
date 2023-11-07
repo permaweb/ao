@@ -289,7 +289,7 @@ describe('loadMessages', () => {
     })
   })
 
-  describe('scheduleMessagesBetween', () => {
+  describe('scheduleMessagesBetween', async () => {
     /**
      * Timestamps the CU deals with will always be milliseconds, at the top of the SECOND
      *
@@ -427,7 +427,7 @@ describe('loadMessages', () => {
 
     const scheduleMessagesBetween = scheduleMessagesBetweenWith({ processId, owner, originBlock, schedules, blocksMeta })
 
-    const scheduledMessages = scheduleMessagesBetween(
+    const genScheduledMessages = scheduleMessagesBetween(
       // left
       {
         block: {
@@ -449,6 +449,9 @@ describe('loadMessages', () => {
         // message
       }
     )
+
+    const scheduledMessages = []
+    for await (const scheduled of genScheduledMessages) scheduledMessages.push(scheduled)
 
     test('should create scheduled message according to the schedules', async () => {
       console.log(countBy(prop('sortKey'), scheduledMessages))
