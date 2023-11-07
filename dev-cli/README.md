@@ -180,4 +180,4 @@ DockerHub using `docker push p3rmaw3b/ao:<tag>`.
 Once the docker image is published, update the `VERSION.IMAGE` value to the
 corresponding version in `src/versions.js`, commit, and push.
 
-Then run the CI as described in
+Then run the CI as described in [Publish a new Version of the CLI](#publish-a-new-version-of-the-cli)
