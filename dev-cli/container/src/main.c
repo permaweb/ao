@@ -115,7 +115,7 @@ int main(void) {
     lua_close(wasm_lua_state);
     return 1;
   }
-  printf("Boot Lua Webassembly!\n");
+  //printf("Boot Lua Webassembly!\n");
   return 0;
 }
 

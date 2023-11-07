@@ -14,33 +14,39 @@ describe('loader', async () => {
   it('load and execute message passing contract', async () => {
     const { default: hyperbeamLoader } = await import(MODULE_PATH)
 
-    const wasmBinary = fs.readFileSync('./test/contracts/message/contract.wasm')
-    const mainHandler = hyperbeamLoader(wasmBinary)
+    const wasmBinary = fs.readFileSync('./test/contracts/process.wasm')
+    const mainHandler = await hyperbeamLoader(wasmBinary)
     const mainResult = await mainHandler(
+      null,
       {
-        balances: { 1: 1 },
-        sendToContract: 'ctr-id-123'
-      },
-      {
-        input: { function: 'noop' }
+        owner: 'tom',
+        target: '',
+        tags: [
+          { name: 'function', value: 'count' }
+        ]
       },
       {
         transaction: { id: 'tx-id-123' },
-        contract: { id: 'ctr-id-456' }
+        process: { id: 'ctr-id-456' }
       }
     )
-    console.log(mainResult.result)
-    const { result: { messages: [message] } } = mainResult
-    assert.deepStrictEqual(message, {
-      target: 'ctr-id-123',
-      txId: 'tx-id-123',
-      message: {
-        caller: 'ctr-id-456',
-        qty: 10,
-        type: 'transfer',
-        from: 'ctr-id-456',
-        to: 'ctr-id-123'
-      }
-    })
+    assert.equal(mainResult.output, 'Hello World')
+
+    assert.ok(true)
+  })
+
+  it('should load previous memory', async () => {
+    const { default: hyperbeamLoader } = await import(MODULE_PATH)
+
+    const wasmBinary = fs.readFileSync('./test/contracts/process2.wasm')
+    const mainHandler = await hyperbeamLoader(wasmBinary)
+    // spawn
+    const result = await mainHandler(null, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
+    assert.equal(result.output, 'count: 1')
+
+    const nextHandler = await hyperbeamLoader(wasmBinary)
+    const result2 = await nextHandler(result.buffer, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
+    assert.equal(result2.output, 'count: 2')
+    assert.ok(true)
   })
 })

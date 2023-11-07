@@ -27,7 +27,7 @@ function contractSourceArgs (contractWasmPath) {
   /**
    * Use contract.wasm in pwd by default
    */
-  contractWasmPath = contractWasmPath || 'contract.wasm'
+  contractWasmPath = contractWasmPath || 'process.wasm'
   const contractName = basename(contractWasmPath)
   const contractWasmDest = `/src/${contractName}`
 

@@ -18,32 +18,66 @@ var Module = (() => {
 })();
 /* eslint-enable */
 
-// load wasm and return handle function
+/**
+ * @typedef Tag
+ * @property {string} name
+ * @property {string} value
+ */
+
+/**
+ * @typedef Message
+ * @property {string} owner
+ * @property {string} target
+ * @property {Tag[]} tags
+ * @property {DataItem} data
+ */
+
+/**
+ * @typedef Environment
+ * @property {{id: string, owner: string, tags: Tag[]}} process
+ * @property {{id: string, owner: string, tags: Tag[]}} message
+ * @property {{height: string, timestamp: string}} block
+ */
+
+/**
+ * @typedef HandleResponse
+ * @property {ArrayBuffer} buffer
+ * @property {DataItem} output
+ * @property {Message[]} messages
+ * @property {Message[]} spawns
+ */
+
 /**
  * @callback handleFunction
- * @param {unknown} state
- * @param {unknown} action
- * @param {unknown} SmartWeave
+ * @param {ArrayBuffer | NULL} buffer
+ * @param {Message} msg
+ * @param {Environment} env
+ * @returns {HandleResponse}
  */
 
 /**
  * @param {ArrayBuffer} binary
  * @returns {handleFunction}
  */
-module.exports = function (binary) {
-  // execute handle function
-  return (state, action, SmartWeave) => Module(binary).then(i => {
-    const handle = i.cwrap('handle', 'string', ['string', 'string', 'string'])
+module.exports = async function (binary) {
+  const instance = await Module(binary)
+  const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
+  
+  return (buffer, msg, env) => {
+    if (buffer) {
+      instance.HEAPU8.set(buffer)
+    }
+    const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
 
-    const { ok, response } = JSON.parse(handle(JSON.stringify(state), JSON.stringify(action), JSON.stringify(SmartWeave)))
-
-    if (ok) return response
-    /**
-     * An unhandled error was received across the interop, so throw it,
-     * causing the Promise to reject.
-     *
-     * The caller should handle accordingly
-     */
+    if (ok) {
+      buffer = instance.HEAPU8.slice()
+      return {
+        buffer,
+        output: response.output,
+        messages: response.messages,
+        spawns: response.spawns
+      }
+    }
     throw response
-  })
+  }
 }
