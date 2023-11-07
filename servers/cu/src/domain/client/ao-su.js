@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
-
-import { fromPromise, of } from 'hyper-async'
-import { always, applySpec, assoc, compose, evolve, filter, isNotNil, last, map, path, pathOr, pipe, pluck, prop, reduce, transduce } from 'ramda'
+import { pipeline } from 'node:stream'
+import { of } from 'hyper-async'
+import { always, applySpec, assoc, evolve, filter, isNotNil, last, path, pathOr, pipe, prop, reduce } from 'ramda'
 
 import { padBlockHeight } from '../lib/utils.js'
 
@@ -55,51 +55,64 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
     })(args)
   }
 
-  async function fetchAllPages ({ processId, from, to }) {
-    async function fetchPage ({ from: newFrom }) {
-      // deno-fmt-ignore-start
-      return Promise.resolve({ from: newFrom, to, limit: pageSize })
+  /**
+   * Returns an async generator that emits sequenced messages,
+   * one at a time
+   *
+   * Sequenced messages are fetched a page at a time, but
+   * emitted from the generator one message at a time.
+   *
+   * When the currently fetched page is drained, the next page is fetched
+   * dynamically
+   */
+  function fetchAllPages ({ processId, from, to }) {
+    async function fetchPage ({ from }) {
+      return Promise.resolve({ from, to, limit: pageSize })
         .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
-        .then(params => {
-          logger(
-            'Loading messages page of size %s for process %s from %s to %s',
-            pageSize,
-            processId,
-            newFrom || 'initial',
-            to || 'latest'
-          )
-          return params
-        })
         .then((params) => fetch(`${SU_URL}/messages/${processId}?${params.toString()}`))
         .then((res) => res.json())
     }
 
-    async function maybeFetchNext ({ page_info, edges }) {
-      /**
-       * Either have reached the end and resolve,
-       * or fetch the next page and recurse
-       */
-      return !page_info.has_next_page
-        ? { page_info, edges }
-        : Promise.resolve({
-          /**
-           * The next page will start on the next block
-           */
-          from: pipe(
-            last,
-            path(['node', 'cursor'])
-          )(edges)
-        })
-          .then(fetchPage)
-          .then(maybeFetchNext)
-          .then(({ page_info, edges: e }) => ({ page_info, edges: edges.concat(e) }))
-    }
+    return async function * sequenced () {
+      let curPage = []
+      let curFrom = from
+      let hasNextPage = true
 
-    /**
-     * Start with the first page, then keep going
-     */
-    return fetchPage({ from }).then(maybeFetchNext)
+      let total = 0
+
+      while (hasNextPage) {
+        await Promise.resolve()
+          .then(() => {
+            logger(
+              'Loading next page of maximum %s messages for process %s from %s to %s',
+              pageSize,
+              processId,
+              from || 'initial',
+              to || 'latest'
+            )
+            return fetchPage({ from: curFrom })
+          })
+          .then(({ page_info, edges }) => {
+            total += edges.length
+            curPage = edges
+            hasNextPage = page_info.has_next_page
+            curFrom = page_info.has_next_page && pipe(
+              last,
+              path(['node', 'cursor'])
+            )(edges)
+          })
+
+        while (curPage.length) yield curPage.shift()
+      }
+
+      logger(
+        'Successfully loaded %s sequenced messages for process "%s" from "%s" to "%s"...',
+        total,
+        processId,
+        from || 'initial',
+        to || 'latest')
+    }
   }
 
   /**
@@ -116,72 +129,62 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
     return undefined
   }
 
-  function mapAoGlobal ({ process: { id, owner } }) {
-    return (message) => applySpec({
-      process: always({ id, owner }),
-      block: applySpec({
-        height: path(['block', 'height']),
-        timestamp: path(['block', 'timestamp'])
-      })
-    })(message)
+  function mapAoMessage ({ processId, processOwner }) {
+    return async function * (edges) {
+      for await (const edge of edges) {
+        yield pipe(
+          prop('node'),
+          logger.tap('transforming message retrieved from the SU %o'),
+          applySpec({
+            sortKey: path(['sort_key']),
+            message: applySpec({
+              owner: path(['owner', 'address']),
+              target: path(['process_id']),
+              anchor: path(['message', 'anchor']),
+              from: mapFrom,
+              'Forwarded-By': mapForwardedBy,
+              tags: pipe(
+                pathOr([], ['message', 'tags']),
+                // Parse into a key-value pair
+                reduce((a, t) => assoc(t.name, t.value, a), {})
+              )
+            }),
+            /**
+             * We need the block metadata per message,
+             * so that we can calculate implicit messages
+             */
+            block: applySpec({
+              height: path(['block', 'height']),
+              /**
+               * SU is currently sending back timestamp in milliseconds,
+               */
+              timestamp: path(['block', 'timestamp'])
+            }),
+            AoGlobal: applySpec({
+              process: always({ id: processId, owner: processOwner }),
+              block: applySpec({
+                height: path(['block', 'height']),
+                timestamp: path(['block', 'timestamp'])
+              })
+            })
+          })
+        )(edge)
+      }
+    }
   }
 
   return (args) =>
     of(args)
       .map(mapBounds)
-      .chain(fromPromise(({ processId, owner: processOwner, from, to }) => {
-        return fetchAllPages({ processId, from, to })
-          .then(prop('edges'))
-          .then(pluck('node'))
-          .then(nodes =>
-            transduce(
-              /**
-               * fields from SU are currently snake_case,
-               * so we need to map from those
-               */
-              // { message, block, owner, sort_key, process_id }
-              compose(
-                map(logger.tap('transforming message retrieved from the SU')),
-                map(applySpec({
-                  sortKey: path(['sort_key']),
-                  message: applySpec({
-                    owner: path(['owner', 'address']),
-                    target: path(['process_id']),
-                    anchor: path(['message', 'anchor']),
-                    /**
-                     * TODO: implement from and Forwarded-By
-                     */
-                    from: mapFrom,
-                    'Forwarded-By': mapForwardedBy,
-                    tags: pipe(
-                      pathOr([], ['message', 'tags']),
-                      // Parse into a key-value pair
-                      reduce((a, t) => assoc(t.name, t.value, a), {})
-                    )
-                  }),
-                  /**
-                   * We need the block metadata per message,
-                   * so that we can calculate implicit messages
-                   */
-                  block: applySpec({
-                    height: path(['block', 'height']),
-                    /**
-                     * SU is currently sending back timestamp in milliseconds,
-                     */
-                    timestamp: path(['block', 'timestamp'])
-                  }),
-                  AoGlobal: mapAoGlobal({ process: { id: processId, owner: processOwner } })
-                }))
-              ),
-              (acc, message) => {
-                acc.push(message)
-                return acc
-              },
-              [],
-              nodes
-            )
-          )
-      }))
+      .map(({ processId, owner: processOwner, from, to }) => {
+        return pipeline(
+          fetchAllPages({ processId, from, to }),
+          mapAoMessage({ processId, processOwner }),
+          (err) => {
+            if (err) logger('Encountered err when mapping Sequencer Messages', err)
+          }
+        )
+      })
       .toPromise()
 }
 
