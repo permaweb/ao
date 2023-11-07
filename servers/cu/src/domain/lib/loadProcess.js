@@ -111,8 +111,11 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   return (ctx) => of(ctx)
     .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
     .bimap(
-      logger.tap('Could not find latest evaluation in db. Using intial process as state'),
-      logger.tap('found evaluation in db %j. Using as state and starting point to load messages')
+      (_) => {
+        logger('Could not find latest evaluation in db. Using intial process as state...')
+        return _
+      },
+      logger.tap('Found previous evaluation in db %j. Using as state and starting point to load messages')
     )
     .bichain(
       /**
