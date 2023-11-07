@@ -23,6 +23,7 @@ SmartWeaveContracts written in [Lua](https://www.lua.org/).
 - [For Developers](#for-developers)
   - [Contributing](#contributing)
   - [Publish a new Version of the CLI](#publish-a-new-version-of-the-cli)
+    - [Need a to also Publish a new Docker Image version?](#need-a-to-also-publish-a-new-docker-image-version)
 
 <!-- tocstop -->
 
@@ -152,6 +153,8 @@ Workflow Dispatch that will:
 - Publish the binaries to Arweave, via Irys Node 2
 - Build the install script
 - Publish the install script to Arweave, via Irys Node 2
+- Update the `ArNS` for `https://install_ao.g8way.io` to point to the newest
+  install script
 - Update `version` and `txMappings` in `deno.json`
 - `push` `deno.json` updates back to the remote repo
 
@@ -163,3 +166,18 @@ Workflow Dispatch that will:
 > For now, if the Irys Node needs more funding, contact `@TillaTheHun0`. (Maybe
 > eventually we add a Workflow Dispatch script to automatically fund the Irys
 > Node)
+
+#### Need a to also Publish a new Docker Image version?
+
+If you need to also publish a new Docker Image, you will currently need to do
+this manually.
+
+First login to DockerHub with the appropriate `p3rmaweb` credentials:
+`docker login`. Then run `cd container && ./build.sh` to build the image. Tag
+the image using `docker tag <image_id> p3rmaw3b/ao:<tag>`. Then finally, push to
+DockerHub using `docker push p3rmaw3b/ao:<tag>`.
+
+Once the docker image is published, update the `VERSION.IMAGE` value to the
+corresponding version in `src/versions.js`, commit, and push.
+
+Then run the CI as described in
