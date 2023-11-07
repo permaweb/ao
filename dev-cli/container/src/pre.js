@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 Module.locateFile = (url) => {
-  console.log('file', url)
+  //console.log('file', url)
   return url
 }
 
