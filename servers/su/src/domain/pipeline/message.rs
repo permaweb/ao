@@ -77,12 +77,12 @@ impl MessagePipeline {
     pub async fn commit(&mut self) -> Result<String, String> {
         let build_data = match &self.build_data {
             Some(data) => data,
-            None => return Err("Upload error occurred.".to_string()),
+            None => return Err("Build error occurred.".to_string()),
         };
 
         let build_bundle = match &self.build_bundle {
             Some(data) => data,
-            None => return Err("Upload error occurred.".to_string()),
+            None => return Err("Build error occurred.".to_string()),
         };
         
         

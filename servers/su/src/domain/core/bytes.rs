@@ -305,5 +305,15 @@ impl DataItem {
     pub fn tags(&self) -> Vec<Tag> {
         self.tags.clone()
     }
+
+    pub fn data(&self) -> Option<String> {
+        match &self.data {
+            Data::Bytes(d) => {
+                let data_base64 = base64_url::encode(&d);
+                Some(data_base64)
+            },
+            Data::None => None
+        }
+    }
     
 }
