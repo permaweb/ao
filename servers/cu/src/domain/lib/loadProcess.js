@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { F, T, always, assoc, cond, equals, includes, is, isNotNil, mergeRight, reduce } from 'ramda'
+import { F, T, always, cond, equals, includes, is, isNotNil, mergeRight } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, saveProcessSchema } from '../dal.js'
@@ -83,23 +83,11 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
 function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
 
-  function maybeJson (str) {
-    try {
-      return JSON.parse(str)
-    } catch (e) {
-      return str
-    }
-  }
-
-  function tagsToJson (tags) {
-    return reduce((a, t) => assoc(t.name, maybeJson(t.value), a), {})(tags)
-  }
-
   return (ctx) => of(ctx)
     .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
     .bimap(
       (_) => {
-        logger('Could not find latest evaluation in db. Using intial process as state...')
+        logger('Could not find latest evaluation in db. Starting with initial state of null...')
         return _
       },
       logger.tap('Found previous evaluation in db %j. Using as state and starting point to load messages')
@@ -110,14 +98,10 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        */
       () => Resolved({
         /**
-         * Since this is the first initial state,
-         * we have to parse the process tag _values_
-         * into JSON
-         *
-         * TODO: not really sure how to get around the CU needing to do this,
-         * but will have to do for now.
+         * With BiBo, the initial state is simply nothing.
+         * It is up to the process to set up it's own initial state
          */
-        state: tagsToJson(ctx.tags || []),
+        state: null,
         result: {
           error: undefined,
           messages: [],
@@ -152,10 +136,10 @@ const ctxSchema = z.object({
   block: rawBlockSchema,
   /**
    * The most recent state. This could be the most recent
-   * cached state, or potentially the initial state
-   * if no interactions are cached
+   * cached buffer, or potentially null if there is no recently
+   * cached state
    */
-  state: z.record(z.any()),
+  state: z.any().nullable(),
   /**
    * The most recent result. This could be the most recent
    * cached result, or potentially nothing
