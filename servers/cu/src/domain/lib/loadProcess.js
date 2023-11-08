@@ -1,16 +1,15 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { F, T, always, applySpec, assoc, cond, equals, includes, is, isNotNil, mergeRight, path, reduce } from 'ramda'
+import { F, T, always, assoc, cond, equals, includes, is, isNotNil, mergeRight, reduce } from 'ramda'
 import { z } from 'zod'
 
-import { findLatestEvaluationSchema, findProcessSchema, loadProcessBlockSchema, loadTransactionMetaSchema, saveProcessSchema } from '../dal.js'
+import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, saveProcessSchema } from '../dal.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
 import { parseTags } from './utils.js'
 
-function getProcessMetaWith ({ loadTransactionMeta, loadProcessBlock, findProcess, saveProcess, logger }) {
-  loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
+function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) {
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
-  loadProcessBlock = fromPromise(loadProcessBlockSchema.implement(loadProcessBlock))
+  loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
 
   const checkTag = (name, pred) => (tags) => pred(tags[name])
     ? Resolved(tags)
@@ -24,11 +23,7 @@ function getProcessMetaWith ({ loadTransactionMeta, loadProcessBlock, findProces
    * for now, just loading Block, since that's the only bit that doesn't finalize
    */
   function loadFromChainAndSu (processId) {
-    return loadTransactionMeta(processId)
-      .map(applySpec({
-        owner: path(['owner', 'address']),
-        tags: path(['tags'])
-      }))
+    return loadProcess(processId)
       /**
        * Verify the process by examining the tags
        */
@@ -51,14 +46,6 @@ function getProcessMetaWith ({ loadTransactionMeta, loadProcessBlock, findProces
             logger.tap('Verifying process failed: %s'),
             logger.tap('Verified process. Saving to db...')
           )
-      )
-      /**
-       * Fetch block metadata from SU
-       * and merge with the process meta from the gateway
-       */
-      .chain(process =>
-        loadProcessBlock(processId)
-          .map(mergeRight(process))
       )
       /**
        * Attempt to save to the db

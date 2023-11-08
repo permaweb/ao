@@ -21,13 +21,11 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (id) => ({
-        owner: { address: 'woohoo' },
-        tags
-      }),
-      loadProcessBlock: async (id) => {
+      loadProcess: async (id) => {
         assert.equal(id, PROCESS)
         return {
+          owner: 'woohoo',
+          tags,
           block: { height: 123, timestamp: 1697574792000 }
         }
       },
@@ -75,8 +73,7 @@ describe('loadProcess', () => {
       }),
       saveProcess: async () => assert.fail('should not save if found in db'),
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => assert.fail('should not load transaction meta if found in db'),
-      loadProcessBlock: async (_id) => assert.fail('should not load process block if found in db'),
+      loadProcess: async (_id) => assert.fail('should not load process block if found in db'),
       logger
     })
 
@@ -128,11 +125,9 @@ describe('loadProcess', () => {
         assert.equal(to, 'sortkey-123')
         return cachedEvaluation
       },
-      loadTransactionMeta: async (_id) => ({
-        owner: { address: 'woohoo' },
-        tags
-      }),
-      loadProcessBlock: async (id) => ({
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
+        tags,
         block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
@@ -165,11 +160,9 @@ describe('loadProcess', () => {
         return PROCESS
       },
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => ({
-        owner: { address: 'woohoo' },
-        tags
-      }),
-      loadProcessBlock: async (id) => ({
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
+        tags,
         block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
@@ -189,11 +182,9 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => ({
-        owner: { address: 'woohoo' },
-        tags
-      }),
-      loadProcessBlock: async (id) => ({
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
+        tags,
         block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
@@ -211,15 +202,13 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => ({
-        owner: { address: 'woohoo' },
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
         tags: [
           { name: 'Not-Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'process' }
-        ]
-      }),
-      loadProcessBlock: async (id) => ({
+        ],
         block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
@@ -235,15 +224,13 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => ({
-        owner: { address: 'woohoo' },
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
         tags: [
           { name: 'Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
           { name: 'ao-type', value: 'process' }
-        ]
-      }),
-      loadProcessBlock: async (id) => ({
+        ],
         block: { height: 123, timestamp: 1697574792000 }
       }),
       logger
@@ -259,15 +246,13 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadTransactionMeta: async (_id) => ({
-        owner: { address: 'woohoo' },
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
         tags: [
           { name: 'Contract-Src', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'message' }
-        ]
-      }),
-      loadProcessBlock: async (id) => ({
+        ],
         block: { height: 123, timestamp: 1697574792000 }
       }),
       logger

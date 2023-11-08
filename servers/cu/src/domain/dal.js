@@ -76,9 +76,15 @@ export const loadMessagesSchema = z.function()
     }, { message: 'Value must implement the iteration protocol' })
   ))
 
-export const loadProcessBlockSchema = z.function()
+export const loadProcessSchema = z.function()
   .args(z.string().min(1))
-  .returns(z.promise(z.object({ block: rawBlockSchema })))
+  .returns(z.promise(
+    z.object({
+      owner: z.string().min(1),
+      tags: z.array(rawTagSchema),
+      block: rawBlockSchema
+    })
+  ))
 
 export const loadTimestampSchema = z.function()
   .returns(z.promise(z.object({

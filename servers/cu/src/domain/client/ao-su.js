@@ -188,11 +188,13 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
       .toPromise()
 }
 
-export const loadProcessBlockWith = ({ fetch, SU_URL }) => {
+export const loadProcessWith = ({ fetch, SU_URL }) => {
   return async (processId) => {
     return fetch(`${SU_URL}/processes/${processId}`, { method: 'GET' })
       .then(res => res.json())
       .then(applySpec({
+        owner: path(['owner', 'address']),
+        tags: path(['tags']),
         block: applySpec({
           height: path(['block', 'height']),
           /**
