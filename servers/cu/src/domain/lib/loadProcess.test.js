@@ -36,17 +36,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
-    // The initial state will be parsed as JSON from the original tags
-    assert.deepStrictEqual(
-      res.state,
-      {
-        'Contract-Src': 'foobar',
-        'Data-Protocol': 'ao',
-        'ao-type': 'process',
-        inbox: [],
-        balances: { 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc': 1000 }
-      }
-    )
+    assert.deepStrictEqual(res.state, null)
     assert.deepStrictEqual(res.result, {
       messages: [],
       output: [],
