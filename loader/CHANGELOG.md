@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.6](https://github.com/permaweb/ao/compare/loader@v0.0.5...loader@v0.0.6) (2023-11-08)
+
+
+### Bug Fixes
+
+* bug with file console log message [#135](https://github.com/permaweb/ao/issues/135) ([72a5d6f](https://github.com/permaweb/ao/commit/72a5d6f6edea6315cb0dfa43c8b0b65172a3ed56))
+
 ## 0.0.5 (2023-11-07)
 
 
