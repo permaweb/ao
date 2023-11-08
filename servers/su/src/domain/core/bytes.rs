@@ -9,6 +9,23 @@ use bundlr_sdk::{error::BundlrError, tags::*};
 use sha2::{Digest, Sha256};
 use base64_url;
 
+#[derive(Debug)]
+pub enum ByteErrorType {
+    ByteError(String)
+}
+
+impl From<BundlrError> for ByteErrorType {
+    fn from(error: BundlrError) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {}", error))
+    }
+}
+
+impl From<&str> for ByteErrorType {
+    fn from(error: &str) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {}", error.to_string()))
+    }
+}
+
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
@@ -24,8 +41,7 @@ impl DataBundle {
         self.items.push(item);
     }
 
-    // TODO: remove unwrap() calls
-    pub fn to_bytes(&self) -> Result<Vec<u8>, BundlrError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, ByteErrorType> {
         let mut headers = vec![0u8; 64 * self.items.len()];
         let mut binaries = Vec::new();
 
@@ -33,15 +49,15 @@ impl DataBundle {
             let id = item.raw_id(); 
 
             let mut header = Vec::with_capacity(64);
-            header.extend_from_slice(&long_to_32_byte_array(item.as_bytes().unwrap().len() as u64).unwrap()); 
+            header.extend_from_slice(&long_to_32_byte_array(item.as_bytes()?.len() as u64)?); 
             header.extend_from_slice(&id);
 
             headers.splice(64 * index..64 * (index + 1), header.iter().cloned());
-            binaries.extend_from_slice(&item.as_bytes().unwrap()); 
+            binaries.extend_from_slice(&item.as_bytes()?); 
         }
 
         let mut buffer = Vec::new();
-        buffer.extend_from_slice(&long_to_32_byte_array(self.items.len() as u64).unwrap());
+        buffer.extend_from_slice(&long_to_32_byte_array(self.items.len() as u64)?);
         buffer.extend_from_slice(&headers);
         buffer.extend_from_slice(&binaries);
 
@@ -49,7 +65,7 @@ impl DataBundle {
     }
 }
 
-fn long_to_n_byte_array(n: usize, long: u64) -> Result<Vec<u8>, &'static str> {
+fn long_to_n_byte_array(n: usize, long: u64) -> Result<Vec<u8>, ByteErrorType> {
     let mut byte_array = vec![0u8; n];
     let mut value = long;
 
@@ -62,7 +78,7 @@ fn long_to_n_byte_array(n: usize, long: u64) -> Result<Vec<u8>, &'static str> {
     Ok(byte_array)
 }
 
-fn long_to_32_byte_array(value: u64) -> Result<Vec<u8>, &'static str> {
+fn long_to_32_byte_array(value: u64) -> Result<Vec<u8>, ByteErrorType> {
     long_to_n_byte_array(32, value)
 }
 
@@ -121,11 +137,11 @@ impl DataItem {
         !self.signature.is_empty() && self.signature_type != SignerMap::None
     }
 
-    fn from_info_bytes(buffer: &[u8]) -> Result<(Self, usize), BundlrError> {
+    fn from_info_bytes(buffer: &[u8]) -> Result<(Self, usize), ByteErrorType> {
         let sig_type_b = &buffer[0..2];
         let signature_type = u16::from_le_bytes(
             <[u8; 2]>::try_from(sig_type_b)
-                .map_err(|err| BundlrError::BytesError(err.to_string()))?,
+                .map_err(|err| ByteErrorType::ByteError(err.to_string()))?,
         );
         let signer = SignerMap::from(signature_type);
     
@@ -141,33 +157,33 @@ impl DataItem {
         let target_start = 2 + sig_length + pub_length;
         let target_present = u8::from_le_bytes(
             <[u8; 1]>::try_from(&buffer[target_start..target_start + 1])
-                .map_err(|err| BundlrError::BytesError(err.to_string()))?,
+                .map_err(|err| ByteErrorType::ByteError(format!("target bytes error - {}", err.to_string())))?,
         );
         let target = match target_present {
             0 => &[],
             1 => &buffer[target_start + 1..target_start + 33],
-            b => return Err(BundlrError::InvalidPresenceByte(b.to_string())),
+            _b => return Err(ByteErrorType::ByteError("target bytes error".to_string())),
         };
         let anchor_start = target_start + 1 + target.len();
         let anchor_present = u8::from_le_bytes(
             <[u8; 1]>::try_from(&buffer[anchor_start..anchor_start + 1])
-                .map_err(|err| BundlrError::BytesError(err.to_string()))?,
+                .map_err(|err| ByteErrorType::ByteError(format!("anchor bytes error - {}", err.to_string())))?,
         );
         let anchor = match anchor_present {
             0 => &[],
             1 => &buffer[anchor_start + 1..anchor_start + 33],
-            b => return Err(BundlrError::InvalidPresenceByte(b.to_string())),
+            b => return Err(ByteErrorType::ByteError(format!("anchor bytes error - {}", b.to_string()))),
         };
     
         let tags_start = anchor_start + 1 + anchor.len();
         let number_of_tags = u64::from_le_bytes(
             <[u8; 8]>::try_from(&buffer[tags_start..tags_start + 8])
-                .map_err(|err| BundlrError::BytesError(err.to_string()))?,
+                .map_err(|err| ByteErrorType::ByteError(format!("tag bytes error - {}", err.to_string())))?,
         );
     
         let number_of_tags_bytes = u64::from_le_bytes(
             <[u8; 8]>::try_from(&buffer[tags_start + 8..tags_start + 16])
-                .map_err(|err| BundlrError::BytesError(err.to_string()))?,
+                .map_err(|err| ByteErrorType::ByteError(format!("tag bytes error - {}", err.to_string())))?,
         );
     
         let mut b = buffer.to_vec();
@@ -181,7 +197,7 @@ impl DataItem {
         };
     
         if number_of_tags != tags.len() as u64 {
-            return Err(BundlrError::InvalidTagEncoding);
+            return Err(ByteErrorType::ByteError("invalid tag encoding".to_string()));
         }
     
         let data_item = DataItem {
@@ -197,7 +213,7 @@ impl DataItem {
         Ok((data_item, tags_start + 16 + number_of_tags_bytes as usize))
     }
 
-    pub fn from_bytes(buffer: Vec<u8>) -> Result<Self, BundlrError> {
+    pub fn from_bytes(buffer: Vec<u8>) -> Result<Self, ByteErrorType> {
         let (bundlr_tx, data_start) = DataItem::from_info_bytes(&buffer)?;
         let data = &buffer[data_start..buffer.len()];
 
@@ -207,12 +223,12 @@ impl DataItem {
         })
     }
 
-    pub fn as_bytes(&self) -> Result<Vec<u8>, BundlrError> {
+    pub fn as_bytes(&self) -> Result<Vec<u8>, ByteErrorType> {
         if !self.is_signed() {
-            return Err(BundlrError::NoSignature);
+            return Err(ByteErrorType::ByteError("no signature".to_string()));
         }
         let data = match &self.data {
-            Data::None => return Err(BundlrError::InvalidDataType),
+            Data::None => return Err(ByteErrorType::ByteError("invalid data type".to_string())),
             Data::Bytes(data) => data,
         };
 
@@ -232,7 +248,7 @@ impl DataItem {
 
         let mut b = Vec::with_capacity(
             TryInto::<usize>::try_into(length)
-                .map_err(|err| BundlrError::TypeParseError(err.to_string()))?,
+                .map_err(|err| ByteErrorType::ByteError(format!("data length error - {} ", err.to_string())))?,
         );
 
         let sig_type: [u8; 2] = (self.signature_type.clone() as u16).to_le_bytes();
@@ -284,21 +300,6 @@ impl DataItem {
     pub fn target(&self) -> String {
         let target_base64 = base64_url::encode(&self.target);
         target_base64
-    }
-
-    pub fn anchor(&self) -> String {
-        let anchor_base64 = base64_url::encode(&self.anchor);
-        anchor_base64
-    }
-
-    pub fn tags_as_tuples(&self) -> Vec<(String, String)> {
-        let mut tag_tuples = Vec::new();
-        
-        for tag in &self.tags {
-            tag_tuples.push((tag.name.clone(), tag.value.clone()));
-        }
-
-        tag_tuples
     }
 
     pub fn tags(&self) -> Vec<Tag> {

@@ -15,40 +15,44 @@ use arweave_rs::network::NetworkInfoClient;
 
 use jsonwebkey::{JsonWebKey, Key, ByteVec};
 
-use super::binary::DataItem;
-use super::error::CoreError;
+use super::bytes::DataItem;
 
-impl From<std::time::SystemTimeError> for CoreError {
+#[derive(Debug, Clone)]
+pub enum SequencerErrorType {
+    SequencerError(String)
+}
+
+impl From<std::time::SystemTimeError> for SequencerErrorType {
     fn from(_error: std::time::SystemTimeError) -> Self {
-        CoreError::SequencerError("Sequencer experienced an error obtaining system time".to_string())
+        SequencerErrorType::SequencerError("Sequencer experienced an error obtaining system time".to_string())
     }
 }
 
-impl From<arweave_rs::network::ResponseError> for CoreError {
+impl From<arweave_rs::network::ResponseError> for SequencerErrorType {
     fn from(_error: arweave_rs::network::ResponseError) -> Self {
-        CoreError::SequencerError("Sequencer experienced an error obtaining network info".to_string())
+        SequencerErrorType::SequencerError("Sequencer experienced an error obtaining network info".to_string())
     }
 }
 
-impl From<std::io::Error> for CoreError {
+impl From<std::io::Error> for SequencerErrorType {
     fn from(_error: std::io::Error) -> Self {
-        CoreError::SequencerError("Sequencer experienced an io error".to_string())
+        SequencerErrorType::SequencerError("Sequencer experienced an io error".to_string())
     }
 }
 
-impl From<serde_json::Error> for CoreError {
+impl From<serde_json::Error> for SequencerErrorType {
     fn from(_error: serde_json::Error) -> Self {
-        CoreError::SequencerError("Sequencer experienced an error parsing json".to_string())
+        SequencerErrorType::SequencerError("Sequencer experienced an error parsing json".to_string())
     }
 }
 
-impl From<base64_url::base64::DecodeError> for CoreError {
+impl From<base64_url::base64::DecodeError> for SequencerErrorType {
     fn from(_error: base64_url::base64::DecodeError) -> Self {
-        CoreError::SequencerError("Sequencer experienced an error decoding ids".to_string())
+        SequencerErrorType::SequencerError("Sequencer experienced an error decoding ids".to_string())
     }
 }
 
-pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, CoreError> {
+pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, SequencerErrorType> {
     dotenv::dotenv().ok();
 
     // TODO: move time into its own core module
@@ -59,7 +63,12 @@ pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, CoreError> {
 
     // TODO: move network to a client or its own core module
     let gateway_url = "https://arweave.net".to_string();
-    let url = Url::parse(&gateway_url).unwrap();
+    let url = match Url::parse(&gateway_url) {
+        Ok(u) => u,
+        Err(e) => {
+            return Err(SequencerErrorType::SequencerError(format!("{:?}", e)));
+        }
+    };
 
     let network_client = NetworkInfoClient::new(url);
     let network_info = network_client.network_info().await?;
@@ -75,7 +84,7 @@ pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, CoreError> {
             let d_value: &ByteVec = &rsa_private.d;
             d_value.to_vec()
         }
-        _ => return Err(CoreError::SequencerError("Sequencer experienced a wallet error".to_string()))
+        _ => return Err(SequencerErrorType::SequencerError("Sequencer experienced a wallet error".to_string()))
     };
 
     let height = network_info.height.clone();

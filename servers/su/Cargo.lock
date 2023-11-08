@@ -2863,6 +2863,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "arweave-rs",
+ "avro-rs",
  "base64 0.13.1",
  "base64-url",
  "bundlr-sdk",
@@ -2874,6 +2875,7 @@ dependencies = [
  "dotenv",
  "hex",
  "jsonwebkey",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_derive",

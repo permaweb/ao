@@ -4,29 +4,68 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
+use std::env::VarError;
 
-use super::super::bl::results::{DepError, TransactionId};
 use super::super::core::json::{Message, Process};
+
+#[derive(Debug)]
+pub enum StoreErrorType {
+    DatabaseError(String),
+    NotFound(String),
+    JsonError(String),
+    EnvVarError(String)
+}
+
+use diesel::result::Error as DieselError; // Import Diesel's Error
+
+impl From<DieselError> for StoreErrorType {
+    fn from(diesel_error: DieselError) -> Self {
+        StoreErrorType::DatabaseError(format!("{:?}", diesel_error))
+    }
+}
+
+impl From<serde_json::Error> for StoreErrorType {
+    fn from(error: serde_json::Error) -> Self {
+        StoreErrorType::JsonError(format!("data store json error: {}", error))
+    }
+}
+
+impl From<StoreErrorType> for String {
+    fn from(error: StoreErrorType) -> Self {
+        format!("{:?}", error)
+    }
+}
+
+impl From<VarError> for StoreErrorType {
+    fn from(error: VarError) -> Self{
+        StoreErrorType::EnvVarError(format!("data store env var error: {}", error))
+    }
+}
+
+impl From<diesel::prelude::ConnectionError> for StoreErrorType {
+    fn from(error: diesel::prelude::ConnectionError) -> Self{
+        StoreErrorType::DatabaseError(format!("data store connection error: {}", error))
+    }
+}
 
 pub struct StoreClient{
     connection: PgConnection
 }
 
 impl StoreClient {
-    pub fn connect() -> StoreClient {
+    pub fn connect() -> Result<StoreClient, StoreErrorType> {
         dotenv().ok();
     
-        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let database_url = env::var("DATABASE_URL")?;
 
-        let connection = PgConnection::establish(&database_url)
-            .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+        let connection = PgConnection::establish(&database_url)?;
 
-        StoreClient {
+        Ok(StoreClient {
             connection: connection
-        }
+        })
     }
 
-    pub fn save_process(&mut self, process: &Process) -> Result<TransactionId, DepError> {
+    pub fn save_process(&mut self, process: &Process) -> Result<String, StoreErrorType> {
         use super::schema::processes::dsl::*;
         let conn = &mut self.connection;
     
@@ -42,13 +81,13 @@ impl StoreClient {
             .execute(conn)
         {
             Ok(_) => {
-                Ok(TransactionId(9080))
+                Ok("saved".to_string())
             },
-            Err(e) => Err(DepError::from(e)),
+            Err(e) => Err(StoreErrorType::from(e)),
         }
     }
 
-    pub fn get_process(&mut self, process_id_in: &str) -> Result<Process, DepError> {
+    pub fn get_process(&mut self, process_id_in: &str) -> Result<Process, StoreErrorType> {
         use super::schema::processes::dsl::*;
         let conn = &mut self.connection;
     
@@ -62,12 +101,12 @@ impl StoreClient {
                 let process: Process = serde_json::from_value(db_process.process_data.clone())?;
                 Ok(process)
             },
-            Ok(None) => Err(DepError::NotFound("Process not found".to_string())), 
-            Err(e) => Err(DepError::from(e)),
+            Ok(None) => Err(StoreErrorType::NotFound("Process not found".to_string())), 
+            Err(e) => Err(StoreErrorType::from(e)),
         }
     }
     
-    pub fn save_message(&mut self, message: &Message) -> Result<TransactionId, DepError> {
+    pub fn save_message(&mut self, message: &Message) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.connection;
     
@@ -86,17 +125,17 @@ impl StoreClient {
         {
             Ok(row_count) => {
                 if row_count == 0 {
-                    Err(DepError::DatabaseError("Duplicate message id".to_string())) // Return a custom error for duplicates
+                    Err(StoreErrorType::DatabaseError("Duplicate message id".to_string())) // Return a custom error for duplicates
                 } else {
-                    Ok(TransactionId(9080))
+                    Ok("saved".to_string())
                 }
             },
-            Err(e) => Err(DepError::from(e)),
+            Err(e) => Err(StoreErrorType::from(e)),
         }
     }    
 
 
-    pub fn get_messages(&mut self, process_id_in: &str) -> Result<Vec<Message>, DepError> {
+    pub fn get_messages(&mut self, process_id_in: &str) -> Result<Vec<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.connection;
 
@@ -106,19 +145,21 @@ impl StoreClient {
 
         match db_messages_result {
             Ok(db_messages) => {
-                let n_messages: Vec<Message> = db_messages
+                let n_messages: Result<Vec<Message>, StoreErrorType> = db_messages
                     .iter()
                     .map(|db_message| {
-                        serde_json::from_value(db_message.message_data.clone()).unwrap()
+                        serde_json::from_value(db_message.message_data.clone())
+                            .map_err(|e| StoreErrorType::from(e))
                     })
                     .collect();
-                Ok(n_messages)
-            },
-            Err(e) => Err(DepError::from(e)),
+        
+                n_messages
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
         }
     }
 
-    pub fn get_message(&mut self, message_id_in: &str) -> Result<Message, DepError> {
+    pub fn get_message(&mut self, message_id_in: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.connection;
     
@@ -132,28 +173,11 @@ impl StoreClient {
                 let message: Message = serde_json::from_value(db_message.message_data.clone())?;
                 Ok(message)
             },
-            Ok(None) => Err(DepError::NotFound("Message not found".to_string())), // Adjust this error type as needed
-            Err(e) => Err(DepError::from(e)),
+            Ok(None) => Err(StoreErrorType::NotFound("Message not found".to_string())), // Adjust this error type as needed
+            Err(e) => Err(StoreErrorType::from(e)),
         }
     }
     
-}
-
-use diesel::result::Error as DieselError; // Import Diesel's Error
-
-impl From<DieselError> for DepError {
-    fn from(diesel_error: DieselError) -> Self {
-        let e = format!("{:?}", diesel_error);
-        println!("{}", e);
-        DepError::DatabaseError(e)
-    }
-}
-
-impl From<serde_json::Error> for DepError {
-    fn from(error: serde_json::Error) -> Self {
-        // You can create a custom error variant here if needed
-        DepError::JsonError(format!("JSON error: {}", error))
-    }
 }
 
 

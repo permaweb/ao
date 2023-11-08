@@ -14,10 +14,14 @@ pub struct MessagesReturn {
 }
 
 impl MessagesPipeline {
-    pub fn new(data_store: StoreClient) -> Self {
-        MessagesPipeline {
+    pub fn new() -> Result<Self, String> {
+        let data_store = match StoreClient::connect() {
+            Ok(d) => d,
+            Err(e) => return Err(format!("{:?}", e))
+        };
+        Ok(MessagesPipeline {
             data_store
-        }
+        })
     }
 
     pub async fn process(
@@ -38,6 +42,10 @@ impl MessagesPipeline {
     ) -> Result<String, String> {
         let messages = self.data_store.get_messages(&process_id)?;
         let sorted_messages = SortedMessages::from_messages(messages, from, to);
-        Ok(serde_json::to_string(&sorted_messages).unwrap())
+        let result = match serde_json::to_string(&sorted_messages) {
+            Ok(r) => r,
+            Err(e) => return Err(format!("{:?}", e))
+        };
+        Ok(result)
     }
 }

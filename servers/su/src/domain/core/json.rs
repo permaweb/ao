@@ -1,14 +1,28 @@
 
-use std::time::{SystemTime, UNIX_EPOCH};
+
 
 use serde::{Serialize, Deserialize}; // Import Serde traits
 
-use super::binary::{DataBundle, DataItem};
+use super::bytes::{DataBundle};
 use super::sequencer::hash;
 use bundlr_sdk::{tags::*};
 
-use reqwest::{Url};
-use arweave_rs::network::NetworkInfoClient;
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum JsonErrorType {
+    JsonError(String)
+}
+
+impl From<JsonErrorType> for String {
+    fn from(error: JsonErrorType) -> Self {
+        format!("Json error: {:?}", error)
+    }
+}
+
+impl From<base64_url::base64::DecodeError> for JsonErrorType {
+    fn from(error: base64_url::base64::DecodeError) -> Self {
+        JsonErrorType::JsonError(format!("Json error: {:?}", error))
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MessageInner {
@@ -64,29 +78,43 @@ pub struct Edge {
     pub cursor: String,
 }
 
+fn parse_sort_key(sort_key: &String) -> Result<Block, JsonErrorType> {
+    let mut parts = sort_key.split(',');
+    let height_str = match parts.next() {
+        Some(h) => h,
+        None => return Err(JsonErrorType::JsonError("No height in sort key".to_string()))
+    };
+    let height = match height_str.parse::<u64>() {
+        Ok(h) => h,
+        Err(_) => return Err(JsonErrorType::JsonError("Invalid height in sort key".to_string()))
+    };
+
+    let timestamp_str = match parts.next() {
+        Some(h) => h,
+        None => return Err(JsonErrorType::JsonError("No timstamp in sort key".to_string()))
+    };
+    let timestamp = match timestamp_str.parse::<u64>() {
+        Ok(h) => h,
+        Err(_) => return Err(JsonErrorType::JsonError("Invalid timestamp in sort key".to_string()))
+    }; 
+
+    Ok(Block {
+        height: height,
+        timestamp: timestamp
+    })
+}
 
 impl Process {
-    pub fn from_bundle(data_bundle: &DataBundle) -> Self {
+    pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
         let sort_key_clone = data_bundle.sort_key.clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
        
-        // TODO: move this into a function
-        let mut parts = sort_key_clone.split(',');
-        let height_str = parts.next().unwrap_or_default();
-        let height = height_str.parse::<u64>().unwrap_or_default();
-
-        let timestamp_str = parts.next().unwrap_or_default();
-        let timestamp = timestamp_str.parse::<u64>().unwrap_or_default(); 
-
-        let block = Block {
-            height: height,
-            timestamp: timestamp
-        };
-
+        let block = parse_sort_key(&sort_key_clone)?;
+        
         // TODO: implement a from on the owner struct
-        let owner_bytes = base64_url::decode(&owner).unwrap();
+        let owner_bytes = base64_url::decode(&owner)?;
         let address_hash = hash(&owner_bytes);
         let address = base64_url::encode(&address_hash);
 
@@ -95,18 +123,18 @@ impl Process {
             key: owner,
         };
 
-        Process {
+        Ok(Process {
             process_id: id,
             block: Some(block),
             owner: owner,
             tags: tags,
             sort_key: sort_key_clone
-        }
+        })
     }
 }
 
 impl Message {
-    pub fn from_bundle(data_bundle: &DataBundle) -> Self {
+    pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
         let sort_key_clone = data_bundle.sort_key.clone();
         let tags = data_bundle.items[0].tags();
@@ -118,7 +146,7 @@ impl Message {
             tags: tags,
         };
 
-        let owner_bytes = base64_url::decode(&owner).unwrap();
+        let owner_bytes = base64_url::decode(&owner)?;
         let address_hash = hash(&owner_bytes);
         let address = base64_url::encode(&address_hash);
 
@@ -129,41 +157,39 @@ impl Message {
 
         let process_id = target;
 
-        let mut parts = sort_key_clone.split(',');
-        let height_str = parts.next().unwrap_or_default();
-        let height = height_str.parse::<u64>().unwrap_or_default();
+        let block = parse_sort_key(&sort_key_clone)?;
 
-        let timestamp_str = parts.next().unwrap_or_default();
-        let timestamp = timestamp_str.parse::<u64>().unwrap_or_default(); 
-
-        let block = Block {
-            height: height,
-            timestamp: timestamp
-        };
-
-        Message {
+        Ok(Message {
             message: message_inner,
             block: Some(block),
             bundle_block: None,
             owner,
             sort_key: sort_key_clone,
             process_id,
-        }
+        })
     }
 }
 
 impl SortedMessages {
 
-    pub fn from_messages(messages: Vec<Message>, from: Option<String>, to: Option<String>) -> Self {
+    pub fn from_messages(messages: Vec<Message>, from: Option<String>, to: Option<String>) -> Result<Self, JsonErrorType> {
         let mut sorted_messages = messages.clone();
+        
         sorted_messages.sort_by(|a, b| {
             let a_timestamp = extract_timestamp(&a.sort_key);
             let b_timestamp = extract_timestamp(&b.sort_key);
             a_timestamp.cmp(&b_timestamp)
         });
 
-        let from_timestamp = from.as_ref().map(|from_str| extract_timestamp(from_str)).unwrap_or(0);
-        let to_timestamp = to.as_ref().map(|to_str| extract_timestamp(to_str)).unwrap_or(std::i64::MAX);
+        let from_timestamp = match from.as_ref().map(|from_str| extract_timestamp(from_str)){
+            Some(t) => t,
+            None => 0
+        };
+
+        let to_timestamp = match to.as_ref().map(|to_str| extract_timestamp(to_str)) {
+            Some(t) => t,
+            None => std::i64::MAX
+        };
 
         let filtered_messages: Vec<Message> = sorted_messages.into_iter().filter(|message| {
             let message_timestamp = extract_timestamp(&message.sort_key);
@@ -177,7 +203,7 @@ impl SortedMessages {
             cursor: message.sort_key.clone(),
         }).collect();
 
-        SortedMessages { page_info, edges }
+        Ok(SortedMessages { page_info, edges })
     }
 }
 

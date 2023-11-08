@@ -1,5 +1,5 @@
 
-pub mod binary;
+pub mod bytes;
 pub mod json;
 pub mod sequencer;
-pub mod error;
+pub mod builder;
