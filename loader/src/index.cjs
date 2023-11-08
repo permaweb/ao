@@ -64,20 +64,17 @@ module.exports = async function (binary) {
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
   return (buffer, msg, env) => {
-    if (buffer) {
-      instance.HEAPU8.set(buffer)
-    }
+    if (buffer) instance.HEAPU8.set(buffer)
+
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
 
-    if (ok) {
-      buffer = instance.HEAPU8.slice()
-      return {
-        buffer,
-        output: response.output,
-        messages: response.messages,
-        spawns: response.spawns
-      }
+    if (!ok) throw response
+
+    return {
+      buffer: instance.HEAPU8.slice(),
+      output: response.output,
+      messages: response.messages,
+      spawns: response.spawns
     }
-    throw response
   }
 }
