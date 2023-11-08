@@ -8,18 +8,48 @@ import { readStateWith } from './lib/readState/index.js'
 import { writeMessageWith } from './lib/writeMessage/index.js'
 import { createProcessWith } from './lib/createProcess/index.js'
 
-const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
-const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
-const CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
-const SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
+const DEFAULT_GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
+const DEFAULT_MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
+const DEFAULT_CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
+const DEFAULT_SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
 
 /**
- * Any environment specific build-time dependencies
- * can eventually be passed here (currently, there are none)
+ * Build the sdk apis using the provided ao component urls. You can currently specify
  *
- * Some dependencies, like the signer, are passed at runtime
+ * - a GATEWAY_URL
+ * - a Messenger Unit URL
+ * - a Compute Unit URL
+ * - a Sequencer Unit URL
+ *
+ * If any url is not provided, an SDK default will be used.
+ * Invoking connect() with no parameters or an empty object is functionally equivalent
+ * to using the top-lvl exports of the SDK ie.
+ *
+ * @example
+ * import {
+ *  createProcess,
+ *  writeMessage,
+ *  readState
+ *  connect
+ * } from '@permaweb/ao-sdk';
+ *
+ * // These are functionally equivalent
+ * connect() == { createProcess, writeMessage, readState }
+ *
+ * @typedef Services
+ * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
+ * @property {string} [MU_URL] - the url of the desried ao Messenger Unit.
+ * @property {string} [CU_URL] - the url of the desried ao Compute Unit.
+ * @property {string} [SU_URL] - the url of the desried ao Sequencer Unit.
+ *
+ * @param {Services} [services]
  */
-export function buildSdk () {
+export function connect ({
+  GATEWAY_URL = DEFAULT_GATEWAY_URL,
+  MU_URL = DEFAULT_MU_URL,
+  CU_URL = DEFAULT_CU_URL,
+  SU_URL = DEFAULT_SU_URL
+} = {}) {
   const logger = createLogger('@permaweb/ao-sdk')
 
   const readStateLogger = logger.child('readState')

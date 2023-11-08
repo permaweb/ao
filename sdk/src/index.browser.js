@@ -1,10 +1,12 @@
-import { buildSdk } from './index.common.js'
+import { connect } from './index.common.js'
 
 import { WalletClient } from './client/browser/index.js'
 
-const { readState, writeMessage, createProcess } = buildSdk()
+const { readState, writeMessage, createProcess } = connect()
 
 export { readState, writeMessage, createProcess }
+export { connect }
+
 /**
  * A function that builds a signer using the global arweaveWallet
  * commonly used in browser-based dApps

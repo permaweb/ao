@@ -17,6 +17,7 @@ interacting with `ao` Processes.
     - [`readState`](#readstate)
     - [`writeMessage`](#writemessage)
     - [`createProcess`](#createprocess)
+    - [`connect`](#connect)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
 - [Testing](#testing)
@@ -37,9 +38,7 @@ import { createProcess, readState, writeMessage } from "@permaweb/ao-sdk";
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { readState, writeMessage, createProcess } = require(
-  "@permaweb/ao-sdk",
-);
+const { readState, writeMessage, createProcess } = require("@permaweb/ao-sdk");
 ```
 
 The duration of this document will use `ESM` for examples
@@ -79,14 +78,15 @@ const messageId = await writeMessage({
 });
 ```
 
-> You can pass a 32 byte `anchor` to `writeMessage` which will be set on the DataItem
+> You can pass a 32 byte `anchor` to `writeMessage` which will be set on the
+> DataItem
 
 #### `createProcess`
 
 Create an `ao` process, publishing to Arys.
 
 ```js
-import { createProcess, createDataItemSigner } from "@permaweb/ao-sdk";
+import { createDataItemSigner, createProcess } from "@permaweb/ao-sdk";
 
 const processId = await createProcess({
   srcId,
@@ -95,14 +95,51 @@ const processId = await createProcess({
 });
 ```
 
+#### `connect`
+
+If you would like the sdk to use ao components other than the defaults, you can
+specify those components by providing their urls to `connect`. You can currently specify
+
+- The GATEWAY_URL
+- The Messenger Unit URL
+- The Compute Unit URL
+- The Sequencer Unit URL
+
+```js
+import { connect } from "@permaweb/ao-sdk";
+
+const { createProcess, writeMessage, readState } = connect({
+  GATEWAY_URL: "...",
+  MU_URL: "...",
+  CU_URL: "...",
+  SU_URL: "...",
+});
+```
+
+If any url is not provided, an SDK default will be used. In this sense, invoking
+`connect()` with no parameters or an empty object is functionally equivalent to
+using the top-lvl exports of the SDK:
+
+```js
+import {
+ createProcess,
+ writeMessage,
+ readState
+ connect
+} from '@permaweb/ao-sdk';
+
+// These are functionally equivalent
+connect() == { createProcess, writeMessage, readState }
+```
+
 #### `createDataItemSigner`
 
 `writeMessage` and `createProcess` both require signing a DataItem with a
 wallet.
 
 `createDataItemSigner` is a convenience api that, given a wallet, returns a
-function that can be passed to both `writeMessage` and `createProcess` in
-order to properly sign DataItems.
+function that can be passed to both `writeMessage` and `createProcess` in order
+to properly sign DataItems.
 
 The SDK provides a browser compatible and node compatible version that you can
 use OOTB.
