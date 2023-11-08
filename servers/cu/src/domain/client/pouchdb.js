@@ -34,7 +34,6 @@ const evaluationDocSchema = z.object({
   sortKey: evaluationSchema.shape.sortKey,
   parent: z.string().min(1),
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  message: evaluationSchema.shape.message,
   output: evaluationSchema.shape.output,
   type: z.literal('evaluation')
 })
@@ -151,7 +150,6 @@ export function findLatestEvaluationWith ({ pouchDb }) {
       .map(applySpec({
         sortKey: prop('sortKey'),
         processId: prop('parent'),
-        message: prop('message'),
         output: prop('output'),
         evaluatedAt: prop('evaluatedAt')
       }))
@@ -179,7 +177,6 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
           }),
         sortKey: prop('sortKey'),
         parent: prop('processId'),
-        message: prop('message'),
         output: prop('output'),
         evaluatedAt: prop('evaluatedAt'),
         type: always('evaluation')
@@ -252,7 +249,6 @@ export function findEvaluationsWith ({ pouchDb }) {
         map(applySpec({
           sortKey: prop('sortKey'),
           processId: prop('parent'),
-          message: prop('message'),
           output: prop('output'),
           evaluatedAt: prop('evaluatedAt')
         }))

@@ -188,7 +188,6 @@ export function evaluateWith (env) {
                   saveEvaluation({
                     sortKey,
                     processId: ctx.id,
-                    message,
                     output,
                     evaluatedAt: new Date()
                   })

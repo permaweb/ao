@@ -155,7 +155,6 @@ describe('pouchdb', () => {
                     _id: 'process-123,sortkey-890',
                     sortKey: 'sortkey-890',
                     parent: 'process-123',
-                    message: { target: 'process-456', owner: 'owner-123', tags: [] },
                     output: { state: { foo: 'bar' } },
                     evaluatedAt,
                     type: 'evaluation'
@@ -174,7 +173,6 @@ describe('pouchdb', () => {
 
       assert.equal(res.sortKey, 'sortkey-890')
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.message, { target: 'process-456', owner: 'owner-123', tags: [] })
       assert.deepStrictEqual(res.output, { state: { foo: 'bar' } })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
@@ -201,7 +199,6 @@ describe('pouchdb', () => {
                     _id: 'process-123,sortkey-890',
                     sortKey: 'sortkey-890',
                     parent: 'process-123',
-                    message: { target: 'process-456', owner: 'owner-123', tags: [] },
                     output: { state: { foo: 'bar' } },
                     evaluatedAt,
                     type: 'evaluation'
@@ -219,7 +216,6 @@ describe('pouchdb', () => {
 
       assert.equal(res.sortKey, 'sortkey-890')
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.message, { target: 'process-456', owner: 'owner-123', tags: [] })
       assert.deepStrictEqual(res.output, { state: { foo: 'bar' } })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
@@ -253,7 +249,6 @@ describe('pouchdb', () => {
               assert.equal(doc._id, 'process-123,sortkey-890')
               assert.equal(doc.sortKey, 'sortkey-890')
               assert.equal(doc.parent, 'process-123')
-              assert.deepStrictEqual(doc.message, { target: 'process-456', owner: 'owner-123', tags: [] })
               assert.deepStrictEqual(doc.output, { state: { foo: 'bar' } })
               assert.equal(doc.evaluatedAt.toISOString(), evaluatedAt)
               return Promise.resolve(true)
@@ -266,7 +261,6 @@ describe('pouchdb', () => {
       await saveEvaluation({
         sortKey: 'sortkey-890',
         processId: 'process-123',
-        message: { target: 'process-456', owner: 'owner-123', tags: [] },
         output: { state: { foo: 'bar' } },
         evaluatedAt
       })
@@ -280,7 +274,6 @@ describe('pouchdb', () => {
               _id: 'process-123,sortkey-890',
               sortKey: 'sortkey-890',
               parent: 'process-123',
-              message: { target: 'process-456', owner: 'owner-123', tags: [] },
               output: { state: { foo: 'bar' } },
               evaluatedAt: new Date()
             }),
@@ -293,7 +286,6 @@ describe('pouchdb', () => {
       await saveEvaluation({
         sortKey: 'sortkey-890',
         processId: 'process-123',
-        message: { target: 'process-456', owner: 'owner-123', tags: [] },
         output: { state: { foo: 'bar' } },
         evaluatedAt: new Date()
       })
@@ -307,7 +299,6 @@ describe('pouchdb', () => {
         _id: 'process-123,sortkey-890',
         sortKey: 'sortkey-890',
         parent: 'process-123',
-        message: { target: 'process-456', owner: 'owner-123', tags: [] },
         output: { state: { foo: 'bar' } },
         evaluatedAt,
         type: 'evaluation'
@@ -348,7 +339,6 @@ describe('pouchdb', () => {
         _id: 'process-123,sortkey-890',
         sortKey: 'sortkey-890',
         parent: 'process-123',
-        message: { target: 'process-456', owner: 'owner-123', tags: [] },
         output: { state: { foo: 'bar' } },
         evaluatedAt,
         type: 'evaluation'
