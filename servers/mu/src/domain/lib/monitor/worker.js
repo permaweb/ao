@@ -33,7 +33,7 @@ const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
 
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    setInterval(() => processMonitors(), 1000)
+    // setInterval(() => processMonitors(), 1000)
     parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
@@ -133,7 +133,7 @@ async function processMonitor(monitor) {
   
       return {status: 'ok'}
     } catch(e) {
-      console.error('Error in processMonitor:', error);
+      console.error('Error in processMonitor:', e);
       throw error; 
     }
     

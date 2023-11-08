@@ -1,7 +1,7 @@
 
 
 
-use serde::{Serialize, Deserialize}; // Import Serde traits
+use serde::{Serialize, Deserialize}; 
 
 use super::bytes::{DataBundle};
 use super::sequencer::hash;
@@ -59,6 +59,7 @@ pub struct Message {
     pub owner: Owner,
     pub sort_key: String,
     pub process_id: String,
+    pub data: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -140,6 +141,7 @@ impl Message {
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
         let target = data_bundle.items[0].target().clone();
+        let data = data_bundle.items[0].data().clone();
 
         let message_inner = MessageInner {
             id: id,
@@ -166,6 +168,7 @@ impl Message {
             owner,
             sort_key: sort_key_clone,
             process_id,
+            data: data
         })
     }
 }

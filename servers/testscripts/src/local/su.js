@@ -11,7 +11,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   const tags = []
 
   const signer = new ArweaveSigner(wallet)
-  const dataItem = createData(data, signer, { tags, target: 'feOEvFn5N8KxXjmHTGWQ26l_39Cm1_uEo4SiSil7cZU' })
+  const dataItem = createData(data, signer, { tags, target: 'UO6S6DLXzn3Jlz7E2XCiG3hZcRYTmzpOZpvZwBrCuqQ' })
   await dataItem.sign(signer)
 
   const response = await fetch(
