@@ -13,7 +13,7 @@
     "dependencies": {
         "@bundlr-network/client": "0.11.1",
         "@noble/hashes": "^1.1.5",
-        "@permaweb/ao-sdk": "0.0.15",
+        "@permaweb/ao-sdk": "0.0.16",
         "@scure/bip32": "^1.1.5",
         "@types/fs-extra": "^8.1.0",
         "arbundles": "^0.10.0",
