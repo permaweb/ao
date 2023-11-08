@@ -1,18 +1,19 @@
 import { readFileSync } from 'node:fs';
 
-
 import WarpArBundles from "warp-arbundles"
 const { createData, ArweaveSigner } = WarpArBundles
 
-globalThis.MU_URL = "http://localhost:3004"
-globalThis.CU_URL = "http://localhost:6363"
-globalThis.SU_URL = "http://localhost:9000"
+import { connect, createDataItemSigner} from '@permaweb/ao-sdk'
 
-import {
+const {
   createProcess,
-  createDataItemSigner,
   writeMessage
-} from '@permaweb/ao-sdk';
+} = connect({
+  GATEWAY_URL: "https://arweave.net", 
+  MU_URL: "http://localhost:3004",
+  CU_URL: "http://localhost:6363",
+  SU_URL: "http://localhost:9000"
+});
 
 (async function () {
   const PROCESS_SRC = 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no';
@@ -76,7 +77,7 @@ import {
   await dataItem.sign(signer)
 
   const response = await fetch(
-      `http://localhost:9000/monitor/${c2}`,
+      `http://localhost:3004/monitor/${c2}`,
       {
         method: 'POST',
         headers: {
