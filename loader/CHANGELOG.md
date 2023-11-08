@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.7](https://github.com/permaweb/ao/compare/loader@v0.0.6...loader@v0.0.7) (2023-11-08)
+
 ## [0.0.6](https://github.com/permaweb/ao/compare/loader@v0.0.5...loader@v0.0.6) (2023-11-08)
 
 
