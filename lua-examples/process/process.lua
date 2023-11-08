@@ -71,7 +71,7 @@ function process.handle(msg, env)
 
     -- exec expression
     local expr = findObject(msg.tags, "name", "expression")
-    if (expr == nil) then return { result = { error = "could not find expression" } } end
+    if (expr == nil) then return { error = "could not find expression" } end
 
     local func, err = load(expr.value, 'aos', 't', _G)
     local output = ""
@@ -87,11 +87,7 @@ function process.handle(msg, env)
     -- Add Message to Inbox
   end
 
-
-  local response = {
-    result = { error = "could not find action" }
-  }
-  return response
+  return { error = "could not find action" }
 end
 
 return process
