@@ -80,10 +80,6 @@ export const evaluationSchema = z.object({
     z.date()
   ),
   /**
-   * The message applied to the process
-   */
-  message: z.record(z.any()),
-  /**
    * ao processes return { state, result: { messages, spawns, output, error } }
    *
    * This is the output of process, after the action was applied
