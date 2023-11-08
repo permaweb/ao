@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.16](https://github.com/permaweb/ao/compare/sdk@v0.0.15...sdk@v0.0.16) (2023-11-08)
+
+
+### Features
+
+* **sdk:** expose connect to allow passing ao component urls ([ea09174](https://github.com/permaweb/ao/commit/ea0917452d547098f262397a0a2be6fdec32d14c))
+
 ## [0.0.15](https://github.com/permaweb/ao/compare/sdk@v0.0.14...sdk@v0.0.15) (2023-11-02)
 
 
