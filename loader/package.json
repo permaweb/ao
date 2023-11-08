@@ -17,7 +17,7 @@
     "test:integration": "npm run build:src && MODULE_PATH='../dist/index.cjs' node --test"
   },
   "devDependencies": {
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.19.5",
     "typescript": "^5.2.2"
   },
   "engines": {
