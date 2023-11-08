@@ -41,7 +41,7 @@ impl MessagesPipeline {
         to: Option<String>
     ) -> Result<String, String> {
         let messages = self.data_store.get_messages(&process_id)?;
-        let sorted_messages = SortedMessages::from_messages(messages, from, to);
+        let sorted_messages = SortedMessages::from_messages(messages, from, to)?;
         let result = match serde_json::to_string(&sorted_messages) {
             Ok(r) => r,
             Err(e) => return Err(format!("{:?}", e))
