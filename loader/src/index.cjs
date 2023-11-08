@@ -57,7 +57,7 @@ var Module = (() => {
 
 /**
  * @param {ArrayBuffer} binary
- * @returns {handleFunction}
+ * @returns {Promise<handleFunction>}
  */
 module.exports = async function (binary) {
   const instance = await Module(binary)
