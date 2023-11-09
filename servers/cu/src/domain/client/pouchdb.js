@@ -1,5 +1,8 @@
+import { deflate, inflate } from 'node:zlib'
+import { promisify } from 'node:util'
+
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, map, prop } from 'ramda'
+import { always, applySpec, head, lensPath, map, omit, pipe, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -7,6 +10,9 @@ import PouchDbFind from 'pouchdb-find'
 import LevelDb from 'pouchdb-adapter-leveldb'
 
 import { evaluationSchema, processSchema } from '../model.js'
+
+const deflateP = promisify(deflate)
+const inflateP = promisify(inflate)
 
 /**
  * An implementation of the db client using pouchDB
@@ -27,15 +33,6 @@ const processDocSchema = z.object({
   tags: processSchema.shape.tags,
   block: processSchema.shape.block,
   type: z.literal('process')
-})
-
-const evaluationDocSchema = z.object({
-  _id: z.string().min(1),
-  sortKey: evaluationSchema.shape.sortKey,
-  parent: z.string().min(1),
-  evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output,
-  type: z.literal('evaluation')
 })
 
 function createEvaluationId ({ processId, sortKey }) {
@@ -121,6 +118,17 @@ export function findLatestEvaluationWith ({ pouchDb }) {
     return selector
   }
 
+  const foundEvaluationDocSchema = z.object({
+    _id: z.string().min(1),
+    sortKey: evaluationSchema.shape.sortKey,
+    parent: z.string().min(1),
+    evaluatedAt: evaluationSchema.shape.evaluatedAt,
+    output: evaluationSchema.shape.output,
+    type: z.literal('evaluation')
+  })
+
+  const bufferLens = lensPath(['output', 'buffer'])
+
   return ({ processId, to }) => {
     return of({ processId, to })
       .map(createSelector)
@@ -143,10 +151,21 @@ export function findLatestEvaluationWith ({ pouchDb }) {
       .map(head)
       .chain((doc) => doc ? Resolved(doc) : Rejected(undefined))
       /**
+       * Also retrieve the state buffer, persisted as an attachment
+       * and set it on the output.buffer field to match the expected output shape
+       */
+      .chain(fromPromise(async (doc) => {
+        const buffer = await pouchDb.getAttachment(doc._id, 'buffer.txt')
+        /**
+         * Make sure to decompress the state buffer
+         */
+        return set(bufferLens, await inflateP(buffer), doc)
+      }))
+      /**
        * Ensure the input matches the expected
        * shape
        */
-      .map(evaluationDocSchema.parse)
+      .map(foundEvaluationDocSchema.parse)
       .map(applySpec({
         sortKey: prop('sortKey'),
         processId: prop('parent'),
@@ -160,9 +179,35 @@ export function findLatestEvaluationWith ({ pouchDb }) {
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   const logger = _logger.child('pouchDb:saveEvaluation')
 
+  const savedEvaluationDocSchema = z.object({
+    _id: z.string().min(1),
+    sortKey: evaluationSchema.shape.sortKey,
+    parent: z.string().min(1),
+    evaluatedAt: evaluationSchema.shape.evaluatedAt,
+    /**
+     * Omit buffer from the document schema (see _attachments below)
+     */
+    output: evaluationSchema.shape.output.omit({ buffer: true }),
+    type: z.literal('evaluation'),
+    /**
+     * Since Bibo, the state of a process is a buffer, so we will store it as
+     * a document attachment in PouchDb, then reassemable the evaluation shape
+     * when it is used as a start point for eval (see findEvaluation)
+     *
+     * See https://pouchdb.com/api.html#save_attachment
+     */
+    _attachments: z.object({
+      'buffer.txt': z.object({
+        content_type: z.literal('text/plain'),
+        data: z.any()
+      })
+    })
+  })
+
   return (evaluation) => {
     return of(evaluation)
-      .map(applySpec({
+      .chain(fromPromise(async (evaluation) =>
+        applySpec({
         /**
          * The processId concatenated with the sortKey
          * is used as the _id for an evaluation
@@ -170,21 +215,49 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
          * This makes it easier to query using a range query against the
          * primary index
          */
-        _id: (evaluation) =>
-          createEvaluationId({
-            processId: evaluation.processId,
-            sortKey: evaluation.sortKey
-          }),
-        sortKey: prop('sortKey'),
-        parent: prop('processId'),
-        output: prop('output'),
-        evaluatedAt: prop('evaluatedAt'),
-        type: always('evaluation')
-      }))
+          _id: (evaluation) =>
+            createEvaluationId({
+              processId: evaluation.processId,
+              sortKey: evaluation.sortKey
+            }),
+          sortKey: prop('sortKey'),
+          parent: prop('processId'),
+          output: pipe(
+            prop('output'),
+            /**
+             * Make sure to omit the buffer from the output field
+             * on the document. We will instead persist the state buffer
+             * as an attachment (see below)
+             */
+            omit(['buffer'])
+          ),
+          evaluatedAt: prop('evaluatedAt'),
+          type: always('evaluation'),
+          /**
+           * Store the state produced from the evaluation
+           * as an attachment. This allows for efficient storage
+           * and retrieval of the Buffer
+           *
+           * See https://pouchdb.com/api.html#save_attachment
+           */
+          _attachments: always({
+            'buffer.txt': {
+              content_type: 'text/plain',
+              /**
+               * zlib compress the buffer before persisting
+               *
+               * In testing, this results in orders of magnitude
+               * smaller buffer and smaller persistence times
+               */
+              data: await deflateP(evaluation.output.buffer)
+            }
+          })
+        })(evaluation)
+      ))
       /**
        * Ensure the expected shape before writing to the db
        */
-      .map(evaluationDocSchema.parse)
+      .map(savedEvaluationDocSchema.parse)
       .chain((doc) =>
         of(doc)
           .chain(fromPromise((doc) => pouchDb.get(doc._id)))
