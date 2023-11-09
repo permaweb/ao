@@ -1,6 +1,8 @@
 /* eslint-disable no-throw-literal */
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
+import { deflate } from 'node:zlib'
+import { promisify } from 'node:util'
 
 import { findEvaluationsSchema, findLatestEvaluationSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
 import {
@@ -14,6 +16,7 @@ import {
 import { createLogger } from '../logger.js'
 
 const logger = createLogger('ao-cu:readState')
+const deflateP = promisify(deflate)
 
 describe('pouchdb', () => {
   describe('findProcess', () => {
@@ -135,6 +138,8 @@ describe('pouchdb', () => {
   describe('findLatestEvaluation', () => {
     test('return the lastest evaluation', async () => {
       const evaluatedAt = new Date().toISOString()
+      const buffer = Buffer.from('Hello World', 'utf-8')
+
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
           pouchDb: {
@@ -155,12 +160,18 @@ describe('pouchdb', () => {
                     _id: 'process-123,sortkey-890',
                     sortKey: 'sortkey-890',
                     parent: 'process-123',
-                    output: { state: { foo: 'bar' } },
+                    output: { messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
                   }
                 ]
               }
+            },
+            getAttachment: async (_id, name) => {
+              assert.equal(_id, 'process-123,sortkey-890')
+              assert.equal(name, 'buffer.txt')
+              // impl will inflate this buffer
+              return deflateP(buffer)
             }
           },
           logger
@@ -173,12 +184,14 @@ describe('pouchdb', () => {
 
       assert.equal(res.sortKey, 'sortkey-890')
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { state: { foo: 'bar' } })
+      assert.deepStrictEqual(res.output, { buffer, messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
     test("without 'to', return the lastest interaction using collation sequence max char", async () => {
       const evaluatedAt = new Date().toISOString()
+      const buffer = Buffer.from('Hello World', 'utf-8')
+
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
           pouchDb: {
@@ -199,12 +212,18 @@ describe('pouchdb', () => {
                     _id: 'process-123,sortkey-890',
                     sortKey: 'sortkey-890',
                     parent: 'process-123',
-                    output: { state: { foo: 'bar' } },
+                    output: { messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
                   }
                 ]
               }
+            },
+            getAttachment: async (_id, name) => {
+              assert.equal(_id, 'process-123,sortkey-890')
+              assert.equal(name, 'buffer.txt')
+              // impl will inflate this buffer
+              return deflateP(buffer)
             }
           },
           logger
@@ -216,7 +235,7 @@ describe('pouchdb', () => {
 
       assert.equal(res.sortKey, 'sortkey-890')
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { state: { foo: 'bar' } })
+      assert.deepStrictEqual(res.output, { buffer, messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
@@ -239,17 +258,32 @@ describe('pouchdb', () => {
   })
 
   describe('saveEvaluation', () => {
-    test('save the evaluation to pouchdb', async () => {
+    test('save the evaluation to pouchdb with the buffer as an attachment', async () => {
       const evaluatedAt = new Date().toISOString()
+      const buffer = Buffer.from('Hello World', 'utf-8')
+
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
           pouchDb: {
             get: async () => undefined,
-            put: (doc) => {
+            put: async (doc) => {
               assert.equal(doc._id, 'process-123,sortkey-890')
               assert.equal(doc.sortKey, 'sortkey-890')
               assert.equal(doc.parent, 'process-123')
-              assert.deepStrictEqual(doc.output, { state: { foo: 'bar' } })
+              // buffer is omitted from output and moved to _attachments
+              assert.deepStrictEqual(doc.output, { messages: [{ foo: 'bar' }] })
+              assert.deepStrictEqual(doc._attachments, {
+                'buffer.txt': {
+                  content_type: 'text/plain',
+                  /**
+                   * zlib compress the buffer before persisting
+                   *
+                   * In testing, this results in orders of magnitude
+                   * smaller buffer and smaller persistence times
+                   */
+                  data: await deflateP(buffer)
+                }
+              })
               assert.equal(doc.evaluatedAt.toISOString(), evaluatedAt)
               return Promise.resolve(true)
             }
@@ -261,7 +295,7 @@ describe('pouchdb', () => {
       await saveEvaluation({
         sortKey: 'sortkey-890',
         processId: 'process-123',
-        output: { state: { foo: 'bar' } },
+        output: { buffer, messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
@@ -274,7 +308,7 @@ describe('pouchdb', () => {
               _id: 'process-123,sortkey-890',
               sortKey: 'sortkey-890',
               parent: 'process-123',
-              output: { state: { foo: 'bar' } },
+              output: { buffer: Buffer.from('Hello World', 'utf-8'), messages: [{ foo: 'bar' }] },
               evaluatedAt: new Date()
             }),
             put: assert.fail
@@ -286,7 +320,7 @@ describe('pouchdb', () => {
       await saveEvaluation({
         sortKey: 'sortkey-890',
         processId: 'process-123',
-        output: { state: { foo: 'bar' } },
+        output: { buffer: Buffer.from('Hello World', 'utf-8'), messages: [{ foo: 'bar' }] },
         evaluatedAt: new Date()
       })
     })
