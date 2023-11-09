@@ -37,7 +37,7 @@ export const messageSchema = z.object({
     anchor: z.string().optional(),
     from: z.string().optional(),
     'Forwarded-By': z.string().optional(),
-    tags: rawTagSchema
+    tags: z.array(rawTagSchema)
   }),
   AoGlobal: z.object({
     process: z.object({

@@ -344,9 +344,9 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
    */
   function genTuplesWithBoundaries ({ left: first, right: last }) {
     return async function * genTuples (boundaries) {
-    /**
-     * the initial prev is the left-most boundary
-     */
+      /**
+       * the initial prev is the left-most boundary
+       */
       let prev = first
       for await (const boundary of boundaries) {
         yield [prev, boundary]
@@ -354,8 +354,8 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
       }
 
       /**
-     * Emit the last boundary
-     */
+       * Emit the last boundary
+       */
       yield [prev, last]
     }
   }
@@ -428,7 +428,10 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
               }
             })
         )
-        .map(logger.tap('Merging Streams of Sequenced and Scheduled Messages...'))
+        .map(ctx => {
+          logger('Merging Streams of Sequenced and Scheduled Messages...')
+          return ctx
+        })
         .map(({ leftMost, rightMost, $sequenced, genScheduledMessages }) => {
           /**
            * Each set of scheduled messages will be generated between a left and right boundary,

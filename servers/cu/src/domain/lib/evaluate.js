@@ -139,9 +139,10 @@ export function evaluateWith (env) {
            * to their identity
            */
           buffer: pathOr(null, ['buffer']),
-          messages: always([]),
-          output: always(''),
-          spawns: always([])
+          error: pathOr(undefined, ['result', 'error']),
+          messages: pathOr([], ['result', 'messages']),
+          spawns: pathOr([], ['result', 'spawns']),
+          output: pathOr([], ['result', 'output'])
         })(ctx)
 
         /**

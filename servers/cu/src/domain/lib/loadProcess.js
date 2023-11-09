@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { F, T, always, cond, equals, includes, is, isNotNil, mergeRight } from 'ramda'
+import { F, T, always, cond, equals, includes, is, isNotNil, mergeRight, omit } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, saveProcessSchema } from '../dal.js'
@@ -90,7 +90,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
         logger('Could not find latest evaluation in db. Starting with initial state of null...')
         return _
       },
-      logger.tap('Found previous evaluation in db %j. Using as state and starting point to load messages')
+      logger.tap('Found previous evaluation in db. Using as state and starting point to load messages')
     )
     .bichain(
       /**
@@ -102,6 +102,12 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
          * It is up to the process to set up it's own initial state
          */
         buffer: null,
+        result: {
+          error: undefined,
+          messages: [],
+          output: '',
+          spawns: []
+        },
         from: undefined,
         evaluatedAt: undefined
       }),
@@ -110,6 +116,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        */
       (evaluation) => Resolved({
         buffer: evaluation.output.buffer,
+        result: omit(['buffer'], evaluation.output),
         from: evaluation.sortKey,
         evaluatedAt: evaluation.evaluatedAt
       })
@@ -133,6 +140,12 @@ const ctxSchema = z.object({
    * cached state
    */
   buffer: z.any().nullable(),
+  /**
+   * The most recent result. This could be the most recent
+   * cached result, or potentially nothing
+   * if no evaluations are cached
+   */
+  result: z.record(z.any()),
   /**
    * The most recent message sortKey. This could be from the most recent
    * cached evaluation, or undefined, if no evaluations were cached
@@ -184,6 +197,6 @@ export function loadProcessWith (env) {
           // { id, owner, ..., buffer, result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded process and appended to ctx %O'))
+      .map(logger.tap('Loaded process and appended to ctx'))
   }
 }
