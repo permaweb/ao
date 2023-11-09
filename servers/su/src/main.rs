@@ -3,21 +3,14 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest};
 use serde::Deserialize;
 
-use su::domain::{MessagePipeline, MessagesPipeline, ReadMessagePipeline, ProcessPipeline, ReadProcessPipeline, TimestampPipeline};
-
+use su::domain::flows;
 
 async fn base() -> impl Responder {
     HttpResponse::Ok().body("ao sequencer unit")
 }
 
 async fn timestamp_route() -> impl Responder {
-    let mut pipeline = match TimestampPipeline::new() {
-        Ok(p) => p,
-        Err(err) => return HttpResponse::InternalServerError().body(err),
-    };
-
-    let result = pipeline
-        .process().await;
+    let result = flows::timestamp().await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -28,13 +21,7 @@ async fn timestamp_route() -> impl Responder {
 }
 
 async fn message_route(req_body: web::Bytes) -> impl Responder {
-    let mut pipeline = match MessagePipeline::new() {
-        Ok(p) => p,
-        Err(err) => return HttpResponse::InternalServerError().body(err),
-    };
-
-    let result = pipeline
-        .process(req_body.to_vec()).await;
+    let result = flows::write_message(req_body.to_vec()).await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -60,13 +47,7 @@ async fn messages_route(_req: HttpRequest, path: web::Path<ProcessId>, query_par
     let from_sort_key = query_params.from.clone();
     let to_sort_key = query_params.to.clone();
 
-    let mut pipeline = match MessagesPipeline::new() {
-        Ok(p) => p,
-        Err(err) => return HttpResponse::InternalServerError().body(err),
-    };
-
-    let result = pipeline
-        .process(process_id, from_sort_key, to_sort_key).await;
+    let result = flows::read_messages(process_id, from_sort_key, to_sort_key).await;
         
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -84,13 +65,7 @@ struct MessageId {
 async fn read_message_route(_req: HttpRequest, path: web::Path<MessageId>, _query_params: web::Query<FromTo>) -> impl Responder {
     let message_id = path.message_id.clone();
 
-    let mut pipeline = match ReadMessagePipeline::new() {
-        Ok(p) => p,
-        Err(err) => return HttpResponse::InternalServerError().body(err),
-    };
-
-    let result = pipeline
-        .process(message_id).await;
+    let result = flows::read_message(message_id).await;
         
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -101,13 +76,7 @@ async fn read_message_route(_req: HttpRequest, path: web::Path<MessageId>, _quer
 }
 
 async fn process_route(req_body: web::Bytes) -> impl Responder {
-    let mut pipeline = match ProcessPipeline::new() {
-        Ok(p) => p,
-        Err(err) => return HttpResponse::InternalServerError().body(err),
-    };
-
-    let result = pipeline
-        .process(req_body.to_vec()).await;
+    let result = flows::write_process(req_body.to_vec()).await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -120,13 +89,7 @@ async fn process_route(req_body: web::Bytes) -> impl Responder {
 async fn read_process_route(_req: HttpRequest, path: web::Path<ProcessId>) -> impl Responder {
     let process_id = path.process_id.clone();
 
-    let mut pipeline = match ReadProcessPipeline::new() {
-        Ok(p) => p,
-        Err(err) => return HttpResponse::InternalServerError().body(err),
-    };
-
-    let result = pipeline
-        .process(process_id).await;
+    let result = flows::read_process(process_id).await;
         
     match result {
         Ok(processed_str) => HttpResponse::Ok()
