@@ -53,6 +53,12 @@ impl From<VerifyErrorType> for BuilderErrorType {
     }
 }
 
+impl From<BuilderErrorType> for String {
+    fn from(error: BuilderErrorType) -> Self {
+        format!("error in builder: {:?}", error)
+    }
+}
+
 impl Builder {
     pub fn new(node_url: &str, wallet_path: &str) -> Result<Self, BuilderErrorType> {
         let wallet = PathBuf::from_str(wallet_path)
