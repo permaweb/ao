@@ -61,10 +61,10 @@ describe('loadMessages', () => {
         value: 10,
         unit: 'blocks',
         message: {
-          tags: {
-            'notify-function': 'transfer',
-            function: 'notify'
-          }
+          tags: [
+            { name: 'function', value: 'notify' },
+            { name: 'notify-function', value: 'transfer' }
+          ]
         },
         interval: '10-blocks'
       })
@@ -73,10 +73,10 @@ describe('loadMessages', () => {
         value: 600,
         unit: 'seconds',
         message: {
-          tags: {
-            'notify-function': 'transfer',
-            function: 'notify'
-          }
+          tags: [
+            { name: 'function', value: 'notify' },
+            { name: 'notify-function', value: 'transfer' }
+          ]
         },
         interval: ' 10-minutes '
       })
@@ -85,9 +85,9 @@ describe('loadMessages', () => {
         value: '* 1 * * *',
         unit: 'cron',
         message: {
-          tags: {
-            function: 'transfer'
-          }
+          tags: [
+            { name: 'function', value: 'transfer' }
+          ]
         },
         interval: '* 1 * * *-cron'
       })

@@ -1,7 +1,7 @@
 import { pipeline } from 'node:stream'
 
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, assoc, cond, equals, ifElse, length, mergeRight, pipe, prop, reduce } from 'ramda'
+import { T, always, ascend, cond, equals, ifElse, length, mergeRight, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -50,18 +50,6 @@ export function parseSchedules ({ tags }) {
     ])(unit)
   }
 
-  function maybeJson (str) {
-    try {
-      return JSON.parse(str)
-    } catch (e) {
-      return str
-    }
-  }
-
-  function tagsToJson (tags) {
-    return reduce((a, t) => assoc(t.name, maybeJson(t.value), a), {})(tags)
-  }
-
   return of(tags)
     .chain(tags => {
       /**
@@ -107,10 +95,7 @@ export function parseSchedules ({ tags }) {
               value,
               unit,
               interval,
-              message: pipe(
-                messageStr => JSON.parse(messageStr),
-                message => assoc('tags', tagsToJson(message.tags), message)
-              )(tag.value)
+              message: JSON.parse(tag.value)
             })
           }
           return acc

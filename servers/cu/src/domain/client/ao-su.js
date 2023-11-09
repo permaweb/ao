@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import { pipeline } from 'node:stream'
 import { of } from 'hyper-async'
-import { always, applySpec, assoc, evolve, filter, isNotNil, last, path, pathOr, pipe, prop, reduce } from 'ramda'
+import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
 import { padBlockHeight } from '../lib/utils.js'
 
@@ -143,11 +143,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
               anchor: path(['message', 'anchor']),
               from: mapFrom,
               'Forwarded-By': mapForwardedBy,
-              tags: pipe(
-                pathOr([], ['message', 'tags']),
-                // Parse into a key-value pair
-                reduce((a, t) => assoc(t.name, t.value, a), {})
-              )
+              tags: pathOr([], ['message', 'tags'])
             }),
             /**
              * We need the block metadata per message,
