@@ -12,8 +12,6 @@ export const rawTagSchema = z.object({
   value: z.string()
 })
 
-export const parsedTagSchema = z.record(z.any())
-
 export const rawBlockSchema = z.object({
   height: z.number(),
   timestamp: z.number()
@@ -39,7 +37,7 @@ export const messageSchema = z.object({
     anchor: z.string().optional(),
     from: z.string().optional(),
     'Forwarded-By': z.string().optional(),
-    tags: parsedTagSchema
+    tags: rawTagSchema
   }),
   AoGlobal: z.object({
     process: z.object({
@@ -80,12 +78,15 @@ export const evaluationSchema = z.object({
     z.date()
   ),
   /**
-   * ao processes return { state, result: { messages, spawns, output, error } }
+   * ao processes return { state, messages, spawns, output, error } }
    *
    * This is the output of process, after the action was applied
    */
   output: z.object({
-    state: z.record(z.any()).optional(),
-    result: z.record(z.any()).optional()
+    buffer: z.any().optional(),
+    messages: z.array(z.any()).optional(),
+    spawns: z.array(z.any()).optional(),
+    output: z.any().optional(),
+    error: z.any().optional()
   })
 })
