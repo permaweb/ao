@@ -61,8 +61,8 @@ impl MessagePipeline {
                             self.build_data = Some(bundle_data); 
                             self.build_bundle = Some(bundle);
                         },
-                        Err(_e) => {
-                            self.error = Some("Failed to build tx".to_string())
+                        Err(e) => {
+                            self.error = Some(format!("{:?}", e))
                         },
                     };
                 },
@@ -75,6 +75,11 @@ impl MessagePipeline {
     }
 
     pub async fn commit(&mut self) -> Result<String, String> {
+        match &self.error {
+            Some(e) => return Err(format!("{:?}", e)),
+            None => ()
+        };
+
         let build_data = match &self.build_data {
             Some(data) => data,
             None => return Err("Build error occurred.".to_string()),
