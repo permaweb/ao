@@ -72,6 +72,7 @@ module.exports = async function (binary) {
 
     return {
       buffer: instance.HEAPU8.slice(),
+      error: response.error,
       output: response.output,
       messages: response.messages,
       spawns: response.spawns
