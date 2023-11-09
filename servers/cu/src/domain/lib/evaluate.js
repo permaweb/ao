@@ -1,5 +1,5 @@
 import {
-  T, always, applySpec, assocPath, cond, identity,
+  T, always, applySpec, assocPath, cond, defaultTo, identity,
   ifElse,
   is, mergeRight, pathOr, pipe, propOr, reduced
 } from 'ramda'
@@ -27,7 +27,7 @@ const ctxSchema = z.object({
 
 function addHandler (ctx) {
   return of(ctx.src)
-    .map(AoLoader)
+    .chain(fromPromise(AoLoader))
     .map((handle) => ({ handle, ...ctx }))
 }
 
@@ -91,33 +91,34 @@ export function evaluateWith (env) {
    * return a function that will merge the next interaction output
    * with the previous.
    */
-  const mergeOutput = (prev) => applySpec({
-    /**
-     * We default to 'new' state, from applying an interaction,
-     * to the previous state, but it will be overwritten by the outputs state
-     *
-     * This ensures the new interaction in the chain has state to
-     * operate on, even if the previous interaction only produced
-     * messages and no state change.
-     *
-     * If the output contains an error, ignore its state,
-     * and use the previous message's state
-     */
-    state: ifElse(
-      pathOr(undefined, ['result', 'error']),
-      always(prev.state),
-      propOr(prev.state, 'state')
-    ),
-    result: {
-      error: pathOr(undefined, ['result', 'error']),
-      messages: pathOr([], ['result', 'messages']),
-      spawns: pathOr([], ['result', 'spawns']),
+  const mergeOutput = (prev) => pipe(
+    defaultTo({}),
+    applySpec({
+      /**
+       * We default to 'new' state, from applying an interaction,
+       * to the previous state, but it will be overwritten by the outputs state
+       *
+       * This ensures the new interaction in the chain has state to
+       * operate on, even if the previous interaction only produced
+       * messages and no state change.
+       *
+       * If the output contains an error, ignore its state,
+       * and use the previous message's state
+       */
+      buffer: ifElse(
+        pathOr(undefined, ['error']),
+        always(prev.buffer),
+        propOr(prev.buffer, 'buffer')
+      ),
+      error: pathOr(undefined, ['error']),
+      messages: pathOr([], ['messages']),
+      spawns: pathOr([], ['spawns']),
       output: pipe(
-        pathOr('', ['result', 'output']),
+        pathOr('', ['output']),
         /**
-         * Always make sure the output
-         * is a string
-         */
+           * Always make sure the output
+           * is a string
+           */
         cond([
           [is(String), identity],
           [is(Number), String],
@@ -125,25 +126,23 @@ export function evaluateWith (env) {
           [T, identity]
         ])
       )
-    }
-  })
+    })
+  )
 
   return (ctx) =>
     of(ctx)
       .chain(addHandler)
       .chain(fromPromise(async (ctx) => {
-        let prev = {
-          state: ctx.state,
+        let prev = applySpec({
           /**
            * Ensure all result fields are initialized
            * to their identity
            */
-          result: applySpec({
-            messages: pathOr([], ['messages']),
-            output: pathOr('', ['output']),
-            spawns: pathOr([], ['spawns'])
-          })(ctx.result)
-        }
+          buffer: pathOr(null, ['buffer']),
+          messages: always([]),
+          output: always(''),
+          spawns: always([])
+        })(ctx)
 
         /**
          * Iterate over the async iterable of messages,
@@ -153,24 +152,27 @@ export function evaluateWith (env) {
           prev = await Promise.resolve(prev)
             .then(maybeRejectError)
             .then(prev =>
-              Promise.resolve(prev.state)
+              Promise.resolve(prev.buffer)
                 .then(logger.tap(
                   'Evaluating message with sortKey "%s" to process "%s"',
                   sortKey,
                   ctx.id
                 ))
-                .then((state) => ctx.handle(state, message, AoGlobal))
+                /**
+                 * Where the actual evaluation is performed
+                 */
+                .then((buffer) => ctx.handle(buffer, message, AoGlobal))
                 /**
                  * Map thrown error to a result.error
                  */
-                .catch((err) => Promise.resolve(assocPath(['result', 'error'], err, {})))
+                .catch((err) => Promise.resolve(assocPath(['error'], err, {})))
                 /**
                  * The the previous interaction output, and merge it
                  * with the output of the current interaction
                  */
                 .then(mergeOutput(prev))
                 .then((output) => {
-                  return output.result && output.result.error
+                  return output.error
                     ? Promise.reject(output)
                     : Promise.resolve(output)
                 })
