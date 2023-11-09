@@ -5,10 +5,12 @@ use bundlr_sdk::{bundlr::BundlrBuilder, currency::arweave::ArweaveBuilder, tags:
 
 use super::bytes::{DataBundle, DataItem, ByteErrorType};
 use super::sequencer::{gen_sort_key, SequencerErrorType};
+use super::verifier::{Verifier, VerifyErrorType};
 
 pub struct Builder {
     node_url: Url,
     wallet: PathBuf,
+    verifier: Verifier,
 }
 
 pub struct BuildResult{
@@ -45,6 +47,12 @@ impl From<ByteErrorType> for BuilderErrorType {
     }
 }
 
+impl From<VerifyErrorType> for BuilderErrorType {
+    fn from(error: VerifyErrorType) -> Self {
+        BuilderErrorType::BuilderError(format!("Verification error in builder: {:?}", error))
+    }
+}
+
 impl Builder {
     pub fn new(node_url: &str, wallet_path: &str) -> Result<Self, BuilderErrorType> {
         let wallet = PathBuf::from_str(wallet_path)
@@ -55,9 +63,12 @@ impl Builder {
             Err(e) => return Err(BuilderErrorType::BuilderError(format!("builder error - {}", e.to_string())))
         };
 
+        let verifier = Verifier::new();
+
         Ok(Builder {
             node_url: url,
-            wallet: wallet,
+            wallet,
+            verifier
         })
     }
 
@@ -66,6 +77,9 @@ impl Builder {
         let url_clone = Arc::new(self.node_url.clone());
         
         let item = DataItem::from_bytes(tx)?;
+
+        self.verifier.verify_data_item(&item).await?;
+
         let sort_key = gen_sort_key(&item).await?;
         let mut data_bundle = DataBundle::new(sort_key.clone());
         data_bundle.add_item(item);
