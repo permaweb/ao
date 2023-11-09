@@ -24,15 +24,15 @@ describe('evaluate', () => {
       ctx = {
         id: 'ctr-1234',
         from: 'sort-key-start',
-        src: readFileSync('./test/contracts/happy/contract.wasm'),
-        state: { foo: 'bar' },
+        src: readFileSync('./test/processes/happy/process.wasm'),
+        buffer: null,
         messages: toAsyncIterable([
           {
             message: {
               owner: 'owner-123',
-              tags: {
-                function: 'hello'
-              }
+              tags: [
+                { name: 'function', value: 'hello' }
+              ]
             },
             sortKey: 'a',
             AoGlobal: {}
@@ -40,9 +40,9 @@ describe('evaluate', () => {
           {
             message: {
               owner: 'owner-456',
-              tags: {
-                function: 'world'
-              }
+              tags: [
+                { name: 'function', value: 'world' }
+              ]
             },
             sortKey: 'b',
             AoGlobal: {}
@@ -56,26 +56,36 @@ describe('evaluate', () => {
       assert.ok(output)
     })
 
+    /**
+     * TODO: how to assert eval?
+     */
     test('folds the state', async () => {
       const { output } = await evaluate(ctx).toPromise()
+      /**
+       * Assert the buffer of the internal process state is returned
+       */
+      assert.ok(output.buffer)
       assert.deepStrictEqual(
-        output.state,
+        /**
+         * Our process used in the unit tests serializes the state being mutated
+         * by the process, so we can parse it here and run assertions
+         */
+        JSON.parse(output.output),
         {
-          foo: 'bar',
           heardHello: true,
           heardWorld: true,
           happy: true,
           lastMessage: {
             owner: 'owner-456',
-            tags: {
-              function: 'world'
-            }
+            tags: [
+              { name: 'function', value: 'world' }
+            ]
           }
         }
       )
     })
 
-    test('returns result.messages', async () => {
+    test('returns messages', async () => {
       const expectedMessage = {
         target: 'process-foo-123',
         tags: [
@@ -84,10 +94,10 @@ describe('evaluate', () => {
         ]
       }
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.result.messages, [expectedMessage])
+      assert.deepStrictEqual(output.messages, [expectedMessage])
     })
 
-    test('returns result.spawns', async () => {
+    test('returns spawns', async () => {
       const expectedSpawn = {
         owner: 'owner-123',
         tags: [
@@ -96,12 +106,22 @@ describe('evaluate', () => {
         ]
       }
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.result.spawns, [expectedSpawn])
+      assert.deepStrictEqual(output.spawns, [expectedSpawn])
     })
 
-    test('returns result.output', async () => {
+    test('returns output', async () => {
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.result.output, 'foobar')
+      assert.deepStrictEqual(JSON.parse(output.output), {
+        heardHello: true,
+        heardWorld: true,
+        happy: true,
+        lastMessage: {
+          owner: 'owner-456',
+          tags: [
+            { name: 'function', value: 'world' }
+          ]
+        }
+      })
     })
   })
 
@@ -120,15 +140,15 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/contracts/happy/contract.wasm'),
-      state: { balances: { 1: 1 } },
+      src: readFileSync('./test/processes/happy/process.wasm'),
+      buffer: null,
       messages: toAsyncIterable([
         {
           message: {
             owner: 'owner-123',
-            tags: {
-              function: 'hello'
-            }
+            tags: [
+              { name: 'function', value: 'hello' }
+            ]
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -136,9 +156,9 @@ describe('evaluate', () => {
         {
           message: {
             owner: 'owner-456',
-            tags: {
-              function: 'world'
-            }
+            tags: [
+              { name: 'function', value: 'world' }
+            ]
           },
           sortKey: 'b',
           AoGlobal: {}
@@ -162,23 +182,26 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/contracts/happy/contract.wasm'),
-      state: { balances: { 1: 1 } },
+      src: readFileSync('./test/processes/happy/process.wasm'),
+      /**
+       * In reality this would be an illegible byte array, since it's format
+       * will be determined by whatever the underlying runtime is, in this case,
+       * Lua
+       */
+      buffer: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([])
     }
 
     const { output } = await evaluate(ctx).toPromise()
     assert.deepStrictEqual(output, {
-      state: { balances: { 1: 1 } },
-      result: {
-        messages: [],
-        spawns: [],
-        output: ''
-      }
+      buffer: Buffer.from('Hello', 'utf-8'),
+      messages: [],
+      spawns: [],
+      output: ''
     })
   })
 
-  test('error returned in contract result', async () => {
+  test('error returned in process result', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       logger
@@ -189,58 +212,16 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: { foo: 'bar' },
+      src: readFileSync('./test/processes/sad/process.wasm'),
+      buffer: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
-          // Will include an error in result.error
+          // Will include an error in error
           message: {
             owner: 'owner-456',
-            tags: {
-              function: 'errorResult'
-            }
-          },
-          sortKey: 'a',
-          AoGlobal: {}
-        }
-      ])
-    }
-
-    const res = await evaluate(ctx).toPromise()
-    console.log(res)
-    assert.ok(res.output)
-    assert.deepStrictEqual(res.output, {
-      state: { foo: 'bar' },
-      result: {
-        error: { code: 123, message: 'a handled error within the contract' },
-        messages: [],
-        spawns: [],
-        output: ''
-      }
-    })
-  })
-
-  test('error thrown by contract', async () => {
-    const env = {
-      saveEvaluation: async () => assert.fail(),
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: 'sort-key-start',
-      src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: { foo: 'bar' },
-      messages: toAsyncIterable([
-        {
-          // Will intentionally throw from the lua contract
-          message: {
-            owner: 'owner-456',
-            tags: {
-              function: 'errorThrow'
-            }
+            tags: [
+              { name: 'function', value: 'errorResult' }
+            ]
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -251,17 +232,22 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
-      state: { foo: 'bar' },
-      result: {
-        error: { code: 123, message: 'a thrown error within the contract' },
-        messages: [],
-        spawns: [],
-        output: ''
-      }
+      /**
+       * When an error occurs in eval, its output buffer is ignored
+       * and the output buffer from the previous eval is used.
+       *
+       * So we assert that the original buffer that was passed in is returned
+       * from eval
+       */
+      buffer: Buffer.from('Hello', 'utf-8'),
+      error: { code: 123, message: 'a handled error within the process' },
+      messages: [],
+      spawns: [],
+      output: '0'
     })
   })
 
-  test('error unhandled by contract', async () => {
+  test('error thrown by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       logger
@@ -272,16 +258,55 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: { foo: 'bar' },
+      src: readFileSync('./test/processes/sad/process.wasm'),
+      buffer: Buffer.from('Hello', 'utf-8'),
+      messages: toAsyncIterable([
+        {
+          // Will intentionally throw from the lua process
+          message: {
+            owner: 'owner-456',
+            tags: [
+              { name: 'function', value: 'errorThrow' }
+            ]
+          },
+          sortKey: 'a',
+          AoGlobal: {}
+        }
+      ])
+    }
+
+    const res = await evaluate(ctx).toPromise()
+    assert.ok(res.output)
+    assert.deepStrictEqual(res.output, {
+      buffer: Buffer.from('Hello', 'utf-8'),
+      error: { code: 123, message: 'a thrown error within the process' },
+      messages: [],
+      spawns: [],
+      output: ''
+    })
+  })
+
+  test('error unhandled by process', async () => {
+    const env = {
+      saveEvaluation: async () => assert.fail(),
+      logger
+    }
+
+    const evaluate = evaluateWith(env)
+
+    const ctx = {
+      id: 'ctr-1234',
+      from: 'sort-key-start',
+      src: readFileSync('./test/processes/sad/process.wasm'),
+      buffer: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will unintentionally throw from the lua contract
           message: {
             owner: 'owner-456',
-            tags: {
-              function: 'errorUnhandled'
-            }
+            tags: [
+              { name: 'function', value: 'errorUnhandled' }
+            ]
           },
           sortKey: 'a',
           AoGlobal: {}
@@ -290,10 +315,9 @@ describe('evaluate', () => {
     }
 
     const res = await evaluate(ctx).toPromise()
-    console.log(res.output)
     assert.ok(res.output)
-    assert.ok(res.output.result.error)
-    assert.deepStrictEqual(res.state, { foo: 'bar' })
+    assert.ok(res.output.error)
+    assert.deepStrictEqual(res.buffer, Buffer.from('Hello', 'utf-8'))
   })
 
   test('continue evaluating, ignoring output of errored message', async () => {
@@ -311,29 +335,40 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/contracts/sad/contract.wasm'),
-      state: { counter: 1 },
+      src: readFileSync('./test/processes/sad/process.wasm'),
+      buffer: null,
       messages: toAsyncIterable([
         {
           // Will include an error in result.error
           message: {
             owner: 'owner-456',
-            tags: {
-              function: 'errorResult'
-            }
+            tags: [
+              { name: 'function', value: 'errorResult' }
+            ]
           },
           sortKey: 'a',
           AoGlobal: {}
         },
         {
-          // Will include an error in result.error
+          // Will increment a counter in global state
           message: {
             owner: 'owner-456',
-            tags: {
-              function: 'counter'
-            }
+            tags: [
+              { name: 'function', value: 'counter' }
+            ]
           },
-          sortKey: 'a',
+          sortKey: 'b',
+          AoGlobal: {}
+        },
+        {
+          // Will increment a counter in global state
+          message: {
+            owner: 'owner-456',
+            tags: [
+              { name: 'function', value: 'counter' }
+            ]
+          },
+          sortKey: 'c',
           AoGlobal: {}
         }
       ])
@@ -341,15 +376,8 @@ describe('evaluate', () => {
 
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
-    assert.deepStrictEqual(res.output, {
-      state: { counter: 2 },
-      result: {
-        error: undefined,
-        messages: [],
-        spawns: [],
-        output: ''
-      }
-    })
-    assert.equal(cacheCount, 1)
+    assert.equal(JSON.parse(res.output.output), 2)
+    // Only cache the evals that did not produce errors
+    assert.equal(cacheCount, 2)
   })
 })
