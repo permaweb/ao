@@ -1,3 +1,4 @@
+import { omit } from 'ramda'
 import { of } from 'hyper-async'
 
 import { readStateWith } from './readState.js'
@@ -26,7 +27,7 @@ export function readResultWith (env) {
     return of({ messageTxId })
       .chain(loadMessageMeta)
       .chain(res => readState({ processId: res.processId, to: res.sortKey }))
-      .map(output => output.result)
+      .map(omit(['buffer']))
       .map(
         env.logger.tap(
           'readResult result for message with txId %s',

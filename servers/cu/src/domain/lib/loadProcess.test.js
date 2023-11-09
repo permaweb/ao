@@ -4,6 +4,7 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
+import { omit } from 'ramda'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
@@ -37,6 +38,11 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
     assert.deepStrictEqual(res.buffer, null)
+    assert.deepStrictEqual(res.result, {
+      messages: [],
+      output: '',
+      spawns: []
+    })
     assert.equal(res.from, undefined)
     assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
@@ -81,18 +87,16 @@ describe('loadProcess', () => {
       },
       output: {
         buffer: Buffer.from('Hello', 'utf-8'),
-        result: {
-          messages: [
-            {
-              target: 'foobar',
-              tags: [
-                { name: 'foo', value: 'bar' }
-              ]
-            }
-          ],
-          output: [],
-          spawns: []
-        }
+        messages: [
+          {
+            target: 'foobar',
+            tags: [
+              { name: 'foo', value: 'bar' }
+            ]
+          }
+        ],
+        output: [],
+        spawns: []
       }
     }
 
@@ -120,6 +124,7 @@ describe('loadProcess', () => {
 
     const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
     assert.deepStrictEqual(res.buffer, cachedEvaluation.output.buffer)
+    assert.deepStrictEqual(res.result, omit(['buffer'], cachedEvaluation.output))
     assert.deepStrictEqual(res.from, cachedEvaluation.sortKey)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)

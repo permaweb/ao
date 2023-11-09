@@ -189,6 +189,11 @@ describe('evaluate', () => {
        * Lua
        */
       buffer: Buffer.from('Hello', 'utf-8'),
+      result: {
+        messages: [],
+        output: '',
+        spawns: []
+      },
       messages: toAsyncIterable([])
     }
 
