@@ -33,7 +33,7 @@ const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
 
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    // setInterval(() => processMonitors(), 1000)
+    setInterval(() => processMonitors(), 1000)
     parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
@@ -84,8 +84,9 @@ async function fetchScheduled(monitor) {
     let scheduled = await response.json();
     return scheduled;
   } catch (error) {
-    console.error('Error in fetchScheduled:', error);
-    throw error; 
+    console.log('Error in fetchScheduled:', error);
+    console.log('for monitor: ')
+    console.log(monitor)
   }
 }
 
@@ -96,7 +97,7 @@ async function processMonitor(monitor) {
     try {
       let scheduled = await fetchScheduled(monitor)
 
-      if(scheduled.length < 1) return;
+      if(!scheduled || scheduled.length < 1) return [];
   
       let fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
   
@@ -134,7 +135,7 @@ async function processMonitor(monitor) {
       return {status: 'ok'}
     } catch(e) {
       console.error('Error in processMonitor:', e);
-      throw error; 
+      throw e; 
     }
     
 }
