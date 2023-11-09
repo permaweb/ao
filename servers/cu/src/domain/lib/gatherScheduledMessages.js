@@ -47,7 +47,7 @@ export function gatherScheduledMessagesWith (env) {
               /**
                * Extract the Outbox Messages as a result of evaluating the Scheduled Message
                */
-              pathOr([], ['output', 'result', 'messages']),
+              pathOr([], ['output', 'messages']),
               /**
                * The MU will need to know where to start from, so we attach the Scheduled Message's
                * "sortKey" to each of its Outbox Messages, for the MU to keep track of where it has subscribed
