@@ -1,0 +1,11 @@
+{
+  "name": "hello-world-process",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "@permaweb/ao-loader": "^0.0.9",
+    "@permaweb/ao-sdk": "^0.0.16"
+  }
+}
