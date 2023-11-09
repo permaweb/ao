@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.9](https://github.com/permaweb/ao/compare/loader@v0.0.8...loader@v0.0.9) (2023-11-09)
+
+
+### Bug Fixes
+
+* **loader:** map both returned error and thrown error ([107be41](https://github.com/permaweb/ao/commit/107be410467237719a3fd94d54605f509c4fbd57))
+
 ## [0.0.8](https://github.com/permaweb/ao/compare/loader@v0.0.7...loader@v0.0.8) (2023-11-09)
 
 ## [0.0.7](https://github.com/permaweb/ao/compare/loader@v0.0.6...loader@v0.0.7) (2023-11-08)
