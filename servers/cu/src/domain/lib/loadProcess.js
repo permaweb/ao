@@ -101,13 +101,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
          * With BiBo, the initial state is simply nothing.
          * It is up to the process to set up it's own initial state
          */
-        state: null,
-        result: {
-          error: undefined,
-          messages: [],
-          output: [],
-          spawns: []
-        },
+        buffer: null,
         from: undefined,
         evaluatedAt: undefined
       }),
@@ -115,8 +109,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * State from evaluation we found in cache
        */
       (evaluation) => Resolved({
-        state: evaluation.output.state,
-        result: evaluation.output.result,
+        buffer: evaluation.output.buffer,
         from: evaluation.sortKey,
         evaluatedAt: evaluation.evaluatedAt
       })
@@ -139,13 +132,7 @@ const ctxSchema = z.object({
    * cached buffer, or potentially null if there is no recently
    * cached state
    */
-  state: z.any().nullable(),
-  /**
-   * The most recent result. This could be the most recent
-   * cached result, or potentially nothing
-   * if no interactions are cached
-   */
-  result: z.record(z.any()),
+  buffer: z.any().nullable(),
   /**
    * The most recent message sortKey. This could be from the most recent
    * cached evaluation, or undefined, if no evaluations were cached
@@ -188,12 +175,13 @@ export function loadProcessWith (env) {
   return (ctx) => {
     return of(ctx.id)
       .chain(getProcessMeta)
+      // { id, owner, block }
       .map(mergeRight(ctx))
-      // { state, result, from, evaluatedAt }
+      // { buffer, result, from, evaluatedAt }
       .chain(ctx =>
         loadLatestEvaluation(ctx)
           .map(mergeRight(ctx))
-          // { id, owner, ..., state, result, from, evaluatedAt }
+          // { id, owner, ..., buffer, result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded process and appended to ctx %O'))

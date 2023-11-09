@@ -9,7 +9,7 @@ const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadProcess', () => {
-  test('appends process owner, tags, block, state as process tags parsed as JSON, result, from, and evaluatedAt to ctx', async () => {
+  test('appends process owner, tags, block, buffer as process tags parsed as JSON, result, from, and evaluatedAt to ctx', async () => {
     const tags = [
       { name: 'Contract-Src', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -36,12 +36,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
-    assert.deepStrictEqual(res.state, null)
-    assert.deepStrictEqual(res.result, {
-      messages: [],
-      output: [],
-      spawns: []
-    })
+    assert.deepStrictEqual(res.buffer, null)
     assert.equal(res.from, undefined)
     assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
@@ -74,7 +69,7 @@ describe('loadProcess', () => {
     assert.equal(res.id, PROCESS)
   })
 
-  test('use latest evaluation from db to set state, result, from, and evaluatedAt on ctx', async () => {
+  test('use latest evaluation from db to set buffer, result, from, and evaluatedAt on ctx', async () => {
     const cachedEvaluation = {
       sortKey: 'sortkey-123',
       processId: PROCESS,
@@ -85,7 +80,7 @@ describe('loadProcess', () => {
         ]
       },
       output: {
-        state: { foo: 'bar' },
+        buffer: Buffer.from('Hello', 'utf-8'),
         result: {
           messages: [
             {
@@ -124,8 +119,7 @@ describe('loadProcess', () => {
     })
 
     const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
-    assert.deepStrictEqual(res.state, cachedEvaluation.output.state)
-    assert.deepStrictEqual(res.result, cachedEvaluation.output.result)
+    assert.deepStrictEqual(res.buffer, cachedEvaluation.output.buffer)
     assert.deepStrictEqual(res.from, cachedEvaluation.sortKey)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)
