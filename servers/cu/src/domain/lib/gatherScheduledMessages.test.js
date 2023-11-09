@@ -11,7 +11,6 @@ describe('gatherScheduledMessages', () => {
 
     const mockEval = {
       processId: 'process-123',
-      message: { target: 'process-456', owner: 'owner-123', tags: [] },
       evaluatedAt: new Date()
     }
     const gatherScheduledMessages = gatherScheduledMessagesWith({
@@ -24,24 +23,24 @@ describe('gatherScheduledMessages', () => {
           {
             ...mockEval,
             sortKey: scheduledSortKey,
-            output: { state: { foo: 'bar' }, result: { messages: [{ foo: '1' }, { fizz: '2' }] } }
+            output: { messages: [{ foo: '1' }, { fizz: '2' }] }
           },
           // Scheduled message, but no output.result.messages
           {
             sortKey: scheduledSortKey,
             ...mockEval,
-            output: { state: { foo: 'bar' } }
+            output: {}
           },
           // Not a scheduled message
           {
             sortKey: notScheduledSortKey,
             ...mockEval,
-            output: { state: { foo: 'bar' }, result: { messages: [{ foo: '3' }, { fizz: '4' }] } }
+            output: { messages: [{ foo: '3' }, { fizz: '4' }] }
           },
           {
             ...mockEval,
             sortKey: scheduledSortKey,
-            output: { state: { foo: 'bar' }, result: { messages: [{ foo: '5' }] } }
+            output: { messages: [{ foo: '5' }] }
           }
         ]
       }
