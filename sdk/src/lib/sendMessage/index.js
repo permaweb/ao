@@ -8,7 +8,7 @@ import { uploadMessageWith } from './upload-message.js'
  *
  * @typedef SendMessageArgs
  * @property {string} processId
- * @property {string} anchor
+ * @property {string} [anchor]
  * @property {{ name: string, value: string }[]} [tags]
  * @property {any} signer
  *

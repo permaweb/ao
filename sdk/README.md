@@ -67,8 +67,8 @@ import { createDataItemSigner, sendMessage } from "@permaweb/ao-sdk";
 
 const messageId = await sendMessage({
   processId,
-  input,
   signer: createDataItemSigner(wallet),
+  anchor,
   tags,
 });
 ```
