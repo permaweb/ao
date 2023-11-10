@@ -1,14 +1,13 @@
 import { fromPromise, of } from 'hyper-async'
 
-import { loadStateSchema } from '../../dal.js'
+import { loadResultSchema } from '../../dal.js'
 
 /**
  * @typedef Env
  * @property {any} loadState
  *
  * @typedef Context
- * @property {string} id - the id of the process being read
- * @property {string} [sortKey] - the sortKey to read up to
+ * @property {string} id - the transaction id of the process being read
  *
  * @callback Read
  * @param {Context} ctx
@@ -19,9 +18,9 @@ import { loadStateSchema } from '../../dal.js'
  */
 export function readWith (env) {
   return (ctx) => {
-    return of({ id: ctx.id, sortKey: ctx.sortKey })
+    return of({ id: ctx.id })
       .chain(fromPromise(
-        loadStateSchema.implement(env.loadState)
+        loadResultSchema.implement(env.loadResult)
       ))
   }
 }

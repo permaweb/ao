@@ -7,14 +7,11 @@ const tagSchema = z.object({
 
 // CU
 
-export const loadStateSchema = z.function()
+export const loadResultSchema = z.function()
   .args(z.object({
-    id: z.string().min(1, { message: 'process id is required' }),
-    sortKey: z.string().optional()
+    id: z.string().min(1, { message: 'message id is required' })
   }))
-  .returns(
-    z.promise(z.any())
-  )
+  .returns(z.promise(z.any()))
 
 // MU
 

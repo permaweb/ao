@@ -1,12 +1,13 @@
-# AO SDK
+# `ao` SDK
 
-This sdk will run in a browser or server environment, the purpose is to abstract
-interacting with the infrastructure needed for deploying, evaluating, and
+The `ao` SDK provides an abstraction for spawning, evaluating, and
 interacting with `ao` Processes.
 
-- Reads state of an `ao` Process from a `ao` Compute Unit `cu`
-- Write Message targeting an `ao` Process to an `ao` Message Unit `mu`
-- Deploy an `ao` Process to `Irys` as a Data Item
+This sdk will run in a browser or server environment.
+
+- Read the result of an `ao` Message evaluation from a `ao` Compute Unit `cu`
+- Send a Message targeting an `ao` Process to an `ao` Message Unit `mu`
+- Spawn an `ao` Process on an `ao` Sequencer Unit `su`
 
 <!-- toc -->
 
@@ -14,7 +15,7 @@ interacting with `ao` Processes.
     - [ESM (Node & Browser) aka type: `module`](#esm-node--browser-aka-type-module)
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
   - [API](#api)
-    - [`readState`](#readstate)
+    - [`readResult`](#readresult)
     - [`sendMessage`](#sendmessage)
     - [`spawnProcess`](#spawnprocess)
     - [`connect`](#connect)
@@ -32,40 +33,34 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { spawnProcess, readState, sendMessage } from "@permaweb/ao-sdk";
+import { spawnProcess, sendMessage, readResult } from "@permaweb/ao-sdk";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { readState, sendMessage, spawnProcess } = require("@permaweb/ao-sdk");
+const { spawnProcess, sendMessage, readResult } = require("@permaweb/ao-sdk");
 ```
 
 The duration of this document will use `ESM` for examples
 
 ### API
 
-#### `readState`
+#### `readResult`
 
-Read the state of a process from an `ao` Compute Unit `cu`
+Read the result of the message evaluation from an `ao` Compute Unit `cu`
 
 ```js
-import { readState } from "@permaweb/ao-sdk";
+import { readResult } from "@permaweb/ao-sdk";
 
-let state = await readState({
-  processId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
-});
-// or update to certain sort-key
-state = await readState({
-  processId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
-  sortKey:
-    "000001262259,1694820900780,7160a8e16721d271f96a24ad007a5f54b7e22ae49363652eb7356464fcbb09ed",
+let { messages, spawns, output, error } = await readResult({
+  messageId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
 });
 ```
 
 #### `sendMessage`
 
-write a message to an `ao` Message Unit `mu` targeting an ao `process`.
+send a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
 import { createDataItemSigner, sendMessage } from "@permaweb/ao-sdk";
@@ -83,7 +78,7 @@ const messageId = await sendMessage({
 
 #### `spawnProcess`
 
-Create an `ao` process, publishing to Arys.
+Spawn an `ao` process
 
 ```js
 import { createDataItemSigner, spawnProcess } from "@permaweb/ao-sdk";
@@ -108,7 +103,7 @@ specify those components by providing their urls to `connect`. You can currently
 ```js
 import { connect } from "@permaweb/ao-sdk";
 
-const { spawnProcess, sendMessage, readState } = connect({
+const { spawnProcess, sendMessage, readResult } = connect({
   GATEWAY_URL: "...",
   MU_URL: "...",
   CU_URL: "...",
@@ -124,12 +119,12 @@ using the top-lvl exports of the SDK:
 import {
  spawnProcess,
  sendMessage,
- readState
+ readResult
  connect
 } from '@permaweb/ao-sdk';
 
 // These are functionally equivalent
-connect() == { spawnProcess, sendMessage, readState }
+connect() == { spawnProcess, sendMessage, readResult }
 ```
 
 #### `createDataItemSigner`
@@ -176,7 +171,7 @@ type CreateDataItemSigner = (wallet: any):
 
 You can enable verbose debug logging on the SDK. All logging is scoped under the
 name `@permaweb/ao-sdk*`. You can use wildcards to enable a subset of logs ie.
-`@permaweb/ao-sdk/readState*`
+`@permaweb/ao-sdk/readResult*`
 
 For Node, set the `DEBUG` environment variable to the logs you're interested in.
 

@@ -5,26 +5,21 @@ import { fromPromise, of } from 'hyper-async'
  * @property {fetch} fetch
  * @property {string} CU_URL
  *
- * @typedef LoadStateArgs
+ * @typedef LoadResultArgs
  * @property {string} id - the id of the process being read
- * @property {string} [sortKey] - the sortKey to read up to. Defaults to latest
  *
- * @callback LoadState
- * @param {LoadStateArgs} args
+ * @callback LoadResult
+ * @param {LoadResultArgs} args
  * @returns {Promise<Record<string, any>}
  *
  * @param {Env3} env
- * @returns {LoadState}
+ * @returns {LoadResult}
  */
-export function loadStateWith ({ fetch, CU_URL, logger }) {
-  return ({ id, sortKey }) => {
-    return of({ id, sortKey })
-      .map(ctx => {
-        if (!ctx.sortKey) return ctx
-        return { ...ctx, params: new URLSearchParams({ to: ctx.sortKey }) }
-      })
-      .map(({ id, params }) => `${CU_URL}/state/${id}${params ? `?${params.toString()}` : ''}`)
-      .map(logger.tap('fetching process state from CU'))
+export function loadResultWith ({ fetch, CU_URL, logger }) {
+  return ({ id }) => {
+    return of({ id })
+      .map(({ id }) => `${CU_URL}/result/${id}`)
+      .map(logger.tap('fetching message result from CU'))
       .chain(fromPromise(async (url) =>
         fetch(url, {
           method: 'GET',

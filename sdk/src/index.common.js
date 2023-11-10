@@ -4,7 +4,7 @@ import * as SuClient from './client/ao-su.js'
 import * as GatewayClient from './client/gateway.js'
 import { createLogger } from './logger.js'
 
-import { readStateWith } from './lib/readState/index.js'
+import { readResultWith } from './lib/readResult/index.js'
 import { sendMessageWith } from './lib/sendMessage/index.js'
 import { spawnProcessWith } from './lib/spawnProcess/index.js'
 
@@ -29,12 +29,12 @@ const DEFAULT_SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
  * import {
  *  spawnProcess,
  *  sendMessage,
- *  readState
+ *  readResult
  *  connect
  * } from '@permaweb/ao-sdk';
  *
  * // These are functionally equivalent
- * connect() == { spawnProcess, sendMessage, readState }
+ * connect() == { spawnProcess, sendMessage, readResult }
  *
  * @typedef Services
  * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
@@ -52,10 +52,10 @@ export function connect ({
 } = {}) {
   const logger = createLogger('@permaweb/ao-sdk')
 
-  const readStateLogger = logger.child('readState')
-  const readState = readStateWith({
-    loadState: CuClient.loadStateWith({ fetch, CU_URL, logger: readStateLogger }),
-    logger: readStateLogger
+  const readResultLogger = logger.child('readResult')
+  const readResult = readResultWith({
+    loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: readResultLogger }),
+    logger: readResultLogger
   })
 
   /**
@@ -84,5 +84,5 @@ export function connect ({
     logger: spawnProcessLogger
   })
 
-  return { readState, sendMessage, spawnProcess }
+  return { readResult, sendMessage, spawnProcess }
 }
