@@ -11,9 +11,11 @@ import { saveWith } from './monitor/saveProcess.js'
 import { appendSequencerDataWith } from './monitor/appendSequencerData.js'
 
 /**
- * write the first transaction and fetch its messages
+ * write the first transaction to the su,
+ * and return that result, along with a method to
+ * fetch it
  */
-export function initMsgsWith ({
+export function sendMsgWith ({
   createDataItem,
   cacheTx,
   selectNode,
@@ -24,6 +26,8 @@ export function initMsgsWith ({
   saveSpawn,
   findLatestMsgs,
   findLatestSpawns,
+  processMsg,
+  processSpawn,
   logger
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -31,12 +35,30 @@ export function initMsgsWith ({
   const cacheAndWriteTx = cacheAndWriteTxWith({ cacheTx, findSequencerTx, writeSequencerTx, logger })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
 
+  const crank = crankWith({ processMsg, processSpawn, logger })
+
   return (ctx) => {
     return of(ctx)
+      /**
+       * Extract parts from the data item
+       */
       .chain(parseDataItem)
-      .chain(getCuAddress)
+      /**
+       * Cache the message metadata in the db, then forward
+       * to the SU
+       */
       .chain(cacheAndWriteTx)
-      .chain(fetchAndSaveResult)
+      .map(res => ({
+        ...res,
+        /**
+         * An opaque method to fetch the result of the message just forwarded
+         * and then crank its results
+         */
+        crank: () => of(res)
+          .chain(getCuAddress)
+          .chain(fetchAndSaveResult)
+          .chain(({ msgs, spawns }) => crank({ msgs, spawns }))
+      }))
   }
 }
 
@@ -104,8 +126,7 @@ export function crankMsgsWith ({
   }
 }
 
-
-export function monitorProcessWith({
+export function monitorProcessWith ({
   logger,
   createDataItem,
   saveProcessToMonitor,
@@ -113,7 +134,7 @@ export function monitorProcessWith({
 }) {
   const parse = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
-  const appendSequencerData = appendSequencerDataWith({logger, fetchSequencerProcess})
+  const appendSequencerData = appendSequencerDataWith({ logger, fetchSequencerProcess })
   return (ctx) => {
     return of(ctx)
       .chain(parse)
