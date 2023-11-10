@@ -2,19 +2,19 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { loadStateSchema } from '../dal.js'
-import { loadStateWith } from './ao-cu.js'
+import { loadResultSchema } from '../dal.js'
+import { loadResultWith } from './ao-cu.js'
 
 const logger = createLogger('ao-cu')
 
 describe('ao-cu', () => {
-  describe('loadStateWith', () => {
+  describe('loadResultWith', () => {
     test('fetches the state from the CU and passes it through', async () => {
-      const loadState = loadStateSchema.implement(
-        loadStateWith({
+      const loadResult = loadResultSchema.implement(
+        loadResultWith({
           CU_URL: 'https://foo.bar',
           fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/state/process-123?to=sort-key-123')
+            assert.equal(url, 'https://foo.bar/result/message-123')
             assert.deepStrictEqual(options, {
               method: 'GET',
               headers: {
@@ -23,37 +23,53 @@ describe('ao-cu', () => {
             })
 
             return new Response(JSON.stringify({
-              state: { foo: 'bar' },
-              result: {}
+              output: '',
+              messages: [
+                {
+                  owner: 'SIGNERS_WALLET_ADDRESS',
+                  target: 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc',
+                  anchor: 'process-id:message-id:counter',
+                  tags: [
+                    { name: 'Forwarded-For', value: 'b09lyYWG6jZabiyZrZS2meWUyZXspaX4TCfDmH1KDmI' },
+                    { name: 'Data-Protocol', value: 'ao' },
+                    { name: 'ao-type', value: 'message' },
+                    { name: 'function', value: 'notify' },
+                    { name: 'notify-function', value: 'transfer' },
+                    { name: 'from', value: 'SIGNERS_WALLET_ADDRESS' },
+                    { name: 'qty', value: '1000' }
+                  ],
+                  data: ''
+                }
+              ],
+              spawns: []
             }))
           },
           logger
         })
       )
 
-      await loadState({ id: 'process-123', sortKey: 'sort-key-123' })
+      await loadResult({ id: 'message-123' })
         .then(res => assert.deepStrictEqual(res, {
-          state: { foo: 'bar' },
-          result: {}
+          output: '',
+          messages: [
+            {
+              owner: 'SIGNERS_WALLET_ADDRESS',
+              target: 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc',
+              anchor: 'process-id:message-id:counter',
+              tags: [
+                { name: 'Forwarded-For', value: 'b09lyYWG6jZabiyZrZS2meWUyZXspaX4TCfDmH1KDmI' },
+                { name: 'Data-Protocol', value: 'ao' },
+                { name: 'ao-type', value: 'message' },
+                { name: 'function', value: 'notify' },
+                { name: 'notify-function', value: 'transfer' },
+                { name: 'from', value: 'SIGNERS_WALLET_ADDRESS' },
+                { name: 'qty', value: '1000' }
+              ],
+              data: ''
+            }
+          ],
+          spawns: []
         }))
-    })
-
-    test('omit params if no sortKey is provided', async () => {
-      const loadState = loadStateSchema.implement(
-        loadStateWith({
-          CU_URL: 'https://foo.bar',
-          fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/state/process-123')
-            return new Response(JSON.stringify({
-              state: { foo: 'bar' },
-              result: {}
-            }))
-          },
-          logger
-        })
-      )
-
-      await loadState({ id: 'process-123' })
     })
   })
 })

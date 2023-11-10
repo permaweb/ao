@@ -2,8 +2,7 @@ import { of } from 'hyper-async'
 import { z } from 'zod'
 
 const inputSchema = z.object({
-  id: z.string().min(1, { message: 'id is required to be a process id' }),
-  sortKey: z.string().optional()
+  id: z.string().min(1, { message: 'id is required to be a message id' })
 })
 
 /**
