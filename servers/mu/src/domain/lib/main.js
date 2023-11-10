@@ -10,13 +10,7 @@ import { parseDataItemWith } from './processMsg/parse-data-item.js'
 import { saveWith } from './monitor/saveProcess.js'
 import { appendSequencerDataWith } from './monitor/appendSequencerData.js'
 
-/**
- * write the first transaction and fetch its messages
- * the difference between this and processMsg is that this
- * takes a data item, while processMsg works on a cached
- * cu result
- */
-export function initMsgsWith ({
+export function sendMsgWith ({
   createDataItem,
   selectNode,
   findSequencerTx,
@@ -26,6 +20,8 @@ export function initMsgsWith ({
   saveSpawn,
   findLatestMsgs,
   findLatestSpawns,
+  processMsg,
+  processSpawn,
   logger
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -33,12 +29,23 @@ export function initMsgsWith ({
   const writeTx = writeTxWith({ findSequencerTx, writeSequencerTx, logger })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
 
+  const crank = crankWith({ processMsg, processSpawn, logger })
+
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
-      .chain(getCuAddress)
       .chain(writeTx)
-      .chain(fetchAndSaveResult)
+      .map(res => ({
+        ...res,
+        /**
+         * An opaque method to fetch the result of the message just forwarded
+         * and then crank its results
+         */
+        crank: () => of(res)
+          .chain(getCuAddress)
+          .chain(fetchAndSaveResult)
+          .chain(({ msgs, spawns }) => crank({ msgs, spawns }))
+      }))
   }
 }
 
@@ -106,8 +113,7 @@ export function crankMsgsWith ({
   }
 }
 
-
-export function monitorProcessWith({
+export function monitorProcessWith ({
   logger,
   createDataItem,
   saveProcessToMonitor,
@@ -115,7 +121,7 @@ export function monitorProcessWith({
 }) {
   const parse = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
-  const appendSequencerData = appendSequencerDataWith({logger, fetchSequencerProcess})
+  const appendSequencerData = appendSequencerDataWith({ logger, fetchSequencerProcess })
   return (ctx) => {
     return of(ctx)
       .chain(parse)
