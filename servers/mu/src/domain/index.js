@@ -6,9 +6,11 @@ import dbInstance from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
 
-import { initMsgsWith, processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith } from './lib/main.js'
+import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendMsgWith } from './lib/main.js'
 
 import runScheduledWith from './lib/monitor/manager.js'
+
+import { createLogger } from './logger.js'
 
 const { DataItem } = warpArBundles
 
@@ -16,13 +18,11 @@ export { dataStoreClient }
 export { dbInstance }
 
 const createDataItem = (raw) => new DataItem(raw)
-
-import { createLogger } from './logger.js'
 export { createLogger }
 
 export const batchLogger = createLogger('ao-mu-batch')
 const runScheduledLogger = batchLogger.child('runScheduled')
-const runScheduled = runScheduledWith({dbClient: dataStoreClient, dbInstance, logger: runScheduledLogger})
+const runScheduled = runScheduledWith({ dbClient: dataStoreClient, dbInstance, logger: runScheduledLogger })
 export { runScheduled }
 
 export const domainConfigSchema = z.object({
@@ -38,20 +38,6 @@ export const createApis = (ctx) => {
 
   const logger = ctx.logger
   const fetch = ctx.fetch
-
-  const initMsgsLogger = logger.child('initMsgs')
-  const initMsgs = initMsgsWith({
-    selectNode: cuClient.selectNodeWith({ CU_URL, logger: initMsgsLogger }),
-    createDataItem,
-    findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL, logger: initMsgsLogger }),
-    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: initMsgsLogger }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: initMsgsLogger }),
-    saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: initMsgsLogger }),
-    saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: initMsgsLogger }),
-    findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: initMsgsLogger }),
-    findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance, logger: initMsgsLogger }),
-    logger: initMsgsLogger
-  })
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
@@ -75,6 +61,22 @@ export const createApis = (ctx) => {
     writeContractTx: sequencerClient.writeContractTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger })
   })
 
+  const sendMsgLogger = logger.child('sendMsg')
+  const sendMsg = sendMsgWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendMsgLogger }),
+    createDataItem,
+    findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL, logger: sendMsgLogger }),
+    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: sendMsgLogger }),
+    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendMsgLogger }),
+    saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: sendMsgLogger }),
+    saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: sendMsgLogger }),
+    findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: sendMsgLogger }),
+    findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance, logger: sendMsgLogger }),
+    processMsg,
+    processSpawn,
+    logger: sendMsgLogger
+  })
+
   const crankMsgsLogger = logger.child('crankMsgs')
   const crankMsgs = crankMsgsWith({
     processMsg,
@@ -84,11 +86,11 @@ export const createApis = (ctx) => {
 
   const monitorProcessLogger = logger.child('monitorProcess')
   const monitorProcess = monitorProcessWith({
-    saveProcessToMonitor: dataStoreClient.saveMonitoredProcessWith({dbInstance, logger: monitorProcessLogger}),
+    saveProcessToMonitor: dataStoreClient.saveMonitoredProcessWith({ dbInstance, logger: monitorProcessLogger }),
     createDataItem,
-    fetchSequencerProcess: sequencerClient.fetchSequencerProcessWith({logger: monitorProcessLogger, SEQUENCER_URL}),
+    fetchSequencerProcess: sequencerClient.fetchSequencerProcessWith({ logger: monitorProcessLogger, SEQUENCER_URL }),
     logger: monitorProcessLogger
   })
 
-  return { initMsgs, crankMsgs, monitorProcess }
+  return { sendMsg, crankMsgs, monitorProcess }
 }
