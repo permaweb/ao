@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.18](https://github.com/permaweb/ao/compare/sdk@v0.0.17...sdk@v0.0.18) (2023-11-10)
+
+
+### Features
+
+* **sdk:** add error formatter to format zod errors to be more useful ([c72bee4](https://github.com/permaweb/ao/commit/c72bee4f3106ed90c5ef84f099127f82a8583db1))
+
+
+### Bug Fixes
+
+* **sdk:** entrypoints readState -> readResult ([b46877f](https://github.com/permaweb/ao/commit/b46877f7008a8119e90420ca44744bffd43a064d))
+
 ## [0.0.17](https://github.com/permaweb/ao/compare/sdk@v0.0.16...sdk@v0.0.17) (2023-11-10)
 
 
