@@ -16,11 +16,11 @@ import { loadResultSchema } from '../../dal.js'
  * @param {Env} env
  * @returns {Read}
  */
-export function readWith (env) {
+export function readWith ({ loadResult }) {
+  loadResult = fromPromise(loadResultSchema.implement(loadResult))
+
   return (ctx) => {
     return of({ id: ctx.id })
-      .chain(fromPromise(
-        loadResultSchema.implement(env.loadResult)
-      ))
+      .chain(loadResult)
   }
 }
