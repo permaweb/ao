@@ -1,5 +1,7 @@
+import { identity } from 'ramda'
 import { of } from 'hyper-async'
 
+import { errFrom } from '../utils.js'
 import { verifyProcessWith } from './verify-process.js'
 import { uploadMessageWith } from './upload-message.js'
 
@@ -28,6 +30,7 @@ export function sendMessageWith (env) {
       .chain(verifyProcess)
       .chain(uploadMessage)
       .map((ctx) => ctx.messageId) // the id of the data item
+      .bimap(errFrom, identity)
       .toPromise()
   }
 }

@@ -1,5 +1,7 @@
+import { identity } from 'ramda'
 import { of } from 'hyper-async'
 
+import { errFrom } from '../utils.js'
 import { verifyInputsWith } from './verify-inputs.js'
 import { uploadProcessWith } from './upload-process.js'
 
@@ -27,6 +29,7 @@ export function spawnProcessWith (env) {
       .chain(verifyInputs)
       .chain(uploadProcess)
       .map((ctx) => ctx.processId)
+      .bimap(errFrom, identity)
       .toPromise()
   }
 }
