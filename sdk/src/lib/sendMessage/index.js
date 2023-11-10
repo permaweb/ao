@@ -6,20 +6,20 @@ import { uploadMessageWith } from './upload-message.js'
 /**
  * @typedef Env1
  *
- * @typedef WriteMessageArgs
+ * @typedef SendMessageArgs
  * @property {string} processId
  * @property {string} anchor
  * @property {{ name: string, value: string }[]} [tags]
  * @property {any} signer
  *
- * @callback WriteMessage
- * @param {WriteMessageArgs} args
+ * @callback SendMessage
+ * @param {SendMessageArgs} args
  * @returns {Promise<string>} the id of the data item that represents this message
  *
  * @param {Env1} - the environment
- * @returns {WriteMessage}
+ * @returns {SendMessage}
  */
-export function writeMessageWith (env) {
+export function sendMessageWith (env) {
   const verifyProcess = verifyProcessWith(env)
   const uploadMessage = uploadMessageWith(env)
 

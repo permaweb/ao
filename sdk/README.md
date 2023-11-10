@@ -15,8 +15,8 @@ interacting with `ao` Processes.
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
   - [API](#api)
     - [`readState`](#readstate)
-    - [`writeMessage`](#writemessage)
-    - [`createProcess`](#createprocess)
+    - [`sendMessage`](#sendmessage)
+    - [`spawnProcess`](#spawnprocess)
     - [`connect`](#connect)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
@@ -32,13 +32,13 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { createProcess, readState, writeMessage } from "@permaweb/ao-sdk";
+import { spawnProcess, readState, sendMessage } from "@permaweb/ao-sdk";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { readState, writeMessage, createProcess } = require("@permaweb/ao-sdk");
+const { readState, sendMessage, spawnProcess } = require("@permaweb/ao-sdk");
 ```
 
 The duration of this document will use `ESM` for examples
@@ -63,14 +63,14 @@ state = await readState({
 });
 ```
 
-#### `writeMessage`
+#### `sendMessage`
 
 write a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
-import { createDataItemSigner, writeMessage } from "@permaweb/ao-sdk";
+import { createDataItemSigner, sendMessage } from "@permaweb/ao-sdk";
 
-const messageId = await writeMessage({
+const messageId = await sendMessage({
   processId,
   input,
   signer: createDataItemSigner(wallet),
@@ -78,17 +78,17 @@ const messageId = await writeMessage({
 });
 ```
 
-> You can pass a 32 byte `anchor` to `writeMessage` which will be set on the
+> You can pass a 32 byte `anchor` to `sendMessage` which will be set on the
 > DataItem
 
-#### `createProcess`
+#### `spawnProcess`
 
 Create an `ao` process, publishing to Arys.
 
 ```js
-import { createDataItemSigner, createProcess } from "@permaweb/ao-sdk";
+import { createDataItemSigner, spawnProcess } from "@permaweb/ao-sdk";
 
-const processId = await createProcess({
+const processId = await spawnProcess({
   srcId,
   signer: createDataItemSigner(wallet),
   tags,
@@ -108,7 +108,7 @@ specify those components by providing their urls to `connect`. You can currently
 ```js
 import { connect } from "@permaweb/ao-sdk";
 
-const { createProcess, writeMessage, readState } = connect({
+const { spawnProcess, sendMessage, readState } = connect({
   GATEWAY_URL: "...",
   MU_URL: "...",
   CU_URL: "...",
@@ -122,23 +122,23 @@ using the top-lvl exports of the SDK:
 
 ```js
 import {
- createProcess,
- writeMessage,
+ spawnProcess,
+ sendMessage,
  readState
  connect
 } from '@permaweb/ao-sdk';
 
 // These are functionally equivalent
-connect() == { createProcess, writeMessage, readState }
+connect() == { spawnProcess, sendMessage, readState }
 ```
 
 #### `createDataItemSigner`
 
-`writeMessage` and `createProcess` both require signing a DataItem with a
+`sendMessage` and `spawnProcess` both require signing a DataItem with a
 wallet.
 
 `createDataItemSigner` is a convenience api that, given a wallet, returns a
-function that can be passed to both `writeMessage` and `createProcess` in order
+function that can be passed to both `sendMessage` and `spawnProcess` in order
 to properly sign DataItems.
 
 The SDK provides a browser compatible and node compatible version that you can
