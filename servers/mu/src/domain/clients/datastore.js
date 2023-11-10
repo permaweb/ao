@@ -1,91 +1,8 @@
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, prop } from 'ramda'
+import { always, applySpec, prop } from 'ramda'
 import z from 'zod'
 
 
-const cachedTxSchema = z.object({
-  _id: z.string().min(1),
-  data: z.any(),
-  processId: z.string().min(1),
-  cachedAt: z.preprocess(
-    (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
-    z.date()
-  )
-})
-
-function saveTxWith ({ dbInstance, logger: _logger }) {
-  const logger = _logger.child('saveTx')
-
-  return (tx) => {
-    return of(tx)
-      .map(applySpec({
-        _id: prop('id'),
-        data: prop('data'),
-        processId: prop('processId'),
-        cachedAt: prop('cachedAt')
-      }))
-      .map(cachedTxSchema.parse)
-      .chain((doc) =>
-        of(doc)
-          .chain(fromPromise((doc) => dbInstance.getTx(doc._id)))
-          .bichain(
-            (err) => {
-              if (err.status === 404) {
-                logger(
-                  'No cached document found with _id %s. Caching tx %O',
-                  doc._id,
-                  doc
-                )
-                return Resolved(undefined)
-              }
-              return Rejected(err)
-            },
-            Resolved
-          )
-          .chain((found) =>
-            found
-              ? of(found)
-              : of(doc).chain(fromPromise((doc) => dbInstance.putTx(doc)))
-                .bimap(
-                  logger.tap('Encountered an error when caching tx'),
-                  logger.tap('Cached tx')
-                )
-                .bichain(Resolved, Resolved)
-          )
-          .map(always(doc._id))
-      )
-      .toPromise()
-  }
-}
-
-function findLatestTxWith (
-  { dbInstance }
-) {
-  return ({ id }) => {
-    return of({ txId: id })
-      .chain(fromPromise(() => {
-        return dbInstance.findTx(id).then((res) => {
-          if (res.warning) console.warn(res.warning)
-          return res.docs
-        })
-      }))
-      .map(head)
-      .chain((doc) => doc ? Resolved(doc) : Rejected(doc))
-      /**
-       * Ensure the input matches the expected
-       * shape
-       */
-      .map(cachedTxSchema.parse)
-      .map(applySpec({
-        id: prop('_id'),
-        data: prop('data'),
-        processId: prop('processId'),
-        cachedAt: prop('cachedAt')
-      }))
-      .bichain(Resolved, Resolved)
-      .toPromise()
-  }
-}
 
 const cachedMsgSchema = z.object({
   _id: z.string().min(1),
@@ -332,10 +249,7 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
 
 
 export default {
-  cachedTxSchema,
   cachedMsgSchema,
-  saveTxWith,
-  findLatestTxWith,
   saveMsgWith,
   saveSpawnWith,
   updateMsgWith,

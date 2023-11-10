@@ -1,9 +1,11 @@
 import db from './db.js';
 
 import createInitialMigrations from './migrations/20231031_create_initial_tables.js';
+import dropTransactionTable from './migrations/20231110_drop_transaction_table.js';
 
 const migrations = [
   createInitialMigrations,
+  dropTransactionTable
 ];
 
 async function runMigrations() {

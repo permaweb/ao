@@ -21,21 +21,6 @@ async function withRetry(operation, args, retryCount = 0) {
   }
 }
 
-export async function getTx(id) {
-  return withRetry(db.oneOrNone, ['SELECT * FROM "transactions" WHERE "_id" = $1', [id]]);
-}
-
-export async function putTx(doc) {
-  return withRetry(db.none, [
-    'INSERT INTO "transactions" ("_id", "data", "processId", "cachedAt") VALUES ($1, $2, $3, $4)',
-    [doc._id, JSON.stringify(doc.data), doc.processId, doc.cachedAt]
-  ]);
-}
-
-export async function findTx(id) {
-  return withRetry(db.any, ['SELECT * FROM "transactions" WHERE "_id" = $1', [id]]);
-}
-
 export async function putMsg(doc) {
   return withRetry(db.none, [
     'INSERT INTO "messages" ("_id", "fromTxId", "toTxId", "msg", "cachedAt") VALUES ($1, $2, $3, $4, $5)',
@@ -101,9 +86,6 @@ export async function findMonitors() {
 }
 
 export default {
-  getTx,
-  putTx,
-  findTx,
   putMsg,
   getMsg,
   getMonitor,

@@ -10,26 +10,7 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
-function findAndCacheTxWith ({ cacheTx, logger }) {
-  cacheTx = fromPromise(cacheTx)
-
-  return (tx) => {
-    return of(tx)
-      .map(tx => ({
-        id: tx.id,
-        processId: tx.processId,
-        data: tx.data,
-        cachedAt: new Date()
-      }))
-      .chain((tx) =>
-        cacheTx(tx)
-          .map(logger.tap('cached tx'))
-          .map(() => tx)
-      )
-  }
-}
-
-function findAndWriteSeqTxWith ({ findSequencerTx, writeSequencerTx, logger }) {
+function findOrWriteSeqTxWith ({ findSequencerTx, writeSequencerTx, logger }) {
   findSequencerTx = fromPromise(findSequencerTx)
   writeSequencerTx = fromPromise(writeSequencerTx)
 
@@ -44,16 +25,14 @@ function findAndWriteSeqTxWith ({ findSequencerTx, writeSequencerTx, logger }) {
     .map(logger.tap('wrote tx to sequencer'))
 }
 
-export function cacheAndWriteTxWith (env) {
+export function writeTxWith (env) {
   const { logger } = env
 
-  const findAndCacheTx = findAndCacheTxWith(env)
-  const findAndWriteSeqTx = findAndWriteSeqTxWith(env)
+  const findOrWriteSeqTx = findOrWriteSeqTxWith(env)
 
   return (ctx) => {
     return of(ctx.tx)
-      .chain(findAndCacheTx)
-      .chain(findAndWriteSeqTx)
+      .chain(findOrWriteSeqTx)
       .map(assoc('sequencerTx', __, ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Added "sequencerTx" to ctx'))

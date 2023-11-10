@@ -1,13 +1,10 @@
 import { readFileSync } from 'node:fs';
 
-import WarpArBundles from "warp-arbundles"
-const { createData, ArweaveSigner } = WarpArBundles
-
 import { connect, createDataItemSigner} from '@permaweb/ao-sdk'
 
 const {
-  createProcess,
-  writeMessage
+  spawnProcess,
+  sendMessage
 } = connect({
   GATEWAY_URL: "https://arweave.net", 
   MU_URL: "http://localhost:3004",
@@ -16,7 +13,7 @@ const {
 });
 
 (async function () {
-  const PROCESS_SRC = 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no';
+  const PROCESS_SRC = 'HQC7hZj7cdH4CJCg1WZevHNfPlSvyAbogvgVqT3rF-w';
   const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
 
   const tags1 = [
@@ -26,7 +23,7 @@ const {
     { name: '_fns', value: JSON.stringify({}) },
   ];
 
-  let c1 = await createProcess({
+  let c1 = await spawnProcess({
     srcId: PROCESS_SRC,
     tags: tags1,
     signer: createDataItemSigner(wallet),
@@ -50,7 +47,7 @@ const {
     { name: 'Scheduled-Message', value: JSON.stringify(message) },
   ];
 
-  let c2 = await createProcess({
+  let c2 = await spawnProcess({
     srcId: PROCESS_SRC,
     tags: tags2,
     signer: createDataItemSigner(wallet),
@@ -58,7 +55,7 @@ const {
 
   console.log(`Process 2 ${c2}`);
 
-  let m1 = await writeMessage({
+  let m1 = await sendMessage({
     processId: c2,
     tags: [
       { name: 'function', value: 'eval' },
@@ -68,27 +65,4 @@ const {
   })
 
   console.log(`Message 1 to process 2 ${m1}`);
-
-  const data = Math.random().toString().slice(-4)
-  const tags = []
-
-  const signer = new ArweaveSigner(wallet)
-  const dataItem = createData(data, signer, { tags, target: c2 })
-  await dataItem.sign(signer)
-
-  const response = await fetch(
-      `http://localhost:3004/monitor/${c2}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          Accept: 'application/json'
-        },
-        body: dataItem.getRaw()
-      }
-  )
-
-  const responseText = await response.text()
-  console.log('Monitor Response 1 for Contract 2')
-  console.log(responseText)
 })();
