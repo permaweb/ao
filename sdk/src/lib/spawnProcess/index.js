@@ -6,19 +6,19 @@ import { uploadProcessWith } from './upload-process.js'
 /**
  * @typedef Env1
  *
- * @typedef CreateProcessArgs
+ * @typedef SpawnProcessArgs
  * @property {string} srcId
  * @property {string} signer
  * @property {{ name: string, value: string }[]} [tags]
  *
- * @callback CreateProcess
- * @param {CreateProcessArgs} args
+ * @callback SpawnProcess
+ * @param {SpawnProcessArgs} args
  * @returns {Promise<string>} the tx id of the newly created process
  *
  * @param {Env1} - the environment
- * @returns {CreateProcess}
+ * @returns {SpawnProcess}
  */
-export function createProcessWith (env) {
+export function spawnProcessWith (env) {
   const verifyInputs = verifyInputsWith(env)
   const uploadProcess = uploadProcessWith(env)
 
