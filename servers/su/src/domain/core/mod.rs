@@ -1,6 +1,7 @@
 
-pub mod bytes;
+mod bytes;
+mod sequencer;
+mod verifier;
+
 pub mod json;
-pub mod sequencer;
 pub mod builder;
-pub mod verifier;
