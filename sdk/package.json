@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-sdk",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",

@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.17](https://github.com/permaweb/ao/compare/sdk@v0.0.16...sdk@v0.0.17) (2023-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sdk:** with the introduction of BiBo, readState is no longer
+a useful api, since the state is an opaque byte array. Instead, in order
+to "readState", a consumer should use sendMessage invoking a function
+the process supports to obtain a view of the state in the message's eval
+output. The consumer can then parse output according to its needs.
+* **sdk:** rename writeMessage -> sendMessage and createProcess -> spawnProcess #142
+
+* **sdk:** rename writeMessage -> sendMessage and createProcess -> spawnProcess [#142](https://github.com/permaweb/ao/issues/142) ([2cf3602](https://github.com/permaweb/ao/commit/2cf3602c77d36ac719f9f418b2e2be277bc447e2))
+
+
+### Features
+
+* **sdk:** remove readState and implement readResult [#148](https://github.com/permaweb/ao/issues/148) ([4e592b8](https://github.com/permaweb/ao/commit/4e592b8a3ceaf8f93908b8c594ebe2a722dcb1a3))
+
 ## [0.0.16](https://github.com/permaweb/ao/compare/sdk@v0.0.15...sdk@v0.0.16) (2023-11-08)
 
 
