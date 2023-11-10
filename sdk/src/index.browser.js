@@ -2,9 +2,9 @@ import { connect } from './index.common.js'
 
 import { WalletClient } from './client/browser/index.js'
 
-const { readState, sendMessage, spawnProcess } = connect()
+const { readResult, sendMessage, spawnProcess } = connect()
 
-export { readState, sendMessage, spawnProcess }
+export { readResult, sendMessage, spawnProcess }
 export { connect }
 
 /**
