@@ -3,11 +3,17 @@ import { readFileSync } from 'node:fs';
 import WarpArBundles from "warp-arbundles"
 const { createData, ArweaveSigner } = WarpArBundles
 
-import {
+import { connect, createDataItemSigner} from '@permaweb/ao-sdk'
+
+const {
   spawnProcess,
-  createDataItemSigner,
   sendMessage
-} from '@permaweb/ao-sdk';
+} = connect({
+  GATEWAY_URL: "https://arweave.net", 
+  MU_URL: "http://localhost:3004",
+  CU_URL: "http://localhost:6363",
+  SU_URL: "http://localhost:9000"
+});
 
 (async function () {
   const PROCESS_SRC = 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no';
@@ -64,16 +70,14 @@ import {
   console.log(`Message 1 to process 2 ${m1}`);
 
   const data = Math.random().toString().slice(-4)
-  const tags = [
-    {name: "Contract", value: "asdf"}
-  ]
+  const tags = []
 
   const signer = new ArweaveSigner(wallet)
   const dataItem = createData(data, signer, { tags, target: c2 })
   await dataItem.sign(signer)
 
   const response = await fetch(
-      `https://ao-mu-1.onrender.com/monitor/${c2}`,
+      `http://localhost:3004/monitor/${c2}`,
       {
         method: 'POST',
         headers: {

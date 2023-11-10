@@ -43,7 +43,6 @@ export const createApis = (ctx) => {
   const initMsgs = initMsgsWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: initMsgsLogger }),
     createDataItem,
-    cacheTx: dataStoreClient.saveTxWith({ dbInstance, logger: initMsgsLogger }),
     findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL, logger: initMsgsLogger }),
     writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: initMsgsLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: initMsgsLogger }),
@@ -58,7 +57,6 @@ export const createApis = (ctx) => {
   const processMsg = processMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
     createDataItem,
-    cacheTx: dataStoreClient.saveTxWith({ dbInstance, logger: processMsgLogger }),
     findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL, logger: processMsgLogger }),
     writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processMsgLogger }),
     buildAndSign: sequencerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),

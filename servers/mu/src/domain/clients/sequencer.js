@@ -2,7 +2,7 @@ import { identity } from 'ramda'
 import pkg from 'warp-arbundles'
 import { of, fromPromise, Rejected } from 'hyper-async'
 
-import { createProcess, createDataItemSigner } from '@permaweb/ao-sdk'
+import { spawnProcess, createDataItemSigner } from '@permaweb/ao-sdk'
 
 const { createData, ArweaveSigner } = pkg
 
@@ -81,7 +81,7 @@ function writeContractTxWith ({ SEQUENCER_URL, MU_WALLET }) {
       value
     }))
 
-    const contractId = await createProcess({
+    const contractId = await spawnProcess({
       srcId: src,
       initialState: initState,
       signer: createDataItemSigner(MU_WALLET),
