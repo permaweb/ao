@@ -1,5 +1,7 @@
+import { identity } from 'ramda'
 import { of } from 'hyper-async'
 
+import { errFrom } from '../utils.js'
 import { verifyInputWith } from './verify-input.js'
 import { readWith } from './read.js'
 
@@ -34,6 +36,7 @@ export function readResultWith (env) {
         )
       )
       .map(result => result)
+      .bimap(errFrom, identity)
       .toPromise()
   }
 }
