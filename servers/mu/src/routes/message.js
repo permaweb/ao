@@ -26,6 +26,14 @@ export const withMessageRoutes = (app) => {
             logger.tap('Failed to forward initial message to the SU and read result from the CU'),
             logger.tap('Successfully forwarded initial message to the SU and read result from the CU. Beginning to crank...')
           )
+          .map(response => {
+            /**
+             * Respond to the client after the initial message has been forwarded,
+             * then transparently continue cranking.
+             */
+            res.status(202).send({ message: 'Processing message', id: response.tx.id })
+            return response
+          })
           .map(res => ({ msgs: res.msgs, spawns: res.spawns }))
           .chain(res =>
             crankMsgs(res)
@@ -35,8 +43,6 @@ export const withMessageRoutes = (app) => {
               )
           )
           .toPromise()
-
-        return res.status(202).send({message: 'Processing message'})
       })
     )()
   )
