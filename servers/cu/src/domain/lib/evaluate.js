@@ -10,20 +10,20 @@ import { z } from 'zod'
 import { saveEvaluationSchema } from '../dal.js'
 
 /**
-   * The result that is produced from this step
-   * and added to ctx.
-   *
-   * This is used to parse the output to ensure the correct shape
-   * is always added to context
-   */
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
 const ctxSchema = z.object({
   output: z.record(z.any())
 }).passthrough()
 
 /**
-   * @typedef Env
-   * @property {any} db
-   */
+ * @typedef Env
+ * @property {any} db
+ */
 
 function addHandler (ctx) {
   return of(ctx.src)

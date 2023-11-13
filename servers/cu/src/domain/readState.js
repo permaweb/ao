@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { Resolved, of } from 'hyper-async'
 
 import { loadProcessWith } from './lib/loadProcess.js'
 import { loadSourceWith } from './lib/loadSource.js'
@@ -36,16 +36,21 @@ export function readStateWith (env) {
   return ({ processId, to }) => {
     return of({ id: processId, to })
       .chain(loadProcess)
-      .chain(loadSource)
-      .chain(loadMessages)
-      .chain(evaluate)
-      .map((ctx) => ctx.output)
-      .map(
-        env.logger.tap(
-          'readState result for process "%s" up to message "%s": %o',
-          processId,
-          to || 'latest'
-        )
-      )
+      .chain(res => {
+        /**
+         * The exact evaluation (identified by its input messages sortKey)
+         * was found in the cache, so just return it
+         */
+        if (res.from === to) {
+          env.logger('Cached evaluation exact match for message "%s" to process "%s"', to, processId)
+          return Resolved(res.result)
+        }
+
+        return of(res)
+          .chain(loadSource)
+          .chain(loadMessages)
+          .chain(evaluate)
+          .map((ctx) => ctx.output)
+      })
   }
 }
