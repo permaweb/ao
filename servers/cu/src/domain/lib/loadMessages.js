@@ -1,4 +1,4 @@
-import { pipeline } from 'node:stream'
+import { Transform, pipeline } from 'node:stream'
 
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { T, always, ascend, cond, equals, ifElse, length, mergeRight, pipe, prop, reduce } from 'ramda'
@@ -447,8 +447,8 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
            */
           return pipeline(
             $sequenced,
-            genTuplesWithBoundaries({ left: leftMost, right: rightMost }),
-            async function * (boundaries) {
+            Transform.from(genTuplesWithBoundaries({ left: leftMost, right: rightMost })),
+            Transform.from(async function * (boundaries) {
               let tuple = await boundaries.next()
               while (!tuple.done) {
                 const [left, right] = tuple.value
@@ -476,7 +476,7 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
                  */
                 tuple = next
               }
-            },
+            }),
             (err) => {
               if (err) logger('Encountered err when merging sequenced and scheduled messages', err)
             }

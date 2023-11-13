@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { pipeline } from 'node:stream'
+import { Transform, pipeline } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
@@ -175,7 +175,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
       .map(({ processId, owner: processOwner, from, to }) => {
         return pipeline(
           fetchAllPages({ processId, from, to }),
-          mapAoMessage({ processId, processOwner }),
+          Transform.from(mapAoMessage({ processId, processOwner })),
           (err) => {
             if (err) logger('Encountered err when mapping Sequencer Messages', err)
           }

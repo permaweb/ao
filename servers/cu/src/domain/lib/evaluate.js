@@ -36,7 +36,6 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
 
   return (evaluation) =>
     of(evaluation)
-      .map(logger.tap('Caching evaluation %O'))
       .chain(saveEvaluation)
       /**
        * Always ensure this Async resolves
