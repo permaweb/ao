@@ -7,6 +7,12 @@ export const domainConfigSchema = z.object({
   DB_MAX_LISTENERS: z.number().int('DB_MAX_LISTENERS must be an integer')
 })
 
+export const streamSchema = z.any().refine(stream => {
+  return stream !== null &&
+    typeof stream === 'object' &&
+    typeof stream.pipe === 'function'
+}, { message: 'Value must implement the iteration protocol' })
+
 export const rawTagSchema = z.object({
   name: z.string(),
   value: z.string()
@@ -32,11 +38,13 @@ export const processSchema = z.object({
 export const messageSchema = z.object({
   sortKey: z.string().min(1),
   message: z.object({
+    data: z.string().optional(),
     owner: z.string().min(1),
     target: z.string().min(1),
     anchor: z.string().optional(),
-    from: z.string().optional(),
+    from: z.string().min(1),
     'Forwarded-By': z.string().optional(),
+    'Forwarded-For': z.string().optional(),
     tags: z.array(rawTagSchema)
   }),
   AoGlobal: z.object({
