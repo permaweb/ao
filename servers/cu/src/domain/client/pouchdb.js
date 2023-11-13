@@ -28,7 +28,8 @@ export function createPouchDbClient ({ maxListeners, path }) {
 }
 
 const processDocSchema = z.object({
-  _id: processSchema.shape.id,
+  _id: z.string().min(1),
+  processId: processSchema.shape.id,
   owner: processSchema.shape.owner,
   tags: processSchema.shape.tags,
   block: processSchema.shape.block,
@@ -36,7 +37,21 @@ const processDocSchema = z.object({
 })
 
 function createEvaluationId ({ processId, sortKey }) {
-  return [processId, sortKey].join(',')
+  /**
+   * transactions can sometimes start with an underscore,
+   * which is not allowed in PouchDB, so prepend to create
+   * an _id
+   */
+  return `eval-${[processId, sortKey].join(',')}`
+}
+
+function createProcessId ({ processId }) {
+  /**
+   * transactions can sometimes start with an underscore,
+   * which is not allowed in PouchDB, so prepend to create
+   * an _id
+   */
+  return `proc-${processId}`
 }
 
 /**
@@ -53,10 +68,10 @@ export const COLLATION_SEQUENCE_MAX_CHAR = '\ufff0'
 
 export function findProcessWith ({ pouchDb }) {
   return ({ processId }) => of(processId)
-    .chain(fromPromise(id => pouchDb.get(id)))
+    .chain(fromPromise(id => pouchDb.get(createProcessId({ processId: id }))))
     .map(processDocSchema.parse)
     .map(applySpec({
-      id: prop('_id'),
+      id: prop('processId'),
       owner: prop('owner'),
       tags: prop('tags'),
       block: prop('block')
@@ -68,7 +83,8 @@ export function saveProcessWith ({ pouchDb }) {
   return (process) => {
     return of(process)
       .map(applySpec({
-        _id: prop('id'),
+        _id: process => createProcessId({ processId: process.id }),
+        processId: prop('id'),
         owner: prop('owner'),
         tags: prop('tags'),
         block: prop('block'),
@@ -107,7 +123,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: `${processId},`,
+        $gte: createEvaluationId({ processId, sortKey: '' }),
         $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
@@ -121,6 +137,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
   const foundEvaluationDocSchema = z.object({
     _id: z.string().min(1),
     sortKey: evaluationSchema.shape.sortKey,
+    processId: evaluationSchema.shape.processId,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     output: evaluationSchema.shape.output,
@@ -168,7 +185,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
       .map(foundEvaluationDocSchema.parse)
       .map(applySpec({
         sortKey: prop('sortKey'),
-        processId: prop('parent'),
+        processId: prop('processId'),
         output: prop('output'),
         evaluatedAt: prop('evaluatedAt')
       }))
@@ -182,6 +199,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   const savedEvaluationDocSchema = z.object({
     _id: z.string().min(1),
     sortKey: evaluationSchema.shape.sortKey,
+    processId: evaluationSchema.shape.processId,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     /**
@@ -221,7 +239,8 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
               sortKey: evaluation.sortKey
             }),
           sortKey: prop('sortKey'),
-          parent: prop('processId'),
+          processId: prop('processId'),
+          parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
           output: pipe(
             prop('output'),
             /**
@@ -291,7 +310,7 @@ export function findEvaluationsWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: `${processId},`,
+        $gte: createEvaluationId({ processId, sortKey: '' }),
         $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
@@ -321,7 +340,7 @@ export function findEvaluationsWith ({ pouchDb }) {
       .map(
         map(applySpec({
           sortKey: prop('sortKey'),
-          processId: prop('parent'),
+          processId: prop('processId'),
           output: prop('output'),
           evaluatedAt: prop('evaluatedAt')
         }))

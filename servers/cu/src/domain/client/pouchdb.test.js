@@ -26,7 +26,8 @@ describe('pouchdb', () => {
         findProcessWith({
           pouchDb: {
             get: async () => ({
-              _id: 'process-123',
+              _id: 'proc-process-123',
+              processId: 'process-123',
               owner: 'woohoo',
               tags: [{ name: 'foo', value: 'bar' }],
               block: {
@@ -77,7 +78,8 @@ describe('pouchdb', () => {
             get: async () => undefined,
             put: (doc) => {
               assert.deepStrictEqual(doc, {
-                _id: 'process-123',
+                _id: 'proc-process-123',
+                processId: 'process-123',
                 owner: 'woohoo',
                 tags: [{ name: 'foo', value: 'bar' }],
                 block: {
@@ -109,7 +111,8 @@ describe('pouchdb', () => {
         saveProcessWith({
           pouchDb: {
             get: async () => ({
-              _id: 'process-123',
+              _id: 'proc-process-123',
+              processId: 'process-123',
               owner: 'woohoo',
               tags: [{ name: 'foo', value: 'bar' }],
               block: {
@@ -147,8 +150,8 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'process-123,',
-                    $lte: 'process-123,sortkey-910'
+                    $gte: 'eval-process-123,',
+                    $lte: 'eval-process-123,sortkey-910'
                   }
                 },
                 sort: [{ _id: 'desc' }],
@@ -157,9 +160,10 @@ describe('pouchdb', () => {
               return {
                 docs: [
                   {
-                    _id: 'process-123,sortkey-890',
+                    _id: 'eval-process-123,sortkey-890',
                     sortKey: 'sortkey-890',
-                    parent: 'process-123',
+                    processId: 'process-123',
+                    parent: 'proc-process-123',
                     output: { messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
@@ -168,7 +172,7 @@ describe('pouchdb', () => {
               }
             },
             getAttachment: async (_id, name) => {
-              assert.equal(_id, 'process-123,sortkey-890')
+              assert.equal(_id, 'eval-process-123,sortkey-890')
               assert.equal(name, 'buffer.txt')
               // impl will inflate this buffer
               return deflateP(buffer)
@@ -199,8 +203,8 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'process-123,',
-                    $lte: `process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $gte: 'eval-process-123,',
+                    $lte: `eval-process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
                 sort: [{ _id: 'desc' }],
@@ -209,9 +213,10 @@ describe('pouchdb', () => {
               return {
                 docs: [
                   {
-                    _id: 'process-123,sortkey-890',
+                    _id: 'eval-process-123,sortkey-890',
                     sortKey: 'sortkey-890',
-                    parent: 'process-123',
+                    processId: 'process-123',
+                    parent: 'proc-process-123',
                     output: { messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
@@ -220,7 +225,7 @@ describe('pouchdb', () => {
               }
             },
             getAttachment: async (_id, name) => {
-              assert.equal(_id, 'process-123,sortkey-890')
+              assert.equal(_id, 'eval-process-123,sortkey-890')
               assert.equal(name, 'buffer.txt')
               // impl will inflate this buffer
               return deflateP(buffer)
@@ -267,9 +272,10 @@ describe('pouchdb', () => {
           pouchDb: {
             get: async () => undefined,
             put: async (doc) => {
-              assert.equal(doc._id, 'process-123,sortkey-890')
+              assert.equal(doc._id, 'eval-process-123,sortkey-890')
               assert.equal(doc.sortKey, 'sortkey-890')
-              assert.equal(doc.parent, 'process-123')
+              assert.equal(doc.processId, 'process-123')
+              assert.equal(doc.parent, 'proc-process-123')
               // buffer is omitted from output and moved to _attachments
               assert.deepStrictEqual(doc.output, { messages: [{ foo: 'bar' }] })
               assert.deepStrictEqual(doc._attachments, {
@@ -306,6 +312,7 @@ describe('pouchdb', () => {
           pouchDb: {
             get: async () => ({
               _id: 'process-123,sortkey-890',
+              processId: 'process-123',
               sortKey: 'sortkey-890',
               parent: 'process-123',
               output: { buffer: Buffer.from('Hello World', 'utf-8'), messages: [{ foo: 'bar' }] },
@@ -330,9 +337,10 @@ describe('pouchdb', () => {
     test('return the list of all evaluations', async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
-        _id: 'process-123,sortkey-890',
+        _id: 'eval-process-123,sortkey-890',
         sortKey: 'sortkey-890',
-        parent: 'process-123',
+        processId: 'process-123',
+        parent: 'proc-process-123',
         output: { state: { foo: 'bar' } },
         evaluatedAt,
         type: 'evaluation'
@@ -344,8 +352,8 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'process-123,',
-                    $lte: `process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $gte: 'eval-process-123,',
+                    $lte: `eval-process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
                 sort: [{ _id: 'asc' }],
@@ -370,8 +378,9 @@ describe('pouchdb', () => {
     test("return the evaluations between 'from' and 'to'", async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
-        _id: 'process-123,sortkey-890',
+        _id: 'eval-process-123,sortkey-890',
         sortKey: 'sortkey-890',
+        processId: 'process-123',
         parent: 'process-123',
         output: { state: { foo: 'bar' } },
         evaluatedAt,
@@ -384,8 +393,8 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'process-123,sortkey-123,',
-                    $lte: `process-123,sortkey-456,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $gte: 'eval-process-123,sortkey-123,',
+                    $lte: `eval-process-123,sortkey-456,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
                 sort: [{ _id: 'asc' }],
