@@ -58,7 +58,9 @@ export const createApis = (ctx) => {
   const processSpawnLogger = logger.child('processSpawn')
   const processSpawn = processSpawnWith({
     logger: processSpawnLogger,
-    writeContractTx: sequencerClient.writeContractTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger })
+    writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger }),
+    buildAndSign: sequencerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
+    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processSpawnLogger })
   })
 
   const sendMsgLogger = logger.child('sendMsg')
