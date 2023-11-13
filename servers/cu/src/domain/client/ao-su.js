@@ -3,7 +3,7 @@ import { Transform, pipeline } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
-import { padBlockHeight } from '../lib/utils.js'
+import { findTag, padBlockHeight } from '../lib/utils.js'
 
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
@@ -115,18 +115,39 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
     }
   }
 
-  /**
-   * TODO: need to figure out what this
-   */
-  function mapFrom () {
-    return undefined
+  function mapFrom (node) {
+    const tag = findTag('Forwarded-For')(node.message.tags)
+    /**
+     * Not forwarded, so the signer is the who the message is from
+     */
+    if (!tag) return node.owner.address
+    /**
+     * Forwarded, so the owner is who the message was forwarded on behalf of
+     * (the Forwarded-For) value
+     */
+    return tag.value
+  }
+
+  function mapForwardedBy (node) {
+    const tag = findTag('Forwarded-For')(node.message.tags)
+    /**
+     * Not forwarded by a MU, so simply not set
+     */
+    if (!tag) return undefined
+    /**
+     * Forwarded by a MU, so use the signer (the MU wallet)
+     * as the Forwarded-By value
+     */
+    return node.owner.address
   }
 
   /**
-   * TODO: need to figure out what this is
+   * Simply derived from the tag added by the MU, when cranking a message
    */
-  function mapForwardedBy () {
-    return undefined
+  function mapForwardedFor (node) {
+    const tag = findTag('Forwarded-For')(node.message.tags)
+    if (!tag) return undefined
+    return tag.value
   }
 
   function mapAoMessage ({ processId, processOwner }) {
@@ -143,6 +164,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
               anchor: path(['message', 'anchor']),
               from: mapFrom,
               'Forwarded-By': mapForwardedBy,
+              'Forwarded-For': mapForwardedFor,
               tags: pathOr([], ['message', 'tags'])
             }),
             /**

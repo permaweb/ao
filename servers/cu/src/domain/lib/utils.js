@@ -1,4 +1,4 @@
-import { __, append, assoc, defaultTo, map, pipe, propOr, reduce } from 'ramda'
+import { __, append, assoc, defaultTo, filter, head, map, pipe, propOr, reduce } from 'ramda'
 
 /**
 * Parse tags into a object with key-value pairs of name -> values.
@@ -45,4 +45,16 @@ export function padBlockHeight (sortKey) {
   if (!sortKey) return sortKey
   const [height, ...rest] = String(sortKey).split(',')
   return [height.padStart(12, '0'), ...rest].join(',')
+}
+
+export function findTag (name) {
+  return (tags) => pipe(
+    defaultTo([]),
+    filter(tag => tag.name === name),
+    /**
+     * TODO: what if multiple tags with same name?
+     * For now, just grabbing the first one
+     */
+    head
+  )(tags)
 }
