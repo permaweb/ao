@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { evaluationSchema, processSchema, rawBlockSchema, rawTagSchema } from './model.js'
+import { evaluationSchema, processSchema, rawBlockSchema, rawTagSchema, streamSchema } from './model.js'
 
 // Gateway
 
@@ -68,13 +68,7 @@ export const loadMessagesSchema = z.function()
    * Returns a Stream that wraps an AsyncIterable, which is not something that Zod can
    * parse natively, so we make sure the returned value implements a pipe api
    */
-  .returns(z.promise(
-    z.any().refine(stream => {
-      return stream !== null &&
-        typeof stream === 'object' &&
-        typeof stream.pipe === 'function'
-    }, { message: 'Value must implement the iteration protocol' })
-  ))
+  .returns(z.promise(streamSchema))
 
 export const loadProcessSchema = z.function()
   .args(z.string().min(1))

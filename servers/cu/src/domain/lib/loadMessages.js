@@ -5,7 +5,7 @@ import { T, always, ascend, cond, equals, ifElse, length, mergeRight, pipe, prop
 import { z } from 'zod'
 import ms from 'ms'
 
-import { messageSchema } from '../model.js'
+import { messageSchema, streamSchema } from '../model.js'
 import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
 import { padBlockHeight } from './utils.js'
 
@@ -206,8 +206,9 @@ export function scheduleMessagesBetweenWith ({
           yield {
             message: {
               ...schedule.message,
+              target: processId,
               owner: processOwner,
-              target: processId
+              from: processOwner
             },
             /**
              * TODO: don't know if this is correct, but we need something unique for the sortKey
@@ -247,7 +248,8 @@ export function scheduleMessagesBetweenWith ({
               message: {
                 ...schedule.message,
                 target: processId,
-                owner: processOwner
+                owner: processOwner,
+                from: processOwner
               },
               /**
                * TODO: don't know if this is correct, but we need something unique for the sortKey
@@ -495,9 +497,9 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
  */
 const ctxSchema = z.object({
   /**
-   * Messages to be evaluated, as an async generator
+   * Messages to be evaluated, as a stream
    */
-  messages: z.any()
+  messages: streamSchema
 }).passthrough()
 
 /**

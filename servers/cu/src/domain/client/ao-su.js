@@ -120,7 +120,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
     /**
      * Not forwarded, so the signer is the who the message is from
      */
-    if (!tag) return node.owner.address
+    if (!tag || !tag.value) return node.owner.address
     /**
      * Forwarded, so the owner is who the message was forwarded on behalf of
      * (the Forwarded-For) value
@@ -165,7 +165,12 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
               from: mapFrom,
               'Forwarded-By': mapForwardedBy,
               'Forwarded-For': mapForwardedFor,
-              tags: pathOr([], ['message', 'tags'])
+              tags: pathOr([], ['message', 'tags']),
+              /**
+               * SU currently has this outside of message, but we will place it inside message
+               * as that seems more kosher (since its part of the message)
+               */
+              data: pathOr(undefined, ['data'])
             }),
             /**
              * We need the block metadata per message,
