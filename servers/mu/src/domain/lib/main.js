@@ -5,7 +5,9 @@ import { writeTxWith } from './processMsg/write-tx.js'
 import { fetchAndSaveResultWith } from './processMsg/fetch-and-save-result.js'
 import { buildTxWith } from './processMsg/build-tx.js'
 import { crankWith } from './crank/crank.js'
-import { createContractWith } from './processSpawn/create-contract.js'
+import { spawnProcessWith } from './processSpawn/spawn-process.js'
+import { sendSpawnSuccessWith } from './processSpawn/send-spawn-success.js'
+import { buildSuccessTxWith } from './processSpawn/build-success-tx.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
 import { saveWith } from './monitor/saveProcess.js'
 import { appendSequencerDataWith } from './monitor/appendSequencerData.js'
@@ -85,16 +87,30 @@ export function processMsgWith ({
  */
 export function processSpawnWith ({
   logger,
-  writeContractTx
+  writeProcessTx,
+  writeSequencerTx,
+  buildAndSign
 }) {
-  const createContract = createContractWith({
+  const spawnProcess = spawnProcessWith({
     logger,
-    writeContractTx
+    writeProcessTx
+  })
+
+  const buildSuccessTx = buildSuccessTxWith({
+    logger,
+    buildAndSign
+  })
+
+  const sendSpawnSucess = sendSpawnSuccessWith({
+    logger, 
+    writeSequencerTx
   })
 
   return (ctx) => {
     return of(ctx)
-      .chain(createContract)
+      .chain(spawnProcess)
+      .chain(buildSuccessTx)
+      .chain(sendSpawnSucess)
   }
 }
 
