@@ -19,7 +19,6 @@ function crankListWith ({ processMsg, processSpawn, logger }) {
   }
 
   const processMsgsTrampolined = asyncTrampoline(async function processMessages (ctx) {
-    console.log(ctx.msgs)
     if (!ctx.msgs || ctx.msgs.length === 0) {
       // Process spawns when the recursion terminates
       if (ctx.spawns && ctx.spawns.length > 0) {
@@ -34,8 +33,6 @@ function crankListWith ({ processMsg, processSpawn, logger }) {
     }
 
     const [head, ...tail] = ctx.msgs
-
-    console.log(ctx.msgs)
 
     const newCtx = await of(head).chain(() => processMsg({ cachedMsg: head })).toPromise()
 

@@ -31,20 +31,12 @@ const {
 
   console.log(`Process 1 ${c1}`);
 
-  const message = {
-    tags: [
-      { name: 'function', value: 'eval' },
-      { name: 'expression', value: `return send("${c1}", { body = "Hello World"})` },
-    ],
-  };
 
   const tags2 = [
     { name: 'owner', value: 'HnKoL7ftH0BU3eUveKayuLpKu0XPnRehgBPu1GitZsQ' },
     { name: 'inbox', value: JSON.stringify([]) },
     { name: 'prompt', value: ':) ' },
     { name: '_fns', value: JSON.stringify({}) },
-    { name: 'Scheduled-Interval', value: '5-minutes' },
-    { name: 'Scheduled-Message', value: JSON.stringify(message) },
   ];
 
   let c2 = await spawnProcess({
