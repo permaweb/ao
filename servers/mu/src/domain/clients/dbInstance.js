@@ -22,29 +22,31 @@ async function withRetry(operation, args, retryCount = 0) {
 }
 
 export async function putMsg(doc) {
-  return withRetry(db.none, [
+  await withRetry(db.none, [
     'INSERT INTO "messages" ("_id", "fromTxId", "toTxId", "msg", "cachedAt") VALUES ($1, $2, $3, $4, $5)',
     [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.msg), doc.cachedAt]
   ]);
+  return doc;
 }
 
 export async function getMsg(id) {
-  return withRetry(db.oneOrNone, ['SELECT * FROM "messages" WHERE "_id" = $1', [id]]);
+  return await withRetry(db.oneOrNone, ['SELECT * FROM "messages" WHERE "_id" = $1', [id]]);
 }
 
 export async function findMsgs(fromTxId) {
-  return withRetry(db.any, ['SELECT * FROM "messages" WHERE "fromTxId" = $1', [fromTxId]]);
+  return await withRetry(db.any, ['SELECT * FROM "messages" WHERE "fromTxId" = $1', [fromTxId]]);
 }
 
 export async function putSpawn(doc) {
-  return withRetry(db.none, [
+  await withRetry(db.none, [
     'INSERT INTO "spawns" ("_id", "fromTxId", "toTxId", "spawn", "cachedAt") VALUES ($1, $2, $3, $4, $5)',
     [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.spawn), doc.cachedAt]
   ]);
+  return doc;
 }
 
 export async function findSpawns(fromTxId) {
-  return withRetry(db.any, ['SELECT * FROM "spawns" WHERE "fromTxId" = $1', [fromTxId]]);
+  return await withRetry(db.any, ['SELECT * FROM "spawns" WHERE "fromTxId" = $1', [fromTxId]]);
 }
 
 export async function putMonitor(doc) {
@@ -66,22 +68,20 @@ export async function putMonitor(doc) {
       return doc;
     };
   
-    return withRetry(operation, []);
+    return await withRetry(operation, []);
 }  
 
 export async function getMonitor(id) {
-  return withRetry(db.oneOrNone, ['SELECT * FROM "monitored_processes" WHERE "_id" = $1', [id]]);
+  return await withRetry(db.oneOrNone, ['SELECT * FROM "monitored_processes" WHERE "_id" = $1', [id]]);
 }
 
 export async function findMonitors() {
-  return withRetry(async () => {
+  return await withRetry(async () => {
     const docs = await db.any('SELECT * FROM "monitored_processes"');
-    return {
-      docs: docs.map(doc => ({
-        ...doc,
-        createdAt: parseInt(doc.createdAt)
-      }))
-    };
+    return docs.map(doc => ({
+      ...doc,
+      createdAt: parseInt(doc.createdAt)
+    }));
   }, []);
 }
 

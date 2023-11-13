@@ -68,8 +68,7 @@ function findLatestMsgsWith ({ dbInstance }) {
     return of({ fromTxId })
       .chain(fromPromise(() => {
         return dbInstance.findMsgs(fromTxId).then((res) => {
-          if (res.warning) console.warn(res.warning)
-          return res.docs
+          return res
         })
       }))
       .chain((docs) => {
@@ -134,7 +133,7 @@ function findLatestSpawnsWith ({ dbInstance }) {
       .chain(fromPromise(() => {
         return dbInstance.findSpawns(fromTxId).then((res) => {
           if (res.warning) console.warn(res.warning)
-          return res.docs
+          return res
         })
       }))
       .chain((docs) => {
@@ -201,7 +200,7 @@ function findLatestMonitorsWith ({ dbInstance }) {
       .chain(fromPromise(() => {
         return dbInstance.findMonitors().then((res) => {
           if (res.warning) console.warn(res.warning)
-          return res.docs
+          return res
         })
       }))
       .chain((docs) => {
