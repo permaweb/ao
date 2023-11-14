@@ -3,7 +3,7 @@ import { Transform, pipeline } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
-import { findTag, padBlockHeight } from '../lib/utils.js'
+import { findRawTag, padBlockHeight } from '../lib/utils.js'
 
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
@@ -116,7 +116,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
   }
 
   function mapFrom (node) {
-    const tag = findTag('Forwarded-For')(node.message.tags)
+    const tag = findRawTag('Forwarded-For', node.message.tags)
     /**
      * Not forwarded, so the signer is the who the message is from
      */
@@ -129,7 +129,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
   }
 
   function mapForwardedBy (node) {
-    const tag = findTag('Forwarded-For')(node.message.tags)
+    const tag = findRawTag('Forwarded-For', node.message.tags)
     /**
      * Not forwarded by a MU, so simply not set
      */
@@ -145,7 +145,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
    * Simply derived from the tag added by the MU, when cranking a message
    */
   function mapForwardedFor (node) {
-    const tag = findTag('Forwarded-For')(node.message.tags)
+    const tag = findRawTag('Forwarded-For', node.message.tags)
     if (!tag) return undefined
     return tag.value
   }
@@ -159,6 +159,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
           applySpec({
             sortKey: path(['sort_key']),
             message: applySpec({
+              id: path(['message', 'id']),
               owner: path(['owner', 'address']),
               target: path(['process_id']),
               anchor: path(['message', 'anchor']),
