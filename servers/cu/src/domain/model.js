@@ -44,7 +44,7 @@ export const messageSchema = z.object({
      * scheduled messages do not have an id, so this is optional
      */
     id: z.string().optional(),
-    data: z.string().optional(),
+    data: z.any().optional(),
     owner: z.string().min(1),
     target: z.string().min(1),
     anchor: z.string().optional(),

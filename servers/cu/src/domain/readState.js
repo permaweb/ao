@@ -4,14 +4,9 @@ import { loadProcessWith } from './lib/loadProcess.js'
 import { loadSourceWith } from './lib/loadSource.js'
 import { loadMessagesWith } from './lib/loadMessages.js'
 import { evaluateWith } from './lib/evaluate.js'
+import { hydrateMessagesWith } from './lib/hydrateMessages.js'
 
 /**
- * @typedef Env
- * @property {any} loadTransactionData
- * @property {any} loadTransactionMeta
- * @property {any} sequencer
- * @property {any} db
- *
  * @typedef State
  * @property {any} state
  * @property {any} result
@@ -24,13 +19,13 @@ import { evaluateWith } from './lib/evaluate.js'
  * @param {ReadStateArgs} args
  * @returns {Promise<State>} result
  *
- * @param {Env} - the environment
  * @returns {ReadState}
  */
 export function readStateWith (env) {
   const loadProcess = loadProcessWith(env)
-  const loadSource = loadSourceWith(env)
   const loadMessages = loadMessagesWith(env)
+  const hydrateMessages = hydrateMessagesWith(env)
+  const loadSource = loadSourceWith(env)
   const evaluate = evaluateWith(env)
 
   return ({ processId, to }) => {
@@ -47,8 +42,9 @@ export function readStateWith (env) {
         }
 
         return of(res)
-          .chain(loadSource)
           .chain(loadMessages)
+          .chain(hydrateMessages)
+          .chain(loadSource)
           .chain(evaluate)
           .map((ctx) => ctx.output)
       })

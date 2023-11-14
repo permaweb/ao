@@ -22,17 +22,14 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
       transactions(ids: $processIds) {
         edges {
           node {
+            id
+            anchor
             owner {
               address
             }
             tags {
               name
               value
-            }
-            block {
-              id
-              height
-              timestamp
             }
           }
         }
@@ -194,6 +191,6 @@ export function loadTransactionDataWith ({ fetch, GATEWAY_URL }) {
 
   return (id) =>
     of(id)
-      .chain(fromPromise((id) => fetch(`${GATEWAY_URL}/${id}`)))
+      .chain(fromPromise((id) => fetch(`${GATEWAY_URL}/raw/${id}`)))
       .toPromise()
 }
