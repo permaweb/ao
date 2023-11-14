@@ -153,11 +153,10 @@ export function evaluateWith (env) {
             .then(maybeRejectError)
             .then(prev =>
               Promise.resolve(prev.buffer)
-                .then(logger.tap(
-                  'Evaluating message with sortKey "%s" to process "%s"',
-                  sortKey,
-                  ctx.id
-                ))
+                .then(buffer => {
+                  logger('Evaluating message with sortKey "%s" to process "%s"', sortKey, ctx.id)
+                  return buffer
+                })
                 /**
                  * Where the actual evaluation is performed
                  */
@@ -176,13 +175,10 @@ export function evaluateWith (env) {
                     ? Promise.reject(output)
                     : Promise.resolve(output)
                 })
-                .then(
-                  logger.tap(
-                    'Applied message with sortKey "%s" to process "%s"',
-                    sortKey,
-                    ctx.id
-                  )
-                )
+                .then(output => {
+                  logger('Applied message with sortKey "%s" to process "%s"', sortKey, ctx.id)
+                  return output
+                })
               /**
                * Create a new evaluation to be cached in the local db
                */
