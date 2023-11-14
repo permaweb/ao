@@ -63,6 +63,9 @@ export function loadSourceWith (env) {
       .chain(getSourceBuffer)
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded source and appended to ctx'))
+      .map(ctx => {
+        logger('Loaded source and appended to ctx')
+        return ctx
+      })
   }
 }
