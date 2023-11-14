@@ -467,9 +467,5 @@ describe('loadMessages', () => {
     })
   })
 
-  describe('TODO loadMessages', () => {
-    test('appends messages', async () => {
-
-    })
-  })
+  describe.todo('loadMessages', () => {})
 })
