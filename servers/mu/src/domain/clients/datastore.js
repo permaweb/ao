@@ -41,28 +41,6 @@ function saveMsgWith ({ dbInstance, logger: _logger }) {
   }
 }
 
-function updateMsgWith ({ dbInstance, logger: _logger }) {
-  const logger = _logger.child('updateMsg')
-
-  return ({ _id, toTxId }) => {
-    return of({ _id })
-      .chain(fromPromise(() => dbInstance.getMsg(_id)))
-      .map(doc => ({ ...doc, toTxId }))
-      .map(cachedMsgSchema.parse)
-      .chain(updatedDoc =>
-        of(updatedDoc)
-          .chain(fromPromise(() => dbInstance.putMsg(updatedDoc)))
-          .bimap(
-            logger.tap('Encountered an error when updating msg'),
-            logger.tap('Updated msg')
-          )
-          .bichain(Resolved, Resolved)
-          .map(always(updatedDoc._id))
-      )
-      .toPromise()
-  }
-}
-
 function findLatestMsgsWith ({ dbInstance }) {
   return ({ fromTxId }) => {
     return of({ fromTxId })
@@ -86,6 +64,22 @@ function findLatestMsgsWith ({ dbInstance }) {
           cachedAt: prop('cachedAt', doc)
         })))
       })
+      .toPromise()
+  }
+}
+
+function deleteMsgWith({ dbInstance, logger: _logger }) {
+  const logger = _logger.child('deleteMsg')
+
+  return ({ _id }) => {
+    return of({ _id })
+      .chain(fromPromise(() => dbInstance.deleteMsg(_id)))
+      .bimap(
+        logger.tap('Encountered an error when deleting msg'),
+        logger.tap('Deleted msg')
+      )
+      .bichain(Resolved, Resolved)
+      .map(always(_id))
       .toPromise()
   }
 }
@@ -151,6 +145,22 @@ function findLatestSpawnsWith ({ dbInstance }) {
           cachedAt: prop('cachedAt', doc)
         })))
       })
+      .toPromise()
+  }
+}
+
+function deleteSpawnWith({ dbInstance, logger: _logger }) {
+  const logger = _logger.child('deleteSpawn')
+
+  return ({ _id }) => {
+    return of({ _id })
+      .chain(fromPromise(() => dbInstance.deleteSpawn(_id)))
+      .bimap(
+        logger.tap('Encountered an error when deleting spawn'),
+        logger.tap('Deleted spawn')
+      )
+      .bichain(Resolved, Resolved)
+      .map(always(_id))
       .toPromise()
   }
 }
@@ -227,7 +237,6 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('updateMonitor')
 
   return ({ id, lastFromSortKey }) => {
-    console.log(id)
     return of({ id })
       .chain(fromPromise(() => dbInstance.getMonitor(id)))
       .map(doc => ({ ...doc, lastFromSortKey }))
@@ -251,10 +260,11 @@ export default {
   cachedMsgSchema,
   saveMsgWith,
   saveSpawnWith,
-  updateMsgWith,
   updateMonitorWith,
   findLatestMsgsWith,
   findLatestSpawnsWith,
   findLatestMonitorsWith,
-  saveMonitoredProcessWith
+  saveMonitoredProcessWith,
+  deleteMsgWith,
+  deleteSpawnWith
 }

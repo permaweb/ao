@@ -11,6 +11,8 @@ import { buildSuccessTxWith } from './processSpawn/build-success-tx.js'
 import { parseDataItemWith } from './processMsg/parse-data-item.js'
 import { saveWith } from './monitor/saveProcess.js'
 import { appendSequencerDataWith } from './monitor/appendSequencerData.js'
+import { deleteMsgDataWith } from './processMsg/delete-msg-data.js'
+import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 
 export function sendMsgWith ({
   createDataItem,
@@ -63,15 +65,39 @@ export function processMsgWith ({
   saveMsg,
   saveSpawn,
   buildAndSign,
-  updateMsg,
   findLatestMsgs,
   findLatestSpawns,
+  deleteMsg,
   logger
 }) {
-  const buildTx = buildTxWith({ buildAndSign, logger })
-  const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeTx = writeTxWith({ findSequencerTx, writeSequencerTx, logger })
-  const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
+  const buildTx = buildTxWith({ 
+    buildAndSign, 
+    logger 
+  })
+
+  const getCuAddress = getCuAddressWith({ 
+    selectNode, 
+    logger 
+  })
+
+  const writeTx = writeTxWith({ 
+    findSequencerTx, 
+    writeSequencerTx, logger 
+  })
+
+  const fetchAndSaveResult = fetchAndSaveResultWith({ 
+    fetchResult, 
+    saveMsg, 
+    saveSpawn, 
+    findLatestMsgs, 
+    findLatestSpawns, 
+    logger 
+  })
+
+  const deleteMsgData = deleteMsgDataWith({
+    deleteMsg, 
+    logger
+  })
 
   return (ctx) => {
     return of(ctx)
@@ -79,6 +105,7 @@ export function processMsgWith ({
       .chain(getCuAddress)
       .chain(writeTx)
       .chain(fetchAndSaveResult)
+      .chain(deleteMsgData)
   }
 }
 
@@ -89,7 +116,8 @@ export function processSpawnWith ({
   logger,
   writeProcessTx,
   writeSequencerTx,
-  buildAndSign
+  buildAndSign,
+  deleteSpawn
 }) {
   const spawnProcess = spawnProcessWith({
     logger,
@@ -101,16 +129,22 @@ export function processSpawnWith ({
     buildAndSign
   })
 
-  const sendSpawnSucess = sendSpawnSuccessWith({
+  const sendSpawnSuccess = sendSpawnSuccessWith({
     logger, 
     writeSequencerTx
+  })
+
+  const deleteSpawnData = deleteSpawnDataWith({
+    logger,
+    deleteSpawn
   })
 
   return (ctx) => {
     return of(ctx)
       .chain(spawnProcess)
       .chain(buildSuccessTx)
-      .chain(sendSpawnSucess)
+      .chain(sendSpawnSuccess)
+      .chain(deleteSpawnData)
   }
 }
 

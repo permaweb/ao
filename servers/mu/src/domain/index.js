@@ -49,8 +49,8 @@ export const createApis = (ctx) => {
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: processMsgLogger }),
-    updateMsg: dataStoreClient.updateMsgWith({ dbInstance, logger: processMsgLogger }),
     findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: processMsgLogger }),
+    deleteMsg: dataStoreClient.deleteMsgWith({dbInstance, logger: processMsgLogger}),
     findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance, logger: processMsgLogger }),
     logger
   })
@@ -60,7 +60,8 @@ export const createApis = (ctx) => {
     logger: processSpawnLogger,
     writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger }),
     buildAndSign: sequencerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processSpawnLogger })
+    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processSpawnLogger }),
+    deleteSpawn: dataStoreClient.deleteSpawnWith({dbInstance, logger: processSpawnLogger}),
   })
 
   const sendMsgLogger = logger.child('sendMsg')

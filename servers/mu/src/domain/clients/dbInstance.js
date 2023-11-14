@@ -37,6 +37,10 @@ export async function findMsgs(fromTxId) {
   return await withRetry(db.any, ['SELECT * FROM "messages" WHERE "fromTxId" = $1', [fromTxId]]);
 }
 
+export async function deleteMsg(id) {
+  return await withRetry(db.none, ['DELETE FROM "messages" WHERE "_id" = $1', [id]]);
+}
+
 export async function putSpawn(doc) {
   await withRetry(db.none, [
     'INSERT INTO "spawns" ("_id", "fromTxId", "toTxId", "spawn", "cachedAt") VALUES ($1, $2, $3, $4, $5)',
@@ -47,6 +51,10 @@ export async function putSpawn(doc) {
 
 export async function findSpawns(fromTxId) {
   return await withRetry(db.any, ['SELECT * FROM "spawns" WHERE "fromTxId" = $1', [fromTxId]]);
+}
+
+export async function deleteSpawn(id) {
+  return await withRetry(db.none, ['DELETE FROM "spawns" WHERE "_id" = $1', [id]]);
 }
 
 export async function putMonitor(doc) {
@@ -94,4 +102,6 @@ export default {
   findSpawns,
   putMonitor,
   findMonitors,
+  deleteMsg,
+  deleteSpawn
 };
