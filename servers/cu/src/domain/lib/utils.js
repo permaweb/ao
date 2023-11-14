@@ -29,6 +29,18 @@ export function parseTags (rawTags) {
   )(rawTags)
 }
 
+export function findRawTag (name, tags) {
+  return pipe(
+    defaultTo([]),
+    filter(tag => tag.name === name),
+    /**
+     * TODO: what if multiple tags with same name?
+     * For now, just grabbing the first one
+     */
+    head
+  )(tags)
+}
+
 /**
 * Pad the block height portion of the sortKey to 12 characters
 *
@@ -45,16 +57,4 @@ export function padBlockHeight (sortKey) {
   if (!sortKey) return sortKey
   const [height, ...rest] = String(sortKey).split(',')
   return [height.padStart(12, '0'), ...rest].join(',')
-}
-
-export function findTag (name) {
-  return (tags) => pipe(
-    defaultTo([]),
-    filter(tag => tag.name === name),
-    /**
-     * TODO: what if multiple tags with same name?
-     * For now, just grabbing the first one
-     */
-    head
-  )(tags)
 }

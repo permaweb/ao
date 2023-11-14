@@ -38,6 +38,12 @@ export const processSchema = z.object({
 export const messageSchema = z.object({
   sortKey: z.string().min(1),
   message: z.object({
+    /**
+     * The tx id of the message ie. the data item id
+     *
+     * scheduled messages do not have an id, so this is optional
+     */
+    id: z.string().optional(),
     data: z.string().optional(),
     owner: z.string().min(1),
     target: z.string().min(1),
