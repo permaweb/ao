@@ -12,8 +12,8 @@ This is an example of a simple `ao` Process called `hello-world`. It implements
 - `say` (`ao-action`: `read`): return the value of the transaction pointed to by
   `ao-load` as stringified JSON in `output`
 
-This is a simple process that can be used to test the core functionality of
-`ao`:
+This is a simple process that can be used to see some of the core functionality
+of `ao`:
 
 - Scheduled Messages
 - Persistent Internal State
