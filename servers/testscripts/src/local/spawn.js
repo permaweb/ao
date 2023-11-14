@@ -35,7 +35,7 @@ const {
     processId: c2,
     tags: [
       { name: 'function', value: 'eval' },
-      { name: 'expression', value: `return spawn("${PROCESS_SRC}")` },
+      { name: 'expression', value: `spawn("${PROCESS_SRC}")` },
     ],
     signer: createDataItemSigner(wallet),
   })
