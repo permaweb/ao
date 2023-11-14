@@ -5,9 +5,9 @@ import { spawnProcess, createDataItemSigner } from '@permaweb/ao-sdk'
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 
 await spawnProcess({
-  srcId: 'IKZzFN5JvCf3XCOx1kw940sjY9zAbsd6Wm7MMRgf_Zk',
+  srcId: 'QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY',
   tags: [
-    { name: 'Scheduled-Interval', value: '5-minutes' },
+    { name: 'Scheduled-Interval', value: '1-hour' },
     {
       name: 'Scheduled-Message',
       value: JSON.stringify({

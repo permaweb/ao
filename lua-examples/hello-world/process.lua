@@ -1,5 +1,6 @@
 -- Corresponding local wasm at ./process.wasm
 -- published at IKZzFN5JvCf3XCOx1kw940sjY9zAbsd6Wm7MMRgf_Zk
+-- with 'say' function support at QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY
 
 local JSON = require("json")
 local base64 = require(".src.base64")
