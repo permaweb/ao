@@ -97,7 +97,10 @@ describe('gateway', () => {
     test('load transaction data', async () => {
       const loadTransactionData = loadTransactionDataSchema.implement(
         loadTransactionDataWith({
-          fetch,
+          fetch: (url, options) => {
+            assert.equal(url, `${GATEWAY_URL}/raw/${PROCESS}`)
+            return fetch(url, options)
+          },
           GATEWAY_URL
         })
       )
