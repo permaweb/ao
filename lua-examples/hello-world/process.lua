@@ -2,6 +2,7 @@
 -- published at IKZzFN5JvCf3XCOx1kw940sjY9zAbsd6Wm7MMRgf_Zk
 
 local JSON = require("json")
+local base64 = require(".src.base64")
 
 local process = { _version = "0.0.6" }
 
@@ -48,6 +49,10 @@ actions['world'] = function (state)
 end
 actions['raw'] = function (state)
   return { state = state , output = JSON.encode(state) }
+end
+actions['say'] = function (state, message)
+  local data = base64.decode(message.data.data)
+  return { state = state , output = JSON.encode(data) }
 end
 
 function process.handle(message, AoGlobal)
