@@ -2,10 +2,17 @@ import { parentPort } from 'worker_threads'
 import { of } from 'hyper-async'
 import { z } from 'zod'
 
-import { createApis, domainConfigSchema, createLogger } from '../../index.js'
-import { config } from '../../../config.js'
-import { dataStoreClient } from '../../index.js'
-import { dbInstance } from '../../index.js'
+import { createApis, domainConfigSchema, createLogger } from '../index.js'
+import { config } from '../../config.js'
+import { dataStoreClient } from '../index.js'
+import { dbInstance } from '../index.js'
+
+/**
+ * a Worker which processes scheduled messages. 
+ * it uses an interval to tick every SCHEDULED_INTERVAL(from config)
+ * and fetches all registered processes and detects if it
+ * should crank scheduled messages for that process
+ */
 
 const logger = createLogger('ao-mu-worker')
 
@@ -31,15 +38,22 @@ const saveMsg = dataStoreClient.saveMsgWith({dbInstance, logger})
 const findLatestMsgs = dataStoreClient.findLatestMsgsWith({dbInstance, logger})
 const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
 
+/**
+ * once started set the interval
+ */
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    setInterval(() => processMonitors(), 1000)
+    setInterval(() => processMonitors(), config.SCHEDULED_INTERVAL)
     parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
   }
 })
 
+/**
+ * a list to track if a monitor is currently being processed
+ * if it is we wont process it on this tick of the interval
+ */
 let runningMonitorList = []
 
 async function processMonitors() {
@@ -47,11 +61,13 @@ async function processMonitors() {
     let monitorList = await findLatestMonitors()
   
     monitorList.map((monitor) => {
+      // make sure the monitor record from the db is well formed
       const validationResult = monitorSchema.safeParse(monitor);
 
       if (validationResult.success) {
         if (shouldRun(monitor)) {
-          processMonitor(monitor).then((result) => {
+          processMonitor(monitor).then((_result) => {
+            // monitor completed remove it so it picks up again on the next tick
             const indexToRemove = runningMonitorList.findIndex(
               (item) => item.id === monitor.id
             );
@@ -71,6 +87,18 @@ async function processMonitors() {
   }
 }
 
+/**
+ * Asynchronously fetches scheduled data for a given monitor.
+ * The function makes a GET request to a URL constructed from the monitor's ID.
+ * If the monitor has a 'lastFromSortKey', it is included as a query parameter in the request URL.
+ * 
+ * @param {Object} monitor - The monitor object containing the necessary information for the request.
+ * @param {string} monitor.id - The unique identifier of the monitor.
+ * @param {string} [monitor.lastFromSortKey] - Optional sort key indicating the starting point for fetching data.
+ * 
+ * @returns {Promise<Object>} A promise that resolves to the fetched scheduled data.
+ * If an error occurs during fetching, logs the error and monitor details to the console.
+ */
 async function fetchScheduled(monitor) {
   let lastFromSortKey = monitor.lastFromSortKey;
   let requestUrl = `${config.CU_URL}/scheduled/${monitor.id}`;
@@ -91,6 +119,19 @@ async function fetchScheduled(monitor) {
 }
 
 
+/**
+ * Asynchronously processes a given monitor object. The function includes several steps:
+ * 1. Adding the monitor to a running monitor list.
+ * 2. Fetching scheduled data for the monitor.
+ * 3. If scheduled data exists, generating a unique transaction ID and saving each message
+ *    after removing its 'scheduledSortKey'.
+ * 4. Fetching the latest messages from the database using the generated transaction ID.
+ * 5. Processing these messages through an external API.
+ * 6. Updating the monitor with the sort key of the last scheduled message.
+ * 
+ * @param {Object} monitor - The monitor object to be processed.
+ * @returns {Promise<Object>} A promise that resolves to an object indicating the status
+ */
 async function processMonitor(monitor) {
     runningMonitorList.push(monitor)
 
@@ -140,7 +181,12 @@ async function processMonitor(monitor) {
     
 }
 
-
+/**
+ * determine if we should crank scheduled for this monitor record
+ * 
+ * @param {Object} monitor 
+ * @returns {boolean}
+ */
 function shouldRun(monitor) {
   const index = runningMonitorList.findIndex(item => item.id === monitor.id);
   

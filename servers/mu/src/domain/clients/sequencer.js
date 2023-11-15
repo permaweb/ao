@@ -1,10 +1,8 @@
 import { identity } from 'ramda'
-import pkg from 'warp-arbundles'
+
 import { of, fromPromise, Rejected } from 'hyper-async'
 
 import { spawnProcess, createDataItemSigner } from '@permaweb/ao-sdk'
-
-const { createData, ArweaveSigner } = pkg
 
 function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   return async (data) => {
@@ -36,28 +34,6 @@ function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
       )
       .map(logger.tap('Successfully forwarded DataItem to SU'))
       .toPromise()
-  }
-}
-
-function buildAndSignWith ({ MU_WALLET }) {
-  return async ({ processId, data, tags, anchor }) => {
-    data = data || Math.random().toString().slice(-4)
-    const signer = new ArweaveSigner(MU_WALLET)
-
-    const allTags = [
-      ...tags,
-      { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'message' },
-      { name: 'SDK', value: 'ao' }
-    ]
-
-    const interactionDataItem = createData(data, signer, { target: processId, anchor, tags: allTags })
-    await interactionDataItem.sign(signer)
-    return {
-      id: await interactionDataItem.id,
-      data: interactionDataItem.getRaw(),
-      processId
-    }
   }
 }
 
@@ -101,7 +77,6 @@ function fetchSequencerProcessWith({SEQUENCER_URL, logger}) {
 
 export default {
   writeMessageWith,
-  buildAndSignWith,
   findTxWith,
   writeProcessTxWith,
   fetchSequencerProcessWith

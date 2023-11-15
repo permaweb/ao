@@ -11,7 +11,12 @@ export function buildTxWith ({ buildAndSign, logger }) {
     return of(ctx)
       .chain(fromPromise(() => buildAndSign({
         processId: ctx.cachedMsg.msg.target,
-        tags: ctx.cachedMsg.msg.tags,
+        tags: [
+          ...ctx.cachedMsg.msg.tags,
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'message' },
+          { name: 'SDK', value: 'ao' }
+        ],
         anchor: ctx.cachedMsg.msg.anchor
       })))
       .map(assoc('tx', __, ctx))

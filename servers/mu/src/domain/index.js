@@ -5,10 +5,11 @@ import dataStoreClient from './clients/datastore.js'
 import dbInstance from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
+import signerClient from './clients/signer.js'
 
 import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendMsgWith } from './lib/main.js'
 
-import runScheduledWith from './lib/monitor/manager.js'
+import runScheduledWith from './bg/manager.js'
 
 import { createLogger } from './logger.js'
 
@@ -45,7 +46,7 @@ export const createApis = (ctx) => {
     createDataItem,
     findSequencerTx: sequencerClient.findTxWith({ SEQUENCER_URL, logger: processMsgLogger }),
     writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processMsgLogger }),
-    buildAndSign: sequencerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
+    buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: processMsgLogger }),
@@ -59,7 +60,7 @@ export const createApis = (ctx) => {
   const processSpawn = processSpawnWith({
     logger: processSpawnLogger,
     writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger }),
-    buildAndSign: sequencerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
+    buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processSpawnLogger }),
     deleteSpawn: dataStoreClient.deleteSpawnWith({dbInstance, logger: processSpawnLogger}),
   })
