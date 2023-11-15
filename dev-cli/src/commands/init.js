@@ -9,7 +9,7 @@ function process.handle(msg, env)
   -- do stuff
   local response = {
     output = "Hello World",
-    messages = {} 
+    messages = {},
     spawns = {}
   }
   return response
