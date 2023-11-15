@@ -3,7 +3,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { bytesToBase64, maybeAoLoadWith } from './hydrateMessages.js'
+import { bytesToBase64, maybeAoLoadWith, maybeMessageIdWith } from './hydrateMessages.js'
 
 const logger = createLogger('ao-cu:readState')
 
@@ -35,7 +35,59 @@ describe('hydrateMessages', () => {
     })
   })
 
-  describe.todo('maybeMessageIdWith', () => {})
+  describe('maybeMessageIdWith', () => {
+    const notForwarded = {
+      message: {
+        id: 'message-tx-345',
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'message' },
+          { name: 'function', value: 'notify' }
+        ],
+        data: 'foobar'
+      }
+    }
+
+    const forwarded = {
+      message: {
+        id: 'message-tx-456',
+        'Forwarded-For': 'process-123',
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'ao-type', value: 'message' },
+          { name: 'function', value: 'notify' },
+          { name: 'Forwarded-For', value: 'process-123' }
+        ],
+        data: 'foobar'
+      }
+    }
+
+    test('should conditionally calculate the deephash and attach to the message', async () => {
+      const maybeMessageId = maybeMessageIdWith({ logger })
+
+      async function * messageStream () {
+        yield forwarded
+        yield notForwarded
+        yield forwarded
+      }
+
+      const hydrated = maybeMessageId(messageStream())
+
+      const messages = []
+      for await (const message of hydrated) messages.push(message)
+
+      assert.equal(messages.length, 3)
+      const [one, two, three] = messages
+      assert.ok(one.deepHash)
+      assert.ok(!two.deepHash)
+      assert.ok(three.deepHash)
+      /**
+       * Should be pure, this is CRUCIAL, so that the same shape
+       * will produce the same hash, every time
+       */
+      assert.equal(one.deepHash, three.deepHash)
+    })
+  })
 
   describe('maybeAoLoadWith', () => {
     test('should build the ao-load message', async () => {
@@ -100,7 +152,6 @@ describe('hydrateMessages', () => {
       assert.deepStrictEqual(one, notAoLoad)
       assert.deepStrictEqual(three, notAoLoad)
 
-      console.log(two)
       assert.deepStrictEqual(two, {
         ...aoLoad,
         message: {
