@@ -3,10 +3,13 @@ import { pipeline, Transform } from 'node:stream'
 import { of } from 'hyper-async'
 import { mergeRight } from 'ramda'
 import { z } from 'zod'
+import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { streamSchema } from '../model.js'
 import { findRawTag } from './utils.js'
+
+const { createData } = WarpArBundles
 
 /**
  * The result that is produced from this step
@@ -20,36 +23,40 @@ const ctxSchema = z.object({
 }).passthrough()
 
 /**
- * Construct the JSON representation of a DataItem using
- * raw transaction data, and metadata about the
- * transactions (in the shape of a GQL Gateway Transaction)
- */
-function messageFromParts ({ data, meta }) {
-  return {
-    id: meta.id,
-    owner: meta.owner.address,
-    tags: meta.tags,
-    anchor: meta.anchor,
-    /**
-     * Encode the array buffer of the raw data as base64
-     */
-    data: bytesToBase64(data)
-  }
-}
-
-/**
  * Converts an arraybuffer into base64, also handling
  * the Unicode Problem: https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
  */
 export function bytesToBase64 (bytes) {
-  const binString = String.fromCodePoint(...new Uint8Array(bytes))
-  return btoa(binString)
+  return Buffer.from(bytes).toString('base64')
 }
 
-/**
- * TODO implement
- */
-function maybeMessageIdWith ({ findMessageId, logger }) {
+export function maybeMessageIdWith ({ logger }) {
+  /**
+   * To calculate the messageId, we set the owner to 0 bytes,
+   * and so the owner length will also be 0 bytes.
+   *
+   * So we pass in these signer parameters when creating the data item
+   * so that all of the lengths match up
+   */
+  const signer = {
+    publicKey: Buffer.from(''),
+    ownerLength: 0,
+    signatureLength: 512,
+    signatureType: 1
+  }
+
+  /**
+   * This function will calculate the deep hash of the information
+   * contained in a data item. We use this to detect whether a particular message
+   * has already been evaluated, and therefore should be skipped during the current eval
+   * (ie. a message was cranked twice)
+   */
+  async function calcDataItemDeepHash ({ data, tags, target, anchor }) {
+    const dataItem = createData(data, signer, { tags, target, anchor })
+    const deepHashBinary = await dataItem.getSignatureData()
+    return bytesToBase64(deepHashBinary)
+  }
+
   return async function * maybeMessageId (messages) {
     logger('Hydrating forwarded messages with message id...')
 
@@ -63,12 +70,7 @@ function maybeMessageIdWith ({ findMessageId, logger }) {
       }
 
       logger('Message "%s" is forwarded. Calculating messageId...', cur.sortKey)
-      // TODO: implement
-      // calculate the message id
-
-      logger('Checking if "%s" has already been evaluated...', cur.sortKey)
-      // TODO: implement
-      // if found, don't emit
+      cur.deepHash = await calcDataItemDeepHash(cur.message)
       yield cur
     }
   }
@@ -77,6 +79,24 @@ function maybeMessageIdWith ({ findMessageId, logger }) {
 export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, logger }) {
   loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
   loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
+
+  /**
+   * Construct the JSON representation of a DataItem using
+   * raw transaction data, and metadata about the
+   * transactions (in the shape of a GQL Gateway Transaction)
+   */
+  function messageFromParts ({ data, meta }) {
+    return {
+      id: meta.id,
+      owner: meta.owner.address,
+      tags: meta.tags,
+      anchor: meta.anchor,
+      /**
+       * Encode the array buffer of the raw data as base64
+       */
+      data: bytesToBase64(data)
+    }
+  }
 
   return async function * maybeAoLoad (messages) {
     logger('Hydrating ao-load message with data from arweave...')
