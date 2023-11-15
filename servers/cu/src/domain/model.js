@@ -37,6 +37,14 @@ export const processSchema = z.object({
 
 export const messageSchema = z.object({
   sortKey: z.string().min(1),
+  /**
+   * The deep hash for the message. Only calculated by the CU
+   * for messages with a Forwarded-For tag.
+   *
+   * This is value is ultimately persisted, so that it can be queried
+   * to detect duplicate messages and remove them from the eval stream
+   */
+  deepHash: z.string().optional(),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id

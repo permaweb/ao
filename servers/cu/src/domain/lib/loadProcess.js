@@ -22,7 +22,7 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
    * TODO: could we eventually load all of this from the SU?
    * for now, just loading Block, since that's the only bit that doesn't finalize
    */
-  function loadFromChainAndSu (processId) {
+  function loadFromSu (processId) {
     return loadProcess(processId)
       /**
        * Verify the process by examining the tags
@@ -65,12 +65,17 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
 
   return (processId) =>
     findProcess({ processId })
+      /**
+       * The process could indeed not be found, or there was some other error
+       * fetching from persistence. Regardless, we will fallback to loading from
+       * the su
+       */
       .bimap(
         logger.tap('Could not find process in db. Loading from chain...'),
         logger.tap('found process in db %j')
       )
       .bichain(
-        always(loadFromChainAndSu(processId)),
+        always(loadFromSu(processId)),
         Resolved
       )
       .map(process => ({

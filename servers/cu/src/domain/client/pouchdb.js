@@ -36,6 +36,15 @@ const processDocSchema = z.object({
   type: z.literal('process')
 })
 
+const messageIdDocSchema = z.object({
+  _id: z.string().min(1),
+  /**
+   * The _id of the corresponding cached evaluation
+   */
+  parent: z.string().min(1),
+  type: z.literal('messageId')
+})
+
 function createEvaluationId ({ processId, sortKey }) {
   /**
    * transactions can sometimes start with an underscore,
@@ -54,6 +63,15 @@ function createProcessId ({ processId }) {
   return `proc-${processId}`
 }
 
+function createMessageId ({ messageId }) {
+  /**
+   * transactions can sometimes start with an underscore,
+   * which is not allowed in PouchDB, so prepend to create
+   * an _id
+   */
+  return `messageId-${messageId}`
+}
+
 /**
  * PouchDB does Comparison of string using ICU which implements the Unicode Collation Algorithm,
  * giving a dictionary sorting of keys.
@@ -69,13 +87,20 @@ export const COLLATION_SEQUENCE_MAX_CHAR = '\ufff0'
 export function findProcessWith ({ pouchDb }) {
   return ({ processId }) => of(processId)
     .chain(fromPromise(id => pouchDb.get(createProcessId({ processId: id }))))
-    .map(processDocSchema.parse)
-    .map(applySpec({
-      id: prop('processId'),
-      owner: prop('owner'),
-      tags: prop('tags'),
-      block: prop('block')
-    }))
+    .bichain(
+      (err) => {
+        if (err.status === 404) return Rejected({ status: 404 })
+        return Rejected(err)
+      },
+      (found) => of(found)
+        .map(processDocSchema.parse)
+        .map(applySpec({
+          id: prop('processId'),
+          owner: prop('owner'),
+          tags: prop('tags'),
+          block: prop('block')
+        }))
+    )
     .toPromise()
 }
 
@@ -96,18 +121,16 @@ export function saveProcessWith ({ pouchDb }) {
       .map(processDocSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.get(doc._id)))
+          .chain(fromPromise((doc) => pouchDb.put(doc)))
           .bichain(
             (err) => {
-              if (err.status === 404) return Resolved(undefined)
+              /**
+               * Already exists, so just return the doc
+               */
+              if (err.status === 409) return Resolved(doc)
               return Rejected(err)
             },
             Resolved
-          )
-          .chain((found) =>
-            found
-              ? of(found)
-              : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
           )
           .map(always(doc._id))
       )
@@ -198,6 +221,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
 
   const savedEvaluationDocSchema = z.object({
     _id: z.string().min(1),
+    deepHash: z.string().optional(),
     sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
     parent: z.string().min(1),
@@ -277,27 +301,31 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
        * Ensure the expected shape before writing to the db
        */
       .map(savedEvaluationDocSchema.parse)
-      .chain((doc) =>
-        of(doc)
-          .chain(fromPromise((doc) => pouchDb.get(doc._id)))
-          .bichain(
-            (err) => {
-              if (err.status === 404) return Resolved(undefined)
-              return Rejected(err)
-            },
-            Resolved
+      .map((evaluationDoc) => {
+        if (!evaluation.deepHash) return [evaluationDoc]
+
+        logger('Creating messageId doc for deepHash "%s"', evaluation.deepHash)
+        /**
+         * Create an messageId doc that we can later query
+         * to prevent duplicate evals from duplicate cranks
+         */
+        return [
+          evaluationDoc,
+          messageIdDocSchema.parse({
+            _id: createMessageId({ messageId: evaluation.deepHash }),
+            parent: evaluationDoc._id,
+            type: 'messageId'
+          })
+        ]
+      })
+      .chain(docs =>
+        of(docs)
+          .chain(fromPromise(docs => pouchDb.bulkDocs(docs)))
+          .bimap(
+            logger.tap('Encountered an error when caching evaluation docs'),
+            logger.tap('Successfully cached evaluation docs')
           )
-          .chain((found) =>
-            found
-              ? of(found)
-                .map(logger.tap('Evaluation already existed in cache. Returning found evaluation'))
-              : of(doc).chain(fromPromise((doc) => pouchDb.put(doc)))
-                .bimap(
-                  logger.tap('Encountered an error when caching evaluation'),
-                  logger.tap('Cached evaluation')
-                )
-          )
-          .map(always(doc._id))
+
       )
       .toPromise()
   }
@@ -347,4 +375,18 @@ export function findEvaluationsWith ({ pouchDb }) {
       )
       .toPromise()
   }
+}
+
+export function findMessageIdWith ({ pouchDb }) {
+  return ({ messageId }) => of(messageId)
+    .chain(fromPromise(id => pouchDb.get(createMessageId({ messageId: id }))))
+    .bichain(
+      (err) => {
+        if (err.status === 404) return Rejected({ status: 404 })
+        return Rejected(err)
+      },
+      (found) => of(found)
+        .map(messageIdDocSchema.parse)
+    )
+    .toPromise()
 }

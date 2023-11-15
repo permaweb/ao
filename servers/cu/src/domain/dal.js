@@ -42,7 +42,7 @@ export const findLatestEvaluationSchema = z.function()
   .returns(z.promise(evaluationSchema))
 
 export const saveEvaluationSchema = z.function()
-  .args(evaluationSchema)
+  .args(evaluationSchema.extend({ deepHash: z.string().optional() }))
   .returns(z.promise(z.any()))
 
 export const findEvaluationsSchema = z.function()
@@ -52,6 +52,19 @@ export const findEvaluationsSchema = z.function()
     to: z.string().optional()
   }))
   .returns(z.promise(z.array(evaluationSchema)))
+
+export const findMessageIdSchema = z.function()
+  .args(z.object({
+    messageId: z.string().optional()
+  }))
+  /**
+   * Our business logic does use the output of findMessageId,
+   * only the presence or absence of the document,
+   *
+   * So we don't need to enforce a shape to return here,
+   * as long as it's a document (an object)
+   */
+  .returns(z.promise(z.record(z.any())))
 
 // SU
 
