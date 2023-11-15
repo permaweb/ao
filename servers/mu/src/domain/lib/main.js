@@ -144,7 +144,11 @@ export function processSpawnWith ({
       .chain(spawnProcess)
       .chain(buildSuccessTx)
       .chain(sendSpawnSuccess)
+<<<<<<< HEAD
       // .chain(deleteSpawnData)
+=======
+      .chain(deleteSpawnData)
+>>>>>>> 33ba71cbf46ffc61ab6dc90b681dcd55a077fd33
   }
 }
 

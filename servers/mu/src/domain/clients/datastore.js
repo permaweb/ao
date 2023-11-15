@@ -71,8 +71,6 @@ function deleteMsgWith({ dbInstance, logger: _logger }) {
   const logger = _logger.child('deleteMsg')
 
   return (_id) => {
-    console.log('deleting')
-    console.log(_id)
     return of({ _id })
       .chain(fromPromise(() => dbInstance.deleteMsg(_id)))
       .bimap(
