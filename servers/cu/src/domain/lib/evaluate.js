@@ -3,11 +3,11 @@ import {
   ifElse,
   is, mergeRight, pathOr, pipe, propOr, reduced
 } from 'ramda'
-import { Resolved, fromPromise, of } from 'hyper-async'
+import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
-import { saveEvaluationSchema } from '../dal.js'
+import { findMessageIdSchema, saveEvaluationSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -31,7 +31,7 @@ function addHandler (ctx) {
     .map((handle) => ({ handle, ...ctx }))
 }
 
-function saveEvaluationWith ({ saveEvaluation, logger }) {
+function saveEvaluationWith ({ saveEvaluation }) {
   saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
 
   return (evaluation) =>
@@ -42,6 +42,21 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
        */
       .bichain(Resolved, Resolved)
       .map(() => evaluation)
+}
+
+function doesMessageIdExistWith ({ findMessageId }) {
+  findMessageId = fromPromise(findMessageIdSchema.implement(findMessageId))
+
+  return (deepHash) => {
+    return findMessageId({ messageId: deepHash })
+      .bichain(
+        err => {
+          if (err.status === 404) return Resolved(false)
+          return Rejected(err)
+        },
+        () => Resolved(true)
+      )
+  }
 }
 
 /**
@@ -61,8 +76,10 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
  */
 export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
+  env = { ...env, logger }
 
-  const saveEvaluation = saveEvaluationWith({ ...env, logger })
+  const doesMessageIdExist = doesMessageIdExistWith(env)
+  const saveEvaluation = saveEvaluationWith(env)
 
   /**
    * When an error occurs, we short circuit the reduce using
@@ -148,7 +165,20 @@ export function evaluateWith (env) {
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
-        for await (const { message, sortKey, AoGlobal } of ctx.messages) {
+        for await (const { message, deepHash, sortKey, AoGlobal } of ctx.messages) {
+          /**
+           * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
+           * if their deepHash is found in the cache, this prevents duplicate evals
+           */
+          if (deepHash) {
+            logger('Checking if "%s" has already been evaluated...', sortKey)
+            const found = await doesMessageIdExist(deepHash).toPromise()
+            if (found) {
+              logger('Message with deepHash "%s" was found in cache and therefor has already been evaluated. Removing from eval stream', deepHash)
+              continue
+            }
+          }
+
           prev = await Promise.resolve(prev)
             .then(maybeRejectError)
             .then(prev =>
@@ -184,6 +214,7 @@ export function evaluateWith (env) {
                */
                 .then((output) =>
                   saveEvaluation({
+                    deepHash,
                     sortKey,
                     processId: ctx.id,
                     output,
@@ -215,7 +246,6 @@ export function evaluateWith (env) {
        */
       .chain(fromPromise(maybeResolveError))
       .map(output => ({ output }))
-      .map(logger.tap('Appended eval output to ctx %o'))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
 }

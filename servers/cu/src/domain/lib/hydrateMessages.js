@@ -58,8 +58,6 @@ export function maybeMessageIdWith ({ logger }) {
   }
 
   return async function * maybeMessageId (messages) {
-    logger('Hydrating forwarded messages with message id...')
-
     for await (const cur of messages) {
       /**
        * Not forwarded, so no need to calculate a message id
@@ -99,7 +97,6 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
   }
 
   return async function * maybeAoLoad (messages) {
-    logger('Hydrating ao-load message with data from arweave...')
     for await (const cur of messages) {
       const tag = findRawTag('ao-load', cur.message.tags)
       /**
@@ -111,7 +108,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         continue
       }
 
-      logger('Constructing ao-load message for "%s" from transaction "%s"', cur.sortKey, tag.value)
+      logger('Hydrating ao-load message for "%s" from transaction "%s"', cur.sortKey, tag.value)
       /**
        * - Fetch raw data and meta from gateway
        * - contruct the data item JSON, encoding the raw data as base64
@@ -122,7 +119,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         loadTransactionMeta(tag.value)
       ]).then(([data, meta]) => messageFromParts({ data, meta }))
 
-      logger('Constructed ao-load message for "%s" from transaction "%s" and attached as data', cur.sortKey, tag.value)
+      logger('Hydrated ao-load message for "%s" from transaction "%s" and attached as data', cur.sortKey, tag.value)
 
       yield cur
     }

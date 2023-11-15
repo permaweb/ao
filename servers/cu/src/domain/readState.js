@@ -37,7 +37,7 @@ export function readStateWith (env) {
          * was found in the cache, so just return it
          */
         if (res.from === to) {
-          env.logger('Cached evaluation exact match for message "%s" to process "%s"', to, processId)
+          env.logger('Exact match to cached evaluation for message "%s" to process "%s"', to, processId)
           return Resolved(res.result)
         }
 

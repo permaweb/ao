@@ -16,6 +16,7 @@ describe('evaluate', () => {
   describe('output', () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
+      findMessageId: async () => { throw { status: 404 } },
       logger
     })
 
@@ -132,6 +133,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
+      findMessageId: async () => { throw { status: 404 } },
       logger
     }
 
@@ -170,9 +172,80 @@ describe('evaluate', () => {
     assert.equal(cacheCount, 2)
   })
 
+  test('skip over messages that are already evaluated', async () => {
+    let cacheCount = 0
+    let messageIdCount = 0
+    const env = {
+      saveEvaluation: async (evaluation) => {
+        cacheCount++
+        return undefined
+      },
+      findMessageId: async () => {
+        if (!messageIdCount) {
+          messageIdCount++
+          throw { status: 404 }
+        }
+
+        messageIdCount++
+        return { _id: 'messageId-doc-123' }
+      },
+      logger
+    }
+
+    const evaluate = evaluateWith(env)
+
+    const ctx = {
+      id: 'ctr-1234',
+      from: 'sort-key-start',
+      src: readFileSync('./test/processes/happy/process.wasm'),
+      buffer: null,
+      messages: toAsyncIterable([
+        {
+          message: {
+            owner: 'owner-123',
+            tags: [
+              { name: 'function', value: 'hello' }
+            ]
+          },
+          deepHash: 'deephash-123',
+          sortKey: 'a',
+          AoGlobal: {}
+        },
+        {
+          message: {
+            owner: 'owner-456',
+            tags: [
+              { name: 'function', value: 'world' }
+            ]
+          },
+          deepHash: 'deephash-456',
+          sortKey: 'b',
+          AoGlobal: {}
+        },
+        // no deep hash
+        {
+          message: {
+            owner: 'owner-456',
+            tags: [
+              { name: 'function', value: 'world' }
+            ]
+          },
+          sortKey: 'b',
+          AoGlobal: {}
+        }
+      ])
+    }
+
+    await evaluate(ctx).toPromise()
+    assert.equal(messageIdCount, 2)
+    assert.equal(cacheCount, 2)
+  })
+
   test('noop the initial state', async () => {
     const env = {
       saveEvaluation: async (interaction) =>
+        assert.fail('cache should not be interacted with on a noop of state'),
+      findMessageId: async () =>
         assert.fail('cache should not be interacted with on a noop of state'),
       logger
     }
@@ -209,6 +282,7 @@ describe('evaluate', () => {
   test('error returned in process result', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
+      findMessageId: async () => { throw { status: 404 } },
       logger
     }
 
@@ -255,6 +329,7 @@ describe('evaluate', () => {
   test('error thrown by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
+      findMessageId: async () => { throw { status: 404 } },
       logger
     }
 
@@ -294,6 +369,7 @@ describe('evaluate', () => {
   test('error unhandled by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
+      findMessageId: async () => { throw { status: 404 } },
       logger
     }
 
@@ -332,6 +408,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
+      findMessageId: async () => { throw { status: 404 } },
       logger
     }
 
