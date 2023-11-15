@@ -21,6 +21,7 @@ export const createApis = (ctx) => {
     saveProcess: PouchDbClient.saveProcessWith({ pouchDb, logger }),
     findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb, logger }),
     saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
+    findMessageId: PouchDbClient.findMessageIdWith({ pouchDb, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, pageSize: 50, logger }),
