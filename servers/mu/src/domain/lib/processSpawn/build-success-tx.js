@@ -9,7 +9,10 @@ const ctxSchema = z.object({
 export function buildSuccessTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
     const tags = [
-      {name: 'ao-spawn-success', value: ctx.processTx.id}
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'ao-type', value: 'message' },
+      { name: 'SDK', value: 'ao' },
+      { name: 'ao-spawn-success', value: ctx.processTx.id }
     ]
     const forwardedFor = ctx.cachedSpawn.spawn.tags.find((tag) => 
       tag.name === 'Forwarded-For'

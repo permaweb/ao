@@ -3,7 +3,6 @@ import { always, applySpec, prop } from 'ramda'
 import z from 'zod'
 
 
-
 const cachedMsgSchema = z.object({
   _id: z.string().min(1),
   fromTxId: z.string().min(1),
@@ -71,7 +70,9 @@ function findLatestMsgsWith ({ dbInstance }) {
 function deleteMsgWith({ dbInstance, logger: _logger }) {
   const logger = _logger.child('deleteMsg')
 
-  return ({ _id }) => {
+  return (_id) => {
+    console.log('deleting')
+    console.log(_id)
     return of({ _id })
       .chain(fromPromise(() => dbInstance.deleteMsg(_id)))
       .bimap(
@@ -152,8 +153,8 @@ function findLatestSpawnsWith ({ dbInstance }) {
 function deleteSpawnWith({ dbInstance, logger: _logger }) {
   const logger = _logger.child('deleteSpawn')
 
-  return ({ _id }) => {
-    return of({ _id })
+  return (_id) => {
+    return of(_id)
       .chain(fromPromise(() => dbInstance.deleteSpawn(_id)))
       .bimap(
         logger.tap('Encountered an error when deleting spawn'),

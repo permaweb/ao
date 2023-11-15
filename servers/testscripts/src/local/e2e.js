@@ -13,7 +13,7 @@ const {
 });
 
 (async function () {
-  const PROCESS_SRC = 'HQC7hZj7cdH4CJCg1WZevHNfPlSvyAbogvgVqT3rF-w';
+  const PROCESS_SRC = 'ptp7GrWekxYIRAkOrIDFfZB76YXkbIq3okQsNiWOhsM';
   const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
 
   const tags1 = [

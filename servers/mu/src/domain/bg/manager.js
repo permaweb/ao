@@ -1,10 +1,12 @@
 
 
-
-
-
 import { Worker } from 'worker_threads'
 
+
+/**
+ * a function run at server start up this boots
+ * the Worker which handles scheduled messages
+ */
 function runScheduledWith() {
     return async () => {
         try{
@@ -15,13 +17,16 @@ function runScheduledWith() {
     }
 }
 
+/**
+ * create the worker to handled scheduled messages
+ */
 function genWorker() {
-  const worker = new Worker('./src/domain/lib/monitor/worker.js');
+  const worker = new Worker('./src/domain/bg/worker.js');
 
   worker.postMessage({label: 'start'})
 
   worker.on('message', (result) => {
-      // console.log(`Received from worker: ${result}`);
+      console.log(`Received from worker: ${result}`);
   });
 
   worker.on('error', (error) => {
