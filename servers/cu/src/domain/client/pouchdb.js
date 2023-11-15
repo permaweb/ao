@@ -17,13 +17,14 @@ const inflateP = promisify(inflate)
 /**
  * An implementation of the db client using pouchDB
  */
-
+let internalPouchDb
 export function createPouchDbClient ({ maxListeners, path }) {
+  if (internalPouchDb) return internalPouchDb
+
   PouchDb.plugin(LevelDb)
   PouchDb.plugin(PouchDbFind)
-  const internalPouchDb = new PouchDb(path, { adapter: 'leveldb' })
   PouchDb.setMaxListeners(maxListeners)
-
+  internalPouchDb = new PouchDb(path, { adapter: 'leveldb' })
   return internalPouchDb
 }
 
