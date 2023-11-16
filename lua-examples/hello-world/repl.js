@@ -22,8 +22,7 @@ const env = {
  * the Unicode Problem: https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
  */
 function bytesToBase64 (bytes) {
-  const binString = String.fromCodePoint(...new Uint8Array(bytes))
-  return btoa(binString)
+  return Buffer.from(bytes).toString('base64')
 }
 
 async function repl (state) {
