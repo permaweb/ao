@@ -56,17 +56,49 @@ var Module = (() => {
  */
 
 /**
+ * See this issue with emscripten https://github.com/emscripten-core/emscripten/issues/12740
+ *
+ * We need to manually cleanup any listeners that are setup as part of the WASM module,
+ * so that they can be deregistered later and the associated WASM memory can be garbage collected
+ */
+function trackListeners (name) {
+  const start = process.listeners(name)
+  /**
+   * tally any new listeners that did not exist before the WASM was bootstrapped
+   *
+   * TODO: could this capture listeners created by other modules?
+   * For now, this gets us what we need
+   */
+  return () => {
+    const diff = process.listeners(name).filter(l => start.indexOf(l) === -1)
+    /**
+     * Deregister any listeners that did not exist before this
+     * WASM module was bootstrapped
+     */
+    return () => {
+      diff.forEach(l => process.removeListener(name, l))
+    }
+  }
+}
+
+/**
  * @param {ArrayBuffer} binary
  * @returns {Promise<handleFunction>}
  */
 module.exports = async function (binary) {
+  const listenerDiffs = [trackListeners('unhandledRejection'), trackListeners('uncaughtException')]
   const instance = await Module(binary)
+  const cleanupListeners = listenerDiffs.map(diff => diff())
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
   return (buffer, msg, env) => {
     if (buffer) instance.HEAPU8.set(buffer)
 
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
+    /**
+     * Cleanup any listeners to prevent memory leaks
+     */
+    cleanupListeners.forEach(c => c())
 
     if (!ok) throw response
 
