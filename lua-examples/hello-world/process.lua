@@ -1,6 +1,7 @@
 -- Corresponding local wasm at ./process.wasm
 -- published at IKZzFN5JvCf3XCOx1kw940sjY9zAbsd6Wm7MMRgf_Zk
 -- with 'say' function support at QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY
+-- with 'friend' function support at V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
 
 local JSON = require("json")
 local base64 = require(".src.base64")
@@ -38,6 +39,49 @@ local function dump(o)
   end
 end
 
+local function dedup(originalTable)
+  local dedupTable = {}
+  local addedNames = {}
+
+  for _, entry in ipairs(originalTable) do
+      if not addedNames[entry.name] then
+          table.insert(dedupTable, entry)
+          addedNames[entry.name] = true
+      end
+  end
+
+  return dedupTable
+end
+
+local function spawn(tags, AoGlobal) 
+  local srcTable = findObject(tags, "name", "src-id")
+  local srcId = srcTable.value
+
+  -- data = srcId doesnt have any effect were just using srcId as a placeholder,
+  -- { name = "Contract-Src", value = srcId } is what a mu will use to spawn
+  local spawn = {
+    data = srcId,
+    tags = { }
+  }
+
+  local tagsMod = {
+    { name = "Data-Protocol", value = "ao" },
+    { name = "ao-type", value = "process" },
+    { name = "Contract-Src", value = srcId }
+  }
+
+  for k,v in pairs(tags) do
+    -- skip the tags used by this contract internally
+    if v.name ~= 'function' and v.name ~= 'src-id' then
+      table.insert(tagsMod, { name = v.name, value = v.value })
+    end
+  end
+
+  spawn.tags = dedup(tagsMod)
+
+  return spawn
+end
+
 local actions = {}
 actions['hello'] = function (state)
   local _state = assoc('heardHello', true, state)
@@ -55,6 +99,15 @@ actions['say'] = function (state, message)
   local data = base64.decode(message.data.data)
   return { state = state , output = JSON.encode(data) }
 end
+actions['friend'] = function (state, message, AoGlobal)
+  local spawns = {}
+  local srcId = findObject(message.tags, "name", "Contract-Src")
+  local friend = spawn(message.tags, AoGlobal)
+  table.insert(spawns, friend)
+  -- result.output is just for display in the repl here 
+  local o = { friendlyMessage = 'Spawn returned in result.spawns' }
+  return { state = state, output = JSON.encode(o), spawns = spawns }
+end
 
 function process.handle(message, AoGlobal)
   if state == nil then state = { helloCount = 0 } end
@@ -65,9 +118,11 @@ function process.handle(message, AoGlobal)
   local res = actions[func.value](state, message, AoGlobal)
   state = res.state
   local output = res.output
+  local spawns = res.spawns
+  local messages = res.messages
   if (state.heardHello and state.heardWorld) then state = assoc('happy', true, state) end
 
-  return { output = output }
+  return { output = output, messages = messages, spawns = spawns }
 end
 
 return process

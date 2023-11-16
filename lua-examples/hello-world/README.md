@@ -1,7 +1,7 @@
 # Hello `ao`!
 
 This is an example of a simple `ao` Process called `hello-world`. It implements
-4 functions:
+5 functions:
 
 - `hello` (`ao-action`: `write`): updates the internal state for `heardHello` to
   `true`, and also increments the `helloCount` internal state
@@ -11,6 +11,8 @@ This is an example of a simple `ao` Process called `hello-world`. It implements
   JSON in `output`
 - `say` (`ao-action`: `read`): return the value of the transaction pointed to by
   `ao-load` as stringified JSON in `output`
+- `friend` (`ao-action`: `write`): return a spawn in result.spawns with the value
+  of the tag sent in `src-id` in its `Contract-Src` tag output to be spawned by a mu
 
 This is a simple process that can be used to see some of the core functionality
 of `ao`:
@@ -18,6 +20,7 @@ of `ao`:
 - Scheduled Messages
 - Persistent Internal State
 - Data Loading from Arweave
+- Spawning a process from within a process
 
 <!-- toc -->
 
@@ -63,6 +66,12 @@ hello world > say bomIi0Xivq4sMA1fwAlq6nsloj1H-8qpw6oQooKDWco
 > `bomIi0Xivq4sMA1fwAlq6nsloj1H-8qpw6oQooKDWco` actually works! But you can
 > replace it with any transaction that contains text
 
+Return a spawn with an input src id as its Contract-Src tag
+
+```sh
+hello world > friend V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
+```
+
 ## Your own Process
 
 There are convenient scripts included that you can run to spin up your own
@@ -86,6 +95,12 @@ be logged to the console.
 `bomIi0Xivq4sMA1fwAlq6nsloj1H-8qpw6oQooKDWco` is hardcoded, but you can change
 it any tx on arweave that contains text. The `messageId` will be logged to the
 console.
+
+> In addition to `PATH_TO_WALLET`, you also need to set `PROCESS_ID` to the
+> process you'd like to send a message to.
+
+`sendSpawnMessage.js` will send a `friend` message to the process.
+and spawn a contract with the hello-world source code
 
 > In addition to `PATH_TO_WALLET`, you also need to set `PROCESS_ID` to the
 > process you'd like to send a message to.
