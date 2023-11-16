@@ -3,6 +3,17 @@ import { logger } from '../../logger.js'
 import { createApis } from '../../domain/index.js'
 import { domainConfigSchema } from '../../domain/model.js'
 
+const domain = {
+  /**
+   * Ensure server lvl config is never exposed to domain,
+   * by simply parsing it out
+   */
+  ...(domainConfigSchema.parse(config)),
+  fetch,
+  logger
+}
+domain.apis = createApis(domain)
+
 /**
  * A middleware that exposes the domain business logic to a request
  * by attaching each api underneath the 'domain' field on the Request object
@@ -10,16 +21,6 @@ import { domainConfigSchema } from '../../domain/model.js'
  * This allows routes to be encapsulated and easily testable with unit tests
  */
 export const withDomain = (handler) => (req, res) => {
-  req.domain = {
-    /**
-     * Ensure server lvl config is never exposed to domain,
-     * by simply parsing it out
-     */
-    ...(domainConfigSchema.parse(config)),
-    fetch,
-    logger
-  }
-  req.domain.apis = createApis(req.domain)
-
+  req.domain = domain
   return handler(req, res)
 }

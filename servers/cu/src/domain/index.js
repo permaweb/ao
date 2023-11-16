@@ -11,6 +11,8 @@ import { readScheduledMessagesWith } from './readScheduledMessages.js'
 export { createLogger } from './logger.js'
 
 export const createApis = (ctx) => {
+  ctx.logger('Creating business logic apis')
+
   const pouchDb = PouchDbClient.createPouchDbClient({ maxListeners: ctx.DB_MAX_LISTENERS, path: ctx.DB_PATH })
 
   const sharedDeps = (logger) => ({
