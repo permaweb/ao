@@ -2,7 +2,7 @@ import { identity } from 'ramda'
 
 import { of, fromPromise, Rejected } from 'hyper-async'
 
-import { spawnProcess, createDataItemSigner } from '@permaweb/ao-sdk'
+import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
 function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   return async (data) => {
@@ -46,19 +46,15 @@ function findTxWith ({ SEQUENCER_URL }) {
   }
 }
 
-// TODO: inject createContract dep
 function writeProcessTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   return async ({ initState, src, tags }) => {
-    const transformedList = Object.entries(tags).map(([key, value]) => ({
-      name: key,
-      value
-    }))
+    const { spawnProcess } = connect({SU_URL: SEQUENCER_URL})
 
     const processId = await spawnProcess({
       srcId: src,
       initialState: initState,
       signer: createDataItemSigner(MU_WALLET),
-      transformedList
+      tags
     })
 
     return processId

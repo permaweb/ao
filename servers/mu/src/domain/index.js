@@ -52,7 +52,7 @@ export const createApis = (ctx) => {
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: processMsgLogger }),
     findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: processMsgLogger }),
     deleteMsg: dataStoreClient.deleteMsgWith({dbInstance, logger: processMsgLogger}),
-    findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance, logger: processMsgLogger }),
+    findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance }),
     logger
   })
 

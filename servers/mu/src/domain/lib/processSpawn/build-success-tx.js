@@ -12,14 +12,12 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
       { name: 'Data-Protocol', value: 'ao' },
       { name: 'ao-type', value: 'message' },
       { name: 'SDK', value: 'ao' },
-      { name: 'ao-spawn-success', value: ctx.processTx.id }
+      { name: 'ao-spawn-success', value: ctx.processTx }
     ]
-    const forwardedFor = ctx.cachedSpawn.spawn.tags.find((tag) => 
-      tag.name === 'Forwarded-For'
-    )
+
     return of(ctx)
       .chain(fromPromise(() => buildAndSign({
-        processId: forwardedFor.value,
+        processId: ctx.cachedSpawn.processId,
         tags: tags
       })))
       .map(assoc('spawnSuccessTx', __, ctx))

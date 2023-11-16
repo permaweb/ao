@@ -10,8 +10,28 @@ export function spawnProcessWith (env) {
   const { logger, writeProcessTx } = env
 
   return (ctx) => {
-    const { initState, src, tags } = ctx.cachedSpawn.spawn
-    const transformedData = { initState, src, tags }
+    const { tags } = ctx.cachedSpawn.spawn
+    let initState = {}
+    let initStateTag = tags.find((tag) => 
+      tag.name === 'Initial-State'
+    )
+    if(initStateTag) {
+      initState = JSON.parse(initStateTag.value)
+    }
+    let srcTag = tags.find((tag) => 
+      tag.name === 'Contract-Src'
+    )
+    if(!srcTag) {
+      return Rejected(ctx)
+    }
+    let tagsIn = tags.filter(tag => ![
+      'Contract-Src', 
+      'Initial-State', 
+      'Data-Protocol', 
+      'ao-type'
+    ].includes(tag.name));
+
+    const transformedData = { initState, src: srcTag.value, tags: tagsIn }
 
     return of(transformedData)
       .chain(fromPromise(writeProcessTx))
