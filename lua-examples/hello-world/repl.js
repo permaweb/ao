@@ -77,6 +77,14 @@ async function createMessage (expr) {
       .then(res => res.arrayBuffer())
       .then(bytesToBase64)
       .then(data => ({ data }))
+  } else if (expr.startsWith('friend')) {
+    const [, srcId] = expr.split(' ').map(s => s.trim())
+    expr = 'friend'
+    message.tags.push(
+      { name: 'function', value: 'friend' },
+      { name: 'src-id', value: srcId },
+      { name: 'extra-spawn-tag', value: 'this should reach the final process' }
+    )
   } else {
     message.tags.push({ name: 'function', value: expr })
   }
