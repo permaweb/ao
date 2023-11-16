@@ -10,7 +10,7 @@ export function sendSpawnSuccessWith (env) {
   const { logger, writeSequencerTx } = env
 
   return (ctx) => {
-    return of(ctx.spawnSuccessTx)
+    return of(ctx.spawnSuccessTx.data)
       .chain(fromPromise(writeSequencerTx))
       .bichain(
         (error) => {

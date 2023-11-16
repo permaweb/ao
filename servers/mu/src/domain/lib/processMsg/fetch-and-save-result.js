@@ -11,12 +11,12 @@ function findMsgsWith ({ findLatestMsgs }) {
 
   const maybeFindMsgs = (ctx) => doFindMsgs({ fromTxId: ctx.tx.id })
     .bichain(
-      () => Rejected({ ...ctx, msgs: [], spawns: [] }),
+      () => Resolved({ ...ctx, msgs: [], spawns: [] }),
       msgs => Resolved({ ...ctx, msgs, spawns: [] })
     )
 
   return (ctx) => maybeFindMsgs(ctx)
-    .bichain(Rejected, Resolved)
+    .bichain(Resolved, Resolved)
 }
 
 function findSpawnsWith ({ findLatestSpawns }) {
@@ -24,16 +24,15 @@ function findSpawnsWith ({ findLatestSpawns }) {
 
   const maybeFindSpawns = (ctx) => doFindSpawns({ fromTxId: ctx.tx.id })
     .bichain(
-      () => Rejected({ ...ctx, spawns: [] }),
+      () => Resolved({ ...ctx, spawns: [] }),
       spawns => Resolved({ ...ctx, spawns })
     )
 
   return (ctx) => maybeFindSpawns(ctx)
-    .bichain(Rejected, Resolved)
+    .bichain(Resolved, Resolved)
 }
 
-function cacheResultWith ({ fetchResult, saveMsg, findLatestMsgs, saveSpawn }) {
-  const findMsgs = findMsgsWith({ findLatestMsgs })
+function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
   const tryFetchAndSave = (ctx) =>
@@ -44,7 +43,8 @@ function cacheResultWith ({ fetchResult, saveMsg, findLatestMsgs, saveSpawn }) {
             id: Math.floor(Math.random() * 1e18).toString(),
             fromTxId: ctx.tx.id,
             msg,
-            cachedAt: new Date()
+            cachedAt: new Date(),
+            processId: ctx.tx.processId
           })
         })
 
@@ -53,7 +53,8 @@ function cacheResultWith ({ fetchResult, saveMsg, findLatestMsgs, saveSpawn }) {
             id: Math.floor(Math.random() * 1e18).toString(),
             fromTxId: ctx.tx.id,
             spawn,
-            cachedAt: new Date()
+            cachedAt: new Date(),
+            processId: ctx.tx.processId
           })
         })
 
@@ -63,8 +64,7 @@ function cacheResultWith ({ fetchResult, saveMsg, findLatestMsgs, saveSpawn }) {
       })
       .map(() => ctx)
 
-  return (ctx) => findMsgs(ctx)
-    .bichain(tryFetchAndSave, () => Resolved(ctx))
+  return (ctx) => tryFetchAndSave(ctx)
 }
 
 export function fetchAndSaveResultWith (env) {

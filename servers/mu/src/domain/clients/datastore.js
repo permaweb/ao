@@ -12,7 +12,8 @@ const cachedMsgSchema = z.object({
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
-  )
+  ),
+  processId: z.string().min(1),
 })
 
 function saveMsgWith ({ dbInstance, logger: _logger }) {
@@ -23,7 +24,8 @@ function saveMsgWith ({ dbInstance, logger: _logger }) {
         _id: prop('id'),
         fromTxId: prop('fromTxId'),
         msg: prop('msg'),
-        cachedAt: prop('cachedAt')
+        cachedAt: prop('cachedAt'),
+        processId: prop('processId')
       }))
       .map(cachedMsgSchema.parse)
       .chain((doc) =>
@@ -60,7 +62,8 @@ function findLatestMsgsWith ({ dbInstance }) {
           fromTxId: prop('fromTxId', doc),
           toTxId: prop('toTxId', doc),
           msg: prop('msg', doc),
-          cachedAt: prop('cachedAt', doc)
+          cachedAt: prop('cachedAt', doc),
+          processId: prop('processId', doc),
         })))
       })
       .toPromise()
@@ -71,8 +74,6 @@ function deleteMsgWith({ dbInstance, logger: _logger }) {
   const logger = _logger.child('deleteMsg')
 
   return (_id) => {
-    console.log('deleting')
-    console.log(_id)
     return of({ _id })
       .chain(fromPromise(() => dbInstance.deleteMsg(_id)))
       .bimap(
@@ -94,7 +95,8 @@ const cachedSpawnSchema = z.object({
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
-  )
+  ),
+  processId: z.string().min(1),
 })
 
 function saveSpawnWith ({ dbInstance, logger: _logger }) {
@@ -105,7 +107,8 @@ function saveSpawnWith ({ dbInstance, logger: _logger }) {
         _id: prop('id'),
         fromTxId: prop('fromTxId'),
         spawn: prop('spawn'),
-        cachedAt: prop('cachedAt')
+        cachedAt: prop('cachedAt'),
+        processId: prop('processId')
       }))
       .map(cachedSpawnSchema.parse)
       .chain((doc) =>
@@ -143,7 +146,8 @@ function findLatestSpawnsWith ({ dbInstance }) {
           fromTxId: prop('fromTxId', doc),
           toTxId: prop('toTxId', doc),
           spawn: prop('spawn', doc),
-          cachedAt: prop('cachedAt', doc)
+          cachedAt: prop('cachedAt', doc),
+          processId: prop('processId', doc)
         })))
       })
       .toPromise()
