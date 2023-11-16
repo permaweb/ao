@@ -8,3 +8,5 @@
 **/data
 *yalc*
 ao-cache*
+static/*
+!static/.gitkeep

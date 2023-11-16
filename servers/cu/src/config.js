@@ -27,7 +27,8 @@ const serverConfigSchema = domainConfigSchema.extend({
     if (!val) return -1
     if (typeof val === 'number') return val
     return typeof val === 'string' ? parseInt(val) : -1
-  }, z.number().positive())
+  }, z.number().positive()),
+  DUMP_PATH: z.string().min(1)
 })
 
 /**
@@ -43,15 +44,17 @@ const CONFIG_ENVS = {
     SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     DB_PATH: process.env.DB_PATH || 'ao-cache',
-    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100')
+    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
+    DUMP_PATH: process.env.DUMP_PATH || './static'
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
     SEQUENCER_URL: process.env.SEQUENCER_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
-    DB_PATH: process.env.DB_PATH || 'ao-cache',
-    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100')
+    DB_PATH: process.env.DB_PATH,
+    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
+    DUMP_PATH: process.env.DUMP_PATH
   }
 }
 

@@ -1,3 +1,5 @@
+import { join } from 'node:path'
+import heapdump from 'heapdump'
 import { pipe } from 'ramda'
 import express from 'express'
 import cors from 'cors'
@@ -7,6 +9,10 @@ import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 
 export const server = pipe(
+  /**
+   * Allows us to download heapdumps, if created
+   */
+  (app) => app.use(express.static(config.DUMP_PATH)),
   (app) => app.use(cors()),
   (app) => app.use(express.json({ type: 'application/json' })),
   (app) => app.get('/', (_req, res) => res.send('ao compute unit')),
@@ -19,6 +25,10 @@ export const server = pipe(
     process.on('SIGTERM', () => {
       logger('Recevied SIGTERM. Gracefully shutting down server...')
       server.close(() => logger('Server Shut Down'))
+    })
+
+    process.on('SIGUSR2', () => {
+      heapdump.writeSnapshot(join(config.DUMP_PATH, `${Date.now()}.heapsnapshot`))
     })
 
     return server
