@@ -4,11 +4,11 @@ import * as PouchDbClient from './client/pouchdb.js'
 import * as AoSuClient from './client/ao-su.js'
 
 import { readResultWith } from './readResult.js'
-
 import { readStateWith } from './readState.js'
 import { readScheduledMessagesWith } from './readScheduledMessages.js'
 
 export { createLogger } from './logger.js'
+export { domainConfigSchema } from './model.js'
 
 export const createApis = (ctx) => {
   ctx.logger('Creating business logic apis')

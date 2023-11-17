@@ -1,7 +1,6 @@
 import { config } from '../../config.js'
 import { logger } from '../../logger.js'
-import { createApis } from '../../domain/index.js'
-import { domainConfigSchema } from '../../domain/model.js'
+import { createApis, domainConfigSchema } from '../../domain/index.js'
 
 const domain = {
   /**

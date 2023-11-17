@@ -10,6 +10,12 @@ Server.
 - [Tests](#tests)
 - [Debug Logging](#debug-logging)
 - [Heap Snapshot](#heap-snapshot)
+- [Project Structure](#project-structure)
+  - [Business Logic](#business-logic)
+    - [Driven Adapters](#driven-adapters)
+    - [Entrypoint](#entrypoint)
+  - [Routes](#routes)
+    - [Middleware](#middleware)
 
 <!-- tocstop -->
 
@@ -80,3 +86,77 @@ Once you have the process id, you can initiate a heap dump using
 `npm run heapdump -- <pid>`. This will synchronously place a heap snapshot in
 the `DUMP_PATH` and print the name of the snapshot to the console. Then download
 the snapshot from `https://<cu_host>/<snapshot_name>`
+
+## Project Structure
+
+This `ao` Compute Unit project loosely implements the
+[Ports and Adapters](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0)
+Architecture.
+
+```
+Driving Adapter <--> [Port(Business Logic)Port] <--> Driven Adapter
+```
+
+### Business Logic
+
+All business logic is in `src/domain` where each public api is implemented,
+tested, and exposed via a `index.js` (see [Entrypoint](#entrypoint))
+
+`/domain/lib` contains all of the business logic steps that can be composed into
+public apis (ie. `domain/readState.js`, `domain/readResults.js`, and
+`domain/readScheduledMessages.js`)
+
+`dal.js` contains the contracts for the driven adapters aka side-effects.
+Implementations for those contracts are injected into, then parsed and invoked
+by, the business logic. This is how we inject specific integrations with other
+`ao` components and providers while keeping them separated from the business
+logic -- the business logic simply consumes a black-box API -- making them easy
+to stub, and business logic easy to unit tests for correctness.
+
+Because the contract wrapping is done by the business logic itself, it also
+ensures the stubs we use in our unit tests accurately implement the contract
+API. Thus our unit tests are simoultaneously contract tests.
+
+#### Driven Adapters
+
+All driven adapters are located in `/domain/client`
+
+`domain/client` contains implementations, of the contracts in `dal.js`, for
+various platforms. The unit tests for the implementations in `client` also
+import contracts from `dal.js` to help ensure that the implementation properly
+satisfies the API.
+
+#### Entrypoint
+
+Finally, the entrypoint
+`/domain/index.js choosing the appropriate implementations from`client` and
+injecting them into the public apis.
+
+Anything outside of domain should only ever import from `domain/index.js`.
+
+### Routes
+
+All public routes exposed by the `ao` Compute Unit can be found in `/routes`.
+Each route is composed in `/route/index.js`, which is then composed further in
+`app.js`, the Express server. This is the Driving Adapter.
+
+#### Middleware
+
+In lieu of using `express` middleware api, which is specific to `express` and
+not so ergonomic for JS developers, this `ao` Compute Unit uses simple function
+composition to achieve middleware behavior on routes. This allows for a more
+idiomatic developer experience -- if an error occurs, it can simply be thrown,
+which bubbles and is caught by a middleware that is composed at the top (see
+`withErrorHandler.js`). This is in contrast to using `express` `next` middleware
+paradigm which is clunky and not very ergonomic, and does catch bubbled errors.
+
+In fact, our routes don't event import `express`, and instead are injected an
+instance of `express` to mount routes onto.
+
+> `express` middleware is still leveraged, it is abstracted away from the
+> majority of the developer experience, only existing in `app.js`
+
+Business logic is injected into routes via a composed middleware `withDomain.js`
+that attached `config` and business logic apis to `req.domain`. This is how
+routes call into business logic, thus completing the Ports and Adapters
+Architecture.
