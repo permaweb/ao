@@ -50,7 +50,7 @@ const CONFIG_ENVS = {
     SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
     CU_URL: process.env.CU_URL || 'https://ao-cu-2.onrender.com',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
-    SCHEDULED_INTERVAL: 1000
+    SCHEDULED_INTERVAL: 600000
   },
   production: {
     MODE,
@@ -59,7 +59,7 @@ const CONFIG_ENVS = {
     SEQUENCER_URL: process.env.SEQUENCER_URL,
     CU_URL: process.env.CU_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
-    SCHEDULED_INTERVAL: 1000
+    SCHEDULED_INTERVAL: 600000
   }
 }
 

@@ -24,7 +24,7 @@ export const server = pipe(
       server.close(() => logger('Server Shut Down'))
     })
 
-    // runScheduled()
+    runScheduled()
 
     return server
   }
