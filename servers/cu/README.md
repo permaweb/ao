@@ -73,7 +73,7 @@ shot can then be downloaded from the CU at the root.
 First, obtain the process id for the CU process:
 
 ```sh
-ps aux | grep 'src/app.js'
+pgrep node
 ```
 
 Once you have the process id, you can initiate a heap dump using
