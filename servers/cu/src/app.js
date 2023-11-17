@@ -28,8 +28,8 @@ export const server = pipe(
     })
 
     process.on('SIGUSR2', () => {
-      const name = join(config.DUMP_PATH, `${Date.now()}.heapsnapshot`)
-      heapdump.writeSnapshot(name)
+      const name = `${Date.now()}.heapsnapshot`
+      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
       console.log(name)
     })
 
