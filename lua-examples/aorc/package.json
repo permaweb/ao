@@ -1,0 +1,13 @@
+{
+  "name": "aorc-process",
+  "version": "0.0.1",
+  "description": "jshaw playing around",
+  "license": "MIT",
+  "author": "jshaw",
+  "type": "module",
+  "main": "index.js",
+  "devDependencies": {
+    "@permaweb/ao-loader": "0.0.10",
+    "@permaweb/ao-sdk": "0.0.18"
+  }
+}
