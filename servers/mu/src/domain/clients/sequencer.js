@@ -37,15 +37,6 @@ function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   }
 }
 
-// TODO: implement find query
-function findTxWith ({ SEQUENCER_URL }) {
-  return async (txId) => {
-    console.log('Searching for tx on sequencer')
-    console.log(txId)
-    return Promise.reject(new Error('Tx not found on sequencer'))
-  }
-}
-
 function writeProcessTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   return async ({ initState, src, tags }) => {
     const { spawnProcess } = connect({SU_URL: SEQUENCER_URL})
@@ -73,7 +64,6 @@ function fetchSequencerProcessWith({SEQUENCER_URL, logger}) {
 
 export default {
   writeMessageWith,
-  findTxWith,
   writeProcessTxWith,
   fetchSequencerProcessWith
 }
