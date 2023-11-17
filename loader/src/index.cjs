@@ -87,27 +87,32 @@ function trackListeners (name) {
  */
 module.exports = async function (binary) {
   const listenerDiffs = [trackListeners('unhandledRejection'), trackListeners('uncaughtException')]
-  const instance = await Module(binary)
+  const bootstrap = Module(binary)
   const cleanupListeners = listenerDiffs.map(diff => diff())
+
+  const instance = await bootstrap
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
   return (buffer, msg, env) => {
-    if (buffer) instance.HEAPU8.set(buffer)
+    try {
+      if (buffer) instance.HEAPU8.set(buffer)
 
-    const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
-    /**
-     * Cleanup any listeners to prevent memory leaks
-     */
-    cleanupListeners.forEach(c => c())
+      const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
 
-    if (!ok) throw response
+      if (!ok) throw response
 
-    return {
-      buffer: instance.HEAPU8.slice(),
-      error: response.error,
-      output: response.output,
-      messages: response.messages,
-      spawns: response.spawns
+      return {
+        buffer: instance.HEAPU8.slice(),
+        error: response.error,
+        output: response.output,
+        messages: response.messages,
+        spawns: response.spawns
+      }
+    } finally {
+      /**
+       * Always cleanup any listeners to prevent memory leaks
+       */
+      cleanupListeners.forEach(c => c())
     }
   }
 }
