@@ -1,4 +1,4 @@
-import { of, Rejected, Resolved, fromPromise } from 'hyper-async'
+import { of, fromPromise } from 'hyper-async'
 import { __, assoc } from 'ramda'
 import z from 'zod'
 
@@ -10,29 +10,14 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
-function findOrWriteSeqTxWith ({ findSequencerTx, writeSequencerTx, logger }) {
-  findSequencerTx = fromPromise(findSequencerTx)
-  writeSequencerTx = fromPromise(writeSequencerTx)
-
-  const maybeSequencerTx = (tx) => findSequencerTx(tx.id)
-    .bichain(_ => Resolved(tx), Rejected)
-
-  return (tx) => maybeSequencerTx(tx)
-    .bichain(
-      Resolved,
-      (tx) => writeSequencerTx(tx.data)
-    )
-    .map(logger.tap('wrote tx to sequencer'))
-}
-
 export function writeTxWith (env) {
-  const { logger } = env
+  const { logger, writeSequencerTx } = env
 
-  const findOrWriteSeqTx = findOrWriteSeqTxWith(env)
+  const writeSequencer = fromPromise(writeSequencerTx)
 
   return (ctx) => {
     return of(ctx.tx)
-      .chain(findOrWriteSeqTx)
+      .chain(writeSequencer)
       .map(assoc('sequencerTx', __, ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Added "sequencerTx" to ctx'))

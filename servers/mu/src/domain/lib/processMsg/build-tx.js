@@ -3,7 +3,11 @@ import z from 'zod'
 import { assoc, __ } from 'ramda'
 
 const ctxSchema = z.object({
-  tx: z.any()
+  tx: z.object({
+    id: z.string(),
+    data: z.any(),
+    processId: z.string()
+  })
 }).passthrough()
 
 export function buildTxWith ({ buildAndSign, logger }) {
@@ -17,7 +21,8 @@ export function buildTxWith ({ buildAndSign, logger }) {
           { name: 'ao-type', value: 'message' },
           { name: 'SDK', value: 'ao' }
         ],
-        anchor: ctx.cachedMsg.msg.anchor
+        anchor: ctx.cachedMsg.msg.anchor,
+        data: ctx.cachedMsg.msg.data
       })))
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)
