@@ -5,6 +5,6 @@
   "type": "module",
   "main": "index.js",
   "dependencies": {
-    "@permaweb/ao-loader": "^0.0.10"
+    "@permaweb/ao-loader": "^0.0.11"
   }
 }

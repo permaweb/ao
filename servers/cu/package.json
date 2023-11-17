@@ -13,7 +13,7 @@
     "test": "node --test ./src"
   },
   "dependencies": {
-    "@permaweb/ao-loader": "0.0.10",
+    "@permaweb/ao-loader": "0.0.11",
     "cors": "^2.8.5",
     "debug": "^4.3.4",
     "express": "^4.18.2",
