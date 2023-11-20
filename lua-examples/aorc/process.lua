@@ -342,7 +342,7 @@ local API = {
     local funk = findTagByName(msg.tags, "function").value
     return error({
       code = 404,
-      message = 'Function not found: ' .. funk
+      message = 'Function not found: ' .. funk or 'undefined'
     })
   end
 }
@@ -353,19 +353,14 @@ function process.handle(msg, env)
     state = initState()
   end
 
-  local funk
+  local funk = nil
   local funkObj = findTagByName(msg.tags, "function");
 
   if funkObj and funkObj.value then
     -- funkObj exists and has a value
     funk = funkObj.value
   else
-    -- forwardedFor is nil or its value is nil
-    funk = nil
-  end
-
-  -- Throw an error if no function tag exists
-  if funk == nil then
+    -- Throw an error cause no function
     return error({
       code = 500,
       message = 'no function tag in the message'

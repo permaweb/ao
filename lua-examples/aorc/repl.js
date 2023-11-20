@@ -39,7 +39,8 @@ async function repl (state) {
       // Continue the REPL
       await repl(buffer)
     } catch (err) {
-      repl(Buffer.from(null))
+      console.log('Error', err)
+      repl(null)
     }
   })
 }
