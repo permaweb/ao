@@ -4,3 +4,4 @@ dist
 node_modules
 foo.js
 .env
+ao-cache
