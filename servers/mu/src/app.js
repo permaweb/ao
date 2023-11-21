@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { pipe } from 'ramda'
+import heapdump from 'heapdump'
 
 import { logger } from './logger.js'
 import { config } from './config.js'
@@ -25,6 +26,12 @@ export const server = pipe(
     })
 
     // runScheduled()
+    
+    process.on('SIGUSR2', () => {
+      const name = `${Date.now()}.heapsnapshot`
+      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
+      console.log(name)
+    })
 
     return server
   }
