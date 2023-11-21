@@ -1,5 +1,5 @@
 /* eslint-disable no-throw-literal */
-import { describe, test } from 'node:test'
+import { describe, test, before } from 'node:test'
 import * as assert from 'node:assert'
 
 import ms from 'ms'
@@ -289,7 +289,7 @@ describe('loadMessages', () => {
     })
   })
 
-  describe('scheduleMessagesBetween', async () => {
+  describe('scheduleMessagesBetween', () => {
     /**
      * Timestamps the CU deals with will always be milliseconds, at the top of the SECOND
      *
@@ -451,7 +451,9 @@ describe('loadMessages', () => {
     )
 
     const scheduledMessages = []
-    for await (const scheduled of genScheduledMessages) scheduledMessages.push(scheduled)
+    before(async () => {
+      for await (const scheduled of genScheduledMessages) scheduledMessages.push(scheduled)
+    })
 
     test('should create scheduled message according to the schedules', async () => {
       console.log(countBy(prop('sortKey'), scheduledMessages))
