@@ -16,7 +16,7 @@ export function writeTxWith (env) {
   const writeSequencer = fromPromise(writeSequencerTx)
 
   return (ctx) => {
-    return of(ctx.tx)
+    return of(ctx.tx.data)
       .chain(writeSequencer)
       .map(assoc('sequencerTx', __, ctx))
       .map(ctxSchema.parse)
