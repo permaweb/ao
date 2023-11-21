@@ -1,7 +1,8 @@
-import { always, compose } from 'ramda'
+import { compose } from 'ramda'
+import { z } from 'zod'
 
 import { withMiddleware } from './middleware/index.js'
-import { z } from 'zod'
+import { withInMemoryCache } from './middleware/withInMemoryCache.js'
 
 const inputSchema = z.object({
   messageTxId: z.string().min(1, 'a message tx id is required')
@@ -12,14 +13,30 @@ export const withResultRoutes = app => {
     '/result/:messageTxId',
     compose(
       withMiddleware,
-      always(async (req, res) => {
-        const {
-          params: { messageTxId },
-          domain: { apis: { readResult } }
-        } = req
+      withInMemoryCache({
+        keyer: (req) => {
+          const { params: { messageTxId } } = req
+          return messageTxId
+        },
+        loader: async (reqs) => {
+          return reqs.map(async (req) => {
+            const {
+              params: { messageTxId },
+              domain: { apis: { readResult } }
+            } = req
 
-        const input = inputSchema.parse({ messageTxId })
-        return res.send(await readResult(input).toPromise())
+            const input = inputSchema.parse({ messageTxId })
+
+            return readResult(input)
+              .toPromise()
+              /**
+               * Will bubble up to the individual load call
+               * on the dataloader, where it can be handled
+               * individually
+               */
+              .catch(err => err)
+          })
+        }
       })
     )()
   )

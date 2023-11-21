@@ -1,7 +1,8 @@
-import { always, compose } from 'ramda'
+import { compose } from 'ramda'
 import { z } from 'zod'
 
 import { withMiddleware } from './middleware/index.js'
+import { withInMemoryCache } from './middleware/withInMemoryCache.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
@@ -14,15 +15,31 @@ export const withStateRoutes = (app) => {
     '/state/:processId',
     compose(
       withMiddleware,
-      always(async (req, res) => {
-        const {
-          params: { processId },
-          query: { to },
-          domain: { apis: { readState } }
-        } = req
+      withInMemoryCache({
+        keyer: (req) => {
+          const { params: { messageTxId } } = req
+          return messageTxId
+        },
+        loader: async (reqs) => {
+          return reqs.map(async (req) => {
+            const {
+              params: { processId },
+              query: { to },
+              domain: { apis: { readState } }
+            } = req
 
-        const input = inputSchema.parse({ processId, to })
-        return res.send(await readState(input).toPromise())
+            const input = inputSchema.parse({ processId, to })
+
+            return readState(input)
+              .toPromise()
+              /**
+               * Will bubble up to the individual load call
+               * on the dataloader, where it can be handled
+               * individually
+               */
+              .catch(err => err)
+          })
+        }
       })
     )()
   )
