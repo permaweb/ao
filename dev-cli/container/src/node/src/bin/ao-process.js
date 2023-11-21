@@ -1,11 +1,11 @@
 #! /usr/bin/env node
 
 import fs from 'node:fs'
-import { createProcess, createDataItemSigner } from '@permaweb/ao-sdk'
+import { spawnProcess, createDataItemSigner } from '@permaweb/ao-sdk'
 
-import { parseTags, createProcessWith } from '../main.js'
+import { parseTags, spawnProcessWith } from '../main.js'
 
-const uploadAoProcess = createProcessWith({
+const uploadAoProcess = spawnProcessWith({
   walletExists: async (path) => fs.existsSync(path),
   /**
    * implement to read the wallet as JSON from the path
@@ -15,7 +15,7 @@ const uploadAoProcess = createProcessWith({
    * implement to create a contract using the ao SDK
    */
   create: async ({ src, tags, wallet }) => {
-    return createProcess({
+    return spawnProcess({
       srcId: src,
       tags,
       signer: createDataItemSigner(wallet)

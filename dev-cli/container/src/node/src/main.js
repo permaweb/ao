@@ -120,18 +120,18 @@ export const uploadWith =
  *
  * @param {CreateEnvironment} env
  *
- * @typedef CreateProcessArgs
+ * @typedef SpawnProcessArgs
  * @property {string} walletPath
  * @property {string} src
  * @property {Tag[]} tags
  *
- * @callback CreateProcess
- * @param {CreateProcessArgs} args
+ * @callback SpawnProcess
+ * @param {SpawnProcessArgs} args
  * @returns {Promise<string>} the id of the transaction
  *
- * @returns {CreateProcess}
+ * @returns {SpawnProcess}
  */
-export const createProcessWith =
+export const spawnProcessWith =
   ({ walletExists, readWallet, create }) =>
     async ({ walletPath, src, tags }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()

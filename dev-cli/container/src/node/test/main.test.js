@@ -8,7 +8,7 @@ import {
   SUPPORTED_BUNDLERS,
   WalletNotFoundError,
   checkBalanceWith,
-  createProcessWith,
+  spawnProcessWith,
   fundWith,
   uploadWith
 } from '../src/main.js'
@@ -147,9 +147,9 @@ describe('createContractWith', () => {
   }
 
   it('should publish the contract', async () => {
-    const createProcess = createProcessWith(happy)
+    const spawnProcess = spawnProcessWith(happy)
 
-    const res = await createProcess({
+    const res = await spawnProcess({
       walletPath: '/path/to/wallet.json',
       src: 'src-tx-123',
       tags: [
@@ -161,7 +161,7 @@ describe('createContractWith', () => {
   })
 
   it('should pass the correct args to create', async () => {
-    const createProcess = createProcessWith({
+    const spawnProcess = spawnProcessWith({
       ...happy,
       create: (params) => {
         assert.deepStrictEqual(params, {
@@ -176,7 +176,7 @@ describe('createContractWith', () => {
       }
     })
 
-    await createProcess({
+    await spawnProcess({
       walletPath: '/path/to/wallet.json',
       src: 'src-tx-123',
       tags: [
@@ -186,7 +186,7 @@ describe('createContractWith', () => {
   })
 
   it('should throw if the wallet does not exist', async () => {
-    const contract = createProcessWith({
+    const contract = spawnProcessWith({
       ...happy,
       walletExists: async () => false
     })
