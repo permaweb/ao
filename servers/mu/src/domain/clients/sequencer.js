@@ -6,6 +6,8 @@ import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
 function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   return async (data) => {
+    console.log('ddd')
+    console.log(data)
     return of(Buffer.from(data, 'base64'))
       .map(logger.tap(`Forwarding message to SU ${SEQUENCER_URL}`))
       .chain(fromPromise((body) =>

@@ -8,10 +8,15 @@ if (!PROCESS_ID) throw new Error('PROCESS_ID env var is required, so as to know 
 
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 
-const { sendMessage } = connect()
+const { sendMessage } = connect({
+  GATEWAY_URL: "https://arweave.net", 
+  MU_URL: "http://localhost:3004",
+  CU_URL: "http://localhost:6363",
+  SU_URL: "http://localhost:9000"
+})
 
 await sendMessage({
-  processId: PROCESS_ID,
+  processId: '-oM8CYgbqsRcpI3tE_cpGM3kgDlamnYjSGA4nptPao0',
   tags: [
     { name: 'Data-Protocol', value: 'ao' },
     { name: 'function', value: 'raw' }
