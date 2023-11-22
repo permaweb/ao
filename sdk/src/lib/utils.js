@@ -1,6 +1,6 @@
 import {
-  T, __, append, assoc, chain, concat, cond, defaultTo,
-  equals, identity, is, join, map, pipe, propOr, reduce
+  T, __, always, append, assoc, chain, concat, cond, defaultTo,
+  equals, has, identity, is, join, map, pipe, prop, propOr, reduce
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
@@ -38,7 +38,9 @@ export function errFrom (err) {
     defaultTo({ message: 'An error occurred' }),
     cond([
       [is(ZodError), mapZodErr],
-      [T, identity]
+      [has('message'), prop('message')],
+      [is(String), identity],
+      [T, always('An error occurred')]
     ])
   )(err)
 

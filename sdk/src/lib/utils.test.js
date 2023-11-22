@@ -27,5 +27,28 @@ describe('utils', () => {
         'Invalid Arguments \'name\': Expected string, received number.'
       )
     })
+
+    test('should map regular error', async () => {
+      const err = await Promise.reject(new Error('woops')).catch(errFrom)
+      assert.equal(err.message, 'woops')
+    })
+
+    test('should map regular object', async () => {
+      // eslint-disable-next-line
+      const err = await Promise.reject({ message: 'woops' }).catch(errFrom)
+      assert.equal(err.message, 'woops')
+    })
+
+    test('should map regular string', async () => {
+      // eslint-disable-next-line
+      const err = await Promise.reject('woops').catch(errFrom)
+      assert.equal(err.message, 'woops')
+    })
+
+    test('should use the default message', async () => {
+      // eslint-disable-next-line
+      const err = await Promise.reject([]).catch(errFrom)
+      assert.equal(err.message, 'An error occurred')
+    })
   })
 })
