@@ -13,6 +13,8 @@ import runScheduledWith from './bg/manager.js'
 
 import { createLogger } from './logger.js'
 
+export { errFrom } from './utils.js'
+
 const { DataItem } = warpArBundles
 
 export { dataStoreClient }
@@ -50,7 +52,7 @@ export const createApis = (ctx) => {
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: processMsgLogger }),
     findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: processMsgLogger }),
-    deleteMsg: dataStoreClient.deleteMsgWith({dbInstance, logger: processMsgLogger}),
+    deleteMsg: dataStoreClient.deleteMsgWith({ dbInstance, logger: processMsgLogger }),
     findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance }),
     logger
   })
@@ -61,7 +63,7 @@ export const createApis = (ctx) => {
     writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processSpawnLogger }),
-    deleteSpawn: dataStoreClient.deleteSpawnWith({dbInstance, logger: processSpawnLogger}),
+    deleteSpawn: dataStoreClient.deleteSpawnWith({ dbInstance, logger: processSpawnLogger })
   })
 
   const sendMsgLogger = logger.child('sendMsg')

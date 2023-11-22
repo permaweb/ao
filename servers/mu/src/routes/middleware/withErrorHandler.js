@@ -1,3 +1,5 @@
+import { errFrom } from '../../domain/index.js'
+
 /**
  * A middleware that simply calls the next handler in the chain.
  *
@@ -12,9 +14,10 @@ export const withErrorHandler = (handler) => (req, res) => {
     .then(() => handler(req, res))
     .catch((err) => {
       const { domain: { logger } } = req
-      logger(err)
 
+      logger(err)
+      const formatted = errFrom(err)
       if (res.writableEnded) return
-      return res.status(err.status || 500).send(err.message || 'Internal Server Error')
+      return res.status(err.status || 500).send(formatted.message || 'Internal Server Error')
     })
 }
