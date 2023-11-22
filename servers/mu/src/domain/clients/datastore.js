@@ -220,7 +220,7 @@ function findLatestMonitorsWith ({ dbInstance }) {
       }))
       .chain((docs) => {
         if (docs.length === 0) {
-          return Rejected('No documents found')
+          return Resolved([])
         }
 
         const parsedDocs = docs.map(doc => monitoredProcessSchema.parse(doc))
