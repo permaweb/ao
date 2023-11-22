@@ -34,9 +34,9 @@ pub async fn write_message(input: Vec<u8>) -> Result<String, String> {
         Err(e) => return Err(format!("{:?}", e))
     };
     let build_result = build(input).await?;
+    let r = upload(build_result.binary.to_vec()).await?;
     let message = Message::from_bundle(&build_result.bundle)?;
     data_store.save_message(&message)?;
-    let r = upload(build_result.binary.to_vec()).await?;
     Ok(r)
 }
 
@@ -46,9 +46,9 @@ pub async fn write_process(input: Vec<u8>) -> Result<String, String> {
         Err(e) => return Err(format!("{:?}", e))
     };
     let build_result = build(input).await?;
+    let r = upload(build_result.binary.to_vec()).await?;
     let process = Process::from_bundle(&build_result.bundle)?;
     data_store.save_process(&process)?;
-    let r = upload(build_result.binary.to_vec()).await?;
     Ok(r)
 }
 
