@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/app.js",
   "scripts": {
-    "dev": "node -r dotenv/config src/app.js",
+    "dev": "nodemon",
     "docker-build": "docker build -t cu-app .",
     "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
     "heapdump": "kill -USR2",
@@ -30,7 +30,8 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "nodemon": "^3.0.1"
   },
   "engines": {
     "node": "18"
