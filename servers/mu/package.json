@@ -29,9 +29,6 @@
     "hyper-async": "^1.1.2",
     "pg": "^8.11.3",
     "pg-promise": "^11.5.4",
-    "pouchdb": "^8.0.1",
-    "pouchdb-adapter-leveldb": "^8.0.1",
-    "pouchdb-find": "^8.0.1",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
     "zod": "^3.22.4"
@@ -42,6 +39,6 @@
     "supertest": "^6.3.3"
   },
   "engines": {
-    "node": "20"
+    "node": "18"
   }
 }
