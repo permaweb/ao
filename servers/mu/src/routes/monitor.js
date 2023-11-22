@@ -24,7 +24,6 @@ export const withMonitorRoutes = (app) => {
           .chain(monitorProcess)
           .toPromise()
 
-
         return res.status(200).send('Monitoring process')
       })
     )()
