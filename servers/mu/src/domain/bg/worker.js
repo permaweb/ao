@@ -58,32 +58,35 @@ let runningMonitorList = []
 
 async function processMonitors() {
   try {
-    let monitorList = await findLatestMonitors()
+    let monitorList = await findLatestMonitors();
   
-    monitorList.map((monitor) => {
-      // make sure the monitor record from the db is well formed
+    for (const monitor of monitorList) {
       const validationResult = monitorSchema.safeParse(monitor);
-
       if (validationResult.success) {
         if (shouldRun(monitor)) {
-          processMonitor(monitor).then((_result) => {
-            // monitor completed remove it so it picks up again on the next tick
-            const indexToRemove = runningMonitorList.findIndex(
-              (item) => item.id === monitor.id
-            );
-            if (indexToRemove !== -1) {
-              runningMonitorList.splice(indexToRemove, 1);
-            }
-          });
+          try {
+            await processMonitor(monitor);
+            // Handle removal from runningMonitorList here
+            removeMonitorFromRunningList(monitor.id);
+          } catch (error) {
+            // Handle error specific to processing a monitor
+            removeMonitorFromRunningList(monitor.id);
+            console.log(`Error processing monitor ${monitor.id}:`, error);
+          }
         }
       } else {
-        console.error('Invalid monitor:', validationResult.error);
+        console.log('Invalid monitor:', validationResult.error);
       }
-    })
-  } catch(e) {
-    if(e !== 'No documents found') {
-      console.log(e)
     }
+  } catch(e) {
+    console.log(e);
+  }
+}
+
+function removeMonitorFromRunningList(monitorId) {
+  const index = runningMonitorList.findIndex(item => item.id === monitorId);
+  if (index !== -1) {
+    runningMonitorList.splice(index, 1);
   }
 }
 
