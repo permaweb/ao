@@ -1,8 +1,12 @@
-import pgPromise from 'pg-promise';
-import dotenv from 'dotenv';
+import pgPromise from 'pg-promise'
 
-dotenv.config();
+/**
+ * TODO: these credentials should be injected,
+ *
+ * but for now just keeping as is to minimize the diff
+ */
+import { config } from '../src/config.js'
 
 const pgp = pgPromise()
-const db = pgp(process.env.MU_DATABASE_URL)
+const db = pgp(config.MU_DATABASE_URL)
 export default db

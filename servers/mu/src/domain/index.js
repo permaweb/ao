@@ -2,7 +2,7 @@ import { z } from 'zod'
 import warpArBundles from 'warp-arbundles'
 
 import dataStoreClient from './clients/datastore.js'
-import dbInstance from './clients/dbInstance.js'
+import dbInstance, { createDbClient } from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
 import signerClient from './clients/signer.js'
@@ -23,24 +23,40 @@ export { dbInstance }
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
 
-export const batchLogger = createLogger('ao-mu-batch')
-const runScheduledLogger = batchLogger.child('runScheduled')
-const runScheduled = runScheduledWith({ dbClient: dataStoreClient, dbInstance, logger: runScheduledLogger })
-export { runScheduled }
+export const createScheduledApis = (ctx) => {
+  const MU_DATABASE_URL = ctx.MU_DATABASE_URL
+
+  /**
+   * hate side effects like this, see TODO in ./dbInstance.js
+   */
+  createDbClient({ MU_DATABASE_URL })
+
+  const batchLogger = createLogger('ao-mu-batch')
+  const runScheduledLogger = batchLogger.child('runScheduled')
+  const runScheduled = runScheduledWith({ dbClient: dataStoreClient, dbInstance, logger: runScheduledLogger })
+  return { runScheduled }
+}
 
 export const domainConfigSchema = z.object({
   SEQUENCER_URL: z.string().url('SEQUENCER_URL must be a a valid URL'),
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
-  MU_WALLET: z.record(z.any())
+  MU_WALLET: z.record(z.any()),
+  MU_DATABASE_URL: z.string()
 })
 
 export const createApis = (ctx) => {
   const SEQUENCER_URL = ctx.SEQUENCER_URL
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
+  const MU_DATABASE_URL = ctx.MU_DATABASE_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
+
+  /**
+   * hate side effects like this, see TODO in ./dbInstance.js
+   */
+  createDbClient({ MU_DATABASE_URL })
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({

@@ -49,6 +49,7 @@ const CONFIG_ENVS = {
     MU_WALLET: walletKey,
     SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
     CU_URL: process.env.CU_URL || 'https://ao-cu-2.onrender.com',
+    MU_DATABASE_URL: process.env.MU_DATABASE_URL || 'postgres://admin:admin@localhost:5432/mu',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     SCHEDULED_INTERVAL: 600000,
     DUMP_PATH: process.env.DUMP_PATH || './static'
@@ -59,6 +60,7 @@ const CONFIG_ENVS = {
     MU_WALLET: walletKey,
     SEQUENCER_URL: process.env.SEQUENCER_URL,
     CU_URL: process.env.CU_URL,
+    MU_DATABASE_URL: process.env.MU_DATABASE_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
     SCHEDULED_INTERVAL: 600000,
     DUMP_PATH: process.env.DUMP_PATH || './static'
