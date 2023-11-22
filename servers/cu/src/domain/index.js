@@ -9,6 +9,7 @@ import { readScheduledMessagesWith } from './readScheduledMessages.js'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema } from './model.js'
+export { errFrom } from './utils.js'
 
 export const createApis = (ctx) => {
   ctx.logger('Creating business logic apis')
