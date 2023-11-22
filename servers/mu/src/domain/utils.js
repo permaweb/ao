@@ -67,9 +67,9 @@ function mapZodErr (zodErr) {
         (acc, zodIssue) => {
           const { message, path: _path, contextCode: _contextCode } = zodIssue
           /**
-               * if object, path[1] will be the object key and path[0] '0', so just skip it
-               * if string, path[0] will be the string and path[1] undefined
-               */
+           * if object, path[1] will be the object key and path[0] '0', so just skip it
+           * if string, path[0] will be the string and path[1] undefined
+           */
           const path = _path[1] || _path[0]
           const contextCode = _contextCode ? `${_contextCode} ` : ''
 
