@@ -1,12 +1,13 @@
 import {
-  T, always, chain, concat, cond, defaultTo,
-  equals, has, identity, is, join, pipe, prop, reduce
+  T, always, chain, concat, cond, equals,
+  has, identity, is, join, pipe, prop, reduce
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
 export function errFrom (err) {
+  err = err || { message: 'An error occurred' }
+
   const message = pipe(
-    defaultTo({ message: 'An error occurred' }),
     cond([
       [is(ZodError), mapZodErr],
       [has('message'), prop('message')],
@@ -15,7 +16,9 @@ export function errFrom (err) {
     ])
   )(err)
 
-  return new Error(message)
+  const e = new Error(message)
+  e.stack += err.stack || ''
+  return e
 }
 
 function mapZodErr (zodErr) {
