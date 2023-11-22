@@ -2,5 +2,6 @@
   "watch": ["src"],
   "exec": "node -r dotenv/config src/app.js",
   "ext": "js",
-  "delay": "500"
+  "delay": "500",
+  "signal": "SIGHUP"
 } 

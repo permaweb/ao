@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import express from 'express'
 import cors from 'cors'
 import { pipe } from 'ramda'
@@ -7,7 +8,8 @@ import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 
-import { runScheduled } from './domain/index.js';
+// eslint-disable-next-line
+import { runScheduled } from './domain/index.js'
 
 export const server = pipe(
   (app) => app.use(cors()),
@@ -26,7 +28,7 @@ export const server = pipe(
     })
 
     // runScheduled()
-    
+
     process.on('SIGUSR2', () => {
       const name = `${Date.now()}.heapsnapshot`
       heapdump.writeSnapshot(join(config.DUMP_PATH, name))
