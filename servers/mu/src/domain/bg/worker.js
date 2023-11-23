@@ -43,7 +43,7 @@ const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
  */
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    setInterval(() => processMonitors(), config.SCHEDULED_INTERVAL)
+    // setInterval(() => processMonitors(), config.SCHEDULED_INTERVAL)
     parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
