@@ -41,7 +41,10 @@ export const domainConfigSchema = z.object({
   SEQUENCER_URL: z.string().url('SEQUENCER_URL must be a a valid URL'),
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
   MU_WALLET: z.record(z.any()),
-  MU_DATABASE_URL: z.string()
+  MU_DATABASE_URL: z.string(),
+  SCHEDULED_INTERVAL: z.number(),
+  DUMP_PATH: z.string(),
+  GATEWAY_URL: z.string()
 })
 
 export const createApis = (ctx) => {
