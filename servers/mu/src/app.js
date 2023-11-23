@@ -28,7 +28,7 @@ export const server = pipe(
 
     // eslint-disable-next-line
     const { runScheduled } = createScheduledApis(config)
-    // runScheduled()
+    runScheduled()
 
     process.on('SIGUSR2', () => {
       const name = `${Date.now()}.heapsnapshot`
