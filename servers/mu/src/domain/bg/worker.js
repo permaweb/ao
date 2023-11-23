@@ -43,12 +43,22 @@ const updateMonitor = dataStoreClient.updateMonitorWith({dbInstance, logger})
  */
 parentPort.on('message', (message) => {
   if(message.label === 'start') {
-    // setInterval(() => processMonitors(), config.SCHEDULED_INTERVAL)
+    setInterval(() => {
+      processMonitors()
+        .then(
+            _result => {},
+            error => {
+              console.log(`processMonitors error ${error}`)
+            }
+        )
+    }, config.SCHEDULED_INTERVAL)
     parentPort.postMessage(`Monitor worker started`)
   } else {
     parentPort.postMessage(`Invalid message`)
   }
 })
+
+
 
 /**
  * a list to track if a monitor is currently being processed
@@ -66,10 +76,8 @@ async function processMonitors() {
         if (shouldRun(monitor)) {
           try {
             await processMonitor(monitor);
-            // Handle removal from runningMonitorList here
             removeMonitorFromRunningList(monitor.id);
           } catch (error) {
-            // Handle error specific to processing a monitor
             removeMonitorFromRunningList(monitor.id);
             console.log(`Error processing monitor ${monitor.id}:`, error);
           }
@@ -78,8 +86,10 @@ async function processMonitors() {
         console.log('Invalid monitor:', validationResult.error);
       }
     }
+
+    return 'finished processing'
   } catch(e) {
-    console.log(e);
+    throw e
   }
 }
 
