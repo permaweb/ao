@@ -1,19 +1,19 @@
 import { always, compose } from 'ramda'
 import { of } from 'hyper-async'
-import { z } from 'zod'
+// import { z } from 'zod'
 // import WarpArBundles from 'warp-arbundles'
 
 import { withMiddleware } from './middleware/index.js'
 
 // const { DataItem } = WarpArBundles
 
-const inputSchema = z.object({
-  body: z.any().refine(
-    // async (val) => DataItem.verify(val).catch((_err) => false),
-    async (val) => true,
-    { message: 'A valid and signed data item must be provided as the body' }
-  )
-})
+// const inputSchema = z.object({
+//   body: z.any().refine(
+//     // async (val) => DataItem.verify(val).catch((_err) => false),
+//     async (val) => true,
+//     { message: 'A valid and signed data item must be provided as the body' }
+//   )
+// })
 
 export const withMonitorRoutes = (app) => {
   app.post(
@@ -26,9 +26,10 @@ export const withMonitorRoutes = (app) => {
           domain: { apis: { monitorProcess } }
         } = req
 
-        const input = await inputSchema.parseAsync(body)
+        if (!body) return res.status(400).send('Signed data item is required')
+        // const input = await inputSchema.parseAsync(body)
 
-        await of({ raw: input.body })
+        await of({ raw: body })
           .chain(monitorProcess)
           .toPromise()
 
