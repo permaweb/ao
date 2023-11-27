@@ -8,7 +8,10 @@ class LuaFile():
         else:
             self.basename = os.path.basename(filepath)
 
-        self.module_name = os.path.splitext(self.basename)[0].replace('/', '.')
+        module_name = os.path.splitext(self.basename)[0].replace('/', '.')
+        if module_name.startswith('.src'):
+            module_name = module_name.replace('.src', '', 1)
+        self.module_name = module_name
 
 
 class ModuleFile():
