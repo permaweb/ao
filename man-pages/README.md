@@ -1,6 +1,6 @@
 # Manpages
 
-The `man-pages` directory holds several small manuals related to `ao` and `aos`.  These `manpages` can be easily installed on your own AOS instance!
+The `man-pages` directory holds several small manuals related to `ao` and `aos`.  These `manpages` can be easily installed on your own AOS instance! Each of these `manpages` assumes you have `nodejs` installed.  The newer the version, the better.
 
 Manpages will follow the following spec.
 
