@@ -2,6 +2,8 @@
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use dotenv::dotenv;
 use std::env;
 use std::env::VarError;
@@ -48,26 +50,34 @@ impl From<diesel::prelude::ConnectionError> for StoreErrorType {
     }
 }
 
+
 pub struct StoreClient{
-    connection: PgConnection
+    pool: Pool<ConnectionManager<PgConnection>>
 }
 
 impl StoreClient {
-    pub fn connect() -> Result<StoreClient, StoreErrorType> {
+    pub fn new() -> Result<Self, StoreErrorType> {
         dotenv().ok();
-    
         let database_url = env::var("DATABASE_URL")?;
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        let pool = Pool::builder()
+            .test_on_check_out(true)
+            .build(manager).map_err(
+                |_| StoreErrorType::DatabaseError("Failed to initialize connection pool.".to_string())
+            )?;
 
-        let connection = PgConnection::establish(&database_url)?;
-
-        Ok(StoreClient {
-            connection: connection
-        })
+        Ok(StoreClient { pool })
     }
 
-    pub fn save_process(&mut self, process: &Process) -> Result<String, StoreErrorType> {
+    pub fn get_conn(&self) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType> {
+        self.pool.get().map_err(
+            |_| StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string())
+        )
+    }
+
+    pub fn save_process(&self, process: &Process) -> Result<String, StoreErrorType> {
         use super::schema::processes::dsl::*;
-        let conn = &mut self.connection;
+        let conn = &mut self.get_conn()?;
     
         let new_process = NewProcess {
             process_id: &process.process_id,
@@ -87,9 +97,9 @@ impl StoreClient {
         }
     }
 
-    pub fn get_process(&mut self, process_id_in: &str) -> Result<Process, StoreErrorType> {
+    pub fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType> {
         use super::schema::processes::dsl::*;
-        let conn = &mut self.connection;
+        let conn = &mut self.get_conn()?;
     
         let db_process_result: Result<Option<DbProcess>, DieselError> = processes
             .filter(process_id.eq(process_id_in))
@@ -106,9 +116,9 @@ impl StoreClient {
         }
     }
     
-    pub fn save_message(&mut self, message: &Message) -> Result<String, StoreErrorType> {
+    pub fn save_message(&self, message: &Message) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.connection;
+        let conn = &mut self.get_conn()?;
     
         let new_message = NewMessage {
             process_id: &message.process_id,
@@ -135,9 +145,9 @@ impl StoreClient {
     }    
 
 
-    pub fn get_messages(&mut self, process_id_in: &str) -> Result<Vec<Message>, StoreErrorType> {
+    pub fn get_messages(&self, process_id_in: &str) -> Result<Vec<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.connection;
+        let conn = &mut self.get_conn()?;
 
         let db_messages_result: Result<Vec<DbMessage>, DieselError> = messages
             .filter(process_id.eq(process_id_in))
@@ -159,9 +169,9 @@ impl StoreClient {
         }
     }
 
-    pub fn get_message(&mut self, message_id_in: &str) -> Result<Message, StoreErrorType> {
+    pub fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.connection;
+        let conn = &mut self.get_conn()?;
     
         let db_message_result: Result<Option<DbMessage>, DieselError> = messages
             .filter(message_id.eq(message_id_in))

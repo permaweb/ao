@@ -1,4 +1,6 @@
 use std::env;
+use std::sync::Arc;
+
 use dotenv::dotenv;
 use std::time::{SystemTime, UNIX_EPOCH, SystemTimeError};
 use serde_json::json;
@@ -28,11 +30,7 @@ async fn upload(build_result: Vec<u8>) -> Result<String, String> {
     Ok(result)
 }
 
-pub async fn write_message(input: Vec<u8>) -> Result<String, String> {
-    let mut data_store = match StoreClient::connect() {
-        Ok(d) => d,
-        Err(e) => return Err(format!("{:?}", e))
-    };
+pub async fn write_message(data_store: Arc<StoreClient>, input: Vec<u8>,) -> Result<String, String> {
     let build_result = build(input).await?;
     let r = upload(build_result.binary.to_vec()).await?;
     let message = Message::from_bundle(&build_result.bundle)?;
@@ -40,11 +38,7 @@ pub async fn write_message(input: Vec<u8>) -> Result<String, String> {
     Ok(r)
 }
 
-pub async fn write_process(input: Vec<u8>) -> Result<String, String> {
-    let mut data_store = match StoreClient::connect() {
-        Ok(d) => d,
-        Err(e) => return Err(format!("{:?}", e))
-    };
+pub async fn write_process(data_store: Arc<StoreClient>, input: Vec<u8>) -> Result<String, String> {
     let build_result = build(input).await?;
     let r = upload(build_result.binary.to_vec()).await?;
     let process = Process::from_bundle(&build_result.bundle)?;
@@ -53,14 +47,11 @@ pub async fn write_process(input: Vec<u8>) -> Result<String, String> {
 }
 
 pub async fn read_messages(
+    data_store: Arc<StoreClient>,
     process_id: String, 
     from: Option<String>, 
     to: Option<String>
 ) -> Result<String, String> {
-    let mut data_store = match StoreClient::connect() {
-        Ok(d) => d,
-        Err(e) => return Err(format!("{:?}", e))
-    };
     let messages = data_store.get_messages(&process_id)?;
     let sorted_messages = SortedMessages::from_messages(messages, from, to)?;
     let result = match serde_json::to_string(&sorted_messages) {
@@ -71,12 +62,9 @@ pub async fn read_messages(
 }
 
 pub async fn read_message(
+    data_store: Arc<StoreClient>,
     message_id: String
 ) -> Result<String, String> {
-    let mut data_store = match StoreClient::connect() {
-        Ok(d) => d,
-        Err(e) => return Err(format!("{:?}", e))
-    };
     let message = data_store.get_message(&message_id)?;
     let result = match serde_json::to_string(&message) {
         Ok(r) => r,
@@ -86,12 +74,9 @@ pub async fn read_message(
 }
 
 pub async fn read_process(
+    data_store: Arc<StoreClient>,
     process_id: String
 ) -> Result<String, String> {
-    let mut data_store = match StoreClient::connect() {
-        Ok(d) => d,
-        Err(e) => return Err(format!("{:?}", e))
-    };
     let process = data_store.get_process(&process_id)?;
     let result = match serde_json::to_string(&process) {
         Ok(r) => r,
