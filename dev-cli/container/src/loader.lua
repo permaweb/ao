@@ -1,5 +1,5 @@
 local json = require "json"
-local process = require ".src.process"
+local process = require ".process"
 
 function handle(msgJSON, aoJSON)
   -- decode inputs

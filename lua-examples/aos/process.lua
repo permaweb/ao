@@ -1,5 +1,5 @@
 local JSON = require("json")
-local ao = require('.src.ao')
+local ao = require('.ao')
 
 local process = { _version = "0.0.6" }
 
