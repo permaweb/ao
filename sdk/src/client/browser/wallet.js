@@ -6,33 +6,6 @@ const { DataItem } = WarpArBundles
 if (!globalThis.Buffer) globalThis.Buffer = Buffer
 
 /**
- * Adapted from:
- * https://github.com/warp-contracts/warp-contracts-plugins/blob/cacb84e41da8936184ed0d7792feb93d04fec825/warp-contracts-plugin-signature/src/web/arweave/InjectedArweaveSigner.ts#L6
- *
- * Constants copied from https://github.com/Bundlr-Network/arbundles/blob/4c90af5a71b14a3c1a213b84fa9edb545b48b8a2/src/constants.ts#L18
- */
-class InjectedArweaveSigner {
-  constructor (windowArweaveWallet, createDataItem) {
-    this.signer = windowArweaveWallet
-    this.createDataItem = createDataItem
-    this.ownerLength = 512
-    this.signatureLength = 512
-    this.signatureType = 1
-  }
-
-  async createAndSignDataItem ({ data, tags, target, anchor }) {
-    /**
-     * signDataItem interface according to ArweaveWalletConnector
-     *
-     * https://github.com/jfbeats/ArweaveWalletConnector/blob/7c167f79cd0cf72b6e32e1fe5f988a05eed8f794/src/Arweave.ts#L46C23-L46C23
-     */
-    const buf = Buffer.from(await this.signer.signDataItem({ data, tags, target, anchor }))
-    const dataI = this.createDataItem(buf)
-    return dataI
-  }
-}
-
-/**
  * A function that builds a signer using the global arweaveWallet
  * commonly used in browser-based dApps
  *
@@ -45,12 +18,17 @@ export function createDataItemSigner (arweaveWallet) {
    * with a stub
    */
   const signer = async ({ data, tags, target, anchor, createDataItem = (buf) => new DataItem(buf) }) => {
-    const iSigner = new InjectedArweaveSigner(arweaveWallet, createDataItem)
-    return iSigner.createAndSignDataItem({ data, tags, target, anchor })
-      .then(async dataItem => ({
-        id: await dataItem.id,
-        raw: await dataItem.getRaw()
-      }))
+    /**
+     * signDataItem interface according to ArweaveWalletConnector
+     *
+     * https://github.com/jfbeats/ArweaveWalletConnector/blob/7c167f79cd0cf72b6e32e1fe5f988a05eed8f794/src/Arweave.ts#L46C23-L46C23
+     */
+    const view = await arweaveWallet.signDataItem({ data, tags, target, anchor })
+    const dataItem = createDataItem(Buffer.from(view))
+    return {
+      id: await dataItem.id,
+      raw: await dataItem.getRaw()
+    }
   }
 
   return signer
