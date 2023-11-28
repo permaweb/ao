@@ -36,7 +36,7 @@ export const withMessageRoutes = (app) => {
         /**
          * Forward the message
          */
-        await of({ raw: input })
+        await of({ raw: input.body })
           .chain(sendMsg)
           .bimap(
             logger.tap('Failed to forward initial message to the SU and read result from the CU'),
