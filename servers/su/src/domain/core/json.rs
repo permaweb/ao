@@ -55,7 +55,6 @@ pub struct Process {
 pub struct Message {
     pub message: MessageInner,
     pub block: Option<Block>,
-    pub bundle_block: Option<Block>,
     pub owner: Owner,
     pub sort_key: String,
     pub process_id: String,
@@ -164,7 +163,6 @@ impl Message {
         Ok(Message {
             message: message_inner,
             block: Some(block),
-            bundle_block: None,
             owner,
             sort_key: sort_key_clone,
             process_id,
