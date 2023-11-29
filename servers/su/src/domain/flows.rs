@@ -7,15 +7,18 @@ use serde_json::json;
 use arweave_rs::network::NetworkInfoClient;
 use reqwest::{Url};
 
-use crate::domain::clients::{uploader::UploaderClient, store::StoreClient};
+use crate::domain::clients::{uploader::UploaderClient, store::StoreClient, gateway::ArweaveGateway, wallet::FileWallet};
 use crate::domain::core::json::{Message, Process, SortedMessages};
 use crate::domain::core::builder::{Builder, BuildResult};
+use crate::domain::core::dal::{Gateway, Wallet};
 
 
 async fn build(input: Vec<u8>) -> Result<BuildResult, String> {
     dotenv().ok();
+    let gateway: Arc<dyn Gateway> = Arc::new(ArweaveGateway);
+    let wallet: Arc<dyn Wallet> = Arc::new(FileWallet);
     let wallet_path = env::var("SU_WALLET_PATH").expect("SU_WALLET_PATH must be set");
-    let builder = Builder::new("https://node2.irys.xyz", &wallet_path)?;
+    let builder = Builder::new("https://node2.irys.xyz", &wallet_path, gateway, wallet)?;
     let build_result = builder.build(input).await?;
     Ok(build_result)
 }
