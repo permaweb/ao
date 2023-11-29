@@ -1,20 +1,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::fs::File;
-use std::io::Read;
-use std::env;
+use std::{sync::Arc};
 
 use sha2::{Digest, Sha256};
-
 use hex;
-
-use reqwest::{Url};
-
 use base64_url;
-
-use arweave_rs::network::NetworkInfoClient;
-
 use jsonwebkey::{JsonWebKey, Key, ByteVec};
 
+use super::dal::{Gateway, Wallet};
 use super::bytes::DataItem;
 
 #[derive(Debug, Clone)]
@@ -25,12 +17,6 @@ pub enum SequencerErrorType {
 impl From<std::time::SystemTimeError> for SequencerErrorType {
     fn from(_error: std::time::SystemTimeError) -> Self {
         SequencerErrorType::SequencerError("Sequencer experienced an error obtaining system time".to_string())
-    }
-}
-
-impl From<arweave_rs::network::ResponseError> for SequencerErrorType {
-    fn from(_error: arweave_rs::network::ResponseError) -> Self {
-        SequencerErrorType::SequencerError("Sequencer experienced an error obtaining network info".to_string())
     }
 }
 
@@ -52,33 +38,27 @@ impl From<base64_url::base64::DecodeError> for SequencerErrorType {
     }
 }
 
-pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, SequencerErrorType> {
+impl From<String> for SequencerErrorType {
+    fn from(error: String) -> Self {
+        SequencerErrorType::SequencerError(error)
+    }
+}
+
+pub async fn gen_sort_key(data_item: &DataItem, gateway: Arc<dyn Gateway>, wallet: Arc<dyn Wallet>) -> Result<String, SequencerErrorType> {
     dotenv::dotenv().ok();
 
-    // TODO: move time into its own core module
     let start_time = SystemTime::now();
     let duration = start_time.duration_since(UNIX_EPOCH)?;
     let millis = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
     let millis_string = millis.to_string();
 
-    // TODO: move network to a client or its own core module
-    let gateway_url = "https://arweave.net".to_string();
-    let url = match Url::parse(&gateway_url) {
-        Ok(u) => u,
-        Err(e) => {
-            return Err(SequencerErrorType::SequencerError(format!("{:?}", e)));
-        }
-    };
+    let network_info = gateway.network_info().await?;
+    let height = network_info.height.clone();
+    let current_block_id_base64 = network_info.current.clone();
+    let current_block_id_bytes = base64_url::decode(&current_block_id_base64)?;
 
-    let network_client = NetworkInfoClient::new(url);
-    let network_info = network_client.network_info().await?;
-
-    let file_path = env::var("SU_WALLET_PATH")
-        .expect("SU_WALLET_PATH environment variable not found");
-    let mut file = File::open(&file_path)?;
-    let mut key_json = String::new();
-    file.read_to_string(&mut key_json)?;
-    let jwk: JsonWebKey = serde_json::from_str(&key_json)?;
+    let wallet_json = wallet.wallet_json()?;
+    let jwk: JsonWebKey = serde_json::from_str(&wallet_json)?;
     let d_bytes = match &*jwk.key {
         Key::RSA { private: Some(rsa_private), .. } => {
             let d_value: &ByteVec = &rsa_private.d;
@@ -87,14 +67,8 @@ pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, SequencerError
         _ => return Err(SequencerErrorType::SequencerError("Sequencer experienced a wallet error".to_string()))
     };
 
-    let height = network_info.height.clone();
-    let height_string = format!("{:0>12}", height);
-
     let tx_id_base64 = data_item.id().clone();
     let tx_id_bytes = base64_url::decode(&tx_id_base64)?;
-
-    let current_block_id_base64 = network_info.current.to_string();
-    let current_block_id_bytes = base64_url::decode(&current_block_id_base64)?;
 
     let concatenated: Vec<u8> = concat_buffers(
         vec![
@@ -106,7 +80,7 @@ pub async fn gen_sort_key(data_item: &DataItem) -> Result<String, SequencerError
     let hashed = hash(&concatenated);
     let hex_hash = hex::encode(hashed);
 
-    let sort_key = format!("{},{},{}", height_string, millis_string, hex_hash);
+    let sort_key = format!("{},{},{}", height, millis_string, hex_hash);
 
     Ok(sort_key)
 }

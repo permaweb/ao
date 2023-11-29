@@ -1,16 +1,20 @@
 use std::{path::PathBuf, sync::Arc};
 use std::{str::FromStr};
+
 use reqwest::{Url};
 use bundlr_sdk::{bundlr::BundlrBuilder, currency::arweave::ArweaveBuilder, tags::Tag};
 
 use super::bytes::{DataBundle, DataItem, ByteErrorType};
 use super::sequencer::{gen_sort_key, SequencerErrorType};
 use super::verifier::{Verifier, VerifyErrorType};
+use super::dal::{Gateway, Wallet};
 
 pub struct Builder {
     node_url: Url,
     wallet: PathBuf,
     verifier: Verifier,
+    gateway: Arc<dyn Gateway>,
+    file_wallet: Arc<dyn Wallet>
 }
 
 pub struct BuildResult{
@@ -60,7 +64,7 @@ impl From<BuilderErrorType> for String {
 }
 
 impl Builder {
-    pub fn new(node_url: &str, wallet_path: &str) -> Result<Self, BuilderErrorType> {
+    pub fn new(node_url: &str, wallet_path: &str, gateway: Arc<dyn Gateway>, file_wallet: Arc<dyn Wallet>) -> Result<Self, BuilderErrorType> {
         let wallet = PathBuf::from_str(wallet_path)
             .expect("wallet file does not exist");
 
@@ -69,12 +73,14 @@ impl Builder {
             Err(e) => return Err(BuilderErrorType::BuilderError(format!("builder error - {}", e.to_string())))
         };
 
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(Arc::clone(&gateway));
 
         Ok(Builder {
             node_url: url,
             wallet,
-            verifier
+            verifier,
+            gateway,
+            file_wallet
         })
     }
 
@@ -86,7 +92,7 @@ impl Builder {
 
         self.verifier.verify_data_item(&item).await?;
 
-        let sort_key = gen_sort_key(&item).await?;
+        let sort_key = gen_sort_key(&item, self.gateway.clone(), self.file_wallet.clone()).await?;
         let mut data_bundle = DataBundle::new(sort_key.clone());
         data_bundle.add_item(item);
         let buffer = data_bundle.to_bytes()?;
