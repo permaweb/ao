@@ -6,8 +6,10 @@ use bytes::{BufMut, Bytes};
 
 use bundlr_sdk::{error::BundlrError, tags::*};
 
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, Sha384};
 use base64_url;
+
+use ring::rand::SecureRandom;
 
 #[derive(Debug)]
 pub enum ByteErrorType {
@@ -91,7 +93,7 @@ enum Data {
 #[derive(Clone)]
 pub struct DataItem {
     signature_type: SignerMap,
-    signature: Vec<u8>,
+    pub signature: Vec<u8>,
     owner: Vec<u8>,
     target: Vec<u8>,
     anchor: Vec<u8>,
@@ -123,6 +125,15 @@ impl SignerMap {
     }
 }
 
+impl SignerMap {
+    pub fn as_u16(&self) -> u16 {
+        match self {
+            SignerMap::Arweave => 1,
+            _ => u16::MAX,
+        }
+    }
+}
+
 impl From<u16> for SignerMap {
     fn from(t: u16) -> Self {
         match t {
@@ -132,7 +143,100 @@ impl From<u16> for SignerMap {
     }
 }
 
+pub const LIST_AS_BUFFER: &[u8] = "list".as_bytes();
+pub const BLOB_AS_BUFFER: &[u8] = "blob".as_bytes();
+pub const DATAITEM_AS_BUFFER: &[u8] = "dataitem".as_bytes();
+pub const ONE_AS_BUFFER: &[u8] = "1".as_bytes();
+
+pub enum DeepHashChunk {
+    Chunk(Bytes),
+    Chunks(Vec<DeepHashChunk>),
+}
+
+pub fn deep_hash_sync(chunk: DeepHashChunk) -> Result<Bytes, ByteErrorType> {
+    match chunk {
+        DeepHashChunk::Chunk(b) => {
+            let tag = [BLOB_AS_BUFFER, b.len().to_string().as_bytes()].concat();
+            let c = [sha384hash(tag.into()), sha384hash(b)].concat();
+            Ok(Bytes::copy_from_slice(&sha384hash(c.into())))
+        }
+        DeepHashChunk::Chunks(chunks) => {
+            let len = chunks.len() as f64;
+            let tag = [LIST_AS_BUFFER, len.to_string().as_bytes()].concat();
+            let acc = sha384hash(tag.into());
+            deep_hash_chunks_sync(chunks, acc)
+        }
+    }
+}
+
+pub fn deep_hash_chunks_sync(
+    mut chunks: Vec<DeepHashChunk>,
+    acc: Bytes,
+) -> Result<Bytes, ByteErrorType> {
+    if chunks.is_empty() {
+        return Ok(acc);
+    };
+    let acc = Bytes::copy_from_slice(&acc);
+    let hash_pair = [acc, deep_hash_sync(chunks.remove(0))?].concat();
+    let new_acc = sha384hash(hash_pair.into());
+    deep_hash_chunks_sync(chunks, new_acc)
+}
+
+fn sha384hash(b: Bytes) -> Bytes {
+    let mut hasher = Sha384::new();
+    hasher.update(&b);
+    Bytes::copy_from_slice(&hasher.finalize())
+}
+
 impl DataItem {
+    pub fn new(target: Vec<u8>, data: Vec<u8>, tags: Vec<Tag>, owner: Vec<u8>) -> Result<Self, ByteErrorType> {
+        let mut randoms: [u8; 32] = [0; 32];
+        let sr = ring::rand::SystemRandom::new();
+        match sr.fill(&mut randoms) {
+            Ok(()) => (),
+            Err(err) => return Err(ByteErrorType::ByteError(err.to_string())),
+        }
+        let anchor = randoms.to_vec();
+
+        Ok(DataItem {
+            signature_type: SignerMap::Arweave,
+            signature: vec![],
+            owner: owner,
+            target,
+            anchor,
+            tags,
+            data: Data::Bytes(data),
+        })
+    }
+
+    pub fn get_message(&mut self) -> Result<Bytes, ByteErrorType> {
+        let encoded_tags = if !self.tags.is_empty() {
+            self.tags.encode()?
+        } else {
+            Bytes::default()
+        };
+
+        match &mut self.data {
+            Data::None => Ok(Bytes::new()),
+            Data::Bytes(data) => {
+                let data_chunk = DeepHashChunk::Chunk(data.clone().into());
+                let sig_type = &self.signature_type;
+                let sig_type_bytes = sig_type.as_u16().to_string().as_bytes().to_vec();
+                deep_hash_sync(DeepHashChunk::Chunks(vec![
+                    DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
+                    DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+                    DeepHashChunk::Chunk(sig_type_bytes.to_vec().into()),
+                    DeepHashChunk::Chunk(self.owner.to_vec().into()),
+                    DeepHashChunk::Chunk(self.target.to_vec().into()),
+                    DeepHashChunk::Chunk(self.anchor.to_vec().into()),
+                    DeepHashChunk::Chunk(encoded_tags.clone()),
+                    data_chunk,
+                ]))
+            }
+        }
+    }
+    
+
     pub fn is_signed(&self) -> bool {
         !self.signature.is_empty() && self.signature_type != SignerMap::None
     }

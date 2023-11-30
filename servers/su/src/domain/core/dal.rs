@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 /*
 Interfaces for core dependencies. Implement these traits 
-in clients etc... to feed side effects into the core
+in clients etc... to inject side effects into the core
 */
 
 pub struct NetworkInfo {
@@ -18,4 +18,10 @@ pub trait Gateway {
 
 pub trait Wallet {
     fn wallet_json(&self) -> Result<String, String>;
+}
+
+#[async_trait]
+pub trait Signer {
+    async fn sign_tx(&self, buffer: Vec<u8>) -> Result<Vec<u8>, String>;
+    fn get_public_key(&self) -> Vec<u8>;
 }
