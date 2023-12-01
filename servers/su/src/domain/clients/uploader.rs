@@ -1,10 +1,13 @@
 
 
+use std::sync::Arc;
 
 use reqwest::{Url, Client};
 
 extern crate serde;
 use serde::{Serialize, Deserialize};
+
+use crate::domain::Log;
 
 #[derive(Debug)]
 pub enum UploaderErrorType {
@@ -24,8 +27,9 @@ pub struct UploadResult{
     pub block: u64,
 }
 
-pub struct UploaderClient {
-    node_url: Url
+pub struct UploaderClient<'a> {
+    node_url: Url,
+    logger: &'a Arc<dyn Log>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -50,15 +54,16 @@ impl From<serde_json::Error> for UploaderErrorType {
     }
 }
 
-impl UploaderClient {
-    pub fn new(node_url: &str) -> Result<Self, UploaderErrorType> {
+impl<'a> UploaderClient<'a> {
+    pub fn new(node_url: &str, logger: &'a Arc<dyn Log>) -> Result<Self, UploaderErrorType> {
         let url = match Url::parse(node_url) {
             Ok(u) => u,
             Err(e) => return Err(UploaderErrorType::UploadError(format!("{}", e)))
         };
 
         Ok(UploaderClient {
-            node_url: url
+            node_url: url,
+            logger
         })
     }
 
@@ -81,7 +86,7 @@ impl UploaderClient {
             
         // Capture status and headers before consuming the response
         let response_status = response.status();
-        // let response_headers = response.headers().clone();
+        let response_headers = response.headers().clone();
 
         let body_str = match response.text().await {
             Ok(text) => text,
@@ -91,19 +96,19 @@ impl UploaderClient {
             }
         };
 
-        // let msg = format!(
-        //     "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
-        //     response_status,
-        //     response_headers,
-        //     body_str
-        // );
+        let msg = format!(
+            "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
+            response_status,
+            response_headers,
+            body_str
+        );
 
         if response_status.is_success() {
-            // println!("msg: {:?}", msg);
+            self.logger.log(format!("irys success message - {}", &msg));
             let parsed: UploadResult = serde_json::from_str(&body_str)?;
             Ok(parsed)
         } else {
-            // println!("Error: {:?}", msg);
+            self.logger.error(format!("irys error message - {}", &msg));
             Err(UploaderErrorType::UploadError("upload failed".to_string()))
         }
     }

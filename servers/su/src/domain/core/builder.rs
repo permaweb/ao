@@ -5,13 +5,14 @@ use bundlr_sdk::{tags::Tag};
 use super::bytes::{DataBundle, DataItem, ByteErrorType};
 use super::sequencer::{gen_sort_key, SequencerErrorType};
 use super::verifier::{Verifier, VerifyErrorType};
-use super::dal::{Gateway, Wallet, Signer};
+use super::dal::{Gateway, Wallet, Signer, Log};
 
-pub struct Builder {
+pub struct Builder<'a> {
     verifier: Verifier,
     gateway: Arc<dyn Gateway>,
     wallet: Arc<dyn Wallet>,
-    signer: Arc<dyn Signer>
+    signer: Arc<dyn Signer>,
+    logger: &'a Arc<dyn Log>,
 }
 
 
@@ -55,11 +56,12 @@ impl From<String> for BuilderErrorType {
     }
 }
 
-impl Builder {
+impl<'a> Builder<'a> {
     pub fn new(
         gateway: Arc<dyn Gateway>, 
         wallet: Arc<dyn Wallet>,
-        signer: Arc<dyn Signer>
+        signer: Arc<dyn Signer>,
+        logger: &'a Arc<dyn Log>,
     ) -> Result<Self, BuilderErrorType> {
         let verifier = Verifier::new(Arc::clone(&gateway));
 
@@ -67,20 +69,26 @@ impl Builder {
             verifier,
             gateway,
             wallet,
-            signer
+            signer,
+            logger
         })
     }
 
     pub async fn build(&self, tx: Vec<u8>) -> Result<BuildResult, BuilderErrorType> {
         let item = DataItem::from_bytes(tx)?;
-
+        self.logger.log(format!("attempting to verify data item id - {}", &item.id()));
+        self.logger.log(format!("owner - {}", &item.owner()));
+        self.logger.log(format!("target - {}", &item.target()));
+        self.logger.log(format!("tags - {:?}", &item.tags()));
         self.verifier.verify_data_item(&item).await?;
+        self.logger.log(format!("verified data item id - {}", &item.id()));
 
         let sort_key = gen_sort_key(&item, self.gateway.clone(), self.wallet.clone()).await?;
         let mut data_bundle = DataBundle::new(sort_key.clone());
         data_bundle.add_item(item);
         let buffer = data_bundle.to_bytes()?;
-        
+        self.logger.log(format!("generated sort key and created bundle, sort_key - {}", &sort_key));
+
         let process_id = data_bundle.items[0].target().clone();
 
         let tags = vec![
@@ -91,6 +99,8 @@ impl Builder {
             Tag::new(&"Ao-Process-Id".to_string(), &process_id),
         ];
 
+        self.logger.log(format!("generated tags - {:?}", &tags));
+
         let pub_key = self.signer.get_public_key();
         let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;
         let message = new_data_item.get_message()?.to_vec();
@@ -99,6 +109,8 @@ impl Builder {
             .sign_tx(message).await?;
 
         new_data_item.signature = signature;
+
+        self.logger.log(format!("signature succeeded {}", ""));
 
         Ok(BuildResult{
             binary: new_data_item.as_bytes()?,
