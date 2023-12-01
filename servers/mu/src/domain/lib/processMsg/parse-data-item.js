@@ -19,7 +19,15 @@ export function parseDataItemWith ({ createDataItem, logger }) {
        */
       .chain(fromPromise(
         async (dataItem) => ({
-          tx: { id: await dataItem.id, processId: dataItem.target, data: ctx.raw }
+          tx: { id: await dataItem.id, processId: dataItem.target, data: ctx.raw },
+          message: {
+            ...dataItem.toJSON(),
+            /**
+             * For some reason, anchor is not included in the toJSON api on DataItem,
+             * so we make sure to include it here
+             */
+            anchor: dataItem.anchor
+          }
         })
       ))
       .map(mergeRight(ctx))
