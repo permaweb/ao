@@ -77,21 +77,22 @@ Okay, it's time for Process 2.  You should only have one other AO process runnin
 ```zsh
 aos> send("<process1 id>", "Test!")
 ```
-```
 
 To see what your latest message is:
 
 ```zsh
 aos> inbox[#inbox]
+```
+
 You can get the `processId` by using the printing the `ao.id` variable:
 
 ```zsh
 aos> ao.id
+```
+
 For this handler, we want to "prepend" it to `handlers`.  We will use the `prepend` function instead of `append`.  This handler will run BEFORE the previous one.
 
 Let's just smile before we laugh.
-
-```
 
 You should be able to check your inbox and see how many messages you have (1 if you're using fresh processes):
 
@@ -133,11 +134,10 @@ Another message!
 
 ```zsh
 aos> send("<process1 id>", "Test!")
+```
+
 If you need an idea for a handler, feel free to check to see if the message is from me and send me tokens if it is!
+
 This time, the last message `inbox[#inbox]` will be *Haha!* and the second to last message `inbox[#inbox - 1]` will be 😊.
 
 Now all you need to do is figure out the pattern you'd like to match and start buidling handlers!
-
-## Recommendations
-
-```
