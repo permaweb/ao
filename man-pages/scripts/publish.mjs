@@ -29,11 +29,16 @@ async function getFiles() {
 }
 
 async function publishFile(name) {
+  const newName = name.replace('.md', '');
+  const prettyName = newName.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
+  const tags = [{ name: 'ao-manpage', value: prettyName }, { name: 'Content-Type', value: 'text/markdown' }, { name: 'Type', value: 'manpage' }, { name: "Title", value: prettyName }]
   const irys = getIrysArweave();
-  const response = await irys.uploadFile(`./${name}`);
+  const response = await irys.uploadFile(`./${name}`, {
+    tags
+  });
 
   return {
-    [name.replace('.md', '')]: response.id,
+    [newName]: response.id,
   }
 }
 
