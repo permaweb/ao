@@ -6,12 +6,26 @@ Manpages will follow the following spec.
 
 <!-- toc -->
 
+- [Generate wallets](#generate-wallets)
+- [Publish](#publish)
 - [aos Manpages Spec](#aos-manpages-spec)
   - [Abstract](#abstract)
   - [Spec](#spec)
   - [Collections _future_](#collections-future-)
 
 <!-- tocstop -->
+
+## Generate wallets
+
+```zsh
+npm run generate:wallets
+```
+
+## Publish
+
+```zsh
+npm run publish
+```
 
 ## aos Manpages Spec
 

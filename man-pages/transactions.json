@@ -1,15 +1,1 @@
-{
-  "transactions": {
-    "creating-handlers": "ZklLtyaYpDjF6QMYGsBiQ_hUbR5AHE2UTwR_A9oFZmQ",
-    "creating-man-pages": "0q3Vm9P3bJI8rBG4xdu4iIm5auGd79PRcQRuEcZj8CQ",
-    "how-to-build-an-ao-module": "ipzaq2Tk8s__pPJAcnA4-OLQSP3T2iJgYc4arVNSxU4",
-    "how-to-create-an-ao-module": "FXO4kry3RJLEOI_FmYqEJ6zAI3EgKJwB7YdHVuRYMLk",
-    "how-to-publish-an-ao-module": "U8U-LlI8H8l6rAwM9hmlNorMxep4tK9VIpjBPdqeAi4",
-    "how-to-setup-the-dev-cli": "cFyDPqHmIbXE6rGFM4oskqSL85j_jCEh7g30Pb0DK1U",
-    "how-to-spawn-an-ao-module": "Qu2kckvjGJpCdZi3BjmXSCUHkqBcdrf1dy3saa1-m5Q",
-    "how-to-test-and-ao-module": "2lRPK53wodbdX-H0Q6XbZr-vXM_WIlH_o4ORj5D9Cmg",
-    "intro-to-aos": "L05Zc0FmytEw09Q_LKqGxeVXIdHYZI-p4-G1cNG8st0",
-    "reading-the-inbox": "CyKM883Cb0Br5jBhHbkq8Ca0oDHjx0BR2ZJs8vEzeak",
-    "sending-messages": "KaR6Pow3GZeJSVzTEGAjGci2YS1ekEmUiONk_NanRe8"
-  }
-}
+{"transactions":{"creating-handlers":"Wki3gw98yXu9U1OckbQRntRPN3amOSAdiN6fkzIe8tY","creating-man-pages":"-49tykW6DCTe7SgzDRl5u6NXRbXFWMZ_0Pv_imMOhUM","how-to-build-an-ao-module":"Wowsur_zio5uA4S_RFN8R5GMQZ-lz9fS_4BMDOw8_88","how-to-create-an-ao-module":"KzlH0ufyB5s0CSW5dXDo4Zpr5iWuctzVaoTpPMsMcNQ","how-to-publish-an-ao-module":"jxsDraABYPFx4R5RSz1fazKucEoo1Zp7ie39Egup4lo","how-to-setup-the-dev-cli":"ILBkso9hr7TRMTfHN1LXhPpD6oIVEbmSiJdNIbKU-08","how-to-spawn-an-ao-module":"J83rhCQXsB_anvrHgvm_hwKeQN-PAo5mZicQokEO8uU","how-to-test-and-ao-module":"IIcAc7rAsPdQGI4IpG4eVIvVqVwUT1GamWVSMZ5YLKk","intro-to-aos":"yaSaAgdxTjzVfzzJN_vxav56dUigQHwZWdSZLhiHKFA","reading-the-inbox":"et6Gd4DW3J_bpejciCuJFrgV1UdIH-FbyK8G7XuEjZ8","sending-messages":"9rh0QhkFECOX-FbHFp-KWeAX0g-UbCofKKpM1ebo3mY"}}
