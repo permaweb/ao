@@ -25,3 +25,8 @@ pub trait Signer {
     async fn sign_tx(&self, buffer: Vec<u8>) -> Result<Vec<u8>, String>;
     fn get_public_key(&self) -> Vec<u8>;
 }
+
+pub trait Log: Send + Sync {
+    fn log(&self, message: String);
+    fn error(&self, message: String);
+}
