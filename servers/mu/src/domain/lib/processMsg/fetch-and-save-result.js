@@ -1,4 +1,4 @@
-import { of, fromPromise, Resolved, Rejected } from 'hyper-async'
+import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
 
 const ctxSchema = z.object({

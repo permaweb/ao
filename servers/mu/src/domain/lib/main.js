@@ -70,34 +70,18 @@ export function processMsgWith ({
   deleteMsg,
   logger
 }) {
-  const buildTx = buildTxWith({ 
-    buildAndSign, 
-    logger 
-  })
-
-  const getCuAddress = getCuAddressWith({ 
-    selectNode, 
-    logger 
-  })
-
-  const writeTx = writeTxWith({ 
-    findSequencerTx, 
-    writeSequencerTx, logger 
-  })
-
-  const fetchAndSaveResult = fetchAndSaveResultWith({ 
-    fetchResult, 
-    saveMsg, 
-    saveSpawn, 
-    findLatestMsgs, 
-    findLatestSpawns, 
-    logger 
-  })
-
-  const deleteMsgData = deleteMsgDataWith({
-    deleteMsg, 
+  const buildTx = buildTxWith({ buildAndSign, logger })
+  const getCuAddress = getCuAddressWith({ selectNode, logger })
+  const writeTx = writeTxWith({ findSequencerTx, writeSequencerTx, logger })
+  const fetchAndSaveResult = fetchAndSaveResultWith({
+    fetchResult,
+    saveMsg,
+    saveSpawn,
+    findLatestMsgs,
+    findLatestSpawns,
     logger
   })
+  const deleteMsgData = deleteMsgDataWith({ deleteMsg, logger })
 
   return (ctx) => {
     return of(ctx)
@@ -119,25 +103,10 @@ export function processSpawnWith ({
   buildAndSign,
   deleteSpawn
 }) {
-  const spawnProcess = spawnProcessWith({
-    logger,
-    writeProcessTx
-  })
-
-  const buildSuccessTx = buildSuccessTxWith({
-    logger,
-    buildAndSign
-  })
-
-  const sendSpawnSuccess = sendSpawnSuccessWith({
-    logger, 
-    writeSequencerTx
-  })
-
-  const deleteSpawnData = deleteSpawnDataWith({
-    logger,
-    deleteSpawn
-  })
+  const spawnProcess = spawnProcessWith({ logger, writeProcessTx })
+  const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
+  const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeSequencerTx })
+  const deleteSpawnData = deleteSpawnDataWith({ logger, deleteSpawn })
 
   return (ctx) => {
     return of(ctx)
@@ -157,6 +126,7 @@ export function crankMsgsWith ({
   logger
 }) {
   const crank = crankWith({ processMsg, processSpawn, logger })
+
   return (ctx) => {
     return of(ctx)
       .chain(crank)
@@ -169,12 +139,13 @@ export function monitorProcessWith ({
   saveProcessToMonitor,
   fetchSequencerProcess
 }) {
-  const parse = parseDataItemWith({ createDataItem, logger })
+  const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
   const appendSequencerData = appendSequencerDataWith({ logger, fetchSequencerProcess })
+
   return (ctx) => {
     return of(ctx)
-      .chain(parse)
+      .chain(parseDataItem)
       .chain(appendSequencerData)
       .chain(save)
   }

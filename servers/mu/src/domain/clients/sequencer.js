@@ -41,7 +41,7 @@ function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
 
 function writeProcessTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   return async ({ initState, src, tags }) => {
-    const { spawnProcess } = connect({SU_URL: SEQUENCER_URL})
+    const { spawnProcess } = connect({ SU_URL: SEQUENCER_URL })
 
     const processId = await spawnProcess({
       srcId: src,
@@ -54,7 +54,7 @@ function writeProcessTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   }
 }
 
-function fetchSequencerProcessWith({SEQUENCER_URL, logger}) {
+function fetchSequencerProcessWith ({ SEQUENCER_URL, logger }) {
   return async (processId) => {
     logger(`${SEQUENCER_URL}/processes/${processId}`)
 

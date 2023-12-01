@@ -18,7 +18,7 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
     return of(ctx)
       .chain(fromPromise(() => buildAndSign({
         processId: ctx.cachedSpawn.processId,
-        tags: tags
+        tags
       })))
       .map(assoc('spawnSuccessTx', __, ctx))
       .map(ctxSchema.parse)

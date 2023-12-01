@@ -2,7 +2,6 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, prop } from 'ramda'
 import z from 'zod'
 
-
 const cachedMsgSchema = z.object({
   _id: z.string().min(1),
   fromTxId: z.string().min(1),
@@ -13,7 +12,7 @@ const cachedMsgSchema = z.object({
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
   ),
-  processId: z.string().min(1),
+  processId: z.string().min(1)
 })
 
 function saveMsgWith ({ dbInstance, logger: _logger }) {
@@ -63,14 +62,14 @@ function findLatestMsgsWith ({ dbInstance }) {
           toTxId: prop('toTxId', doc),
           msg: prop('msg', doc),
           cachedAt: prop('cachedAt', doc),
-          processId: prop('processId', doc),
+          processId: prop('processId', doc)
         })))
       })
       .toPromise()
   }
 }
 
-function deleteMsgWith({ dbInstance, logger: _logger }) {
+function deleteMsgWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('deleteMsg')
 
   return (_id) => {
@@ -96,7 +95,7 @@ const cachedSpawnSchema = z.object({
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
   ),
-  processId: z.string().min(1),
+  processId: z.string().min(1)
 })
 
 function saveSpawnWith ({ dbInstance, logger: _logger }) {
@@ -154,7 +153,7 @@ function findLatestSpawnsWith ({ dbInstance }) {
   }
 }
 
-function deleteSpawnWith({ dbInstance, logger: _logger }) {
+function deleteSpawnWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('deleteSpawn')
 
   return (_id) => {
@@ -169,7 +168,6 @@ function deleteSpawnWith({ dbInstance, logger: _logger }) {
       .toPromise()
   }
 }
-
 
 const monitoredProcessSchema = z.object({
   _id: z.string().min(1),
@@ -259,7 +257,6 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
       .toPromise()
   }
 }
-
 
 export default {
   cachedMsgSchema,

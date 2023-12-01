@@ -1,5 +1,4 @@
 import { of, fromPromise } from 'hyper-async'
-import { __ } from 'ramda'
 
 export function deleteMsgDataWith ({ deleteMsg, logger }) {
   return (ctx) => {

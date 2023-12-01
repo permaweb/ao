@@ -1,4 +1,4 @@
-import { of, fromPromise } from 'hyper-async'
+import { of, fromPromise, Rejected } from 'hyper-async'
 import { __, assoc } from 'ramda'
 import z from 'zod'
 
@@ -12,24 +12,23 @@ export function spawnProcessWith (env) {
   return (ctx) => {
     const { tags } = ctx.cachedSpawn.spawn
     let initState = {}
-    let initStateTag = tags.find((tag) => 
+    const initStateTag = tags.find((tag) =>
       tag.name === 'Initial-State'
     )
-    if(initStateTag) {
+    if (initStateTag) {
       initState = JSON.parse(initStateTag.value)
     }
-    let srcTag = tags.find((tag) => 
+    const srcTag = tags.find((tag) =>
       tag.name === 'Contract-Src'
     )
-    if(!srcTag) {
-      return Rejected(ctx)
-    }
-    let tagsIn = tags.filter(tag => ![
-      'Contract-Src', 
-      'Initial-State', 
-      'Data-Protocol', 
+    if (!srcTag) return Rejected(ctx)
+
+    const tagsIn = tags.filter(tag => ![
+      'Contract-Src',
+      'Initial-State',
+      'Data-Protocol',
       'ao-type'
-    ].includes(tag.name));
+    ].includes(tag.name))
 
     const transformedData = { initState, src: srcTag.value, tags: tagsIn }
 

@@ -1,4 +1,4 @@
-async function up(db) {
+async function up (db) {
   await db.none(`
     CREATE TABLE IF NOT EXISTS "transactions" (
       "id" SERIAL PRIMARY KEY,
@@ -41,7 +41,7 @@ async function up(db) {
   `)
 }
 
-async function down(db) {
+async function down (db) {
   await db.none('DROP TABLE IF EXISTS transactions')
   await db.none('DROP TABLE IF EXISTS messages')
   await db.none('DROP TABLE IF EXISTS spawns')
