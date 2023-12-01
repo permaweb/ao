@@ -4,11 +4,10 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
-use dotenv::dotenv;
-use std::env;
 use std::env::VarError;
 
 use super::super::core::json::{Message, Process};
+use crate::config::Config;
 
 #[derive(Debug)]
 pub enum StoreErrorType {
@@ -57,8 +56,8 @@ pub struct StoreClient{
 
 impl StoreClient {
     pub fn new() -> Result<Self, StoreErrorType> {
-        dotenv().ok();
-        let database_url = env::var("DATABASE_URL")?;
+        let config = Config::new().expect("Failed to read configuration");
+        let database_url = config.database_url;
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
             .test_on_check_out(true)

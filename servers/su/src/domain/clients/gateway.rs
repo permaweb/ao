@@ -5,6 +5,7 @@ use reqwest::{Url, Client};
 use arweave_rs::network::NetworkInfoClient;
 
 use crate::domain::core::dal::{Gateway, NetworkInfo};
+use crate::config::Config;
 
 pub struct ArweaveGateway;
 
@@ -22,7 +23,8 @@ impl From<GatewayErrorType> for String {
 #[async_trait]
 impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
-        let gateway_url = "https://arweave.net/".to_string();
+        let config = Config::new().expect("Failed to read configuration");
+        let gateway_url = config.gateway_url;
 
         let url = match Url::parse(&gateway_url) {
             Ok(u) => u,
@@ -51,7 +53,8 @@ impl Gateway for ArweaveGateway {
     }
 
     async fn network_info(&self) -> Result<NetworkInfo, String> {
-        let gateway_url = "https://arweave.net".to_string();
+        let config = Config::new().expect("Failed to read configuration");
+        let gateway_url = config.gateway_url;
         let url = match Url::parse(&gateway_url) {
             Ok(u) => u,
             Err(e) => {
