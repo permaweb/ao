@@ -31,6 +31,8 @@ Run `inbox` again to see the message.
 
 ## Run `list()`
 
+The list function will read your messages and output the tags and body of the messages, along with some other important info about the message. 
+
 ```zsh
 aos> list()
 ```
