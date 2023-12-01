@@ -4,8 +4,7 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, midd
 use serde::Deserialize;
 
 use su::domain::{flows, StoreClient, Deps, Log};
-
-use su::logger::{SuLog};
+use su::logger::SuLog;
 
 async fn base() -> impl Responder {
     HttpResponse::Ok().body("ao sequencer unit")

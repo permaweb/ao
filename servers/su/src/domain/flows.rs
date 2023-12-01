@@ -1,4 +1,4 @@
-use std::env;
+
 use std::sync::Arc;
 
 use dotenv::dotenv;
@@ -15,6 +15,7 @@ use crate::domain::clients::signer::ArweaveSigner;
 use crate::domain::core::json::{Message, Process, SortedMessages};
 use crate::domain::core::builder::{Builder, BuildResult};
 use crate::domain::core::dal::{Gateway, Wallet, Signer, Log};
+use crate::config::Config;
 
 pub struct Deps {
     pub data_store: Arc<StoreClient>,
@@ -30,7 +31,8 @@ async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildResult, String> 
     dotenv().ok();
     let gateway: Arc<dyn Gateway> = Arc::new(ArweaveGateway);
     let wallet: Arc<dyn Wallet> = Arc::new(FileWallet);
-    let wallet_path = env::var("SU_WALLET_PATH").expect("SU_WALLET_PATH must be set");
+    let config = Config::new().expect("Failed to read configuration");
+    let wallet_path = config.su_wallet_path;
     let arweave_signer = ArweaveSigner::new(&wallet_path)?;
     let signer: Arc<dyn Signer> = Arc::new(arweave_signer);
     let builder = Builder::new(gateway, wallet, signer, &deps.logger)?;
@@ -39,7 +41,9 @@ async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildResult, String> 
 }
 
 async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, String> {
-    let uploader = UploaderClient::new("https://node2.irys.xyz", &deps.logger)?;
+    let config = Config::new().expect("Failed to read configuration");
+    let upload_node_url = config.upload_node_url;
+    let uploader = UploaderClient::new(&upload_node_url, &deps.logger)?;
     let uploaded_tx = uploader.upload(build_result).await?;
     let result = match serde_json::to_string(&uploaded_tx) {
         Ok(r) => r,
@@ -117,7 +121,8 @@ fn system_time() -> Result<String, SystemTimeError> {
 pub async fn timestamp() -> Result<String, String>{
     match system_time() {
         Ok(timestamp) => {
-            let gateway_url = "https://arweave.net".to_string();
+            let config = Config::new().expect("Failed to read configuration");
+            let gateway_url = config.gateway_url;
             let url = match Url::parse(&gateway_url) {
                 Ok(u) => u,
                 Err(e) => return Err(format!("url error {:?}", e))

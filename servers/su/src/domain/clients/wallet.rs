@@ -1,16 +1,16 @@
 
 use std::fs::File;
 use std::io::Read;
-use std::env;
 
 use crate::domain::core::dal::Wallet;
+use crate::config::Config;
 
 pub struct FileWallet;
 
 impl Wallet for FileWallet {
     fn wallet_json(&self) -> Result<String, String> {
-        let file_path = env::var("SU_WALLET_PATH")
-            .expect("SU_WALLET_PATH environment variable not found");
+        let config = Config::new().expect("Failed to read configuration");
+        let file_path = config.su_wallet_path;
         let mut file = match File::open(&file_path) {
             Ok(f) => f,
             Err(_) => return Err("failed to read wallet file".to_string())
