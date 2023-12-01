@@ -18,8 +18,7 @@ const getIrysArweave = () => {
   return irys;
 };
 
-const intro = 'intro-to-ao-as-a-developer.md';
-const excludes = ['readme.md', intro];
+const excludes = ['readme.md'];
 
 const main = () => Async.of(undefined).chain(fromPromise(getFiles)).chain(fromPromise(publishFiles)).chain(fromPromise(writeTransactions)).toPromise();
 
