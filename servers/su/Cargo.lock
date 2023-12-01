@@ -658,9 +658,7 @@ checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
- "js-sys",
  "num-traits",
- "wasm-bindgen",
  "windows-targets",
 ]
 
@@ -745,15 +743,6 @@ name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
-
-[[package]]
-name = "crypto"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf1e6e5492f8f0830c37f301f6349e0dac8b2466e4fe89eef90e9eef906cd046"
-dependencies = [
- "crypto-common",
-]
 
 [[package]]
 name = "crypto-bigint"
@@ -2885,25 +2874,20 @@ dependencies = [
  "actix-web",
  "arweave-rs",
  "async-trait",
- "avro-rs",
- "base64 0.13.1",
  "base64-url",
  "bundlr-sdk",
- "byteorder",
  "bytes",
- "chrono",
- "crypto",
  "diesel",
  "dotenv",
  "hex",
  "jsonwebkey",
- "lazy_static",
  "reqwest",
  "ring",
  "serde",
  "serde_derive",
  "serde_json",
  "sha2 0.10.8",
+ "tokio",
 ]
 
 [[package]]

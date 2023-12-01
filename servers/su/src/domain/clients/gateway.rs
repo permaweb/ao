@@ -43,8 +43,8 @@ impl Gateway for ArweaveGateway {
 
         let response_status = response.status();
 
-        if !response_status.is_success() {
-            return Ok(true);
+        if response_status.is_success() {
+            return  Ok(true);
         } 
 
         Ok(false)
