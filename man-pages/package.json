@@ -6,10 +6,13 @@
   "author": "Justin Shaw",
   "main": "index.js",
   "scripts": {
+    "generate:wallets": "node scripts/generate-wallets.mjs",
     "publish:manpage": "irys upload ${FILE} -h https://node2.irys.xyz -t arweave -w ${PATH_TO_WALLET} --tags ao-manpage 'Creating a Manpage' Content-Type text/markdown Type manpage Title 'Creating a manpage'",
     "test": "echo 'implement tests'"
   },
   "devDependencies": {
-    "@irys/sdk": "0.1.0"
+    "@irys/sdk": "0.1.0",
+    "arweave": "1.14.4",
+    "hyper-async": "1.1.2"
   }
 }
