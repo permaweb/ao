@@ -1,6 +1,6 @@
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, prop } from 'ramda'
-import z from 'zod'
+import { z } from 'zod'
 
 const cachedMsgSchema = z.object({
   _id: z.string().min(1),
