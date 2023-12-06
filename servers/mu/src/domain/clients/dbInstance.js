@@ -1,4 +1,5 @@
 import pgPromise from 'pg-promise'
+import { always, identity, ifElse } from 'ramda'
 
 let db
 export function createDbClient ({ MU_DATABASE_URL }) {
@@ -11,6 +12,15 @@ export function createDbClient ({ MU_DATABASE_URL }) {
 
 const maxRetries = 5
 const retryDelay = 500
+
+const maybeCriteria = (col, value) =>
+  ifElse(
+    always(value),
+    // Add id parameter
+    ([query, params]) => [`${query} AND ${col} = $${params.length + 1}`, [...params, value]],
+    // do nothing
+    identity
+  )
 
 /**
  * Tyler: TODO: ideally, these should each be injected the db client,
@@ -108,6 +118,35 @@ export async function findMonitors () {
   }, [])
 }
 
+export async function putMessageTrace (doc) {
+  await withRetry(db.none, [
+    'INSERT INTO "message_traces" ("_id", "parent", "children", "spawns, "from", "to", "msg", "trace", "tracedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+    [doc._id, doc.parent, doc.children, doc.spawns, doc.from, doc.to, JSON.stringify(doc.msg), doc.trace, doc.tracedAt]
+  ])
+  return doc
+}
+
+export async function findMessageTraces ({ id, from, to, limit, offset }) {
+  const operation = [
+    'SELECT * FROM "message_traces" WHERE id > 0',
+    []
+  ]
+    .map(maybeCriteria('_id', id))
+    .map(maybeCriteria('from', from))
+    .map(maybeCriteria('to', to))
+    .map(([query, params]) => [`${query} ORDER BY "tracedAt" DESC`, params])
+    .map(([query, params]) => limit
+      ? [`${query} LIMIT $${params.length}`, [...params, limit]]
+      : [query, params]
+    )
+    .map(([query, params]) => offset
+      ? [`${query} OFFSET $${params.length}`, [...params, offset]]
+      : [query, params]
+    )
+
+  return await withRetry(db.any, operation)
+}
+
 export default {
   putMsg,
   getMsg,
@@ -118,5 +157,7 @@ export default {
   putMonitor,
   findMonitors,
   deleteMsg,
-  deleteSpawn
+  deleteSpawn,
+  putMessageTrace,
+  findMessageTraces
 }
