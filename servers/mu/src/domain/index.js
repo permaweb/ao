@@ -1,12 +1,12 @@
 import { z } from 'zod'
 import warpArBundles from 'warp-arbundles'
 
-import dataStoreClient from './clients/datastore.js'
 import dbInstance, { createDbClient } from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
 import sequencerClient from './clients/sequencer.js'
 import signerClient from './clients/signer.js'
 
+import dataStoreClient from './lib/datastore.js'
 import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendMsgWith } from './lib/main.js'
 
 import runScheduledWith from './bg/manager.js'
@@ -85,6 +85,13 @@ export const createApis = (ctx) => {
     deleteSpawn: dataStoreClient.deleteSpawnWith({ dbInstance, logger: processSpawnLogger })
   })
 
+  const crankMsgsLogger = logger.child('crankMsgs')
+  const crankMsgs = crankMsgsWith({
+    processMsg,
+    processSpawn,
+    logger: crankMsgsLogger
+  })
+
   const sendMsgLogger = logger.child('sendMsg')
   const sendMsg = sendMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendMsgLogger }),
@@ -95,16 +102,8 @@ export const createApis = (ctx) => {
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: sendMsgLogger }),
     findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: sendMsgLogger }),
     findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance, logger: sendMsgLogger }),
-    processMsg,
-    processSpawn,
+    crank: crankMsgs,
     logger: sendMsgLogger
-  })
-
-  const crankMsgsLogger = logger.child('crankMsgs')
-  const crankMsgs = crankMsgsWith({
-    processMsg,
-    processSpawn,
-    logger: crankMsgsLogger
   })
 
   const monitorProcessLogger = logger.child('monitorProcess')
