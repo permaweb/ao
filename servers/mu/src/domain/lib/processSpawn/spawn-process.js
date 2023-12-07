@@ -1,9 +1,9 @@
 import { of, fromPromise, Rejected } from 'hyper-async'
-import { __, assoc } from 'ramda'
+import { __, assoc, tap } from 'ramda'
 import z from 'zod'
 
 const ctxSchema = z.object({
-  contractTx: z.any()
+  processTx: z.any()
 }).passthrough()
 
 export function spawnProcessWith (env) {
@@ -42,6 +42,11 @@ export function spawnProcessWith (env) {
         (result) => {
           return of(result)
             .map(assoc('processTx', __, ctx))
+            /**
+             * Make sure to add the spawned process id
+             * to the trace of the parent message
+             */
+            .map(tap(ctx => ctx.tracer.spawn(ctx.processTx)))
             .map(ctxSchema.parse)
             .map(logger.tap('Added "processTx" to ctx'))
         }

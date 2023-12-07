@@ -89,6 +89,7 @@ export const createApis = (ctx) => {
   const crankMsgs = crankMsgsWith({
     processMsg,
     processSpawn,
+    saveMessageTrace: dataStoreClient.saveMessageTraceWith({ dbInstance, logger: crankMsgsLogger }),
     logger: crankMsgsLogger
   })
 

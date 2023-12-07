@@ -39,7 +39,13 @@ describe('spawnProcess', () => {
     })
 
     const result = await spawnProcess({
-      cachedSpawn: cachedSpawn1
+      cachedSpawn: cachedSpawn1,
+      tracer: ({
+        spawn: (id) => {
+          assert.equal(id, 'pid-1')
+          return 1
+        }
+      })
     }).toPromise()
 
     assert.equal(result.processTx, 'pid-1')
