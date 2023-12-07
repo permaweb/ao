@@ -258,6 +258,143 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
   }
 }
 
+const messageTraceSchema = z.object({
+  /**
+   * The transactionId of the message
+   */
+  _id: z.string().min(1),
+  /**
+   * The id of the message that produced this message.
+   * In other words, this message was retrieved from an outbox and cranked
+   * by a MU.
+   *
+   * parent can be used to build the entire trace up to the original un-cranked message.
+   *
+   * If null, then this message was sent directly to a MU ie. it wasn't cranked.
+   */
+  parent: z.string().optional(),
+  /**
+   * Any messages produced as a result of this messages evaluation.
+   * In other words, these are the messages placed in the process outbox,
+   * to be cranked by a MU.
+   *
+   * children can be used to build the entire trace down the original final cranked message.
+   *
+   * If null, then this message's evaluation produced no outbox messages.
+   */
+  children: z.array(z.string.min(1)).optional(),
+  /**
+   * Any messages produced as a result of this messages evaluation.
+   * In other words, these are the messages placed in the process outbox,
+   * to be cranked by a MU.
+   *
+   * children can be used to build the entire trace down the original final cranked message.
+   *
+   * If null, then this message's evaluation produced no outbox messages.
+   */
+  spawns: z.array(z.string.min(1)).optional(),
+  /**
+   * The process that sent this message
+   *
+   * Could also be a wallet address, if the message was signed directly by a wallet,
+   * in other words, not cranked
+   */
+  from: z.string().min(1),
+  /**
+   * The process this message was for aka. the message's target
+   */
+  to: z.string().min(1),
+  /**
+   * The JSON representation of the message aka. the DataItem parsed as JSON
+   */
+  message: z.record(z.any()),
+  /**
+   * An array of logs related to the processing of this message.
+   * This is meant to give more resolution to the steps taken to process a message
+   */
+  trace: z.array(z.string()),
+  /**
+   * The time at which this message trace was started.
+   *
+   * This is useful when ordering all of the message traces for a process
+   */
+  tracedAt: z.preprocess(
+    (
+      arg
+    ) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
+    z.date()
+  )
+})
+
+function saveMessageTraceWith ({ dbInstance, logger: _logger }) {
+  const logger = _logger.child('saveMessageTrace')
+
+  return (messageTrace) => {
+    return of(messageTrace)
+      .map(applySpec({
+        _id: prop('id'),
+        parent: prop('parent'),
+        children: prop('children'),
+        spawns: prop('spawns'),
+        from: prop('from'),
+        to: prop('to'),
+        message: prop('message'),
+        trace: prop('trace'),
+        tracedAt: prop('tracedAt')
+      }))
+      .map(messageTraceSchema.parse)
+      .chain((doc) =>
+        of(doc)
+          .chain(fromPromise((doc) => dbInstance.putMessageTrace(doc)))
+          .bimap(
+            logger.tap(`Encountered an error when saving message trace for message ${messageTrace.id}`),
+            logger.tap('Saved message trace')
+          )
+          .bichain(Resolved, Resolved)
+          .map(always(doc._id))
+      )
+      .toPromise()
+  }
+}
+
+function findMessageTracesWith ({ dbInstance, logger: _logger }) {
+  const criteria = z.object({
+    id: z.string().optional(),
+    from: z.string().optional(),
+    to: z.string().optional(),
+    /**
+     * Always require a limit, so the database does not get bogged down
+     * with sending too large of a response
+     */
+    limit: z.number().int().positive(),
+    offset: z.number().int().positive().optional()
+  })
+
+  return ({ id, from, to, limit, offset }) => {
+    return of({ id, from, to, limit, offset })
+      .map(params => criteria.parse(params))
+      .chain(fromPromise((params) => dbInstance.findMessageTraces(params)))
+      .chain((docs) => {
+        return Resolved(
+          docs.map((doc) => messageTraceSchema.parse(
+            applySpec({
+              _id: prop('_id'),
+              parent: prop('parent'),
+              children: prop('children'),
+              spawns: prop('spawns'),
+              from: prop('from'),
+              to: prop('to'),
+              message: prop('message'),
+              trace: prop('trace'),
+              tracedAt: prop('tracedAt')
+            }, doc)
+          ))
+        )
+      })
+      .toPromise()
+  }
+}
+
 export default {
   cachedMsgSchema,
   saveMsgWith,
@@ -268,5 +405,8 @@ export default {
   findLatestMonitorsWith,
   saveMonitoredProcessWith,
   deleteMsgWith,
-  deleteSpawnWith
+  deleteSpawnWith,
+  messageTraceSchema,
+  saveMessageTraceWith,
+  findMessageTracesWith
 }

@@ -26,7 +26,13 @@ describe('writeTx', () => {
         processId: 'id-1',
         id: 'id-2',
         data: Buffer.alloc(0)
-      }
+      },
+      tracer: ({
+        child: (id) => {
+          assert.equal(id, 'id-2')
+          return 1
+        }
+      })
     }).toPromise()
 
     assert.equal(result.sequencerTx.id, 'id-3')

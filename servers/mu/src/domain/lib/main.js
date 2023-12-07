@@ -15,41 +15,56 @@ import { deleteMsgDataWith } from './processMsg/delete-msg-data.js'
 import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 
 export function sendMsgWith ({
-  createDataItem,
   selectNode,
-  findSequencerTx,
+  createDataItem,
   writeSequencerTx,
   fetchResult,
   saveMsg,
   saveSpawn,
   findLatestMsgs,
   findLatestSpawns,
-  processMsg,
-  processSpawn,
+  crank,
   logger
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeTx = writeTxWith({ findSequencerTx, writeSequencerTx, logger })
+  const writeTx = writeTxWith({ writeSequencerTx, logger })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
-
-  const crank = crankWith({ processMsg, processSpawn, logger })
 
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
-      .chain(writeTx)
-      .map(res => ({
-        ...res,
-        /**
-         * An opaque method to fetch the result of the message just forwarded
-         * and then crank its results
-         */
-        crank: () => of(res)
-          .chain(getCuAddress)
-          .chain(fetchAndSaveResult)
-          .chain(({ msgs, spawns }) => crank({ msgs, spawns }))
-      }))
+      .chain(({ message, ...rest }) => {
+        return writeTx(rest)
+          .map(res => ({
+            ...res,
+            /**
+             * An opaque method to fetch the result of the message just forwarded
+             * and then crank its results
+             */
+            crank: () => of(res)
+              .chain(getCuAddress)
+              .chain(fetchAndSaveResult)
+              .chain(({ msgs, spawns }) => crank({
+                /**
+                 * The message being cranked is the start of the trace train
+                 */
+                message,
+                /**
+                 * Since this message was sent to the MU, it was not cranked by the MU,
+                 * and hence has no parent message
+                 */
+                parent: null,
+                /**
+                 * Since this message was sent to the MU, it was not cranked by the MU,
+                 * and hence is from the wallet that signed the message
+                 */
+                from: message.owner,
+                msgs,
+                spawns
+              }))
+          }))
+      })
   }
 }
 
@@ -59,7 +74,6 @@ export function sendMsgWith ({
  */
 export function processMsgWith ({
   selectNode,
-  findSequencerTx,
   writeSequencerTx,
   fetchResult,
   saveMsg,
@@ -72,15 +86,8 @@ export function processMsgWith ({
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeTx = writeTxWith({ findSequencerTx, writeSequencerTx, logger })
-  const fetchAndSaveResult = fetchAndSaveResultWith({
-    fetchResult,
-    saveMsg,
-    saveSpawn,
-    findLatestMsgs,
-    findLatestSpawns,
-    logger
-  })
+  const writeTx = writeTxWith({ writeSequencerTx, logger })
+  const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
   const deleteMsgData = deleteMsgDataWith({ deleteMsg, logger })
 
   return (ctx) => {
@@ -118,14 +125,16 @@ export function processSpawnWith ({
 }
 
 /**
- * accept list of msgs and crank them
+ * Accepts the result of an evaluation, and processes the outbox,
+ * ie. the messages and spawns
  */
 export function crankMsgsWith ({
   processMsg,
   processSpawn,
+  saveMessageTrace,
   logger
 }) {
-  const crank = crankWith({ processMsg, processSpawn, logger })
+  const crank = crankWith({ processMsg, processSpawn, saveMessageTrace, logger })
 
   return (ctx) => {
     return of(ctx)
