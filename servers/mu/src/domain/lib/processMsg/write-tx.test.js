@@ -31,6 +31,10 @@ describe('writeTx', () => {
         child: (id) => {
           assert.equal(id, 'id-2')
           return 1
+        },
+        trace: (s) => {
+          assert.ok(typeof s === 'string')
+          return 1
         }
       })
     }).toPromise()

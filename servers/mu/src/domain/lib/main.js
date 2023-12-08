@@ -102,8 +102,8 @@ export function processMsgWith ({
   return (ctx) => {
     return of(ctx)
       .chain(buildTx)
-      .chain(getCuAddress)
       .chain(writeTx)
+      .chain(getCuAddress)
       .chain(fetchAndSaveResult)
       .chain(deleteMsgData)
   }

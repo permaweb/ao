@@ -1,4 +1,5 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
+import { tap } from 'ramda'
 import z from 'zod'
 
 const ctxSchema = z.object({
@@ -46,6 +47,8 @@ function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
             cachedAt: new Date(),
             processId: ctx.tx.processId
           })
+            .then(tap(() => ctx.tracer.trace('Cached outbox message')))
+            .catch(tap(() => ctx.tracer.trace('Failed to cache outbox message')))
         })
 
         const saveSpawnPromises = fetchedResult.spawns.map(spawn => {
@@ -56,6 +59,8 @@ function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
             cachedAt: new Date(),
             processId: ctx.tx.processId
           })
+            .then(tap(() => ctx.tracer.trace('Cached spawn')))
+            .catch(tap(() => ctx.tracer.trace('Failed to cache spawn')))
         })
 
         const allPromises = [...savePromises, ...saveSpawnPromises]
@@ -76,11 +81,16 @@ export function fetchAndSaveResultWith (env) {
 
   return (ctx) => {
     return of(ctx)
+      .map(tap(() => ctx.tracer.trace('Fetching message result from SU')))
       .chain(fetchAndCacheResult)
       .chain(findMsgs)
       .chain(findSpawns)
       .bichain(Resolved, Resolved)
       .map(ctxSchema.parse)
       .map(logger.tap('Added "msgs and spawns" to ctx'))
+      .bimap(
+        tap(() => ctx.tracer.trace('Failed to fetch and cache message result')),
+        tap(() => ctx.tracer.trace('Fetched and cached message result'))
+      )
   }
 }

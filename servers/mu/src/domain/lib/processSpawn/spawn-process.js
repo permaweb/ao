@@ -10,6 +10,8 @@ export function spawnProcessWith (env) {
   const { logger, writeProcessTx } = env
 
   return (ctx) => {
+    ctx.tracer.trace('Constructing message from spawn')
+
     const { tags } = ctx.cachedSpawn.spawn
     let initState = {}
     const initStateTag = tags.find((tag) =>
@@ -34,6 +36,10 @@ export function spawnProcessWith (env) {
 
     return of(transformedData)
       .chain(fromPromise(writeProcessTx))
+      .bimap(
+        tap(() => ctx.tracer.trace('Failed to write spawn to SU')),
+        tap(() => ctx.tracer.trace('Wrote spawn to SU'))
+      )
       .bichain(
         (error) => {
           console.error('writeProcessTx failed. Recovering and returning original ctx.', error)

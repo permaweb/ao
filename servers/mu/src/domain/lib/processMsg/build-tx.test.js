@@ -33,7 +33,13 @@ describe('buildTx', () => {
           anchor: 'anchor-1',
           data: 'data-1'
         }
-      }
+      },
+      tracer: ({
+        trace: (s) => {
+          assert.ok(typeof s === 'string')
+          return 1
+        }
+      })
     }).toPromise()
 
     assert.equal(result.tx.processId, 'id-1')

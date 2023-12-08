@@ -1,6 +1,6 @@
 import { of, fromPromise } from 'hyper-async'
 import z from 'zod'
-import { assoc, __ } from 'ramda'
+import { assoc, __, tap } from 'ramda'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -13,6 +13,7 @@ const ctxSchema = z.object({
 export function buildTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
     return of(ctx)
+      .map(tap(() => ctx.tracer.trace('Building and signing message from outbox')))
       .chain(fromPromise(() => buildAndSign({
         processId: ctx.cachedMsg.msg.target,
         tags: [
@@ -27,5 +28,9 @@ export function buildTxWith ({ buildAndSign, logger }) {
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Added tx to ctx'))
+      .bimap(
+        tap(() => ctx.tracer.trace('Failed to build and sign message from outbox')),
+        tap(() => ctx.tracer.trace('Built and signed message from outbox'))
+      )
   }
 }

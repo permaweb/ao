@@ -59,7 +59,13 @@ describe('fetchAndSaveResult', () => {
       tx: {
         id: 'id-1',
         processId: 'pid-1'
-      }
+      },
+      tracer: ({
+        trace: (s) => {
+          assert.ok(typeof s === 'string')
+          return 1
+        }
+      })
     }).toPromise()
 
     assert.deepStrictEqual(result.msgs[0], cachedMsg1)
