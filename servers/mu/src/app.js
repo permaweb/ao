@@ -14,7 +14,6 @@ export const server = pipe(
   (app) => app.use(cors()),
   (app) => app.use(express.json({ type: 'application/json' })),
   (app) => app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' })),
-  (app) => app.get('/', (_req, res) => res.send('ao messenger unit')),
   withRoutes,
   app => {
     const server = app.listen(config.port, () => {
