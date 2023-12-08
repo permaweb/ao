@@ -66,10 +66,22 @@ hello world > say bomIi0Xivq4sMA1fwAlq6nsloj1H-8qpw6oQooKDWco
 > `bomIi0Xivq4sMA1fwAlq6nsloj1H-8qpw6oQooKDWco` actually works! But you can
 > replace it with any transaction that contains text
 
-Return a spawn with an input src id as its Contract-Src tag
+Spawn a friend (another hello-world process) with an input src id set to the Contract-Src tag
 
 ```sh
 hello world > friend V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
+```
+
+Ping a friend, by sending a ping message to them. If your friend is a hello-world process, it will send a pong message back to you
+
+```sh
+hello world > ping <friend_id>
+```
+
+Pong a friend, by sending a pong message to them. If your friend is a hello-world process, it will simply accept your pong
+
+```sh
+hello world > pong <friend_id>
 ```
 
 ## Your own Process

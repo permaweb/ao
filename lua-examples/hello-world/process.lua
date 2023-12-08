@@ -4,7 +4,7 @@
 -- with 'friend' function support at V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
 
 local JSON = require("json")
-local base64 = require(".src.base64")
+local base64 = require(".base64")
 
 local process = { _version = "0.0.6" }
 
@@ -82,6 +82,22 @@ local function spawn(tags, AoGlobal)
   return spawn
 end
 
+local function send(tags, target, AoGlobal)
+  local message = {
+    target = target,
+    tags = {
+      { name = "Data-Protocol", value = "ao" },
+      { name = "ao-type", value = "message" },
+    }
+  }
+
+  for k,v in pairs(tags) do
+    table.insert(message.tags, { name = k, value = v })
+  end
+
+  return message
+end
+
 local actions = {}
 actions['hello'] = function (state)
   local _state = assoc('heardHello', true, state)
@@ -101,12 +117,25 @@ actions['say'] = function (state, message)
 end
 actions['friend'] = function (state, message, AoGlobal)
   local spawns = {}
-  local srcId = findObject(message.tags, "name", "Contract-Src")
   local friend = spawn(message.tags, AoGlobal)
   table.insert(spawns, friend)
   -- result.output is just for display in the repl here 
   local o = { friendlyMessage = 'Spawn returned in result.spawns' }
   return { state = state, output = JSON.encode(o), spawns = spawns }
+end
+actions['ping'] = function (state, message)
+  local target = findObject(message.tags, "name", "friend").value
+  local tags = {
+    { name = "function", value = "pong" }
+  }
+
+  local o = { friendlyMessage = 'sending ping to ' .. target }
+  return { state = state, output = JSON.encode(o), messages = { send(tags, target) } }
+end
+actions['pong'] = function (state, message)
+  local friend = findObject(message.tags, "name", "friend").value
+  local o = { friendlyMessage = 'received pong from ' .. friend }
+  return { state = state, output = JSON.encode(o) }
 end
 
 function process.handle(message, AoGlobal)
