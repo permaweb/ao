@@ -17,6 +17,7 @@ export function writeTxWith (env) {
 
   return (ctx) => {
     return of(ctx.tx.data)
+      .map(tap(() => ctx.tracer.trace('Sending message to SU')))
       .chain(writeSequencer)
       .map(assoc('sequencerTx', __, ctx))
       /**
@@ -26,5 +27,9 @@ export function writeTxWith (env) {
       .map(tap(ctx => ctx.tracer.child(ctx.tx.id)))
       .map(ctxSchema.parse)
       .map(logger.tap('Added "sequencerTx" to ctx'))
+      .bimap(
+        tap(() => ctx.tracer.trace('Failed to send message to SU')),
+        tap(() => ctx.tracer.trace('Sent message to SU'))
+      )
   }
 }

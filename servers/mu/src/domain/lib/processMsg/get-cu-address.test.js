@@ -21,7 +21,13 @@ describe('getCuAddress', () => {
     const result = await getCuAddress({
       tx: {
         processId: 'id-1'
-      }
+      },
+      tracer: ({
+        trace: (s) => {
+          assert.ok(typeof s === 'string')
+          return 1
+        }
+      })
     }).toPromise()
 
     assert.equal(result.cuAddress, 'id-1')

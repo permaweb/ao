@@ -27,11 +27,11 @@ describe('spawnProcess', () => {
         // the program extracts this from the tag and puts it in src
         assert.equal(spawnData.src, 'src-1')
         /**
-                 * all tags should be removed in this case because they
-                 * would get duplicated by the sdk spawnProcess call
-                 * the program should only pass through tags that are
-                 * not built in part of ao
-                 */
+         * all tags should be removed in this case because they
+         * would get duplicated by the sdk spawnProcess call
+         * the program should only pass through tags that are
+         * not built in part of ao
+         */
         assert.equal(spawnData.tags.length, 0)
         return 'pid-1'
       },
@@ -43,6 +43,10 @@ describe('spawnProcess', () => {
       tracer: ({
         spawn: (id) => {
           assert.equal(id, 'pid-1')
+          return 1
+        },
+        trace: (s) => {
+          assert.ok(typeof s === 'string')
           return 1
         }
       })
