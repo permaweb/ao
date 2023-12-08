@@ -1,5 +1,6 @@
 import { of, fromPromise } from 'hyper-async'
 import { isNil, isEmpty, anyPass } from 'ramda'
+import { tracerFor } from '../tracer'
 
 const isNilOrEmpty = anyPass(isNil, isEmpty)
 
@@ -11,47 +12,13 @@ async function eventQueue (init) {
 }
 
 function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
-  /**
-   * Incrementally build out the message trace for the message being cranked
-   *
-   * TODO: how do we handle updating an existing trace, like in the case
-   * of an error and recovery on a separate thread
-   *
-   * For now, since recovery is not written, we will do nothing
-   */
-  function tracerFor ({ message, parent, from }) {
-    const trace = []
-    const children = []
-    const spawns = []
-
-    const tracedAt = new Date()
-
-    return {
-      child: (c) => children.push(c),
-      spawn: (s) => spawns.push(s),
-      trace: (t) => trace.push(t),
-      unwrap: () => ({
-        id: message.id,
-        parent,
-        children,
-        spawns,
-        from,
-        to: message.target,
-        message,
-        trace,
-        tracedAt
-      })
-    }
-  }
-
-  async function processOutboxFor ({ message, parent, from, msgs = [], spawns = [] }) {
+  async function processOutboxFor ({ message, tracer, msgs = [], spawns = [] }) {
     /**
      * Nothing was produced in the outbox, so simply return no events
      */
     if (isNilOrEmpty(msgs) && isNilOrEmpty(spawns)) return []
 
     const events = []
-    const tracer = tracerFor({ message, parent, from })
 
     /**
      * Immediately push thunks to spawn processes from this outbox
@@ -75,6 +42,19 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
      */
     events.push(...msgs.map((cachedMsg) =>
       async () => {
+        const { tx, msgs, spawns } = await of({ cachedMsg, tracer })
+          .chain(processMsg)
+          .toPromise()
+
+        /**
+         * The id for cachedMsg is not determined until the MU parses it into a data item,
+         * signs it, and forwards it to a SU, then reads it's eval result,
+         * as part of processMsg.
+         *
+         * So make sure to include the id from that subsequent data item as part of the
+         * original message, when appending the event to process its outbox
+         */
+        const next = { ...cachedMsg.msg, id: tx.id }
         /**
          * The parent of each of these outbox messages is the message
          * that produced this outbox currently being processed
@@ -89,26 +69,23 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
          */
         const from = cachedMsg.msg.target
 
-        const { tx, msgs, spawns } = await of({ cachedMsg, tracer })
-          .chain(processMsg)
-          .toPromise()
-
         /**
-         * Process the outbox of each subsequent message, using the
-         *
+         * Process the outbox of each subsequent message
          * This will return the next set of events, that will be appended to the top level event queue
          */
         return processOutboxFor({
+          message: next,
           /**
-           * The id for cachedMsg is not determined until the MU parses it into a data item,
-           * signs it, and forwards it to a SU, as part of processMsg.
+           * Create a new tracer for this message, that all of it's children will use.
            *
-           * So make sure to include the id from that subsequent data item as part of the
-           * original message, when appending the event to process its outbox
+           * As the event queue is processed, this will create an ancestory tree, starting
+           * from the original message
            */
-          message: { ...cachedMsg.msg, id: tx.id },
-          parent,
-          from,
+          tracer: tracerFor({
+            message: next,
+            parent,
+            from
+          }),
           msgs,
           spawns
         })
@@ -132,7 +109,7 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
   /**
    * Begin the event queue with the initial outbox processing
    */
-  return ({ message, parent, from, msgs, spawns }) => eventQueue(() => processOutboxFor({ message, parent, from, msgs, spawns }))
+  return ({ message, tracer, msgs, spawns }) => eventQueue(() => processOutboxFor({ message, tracer, msgs, spawns }))
 }
 
 export function crankWith ({ processMsg, processSpawn, saveMessageTrace, logger }) {
