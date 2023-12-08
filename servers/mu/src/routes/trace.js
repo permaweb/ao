@@ -41,7 +41,7 @@ export const withTraceRoutes = (app) => {
          */
         if (!query.debug) return res.send('ao messenger unit')
 
-        const logger = _logger.child('GET_TRACE')
+        const logger = _logger.child('GET_trace')
 
         const inputSchema = z.object({
           process: z.string().optional(),
@@ -61,7 +61,7 @@ export const withTraceRoutes = (app) => {
         /**
          * Retrieve all message traces for the given input
          */
-        await of({ ...input, limit: input.pageSize, offset: input.page })
+        await of({ ...input, limit: input.pageSize, offset: input.pageSize * (input.page - 1) })
           .chain(traceMsgs)
           .bimap(
             logger.tap('Failed to retrieve trace for process "%s" or message "%s"', input.process, input.message),

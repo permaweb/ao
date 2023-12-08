@@ -168,3 +168,12 @@ export function monitorProcessWith ({
       .chain(save)
   }
 }
+
+export function traceMsgsWith ({ logger, findMessageTraces }) {
+  const traceMsgs = traceMsgsWith({ logger, findMessageTraces })
+
+  return (ctx) => {
+    return of(ctx)
+      .chain(traceMsgs)
+  }
+}
