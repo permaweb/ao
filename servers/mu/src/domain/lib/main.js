@@ -13,6 +13,7 @@ import { saveWith } from './saveMonitor/save-process.js'
 import { appendSequencerDataWith } from './saveMonitor/append-sequencer-data.js'
 import { deleteMsgDataWith } from './processMsg/delete-msg-data.js'
 import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
+import { tracerFor } from './tracer.js'
 
 export function sendMsgWith ({
   selectNode,
@@ -34,10 +35,30 @@ export function sendMsgWith ({
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
-      .chain(({ message, ...rest }) => {
-        return writeTx(rest)
+      .map(({ message, ...rest }) => ({
+        ...rest,
+        message,
+        tracer: tracerFor({
+          /**
+           * The message being cranked is the start of the trace train
+           */
+          message,
+          /**
+           * Since this message was sent to the MU, it was not cranked by the MU,
+           * and hence has no parent message
+           */
+          parent: null,
+          /**
+           * Since this message was sent to the MU, it was not cranked by the MU,
+           * and hence is from the wallet that signed the message
+           */
+          from: message.owner
+        })
+      }))
+      .chain(({ message, tracer, ...rest }) =>
+        of({ ...rest, tracer })
+          .chain(writeTx)
           .map(res => ({
-            ...res,
             /**
              * An opaque method to fetch the result of the message just forwarded
              * and then crank its results
@@ -46,25 +67,13 @@ export function sendMsgWith ({
               .chain(getCuAddress)
               .chain(fetchAndSaveResult)
               .chain(({ msgs, spawns }) => crank({
-                /**
-                 * The message being cranked is the start of the trace train
-                 */
                 message,
-                /**
-                 * Since this message was sent to the MU, it was not cranked by the MU,
-                 * and hence has no parent message
-                 */
-                parent: null,
-                /**
-                 * Since this message was sent to the MU, it was not cranked by the MU,
-                 * and hence is from the wallet that signed the message
-                 */
-                from: message.owner,
+                tracer,
                 msgs,
                 spawns
               }))
           }))
-      })
+      )
   }
 }
 

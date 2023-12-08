@@ -2,16 +2,42 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, prop } from 'ramda'
 import { z } from 'zod'
 
+import { messageTraceSchema } from '../model.js'
+
+/**
+ * Business logic api for the underlying datastore that is utilized
+ * by this MU
+ *
+ * Given a DB instace, this business logic will map the domain models
+ * to/from the persistence api, as implemented by the dbInstance
+ *
+ * TODO: de-conflate these models with persistence models, and move to models.js
+ */
+
 const cachedMsgSchema = z.object({
+  /**
+   * The pseudo-random unique identifier
+   */
   _id: z.string().min(1),
+  /**
+   * The id of the data item transaction that represents this message
+   * on chain
+   */
   fromTxId: z.string().min(1),
-  toTxId: z.string().min(1).nullable().optional(),
+  /**
+   * The JSON representation of the message data item, prior to signing
+   */
   msg: z.any(),
-  _rev: z.string().optional(),
+  /**
+   * When this message was cached in the MU
+   */
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
   ),
+  /**
+   * The target process of the message -- which process evaluated this message
+   */
   processId: z.string().min(1)
 })
 
@@ -86,15 +112,29 @@ function deleteMsgWith ({ dbInstance, logger: _logger }) {
 }
 
 const cachedSpawnSchema = z.object({
+  /**
+   * The pseudo-random unique identifier
+   */
   _id: z.string().min(1),
+  /**
+   * The id of the data item transaction that represents this message
+   * on chain
+   */
   fromTxId: z.string().min(1),
-  toTxId: z.string().min(1).nullable().optional(),
+  /**
+   * The JSON representation of the message data item, prior to signing
+   */
   spawn: z.any(),
-  _rev: z.string().optional(),
+  /**
+   * When this message was cached in the MU
+   */
   cachedAt: z.preprocess(
     (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
     z.date()
   ),
+  /**
+   * The process that produced this spawn
+   */
   processId: z.string().min(1)
 })
 
@@ -257,74 +297,6 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
       .toPromise()
   }
 }
-
-const messageTraceSchema = z.object({
-  /**
-   * The transactionId of the message
-   */
-  _id: z.string().min(1),
-  /**
-   * The id of the message that produced this message.
-   * In other words, this message was retrieved from an outbox and cranked
-   * by a MU.
-   *
-   * parent can be used to build the entire trace up to the original un-cranked message.
-   *
-   * If null, then this message was sent directly to a MU ie. it wasn't cranked.
-   */
-  parent: z.string().optional(),
-  /**
-   * Any messages produced as a result of this messages evaluation.
-   * In other words, these are the messages placed in the process outbox,
-   * to be cranked by a MU.
-   *
-   * children can be used to build the entire trace down the original final cranked message.
-   *
-   * If null, then this message's evaluation produced no outbox messages.
-   */
-  children: z.array(z.string.min(1)).optional(),
-  /**
-   * Any messages produced as a result of this messages evaluation.
-   * In other words, these are the messages placed in the process outbox,
-   * to be cranked by a MU.
-   *
-   * children can be used to build the entire trace down the original final cranked message.
-   *
-   * If null, then this message's evaluation produced no outbox messages.
-   */
-  spawns: z.array(z.string.min(1)).optional(),
-  /**
-   * The process that sent this message
-   *
-   * Could also be a wallet address, if the message was signed directly by a wallet,
-   * in other words, not cranked
-   */
-  from: z.string().min(1),
-  /**
-   * The process this message was for aka. the message's target
-   */
-  to: z.string().min(1),
-  /**
-   * The JSON representation of the message aka. the DataItem parsed as JSON
-   */
-  message: z.record(z.any()),
-  /**
-   * An array of logs related to the processing of this message.
-   * This is meant to give more resolution to the steps taken to process a message
-   */
-  trace: z.array(z.string()),
-  /**
-   * The time at which this message trace was started.
-   *
-   * This is useful when ordering all of the message traces for a process
-   */
-  tracedAt: z.preprocess(
-    (
-      arg
-    ) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
-    z.date()
-  )
-})
 
 function saveMessageTraceWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveMessageTrace')
