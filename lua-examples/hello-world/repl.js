@@ -68,7 +68,6 @@ async function createMessage (expr) {
    */
   if (expr.startsWith('say')) {
     const [, txId] = expr.split(' ').map(s => s.trim())
-    expr = 'say'
     message.tags.push(
       { name: 'function', value: 'say' },
       { name: 'ao-load', value: txId }
@@ -79,11 +78,22 @@ async function createMessage (expr) {
       .then(data => ({ data }))
   } else if (expr.startsWith('friend')) {
     const [, srcId] = expr.split(' ').map(s => s.trim())
-    expr = 'friend'
     message.tags.push(
       { name: 'function', value: 'friend' },
       { name: 'src-id', value: srcId },
       { name: 'extra-spawn-tag', value: 'this should reach the final process' }
+    )
+  } else if (expr.startsWith('ping')) {
+    const [, friend] = expr.split(' ').map(s => s.trim())
+    message.tags.push(
+      { name: 'function', value: 'ping' },
+      { name: 'friend', value: friend }
+    )
+  } else if (expr.startsWith('pong')) {
+    const [, friend] = expr.split(' ').map(s => s.trim())
+    message.tags.push(
+      { name: 'function', value: 'pong' },
+      { name: 'friend', value: friend }
     )
   } else {
     message.tags.push({ name: 'function', value: expr })
