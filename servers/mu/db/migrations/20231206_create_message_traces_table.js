@@ -6,7 +6,7 @@ async function up (db) {
    * instead of embedding those constraints into a database
    */
   await db.none(`
-    CREATE TABLE "message_traces" (
+    CREATE TABLE IF NOT EXISTS "message_traces" (
       "id" SERIAL PRIMARY KEY,
       "_id" VARCHAR(255) NOT NULL UNIQUE,
       "parent" VARCHAR(255),
