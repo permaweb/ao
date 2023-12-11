@@ -7,7 +7,7 @@ import sequencerClient from './clients/sequencer.js'
 import signerClient from './clients/signer.js'
 
 import dataStoreClient from './lib/datastore.js'
-import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendMsgWith } from './lib/main.js'
+import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendMsgWith, sendSpawnWith } from './lib/main.js'
 
 import runScheduledWith from './bg/manager.js'
 
@@ -76,6 +76,13 @@ export const createApis = (ctx) => {
     logger
   })
 
+  const sendSpawnLogger = logger.child('sendSpawn')
+  const sendSpawn = sendSpawnWith({
+    writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: sendSpawnLogger }),
+    createDataItem,
+    logger: sendSpawnLogger
+  })
+
   const processSpawnLogger = logger.child('processSpawn')
   const processSpawn = processSpawnWith({
     logger: processSpawnLogger,
@@ -115,5 +122,5 @@ export const createApis = (ctx) => {
     logger: monitorProcessLogger
   })
 
-  return { sendMsg, crankMsgs, monitorProcess }
+  return { sendMsg, crankMsgs, monitorProcess, sendSpawn }
 }

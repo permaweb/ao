@@ -1,29 +1,33 @@
 import { readFileSync } from 'node:fs'
 
-import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
+import WarpArBundles from 'warp-arbundles'
+const { createData, ArweaveSigner } = WarpArBundles;
 
-const {
-  spawnProcess
-} = connect({
-  GATEWAY_URL: "https://arweave.net", 
-  MU_URL: "http://localhost:3004",
-  CU_URL: "http://localhost:6363",
-  SU_URL: "http://localhost:9000"
-});
+(async function () {
+  const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
+  const data = Math.random().toString().slice(-4)
+  const tags = [
+    { name: 'Scheduler', value: 'mx8zvkz0jWNwAiBnBqkGcZqqfcFYptbrL4RIKMd4anc' },
+    { name: 'Contract-Src', value: 'V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs' }
+  ]
 
-const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
+  const signer = new ArweaveSigner(wallet)
+  const dataItem = createData(data, signer, { tags })
+  await dataItem.sign(signer)
 
-await spawnProcess({
-  srcId: 'V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs',
-  tags: [
-    { name: 'Scheduled-Interval', value: '1-hour' },
+  const response = await fetch(
+    'http://localhost:3004/spawn',
     {
-      name: 'Scheduled-Message',
-      value: JSON.stringify({
-        tags: [{ name: 'function', value: 'hello' }]
-      })
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        Accept: 'application/json'
+      },
+      body: dataItem.getRaw()
     }
-  ],
-  signer: createDataItemSigner(wallet)
-}).then(console.log)
-  .catch(console.error)
+  )
+
+  const responseText = await response.text()
+  console.log('MU Response 1 for Contract 1')
+  console.log(responseText)
+})()
