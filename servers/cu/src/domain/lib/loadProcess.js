@@ -16,11 +16,8 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
     : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on transaction`)
 
   /**
-   * Load the process from chain, extracting the metadata,
+   * Load the process from the SU, extracting the metadata,
    * and then saving to the db
-   *
-   * TODO: could we eventually load all of this from the SU?
-   * for now, just loading Block, since that's the only bit that doesn't finalize
    */
   function loadFromSu (processId) {
     return loadProcess(processId)
@@ -136,8 +133,18 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
  * is always added to context
  */
 const ctxSchema = z.object({
+  /**
+   * The wallet address of of the process owner
+   */
   owner: z.string().min(1),
+  /**
+   * The tags on the process
+   */
   tags: z.array(rawTagSchema),
+  /**
+   * The block height and timestamp, according to the SU,
+   * that was most recent when this process was spawned
+   */
   block: rawBlockSchema,
   /**
    * The most recent state. This could be the most recent
@@ -199,7 +206,7 @@ export function loadProcessWith (env) {
       .chain(ctx =>
         loadLatestEvaluation(ctx)
           .map(mergeRight(ctx))
-          // { id, owner, ..., buffer, result, from, evaluatedAt }
+          // { id, owner, tags, ..., buffer, result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded process and appended to ctx'))

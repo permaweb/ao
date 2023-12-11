@@ -64,7 +64,8 @@ export const messageSchema = z.object({
   AoGlobal: z.object({
     process: z.object({
       id: z.string(),
-      owner: z.string()
+      owner: z.string(),
+      tags: z.array(rawTagSchema)
     }),
     block: rawBlockSchema
     // TODO: more here

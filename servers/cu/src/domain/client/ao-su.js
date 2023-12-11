@@ -150,7 +150,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
     return tag.value
   }
 
-  function mapAoMessage ({ processId, processOwner }) {
+  function mapAoMessage ({ processId, processOwner, processTags }) {
     return async function * (edges) {
       for await (const edge of edges) {
         yield pipe(
@@ -185,7 +185,7 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
               timestamp: path(['block', 'timestamp'])
             }),
             AoGlobal: applySpec({
-              process: always({ id: processId, owner: processOwner }),
+              process: always({ id: processId, owner: processOwner, tags: processTags }),
               block: applySpec({
                 height: path(['block', 'height']),
                 timestamp: path(['block', 'timestamp'])
@@ -200,10 +200,10 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
   return (args) =>
     of(args)
       .map(mapBounds)
-      .map(({ processId, owner: processOwner, from, to }) => {
+      .map(({ processId, owner: processOwner, tags: processTags, from, to }) => {
         return pipeline(
           fetchAllPages({ processId, from, to }),
-          Transform.from(mapAoMessage({ processId, processOwner })),
+          Transform.from(mapAoMessage({ processId, processOwner, processTags })),
           (err) => {
             if (err) logger('Encountered err when mapping Sequencer Messages', err)
           }
