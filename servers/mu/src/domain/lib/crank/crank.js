@@ -26,6 +26,10 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
     events.push(...spawns.map((cachedSpawn) =>
       async () => of({ cachedSpawn, tracer })
         .chain(processSpawn)
+        /**
+         * No more events to push onto the event queue
+         */
+        .map(() => [])
         .toPromise()
     ))
 
@@ -100,6 +104,10 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
       return of()
         .map(() => tracer.unwrap())
         .chain(fromPromise(saveMessageTrace))
+        /**
+         * No more events to push onto the event queue
+         */
+        .map(() => [])
         .toPromise()
     })
 
