@@ -50,7 +50,7 @@ export const withTraceRoutes = (app) => {
           pageSize: z.coerce(z.number().int()).default(DEFAULT_PAGE_SIZE)
         })
 
-        const input = await inputSchema.parseAsync(query)
+        const input = inputSchema.parse(query)
 
         if (input.process && input.message) {
           const err = new Error('Only one of process or message query parameters can be provided')
