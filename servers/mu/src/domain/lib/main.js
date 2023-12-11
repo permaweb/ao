@@ -14,6 +14,7 @@ import { appendSequencerDataWith } from './saveMonitor/append-sequencer-data.js'
 import { deleteMsgDataWith } from './processMsg/delete-msg-data.js'
 import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 import { tracerFor } from './tracer.js'
+import { resolveSchedulerWith } from './processSpawn/resolve-scheduler.js'
 
 export function sendMsgWith ({
   selectNode,
@@ -106,6 +107,25 @@ export function processMsgWith ({
       .chain(getCuAddress)
       .chain(fetchAndSaveResult)
       .chain(deleteMsgData)
+  }
+}
+
+/**
+ * send a spawn that comes in on the spawn endpoint
+ */
+export function sendSpawnWith ({
+  logger,
+  writeProcessTx,
+  createDataItem
+}) {
+  const parseDataItem = parseDataItemWith({ createDataItem, logger })
+  const resolveScheduler = resolveSchedulerWith({ logger })
+
+  return (ctx) => {
+    console.log(ctx)
+    return of(ctx)
+      .chain(parseDataItem)
+      .chain(resolveScheduler)
   }
 }
 

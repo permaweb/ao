@@ -29,7 +29,7 @@ export function spawnProcessWith (env) {
       'Contract-Src',
       'Initial-State',
       'Data-Protocol',
-      'ao-type'
+      'AO-Type'
     ].includes(tag.name))
 
     const transformedData = { initState, src: srcTag.value, tags: tagsIn }
