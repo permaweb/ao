@@ -1,4 +1,4 @@
-import { messageTraceSchema } from './datastore.js'
+import { messageTraceSchema } from '../model.js'
 
 /**
  * Given a message, it's parent, and the origin of the message (from - a wallet or process)
