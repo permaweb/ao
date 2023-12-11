@@ -290,6 +290,7 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
       .chain(args => loadMessages({
         processId: args.id,
         owner: args.owner,
+        tags: args.tags,
         from: args.from, // could be undefined
         to: args.to // could be undefined
       }))
