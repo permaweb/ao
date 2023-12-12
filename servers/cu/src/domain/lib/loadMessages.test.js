@@ -5,56 +5,30 @@ import * as assert from 'node:assert'
 import ms from 'ms'
 import { countBy, prop, uniqBy } from 'ramda'
 
-import { SCHEDULED_INTERVAL, SCHEDULED_MESSAGE, isBlockOnSchedule, isTimestampOnSchedule, parseSchedules, scheduleMessagesBetweenWith } from './loadMessages.js'
+import { CRON_INTERVAL, parseCrons, isBlockOnSchedule, isTimestampOnSchedule, scheduleMessagesBetweenWith } from './loadMessages.js'
 import { padBlockHeight } from './utils.js'
 
 describe('loadMessages', () => {
-  describe('parseSchedules', () => {
-    const [action1, action2, action3] = [
-      JSON.stringify({
-        tags: [
-          { name: 'function', value: 'notify' },
-          { name: 'notify-function', value: 'transfer' }
-        ]
-      }),
-      JSON.stringify({
-        tags: [
-          { name: 'function', value: 'notify' },
-          { name: 'notify-function', value: 'transfer' }
-        ]
-      }),
-      JSON.stringify({
-        tags: [
-          { name: 'function', value: 'transfer' }
-        ]
-      })
-    ]
+  describe('parseCrons', () => {
     test('parses the schedules from the tags', async () => {
       /**
        * Purposefully mixed up to test robustness of parsing queue
        */
       const tags = [
         { name: 'Foo', value: 'Bar' },
-        { name: SCHEDULED_INTERVAL, value: '10-blocks' },
-        { name: SCHEDULED_INTERVAL, value: ' 10-minutes ' },
-        {
-          name: SCHEDULED_MESSAGE,
-          value: action1
-        },
+        { name: CRON_INTERVAL, value: '10-blocks' },
+        { name: 'Cron-Tag-function', value: 'notify' },
+        { name: 'Cron-Tag-notify-function', value: 'transfer' },
         { name: 'Random', value: 'Tag' },
-        {
-          name: SCHEDULED_MESSAGE,
-          value: action2
-        },
-        { name: SCHEDULED_INTERVAL, value: '* 1 * * *-cron' },
+        { name: CRON_INTERVAL, value: ' 10-minutes ' },
+        { name: 'Cron-Tag-function', value: 'notify' },
+        { name: 'Cron-Tag-notify-function', value: 'transfer' },
+        { name: CRON_INTERVAL, value: '1 hour' },
         { name: 'Another', value: 'Tag' },
-        {
-          name: SCHEDULED_MESSAGE,
-          value: action3
-        }
+        { name: 'Cron-Tag-Function', value: 'transfer' }
       ]
 
-      const [blocks, staticTime, cron] = await parseSchedules({ tags })
+      const [blocks, staticTime] = await parseCrons({ tags })
         .toPromise()
 
       assert.deepStrictEqual(blocks, {
@@ -80,39 +54,25 @@ describe('loadMessages', () => {
         },
         interval: ' 10-minutes '
       })
-
-      assert.deepStrictEqual(cron, {
-        value: '* 1 * * *',
-        unit: 'cron',
-        message: {
-          tags: [
-            { name: 'function', value: 'transfer' }
-          ]
-        },
-        interval: '* 1 * * *-cron'
-      })
     })
 
     test('return an empty array of no schedules are found', async () => {
-      const schedules = await parseSchedules({
+      const crons = await parseCrons({
         tags: []
       }).toPromise()
 
-      assert.deepStrictEqual(schedules, [])
+      assert.deepStrictEqual(crons, [])
     })
 
     test('throw if time-based schedule is less than 1 second', async () => {
-      await parseSchedules({
+      await parseCrons({
         tags: [
-          { name: SCHEDULED_INTERVAL, value: '500-Milliseconds' },
-          {
-            name: SCHEDULED_MESSAGE,
-            value: action3
-          }
+          { name: CRON_INTERVAL, value: '500-Milliseconds' },
+          { name: 'Cron-Tag-Function', value: 'transfer' }
         ]
       }).toPromise()
         .catch(err => {
-          assert.equal(err.message, 'time-based interval cannot be less than 1 second')
+          assert.equal(err.message, 'time-based cron cannot be less than 1 second')
         })
     })
   })

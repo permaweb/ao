@@ -1,6 +1,6 @@
 import { Transform, pipeline } from 'node:stream'
 
-import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of } from 'hyper-async'
 import { T, always, ascend, cond, equals, ifElse, length, mergeRight, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
@@ -10,22 +10,21 @@ import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema } from '.
 import { padBlockHeight } from './utils.js'
 
 /**
- * - { name: 'Scheduled-Interval', value: 'interval' }
- * - { name: 'Scheduled-Message', value: 'JSON' }
+ * - { name: 'Cron-Interval', value: 'interval' }
+ * - { name: 'Cron-Tag-Foo', value: 'Bar' }
+ * - { name: 'Cron-Tag-Fizz', value: 'Buzz' }
  *
  * Interval Format: 'X-Y'
  *
  * Where X is the value
  * Where Y is the unit:
  * - 'blocks'
- * - 'cron' (X is cron string)
  * - time unit ie. 'seconds' 'minutes' 'hours' 'days' 'weeks' 'months' 'years'
  *
  * - '10-blocks'
  * - '10-seconds'
- * - '* * * * *-cron'
  */
-export function parseSchedules ({ tags }) {
+export function parseCrons ({ tags }) {
   function parseInterval (interval = '') {
     const [value, unit] = interval
       .split('-')
@@ -34,7 +33,6 @@ export function parseSchedules ({ tags }) {
     return cond([
       [equals('blocks'), always({ interval, unit, value: parseInt(value) })],
       [equals('block'), always({ interval, unit, value: parseInt(value) })],
-      [equals('cron'), always({ interval, unit, value })],
       /**
        * Assume it's a time, so convert to seconds
        *
@@ -42,9 +40,9 @@ export function parseSchedules ({ tags }) {
        */
       [T, pipe(
         always({ interval, unit: 'seconds', value: Math.floor(ms([value, unit].join(' ')) / 1000) }),
-        (schedule) => {
-          if (schedule.value <= 0) throw new Error('time-based interval cannot be less than 1 second')
-          return schedule
+        (cron) => {
+          if (cron.value <= 0) throw new Error('time-based cron cannot be less than 1 second')
+          return cron
         }
       )]
     ])(unit)
@@ -53,66 +51,58 @@ export function parseSchedules ({ tags }) {
   return of(tags)
     .chain(tags => {
       /**
-       * Build schedules from tags.
-       * interval is matched with message using a queue
+       * Build crons from tags.
+       * interval is matched with most recent Cron-Interval ta
        *
        * tags like:
-       *
        * [
-          { name: 'Foo', value: 'Bar' },
-          { name: 'Scheduled-Interval', value: '10-blocks' },
-          { name: 'Scheduled-Interval', value: ' 20-seconds ' },
-          {
-            name: 'Scheduled-Message',
-            value: action1
-          },
-          { name: 'Random', value: 'Tag' },
-          {
-            name: 'Scheduled-Message',
-            value: action2
-          },
-          { name: 'Scheduled-Interval', value: '* 1 * * *-cron' },
-          { name: 'Another', value: 'Tag' },
-          {
-            name: 'Scheduled-Message',
-            value: action3
-          }
-        ]
+           { name: 'Cron-Interval', value: '5-minutes' },
+           { name: 'Cron-Tag-Foo', value: 'Bar' },
+           { name: 'Cron-Tag-Fizz', value: 'Buzz' },
+           { name: 'Cron-Interval', value: '10-blocks' },
+           { name: 'Cron-Tag-Foo', value: 'Bar' },
+           { name: 'Cron-Tag-Fizz', value: 'Buzz' },
+       * ]
        */
-      const [schedules, queue] = reduce(
-        (acc, tag) => {
+      const crons = reduce(
+        (crons, tag) => {
           /**
-           * New interval found, so push to queue
+           * New interval found, so push to list
            */
-          if (tag.name === SCHEDULED_INTERVAL) acc[1].push(parseInterval(tag.value))
-          /**
-           * New message found, so combine with earliest found interval
-           * and construct the schedule
-           */
-          if (tag.name === SCHEDULED_MESSAGE) {
-            const { value, unit, interval } = acc[1].shift()
-            acc[0].push({
-              value,
-              unit,
-              interval,
-              message: JSON.parse(tag.value)
+          if (tag.name === CRON_INTERVAL) {
+            crons.push({
+              ...parseInterval(tag.value),
+              /**
+               * Cron Messages may only specify tags
+               */
+              message: { tags: [] }
             })
+
+            return crons
           }
-          return acc
+
+          if (CRON_TAG_REGEX.test(tag.name)) {
+            /**
+             * If a Cron-Tag-* is not preceded, at some point, by a Cron-Interval tag, then this is invalid
+             * and we throw an error
+             */
+            if (!crons.length) throw new Error(`Unmatched Cron-Tag with no preceding Cron-Interval: ${tag.name}`)
+            const [, tagName] = CRON_TAG_REGEX.exec(tag.name)
+            crons[crons.length - 1].message.tags.push({ name: tagName, value: tag.value })
+          }
+
+          return crons
         },
-        [[], []],
+        [],
         tags
       )
 
-      if (queue.length) return Rejected(`Unmatched Schedules found: ${queue.join(', ')}`)
-
-      if (!schedules.length) return Resolved([])
-      return Resolved(schedules)
+      return Resolved(crons)
     })
 }
 
-export const SCHEDULED_INTERVAL = 'Scheduled-Interval'
-export const SCHEDULED_MESSAGE = 'Scheduled-Message'
+export const CRON_INTERVAL = 'Cron-Interval'
+export const CRON_TAG_REGEX = /^Cron-Tag-(.+)$/
 
 /**
  * Whether the block height, relative to the origin block height,
@@ -364,7 +354,7 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
   }
 
   return (ctx) => of(ctx)
-    .chain(parseSchedules)
+    .chain(parseCrons)
     .bimap(
       logger.tap('Failed to parse schedules:'),
       ifElse(
