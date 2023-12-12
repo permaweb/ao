@@ -10,6 +10,7 @@ import { uploadMessageWith } from './upload-message.js'
  *
  * @typedef SendMessageArgs
  * @property {string} process
+ * @property {string | ArrayBuffer} [data]
  * @property {string} [anchor]
  * @property {{ name: string, value: string }[]} [tags]
  * @property {any} signer
@@ -25,8 +26,8 @@ export function messageWith (env) {
   const verifyProcess = verifyProcessWith(env)
   const uploadMessage = uploadMessageWith(env)
 
-  return ({ process, tags, anchor, signer }) => {
-    return of({ id: process, tags, anchor, signer })
+  return ({ process, data, tags, anchor, signer }) => {
+    return of({ id: process, data, tags, anchor, signer })
       .chain(verifyProcess)
       .chain(uploadMessage)
       .map((ctx) => ctx.messageId) // the id of the data item

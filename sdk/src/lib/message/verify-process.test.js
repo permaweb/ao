@@ -11,11 +11,10 @@ describe('verify-process', () => {
       loadProcessMeta: async (_id) =>
         ({
           tags: [
-            { name: 'Contract-Src', value: 'foobar' },
             { name: 'Data-Protocol', value: 'ao' },
-            // Implements multiple Data-Protocols
-            { name: 'Data-Protocol', value: 'foo' },
-            { name: 'ao-type', value: 'process' }
+            { name: 'Data-Protocol', value: 'Data-Protocol' },
+            { name: 'Type', value: 'Process' },
+            { name: 'Module', value: 'module-123' }
           ]
         })
     })
@@ -25,47 +24,70 @@ describe('verify-process', () => {
       .catch(() => assert('unreachable. Should have succeeded'))
   })
 
-  test('throw if the Contract-Src tag is not provided', async () => {
-    const verifyProcess = verifyProcessWith({
-      loadProcessMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'Data-Protocol', value: 'ao' },
-            { name: 'ao-type', value: 'process' }
-          ]
+  describe('throw if required tag is invalid on process', () => {
+    test('Data-Protocol', async () => {
+      const verifyProcess = verifyProcessWith({
+        loadProcessMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'not_ao' },
+              { name: 'Data-Protocol', value: 'Data-Protocol' },
+              { name: 'Type', value: 'Process' },
+              { name: 'Module', value: 'module-123' }
+            ]
+          })
+      })
+
+      await verifyProcess({ id: PROCESS }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Data-Protocol': value 'ao' was not found on process"
+          )
         })
     })
 
-    await verifyProcess({ id: PROCESS }).toPromise()
-      .catch(assert.ok)
-  })
+    test('Type', async () => {
+      const verifyProcess = verifyProcessWith({
+        loadProcessMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'ao' },
+              { name: 'Type', value: 'Not_process' }
+            ]
+          })
+      })
 
-  test('throw if the Data-Protocol tag is not provided', async () => {
-    const verifyProcess = verifyProcessWith({
-      loadProcessMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'Contract-Src', value: 'foobar' },
-            { name: 'ao-type', value: 'process' }
-          ]
+      await verifyProcess({ id: PROCESS }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Type': value 'Process' was not found on process"
+          )
         })
     })
 
-    await verifyProcess({ id: PROCESS }).toPromise()
-      .catch(assert.ok)
-  })
+    test('Module', async () => {
+      const verifyProcess = verifyProcessWith({
+        loadProcessMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'ao' },
+              { name: 'Type', value: 'Process' }
+            ]
+          })
+      })
 
-  test('throw if multiple tags not provided', async () => {
-    const verifyProcess = verifyProcessWith({
-      loadProcessMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'Data-Protocol', value: 'ao' }
-          ]
+      await verifyProcess({ id: PROCESS }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Module': was not found on process"
+          )
         })
     })
-
-    await verifyProcess({ id: PROCESS }).toPromise()
-      .catch(assert.ok)
   })
 })

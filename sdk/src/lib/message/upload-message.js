@@ -1,6 +1,6 @@
-import { fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { __, assoc, concat, defaultTo, propEq, reject } from 'ramda'
+import { __, always, append, assoc, concat, defaultTo, ifElse, pipe, prop, propEq, reject } from 'ramda'
 
 import { deployMessageSchema, signerSchema } from '../../dal.js'
 
@@ -32,21 +32,12 @@ const tagSchema = z.array(z.object({
  * @returns { BuildTags }
  */
 function buildTagsWith () {
-  function removeTagsByName (name) {
-    return (tags) => reject(propEq(name, 'name'), tags)
-  }
-
   return (ctx) => {
     return of(ctx.tags)
       .map(defaultTo([]))
-      /**
-       * Remove any reserved tags, so that the sdk
-       * can properly set them
-       */
-      .map(removeTagsByName('ao-type'))
       .map(concat(__, [
         { name: 'Data-Protocol', value: 'ao' },
-        { name: 'ao-type', value: 'message' },
+        { name: 'Type', value: 'Message' },
         { name: 'SDK', value: 'ao' }
       ]))
       .map(tagSchema.parse)
@@ -61,11 +52,38 @@ function buildTagsWith () {
  *
  * @returns { BuildData }
  */
-function buildDataWith () {
+function buildDataWith ({ logger }) {
+  function removeTagsByName (name) {
+    return (tags) => reject(propEq(name, 'name'), tags)
+  }
+
   return (ctx) => {
     return of(ctx)
-      .map(() => Math.random().toString().slice(-4))
-      .map(assoc('data', __, ctx))
+      .chain(ifElse(
+        always(ctx.data),
+        /**
+         * data is provided as input, so do nothing
+         */
+        () => Resolved(ctx),
+        /**
+         * Just generate a random value for data
+         */
+        () => Resolved(Math.random().toString().slice(-4))
+          .map(assoc('data', __, ctx))
+          /**
+           * Since we generate the data value, we know it's Content-Type,
+           * so set it on the tags
+           */
+          .map(
+            (ctx) => pipe(
+              prop('tags'),
+              removeTagsByName('Content-Type'),
+              append({ name: 'Content-Type', value: 'text/plain' }),
+              assoc('tags', __, ctx)
+            )(ctx)
+          )
+          .map(logger.tap('added pseudo-random string as message "data"'))
+      ))
   }
 }
 

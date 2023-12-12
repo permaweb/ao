@@ -1,8 +1,8 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { anyPass, equals, includes, isNotNil, path } from 'ramda'
+import { isNotNil, prop } from 'ramda'
 
 import { loadProcessMetaSchema } from '../../dal.js'
-import { parseTags } from '../utils.js'
+import { eqOrIncludes, parseTags } from '../utils.js'
 
 /**
  * @typedef Env5
@@ -14,25 +14,21 @@ import { parseTags } from '../utils.js'
  * @param {Env5} env
  * @returns {any} VerifyTags
  */
-function verfiyTagsWith ({ loadProcessMeta }) {
-  const checkTag = (name, pred) => tags => pred(tags[name])
+function verifyProcessTagsWith ({ loadProcessMeta }) {
+  const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
-    : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on contract source`)
+    : Rejected(`Tag '${name}': ${err}`)
 
   loadProcessMeta = fromPromise(loadProcessMetaSchema.implement(loadProcessMeta))
 
   return (id) => {
     return of(id)
       .chain(loadProcessMeta)
-      .map(path(['tags']))
+      .map(prop('tags'))
       .map(parseTags)
-      /**
-       * The process could implement multiple Data-Protocols,
-       * so check in the case of a single value or an array of values
-       */
-      .chain(checkTag('Data-Protocol', anyPass([equals('ao'), includes('ao')])))
-      .chain(checkTag('ao-type', equals('process')))
-      .chain(checkTag('Contract-Src', isNotNil))
+      .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on process'))
+      .chain(checkTag('Type', eqOrIncludes('Process'), 'value \'Process\' was not found on process'))
+      .chain(checkTag('Module', isNotNil, 'was not found on process'))
   }
 }
 
@@ -58,10 +54,10 @@ function verfiyTagsWith ({ loadProcessMeta }) {
  * @returns {VerifyProcess}
  */
 export function verifyProcessWith (env) {
-  const verfiyTags = verfiyTagsWith(env)
+  const verifyProcess = verifyProcessTagsWith(env)
   return (ctx) => {
     return of(ctx.id)
-      .chain(verfiyTags)
+      .chain(verifyProcess)
       .map(() => ctx)
   }
 }
