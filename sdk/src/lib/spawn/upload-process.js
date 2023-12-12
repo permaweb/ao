@@ -15,7 +15,7 @@ const tagSchema = z.array(z.object({
  * @property {any} value
  *
  * @typedef Context3
- * @property {string} srcId - the id of the transactions that contains the xontract source
+ * @property {string} moduleId - the id of the transactions that contains the xontract source
  * @property {any} initialState -the initialState of the contract
  * @property {Tag[]} tags
  *
@@ -35,12 +35,12 @@ function buildTagsWith () {
        * Remove any reserved tags, so that the sdk
        * can properly set them
        */
-      .map(removeTagsByName('ao-type'))
-      .map(removeTagsByName('Contract-Src'))
+      .map(removeTagsByName('Type'))
+      .map(removeTagsByName('Module'))
       .map(concat(__, [
         { name: 'Data-Protocol', value: 'ao' },
-        { name: 'ao-type', value: 'process' },
-        { name: 'Contract-Src', value: ctx.srcId },
+        { name: 'Type', value: 'Process' },
+        { name: 'Module', value: ctx.moduleId },
         { name: 'Content-Type', value: 'text/plain' },
         { name: 'SDK', value: 'ao' }
       ]))

@@ -9,7 +9,7 @@ import { uploadProcessWith } from './upload-process.js'
  * @typedef Env1
  *
  * @typedef SpawnProcessArgs
- * @property {string} srcId
+ * @property {string} moduleId
  * @property {string} signer
  * @property {{ name: string, value: string }[]} [tags]
  *
@@ -24,8 +24,8 @@ export function spawnWith (env) {
   const verifyInputs = verifyInputsWith(env)
   const uploadProcess = uploadProcessWith(env)
 
-  return ({ srcId, signer, tags }) => {
-    return of({ srcId, signer, tags })
+  return ({ moduleId, signer, tags }) => {
+    return of({ moduleId, signer, tags })
       .chain(verifyInputs)
       .chain(uploadProcess)
       .map((ctx) => ctx.processId)
