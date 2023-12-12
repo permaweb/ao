@@ -16,7 +16,7 @@ function sourceArgs (src) {
  * - Validate existence of wallet
  * - require confirmation and bypass with --yes
  */
-export async function process ({ wallet, tag, source }) {
+export async function spawn ({ wallet, tag, source }) {
   const cmdArgs = [
     ...walletArgs(wallet),
     ...sourceArgs(source),
@@ -39,15 +39,15 @@ export async function process ({ wallet, tag, source }) {
 }
 
 export const command = new Command()
-  .description('Create an ao Process using a published ao Source')
+  .description('Spawn an ao Process using a published ao Module')
   .option(
     '-w, --wallet <path:string>',
     'the path to the wallet that should be used to sign the transaction',
     { required: true }
   )
   .option(
-    '-s, --source <txId:string>',
-    'the transaction that contains the contract source',
+    '-m, --module <txId:string>',
+    'the transaction that contains the ao Module',
     { required: true }
   )
   .option(
@@ -55,4 +55,4 @@ export const command = new Command()
     '"name:value" additional tag to add to the transaction',
     { collect: true }
   )
-  .action(process)
+  .action(spawn)
