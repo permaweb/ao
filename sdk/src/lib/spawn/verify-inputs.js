@@ -1,8 +1,12 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { isNotNil, prop } from 'ramda'
+import { ifElse, isNotNil, prop } from 'ramda'
 
 import { loadTransactionMetaSchema } from '../../dal.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
+
+const checkTag = (name, pred, err) => tags => pred(tags[name])
+  ? Resolved(tags)
+  : Rejected(`Tag '${name}': ${err}`)
 
 /**
  * @typedef Tag
@@ -19,16 +23,12 @@ import { eqOrIncludes, parseTags } from '../utils.js'
  */
 
 function verifyModuleWith ({ loadTransactionMeta, logger }) {
-  const checkTag = (name, pred, err) => tags => pred(tags[name])
-    ? Resolved(tags)
-    : Rejected(`Tag '${name}': ${err}`)
-
-  return (moduleId) => of(moduleId)
+  return (module) => of(module)
     .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
     .map(prop('tags'))
     .map(parseTags)
     /**
-     * Ensure all tags required by the specification are set
+     * Ensure all Module tags required by the specification are set
      */
     .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on module'))
     .chain(checkTag('Type', eqOrIncludes('Module'), 'value \'Module\' was not found on module'))
@@ -41,6 +41,25 @@ function verifyModuleWith ({ loadTransactionMeta, logger }) {
     )
 }
 
+function verifySchedulerWith ({ logger }) {
+  return (scheduler) => of(scheduler)
+    /**
+     * TODO: actually fetch Schedule-Location record
+     * by owner and confirm that it is valid
+     */
+    .chain(
+      ifElse(
+        isNotNil,
+        Resolved,
+        () => Rejected('scheduler not found')
+      )
+    )
+    .bimap(
+      logger.tap('Verifying scheduler failed: %s'),
+      logger.tap('Verified scheduler')
+    )
+}
+
 function verifySignerWith ({ logger }) {
   return (signer) => of(signer)
     .map(logger.tap('Checking for signer'))
@@ -49,7 +68,7 @@ function verifySignerWith ({ logger }) {
 
 /**
  * @typedef Context
- * @property {string} moduleId - the id of the module source
+ * @property {string} module - the id of the module source
  * @property {Function} sign - the signer used to sign the process
  * @property {Tag[]} tags - the additional tags to add to the process
  *
@@ -70,11 +89,13 @@ export function verifyInputsWith (env) {
   env = { ...env, logger }
 
   const verifyModule = verifyModuleWith(env)
+  const verifyScheduler = verifySchedulerWith(env)
   const verifySigner = verifySignerWith(env)
 
   return (ctx) => {
     return of(ctx)
-      .chain(ctx => verifyModule(ctx.moduleId).map(() => ctx))
+      .chain(ctx => verifyModule(ctx.module).map(() => ctx))
+      .chain(ctx => verifyScheduler(ctx.scheduler)).map(() => ctx)
       .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
       .bimap(
         logger.tap('Error when verify input: %s'),
