@@ -54,7 +54,7 @@ Read the result of the message evaluation from an `ao` Compute Unit `cu`
 import { result } from "@permaweb/ao-sdk";
 
 let { messages, spawns, output, error } = await result({
-  messageId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+  message: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
 });
 ```
 

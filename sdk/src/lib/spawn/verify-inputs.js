@@ -23,8 +23,10 @@ const checkTag = (name, pred, err) => tags => pred(tags[name])
  */
 
 function verifyModuleWith ({ loadTransactionMeta, logger }) {
+  loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
+
   return (module) => of(module)
-    .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
+    .chain(loadTransactionMeta)
     .map(prop('tags'))
     .map(parseTags)
     /**

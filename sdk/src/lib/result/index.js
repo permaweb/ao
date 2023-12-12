@@ -13,7 +13,7 @@ import { readWith } from './read.js'
  * @property {string} [error]
  *
  * @typedef ReadResultArgs
- * @property {string} messageId - the transaction id of the message
+ * @property {string} message - the transaction id of the message
  *
  * @callback ReadResult
  * @param {ReadResultArgs} args
@@ -25,14 +25,14 @@ export function resultWith (env) {
   const verifyInput = verifyInputWith(env)
   const read = readWith(env)
 
-  return ({ messageId }) => {
-    return of({ id: messageId })
+  return ({ message }) => {
+    return of({ id: message })
       .chain(verifyInput)
       .chain(read)
       .map(
         env.logger.tap(
           'readResult result for message "%s": %O',
-          messageId
+          message
         )
       )
       .map(result => result)
