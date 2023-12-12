@@ -3,7 +3,7 @@
 import { Command } from '../deps.js'
 import { VERSION } from '../versions.js'
 
-export async function repl () {
+export async function lua () {
   const pwd = Deno.cwd()
   const p = Deno.run({
     cmd: [
@@ -23,4 +23,4 @@ export async function repl () {
 
 export const command = new Command()
   .description('Start a Lua Repl')
-  .action(repl)
+  .action(lua)
