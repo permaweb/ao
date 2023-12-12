@@ -70,17 +70,14 @@ export function connect ({
   })
 
   /**
-   * default createContract that works OOTB
+   * default spawn that works OOTB
    * - Verifies the inputs
-   * - Creates the process
-   *   - In browser, uses Arweave Wallet to upload process to Irys (via dispatch)
-   *   - On server, uses Irys Node to upload process to Irys
-   * - Registers the Process with SU
+   * - spawns the process via the MU
    */
   const spawnLogger = logger.child('spawn')
   const spawn = spawnWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-    deployProcess: SuClient.deployProcessWith({ fetch, SU_URL, logger: spawnLogger }),
+    deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
     logger: spawnLogger
   })
 
