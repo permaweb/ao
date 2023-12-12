@@ -14,8 +14,8 @@ describe('upload-process', () => {
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'process' },
-          { name: 'Contract-Src', value: 'src-id-123' },
+          { name: 'Type', value: 'Process' },
+          { name: 'Module', value: 'module-id-123' },
           { name: 'Content-Type', value: 'text/plain' },
           { name: 'SDK', value: 'ao' }
         ])
@@ -35,7 +35,7 @@ describe('upload-process', () => {
     })
 
     await uploadProcess({
-      srcId: 'src-id-123',
+      moduleId: 'module-id-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ],
@@ -49,8 +49,8 @@ describe('upload-process', () => {
       deployProcess: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'process' },
-          { name: 'Contract-Src', value: 'src-id-123' },
+          { name: 'Type', value: 'Process' },
+          { name: 'Module', value: 'module-id-123' },
           { name: 'Content-Type', value: 'text/plain' },
           { name: 'SDK', value: 'ao' }
         ])
@@ -62,7 +62,7 @@ describe('upload-process', () => {
     })
 
     await uploadProcess({
-      srcId: 'src-id-123',
+      moduleId: 'module-id-123',
       signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
   })
@@ -72,8 +72,8 @@ describe('upload-process', () => {
       deployProcess: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'process' },
-          { name: 'Contract-Src', value: 'src-id-123' },
+          { name: 'Type', value: 'Process' },
+          { name: 'Module', value: 'module-id-123' },
           { name: 'Content-Type', value: 'text/plain' },
           { name: 'SDK', value: 'ao' }
         ])
@@ -85,11 +85,11 @@ describe('upload-process', () => {
     })
 
     await uploadProcess({
-      srcId: 'src-id-123',
+      moduleId: 'module-id-123',
       tags: [
-        { name: 'ao-type', value: 'process' },
-        { name: 'ao-type', value: 'process' },
-        { name: 'Contract-Src', value: 'oops-duplicate' }
+        { name: 'Type', value: 'Process' },
+        { name: 'Type', value: 'Process' },
+        { name: 'Module', value: 'oops-duplicate' }
       ],
       signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()

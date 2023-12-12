@@ -84,7 +84,7 @@ Spawn an `ao` process
 import { createDataItemSigner, spawn } from "@permaweb/ao-sdk";
 
 const processId = await spawn({
-  srcId,
+  moduleId,
   signer: createDataItemSigner(wallet),
   tags,
 });
