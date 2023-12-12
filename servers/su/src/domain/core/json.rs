@@ -104,6 +104,8 @@ fn parse_sort_key(sort_key: &String) -> Result<Block, JsonErrorType> {
     })
 }
 
+// TODO: save all the bundle level tags
+
 impl Process {
     pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();

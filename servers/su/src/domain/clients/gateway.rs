@@ -23,7 +23,7 @@ impl From<GatewayErrorType> for String {
 #[async_trait]
 impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
-        let config = Config::new().expect("Failed to read configuration");
+        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
         let gateway_url = config.gateway_url;
 
         let url = match Url::parse(&gateway_url) {
@@ -53,7 +53,7 @@ impl Gateway for ArweaveGateway {
     }
 
     async fn network_info(&self) -> Result<NetworkInfo, String> {
-        let config = Config::new().expect("Failed to read configuration");
+        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
         let gateway_url = config.gateway_url;
         let url = match Url::parse(&gateway_url) {
             Ok(u) => u,

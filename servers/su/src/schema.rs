@@ -14,6 +14,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    process_schedulers (row_id) {
+        row_id -> Int4,
+        process_id -> Varchar,
+        scheduler_row_id -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
     processes (row_id) {
         row_id -> Int4,
         #[max_length = 255]
@@ -22,7 +30,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    schedulers (row_id) {
+        row_id -> Int4,
+        url -> Varchar,
+    }
+}
+
+diesel::joinable!(process_schedulers -> schedulers (scheduler_row_id));
+
 diesel::allow_tables_to_appear_in_same_query!(
     messages,
+    process_schedulers,
     processes,
+    schedulers,
 );

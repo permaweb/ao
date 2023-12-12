@@ -18,6 +18,7 @@ pub trait Gateway {
 
 pub trait Wallet {
     fn wallet_json(&self) -> Result<String, String>;
+    fn wallet_address(&self) -> Result<String, String>;
 }
 
 #[async_trait]
