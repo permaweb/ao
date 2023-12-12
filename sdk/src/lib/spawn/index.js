@@ -13,7 +13,7 @@ import { uploadProcessWith } from './upload-process.js'
  * @property {string} scheduler
  * @property {string} signer
  * @property {{ name: string, value: string }[]} [tags]
- * @property {string | ArrayBuffer} [data]
+ * @property {string} [data]
  *
  * @callback SpawnProcess
  * @param {SpawnProcessArgs} args

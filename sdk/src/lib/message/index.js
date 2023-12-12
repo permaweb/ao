@@ -10,7 +10,7 @@ import { uploadMessageWith } from './upload-message.js'
  *
  * @typedef SendMessageArgs
  * @property {string} process
- * @property {string | ArrayBuffer} [data]
+ * @property {string} [data]
  * @property {string} [anchor]
  * @property {{ name: string, value: string }[]} [tags]
  * @property {any} signer
