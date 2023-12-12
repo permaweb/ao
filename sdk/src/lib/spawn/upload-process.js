@@ -1,6 +1,6 @@
-import { fromPromise, of } from 'hyper-async'
+import { fromPromise, of, Resolved } from 'hyper-async'
 import { z } from 'zod'
-import { __, assoc, concat, defaultTo, propEq, reject } from 'ramda'
+import { __, always, assoc, concat, defaultTo, ifElse, propEq, reject } from 'ramda'
 
 import { deployProcessSchema, signerSchema } from '../../dal.js'
 
@@ -18,6 +18,7 @@ const tagSchema = z.array(z.object({
  * @property {string} moduleId - the id of the transactions that contains the xontract source
  * @property {any} initialState -the initialState of the contract
  * @property {Tag[]} tags
+ * @property {string | ArrayBuffer} [data]
  *
  * @typedef Env6
  * @property {any} upload
@@ -52,12 +53,19 @@ function buildTagsWith () {
 function buildDataWith ({ logger }) {
   return (ctx) => {
     return of(ctx)
-      /**
-       * The data does not matter, so we just generate a random value
-       */
-      .map(() => Math.random().toString().slice(-4))
-      .map(assoc('data', __, ctx))
-      .map(logger.tap('added pseudo-random data as payload for contract at "data"'))
+      .chain(ifElse(
+        always(ctx.data),
+        /**
+         * data is provided as input, so do nothing
+         */
+        () => Resolved(ctx),
+        /**
+         * Just generate a random value for data
+         */
+        () => Resolved(Math.random().toString().slice(-4))
+          .map(assoc('data', __, ctx))
+          .map(logger.tap('added pseudo-random data as payload for contract at "data"'))
+      ))
   }
 }
 
