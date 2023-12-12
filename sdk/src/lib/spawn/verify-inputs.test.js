@@ -6,7 +6,7 @@ import { verifyInputsWith } from './verify-inputs.js'
 
 const MODULE = 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
 
-const logger = createLogger('createContract')
+const logger = createLogger('spawn')
 
 describe('verify-input', () => {
   test('verify source tags and verify signer', async () => {

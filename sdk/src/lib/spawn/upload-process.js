@@ -71,7 +71,7 @@ function buildDataWith ({ logger }) {
               assoc('tags', __, ctx)
             )(ctx)
           )
-          .map(logger.tap('added pseudo-random data as payload for contract at "data"'))
+          .map(logger.tap('added pseudo-random string as process "data"'))
       ))
   }
 }

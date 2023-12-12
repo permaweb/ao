@@ -1,7 +1,10 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
+import { createLogger } from '../../logger.js'
 import { uploadMessageWith } from './upload-message.js'
+
+const logger = createLogger('message')
 
 describe('upload-message', () => {
   test('add the tags, sign, and upload the message, and return the messageId', async () => {
@@ -12,14 +15,16 @@ describe('upload-message', () => {
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'message' },
-          { name: 'SDK', value: 'ao' }
+          { name: 'Type', value: 'Message' },
+          { name: 'SDK', value: 'ao' },
+          { name: 'Content-Type', value: 'text/plain' }
         ])
         assert.equal(anchor, 'idempotent-123')
         assert.ok(signer)
 
         return { messageId: 'data-item-123' }
-      }
+      },
+      logger
     })
 
     await uploadMessage({
