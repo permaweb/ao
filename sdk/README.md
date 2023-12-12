@@ -7,7 +7,7 @@ This sdk will run in a browser or server environment.
 
 - Read the result of an `ao` Message evaluation from a `ao` Compute Unit `cu`
 - Send a Message targeting an `ao` Process to an `ao` Message Unit `mu`
-- Spawn an `ao` Process on an `ao` Sequencer Unit `su`
+- Spawn an `ao` Process, assigning it to an `ao` Scheduler Unit `su`
 
 <!-- toc -->
 
@@ -66,7 +66,7 @@ send a message to an `ao` Message Unit `mu` targeting an ao `process`.
 import { createDataItemSigner, message } from "@permaweb/ao-sdk";
 
 const messageId = await message({
-  processId,
+  process,
   signer: createDataItemSigner(wallet),
   anchor,
   tags,
@@ -78,13 +78,14 @@ const messageId = await message({
 
 #### `spawn`
 
-Spawn an `ao` process
+Spawn an `ao` process, assigning the `ao` Scheduler to schedule its messages
 
 ```js
 import { createDataItemSigner, spawn } from "@permaweb/ao-sdk";
 
 const processId = await spawn({
-  moduleId,
+  module,
+  scheduler,
   signer: createDataItemSigner(wallet),
   tags,
 });
@@ -98,7 +99,7 @@ specify those components by providing their urls to `connect`. You can currently
 - The GATEWAY_URL
 - The Messenger Unit URL
 - The Compute Unit URL
-- The Sequencer Unit URL
+- The Scheduler Unit URL
 
 ```js
 import { connect } from "@permaweb/ao-sdk";

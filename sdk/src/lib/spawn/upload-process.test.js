@@ -16,8 +16,9 @@ describe('upload-process', () => {
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
-          { name: 'Content-Type', value: 'text/plain' },
-          { name: 'SDK', value: 'ao' }
+          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
+          { name: 'SDK', value: 'ao' },
+          { name: 'Content-Type', value: 'text/plain' }
         ])
         assert.ok(signer)
 
@@ -35,7 +36,8 @@ describe('upload-process', () => {
     })
 
     await uploadProcess({
-      moduleId: 'module-id-123',
+      module: 'module-id-123',
+      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       tags: [
         { name: 'foo', value: 'bar' }
       ],
@@ -51,8 +53,9 @@ describe('upload-process', () => {
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
-          { name: 'Content-Type', value: 'text/plain' },
-          { name: 'SDK', value: 'ao' }
+          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
+          { name: 'SDK', value: 'ao' },
+          { name: 'Content-Type', value: 'text/plain' }
         ])
 
         return { res: 'foobar', processId: 'process-id-123' }
@@ -62,7 +65,8 @@ describe('upload-process', () => {
     })
 
     await uploadProcess({
-      moduleId: 'module-id-123',
+      module: 'module-id-123',
+      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
   })
@@ -71,6 +75,17 @@ describe('upload-process', () => {
     const uploadProcess = uploadProcessWith({
       deployProcess: async ({ data, tags, signer }) => {
         assert.equal(data, 'foobar')
+        /**
+         * Assert no Content-Type tag is added
+         */
+        assert.deepStrictEqual(tags, [
+          { name: 'foo', value: 'bar' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Process' },
+          { name: 'Module', value: 'module-id-123' },
+          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
+          { name: 'SDK', value: 'ao' }
+        ])
         return {
           res: 'foobar',
           processId: 'process-id-123',
@@ -84,7 +99,8 @@ describe('upload-process', () => {
     })
 
     await uploadProcess({
-      moduleId: 'module-id-123',
+      module: 'module-id-123',
+      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       tags: [
         { name: 'foo', value: 'bar' }
       ],

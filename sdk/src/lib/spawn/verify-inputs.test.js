@@ -26,8 +26,8 @@ describe('verify-input', () => {
     })
 
     await verifyInput({
-      moduleId: MODULE,
-      initialState: { balances: { foo: 1 } },
+      module: MODULE,
+      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
@@ -49,8 +49,8 @@ describe('verify-input', () => {
       })
 
       await verifyInput({
-        moduleId: MODULE,
-        initialState: { balances: { foo: 1 } },
+        module: MODULE,
+        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -78,8 +78,8 @@ describe('verify-input', () => {
       })
 
       await verifyInput({
-        moduleId: MODULE,
-        initialState: { balances: { foo: 1 } },
+        module: MODULE,
+        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -107,8 +107,8 @@ describe('verify-input', () => {
       })
 
       await verifyInput({
-        moduleId: MODULE,
-        initialState: { balances: { foo: 1 } },
+        module: MODULE,
+        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -137,8 +137,8 @@ describe('verify-input', () => {
       })
 
       await verifyInput({
-        moduleId: MODULE,
-        initialState: { balances: { foo: 1 } },
+        module: MODULE,
+        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -168,8 +168,8 @@ describe('verify-input', () => {
       })
 
       await verifyInput({
-        moduleId: MODULE,
-        initialState: { balances: { foo: 1 } },
+        module: MODULE,
+        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -202,8 +202,8 @@ describe('verify-input', () => {
     })
 
     await verifyInput({
-      moduleId: MODULE,
-      initialState: { balances: { foo: 1 } },
+      module: MODULE,
+      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       signer: undefined,
       tags: [
         { name: 'foo', value: 'bar' }
@@ -215,6 +215,40 @@ describe('verify-input', () => {
         assert.equal(
           err,
           'signer not found'
+        )
+      })
+  })
+
+  test('throw if scheduler is not found', async () => {
+    const verifyInput = verifyInputsWith({
+      loadTransactionMeta: async (_id) =>
+        ({
+          tags: [
+            { name: 'Data-Protocol', value: 'ao' },
+            { name: 'Data-Protocol', value: 'Data-Protocol' },
+            { name: 'Type', value: 'Module' },
+            { name: 'Module-Format', value: 'emscripten' },
+            { name: 'Input-Encoding', value: 'JSON-1' },
+            { name: 'Output-Encoding', value: 'JSON-1' }
+          ]
+        }),
+      logger
+    })
+
+    await verifyInput({
+      module: MODULE,
+      scheduler: undefined,
+      signer: () => {},
+      tags: [
+        { name: 'foo', value: 'bar' }
+      ],
+      logger
+    }).toPromise()
+      .then(assert.fail)
+      .catch(err => {
+        assert.equal(
+          err,
+          'scheduler not found'
         )
       })
   })
