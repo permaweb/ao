@@ -1,9 +1,9 @@
-import { fromPromise, of } from 'hyper-async'
+import { fromPromise, of, Resolved, Rejected } from 'hyper-async'
 import { mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
-import { loadTransactionDataSchema } from '../dal.js'
-import { parseTags } from '../utils.js'
+import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
+import { eqOrIncludes, parseTags } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -21,16 +21,34 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
-function getModuleBufferWith ({ loadTransactionData }) {
-  loadTransactionData = fromPromise(loadTransactionDataSchema.implement(loadTransactionData))
+function getModuleWith ({ loadTransactionData, loadTransactionMeta }) {
+  loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
+  loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
+
+  const checkTag = (name, pred, err) => tags => pred(tags[name])
+    ? Resolved(tags)
+    : Rejected(`Tag '${name}': ${err}`)
 
   return (tags) => {
     return of(tags)
       .map(parseTags)
       .map(prop('Module'))
-      .chain(moduleId =>
+      .chain((moduleId) =>
         of(moduleId)
-          .chain(loadTransactionData)
+          .chain(fromPromise((moduleId) => Promise.all([
+            loadTransactionData(moduleId),
+            loadTransactionMeta(moduleId)
+          ])))
+          /**
+           * This CU currently only implements evaluation for emscripten Module-Format,
+           * so we check that the Module is the correct Module-Format, and reject if not
+           */
+          .chain(([data, meta]) =>
+            of(meta.tags)
+              .map(parseTags)
+              .chain(checkTag('Module-Format', eqOrIncludes('emscripten'), 'only \'emscripten\' module format is supported by this CU'))
+              .map(() => data)
+          )
           .chain(fromPromise((res) => res.arrayBuffer()))
           .map(module => ({ module, moduleId }))
       )
@@ -56,11 +74,11 @@ export function loadModuleWith (env) {
   const logger = env.logger.child('loadModule')
   env = { ...env, logger }
 
-  const getModuleBuffer = getModuleBufferWith(env)
+  const getModule = getModuleWith(env)
 
   return (ctx) => {
     return of(ctx.tags)
-      .chain(getModuleBuffer)
+      .chain(getModule)
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
       .map(ctx => {
