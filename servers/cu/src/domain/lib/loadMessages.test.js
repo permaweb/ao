@@ -5,8 +5,9 @@ import * as assert from 'node:assert'
 import ms from 'ms'
 import { countBy, prop, uniqBy } from 'ramda'
 
+import { padBlockHeight } from '../utils.js'
+
 import { CRON_INTERVAL, parseCrons, isBlockOnSchedule, isTimestampOnSchedule, scheduleMessagesBetweenWith } from './loadMessages.js'
-import { padBlockHeight } from './utils.js'
 
 describe('loadMessages', () => {
   describe('parseCrons', () => {

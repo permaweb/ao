@@ -1,19 +1,19 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { F, T, always, cond, equals, includes, is, isNotNil, mergeRight, omit } from 'ramda'
+import { always, isNotNil, mergeRight, omit } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, saveProcessSchema } from '../dal.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
-import { parseTags } from './utils.js'
+import { eqOrIncludes, parseTags } from '../utils.js'
 
 function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) {
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
   loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
 
-  const checkTag = (name, pred) => (tags) => pred(tags[name])
+  const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
-    : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on transaction`)
+    : Rejected(`Tag '${name}': ${err}`)
 
   /**
    * Load the process from the SU, extracting the metadata,
@@ -27,17 +27,9 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
       .chain(ctx =>
         of(ctx.tags)
           .map(parseTags)
-          /**
-           * The process could implement multiple Data-Protocols,
-           * so check in the case of a single value or an array of values
-           */
-          .chain(checkTag('Data-Protocol', cond([
-            [is(String), equals('ao')],
-            [is(Array), includes('ao')],
-            [T, F]
-          ])))
-          .chain(checkTag('ao-type', equals('process')))
-          .chain(checkTag('Contract-Src', isNotNil))
+          .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on process'))
+          .chain(checkTag('Type', eqOrIncludes('Process'), 'value \'Process\' was not found on process'))
+          .chain(checkTag('Module', isNotNil, 'was not found on process'))
           .map(always({ id: processId, ...ctx }))
           .bimap(
             logger.tap('Verifying process failed: %s'),
@@ -175,10 +167,10 @@ const ctxSchema = z.object({
 
 /**
  * @typedef Args
- * @property {string} id - the id of the contract
+ * @property {string} id - the id of the process
  *
  * @typedef Result
- * @property {string} id - the id of the contract
+ * @property {string} id - the id of the process
  * @property {string} owner
  * @property {any} tags
  * @property {{ height: number, timestamp: number }} block

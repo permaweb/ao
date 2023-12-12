@@ -3,7 +3,7 @@ import { Transform, pipeline } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
-import { findRawTag, padBlockHeight } from '../lib/utils.js'
+import { findRawTag, padBlockHeight } from '../utils.js'
 
 export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')

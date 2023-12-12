@@ -12,9 +12,9 @@ const logger = createLogger('ao-cu:readState')
 describe('loadProcess', () => {
   test('appends process owner, tags, block, buffer as process tags parsed as JSON, result, from, and evaluatedAt to ctx', async () => {
     const tags = [
-      { name: 'Contract-Src', value: 'foobar' },
+      { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'process' },
+      { name: 'Type', value: 'Process' },
       { name: 'inbox', value: JSON.stringify([]) },
       { name: 'balances', value: JSON.stringify({ 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc': 1000 }) }
     ]
@@ -50,9 +50,9 @@ describe('loadProcess', () => {
 
   test('use process from db to set owner, tags, and block', async () => {
     const tags = [
-      { name: 'Contract-Src', value: 'foobar' },
+      { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'process' },
+      { name: 'Type', value: 'Process' },
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
@@ -101,9 +101,9 @@ describe('loadProcess', () => {
     }
 
     const tags = [
-      { name: 'Contract-Src', value: 'foobar' },
+      { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'process' },
+      { name: 'Type', value: 'Process' },
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
@@ -132,9 +132,9 @@ describe('loadProcess', () => {
 
   test('save process to db if fetched from chain', async () => {
     const tags = [
-      { name: 'Contract-Src', value: 'foobar' },
+      { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'process' },
+      { name: 'Type', value: 'Process' },
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
@@ -162,9 +162,9 @@ describe('loadProcess', () => {
 
   test('gracefully handled failure to save to db', async () => {
     const tags = [
-      { name: 'Contract-Src', value: 'foobar' },
+      { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'process' },
+      { name: 'Type', value: 'Process' },
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
@@ -186,7 +186,7 @@ describe('loadProcess', () => {
     assert.equal(res.id, PROCESS)
   })
 
-  test('throw if the Contract-Src tag is not provided', async () => {
+  test('throw if the Module tag is not provided', async () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
@@ -194,9 +194,9 @@ describe('loadProcess', () => {
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
-          { name: 'Not-Contract-Src', value: 'foobar' },
+          { name: 'Not_Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'process' }
+          { name: 'Type', value: 'Process' }
         ],
         block: { height: 123, timestamp: 1697574792000 }
       }),
@@ -205,7 +205,7 @@ describe('loadProcess', () => {
 
     await loadProcess({ id: PROCESS }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.equal(err, "Tag 'Contract-Src' of value 'undefined' was not valid on transaction"))
+      .catch(err => assert.equal(err, "Tag 'Module': was not found on process"))
   })
 
   test('throw if the Data-Protocol tag is not "ao"', async () => {
@@ -216,9 +216,9 @@ describe('loadProcess', () => {
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
-          { name: 'Contract-Src', value: 'foobar' },
+          { name: 'Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
-          { name: 'ao-type', value: 'process' }
+          { name: 'Type', value: 'Process' }
         ],
         block: { height: 123, timestamp: 1697574792000 }
       }),
@@ -227,10 +227,10 @@ describe('loadProcess', () => {
 
     await loadProcess({ id: PROCESS }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.equal(err, "Tag 'Data-Protocol' of value 'not_ao' was not valid on transaction"))
+      .catch(err => assert.equal(err, "Tag 'Data-Protocol': value 'ao' was not found on process"))
   })
 
-  test('throw if the ao-type tag is not "process"', async () => {
+  test('throw if the Type tag is not "Process"', async () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
@@ -238,9 +238,9 @@ describe('loadProcess', () => {
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
-          { name: 'Contract-Src', value: 'foobar' },
+          { name: 'Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'message' }
+          { name: 'Type', value: 'Not_process' }
         ],
         block: { height: 123, timestamp: 1697574792000 }
       }),
@@ -249,6 +249,6 @@ describe('loadProcess', () => {
 
     await loadProcess({ id: PROCESS }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.equal(err, "Tag 'ao-type' of value 'message' was not valid on transaction"))
+      .catch(err => assert.equal(err, "Tag 'Type': value 'Process' was not found on process"))
   })
 })

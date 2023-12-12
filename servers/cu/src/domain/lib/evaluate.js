@@ -26,7 +26,7 @@ const ctxSchema = z.object({
  */
 
 function addHandler (ctx) {
-  return of(ctx.src)
+  return of(ctx.module)
     .chain(fromPromise(AoLoader))
     .map((handle) => ({ handle, ...ctx }))
 }
@@ -64,7 +64,7 @@ function doesMessageIdExistWith ({ findMessageId }) {
  * @property {string} id - the contract id
  * @property {Record<string, any>} state - the initial state
  * @property {string} from - the initial state sortKey
- * @property {ArrayBuffer} src - the contract wasm as an array buffer
+ * @property {ArrayBuffer} module - the contract wasm as an array buffer
  * @property {Record<string, any>[]} action - an array of interactions to apply
  *
  * @callback Evaluate
