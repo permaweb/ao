@@ -18,6 +18,11 @@ table! {
     }
 }
 
+/*
+schedulers and process_schedulers are used
+when the su is in router mode acting as 
+a load balancer/router for the underlying sus
+*/
 table! {
     schedulers (row_id) {
         row_id -> Integer,
@@ -25,5 +30,10 @@ table! {
     }
 }
 
-joinable!(processes -> schedulers (scheduler_row_id)); // establishes the foreign key relationship
-allow_tables_to_appear_in_same_query!(processes, schedulers);
+table! {
+    process_schedulers (row_id) {
+        row_id -> Integer,
+        process_id -> Varchar,
+        scheduler_row_id -> Integer,
+    }
+}

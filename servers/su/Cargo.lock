@@ -2915,6 +2915,7 @@ dependencies = [
  "log",
  "reqwest",
  "ring",
+ "rsa",
  "serde",
  "serde_derive",
  "serde_json",

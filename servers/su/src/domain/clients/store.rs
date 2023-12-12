@@ -7,6 +7,7 @@ use diesel::r2d2::Pool;
 use std::env::VarError;
 
 use super::super::core::json::{Message, Process};
+use super::super::core::router::{Scheduler, ProcessScheduler};
 use crate::config::Config;
 
 #[derive(Debug)]
@@ -56,7 +57,7 @@ pub struct StoreClient{
 
 impl StoreClient {
     pub fn new() -> Result<Self, StoreErrorType> {
-        let config = Config::new().expect("Failed to read configuration");
+        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
         let database_url = config.database_url;
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
@@ -186,6 +187,95 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+
+
+    pub fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType> {
+        use super::schema::process_schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        let new_process_scheduler = NewProcessScheduler {
+            process_id: &process_scheduler.process_id,
+            scheduler_row_id: &process_scheduler.scheduler_row_id,
+        };
+    
+        match diesel::insert_into(process_schedulers)
+            .values(&new_process_scheduler)
+            .on_conflict(process_id)
+            .do_nothing() 
+            .execute(conn)
+        {
+            Ok(_) => {
+                Ok("saved".to_string())
+            },
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    pub fn get_process_scheduler(&self, process_id_in: &str) -> Result<ProcessScheduler, StoreErrorType> {
+        use super::schema::process_schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        let db_process_result: Result<Option<DbProcessScheduler>, DieselError> = process_schedulers
+            .filter(process_id.eq(process_id_in))
+            .first(conn)
+            .optional();
+    
+        match db_process_result {
+            Ok(Some(db_process_scheduler)) => {
+                let process_scheduler: ProcessScheduler = ProcessScheduler {
+                    row_id: Some(db_process_scheduler.row_id),
+                    process_id: db_process_scheduler.process_id,
+                    scheduler_row_id: db_process_scheduler.scheduler_row_id,
+                };
+                Ok(process_scheduler)
+            },
+            Ok(None) => Err(StoreErrorType::NotFound("Process scheduler not found".to_string())), 
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    pub fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
+        use super::schema::schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        let new_scheduler = NewScheduler {
+            url: &scheduler.url,
+        };
+    
+        match diesel::insert_into(schedulers)
+            .values(&new_scheduler)
+            .on_conflict(url)
+            .do_nothing() 
+            .execute(conn)
+        {
+            Ok(_) => {
+                Ok("saved".to_string())
+            },
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    pub fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
+        use super::schema::schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        let db_scheduler_result: Result<Option<DbScheduler>, DieselError> = schedulers
+            .filter(row_id.eq(row_id_in))
+            .first(conn)
+            .optional();
+    
+        match db_scheduler_result {
+            Ok(Some(db_scheduler)) => {
+                let scheduler: Scheduler = Scheduler {
+                    row_id: Some(db_scheduler.row_id),
+                    url: db_scheduler.url
+                };
+                Ok(scheduler)
+            },
+            Ok(None) => Err(StoreErrorType::NotFound("Scheduler not found".to_string())), 
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
     
 }
 
@@ -229,3 +319,34 @@ pub struct NewProcess<'a> {
 }
 
 
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = super::schema::schedulers)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct DbScheduler {
+    pub row_id: i32,
+    pub url: String,
+}
+
+
+#[derive(Insertable)]
+#[diesel(table_name = super::schema::schedulers)]
+pub struct NewScheduler<'a> {
+    pub url: &'a str,
+}
+
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = super::schema::process_schedulers)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct DbProcessScheduler {
+    pub row_id: i32,
+    pub process_id: String,
+    pub scheduler_row_id: i32
+}
+
+
+#[derive(Insertable)]
+#[diesel(table_name = super::schema::process_schedulers)]
+pub struct NewProcessScheduler<'a> {
+    pub process_id: &'a str,
+    pub scheduler_row_id: &'a i32,
+}

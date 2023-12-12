@@ -1,73 +1,114 @@
+use std::env;
 use std::sync::Arc;
+use std::io::{self, Error, ErrorKind};
 
-use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, middleware::Logger};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, middleware::Logger, http::header::LOCATION};
 use serde::Deserialize;
 
 use su::domain::{flows, StoreClient, Deps, Log};
 use su::logger::SuLog;
-
-async fn base() -> impl Responder {
-    HttpResponse::Ok().body("ao sequencer unit")
-}
-
-async fn timestamp_route() -> impl Responder {
-    let result = flows::timestamp().await;
-
-    match result {
-        Ok(processed_str) => HttpResponse::Ok()
-            .content_type("application/json")
-            .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
-    }
-}
-
-async fn message_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes) -> impl Responder {
-    let result = flows::write_message(deps.get_ref().clone(), req_body.to_vec()).await;
-
-    match result {
-        Ok(processed_str) => HttpResponse::Ok()
-            .content_type("application/json")
-            .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
-    }
-}
+use su::config::Config;
 
 #[derive(Deserialize)]
 struct FromTo {
     from: Option<String>,
     to: Option<String>,
+    #[serde(rename = "process-id")]
+    process_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct TxId {
+    tx_id: String,
 }
 
 #[derive(Deserialize)]
 struct ProcessId {
-    process_id: String,
-}
-
-async fn messages_route(deps: web::Data<Arc<Deps>>, _req: HttpRequest, path: web::Path<ProcessId>, query_params: web::Query<FromTo>) -> impl Responder {
-    let process_id = path.process_id.clone();
-    let from_sort_key = query_params.from.clone();
-    let to_sort_key = query_params.to.clone();
-
-    let result = flows::read_messages(deps.get_ref().clone(), process_id, from_sort_key, to_sort_key).await;
-        
-    match result {
-        Ok(processed_str) => HttpResponse::Ok()
-            .content_type("application/json")
-            .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
-    }
+    #[serde(rename = "process-id")]
+    process_id: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct MessageId {
-    message_id: String,
+struct ProcessIdRequired {
+    #[serde(rename = "process-id")]
+    process_id: String,
 }
 
-async fn read_message_route(deps: web::Data<Arc<Deps>>, _req: HttpRequest, path: web::Path<MessageId>, _query_params: web::Query<FromTo>) -> impl Responder {
-    let message_id = path.message_id.clone();
+async fn base(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, req: HttpRequest) -> impl Responder {
+    let process_id = query_params.process_id.clone();
 
-    let result = flows::read_message(deps.get_ref().clone(), message_id).await;
-        
+    match flows::redirect_process_id(deps.get_ref().clone(), process_id).await {
+        Ok(Some(redirect_url)) => {
+            let target_url = format!("{}{}", redirect_url, req.uri());
+            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+        },
+        Ok(None) => (),
+        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+    }
+
+    match flows::health(deps.get_ref().clone()).await {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
+}
+
+async fn timestamp_route(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, req: HttpRequest) -> impl Responder {
+    let process_id = query_params.process_id.clone();
+
+    match flows::redirect_process_id(deps.get_ref().clone(), process_id).await {
+        Ok(Some(redirect_url)) => {
+            let target_url = format!("{}{}", redirect_url, req.uri());
+            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+        },
+        Ok(None) => (),
+        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+    }
+
+    match flows::timestamp(deps.get_ref().clone()).await {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
+}
+
+async fn main_post_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes, req: HttpRequest) -> impl Responder {
+    match flows::redirect_data_item(deps.get_ref().clone(), req_body.to_vec()).await {
+        Ok(Some(redirect_url)) => {
+            let target_url = format!("{}{}", redirect_url, req.uri());
+            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+        },
+        Ok(None) => (),
+        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+    }
+
+    match flows::write_item(deps.get_ref().clone(), req_body.to_vec()).await {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
+}
+
+async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web::Path<TxId>, query_params: web::Query<FromTo>) -> impl Responder {
+    let tx_id = path.tx_id.clone();
+    let from_sort_key = query_params.from.clone();
+    let to_sort_key = query_params.to.clone();
+    let process_id = query_params.process_id.clone();
+
+    match flows::redirect_tx_id(deps.get_ref().clone(), tx_id.clone(), process_id.clone()).await {
+        Ok(Some(redirect_url)) => {
+            let target_url = format!("{}{}", redirect_url, req.uri());
+            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+        },
+        Ok(None) => (),
+        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+    }
+
+    let result = flows::read_message_data(deps.get_ref().clone(), tx_id, from_sort_key, to_sort_key).await;
+
     match result {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
@@ -76,23 +117,19 @@ async fn read_message_route(deps: web::Data<Arc<Deps>>, _req: HttpRequest, path:
     }
 }
 
-async fn process_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes) -> impl Responder {
-    let result = flows::write_process(deps.get_ref().clone(), req_body.to_vec()).await;
-
-    match result {
-        Ok(processed_str) => HttpResponse::Ok()
-            .content_type("application/json")
-            .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
-    }
-}
-
-async fn read_process_route(deps: web::Data<Arc<Deps>>, _req: HttpRequest, path: web::Path<ProcessId>) -> impl Responder {
+async fn read_process_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web::Path<ProcessIdRequired>) -> impl Responder {
     let process_id = path.process_id.clone();
 
-    let result = flows::read_process(deps.get_ref().clone(), process_id).await;
+    match flows::redirect_process_id(deps.get_ref().clone(), Some(process_id.clone())).await {
+        Ok(Some(redirect_url)) => {
+            let target_url = format!("{}{}", redirect_url, req.uri());
+            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+        },
+        Ok(None) => (),
+        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+    }
         
-    match result {
+    match flows::read_process(deps.get_ref().clone(), process_id).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
@@ -101,12 +138,34 @@ async fn read_process_route(deps: web::Data<Arc<Deps>>, _req: HttpRequest, path:
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> io::Result<()> {
+    let args: Vec<String> = env::args().collect();
+    let mode = match args.get(1) {
+        Some(m) => Some(m.clone()),
+        None => None
+    };
+
+    let port = match args.get(2) {
+        Some(port_str) => match port_str.parse::<u16>() {
+            Ok(num) => num,
+            Err(_) => {
+                let err = Error::new(ErrorKind::InvalidInput, "Port number is not valid");
+                return Err(err);
+            }
+        },
+        None => {
+            let err = Error::new(ErrorKind::InvalidInput, "Port argument not provided");
+            return Err(err);
+        }
+    };
+
     let logger: Arc<dyn Log> = SuLog::init();
     let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
+    let config = Arc::new(Config::new(mode).expect("Failed to read configuration"));
     let deps: Deps = Deps {
         data_store,
-        logger
+        logger,
+        config
     };
     let wrapped = web::Data::new(Arc::new(deps));
 
@@ -115,14 +174,12 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(wrapped.clone())
             .route("/", web::get().to(base))
+            .route("/", web::post().to(main_post_route)) 
             .route("/timestamp", web::get().to(timestamp_route))
-            .route("/message", web::post().to(message_route)) 
-            .route("/messages/{process_id}", web::get().to(messages_route))
-            .route("/message/{message_id}", web::get().to(read_message_route))
-            .route("/process", web::post().to(process_route)) 
+            .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
     })
-    .bind(("0.0.0.0", 9000))?
+    .bind(("0.0.0.0", port))?
     .run()
     .await
 }
