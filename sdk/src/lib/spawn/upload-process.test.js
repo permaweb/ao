@@ -67,34 +67,6 @@ describe('upload-process', () => {
     }).toPromise()
   })
 
-  test('deduplicates identifying tags', async () => {
-    const uploadProcess = uploadProcessWith({
-      deployProcess: async ({ tags }) => {
-        assert.deepStrictEqual(tags, [
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Process' },
-          { name: 'Module', value: 'module-id-123' },
-          { name: 'Content-Type', value: 'text/plain' },
-          { name: 'SDK', value: 'ao' }
-        ])
-
-        return { res: 'foobar', processId: 'process-id-123' }
-      },
-      registerProcess: async () => ({ foo: 'bar' }),
-      logger
-    })
-
-    await uploadProcess({
-      moduleId: 'module-id-123',
-      tags: [
-        { name: 'Type', value: 'Process' },
-        { name: 'Type', value: 'Process' },
-        { name: 'Module', value: 'oops-duplicate' }
-      ],
-      signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
-    }).toPromise()
-  })
-
   test('does not overwrite data', async () => {
     const uploadProcess = uploadProcessWith({
       deployProcess: async ({ data, tags, signer }) => {

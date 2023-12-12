@@ -1,8 +1,8 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { equals, prop } from 'ramda'
+import { isNotNil, prop } from 'ramda'
 
 import { loadTransactionMetaSchema } from '../../dal.js'
-import { parseTags } from '../utils.js'
+import { eqOrIncludes, parseTags } from '../utils.js'
 
 /**
  * @typedef Tag
@@ -18,20 +18,26 @@ import { parseTags } from '../utils.js'
  * @property {any} logger
  */
 
-function verifySourceWith ({ loadTransactionMeta, logger }) {
-  const checkTag = (name, pred) => tags => pred(tags[name])
+function verifyModuleWith ({ loadTransactionMeta, logger }) {
+  const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
-    : Rejected(`Tag '${name}' of value '${tags[name]}' was not valid on contract source`)
+    : Rejected(`Tag '${name}': ${err}`)
 
-  return (srcId) => of(srcId)
+  return (moduleId) => of(moduleId)
     .chain(fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta)))
     .map(prop('tags'))
     .map(parseTags)
-    .chain(checkTag('Content-Type', equals('application/wasm')))
-    .chain(checkTag('Contract-Type', equals('ao')))
+    /**
+     * Ensure all tags required by the specification are set
+     */
+    .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on module'))
+    .chain(checkTag('Type', eqOrIncludes('Module'), 'value \'Module\' was not found on module'))
+    .chain(checkTag('Module-Format', isNotNil, 'was not found on module'))
+    .chain(checkTag('Input-Encoding', isNotNil, 'was not found on module'))
+    .chain(checkTag('Output-Encoding', isNotNil, 'was not found on module'))
     .bimap(
-      logger.tap('Verifying contract source failed: %s'),
-      logger.tap('Verified contract source')
+      logger.tap('Verifying module source failed: %s'),
+      logger.tap('Verified module source')
     )
 }
 
@@ -43,7 +49,7 @@ function verifySignerWith ({ logger }) {
 
 /**
  * @typedef Context
- * @property {string} srcId - the id of the contract source
+ * @property {string} moduleId - the id of the module source
  * @property {Function} sign - the signer used to sign the process
  * @property {Tag[]} tags - the additional tags to add to the process
  *
@@ -63,12 +69,12 @@ export function verifyInputsWith (env) {
   const logger = env.logger.child('verifyInput')
   env = { ...env, logger }
 
-  const verifySource = verifySourceWith(env)
+  const verifyModule = verifyModuleWith(env)
   const verifySigner = verifySignerWith(env)
 
   return (ctx) => {
     return of(ctx)
-      .chain(ctx => verifySource(ctx.srcId).map(() => ctx))
+      .chain(ctx => verifyModule(ctx.moduleId).map(() => ctx))
       .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
       .bimap(
         logger.tap('Error when verify input: %s'),
