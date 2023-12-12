@@ -1,6 +1,7 @@
 import {
+  F,
   T, __, always, append, assoc, chain, concat, cond, defaultTo,
-  equals, has, identity, is, join, map, pipe, prop, propOr, reduce
+  equals, has, identity, includes, is, join, map, pipe, prop, propOr, reduce
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
@@ -31,6 +32,14 @@ export function parseTags (rawTags) {
     */
     map((values) => values.length > 1 ? values : values[0])
   )(rawTags)
+}
+
+export function eqOrIncludes (val) {
+  return cond([
+    [is(String), equals(val)],
+    [is(Array), includes(val)],
+    [T, F]
+  ])
 }
 
 export function errFrom (err) {

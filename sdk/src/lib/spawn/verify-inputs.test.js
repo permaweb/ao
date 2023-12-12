@@ -4,7 +4,7 @@ import * as assert from 'node:assert'
 import { createLogger } from '../../logger.js'
 import { verifyInputsWith } from './verify-inputs.js'
 
-const CONTRACT = 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
+const MODULE = 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
 
 const logger = createLogger('createContract')
 
@@ -14,15 +14,19 @@ describe('verify-input', () => {
       loadTransactionMeta: async (_id) =>
         ({
           tags: [
-            { name: 'Content-Type', value: 'application/wasm' },
-            { name: 'Contract-Type', value: 'ao' }
+            { name: 'Data-Protocol', value: 'ao' },
+            { name: 'Data-Protocol', value: 'Data-Protocol' },
+            { name: 'Type', value: 'Module' },
+            { name: 'Module-Format', value: 'emscripten' },
+            { name: 'Input-Encoding', value: 'JSON-1' },
+            { name: 'Output-Encoding', value: 'JSON-1' }
           ]
         }),
       logger
     })
 
     await verifyInput({
-      srcId: CONTRACT,
+      moduleId: MODULE,
       initialState: { balances: { foo: 1 } },
       signer: () => {},
       tags: [
@@ -31,62 +35,154 @@ describe('verify-input', () => {
     }).toPromise().then(assert.ok)
   })
 
-  test('throw if missing Content-Type', async () => {
-    const verifyInput = verifyInputsWith({
-      loadTransactionMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'No-Content-Type', value: 'application/wasm' },
-            { name: 'Contract-Type', value: 'ao' }
-          ]
-        }),
-      logger
+  describe('throw if required tag is invalid on source', () => {
+    test('Data-Protocol', async () => {
+      const verifyInput = verifyInputsWith({
+        loadTransactionMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'not_ao' },
+              { name: 'Data-Protocol', value: 'still_not_ao' }
+            ]
+          }),
+        logger
+      })
+
+      await verifyInput({
+        moduleId: MODULE,
+        initialState: { balances: { foo: 1 } },
+        signer: () => {},
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Data-Protocol': value 'ao' was not found on module"
+          )
+        })
     })
 
-    await verifyInput({
-      srcId: CONTRACT,
-      initialState: { balances: { foo: 1 } },
-      signer: () => {},
-      tags: [
-        { name: 'foo', value: 'bar' }
-      ]
-    }).toPromise()
-      .then(assert.fail)
-      .catch(err => {
-        assert.equal(
-          err,
-          "Tag 'Content-Type' of value 'undefined' was not valid on contract source"
-        )
+    test('Type', async () => {
+      const verifyInput = verifyInputsWith({
+        loadTransactionMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'ao' },
+              { name: 'Type', value: 'Foobar' }
+            ]
+          }),
+        logger
       })
-  })
 
-  test('throw if missing Content-Type', async () => {
-    const verifyInput = verifyInputsWith({
-      loadTransactionMeta: async (_id) =>
-        ({
-          tags: [
-            { name: 'Content-Type', value: 'application/wasm' },
-            { name: 'Contract-Type', value: 'something else' }
-          ]
-        }),
-      logger
+      await verifyInput({
+        moduleId: MODULE,
+        initialState: { balances: { foo: 1 } },
+        signer: () => {},
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Type': value 'Module' was not found on module"
+          )
+        })
     })
 
-    await verifyInput({
-      srcId: CONTRACT,
-      initialState: { balances: { foo: 1 } },
-      signer: () => {},
-      tags: [
-        { name: 'foo', value: 'bar' }
-      ]
-    }).toPromise()
-      .then(assert.fail)
-      .catch(err => {
-        assert.equal(
-          err,
-          "Tag 'Contract-Type' of value 'something else' was not valid on contract source"
-        )
+    test('Module-Format', async () => {
+      const verifyInput = verifyInputsWith({
+        loadTransactionMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'ao' },
+              { name: 'Type', value: 'Module' }
+            ]
+          }),
+        logger
       })
+
+      await verifyInput({
+        moduleId: MODULE,
+        initialState: { balances: { foo: 1 } },
+        signer: () => {},
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Module-Format': was not found on module"
+          )
+        })
+    })
+
+    test('Input-Encoding', async () => {
+      const verifyInput = verifyInputsWith({
+        loadTransactionMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'ao' },
+              { name: 'Type', value: 'Module' },
+              { name: 'Module-Format', value: 'emscripten' }
+            ]
+          }),
+        logger
+      })
+
+      await verifyInput({
+        moduleId: MODULE,
+        initialState: { balances: { foo: 1 } },
+        signer: () => {},
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Input-Encoding': was not found on module"
+          )
+        })
+    })
+
+    test('Output-Encoding', async () => {
+      const verifyInput = verifyInputsWith({
+        loadTransactionMeta: async (_id) =>
+          ({
+            tags: [
+              { name: 'Data-Protocol', value: 'ao' },
+              { name: 'Type', value: 'Module' },
+              { name: 'Module-Format', value: 'emscripten' },
+              { name: 'Input-Encoding', value: 'JSON-1' }
+            ]
+          }),
+        logger
+      })
+
+      await verifyInput({
+        moduleId: MODULE,
+        initialState: { balances: { foo: 1 } },
+        signer: () => {},
+        tags: [
+          { name: 'foo', value: 'bar' }
+        ]
+      }).toPromise()
+        .then(assert.fail)
+        .catch(err => {
+          assert.equal(
+            err,
+            "Tag 'Output-Encoding': was not found on module"
+          )
+        })
+    })
   })
 
   test('throw if signer is not found', async () => {
@@ -94,15 +190,19 @@ describe('verify-input', () => {
       loadTransactionMeta: async (_id) =>
         ({
           tags: [
-            { name: 'Content-Type', value: 'application/wasm' },
-            { name: 'Contract-Type', value: 'ao' }
+            { name: 'Data-Protocol', value: 'ao' },
+            { name: 'Data-Protocol', value: 'Data-Protocol' },
+            { name: 'Type', value: 'Module' },
+            { name: 'Module-Format', value: 'emscripten' },
+            { name: 'Input-Encoding', value: 'JSON-1' },
+            { name: 'Output-Encoding', value: 'JSON-1' }
           ]
         }),
       logger
     })
 
     await verifyInput({
-      srcId: CONTRACT,
+      moduleId: MODULE,
       initialState: { balances: { foo: 1 } },
       signer: undefined,
       tags: [
