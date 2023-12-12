@@ -4,9 +4,9 @@ import * as SuClient from './client/ao-su.js'
 import * as GatewayClient from './client/gateway.js'
 import { createLogger } from './logger.js'
 
-import { readResultWith } from './lib/readResult/index.js'
-import { sendMessageWith } from './lib/sendMessage/index.js'
-import { spawnProcessWith } from './lib/spawnProcess/index.js'
+import { resultWith } from './lib/result/index.js'
+import { messageWith } from './lib/message/index.js'
+import { spawnWith } from './lib/spawn/index.js'
 
 const DEFAULT_GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const DEFAULT_MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
@@ -27,14 +27,14 @@ const DEFAULT_SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
  *
  * @example
  * import {
- *  spawnProcess,
- *  sendMessage,
- *  readResult
+ *  spawn,
+ *  message,
+ *  result
  *  connect
  * } from '@permaweb/ao-sdk';
  *
  * // These are functionally equivalent
- * connect() == { spawnProcess, sendMessage, readResult }
+ * connect() == { spawn, message, result }
  *
  * @typedef Services
  * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
@@ -52,21 +52,21 @@ export function connect ({
 } = {}) {
   const logger = createLogger('@permaweb/ao-sdk')
 
-  const readResultLogger = logger.child('readResult')
-  const readResult = readResultWith({
-    loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: readResultLogger }),
-    logger: readResultLogger
+  const resultLogger = logger.child('result')
+  const result = resultWith({
+    loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: resultLogger }),
+    logger: resultLogger
   })
 
   /**
    * default writeInteraction that works OOTB
    * - writes signed data item for message to the MU
    */
-  const sendMessageLogger = logger.child('sendMessage')
-  const sendMessage = sendMessageWith({
+  const messageLogger = logger.child('message')
+  const message = messageWith({
     loadProcessMeta: SuClient.loadProcessMetaWith({ fetch, SU_URL }),
-    deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: sendMessageLogger }),
-    logger: sendMessageLogger
+    deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
+    logger: messageLogger
   })
 
   /**
@@ -77,12 +77,12 @@ export function connect ({
    *   - On server, uses Irys Node to upload process to Irys
    * - Registers the Process with SU
    */
-  const spawnProcessLogger = logger.child('spawnProcess')
-  const spawnProcess = spawnProcessWith({
+  const spawnLogger = logger.child('spawn')
+  const spawn = spawnWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
-    deployProcess: SuClient.deployProcessWith({ fetch, SU_URL, logger: spawnProcessLogger }),
-    logger: spawnProcessLogger
+    deployProcess: SuClient.deployProcessWith({ fetch, SU_URL, logger: spawnLogger }),
+    logger: spawnLogger
   })
 
-  return { readResult, sendMessage, spawnProcess }
+  return { result, message, spawn }
 }

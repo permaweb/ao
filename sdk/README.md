@@ -15,9 +15,9 @@ This sdk will run in a browser or server environment.
     - [ESM (Node & Browser) aka type: `module`](#esm-node--browser-aka-type-module)
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
   - [API](#api)
-    - [`readResult`](#readresult)
-    - [`sendMessage`](#sendmessage)
-    - [`spawnProcess`](#spawnprocess)
+    - [`result`](#result)
+    - [`message`](#message)
+    - [`spawn`](#spawn)
     - [`connect`](#connect)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
@@ -33,39 +33,39 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { spawnProcess, sendMessage, readResult } from "@permaweb/ao-sdk";
+import { spawn, message, result } from "@permaweb/ao-sdk";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { spawnProcess, sendMessage, readResult } = require("@permaweb/ao-sdk");
+const { spawn, message, result } = require("@permaweb/ao-sdk");
 ```
 
 The duration of this document will use `ESM` for examples
 
 ### API
 
-#### `readResult`
+#### `result`
 
 Read the result of the message evaluation from an `ao` Compute Unit `cu`
 
 ```js
-import { readResult } from "@permaweb/ao-sdk";
+import { result } from "@permaweb/ao-sdk";
 
-let { messages, spawns, output, error } = await readResult({
+let { messages, spawns, output, error } = await result({
   messageId: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
 });
 ```
 
-#### `sendMessage`
+#### `message`
 
 send a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
-import { createDataItemSigner, sendMessage } from "@permaweb/ao-sdk";
+import { createDataItemSigner, message } from "@permaweb/ao-sdk";
 
-const messageId = await sendMessage({
+const messageId = await message({
   processId,
   signer: createDataItemSigner(wallet),
   anchor,
@@ -73,17 +73,17 @@ const messageId = await sendMessage({
 });
 ```
 
-> You can pass a 32 byte `anchor` to `sendMessage` which will be set on the
+> You can pass a 32 byte `anchor` to `message` which will be set on the
 > DataItem
 
-#### `spawnProcess`
+#### `spawn`
 
 Spawn an `ao` process
 
 ```js
-import { createDataItemSigner, spawnProcess } from "@permaweb/ao-sdk";
+import { createDataItemSigner, spawn } from "@permaweb/ao-sdk";
 
-const processId = await spawnProcess({
+const processId = await spawn({
   srcId,
   signer: createDataItemSigner(wallet),
   tags,
@@ -103,7 +103,7 @@ specify those components by providing their urls to `connect`. You can currently
 ```js
 import { connect } from "@permaweb/ao-sdk";
 
-const { spawnProcess, sendMessage, readResult } = connect({
+const { spawn, message, result } = connect({
   GATEWAY_URL: "...",
   MU_URL: "...",
   CU_URL: "...",
@@ -117,23 +117,23 @@ using the top-lvl exports of the SDK:
 
 ```js
 import {
- spawnProcess,
- sendMessage,
- readResult
+ spawn,
+ message,
+ result
  connect
 } from '@permaweb/ao-sdk';
 
 // These are functionally equivalent
-connect() == { spawnProcess, sendMessage, readResult }
+connect() == { spawn, message, result }
 ```
 
 #### `createDataItemSigner`
 
-`sendMessage` and `spawnProcess` both require signing a DataItem with a
+`message` and `spawn` both require signing a DataItem with a
 wallet.
 
 `createDataItemSigner` is a convenience api that, given a wallet, returns a
-function that can be passed to both `sendMessage` and `spawnProcess` in order
+function that can be passed to both `message` and `spawn` in order
 to properly sign DataItems.
 
 The SDK provides a browser compatible and node compatible version that you can
@@ -171,7 +171,7 @@ type CreateDataItemSigner = (wallet: any):
 
 You can enable verbose debug logging on the SDK. All logging is scoped under the
 name `@permaweb/ao-sdk*`. You can use wildcards to enable a subset of logs ie.
-`@permaweb/ao-sdk/readResult*`
+`@permaweb/ao-sdk/result*`
 
 For Node, set the `DEBUG` environment variable to the logs you're interested in.
 

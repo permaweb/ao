@@ -21,7 +21,7 @@ import { uploadMessageWith } from './upload-message.js'
  * @param {Env1} - the environment
  * @returns {SendMessage}
  */
-export function sendMessageWith (env) {
+export function messageWith (env) {
   const verifyProcess = verifyProcessWith(env)
   const uploadMessage = uploadMessageWith(env)
 
