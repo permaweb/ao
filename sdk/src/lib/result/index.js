@@ -21,7 +21,7 @@ import { readWith } from './read.js'
  *
  * @returns {ReadResult}
  */
-export function readResultWith (env) {
+export function resultWith (env) {
   const verifyInput = verifyInputWith(env)
   const read = readWith(env)
 

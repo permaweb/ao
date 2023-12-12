@@ -20,7 +20,7 @@ import { uploadProcessWith } from './upload-process.js'
  * @param {Env1} - the environment
  * @returns {SpawnProcess}
  */
-export function spawnProcessWith (env) {
+export function spawnWith (env) {
   const verifyInputs = verifyInputsWith(env)
   const uploadProcess = uploadProcessWith(env)
 
