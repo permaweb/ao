@@ -2,8 +2,8 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { deployMessageSchema, signerSchema } from '../dal.js'
-import { deployMessageWith } from './ao-mu.js'
+import { deployMessageSchema, deployProcessSchema, signerSchema } from '../dal.js'
+import { deployMessageWith, deployProcessWith } from './ao-mu.js'
 
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
 const logger = createLogger('@permaweb/ao-sdk:readState')
@@ -16,7 +16,7 @@ describe('ao-mu', () => {
           MU_URL,
           logger,
           fetch: async (url, options) => {
-            assert.equal(url, `${MU_URL}/message`)
+            assert.equal(url, MU_URL)
             assert.deepStrictEqual(options, {
               method: 'POST',
               headers: {
@@ -57,6 +57,44 @@ describe('ao-mu', () => {
       assert.deepStrictEqual(res, {
         res: { message: 'foobar' },
         messageId: 'data-item-123'
+      })
+    })
+  })
+
+  describe('deployProcessWith', () => {
+    test('register the contract, and return the id', async () => {
+      const deployProcess = deployProcessSchema.implement(
+        deployProcessWith({
+          MU_URL,
+          logger,
+          fetch: async (url, options) => {
+            assert.equal(url, MU_URL)
+            assert.deepStrictEqual(options, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body: 'raw-buffer'
+            })
+
+            return new Response(JSON.stringify({ foo: 'bar' }))
+          }
+        })
+      )
+
+      await deployProcess({
+        data: '1234',
+        tags: [{ name: 'foo', value: 'bar' }],
+        signer: signerSchema.implement(
+          async ({ data, tags }) => {
+            assert.ok(data)
+            assert.deepStrictEqual(tags, [
+              { name: 'foo', value: 'bar' }
+            ])
+            return { id: 'data-item-123', raw: 'raw-buffer' }
+          }
+        )
       })
     })
   })

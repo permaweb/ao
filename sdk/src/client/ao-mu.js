@@ -39,7 +39,7 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
             fetch(
-              `${MU_URL}/message`,
+              MU_URL,
               {
                 method: 'POST',
                 headers: {
@@ -63,6 +63,62 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
             logger.tap('Successfully wrote message via MU')
           )
           .map(res => ({ res, messageId: signedDataItem.id }))
+      )
+      .toPromise()
+  }
+}
+
+/**
+ * @typedef Env3
+ * @property {fetch} fetch
+ * @property {string} MU_URL
+ *
+ * @typedef RegisterProcess
+ * @property { any } signedData - DataItem returned from arbundles createData
+ *
+ * @callback RegisterProcess
+ * @returns {Promise<Record<string, any>}
+ *
+ * @param {Env3} env
+ * @returns {RegisterProcess}
+ */
+export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('deployProcess')
+
+  return (args) => {
+    return of(args)
+      /**
+       * Sign with the provided signer
+       */
+      .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
+      .chain(signedDataItem =>
+        of(signedDataItem)
+          .chain(fromPromise(async (signedDataItem) =>
+            fetch(
+              MU_URL,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  Accept: 'application/json'
+                },
+                body: signedDataItem.raw
+              }
+            )
+          )).bichain(
+            err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
+            fromPromise(
+              async res => {
+                if (res.ok) return res.json()
+                throw new Error(`${res.status}: ${await res.text()}`)
+              }
+            )
+          )
+          .bimap(
+            logger.tap('Error encountered when deploying process via MU'),
+            logger.tap('Successfully deployed process via MU')
+          )
+          .map(res => ({ res, processId: signedDataItem.id }))
       )
       .toPromise()
   }
