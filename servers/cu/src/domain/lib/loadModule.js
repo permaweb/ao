@@ -3,7 +3,7 @@ import { mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
 import { loadTransactionDataSchema } from '../dal.js'
-import { parseTags } from './utils.js'
+import { parseTags } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -13,26 +13,26 @@ import { parseTags } from './utils.js'
  * is always added to context
  */
 const ctxSchema = z.object({
-  src: z.any().refine((val) => !!val, {
-    message: 'process src must be attached to context'
+  module: z.any().refine((val) => !!val, {
+    message: 'process module must be attached to context'
   }),
-  srcId: z.string().refine((val) => !!val, {
-    message: 'process srcId must be attached to context'
+  moduleId: z.string().refine((val) => !!val, {
+    message: 'process moduleId must be attached to context'
   })
 }).passthrough()
 
-function getSourceBufferWith ({ loadTransactionData }) {
+function getModuleBufferWith ({ loadTransactionData }) {
   loadTransactionData = fromPromise(loadTransactionDataSchema.implement(loadTransactionData))
 
   return (tags) => {
     return of(tags)
       .map(parseTags)
-      .map(prop('Contract-Src'))
-      .chain(srcId =>
-        of(srcId)
+      .map(prop('Module'))
+      .chain(moduleId =>
+        of(moduleId)
           .chain(loadTransactionData)
           .chain(fromPromise((res) => res.arrayBuffer()))
-          .map(src => ({ src, srcId }))
+          .map(module => ({ module, moduleId }))
       )
   }
 }
@@ -42,25 +42,25 @@ function getSourceBufferWith ({ loadTransactionData }) {
  * @property {string} id - the id of the process
  *
  * @typedef Result
- * @property {string} srcId - the id of the process source
- * @property {ArrayBuffer} src - an array buffer that contains the Contract Wasm Src
+ * @property {string} moduleId - the id of the process source
+ * @property {ArrayBuffer} module - an array buffer that contains the Contract Wasm Src
  *
- * @callback LoadSource
+ * @callback LoadModule
  * @param {Args} args
  * @returns {Async<Result & Args>}
  *
  * @param {any} env
- * @returns {LoadSource}
+ * @returns {LoadModule}
  */
-export function loadSourceWith (env) {
-  const logger = env.logger.child('loadSource')
+export function loadModuleWith (env) {
+  const logger = env.logger.child('loadModule')
   env = { ...env, logger }
 
-  const getSourceBuffer = getSourceBufferWith(env)
+  const getModuleBuffer = getModuleBufferWith(env)
 
   return (ctx) => {
     return of(ctx.tags)
-      .chain(getSourceBuffer)
+      .chain(getModuleBuffer)
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
       .map(ctx => {

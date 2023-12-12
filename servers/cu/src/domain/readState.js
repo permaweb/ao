@@ -1,7 +1,7 @@
 import { Resolved, of } from 'hyper-async'
 
 import { loadProcessWith } from './lib/loadProcess.js'
-import { loadSourceWith } from './lib/loadSource.js'
+import { loadModuleWith } from './lib/loadModule.js'
 import { loadMessagesWith } from './lib/loadMessages.js'
 import { evaluateWith } from './lib/evaluate.js'
 import { hydrateMessagesWith } from './lib/hydrateMessages.js'
@@ -25,7 +25,7 @@ export function readStateWith (env) {
   const loadProcess = loadProcessWith(env)
   const loadMessages = loadMessagesWith(env)
   const hydrateMessages = hydrateMessagesWith(env)
-  const loadSource = loadSourceWith(env)
+  const loadModule = loadModuleWith(env)
   const evaluate = evaluateWith(env)
 
   return ({ processId, to }) => {
@@ -44,7 +44,7 @@ export function readStateWith (env) {
         return of(res)
           .chain(loadMessages)
           .chain(hydrateMessages)
-          .chain(loadSource)
+          .chain(loadModule)
           .chain(evaluate)
           .map((ctx) => ctx.output)
       })

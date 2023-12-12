@@ -7,7 +7,7 @@ import ms from 'ms'
 
 import { messageSchema, streamSchema } from '../model.js'
 import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
-import { padBlockHeight } from './utils.js'
+import { padBlockHeight } from '../utils.js'
 
 /**
  * - { name: 'Cron-Interval', value: 'interval' }

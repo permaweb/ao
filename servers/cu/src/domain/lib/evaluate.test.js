@@ -25,7 +25,7 @@ describe('evaluate', () => {
       ctx = {
         id: 'ctr-1234',
         from: 'sort-key-start',
-        src: readFileSync('./test/processes/happy/process.wasm'),
+        module: readFileSync('./test/processes/happy/process.wasm'),
         buffer: null,
         messages: toAsyncIterable([
           {
@@ -142,7 +142,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/happy/process.wasm'),
+      module: readFileSync('./test/processes/happy/process.wasm'),
       buffer: null,
       messages: toAsyncIterable([
         {
@@ -197,7 +197,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/happy/process.wasm'),
+      module: readFileSync('./test/processes/happy/process.wasm'),
       buffer: null,
       messages: toAsyncIterable([
         {
@@ -255,7 +255,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/happy/process.wasm'),
+      module: readFileSync('./test/processes/happy/process.wasm'),
       /**
        * In reality this would be an illegible byte array, since it's format
        * will be determined by whatever the underlying runtime is, in this case,
@@ -291,7 +291,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/sad/process.wasm'),
+      module: readFileSync('./test/processes/sad/process.wasm'),
       buffer: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
@@ -338,7 +338,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/sad/process.wasm'),
+      module: readFileSync('./test/processes/sad/process.wasm'),
       buffer: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
@@ -378,7 +378,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/sad/process.wasm'),
+      module: readFileSync('./test/processes/sad/process.wasm'),
       buffer: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
@@ -417,7 +417,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 'sort-key-start',
-      src: readFileSync('./test/processes/sad/process.wasm'),
+      module: readFileSync('./test/processes/sad/process.wasm'),
       buffer: null,
       messages: toAsyncIterable([
         {

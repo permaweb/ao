@@ -7,7 +7,7 @@ import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { streamSchema } from '../model.js'
-import { findRawTag } from './utils.js'
+import { findRawTag } from '../utils.js'
 
 const { createData } = WarpArBundles
 
