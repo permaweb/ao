@@ -94,4 +94,30 @@ describe('upload-process', () => {
       signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
   })
+
+  test('does not overwrite data', async () => {
+    const uploadProcess = uploadProcessWith({
+      deployProcess: async ({ data, tags, signer }) => {
+        assert.equal(data, 'foobar')
+        return {
+          res: 'foobar',
+          processId: 'process-id-123',
+          signedDataItem: { id: 'process-id-123', raw: 'raw-buffer' }
+        }
+      },
+      registerProcess: async () => {
+        return { foo: 'bar' }
+      },
+      logger
+    })
+
+    await uploadProcess({
+      moduleId: 'module-id-123',
+      tags: [
+        { name: 'foo', value: 'bar' }
+      ],
+      data: 'foobar',
+      signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
+    }).toPromise()
+  })
 })
