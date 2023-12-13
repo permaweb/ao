@@ -240,6 +240,7 @@ impl StoreClient {
     
         let new_scheduler = NewScheduler {
             url: &scheduler.url,
+            process_count: &scheduler.process_count
         };
     
         match diesel::insert_into(schedulers)
@@ -255,6 +256,22 @@ impl StoreClient {
         }
     }
 
+    pub fn update_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
+        use super::schema::schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        // Ensure scheduler.row_id is Some(value) before calling this function
+        match diesel::update(schedulers.filter(row_id.eq(scheduler.row_id.unwrap())))
+            .set((process_count.eq(scheduler.process_count), url.eq(&scheduler.url)))
+            .execute(conn)
+        {
+            Ok(_) => Ok("updated".to_string()),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+    
+    
+
     pub fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
@@ -268,7 +285,8 @@ impl StoreClient {
             Ok(Some(db_scheduler)) => {
                 let scheduler: Scheduler = Scheduler {
                     row_id: Some(db_scheduler.row_id),
-                    url: db_scheduler.url
+                    url: db_scheduler.url,
+                    process_count: db_scheduler.process_count
                 };
                 Ok(scheduler)
             },
@@ -276,6 +294,49 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+
+    pub fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType> {
+        use super::schema::schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        let db_scheduler_result: Result<Option<DbScheduler>, DieselError> = schedulers
+            .filter(url.eq(url_in))
+            .first(conn)
+            .optional();
+    
+        match db_scheduler_result {
+            Ok(Some(db_scheduler)) => {
+                let scheduler: Scheduler = Scheduler {
+                    row_id: Some(db_scheduler.row_id),
+                    url: db_scheduler.url,
+                    process_count: db_scheduler.process_count
+                };
+                Ok(scheduler)
+            },
+            Ok(None) => Err(StoreErrorType::NotFound("Scheduler not found".to_string())), 
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    pub fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType> {
+        use super::schema::schedulers::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        match schedulers.order(row_id.asc()).load::<DbScheduler>(conn) {
+            Ok(db_schedulers) => {
+                let schedulers_out: Vec<Scheduler> = db_schedulers.into_iter().map(|db_scheduler| {
+                    Scheduler {
+                        row_id: Some(db_scheduler.row_id),
+                        url: db_scheduler.url,
+                        process_count: db_scheduler.process_count
+                    }
+                }).collect();
+                Ok(schedulers_out)
+            },
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+    
     
 }
 
@@ -325,6 +386,7 @@ pub struct NewProcess<'a> {
 pub struct DbScheduler {
     pub row_id: i32,
     pub url: String,
+    pub process_count: i32,
 }
 
 
@@ -332,6 +394,7 @@ pub struct DbScheduler {
 #[diesel(table_name = super::schema::schedulers)]
 pub struct NewScheduler<'a> {
     pub url: &'a str,
+    pub process_count: &'a i32,
 }
 
 #[derive(Queryable, Selectable)]

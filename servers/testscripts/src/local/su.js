@@ -5,34 +5,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
 
 (async function () {
   const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
-
-  const data = Math.random().toString().slice(-4)
-  const tags = [
-    { name: 'Data-Protocol', value: 'ao' },
-    { name: 'Type', value: 'Message' },
-    { name: 'Test', value: 'test' }
-  ]
-
   const signer = new ArweaveSigner(wallet)
-  const dataItem = createData(data, signer, { tags, target: 'xvcgB3kZwGqhgT4NUg9Uq7sxewQmuWPBC29ye76ZieI' })
-  await dataItem.sign(signer)
-
-  const response = await fetch(
-    'http://localhost:8000/',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        Accept: 'application/json'
-      },
-      body: dataItem.getRaw()
-    }
-  )
-
-  const responseText = await response.text()
-  console.log(await dataItem.id)
-  console.log('Su Response 1 for Contract 1')
-  console.log(responseText)
 
   const data2 = Math.random().toString().slice(-4)
   const tags2 = [
@@ -46,7 +19,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem2.sign(signer)
 
   const response2 = await fetch(
-    'http://localhost:8000/',
+    'http://localhost:9000/',
     {
       method: 'POST',
       headers: {
@@ -58,7 +31,35 @@ const { createData, ArweaveSigner } = WarpArBundles;
   )
 
   const responseText2 = await response2.text()
+  const processId = await dataItem2.id
   console.log(await dataItem2.id)
-  console.log('Su Spawn Response 1 for Contract 2')
+  console.log('Su Spawn Response 1 for Contract 1')
   console.log(responseText2)
+
+  const data = Math.random().toString().slice(-4)
+  const tags = [
+    { name: 'Data-Protocol', value: 'ao' },
+    { name: 'Type', value: 'Message' },
+    { name: 'Test', value: 'test' }
+  ]
+
+  const dataItem = createData(data, signer, { tags, target: processId })
+  await dataItem.sign(signer)
+
+  const response = await fetch(
+    'http://localhost:9000/',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        Accept: 'application/json'
+      },
+      body: dataItem.getRaw()
+    }
+  )
+
+  const responseText = await response.text()
+  console.log(await dataItem.id)
+  console.log('Su MessageResponse 1 for Contract 1')
+  console.log(responseText)
 })()

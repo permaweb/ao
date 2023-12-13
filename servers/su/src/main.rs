@@ -40,7 +40,7 @@ async fn base(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, r
     match flows::redirect_process_id(deps.get_ref().clone(), process_id).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
-            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+            return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
         Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
@@ -60,7 +60,7 @@ async fn timestamp_route(deps: web::Data<Arc<Deps>>, query_params: web::Query<Pr
     match flows::redirect_process_id(deps.get_ref().clone(), process_id).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
-            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+            return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
         Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
@@ -78,7 +78,7 @@ async fn main_post_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes, req: 
     match flows::redirect_data_item(deps.get_ref().clone(), req_body.to_vec()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
-            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+            return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
         Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
@@ -101,7 +101,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
     match flows::redirect_tx_id(deps.get_ref().clone(), tx_id.clone(), process_id.clone()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
-            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+            return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
         Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
@@ -123,7 +123,7 @@ async fn read_process_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: 
     match flows::redirect_process_id(deps.get_ref().clone(), Some(process_id.clone())).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
-            return HttpResponse::PermanentRedirect().insert_header((LOCATION, target_url)).finish();
+            return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
         Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
@@ -168,6 +168,18 @@ async fn main() -> io::Result<()> {
         config
     };
     let wrapped = web::Data::new(Arc::new(deps));
+
+    /*
+        initialize schedulers from json file in router mode
+        this is for when running as a top level router
+    */
+    let init_deps = wrapped.get_ref().clone();
+    if init_deps.config.mode == "router" {
+        match flows::init_schedulers(init_deps.clone()).await {
+            Err(e) => init_deps.logger.log(format!("{}", e)),
+            Ok(m) => init_deps.logger.log(format!("{}", m)),
+        };
+    }
 
     HttpServer::new(move || {
         App::new()
