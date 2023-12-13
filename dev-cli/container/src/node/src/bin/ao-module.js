@@ -2,11 +2,11 @@
 
 import fs from 'node:fs'
 
-import { ArtifactNotFoundError, BundlerHostNotSupportedError, WalletNotFoundError, parseTags, uploadWith } from '../main.js'
-import { AoContractSourceTags } from '../defaults.js'
+import { ArtifactNotFoundError, BundlerHostNotSupportedError, WalletNotFoundError, parseTags, uploadModuleWith } from '../main.js'
+import { AoModuleTags } from '../defaults.js'
 import { UPLOADERS } from '../clients.js'
 
-const uploadHyperbeamContractSource = uploadWith({
+const uploadModule = uploadModuleWith({
   walletExists: async (path) => fs.existsSync(path),
   /**
    * implement to check if single file exists
@@ -35,14 +35,14 @@ const uploadHyperbeamContractSource = uploadWith({
  */
 Promise.resolve()
   .then(() =>
-    uploadHyperbeamContractSource({
+    uploadModule({
       walletPath: process.env.WALLET_PATH,
-      artifactPath: process.env.CONTRACT_WASM_PATH,
+      artifactPath: process.env.MODULE_WASM_PATH,
       to: process.env.BUNDLER_HOST,
       tags: [
         ...parseTags(process.env.TAGS || ''),
         // Add the proper tags for ao contract source
-        ...AoContractSourceTags
+        ...AoModuleTags
       ]
     })
   )
@@ -55,7 +55,7 @@ Promise.resolve()
         return process.exit(1)
       }
       case ArtifactNotFoundError.code: {
-        console.error('Contract Wasm source not found at the specified path. Make sure to provide the path to your built Wasm')
+        console.error('Module source not found at the specified path. Make sure to provide the path to your built Wasm')
         return process.exit(1)
       }
       case BundlerHostNotSupportedError.code: {

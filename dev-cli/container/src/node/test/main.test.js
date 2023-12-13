@@ -10,11 +10,11 @@ import {
   checkBalanceWith,
   spawnProcessWith,
   fundWith,
-  uploadWith
+  uploadModuleWith
 } from '../src/main.js'
-import { DEFAULT_BUNDLER_HOST } from '../src/defaults.js'
+import { AoModuleTags, DEFAULT_BUNDLER_HOST } from '../src/defaults.js'
 
-describe('uploadWith', () => {
+describe('uploadModuleWith', () => {
   const happy = {
     walletExists: async () => true,
     artifactExists: async () => ({ foo: 'bar' }),
@@ -24,8 +24,91 @@ describe('uploadWith', () => {
     }
   }
 
-  it('should publish the artifact to arweave', async () => {
-    const upload = uploadWith(happy)
+  describe('should use the first tag', () => {
+    it('Module-Format', async () => {
+      const upload = uploadModuleWith({
+        ...happy,
+        uploaders: {
+          [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+            /**
+             * custom tag, plus default tags, then only use
+             * the first Module-Format tag
+             */
+            assert.equal(params.tags.length, 7)
+            return { params, id: '123' }
+          }
+        }
+      })
+
+      await upload({
+        walletPath: '/path/to/wallet.json',
+        artifactPath: '/path/to/artifact.wasm',
+        to: DEFAULT_BUNDLER_HOST,
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Module-Format', value: 'wasi32' },
+          ...AoModuleTags
+        ]
+      })
+    })
+
+    it('Input-Encoding', async () => {
+      const upload = uploadModuleWith({
+        ...happy,
+        uploaders: {
+          [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+            /**
+             * custom tag, plus default tags, then only use
+             * the first Input-Encoding tag
+             */
+            assert.equal(params.tags.length, 7)
+            return { params, id: '123' }
+          }
+        }
+      })
+
+      await upload({
+        walletPath: '/path/to/wallet.json',
+        artifactPath: '/path/to/artifact.wasm',
+        to: DEFAULT_BUNDLER_HOST,
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Input-Encoding', value: 'ANS-104' },
+          ...AoModuleTags
+        ]
+      })
+    })
+
+    it('Output-Encoding', async () => {
+      const upload = uploadModuleWith({
+        ...happy,
+        uploaders: {
+          [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+            /**
+             * custom tag, plus default tags, then only use
+             * the first Input-Encoding tag
+             */
+            assert.equal(params.tags.length, 7)
+            return { params, id: '123' }
+          }
+        }
+      })
+
+      await upload({
+        walletPath: '/path/to/wallet.json',
+        artifactPath: '/path/to/artifact.wasm',
+        to: DEFAULT_BUNDLER_HOST,
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Output-Encoding', value: 'ANS-104' },
+          ...AoModuleTags
+        ]
+      })
+    })
+  })
+
+  it('should publish the artifact', async () => {
+    const upload = uploadModuleWith(happy)
 
     const res = await upload({
       walletPath: '/path/to/wallet.json',
@@ -40,7 +123,7 @@ describe('uploadWith', () => {
   })
 
   it('should default the "to" if not provided', async () => {
-    const upload = uploadWith({
+    const upload = uploadModuleWith({
       ...happy,
       uploaders: {
         [SUPPORTED_BUNDLERS.IRYS]: (params) => {
@@ -68,7 +151,7 @@ describe('uploadWith', () => {
   })
 
   it('should pass the correct args to upload', async () => {
-    const upload = uploadWith({
+    const upload = uploadModuleWith({
       ...happy,
       uploaders: {
         [SUPPORTED_BUNDLERS.IRYS]: (params) => {
@@ -97,7 +180,7 @@ describe('uploadWith', () => {
   })
 
   it('should throw if the wallet does not exist', async () => {
-    const upload = uploadWith({ ...happy, walletExists: async () => false })
+    const upload = uploadModuleWith({ ...happy, walletExists: async () => false })
 
     await upload({
       walletPath: '/path/to/wallet.json',
@@ -111,7 +194,7 @@ describe('uploadWith', () => {
   })
 
   it('should throw if the artifact does not exist', async () => {
-    const upload = uploadWith({ ...happy, artifactExists: async () => false })
+    const upload = uploadModuleWith({ ...happy, artifactExists: async () => false })
 
     await upload({
       walletPath: '/path/to/wallet.json',
@@ -125,7 +208,7 @@ describe('uploadWith', () => {
   })
 
   it('should throw if the bundler is not supported', async () => {
-    const upload = uploadWith(happy)
+    const upload = uploadModuleWith(happy)
 
     await upload({
       walletPath: '/path/to/wallet.json',
@@ -151,7 +234,7 @@ describe('createContractWith', () => {
 
     const res = await spawnProcess({
       walletPath: '/path/to/wallet.json',
-      src: 'src-tx-123',
+      module: 'module-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -165,7 +248,7 @@ describe('createContractWith', () => {
       ...happy,
       create: (params) => {
         assert.deepStrictEqual(params, {
-          src: 'src-tx-123',
+          module: 'module-tx-123',
           tags: [
             { name: 'foo', value: 'bar' }
           ],
@@ -178,7 +261,7 @@ describe('createContractWith', () => {
 
     await spawnProcess({
       walletPath: '/path/to/wallet.json',
-      src: 'src-tx-123',
+      module: 'module-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -193,7 +276,7 @@ describe('createContractWith', () => {
 
     await contract({
       walletPath: '/path/to/wallet.json',
-      src: 'src-tx-123',
+      module: 'module-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ]

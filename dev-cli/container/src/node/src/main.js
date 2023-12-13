@@ -1,4 +1,4 @@
-import { DEFAULT_BUNDLER_HOST } from './defaults.js'
+import { DEFAULT_BUNDLER_HOST, DEFAULT_INPUT_ENCODING_TAG, DEFAULT_MODULE_FORMAT_TAG, DEFAULT_OUTPUT_ENCODING_TAG } from './defaults.js'
 
 export class WalletNotFoundError extends Error {
   static code = 'WalletNotFound'
@@ -59,6 +59,31 @@ export const parseTags = (tagsStr) =>
       .map(([name, value]) => ({ name, value }))
     : [] // TODO: filter out dups?
 
+export const useFirstTag = (name) => (tags = []) => {
+  let found = false
+  return tags.reduce(
+    (tags, tag) => {
+      if (tag.name === name) {
+        /**
+         * skip it
+         */
+        if (found) return tags
+        /**
+         * set the flag
+         */
+        found = true
+      }
+
+      /**
+       * append and continue
+       */
+      tags.push(tag)
+      return tags
+    },
+    []
+  )
+}
+
 /**
  * A reusuable upload client to upload any artifact
  * to any destination that implements the api
@@ -89,13 +114,18 @@ export const parseTags = (tagsStr) =>
  *
  * @returns {Uploader}
  */
-export const uploadWith =
+export const uploadModuleWith =
   ({ walletExists, artifactExists, readWallet, uploaders }) =>
-    async ({ walletPath, artifactPath, to, ...rest }) => {
+    async ({ walletPath, artifactPath, to, tags, ...rest }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
       if (!(await artifactExists(artifactPath))) throw new ArtifactNotFoundError()
 
       to = to || DEFAULT_BUNDLER_HOST
+      tags = [
+        useFirstTag(DEFAULT_MODULE_FORMAT_TAG.name),
+        useFirstTag(DEFAULT_INPUT_ENCODING_TAG.name),
+        useFirstTag(DEFAULT_OUTPUT_ENCODING_TAG.name)
+      ].reduce((tags, fn) => fn(tags), tags)
 
       const bundlerHost = determineBundlerHost(to)
       if (!bundlerHost) throw new BundlerHostNotSupportedError()
@@ -103,7 +133,7 @@ export const uploadWith =
       const upload = uploaders[bundlerHost]
 
       const wallet = await readWallet(walletPath)
-      const res = await upload({ path: artifactPath, to, wallet, ...rest })
+      const res = await upload({ path: artifactPath, to, wallet, tags, ...rest })
       return res.id
     }
 
@@ -111,7 +141,7 @@ export const uploadWith =
  * Create a contract
  *
  * @callback Create
- * @param {{ src: string, tags: Tag[], wallet: unknown }} args
+ * @param {{ module: string, tags: Tag[], wallet: unknown }} args
  *
  * @typedef CreateEnvironment
  * @property {WalletExists} walletExists
@@ -122,7 +152,7 @@ export const uploadWith =
  *
  * @typedef SpawnProcessArgs
  * @property {string} walletPath
- * @property {string} src
+ * @property {string} module
  * @property {Tag[]} tags
  *
  * @callback SpawnProcess
@@ -133,12 +163,12 @@ export const uploadWith =
  */
 export const spawnProcessWith =
   ({ walletExists, readWallet, create }) =>
-    async ({ walletPath, src, tags }) => {
+    async ({ walletPath, module, tags }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
 
       const wallet = await readWallet(walletPath)
       const res = await create({
-        src,
+        module,
         tags,
         wallet
       })

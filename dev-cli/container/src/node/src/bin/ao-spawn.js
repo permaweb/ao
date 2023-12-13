@@ -14,9 +14,9 @@ const uploadAoProcess = spawnProcessWith({
   /**
    * implement to create a contract using the ao SDK
    */
-  create: async ({ src, tags, wallet }) => {
+  create: async ({ module, tags, wallet }) => {
     return spawnProcess({
-      srcId: src,
+      moduleId: module,
       tags,
       signer: createDataItemSigner(wallet)
     }).then((contractId) => ({ contractId }))
@@ -34,7 +34,7 @@ Promise.resolve()
   .then(() =>
     uploadAoProcess({
       walletPath: process.env.WALLET_PATH,
-      src: process.env.CONTRACT_SOURCE_TX,
+      module: process.env.MODULE_TX,
       tags: parseTags(process.env.TAGS || '')
     })
   )
