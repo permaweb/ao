@@ -7,7 +7,7 @@ import { VERSION } from '../versions.js'
 function sourceArgs (src) {
   return [
     '-e',
-    `CONTRACT_SOURCE_TX=${src}`
+    `MODULE_TX=${src}`
   ]
 }
 
@@ -32,7 +32,7 @@ export async function spawn ({ wallet, tag, source }) {
       ...cmdArgs,
       '-it',
       `p3rmaw3b/ao:${VERSION.IMAGE}`,
-      'ao-contract'
+      'ao-spawn'
     ]
   })
   await p.status()

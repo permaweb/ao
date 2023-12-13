@@ -38,7 +38,7 @@ function contractSourceArgs (contractWasmPath) {
     '-v',
     `${contractWasmSrc}:${contractWasmDest}`,
     '-e',
-    `CONTRACT_WASM_PATH=${contractWasmDest}`
+    `MODULE_WASM_PATH=${contractWasmDest}`
   ]
 }
 
@@ -70,7 +70,7 @@ export async function publish ({ wallet, host, tag }, contractWasmPath) {
       ...cmdArgs,
       '-it',
       `p3rmaw3b/ao:${VERSION.IMAGE}`,
-      'ao-source'
+      'ao-module'
     ]
   })
   await p.status()

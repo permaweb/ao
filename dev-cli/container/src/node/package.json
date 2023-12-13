@@ -8,8 +8,8 @@
   "bin": {
     "ao-bundler-balance": "src/bin/bundler-balance.js",
     "ao-bundler-fund": "src/bin/bundler-fund.js",
-    "ao-process": "src/bin/ao-process.js",
-    "ao-source": "src/bin/ao-source.js"
+    "ao-module": "src/bin/ao-module.js",
+    "ao-spawn": "src/bin/ao-spawn.js"
   },
   "scripts": {
     "test": "node --test"
