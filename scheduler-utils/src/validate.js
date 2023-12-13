@@ -1,3 +1,5 @@
+import { InvalidSchedulerLocationError } from './err.js'
+
 export function validateWith ({ loadScheduler, cache }) {
   /**
    * Validate whether the given wallet address is an ao Scheduler
@@ -8,9 +10,16 @@ export function validateWith ({ loadScheduler, cache }) {
   return (address) =>
     cache.getByOwner(address)
       .then((url) => {
-        if (url) return
+        if (url) return true
         return loadScheduler(address)
           .then((scheduler) => cache.setByOwner(address, scheduler.url, scheduler.ttl))
+          .then(() => true)
+          .catch((err) => {
+            if (err instanceof InvalidSchedulerLocationError) return false
+            /**
+             * Unknown error continue to bubble
+             */
+            throw err
+          })
       })
-      .then(() => true)
 }

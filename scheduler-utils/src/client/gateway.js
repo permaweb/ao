@@ -1,5 +1,7 @@
 import { defaultTo, find, juxt, path, pipe, prop, propEq } from 'ramda'
 
+import { InvalidSchedulerLocationError, SchedulerTagNotFoundError, TransactionNotFoundError } from '../err.js'
+
 const URL_TAG = 'Url'
 const TTL_TAG = 'Time-To-Live'
 const SCHEDULER_TAG = 'Scheduler'
@@ -12,7 +14,10 @@ const findTagValue = (name) => pipe(
 )
 
 const findTransactionTags = pipe(
-  defaultTo({}),
+  (transaction) => {
+    if (!transaction) throw new TransactionNotFoundError()
+    return transaction
+  },
   prop('tags'),
   defaultTo([])
 )
@@ -53,7 +58,7 @@ export function loadProcessSchedulerWith ({ fetch, GATEWAY_URL }) {
       .then(findTransactionTags)
       .then(findTagValue(SCHEDULER_TAG))
       .then((walletAddress) => {
-        if (!walletAddress) throw new Error('No "Scheduler" tag found on process')
+        if (!walletAddress) throw new SchedulerTagNotFoundError('No "Scheduler" tag found on process')
         return loadScheduler(walletAddress)
       })
   }
@@ -95,8 +100,8 @@ export function loadSchedulerWith ({ fetch, GATEWAY_URL }) {
         findTagValue(TTL_TAG)
       ]))
       .then(([url, ttl]) => {
-        if (!url) throw new Error('No "Url" tag found on Scheduler-Location')
-        if (!ttl) throw new Error('No "Time-To-Live" tag found on Scheduler-Location')
+        if (!url) throw new InvalidSchedulerLocationError('No "Url" tag found on Scheduler-Location')
+        if (!ttl) throw new InvalidSchedulerLocationError('No "Time-To-Live" tag found on Scheduler-Location')
         return { url, ttl, owner: walletAddress }
       })
 }
