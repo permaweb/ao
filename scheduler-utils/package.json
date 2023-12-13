@@ -1,0 +1,39 @@
+{
+  "name": "@permaweb/ao-scheduler-utils",
+  "version": "0.0.0",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "browser": "./dist/browser.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "browser": "./dist/browser.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist"
+  ],
+  "scripts": {
+    "build": "npm run build:types && npm run build:src",
+    "build:src": "node esbuild.js",
+    "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
+    "test": "node --test ./src"
+  },
+  "dependencies": {
+    "mnemonist": "^0.39.6",
+    "ramda": "^0.29.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.9",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
