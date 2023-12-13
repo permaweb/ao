@@ -28,7 +28,7 @@
     "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
-    "@permaweb/ao-scheduler-utils": "~0.0.2",
+    "@permaweb/ao-scheduler-utils": "~0.0.3",
     "buffer": "^6.0.3",
     "debug": "^4.3.4",
     "hyper-async": "^1.1.2",
