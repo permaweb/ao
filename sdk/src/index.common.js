@@ -50,7 +50,7 @@ export function connect ({
 } = {}) {
   const logger = createLogger('@permaweb/ao-sdk')
 
-  const { locate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
+  const { locate, validate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
 
   const resultLogger = logger.child('result')
   const result = resultWith({
@@ -78,6 +78,7 @@ export function connect ({
   const spawnLogger = logger.child('spawn')
   const spawn = spawnWith({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
+    validateScheduler: validate,
     deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
     logger: spawnLogger
   })
