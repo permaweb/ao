@@ -1,7 +1,7 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { isNotNil, prop } from 'ramda'
 
-import { loadProcessMetaSchema } from '../../dal.js'
+import { loadProcessMetaSchema, locateSchedulerSchema } from '../../dal.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
 
 /**
@@ -14,16 +14,18 @@ import { eqOrIncludes, parseTags } from '../utils.js'
  * @param {Env5} env
  * @returns {any} VerifyTags
  */
-function verifyProcessTagsWith ({ loadProcessMeta }) {
+function verifyProcessTagsWith ({ loadProcessMeta, locateScheduler }) {
   const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
     : Rejected(`Tag '${name}': ${err}`)
 
   loadProcessMeta = fromPromise(loadProcessMetaSchema.implement(loadProcessMeta))
+  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
 
   return (id) => {
     return of(id)
-      .chain(loadProcessMeta)
+      .chain(locateScheduler)
+      .chain(({ url }) => loadProcessMeta({ suUrl: url, processId: id }))
       .map(prop('tags'))
       .map(parseTags)
       .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on process'))

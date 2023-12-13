@@ -8,26 +8,32 @@ const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 describe('verify-process', () => {
   test('verify process is an ao process', async () => {
     const verifyProcess = verifyProcessWith({
-      loadProcessMeta: async (_id) =>
-        ({
+      loadProcessMeta: async ({ suUrl, processId }) => {
+        assert.equal(suUrl, 'https://foo.bar')
+        assert.equal(processId, PROCESS)
+        return {
           tags: [
             { name: 'Data-Protocol', value: 'ao' },
             { name: 'Data-Protocol', value: 'Data-Protocol' },
             { name: 'Type', value: 'Process' },
             { name: 'Module', value: 'module-123' }
           ]
-        })
+        }
+      },
+      locateScheduler: async (id) => {
+        assert.equal(id, PROCESS)
+        return { url: 'https://foo.bar' }
+      }
     })
 
     await verifyProcess({ id: PROCESS }).toPromise()
       .then(assert.ok)
-      .catch(() => assert('unreachable. Should have succeeded'))
   })
 
   describe('throw if required tag is invalid on process', () => {
     test('Data-Protocol', async () => {
       const verifyProcess = verifyProcessWith({
-        loadProcessMeta: async (_id) =>
+        loadProcessMeta: async ({ suUrl, processId }) =>
           ({
             tags: [
               { name: 'Data-Protocol', value: 'not_ao' },
@@ -35,7 +41,8 @@ describe('verify-process', () => {
               { name: 'Type', value: 'Process' },
               { name: 'Module', value: 'module-123' }
             ]
-          })
+          }),
+        locateScheduler: async (id) => ({ url: 'https://foo.bar' })
       })
 
       await verifyProcess({ id: PROCESS }).toPromise()
@@ -50,13 +57,14 @@ describe('verify-process', () => {
 
     test('Type', async () => {
       const verifyProcess = verifyProcessWith({
-        loadProcessMeta: async (_id) =>
+        loadProcessMeta: async ({ suUrl, processId }) =>
           ({
             tags: [
               { name: 'Data-Protocol', value: 'ao' },
               { name: 'Type', value: 'Not_process' }
             ]
-          })
+          }),
+        locateScheduler: async (id) => ({ url: 'https://foo.bar' })
       })
 
       await verifyProcess({ id: PROCESS }).toPromise()
@@ -71,13 +79,14 @@ describe('verify-process', () => {
 
     test('Module', async () => {
       const verifyProcess = verifyProcessWith({
-        loadProcessMeta: async (_id) =>
+        loadProcessMeta: async ({ suUrl, processId }) =>
           ({
             tags: [
               { name: 'Data-Protocol', value: 'ao' },
               { name: 'Type', value: 'Process' }
             ]
-          })
+          }),
+        locateScheduler: async (id) => ({ url: 'https://foo.bar' })
       })
 
       await verifyProcess({ id: PROCESS }).toPromise()
