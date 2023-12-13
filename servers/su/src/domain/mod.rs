@@ -10,6 +10,6 @@ at server startup
 */
 
 pub use core::dal::Log;
-pub use clients::store::StoreClient;
+pub use clients::store::{StoreClient, StoreErrorType};
 pub mod flows;
 pub use flows::Deps;

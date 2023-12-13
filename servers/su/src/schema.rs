@@ -34,6 +34,7 @@ diesel::table! {
     schedulers (row_id) {
         row_id -> Int4,
         url -> Varchar,
+        process_count -> Int4,
     }
 }
 

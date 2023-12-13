@@ -27,6 +27,7 @@ table! {
     schedulers (row_id) {
         row_id -> Integer,
         url -> Varchar,
+        process_count -> Integer,
     }
 }
 

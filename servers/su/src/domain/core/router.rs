@@ -8,7 +8,8 @@ process to su.
 
 pub struct Scheduler {
     pub row_id: Option<i32>,
-    pub url: String
+    pub url: String,
+    pub process_count: i32
 }
 
 pub struct ProcessScheduler {

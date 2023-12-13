@@ -10,6 +10,7 @@ pub struct Config {
     pub upload_node_url: String,
     pub mode: String,
     pub ao_process_id: String,
+    pub scheduler_list_path: String
 }
 
 impl Config {
@@ -25,7 +26,8 @@ impl Config {
             gateway_url: env::var("GATEWAY_URL")?,
             upload_node_url: env::var("UPLOAD_NODE_URL")?,
             ao_process_id: env::var("AO_PROCESS_ID")?,
-            mode: mode_out
+            mode: mode_out,
+            scheduler_list_path: env::var("SCHEDULER_LIST_PATH")?,
         })
     }
 }
