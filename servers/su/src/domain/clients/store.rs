@@ -7,7 +7,7 @@ use diesel::r2d2::Pool;
 use std::env::VarError;
 
 use super::super::core::json::{Message, Process};
-use super::super::core::router::{Scheduler, ProcessScheduler};
+use super::super::flows_router::{Scheduler, ProcessScheduler};
 use crate::config::Config;
 
 #[derive(Debug)]

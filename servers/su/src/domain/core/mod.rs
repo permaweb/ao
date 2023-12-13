@@ -16,6 +16,3 @@ pub mod json;
 
 // main tx building logic
 pub mod builder;
-
-// router mode types and code
-pub mod router;
