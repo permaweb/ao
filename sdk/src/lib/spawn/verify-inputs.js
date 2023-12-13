@@ -1,7 +1,7 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { ifElse, isNotNil, prop } from 'ramda'
+import { isNotNil, prop } from 'ramda'
 
-import { loadTransactionMetaSchema } from '../../dal.js'
+import { loadTransactionMetaSchema, validateSchedulerSchema } from '../../dal.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
 
 const checkTag = (name, pred, err) => tags => pred(tags[name])
@@ -43,18 +43,19 @@ function verifyModuleWith ({ loadTransactionMeta, logger }) {
     )
 }
 
-function verifySchedulerWith ({ logger }) {
+function verifySchedulerWith ({ logger, validateScheduler }) {
+  validateScheduler = fromPromise(validateSchedulerSchema.implement(validateScheduler))
+
   return (scheduler) => of(scheduler)
     /**
-     * TODO: actually fetch Schedule-Location record
-     * by owner and confirm that it is valid
+     * Ensure the provider scheduler wallet actually owns
+     * a valid Scheduler-Location record on-chain
      */
-    .chain(
-      ifElse(
-        isNotNil,
-        Resolved,
-        () => Rejected('scheduler not found')
-      )
+    .chain(scheduler =>
+      validateScheduler(scheduler)
+        .chain(isValid => isValid
+          ? Resolved(scheduler)
+          : Rejected(`Valid Scheduler-Location owned by ${scheduler} not found`))
     )
     .bimap(
       logger.tap('Verifying scheduler failed: %s'),

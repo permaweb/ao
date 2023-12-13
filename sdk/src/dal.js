@@ -62,6 +62,10 @@ export const locateSchedulerSchema = z.function()
     })
   ))
 
+export const validateSchedulerSchema = z.function()
+  .args(z.string())
+  .returns(z.promise(z.boolean()))
+
 // Gateway
 export const loadTransactionMetaSchema = z.function()
   .args(z.string())

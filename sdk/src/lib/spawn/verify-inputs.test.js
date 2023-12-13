@@ -5,6 +5,7 @@ import { createLogger } from '../../logger.js'
 import { verifyInputsWith } from './verify-inputs.js'
 
 const MODULE = 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
+const SCHEDULER = 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucrm'
 
 const logger = createLogger('spawn')
 
@@ -22,12 +23,16 @@ describe('verify-input', () => {
             { name: 'Output-Encoding', value: 'JSON-1' }
           ]
         }),
+      validateScheduler: async (id) => {
+        assert.equal(id, SCHEDULER)
+        return true
+      },
       logger
     })
 
     await verifyInput({
       module: MODULE,
-      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+      scheduler: SCHEDULER,
       signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
@@ -45,12 +50,16 @@ describe('verify-input', () => {
               { name: 'Data-Protocol', value: 'still_not_ao' }
             ]
           }),
+        validateScheduler: async (id) => {
+          assert.equal(id, SCHEDULER)
+          return true
+        },
         logger
       })
 
       await verifyInput({
         module: MODULE,
-        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+        scheduler: SCHEDULER,
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -74,12 +83,16 @@ describe('verify-input', () => {
               { name: 'Type', value: 'Foobar' }
             ]
           }),
+        validateScheduler: async (id) => {
+          assert.equal(id, SCHEDULER)
+          return true
+        },
         logger
       })
 
       await verifyInput({
         module: MODULE,
-        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+        scheduler: SCHEDULER,
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -103,12 +116,16 @@ describe('verify-input', () => {
               { name: 'Type', value: 'Module' }
             ]
           }),
+        validateScheduler: async (id) => {
+          assert.equal(id, SCHEDULER)
+          return true
+        },
         logger
       })
 
       await verifyInput({
         module: MODULE,
-        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+        scheduler: SCHEDULER,
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -133,12 +150,16 @@ describe('verify-input', () => {
               { name: 'Module-Format', value: 'emscripten' }
             ]
           }),
+        validateScheduler: async (id) => {
+          assert.equal(id, SCHEDULER)
+          return true
+        },
         logger
       })
 
       await verifyInput({
         module: MODULE,
-        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+        scheduler: SCHEDULER,
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -164,12 +185,16 @@ describe('verify-input', () => {
               { name: 'Input-Encoding', value: 'JSON-1' }
             ]
           }),
+        validateScheduler: async (id) => {
+          assert.equal(id, SCHEDULER)
+          return true
+        },
         logger
       })
 
       await verifyInput({
         module: MODULE,
-        scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+        scheduler: SCHEDULER,
         signer: () => {},
         tags: [
           { name: 'foo', value: 'bar' }
@@ -198,12 +223,16 @@ describe('verify-input', () => {
             { name: 'Output-Encoding', value: 'JSON-1' }
           ]
         }),
+      validateScheduler: async (id) => {
+        assert.equal(id, SCHEDULER)
+        return true
+      },
       logger
     })
 
     await verifyInput({
       module: MODULE,
-      scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
+      scheduler: SCHEDULER,
       signer: undefined,
       tags: [
         { name: 'foo', value: 'bar' }
@@ -232,12 +261,16 @@ describe('verify-input', () => {
             { name: 'Output-Encoding', value: 'JSON-1' }
           ]
         }),
+      validateScheduler: async (id) => {
+        assert.equal(id, SCHEDULER)
+        return false
+      },
       logger
     })
 
     await verifyInput({
       module: MODULE,
-      scheduler: undefined,
+      scheduler: SCHEDULER,
       signer: () => {},
       tags: [
         { name: 'foo', value: 'bar' }
@@ -248,7 +281,7 @@ describe('verify-input', () => {
       .catch(err => {
         assert.equal(
           err,
-          'scheduler not found'
+          `Valid Scheduler-Location owned by ${SCHEDULER} not found`
         )
       })
   })
