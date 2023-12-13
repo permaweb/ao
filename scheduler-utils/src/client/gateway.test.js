@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
+import { InvalidSchedulerLocationError, SchedulerTagNotFoundError } from '../err.js'
 import { loadProcessSchedulerWith, loadSchedulerWith } from './gateway.js'
 
 const GATEWAY_URL = globalThis.GATEWAY_URL || 'https://arweave.net'
@@ -99,7 +100,7 @@ describe('gateway', () => {
       })
 
       await loadProcessScheduler(PROCESS)
-        .catch((err) => assert.equal(err.message, 'No "Scheduler" tag found on process'))
+        .catch((err) => assert.ok(err instanceof SchedulerTagNotFoundError))
     })
   })
 
@@ -171,7 +172,10 @@ describe('gateway', () => {
       })
 
       await loadScheduler(SCHEDULER)
-        .catch((err) => assert.equal(err.message, 'No "Url" tag found on Scheduler-Location'))
+        .catch((err) => {
+          assert.ok(err instanceof InvalidSchedulerLocationError)
+          assert.equal(err.message, 'No "Url" tag found on Scheduler-Location')
+        })
     })
 
     test('throws if no Time-To-Live tag is found on Scheduler-Location record', async () => {
@@ -204,7 +208,10 @@ describe('gateway', () => {
       })
 
       await loadScheduler(SCHEDULER)
-        .catch((err) => assert.equal(err.message, 'No "Time-To-Live" tag found on Scheduler-Location'))
+        .catch((err) => {
+          assert.ok(err instanceof InvalidSchedulerLocationError)
+          assert.equal(err.message, 'No "Time-To-Live" tag found on Scheduler-Location')
+        })
     })
   })
 })
