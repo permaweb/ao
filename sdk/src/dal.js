@@ -29,8 +29,6 @@ export const deployMessageSchema = z.function()
     }).passthrough()
   ))
 
-// SU
-
 export const deployProcessSchema = z.function()
   .args(z.object({
     data: z.any(),
@@ -43,12 +41,25 @@ export const deployProcessSchema = z.function()
     }).passthrough()
   ))
 
+// SU
+
 export const loadProcessMetaSchema = z.function()
-  .args(z.string())
+  .args(z.object({
+    suUrl: z.string().url(),
+    processId: z.string()
+  }))
   .returns(z.promise(
     z.object({
       tags: z.array(tagSchema)
     }).passthrough()
+  ))
+
+export const locateSchedulerSchema = z.function()
+  .args(z.string())
+  .returns(z.promise(
+    z.object({
+      url: z.string()
+    })
   ))
 
 // Gateway

@@ -1,3 +1,5 @@
+import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as SuClient from './client/ao-su.js'
@@ -8,10 +10,9 @@ import { resultWith } from './lib/result/index.js'
 import { messageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
 
-const DEFAULT_GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
+const DEFAULT_GATEWAY_URL = globalThis.GATEWAY_URL || 'https://arweave.net'
 const DEFAULT_MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
 const DEFAULT_CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
-const DEFAULT_SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
 
 /**
  * Build the sdk apis using the provided ao component urls. You can currently specify
@@ -19,7 +20,6 @@ const DEFAULT_SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
  * - a GATEWAY_URL
  * - a Messenger Unit URL
  * - a Compute Unit URL
- * - a Sequencer Unit URL
  *
  * If any url is not provided, an SDK default will be used.
  * Invoking connect() with no parameters or an empty object is functionally equivalent
@@ -40,17 +40,17 @@ const DEFAULT_SU_URL = globalThis.SU_URL || 'https://ao-su-1.onrender.com'
  * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
  * @property {string} [MU_URL] - the url of the desried ao Messenger Unit.
  * @property {string} [CU_URL] - the url of the desried ao Compute Unit.
- * @property {string} [SU_URL] - the url of the desried ao Sequencer Unit.
  *
  * @param {Services} [services]
  */
 export function connect ({
   GATEWAY_URL = DEFAULT_GATEWAY_URL,
   MU_URL = DEFAULT_MU_URL,
-  CU_URL = DEFAULT_CU_URL,
-  SU_URL = DEFAULT_SU_URL
+  CU_URL = DEFAULT_CU_URL
 } = {}) {
   const logger = createLogger('@permaweb/ao-sdk')
+
+  const { locate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
 
   const resultLogger = logger.child('result')
   const result = resultWith({
@@ -64,7 +64,8 @@ export function connect ({
    */
   const messageLogger = logger.child('message')
   const message = messageWith({
-    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch, SU_URL }),
+    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch }),
+    locateScheduler: locate,
     deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
     logger: messageLogger
   })
