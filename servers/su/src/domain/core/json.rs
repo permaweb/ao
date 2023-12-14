@@ -24,16 +24,22 @@ impl From<base64_url::base64::DecodeError> for JsonErrorType {
     }
 }
 
+impl From<&str> for JsonErrorType {
+    fn from(error: &str) -> Self {
+        JsonErrorType::JsonError(format!("Json error: {:?}", error))
+    }
+}
+
+impl From<std::num::ParseIntError> for JsonErrorType {
+    fn from(error: std::num::ParseIntError) -> Self {
+        JsonErrorType::JsonError(format!("Json error: {:?}", error))
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MessageInner {
     pub id: String,
     pub tags: Vec<Tag>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Block {
-    pub height: u64,
-    pub timestamp: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -45,21 +51,23 @@ pub struct Owner {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
     pub process_id: String,
-    pub block: Option<Block>,
+    pub block: String,
     pub owner: Owner,
     pub tags: Vec<Tag>,
+    pub timestamp: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
     pub message: MessageInner,
-    pub block: Option<Block>,
+    pub block: String,
     pub owner: Owner,
     pub process_id: String,
     pub data: Option<String>,
     pub epoch: i32,
     pub nonce: i32,
-    pub timestamp: i64
+    pub timestamp: i64,
+    pub hash_chain: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -79,22 +87,26 @@ pub struct Edge {
     pub cursor: String,
 }
 
-
-
-// TODO: save all the bundle level tags
-
 impl Process {
     pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
-       
-        let block = None;
         
-        // TODO: implement a from on the owner struct
         let owner_bytes = base64_url::decode(&owner)?;
         let address_hash = hash(&owner_bytes);
         let address = base64_url::encode(&address_hash);
+
+        let bundle_tags = data_bundle.tags.clone();
+        
+        let block_tag = bundle_tags.iter().find(|tag| tag.name == "Block-Height")
+            .ok_or("Block-Height tag not found")?;
+
+        let timestamp_tag = bundle_tags.iter().find(|tag| tag.name == "Timestamp")
+            .ok_or("Timestamp tag not found")?;
+
+        let block = block_tag.value.clone();
+        let timestamp = timestamp_tag.value.clone().parse::<i64>()?;
 
         let owner = Owner {
             address: address,
@@ -104,6 +116,7 @@ impl Process {
         Ok(Process {
             process_id: id,
             block: block,
+            timestamp: timestamp,
             owner: owner,
             tags: tags
         })
@@ -134,17 +147,39 @@ impl Message {
 
         let process_id = target;
 
-        let block = None;
+        let bundle_tags = data_bundle.tags.clone();
+
+        let block_tag = bundle_tags.iter().find(|tag| tag.name == "Block-Height")
+            .ok_or("Block-Height tag not found")?;
+
+        let epoch_tag = bundle_tags.iter().find(|tag| tag.name == "Epoch")
+            .ok_or("Epoch tag not found")?;
+
+        let nonce_tag = bundle_tags.iter().find(|tag| tag.name == "Nonce")
+            .ok_or("Nonce tag not found")?;
+
+        let timestamp_tag = bundle_tags.iter().find(|tag| tag.name == "Timestamp")
+            .ok_or("Timestamp tag not found")?;
+
+        let hash_chain_tag = bundle_tags.iter().find(|tag| tag.name == "Hash-Chain")
+            .ok_or("Hash-Chain tag not found")?;
+
+        let block = block_tag.value.clone();
+        let epoch = epoch_tag.value.clone().parse::<i32>()?;
+        let nonce = nonce_tag.value.clone().parse::<i32>()?;
+        let timestamp = timestamp_tag.clone().value.parse::<i64>()?;
+        let hash_chain = hash_chain_tag.value.clone();
 
         Ok(Message {
             message: message_inner,
-            block: block,
             owner,
             process_id,
-            data: data,
-            epoch: 0,
-            nonce: 0,
-            timestamp: 0
+            data,
+            block,
+            epoch,
+            nonce,
+            timestamp,
+            hash_chain
         })
     }
 }

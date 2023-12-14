@@ -10,8 +10,9 @@ diesel::table! {
         message_data -> Jsonb,
         epoch -> Int4,
         nonce -> Int4,
-        timestamp -> Int4,
+        timestamp -> Int8,
         bundle -> Bytea,
+        hash_chain -> Text,
     }
 }
 

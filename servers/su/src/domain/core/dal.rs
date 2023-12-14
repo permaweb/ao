@@ -38,5 +38,5 @@ pub trait ScheduleProvider {
     fn epoch(&self) -> String;
     fn nonce(&self) -> String;
     fn timestamp(&self) -> String;
-    fn last_hash(&self) -> String;
+    fn hash_chain(&self) -> String;
 }

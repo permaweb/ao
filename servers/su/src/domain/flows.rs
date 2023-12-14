@@ -30,12 +30,8 @@ flows.rs ties together core modules and client
 modules to produce the desired end result
 */
 
-pub struct BuildFnResult {
-    pub build: BuildResult,
-    pub is_message: bool
-}
 
-pub async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildFnResult, String> {
+pub fn init_builder(deps: &Arc<Deps>) -> Result<Builder, String> {
     dotenv().ok();
     let gateway: Arc<dyn Gateway> = Arc::new(ArweaveGateway);
     let wallet: Arc<dyn Wallet> = Arc::new(FileWallet);
@@ -43,6 +39,26 @@ pub async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildFnResult, St
     let arweave_signer = ArweaveSigner::new(wallet_path)?;
     let signer: Arc<dyn Signer> = Arc::new(arweave_signer);
     let builder = Builder::new(gateway, wallet, signer, &deps.logger)?;
+    return Ok(builder);
+}
+
+async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, String> {
+    let upload_node_url = &deps.config.upload_node_url;
+    let uploader = UploaderClient::new(upload_node_url, &deps.logger)?;
+    let uploaded_tx = uploader.upload(build_result).await?;
+    let result = match serde_json::to_string(&uploaded_tx) {
+        Ok(r) => r,
+        Err(e) => return Err(format!("{:?}", e))
+    };
+    Ok(result)
+}
+
+/*
+    this writes a message or process data item,
+    it detects which it is creating by the tags
+*/
+pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, String> {
+    let builder = init_builder(&deps)?;
 
     let data_item = builder.parse_data_item(input.clone())?;
 
@@ -61,64 +77,42 @@ pub async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildFnResult, St
             if !mod_tag_exists || !sched_tag_exists {
                 return Err("Required Module and Scheduler tags for Process type not present".to_string());
             }
-            let build_result = builder.build_process(input).await?;
-            return Ok(BuildFnResult{
-                build: build_result,
-                is_message: false
-            });
+
+            /*
+                acquire the mutex locked scheduling info for the
+                process we are creating. So if a message is written
+                while the process is still being created it will wait
+            */
+            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id(), None).await?;
+            let schedule_info = locked_schedule_info.lock().await;
+
+            let build_result = builder.build_process(input, &*schedule_info).await?;
+            let r = upload(&deps, build_result.binary.to_vec()).await?;
+            let process = Process::from_bundle(&build_result.bundle)?;
+            deps.data_store.save_process(&process, &build_result.binary)?;
+            deps.logger.log(format!("saved process - {:?}", &process));
+            return Ok(r);
         } else if type_tag.value == "Message" {
             /*
                 acquire the mutex locked scheduling info for the
                 process we are writing a message to. this ensures 
                 no conflicts in the schedule
             */
-            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await;
+            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target(), Some(data_item.id())).await?;
             let schedule_info = locked_schedule_info.lock().await;
 
             let build_result = builder.build(input, &*schedule_info).await?;
-            return Ok(BuildFnResult{
-                build: build_result,
-                is_message: true
-            });
+            let r = upload(&deps, build_result.binary.to_vec()).await?;
+            let message = Message::from_bundle(&build_result.bundle)?;
+            deps.data_store.save_message(&message, &build_result.binary)?;
+            deps.logger.log(format!("saved message - {:?}", &message));
+            return Ok(r); // the lock is released here because it goes out of scope
         } else {
             return Err("Type tag not present".to_string());
         }
     } else {
         return Err("Type tag not present".to_string());
     }
-}
-
-async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, String> {
-    let upload_node_url = &deps.config.upload_node_url;
-    let uploader = UploaderClient::new(upload_node_url, &deps.logger)?;
-    let uploaded_tx = uploader.upload(build_result).await?;
-    let result = match serde_json::to_string(&uploaded_tx) {
-        Ok(r) => r,
-        Err(e) => return Err(format!("{:?}", e))
-    };
-    Ok(result)
-}
-
-/*
-    this writes a message or process data item
-    it detects which it is creating by the tags
-*/
-pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, String> {
-    let build_fn_result = build(&deps, input).await?;
-    let build_result = build_fn_result.build;
-    let r = upload(&deps, build_result.binary.to_vec()).await?;
-
-    if build_fn_result.is_message {
-        let message = Message::from_bundle(&build_result.bundle)?;
-        deps.data_store.save_message(&message, &build_result.binary)?;
-        deps.logger.log(format!("saved message - {:?}", &message));
-    } else {
-        let process = Process::from_bundle(&build_result.bundle)?;
-        deps.data_store.save_process(&process, &build_result.binary)?;
-        deps.logger.log(format!("saved process - {:?}", &process));
-    }
-
-    Ok(r)
 }
 
 

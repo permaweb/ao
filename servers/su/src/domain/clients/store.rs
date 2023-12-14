@@ -128,7 +128,8 @@ impl StoreClient {
             epoch: &message.epoch,
             nonce: &message.nonce,
             timestamp: &message.timestamp,
-            bundle: bundle_in
+            bundle: bundle_in,
+            hash_chain: &message.hash_chain,
         };
     
         match diesel::insert_into(messages)
@@ -191,6 +192,30 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+
+    pub fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_conn()?;
+    
+        // Get the latest DbMessage
+        let latest_db_message_result = messages
+            .filter(process_id.eq(process_id_in))
+            .order(row_id.desc())
+            .first::<DbMessage>(conn);
+    
+        match latest_db_message_result {
+            Ok(db_message) => {
+                // Deserialize the message_data into Message
+                let message = serde_json::from_value(db_message.message_data)
+                    .map_err(|e| StoreErrorType::from(e))?;
+    
+                Ok(Some(message))
+            },
+            Err(DieselError::NotFound) => Ok(None), // No messages found
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+    
 
 
     pub fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType> {
@@ -367,6 +392,7 @@ pub struct DbMessage {
     pub nonce: i32,
     pub timestamp: i64,
     pub bundle: Vec<u8>,
+    pub hash_chain: String,
 }
 
 
@@ -380,6 +406,7 @@ pub struct NewMessage<'a> {
     pub epoch: &'a i32,
     pub nonce: &'a i32,
     pub timestamp: &'a i64,
+    pub hash_chain: &'a str,
 }
 
 
