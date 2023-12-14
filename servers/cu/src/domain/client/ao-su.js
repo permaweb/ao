@@ -9,10 +9,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
 
   /**
-   * The cu will generate sort keys for Scheduled Messages that match SU sort keys,
-   * but appends an additional 4th section that contains Scheduled-Interval information, for uniqueness.
+   * The cu will generate sort keys for Cron Messages that match SU sort keys,
+   * but appends an additional 4th section that contains Cron-Interval information, for uniqueness.
    *
-   * So in case the sortKey is a CU generated Scheduled Message sortKey, grab only the first 3
+   * So in case the sortKey is a CU generated Cron Message sortKey, grab only the first 3
    * sections, dropping the potential 4th section, and use that to query the SU
    */
   function suSortKey (sortKey) {
@@ -29,7 +29,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       to: pipe(
         /**
          * Potentially add a comma to the end of the block height, so
-         * the sequencer will include any interactions in that block
+         * the scheduler will include any interactions in that block
          */
         (sortKey) => {
           if (!sortKey) return sortKey
@@ -56,10 +56,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   }
 
   /**
-   * Returns an async generator that emits sequenced messages,
+   * Returns an async generator that emits scheduled messages,
    * one at a time
    *
-   * Sequenced messages are fetched a page at a time, but
+   * Scheduled messages are fetched a page at a time, but
    * emitted from the generator one message at a time.
    *
    * When the currently fetched page is drained, the next page is fetched
@@ -67,14 +67,14 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
    */
   function fetchAllPages ({ suUrl, processId, from, to }) {
     async function fetchPage ({ from }) {
-      return Promise.resolve({ from, to, limit: pageSize })
+      return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
         .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
-        .then((params) => fetch(`${suUrl}/messages/${processId}?${params.toString()}`))
+        .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`))
         .then((res) => res.json())
     }
 
-    return async function * sequenced () {
+    return async function * scheduled () {
       let curPage = []
       let curFrom = from
       let hasNextPage = true
@@ -107,7 +107,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       }
 
       logger(
-        'Successfully loaded %s sequenced messages for process "%s" from "%s" to "%s"...',
+        'Successfully loaded %s scheduled messages for process "%s" from "%s" to "%s"...',
         total,
         processId,
         from || 'initial',
