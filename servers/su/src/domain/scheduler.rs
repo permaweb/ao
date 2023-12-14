@@ -86,15 +86,25 @@ impl ProcessScheduler {
     }
 }
 
-fn gen_hash_chain(previous_or_seed: &str, message_id: Option<&str>) -> String {
+fn gen_hash_chain(previous_or_seed: &str, message_id: Option<&str>) -> Result<String, String> {
     let mut hasher = Sha256::new();
-    hasher.update(previous_or_seed);
+    let mut all = previous_or_seed.to_string();
     match message_id {
-        Some(id) => hasher.update(id),
+        Some(id) => {
+            all = id.to_string() + previous_or_seed;
+        },
         None => ()
     }
+
+    let bytes = match base64_url::decode(&all) {
+        Ok(p) => p,
+        Err(e) => return Err(e.to_string())
+    };
+
+    hasher.update(bytes);
     let result = hasher.finalize();
-    base64_url::encode(&result)
+
+    Ok(base64_url::encode(&result))
 }
 
 /*
@@ -124,11 +134,11 @@ async fn fetch_values(deps: Arc<SchedulerDeps>, process_id: &String) -> Result<(
             let hash_chain = gen_hash_chain(
                 &previous_message.hash_chain, 
                 Some(&previous_message.message.id)
-            );
+            )?;
             Ok((epoch, nonce, hash_chain, millis))
         },
         None => {
-            let hash_chain = gen_hash_chain(&process_id, None);
+            let hash_chain = gen_hash_chain(&process_id, None)?;
             Ok((0, 0, hash_chain, millis))
         }
     }
