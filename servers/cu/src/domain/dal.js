@@ -71,6 +71,7 @@ export const findMessageIdSchema = z.function()
 export const loadMessagesSchema = z.function()
   .args(
     z.object({
+      suUrl: z.string().url(),
       processId: z.string(),
       owner: z.string(),
       from: z.string().optional(),
@@ -84,7 +85,10 @@ export const loadMessagesSchema = z.function()
   .returns(z.promise(streamSchema))
 
 export const loadProcessSchema = z.function()
-  .args(z.string().min(1))
+  .args(z.object({
+    suUrl: z.string().url(),
+    processId: z.string().min(1)
+  }))
   .returns(z.promise(
     z.object({
       owner: z.string().min(1),
@@ -94,16 +98,29 @@ export const loadProcessSchema = z.function()
   ))
 
 export const loadTimestampSchema = z.function()
+  .args(z.string().url())
   .returns(z.promise(z.object({
     height: z.number(),
     timestamp: z.number()
   })))
 
 export const loadMessageMetaSchema = z.function()
-  .args(z.object({ messageTxId: z.string().min(1) }))
+  .args(z.object({
+    suUrl: z.string().url(),
+    processId: z.string().min(1),
+    messageTxId: z.string().min(1)
+  }))
   .returns(z.promise(
     z.object({
       processId: z.string().min(1),
       sortKey: z.string().min(1)
+    })
+  ))
+
+export const locateSchedulerSchema = z.function()
+  .args(z.string())
+  .returns(z.promise(
+    z.object({
+      url: z.string()
     })
   ))

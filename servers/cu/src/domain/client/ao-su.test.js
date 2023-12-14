@@ -11,19 +11,22 @@ describe('ao-su', () => {
       const loadMessageMeta = loadMessageMetaSchema.implement(
         loadMessageMetaWith({
           fetch: async (url, options) => {
-            assert.equal(url, 'https://ao-su-1.onrender.com/message/message-tx-123')
+            assert.equal(url, 'https://ao-su-1.onrender.com/message-tx-123?process-id=process-123')
             assert.deepStrictEqual(options, { method: 'GET' })
 
             return new Response(JSON.stringify({
               process_id: 'process-123',
               sort_key: 'block-123,time-456,hash-789'
             }))
-          },
-          SU_URL: 'https://ao-su-1.onrender.com'
+          }
         })
       )
 
-      const res = await loadMessageMeta({ messageTxId: 'message-tx-123' })
+      const res = await loadMessageMeta({
+        suUrl: 'https://ao-su-1.onrender.com',
+        processId: 'process-123',
+        messageTxId: 'message-tx-123'
+      })
 
       assert.deepStrictEqual(res, {
         processId: 'process-123',

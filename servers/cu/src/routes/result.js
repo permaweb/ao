@@ -5,7 +5,8 @@ import { withMiddleware } from './middleware/index.js'
 import { withInMemoryCache } from './middleware/withInMemoryCache.js'
 
 const inputSchema = z.object({
-  messageTxId: z.string().min(1, 'a message tx id is required')
+  messageTxId: z.string().min(1, 'a message tx id is required'),
+  processId: z.string().min(1, 'a process-id query parameter is required')
 })
 
 export const withResultRoutes = app => {
@@ -22,10 +23,11 @@ export const withResultRoutes = app => {
           return reqs.map(async (req) => {
             const {
               params: { messageTxId },
+              query: { 'process-id': processId },
               domain: { apis: { readResult } }
             } = req
 
-            const input = inputSchema.parse({ messageTxId })
+            const input = inputSchema.parse({ messageTxId, processId })
 
             return readResult(input)
               .toPromise()

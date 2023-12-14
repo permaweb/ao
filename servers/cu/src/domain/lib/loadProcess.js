@@ -2,11 +2,12 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { always, isNotNil, mergeRight, omit } from 'ramda'
 import { z } from 'zod'
 
-import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, saveProcessSchema } from '../dal.js'
+import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
 
-function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) {
+function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, saveProcess, logger }) {
+  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
   loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
@@ -20,7 +21,8 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
    * and then saving to the db
    */
   function loadFromSu (processId) {
-    return loadProcess(processId)
+    return locateScheduler(processId)
+      .chain(({ url }) => loadProcess({ suUrl: url, processId }))
       /**
        * Verify the process by examining the tags
        */
@@ -64,7 +66,7 @@ function getProcessMetaWith ({ loadProcess, findProcess, saveProcess, logger }) 
         logger.tap('found process in db %j')
       )
       .bichain(
-        always(loadFromSu(processId)),
+        () => loadFromSu(processId),
         Resolved
       )
       .map(process => ({
