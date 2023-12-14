@@ -1,7 +1,7 @@
 import { fromPromise } from 'hyper-async'
 import { z } from 'zod'
 
-import { loadMessageMetaSchema } from '../dal.js'
+import { loadMessageMetaSchema, locateSchedulerSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -39,9 +39,15 @@ export function loadMessageMetaWith (env) {
   env = { ...env, logger }
 
   const loadMessageMeta = fromPromise(loadMessageMetaSchema.implement(env.loadMessageMeta))
+  const locateScheduler = fromPromise(locateSchedulerSchema.implement(env.locateScheduler))
 
   return (ctx) => {
-    return loadMessageMeta({ messageTxId: ctx.messageTxId })
+    return locateScheduler(ctx.processId)
+      .chain(({ url }) => loadMessageMeta({
+        suUrl: url,
+        processId: ctx.processId,
+        messageTxId: ctx.messageTxId
+      }))
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded message process and sortKey and appended to ctx %j'))
   }

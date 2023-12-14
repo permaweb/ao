@@ -1,3 +1,6 @@
+import Dataloader from 'dataloader'
+import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+
 // Precanned clients to use for OOTB apis
 import * as GatewayClient from './client/gateway.js'
 import * as PouchDbClient from './client/pouchdb.js'
@@ -14,6 +17,20 @@ export { errFrom } from './utils.js'
 export const createApis = (ctx) => {
   ctx.logger('Creating business logic apis')
 
+  const { locate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL: ctx.GATEWAY_URL })
+  const locateDataloader = new Dataloader(async (processIds) => {
+    /**
+     * locate already maintains a cache, so we'll just clear
+     * the dataloader cache every time
+     *
+     * This way we get the benefits of batching and deduping built
+     * into the dataloader api
+     */
+    locateDataloader.clearAll()
+    return Promise.all(processIds.map(
+      (processId) => locate(processId).catch(err => err)
+    ))
+  })
   const pouchDb = PouchDbClient.createPouchDbClient({ maxListeners: ctx.DB_MAX_LISTENERS, path: ctx.DB_PATH })
 
   const sharedDeps = (logger) => ({
@@ -28,6 +45,7 @@ export const createApis = (ctx) => {
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, pageSize: 50, logger }),
+    locateScheduler: locateDataloader.load.bind(locateDataloader),
     logger
   })
   /**

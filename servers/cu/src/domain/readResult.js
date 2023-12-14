@@ -23,15 +23,16 @@ export function readResultWith (env) {
   const loadMessageMeta = loadMessageMetaWith(env)
   const readState = readStateWith(env)
 
-  return ({ messageTxId }) => {
-    return of({ messageTxId })
+  return ({ processId, messageTxId }) => {
+    return of({ processId, messageTxId })
       .chain(loadMessageMeta)
       .chain(res => readState({ processId: res.processId, to: res.sortKey }))
       .map(omit(['buffer']))
       .map(
         env.logger.tap(
-          'readResult result for message with txId %s',
-          messageTxId
+          'readResult result for message with txId %s to process %s',
+          messageTxId,
+          processId
         )
       )
   }

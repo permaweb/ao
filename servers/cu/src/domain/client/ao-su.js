@@ -5,7 +5,7 @@ import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, 
 
 import { findRawTag, padBlockHeight } from '../utils.js'
 
-export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) => {
+export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
 
   /**
@@ -65,12 +65,12 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
    * When the currently fetched page is drained, the next page is fetched
    * dynamically
    */
-  function fetchAllPages ({ processId, from, to }) {
+  function fetchAllPages ({ suUrl, processId, from, to }) {
     async function fetchPage ({ from }) {
       return Promise.resolve({ from, to, limit: pageSize })
         .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
-        .then((params) => fetch(`${SU_URL}/messages/${processId}?${params.toString()}`))
+        .then((params) => fetch(`${suUrl}/messages/${processId}?${params.toString()}`))
         .then((res) => res.json())
     }
 
@@ -200,9 +200,9 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
   return (args) =>
     of(args)
       .map(mapBounds)
-      .map(({ processId, owner: processOwner, tags: processTags, from, to }) => {
+      .map(({ suUrl, processId, owner: processOwner, tags: processTags, from, to }) => {
         return pipeline(
-          fetchAllPages({ processId, from, to }),
+          fetchAllPages({ suUrl, processId, from, to }),
           Transform.from(mapAoMessage({ processId, processOwner, processTags })),
           (err) => {
             if (err) logger('Encountered err when mapping Sequencer Messages', err)
@@ -212,9 +212,9 @@ export const loadMessagesWith = ({ fetch, SU_URL, logger: _logger, pageSize }) =
       .toPromise()
 }
 
-export const loadProcessWith = ({ fetch, SU_URL }) => {
-  return async (processId) => {
-    return fetch(`${SU_URL}/processes/${processId}`, { method: 'GET' })
+export const loadProcessWith = ({ fetch }) => {
+  return async ({ suUrl, processId }) => {
+    return fetch(`${suUrl}/processes/${processId}`, { method: 'GET' })
       .then(res => res.json())
       .then(applySpec({
         owner: path(['owner', 'address']),
@@ -230,8 +230,8 @@ export const loadProcessWith = ({ fetch, SU_URL }) => {
   }
 }
 
-export const loadTimestampWith = ({ fetch, SU_URL }) => {
-  return () => fetch(`${SU_URL}/timestamp`)
+export const loadTimestampWith = ({ fetch }) => {
+  return (suUrl) => fetch(`${suUrl}/timestamp`)
     .then(res => res.json())
     .then(res => ({
       /**
@@ -243,9 +243,9 @@ export const loadTimestampWith = ({ fetch, SU_URL }) => {
     }))
 }
 
-export const loadMessageMetaWith = ({ fetch, SU_URL }) => {
-  return async ({ messageTxId }) => {
-    return fetch(`${SU_URL}/message/${messageTxId}`, { method: 'GET' })
+export const loadMessageMetaWith = ({ fetch }) => {
+  return async ({ suUrl, processId, messageTxId }) => {
+    return fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' })
       .then(res => res.json())
       .then(res => ({
         processId: res.process_id,

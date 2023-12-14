@@ -10,14 +10,23 @@ const logger = createLogger('ao-cu:readState')
 describe('loadMessageMeta', () => {
   test('should append processId and sortKey to ctx', async () => {
     const loadMessageMeta = loadMessageMetaWith({
+      locateScheduler: async (id) => {
+        assert.equal(id, 'process-123')
+        return { url: 'https://foo.bar' }
+      },
       loadMessageMeta: async (args) => {
-        assert.deepStrictEqual(args, { messageTxId: 'message-tx-123' })
+        assert.deepStrictEqual(args, {
+          suUrl: 'https://foo.bar',
+          processId: 'process-123',
+          messageTxId: 'message-tx-123'
+        })
         return { processId: 'process-123', sortKey: 'sortkey-123' }
       },
       logger
     })
 
-    const res = await loadMessageMeta({ messageTxId: 'message-tx-123' }).toPromise()
+    const res = await loadMessageMeta({ processId: 'process-123', messageTxId: 'message-tx-123' })
+      .toPromise()
 
     assert.deepStrictEqual(res, { processId: 'process-123', sortKey: 'sortkey-123' })
   })

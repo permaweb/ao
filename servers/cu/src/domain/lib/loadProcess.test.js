@@ -22,8 +22,13 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
-      loadProcess: async (id) => {
+      locateScheduler: async (id) => {
         assert.equal(id, PROCESS)
+        return { url: 'https://foo.bar' }
+      },
+      loadProcess: async ({ suUrl, processId }) => {
+        assert.equal(processId, PROCESS)
+        assert.equal(suUrl, 'https://foo.bar')
         return {
           owner: 'woohoo',
           tags,
@@ -64,6 +69,7 @@ describe('loadProcess', () => {
       }),
       saveProcess: async () => assert.fail('should not save if found in db'),
       findLatestEvaluation: async () => { throw { status: 404 } },
+      locateScheduler: async (_id) => assert.fail('should not locate su if found in db'),
       loadProcess: async (_id) => assert.fail('should not load process block if found in db'),
       logger
     })
@@ -114,6 +120,7 @@ describe('loadProcess', () => {
         assert.equal(to, 'sortkey-123')
         return cachedEvaluation
       },
+      locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags,
@@ -149,6 +156,7 @@ describe('loadProcess', () => {
         return PROCESS
       },
       findLatestEvaluation: async () => { throw { status: 404 } },
+      locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags,
@@ -171,6 +179,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
       findLatestEvaluation: async () => { throw { status: 404 } },
+      locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags,
@@ -191,6 +200,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
+      locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
@@ -213,6 +223,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
+      locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
@@ -235,6 +246,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async () => { throw { status: 404 } },
+      locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [

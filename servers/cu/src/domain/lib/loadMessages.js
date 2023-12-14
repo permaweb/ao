@@ -6,7 +6,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { messageSchema, streamSchema } from '../model.js'
-import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema } from '../dal.js'
+import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, locateSchedulerSchema } from '../dal.js'
 import { padBlockHeight } from '../utils.js'
 
 /**
@@ -264,7 +264,8 @@ export function scheduleMessagesBetweenWith ({
   }
 }
 
-function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
+function loadSequencedMessagesWith ({ locateScheduler, loadMessages, loadBlocksMeta, logger }) {
+  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
   loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
 
@@ -274,19 +275,21 @@ function loadSequencedMessagesWith ({ loadMessages, loadBlocksMeta, logger }) {
         logger('Initializing AsyncIterable of Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest')
         return ctx
       })
-      /**
-       * Returns an async iterable whose results are each a sequenced message
-       */
-      .chain(args => loadMessages({
-        processId: args.id,
-        owner: args.owner,
-        tags: args.tags,
-        from: args.from, // could be undefined
-        to: args.to // could be undefined
-      }))
+      .chain((ctx) =>
+        locateScheduler(ctx.id)
+          .chain(({ url }) => loadMessages({
+            suUrl: url,
+            processId: ctx.id,
+            owner: ctx.owner,
+            tags: ctx.tags,
+            from: ctx.from, // could be undefined
+            to: ctx.to // could be undefined
+          }))
+      )
 }
 
-function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
+function loadScheduledMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta, logger }) {
+  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
   loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
 
@@ -374,7 +377,8 @@ function loadScheduledMessagesWith ({ loadTimestamp, loadBlocksMeta, logger }) {
        * Merge the sequence messages stream with scheduled messages,
        * producing a single merged stream
        */
-      return loadTimestamp()
+      return locateScheduler(ctx.id)
+        .chain(({ url }) => loadTimestamp(url))
         .map(logger.tap('loaded current block and tiemstamp from SU'))
         /**
          * In order to generate scheduled messages and merge them with the
