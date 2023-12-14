@@ -1,7 +1,7 @@
 use std::{sync::Arc, fmt::Debug};
 use serde::Deserialize;
 use tokio::{fs::File, io::AsyncReadExt};
-use crate::domain::{clients::store::StoreErrorType, flows::{Deps, build}};
+use crate::domain::{clients::store::StoreErrorType, flows::{Deps, init_builder}};
 
 /*
     The code in this file only runs on a su that is
@@ -71,11 +71,6 @@ pub async fn redirect_process_id(deps: Arc<Deps>, process_id: Option<String>) ->
 
     let pid = process_id.ok_or("No process-id query parameter provided")?;
 
-    // if this is the AO_PROCESS_ID do not redirect
-    if pid == deps.config.ao_process_id {
-        return Ok(None);
-    }
-
     // every other process_id, redirect
     let process_scheduler = deps.data_store.get_process_scheduler(&pid)?;
     let scheduler = deps.data_store.get_scheduler(&process_scheduler.scheduler_row_id)?;
@@ -84,7 +79,7 @@ pub async fn redirect_process_id(deps: Arc<Deps>, process_id: Option<String>) ->
 
 // if this returns Ok(Some(String)) then the server should return a redirect to the String
 pub async fn redirect_tx_id(deps: Arc<Deps>, tx_id: String, process_id: Option<String>) -> Result<Option<String>, String> {
-    if deps.config.mode != "router" || tx_id == deps.config.ao_process_id {
+    if deps.config.mode != "router" {
         return Ok(None);
     }
 
@@ -108,9 +103,8 @@ pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<Optio
     if deps.config.mode != "router" {
         return Ok(None);
     }
-
-    let build_result = build(&deps, input).await?;
-    let item = &build_result.build.bundle.items[0];
+    let builder = init_builder(&deps)?;
+    let item = builder.parse_data_item(input.clone())?;
     let tags = item.tags().clone();
     let id = item.id().clone();
     let target = item.target().clone();
@@ -119,10 +113,6 @@ pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<Optio
     
     match type_tag.value.as_str() {
         "Process" => {
-            // cannot recreate the ao staking process
-            if id == deps.config.ao_process_id {
-                return Err("Cannot recreate the ao staking process".to_string());
-            }
 
              /*
                 new process so we need to generate a
@@ -156,15 +146,6 @@ pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<Optio
             }
         },
         "Message" => {
-            /*
-                if we are writing a message to the
-                ao staking process we want to sequence
-                on this server so no redirect
-            */
-            if target == deps.config.ao_process_id {
-                return Ok(None);
-            }
-
             /*
                 otherwise, fetch the correct scheduler based
                 on the messages's target

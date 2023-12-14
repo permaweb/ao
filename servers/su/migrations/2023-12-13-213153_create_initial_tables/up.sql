@@ -14,8 +14,9 @@ CREATE TABLE messages (
   message_data JSONB NOT NULL,
   epoch INTEGER NOT NULL,
   nonce INTEGER NOT NULL,
-  "timestamp" INTEGER NOT NULL,
-  bundle BYTEA NOT NULL
+  "timestamp" BIGINT NOT NULL,
+  bundle BYTEA NOT NULL,
+  hash_chain TEXT NOT NULL
 );
 
 CREATE INDEX idx_messages_process_id ON messages(process_id);

@@ -28,12 +28,13 @@ impl From<&str> for ByteErrorType {
 
 #[derive(Clone)]
 pub struct DataBundle {
-    pub items: Vec<DataItem>
+    pub items: Vec<DataItem>,
+    pub tags: Vec<Tag>
 }
 
 impl DataBundle {
-    pub fn new() -> Self {
-        DataBundle { items: Vec::new() }
+    pub fn new(tags: Vec<Tag>) -> Self {
+        DataBundle { items: Vec::new(), tags: tags }
     }
 
     pub fn add_item(&mut self, item: DataItem) {

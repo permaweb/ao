@@ -70,18 +70,18 @@ impl<'a> Builder<'a> {
     // TODO: unify build and build_process
     pub async fn build(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
         let item = DataItem::from_bytes(tx)?;
+        let process_id = item.target().clone();
+
         self.logger.log(format!("attempting to verify data item id - {}", &item.id()));
         self.logger.log(format!("owner - {}", &item.owner()));
         self.logger.log(format!("target - {}", &item.target()));
         self.logger.log(format!("tags - {:?}", &item.tags()));
+
         self.verifier.verify_data_item(&item).await?;
         self.logger.log(format!("verified data item id - {}", &item.id()));
 
-        
-        let mut data_bundle = DataBundle::new();
-        data_bundle.add_item(item);
-        let buffer = data_bundle.to_bytes()?;
-        let process_id = data_bundle.items[0].target().clone();
+        let network_info = self.gateway.network_info().await?;
+        let height = network_info.height.clone();
 
         let tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
@@ -89,11 +89,15 @@ impl<'a> Builder<'a> {
             Tag::new(&"Process".to_string(), &process_id),
             Tag::new(&"Epoch".to_string(), &schedule_info.epoch()),
             Tag::new(&"Nonce".to_string(), &schedule_info.nonce()),
-            Tag::new(&"Hash-Chain".to_string(), &schedule_info.last_hash()),
+            Tag::new(&"Hash-Chain".to_string(), &schedule_info.hash_chain()),
+            Tag::new(&"Block-Height".to_string(), &height.to_string()),
             Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
         ];
-
         self.logger.log(format!("generated tags - {:?}", &tags));
+
+        let mut data_bundle = DataBundle::new(tags.clone());
+        data_bundle.add_item(item);
+        let buffer = data_bundle.to_bytes()?;
 
         let pub_key = self.signer.get_public_key();
         let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;
@@ -112,28 +116,32 @@ impl<'a> Builder<'a> {
         })
     }
 
-    pub async fn build_process(&self, tx: Vec<u8>) -> Result<BuildResult, BuilderErrorType> {
+    pub async fn build_process(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
         let item = DataItem::from_bytes(tx)?;
-        self.logger.log(format!("attempting to verify process data item id - {}", &item.id()));
+        let process_id = item.target().clone();
+
+        self.logger.log(format!("attempting to verify data item id - {}", &item.id()));
         self.logger.log(format!("owner - {}", &item.owner()));
         self.logger.log(format!("target - {}", &item.target()));
         self.logger.log(format!("tags - {:?}", &item.tags()));
-        self.verifier.verify_data_item(&item).await?;
-        self.logger.log(format!("verified process data item id - {}", &item.id()));
-
         
-        let mut data_bundle = DataBundle::new();
-        data_bundle.add_item(item);
-        let buffer = data_bundle.to_bytes()?;
+        self.verifier.verify_data_item(&item).await?;
+        self.logger.log(format!("verified data item id - {}", &item.id()));
 
-        let process_id = data_bundle.items[0].target().clone();
+        let network_info = self.gateway.network_info().await?;
+        let height = network_info.height.clone();
 
         let tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
+            Tag::new(&"Block-Height".to_string(), &height.to_string()),
+            Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
         ];
-
         self.logger.log(format!("generated tags - {:?}", &tags));
+
+        let mut data_bundle = DataBundle::new(tags.clone());
+        data_bundle.add_item(item);
+        let buffer = data_bundle.to_bytes()?;
 
         let pub_key = self.signer.get_public_key();
         let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;

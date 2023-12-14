@@ -19,6 +19,7 @@ table! {
         nonce -> Int4,
         timestamp -> BigInt,
         bundle -> Bytea,
+        hash_chain -> Text,
     }
 }
 
