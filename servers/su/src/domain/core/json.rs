@@ -2,9 +2,9 @@
 
 
 use serde::{Serialize, Deserialize}; 
+use sha2::{Digest, Sha256};
 
 use super::bytes::{DataBundle};
-use super::sequencer::hash;
 use bundlr_sdk::{tags::*};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -85,6 +85,13 @@ pub struct PageInfo {
 pub struct Edge {
     pub node: Message,
     pub cursor: String,
+}
+
+pub fn hash(data: &[u8]) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    result.to_vec()
 }
 
 impl Process {
