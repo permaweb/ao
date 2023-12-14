@@ -5,7 +5,6 @@ should be injected via dal.rs traits
 */
 
 mod bytes;
-mod sequencer;
 mod verifier;
 
 // traits for injecting dependencies

@@ -83,7 +83,7 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
                 process we are creating. So if a message is written
                 while the process is still being created it will wait
             */
-            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id(), None).await?;
+            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id()).await?;
             let schedule_info = locked_schedule_info.lock().await;
 
             let build_result = builder.build_process(input, &*schedule_info).await?;
@@ -98,7 +98,7 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
                 process we are writing a message to. this ensures 
                 no conflicts in the schedule
             */
-            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target(), Some(data_item.id())).await?;
+            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
             let schedule_info = locked_schedule_info.lock().await;
 
             let build_result = builder.build(input, &*schedule_info).await?;
