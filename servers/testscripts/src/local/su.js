@@ -62,4 +62,31 @@ const { createData, ArweaveSigner } = WarpArBundles;
   console.log(await dataItem.id)
   console.log('Su MessageResponse 1 for Contract 1')
   console.log(responseText)
+
+  const data3 = Math.random().toString().slice(-4)
+  const tags3 = [
+    { name: 'Data-Protocol', value: 'ao' },
+    { name: 'Type', value: 'Message' },
+    { name: 'Test', value: 'test' }
+  ]
+
+  const dataItem3 = createData(data3, signer, { tags: tags3, target: processId })
+  await dataItem3.sign(signer)
+
+  const response3 = await fetch(
+    'http://localhost:9000/',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        Accept: 'application/json'
+      },
+      body: dataItem3.getRaw()
+    }
+  )
+
+  const responseText3 = await response3.text()
+  console.log(await dataItem3.id)
+  console.log('Su MessageResponse 2 for Contract 1')
+  console.log(responseText3)
 })()
