@@ -2,39 +2,45 @@ use diesel::prelude::*;
 
 table! {
     processes (row_id) {
-        row_id -> Integer,
+        row_id -> Int4,
         process_id -> Varchar,
         process_data -> Jsonb,
+        bundle -> Bytea,
     }
 }
 
 table! {
     messages (row_id) {
-        row_id -> Integer,
+        row_id -> Int4,
         process_id -> Varchar,
         message_id -> Varchar,
-        sort_key -> Varchar,
         message_data -> Jsonb,
+        epoch -> Int4,
+        nonce -> Int4,
+        timestamp -> BigInt,
+        bundle -> Bytea,
     }
 }
 
-/*
-schedulers and process_schedulers are used
-when the su is in router mode acting as 
-a load balancer/router for the underlying sus
-*/
 table! {
     schedulers (row_id) {
-        row_id -> Integer,
+        row_id -> Int4,
         url -> Varchar,
-        process_count -> Integer,
+        process_count -> Int4,
     }
 }
 
 table! {
     process_schedulers (row_id) {
-        row_id -> Integer,
+        row_id -> Int4,
         process_id -> Varchar,
-        scheduler_row_id -> Integer,
+        scheduler_row_id -> Int4,
     }
 }
+
+allow_tables_to_appear_in_same_query!(
+    processes,
+    messages,
+    schedulers,
+    process_schedulers,
+);

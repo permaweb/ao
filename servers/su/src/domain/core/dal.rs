@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /*
 Interfaces for core dependencies. Implement these traits 
@@ -30,4 +32,11 @@ pub trait Signer {
 pub trait Log: Send + Sync {
     fn log(&self, message: String);
     fn error(&self, message: String);
+}
+
+pub trait ScheduleProvider {
+    fn epoch(&self) -> String;
+    fn nonce(&self) -> String;
+    fn timestamp(&self) -> String;
+    fn last_hash(&self) -> String;
 }

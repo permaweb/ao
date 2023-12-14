@@ -110,7 +110,7 @@ pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<Optio
     }
 
     let build_result = build(&deps, input).await?;
-    let item = &build_result.bundle.items[0];
+    let item = &build_result.build.bundle.items[0];
     let tags = item.tags().clone();
     let id = item.id().clone();
     let target = item.target().clone();

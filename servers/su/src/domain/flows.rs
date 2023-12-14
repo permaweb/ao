@@ -15,12 +15,14 @@ use crate::domain::clients::signer::ArweaveSigner;
 use crate::domain::core::json::{Message, Process, SortedMessages};
 use crate::domain::core::builder::{Builder, BuildResult};
 use crate::domain::core::dal::{Gateway, Wallet, Signer, Log};
+use crate::domain::scheduler;
 use crate::config::Config;
 
 pub struct Deps {
     pub data_store: Arc<StoreClient>,
     pub logger: Arc<dyn Log>,
-    pub config: Arc<Config>
+    pub config: Arc<Config>,
+    pub scheduler: Arc<scheduler::ProcessScheduler>
 }
 
 /*
@@ -28,7 +30,12 @@ flows.rs ties together core modules and client
 modules to produce the desired end result
 */
 
-pub async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildResult, String> {
+pub struct BuildFnResult {
+    pub build: BuildResult,
+    pub is_message: bool
+}
+
+pub async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildFnResult, String> {
     dotenv().ok();
     let gateway: Arc<dyn Gateway> = Arc::new(ArweaveGateway);
     let wallet: Arc<dyn Wallet> = Arc::new(FileWallet);
@@ -36,8 +43,49 @@ pub async fn build(deps: &Arc<Deps>, input: Vec<u8>) -> Result<BuildResult, Stri
     let arweave_signer = ArweaveSigner::new(wallet_path)?;
     let signer: Arc<dyn Signer> = Arc::new(arweave_signer);
     let builder = Builder::new(gateway, wallet, signer, &deps.logger)?;
-    let build_result = builder.build(input).await?;
-    Ok(build_result)
+
+    let data_item = builder.parse_data_item(input.clone())?;
+
+    let tags = data_item.tags().clone();
+    let type_tag = tags.iter().find(|tag| tag.name == "Type");
+    let proto_tag_exists = tags.iter().any(|tag| tag.name == "Data-Protocol");
+    if !proto_tag_exists {
+        return Err("Data-Protocol tag not present".to_string());
+    }
+
+    if let Some(type_tag) = type_tag {
+        if type_tag.value == "Process" {
+            let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");
+            let sched_tag_exists = tags.iter().any(|tag| tag.name == "Scheduler");
+
+            if !mod_tag_exists || !sched_tag_exists {
+                return Err("Required Module and Scheduler tags for Process type not present".to_string());
+            }
+            let build_result = builder.build_process(input).await?;
+            return Ok(BuildFnResult{
+                build: build_result,
+                is_message: false
+            });
+        } else if type_tag.value == "Message" {
+            /*
+                acquire the mutex locked scheduling info for the
+                process we are writing a message to. this ensures 
+                no conflicts in the schedule
+            */
+            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await;
+            let schedule_info = locked_schedule_info.lock().await;
+
+            let build_result = builder.build(input, &*schedule_info).await?;
+            return Ok(BuildFnResult{
+                build: build_result,
+                is_message: true
+            });
+        } else {
+            return Err("Type tag not present".to_string());
+        }
+    } else {
+        return Err("Type tag not present".to_string());
+    }
 }
 
 async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, String> {
@@ -56,42 +104,18 @@ async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, Strin
     it detects which it is creating by the tags
 */
 pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, String> {
-    let build_result = build(&deps, input).await?;
+    let build_fn_result = build(&deps, input).await?;
+    let build_result = build_fn_result.build;
     let r = upload(&deps, build_result.binary.to_vec()).await?;
 
-    let tags = build_result.bundle.items[0].tags().clone();
-
-    let proto_tag_exists = tags.iter().any(|tag| tag.name == "Data-Protocol");
-    let type_tag = tags.iter().find(|tag| tag.name == "Type");
-
-    if !proto_tag_exists {
-        return Err("Data-Protocol tag not present".to_string());
-    }
-
-    if let Some(type_tag) = type_tag {
-        match type_tag.value.as_str() {
-            "Message" | "Process" => {
-                if type_tag.value == "Process" {
-                    let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");
-                    let sched_tag_exists = tags.iter().any(|tag| tag.name == "Scheduler");
-
-                    if !mod_tag_exists || !sched_tag_exists {
-                        return Err("Required Module and Scheduler tags for Process type not present".to_string());
-                    } else {
-                        let process = Process::from_bundle(&build_result.bundle)?;
-                        deps.data_store.save_process(&process)?;
-                        deps.logger.log(format!("saved process - {:?}", &process));
-                    }
-                } else {
-                    let message = Message::from_bundle(&build_result.bundle)?;
-                    deps.data_store.save_message(&message)?;
-                    deps.logger.log(format!("saved message - {:?}", &message));
-                }
-            }
-            _ => return Err("Type tag has an invalid value".to_string()),
-        }
+    if build_fn_result.is_message {
+        let message = Message::from_bundle(&build_result.bundle)?;
+        deps.data_store.save_message(&message, &build_result.binary)?;
+        deps.logger.log(format!("saved message - {:?}", &message));
     } else {
-        return Err("Type tag not present".to_string());
+        let process = Process::from_bundle(&build_result.bundle)?;
+        deps.data_store.save_process(&process, &build_result.binary)?;
+        deps.logger.log(format!("saved process - {:?}", &process));
     }
 
     Ok(r)

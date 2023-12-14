@@ -5,7 +5,7 @@ use std::io::{self, Error, ErrorKind};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, middleware::Logger, http::header::LOCATION};
 use serde::Deserialize;
 
-use su::domain::{flows, flows_router, StoreClient, Deps, Log};
+use su::domain::{flows, router, StoreClient, Deps, Log, scheduler};
 use su::logger::SuLog;
 use su::config::Config;
 
@@ -37,7 +37,7 @@ struct ProcessIdRequired {
 async fn base(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, req: HttpRequest) -> impl Responder {
     let process_id = query_params.process_id.clone();
 
-    match flows_router::redirect_process_id(deps.get_ref().clone(), process_id).await {
+    match router::redirect_process_id(deps.get_ref().clone(), process_id).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
@@ -57,7 +57,7 @@ async fn base(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, r
 async fn timestamp_route(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, req: HttpRequest) -> impl Responder {
     let process_id = query_params.process_id.clone();
 
-    match flows_router::redirect_process_id(deps.get_ref().clone(), process_id).await {
+    match router::redirect_process_id(deps.get_ref().clone(), process_id).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
@@ -75,7 +75,7 @@ async fn timestamp_route(deps: web::Data<Arc<Deps>>, query_params: web::Query<Pr
 }
 
 async fn main_post_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes, req: HttpRequest) -> impl Responder {
-    match flows_router::redirect_data_item(deps.get_ref().clone(), req_body.to_vec()).await {
+    match router::redirect_data_item(deps.get_ref().clone(), req_body.to_vec()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
@@ -98,7 +98,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
     let to_sort_key = query_params.to.clone();
     let process_id = query_params.process_id.clone();
 
-    match flows_router::redirect_tx_id(deps.get_ref().clone(), tx_id.clone(), process_id.clone()).await {
+    match router::redirect_tx_id(deps.get_ref().clone(), tx_id.clone(), process_id.clone()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
@@ -120,7 +120,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
 async fn read_process_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web::Path<ProcessIdRequired>) -> impl Responder {
     let process_id = path.process_id.clone();
 
-    match flows_router::redirect_process_id(deps.get_ref().clone(), Some(process_id.clone())).await {
+    match router::redirect_process_id(deps.get_ref().clone(), Some(process_id.clone())).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
@@ -162,10 +162,17 @@ async fn main() -> io::Result<()> {
     let logger: Arc<dyn Log> = SuLog::init();
     let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
     let config = Arc::new(Config::new(mode).expect("Failed to read configuration"));
+    let scheduler_deps = Arc::new(scheduler::SchedulerDeps {
+        data_store: data_store.clone(),
+        config: config.clone(),
+        logger: logger.clone()
+    });
+    let scheduler = Arc::new(scheduler::ProcessScheduler::new(scheduler_deps));
     let deps: Deps = Deps {
         data_store,
         logger,
-        config
+        config,
+        scheduler
     };
     let wrapped = web::Data::new(Arc::new(deps));
 
@@ -175,7 +182,7 @@ async fn main() -> io::Result<()> {
     */
     let init_deps = wrapped.get_ref().clone();
     if init_deps.config.mode == "router" {
-        match flows_router::init_schedulers(init_deps.clone()).await {
+        match router::init_schedulers(init_deps.clone()).await {
             Err(e) => init_deps.logger.log(format!("{}", e)),
             Ok(m) => init_deps.logger.log(format!("{}", m)),
         };

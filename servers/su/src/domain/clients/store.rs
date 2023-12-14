@@ -7,7 +7,7 @@ use diesel::r2d2::Pool;
 use std::env::VarError;
 
 use super::super::core::json::{Message, Process};
-use super::super::flows_router::{Scheduler, ProcessScheduler};
+use super::super::router::{Scheduler, ProcessScheduler};
 use crate::config::Config;
 
 #[derive(Debug)]
@@ -75,13 +75,14 @@ impl StoreClient {
         )
     }
 
-    pub fn save_process(&self, process: &Process) -> Result<String, StoreErrorType> {
+    pub fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_conn()?;
     
         let new_process = NewProcess {
             process_id: &process.process_id,
             process_data: serde_json::to_value(process).expect("Failed to serialize Process"),
+            bundle: bundle_in
         };
     
         match diesel::insert_into(processes)
@@ -116,15 +117,18 @@ impl StoreClient {
         }
     }
     
-    pub fn save_message(&self, message: &Message) -> Result<String, StoreErrorType> {
+    pub fn save_message(&self, message: &Message, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
         let new_message = NewMessage {
             process_id: &message.process_id,
             message_id: &message.message.id,
-            sort_key: &message.sort_key,
             message_data: serde_json::to_value(message).expect("Failed to serialize Message"),
+            epoch: &message.epoch,
+            nonce: &message.nonce,
+            timestamp: &message.timestamp,
+            bundle: bundle_in
         };
     
         match diesel::insert_into(messages)
@@ -348,6 +352,7 @@ pub struct DbProcess {
     pub row_id: i32,
     pub process_id: String,
     pub process_data: serde_json:: Value,
+    pub bundle: Vec<u8>, 
 }
 
 #[derive(Queryable, Selectable)]
@@ -357,8 +362,11 @@ pub struct DbMessage {
     pub row_id: i32,
     pub process_id: String,
     pub message_id: String,
-    pub sort_key: String,
     pub message_data: serde_json::Value,
+    pub epoch: i32,
+    pub nonce: i32,
+    pub timestamp: i64,
+    pub bundle: Vec<u8>,
 }
 
 
@@ -367,8 +375,11 @@ pub struct DbMessage {
 pub struct NewMessage<'a> {
     pub process_id: &'a str,
     pub message_id: &'a str,
-    pub sort_key: &'a str,
     pub message_data: serde_json::Value,
+    pub bundle:  &'a [u8],
+    pub epoch: &'a i32,
+    pub nonce: &'a i32,
+    pub timestamp: &'a i64,
 }
 
 
@@ -377,6 +388,7 @@ pub struct NewMessage<'a> {
 pub struct NewProcess<'a> {
     pub process_id: &'a str,
     pub process_data: serde_json::Value,
+    pub bundle:  &'a [u8],
 }
 
 

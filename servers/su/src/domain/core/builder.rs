@@ -3,9 +3,8 @@ use std::{sync::Arc};
 use bundlr_sdk::{tags::Tag};
 
 use super::bytes::{DataBundle, DataItem, ByteErrorType};
-use super::sequencer::{gen_sort_key, SequencerErrorType};
 use super::verifier::{Verifier, VerifyErrorType};
-use super::dal::{Gateway, Wallet, Signer, Log};
+use super::dal::{Gateway, Wallet, Signer, Log, ScheduleProvider};
 
 pub struct Builder<'a> {
     verifier: Verifier,
@@ -24,12 +23,6 @@ pub struct BuildResult{
 #[derive(Debug)]
 pub enum BuilderErrorType {
     BuilderError(String)
-}
-
-impl From<SequencerErrorType> for BuilderErrorType {
-    fn from(error: SequencerErrorType) -> Self {
-        BuilderErrorType::BuilderError(format!("Sequencer error in builder: {:?}", error))
-    }
 }
 
 impl From<ByteErrorType> for BuilderErrorType {
@@ -74,7 +67,8 @@ impl<'a> Builder<'a> {
         })
     }
 
-    pub async fn build(&self, tx: Vec<u8>) -> Result<BuildResult, BuilderErrorType> {
+    // TODO: unify build and build_process
+    pub async fn build(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
         let item = DataItem::from_bytes(tx)?;
         self.logger.log(format!("attempting to verify data item id - {}", &item.id()));
         self.logger.log(format!("owner - {}", &item.owner()));
@@ -83,20 +77,20 @@ impl<'a> Builder<'a> {
         self.verifier.verify_data_item(&item).await?;
         self.logger.log(format!("verified data item id - {}", &item.id()));
 
-        let sort_key = gen_sort_key(&item, self.gateway.clone(), self.wallet.clone()).await?;
-        let mut data_bundle = DataBundle::new(sort_key.clone());
+        
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(item);
         let buffer = data_bundle.to_bytes()?;
-        self.logger.log(format!("generated sort key and created bundle, sort_key - {}", &sort_key));
-
         let process_id = data_bundle.items[0].target().clone();
 
         let tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-            Tag::new(&"Sequencer-Sort-Key".to_string(), &sort_key),
-            Tag::new(&"Sequencer-Id".to_string(), &"ao-su-1".to_string()),
-            Tag::new(&"Ao-Process-Id".to_string(), &process_id),
+            Tag::new(&"Process".to_string(), &process_id),
+            Tag::new(&"Epoch".to_string(), &schedule_info.epoch()),
+            Tag::new(&"Nonce".to_string(), &schedule_info.nonce()),
+            Tag::new(&"Hash-Chain".to_string(), &schedule_info.last_hash()),
+            Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
         ];
 
         self.logger.log(format!("generated tags - {:?}", &tags));
@@ -116,6 +110,50 @@ impl<'a> Builder<'a> {
             binary: new_data_item.as_bytes()?,
             bundle: data_bundle
         })
+    }
+
+    pub async fn build_process(&self, tx: Vec<u8>) -> Result<BuildResult, BuilderErrorType> {
+        let item = DataItem::from_bytes(tx)?;
+        self.logger.log(format!("attempting to verify process data item id - {}", &item.id()));
+        self.logger.log(format!("owner - {}", &item.owner()));
+        self.logger.log(format!("target - {}", &item.target()));
+        self.logger.log(format!("tags - {:?}", &item.tags()));
+        self.verifier.verify_data_item(&item).await?;
+        self.logger.log(format!("verified process data item id - {}", &item.id()));
+
+        
+        let mut data_bundle = DataBundle::new();
+        data_bundle.add_item(item);
+        let buffer = data_bundle.to_bytes()?;
+
+        let process_id = data_bundle.items[0].target().clone();
+
+        let tags = vec![
+            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
+            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
+        ];
+
+        self.logger.log(format!("generated tags - {:?}", &tags));
+
+        let pub_key = self.signer.get_public_key();
+        let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;
+        let message = new_data_item.get_message()?.to_vec();
+
+        let signature = self.signer
+            .sign_tx(message).await?;
+
+        new_data_item.signature = signature;
+
+        self.logger.log(format!("signature succeeded {}", ""));
+
+        Ok(BuildResult{
+            binary: new_data_item.as_bytes()?,
+            bundle: data_bundle
+        })
+    }
+
+    pub fn parse_data_item(&self, tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
+        Ok(DataItem::from_bytes(tx)?)
     }
 }
 
