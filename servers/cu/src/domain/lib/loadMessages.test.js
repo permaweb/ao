@@ -7,11 +7,11 @@ import { countBy, prop, uniqBy } from 'ramda'
 
 import { padBlockHeight } from '../utils.js'
 
-import { CRON_INTERVAL, parseCrons, isBlockOnSchedule, isTimestampOnSchedule, scheduleMessagesBetweenWith } from './loadMessages.js'
+import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith } from './loadMessages.js'
 
 describe('loadMessages', () => {
   describe('parseCrons', () => {
-    test('parses the schedules from the tags', async () => {
+    test('parses the crons from the tags', async () => {
       /**
        * Purposefully mixed up to test robustness of parsing queue
        */
@@ -57,7 +57,7 @@ describe('loadMessages', () => {
       })
     })
 
-    test('return an empty array of no schedules are found', async () => {
+    test('return an empty array of no crons are found', async () => {
       const crons = await parseCrons({
         tags: []
       }).toPromise()
@@ -65,7 +65,7 @@ describe('loadMessages', () => {
       assert.deepStrictEqual(crons, [])
     })
 
-    test('throw if time-based schedule is less than 1 second', async () => {
+    test('throw if time-based cron is less than 1 second', async () => {
       await parseCrons({
         tags: [
           { name: CRON_INTERVAL, value: '500-Milliseconds' },
@@ -78,13 +78,13 @@ describe('loadMessages', () => {
     })
   })
 
-  describe('isBlockOnSchedule', () => {
-    test('should return whether the block is on the schedule', () => {
+  describe('isBlockOnCron', () => {
+    test('should return whether the block is on the cron', () => {
       assert.equal(
-        isBlockOnSchedule({
+        isBlockOnCron({
           height: 125000,
           originHeight: 123455,
-          schedule: {
+          cron: {
             interval: '5-blocks',
             unit: 'blocks',
             value: 5
@@ -94,10 +94,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isBlockOnSchedule({
+        isBlockOnCron({
           height: 125000,
           originHeight: 123457,
-          schedule: {
+          cron: {
             interval: '5-blocks',
             unit: 'blocks',
             value: 5
@@ -108,8 +108,8 @@ describe('loadMessages', () => {
     })
   })
 
-  describe('isTimestampOnSchedule', () => {
-    test('should return whether the timestamp is on the schedule', () => {
+  describe('isTimestampOnCron', () => {
+    test('should return whether the timestamp is on the cron', () => {
       /**
        * Timestamps the CU deals with will always be milliseconds, at the top of the SECOND
        *
@@ -119,10 +119,10 @@ describe('loadMessages', () => {
       const nowSecond = Math.floor(new Date().getTime() / 1000) * 1000
 
       assert.equal(
-        isTimestampOnSchedule({
+        isTimestampOnCron({
           timestamp: nowSecond,
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '15-seconds',
             unit: 'seconds',
             value: 15
@@ -132,10 +132,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
+        isTimestampOnCron({
           timestamp: nowSecond + ms('3m'),
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '15-seconds',
             unit: 'seconds',
             value: 15
@@ -145,10 +145,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
+        isTimestampOnCron({
           timestamp: nowSecond + ms('2m'),
           originTimestamp: nowSecond - ms('3m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -158,10 +158,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
-          timestamp: nowSecond + ms('10s'), // 5 seconds off schedule
+        isTimestampOnCron({
+          timestamp: nowSecond + ms('10s'), // 5 seconds off cron
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '15-seconds',
             unit: 'seconds',
             value: 15
@@ -171,10 +171,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
+        isTimestampOnCron({
           timestamp: nowSecond,
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -184,10 +184,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
+        isTimestampOnCron({
           timestamp: nowSecond + ms('10m'),
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -197,10 +197,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
-          timestamp: nowSecond + ms('59s'), // 1 second off schedule
+        isTimestampOnCron({
+          timestamp: nowSecond + ms('59s'), // 1 second off cron
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -210,10 +210,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
-          timestamp: nowSecond + ms('3m'), // 2 minutes off schedule
+        isTimestampOnCron({
+          timestamp: nowSecond + ms('3m'), // 2 minutes off cron
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -223,10 +223,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
-          timestamp: nowSecond + ms('6m'), // 1 minute off schedule
+        isTimestampOnCron({
+          timestamp: nowSecond + ms('6m'), // 1 minute off cron
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -236,10 +236,10 @@ describe('loadMessages', () => {
       )
 
       assert.equal(
-        isTimestampOnSchedule({
-          timestamp: nowSecond + ms('10s'), // 10 seconds off schedule
+        isTimestampOnCron({
+          timestamp: nowSecond + ms('10s'), // 10 seconds off cron
           originTimestamp: nowSecond - ms('5m'),
-          schedule: {
+          cron: {
             interval: '5-minutes',
             unit: 'seconds',
             value: ms('5m') / 1000
@@ -250,7 +250,7 @@ describe('loadMessages', () => {
     })
   })
 
-  describe('scheduleMessagesBetween', () => {
+  describe('cronMessagesBetween', () => {
     /**
      * Timestamps the CU deals with will always be milliseconds, at the top of the SECOND
      *
@@ -261,12 +261,13 @@ describe('loadMessages', () => {
 
     const originHeight = 125000
     const originTime = nowSecond - ms('30d')
-    const mockScheduledMessage = {
-      'ao-type': 'message',
-      function: 'notify',
-      'notify-function': 'transfer',
-      from: 'SIGNERS_WALLET_ADDRESS',
-      qty: '1000'
+    const mockCronMessage = {
+      tags: [
+        { name: 'Type', value: 'Message' },
+        { name: 'function', value: 'notify' },
+        { name: 'from', value: 'SIGNERS_WALLET_ADRESS' },
+        { name: 'qty', value: '1000' }
+      ]
     }
 
     const processId = 'process-123'
@@ -275,53 +276,53 @@ describe('loadMessages', () => {
       height: originHeight,
       timestamp: originTime
     }
-    const schedules = [
+    const crons = [
       {
         interval: '10-minutes',
         unit: 'seconds',
         value: ms('10m') / 1000,
-        message: mockScheduledMessage
+        message: mockCronMessage
       },
       {
         interval: '2-blocks',
         unit: 'blocks',
         value: 2,
-        message: mockScheduledMessage
+        message: mockCronMessage
       },
       {
         interval: '15-minutes',
         unit: 'seconds',
         value: ms('15m') / 1000,
-        message: mockScheduledMessage
+        message: mockCronMessage
       },
       {
         interval: '2-blocks',
         unit: 'blocks',
         value: 2,
-        message: mockScheduledMessage
+        message: mockCronMessage
       }
     ]
 
     /**
      * blockRange of 5 blocks and 85 minutes
      *
-     * Should produce 15 scheduled messages,
+     * Should produce 15 cron messages,
      * for a total of 17 including the actual messages
      */
-    const sequencedMessagesStartTime = originTime + ms('35m')
+    const scheduledMessagesStartTime = originTime + ms('35m')
     const blocksMeta = [
       // {
       //   height: originHeight + 10,
-      //   timestamp: sequencedMessagesStartTime - ms('10m') - ms('10m') // 15m
+      //   timestamp: scheduledMessagesStartTime - ms('10m') - ms('10m') // 15m
       // },
       // {
       //   height: originHeight + 11,
-      //   timestamp: sequencedMessagesStartTime - ms('10m') // 25m
+      //   timestamp: scheduledMessagesStartTime - ms('10m') // 25m
       // },
-      // The first sequenced message is on this block
+      // The first scheduled message is on this block
       {
         height: originHeight + 12,
-        timestamp: sequencedMessagesStartTime // 35m
+        timestamp: scheduledMessagesStartTime // 35m
       },
       /**
        * 2 block-based:
@@ -335,7 +336,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 13,
-        timestamp: sequencedMessagesStartTime + ms('16m') // 51m
+        timestamp: scheduledMessagesStartTime + ms('16m') // 51m
       },
       /**
        * 0 block-based
@@ -349,7 +350,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 14,
-        timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') // 80m
+        timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') // 80m
       },
       /**
        * 2 block-based
@@ -362,7 +363,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 15,
-        timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') // 95m
+        timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') // 95m
       },
       /**
        * 0 block-based
@@ -373,7 +374,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 16,
-        timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
+        timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
       }
       /**
        * NOT SCHEDULED BECAUSE OUTSIDE BLOCK RANGE
@@ -386,16 +387,16 @@ describe('loadMessages', () => {
        */
     ]
 
-    const scheduleMessagesBetween = scheduleMessagesBetweenWith({ processId, owner, originBlock, schedules, blocksMeta })
+    const cronMessagesBetween = cronMessagesBetweenWith({ processId, owner, originBlock, crons, blocksMeta })
 
-    const genScheduledMessages = scheduleMessagesBetween(
+    const genCronMessages = cronMessagesBetween(
       // left
       {
         block: {
           height: originHeight + 12,
-          timestamp: sequencedMessagesStartTime
+          timestamp: scheduledMessagesStartTime
         },
-        sortKey: padBlockHeight(`${originHeight + 12},${sequencedMessagesStartTime},hash-123`)
+        sortKey: padBlockHeight(`${originHeight + 12},${scheduledMessagesStartTime},hash-123`)
         // AoGlobal,
         // message
       },
@@ -403,29 +404,29 @@ describe('loadMessages', () => {
       {
         block: {
           height: originHeight + 16,
-          timestamp: sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+          timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
         },
-        sortKey: padBlockHeight(`${originHeight + 16},${sequencedMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`)
+        sortKey: padBlockHeight(`${originHeight + 16},${scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`)
         // AoGlobal,
         // message
       }
     )
 
-    const scheduledMessages = []
+    const cronMessages = []
     before(async () => {
-      for await (const scheduled of genScheduledMessages) scheduledMessages.push(scheduled)
+      for await (const cron of genCronMessages) cronMessages.push(cron)
     })
 
-    test('should create scheduled message according to the schedules', async () => {
-      console.log(countBy(prop('sortKey'), scheduledMessages))
-      // Two actual messages + 15 scheduled messages between them
-      assert.equal(scheduledMessages.length + 2, 17)
+    test('should create cron message according to the crons', async () => {
+      console.log(countBy(prop('sortKey'), cronMessages))
+      // Two actual messages + 15 cron messages between them
+      assert.equal(cronMessages.length + 2, 17)
     })
 
     test('should create a unique pseudo-sortKey for each generated message', async () => {
       assert.equal(
-        scheduledMessages.length,
-        uniqBy(prop('sortKey'), scheduledMessages).length
+        cronMessages.length,
+        uniqBy(prop('sortKey'), cronMessages).length
       )
     })
   })
