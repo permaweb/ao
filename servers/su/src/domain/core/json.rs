@@ -47,8 +47,7 @@ pub struct Process {
     pub process_id: String,
     pub block: Option<Block>,
     pub owner: Owner,
-    pub sort_key: String,
-    pub tags: Vec<Tag>
+    pub tags: Vec<Tag>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -56,9 +55,11 @@ pub struct Message {
     pub message: MessageInner,
     pub block: Option<Block>,
     pub owner: Owner,
-    pub sort_key: String,
     pub process_id: String,
     pub data: Option<String>,
+    pub epoch: i32,
+    pub nonce: i32,
+    pub timestamp: i64
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,42 +79,17 @@ pub struct Edge {
     pub cursor: String,
 }
 
-fn parse_sort_key(sort_key: &String) -> Result<Block, JsonErrorType> {
-    let mut parts = sort_key.split(',');
-    let height_str = match parts.next() {
-        Some(h) => h,
-        None => return Err(JsonErrorType::JsonError("No height in sort key".to_string()))
-    };
-    let height = match height_str.parse::<u64>() {
-        Ok(h) => h,
-        Err(_) => return Err(JsonErrorType::JsonError("Invalid height in sort key".to_string()))
-    };
 
-    let timestamp_str = match parts.next() {
-        Some(h) => h,
-        None => return Err(JsonErrorType::JsonError("No timstamp in sort key".to_string()))
-    };
-    let timestamp = match timestamp_str.parse::<u64>() {
-        Ok(h) => h,
-        Err(_) => return Err(JsonErrorType::JsonError("Invalid timestamp in sort key".to_string()))
-    }; 
-
-    Ok(Block {
-        height: height,
-        timestamp: timestamp
-    })
-}
 
 // TODO: save all the bundle level tags
 
 impl Process {
     pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
-        let sort_key_clone = data_bundle.sort_key.clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
        
-        let block = parse_sort_key(&sort_key_clone)?;
+        let block = None;
         
         // TODO: implement a from on the owner struct
         let owner_bytes = base64_url::decode(&owner)?;
@@ -127,10 +103,9 @@ impl Process {
 
         Ok(Process {
             process_id: id,
-            block: Some(block),
+            block: block,
             owner: owner,
-            tags: tags,
-            sort_key: sort_key_clone
+            tags: tags
         })
     }
 }
@@ -138,7 +113,6 @@ impl Process {
 impl Message {
     pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
-        let sort_key_clone = data_bundle.sort_key.clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
         let target = data_bundle.items[0].target().clone();
@@ -160,16 +134,25 @@ impl Message {
 
         let process_id = target;
 
-        let block = parse_sort_key(&sort_key_clone)?;
+        let block = None;
 
         Ok(Message {
             message: message_inner,
-            block: Some(block),
+            block: block,
             owner,
-            sort_key: sort_key_clone,
             process_id,
-            data: data
+            data: data,
+            epoch: 0,
+            nonce: 0,
+            timestamp: 0
         })
+    }
+}
+
+fn parse_string_to_i64(input: &str) -> Result<i64, String> {
+    match input.parse::<i64>() {
+        Ok(number) => Ok(number),
+        Err(_) => Err("The string could not be parsed as i64".to_string()),
     }
 }
 
@@ -179,23 +162,21 @@ impl SortedMessages {
         let mut sorted_messages = messages.clone();
         
         sorted_messages.sort_by(|a, b| {
-            let a_timestamp = extract_timestamp(&a.sort_key);
-            let b_timestamp = extract_timestamp(&b.sort_key);
-            a_timestamp.cmp(&b_timestamp)
+            a.timestamp.cmp(&b.timestamp)
         });
 
-        let from_timestamp = match from.as_ref().map(|from_str| extract_timestamp(from_str)){
-            Some(t) => t,
+        let from_timestamp = match from.as_ref() {
+            Some(t) => t.parse::<i64>().unwrap() ,
             None => 0
         };
 
-        let to_timestamp = match to.as_ref().map(|to_str| extract_timestamp(to_str)) {
-            Some(t) => t,
+        let to_timestamp = match to.as_ref() {
+            Some(t) => t.parse::<i64>().unwrap(),
             None => std::i64::MAX
         };
 
         let filtered_messages: Vec<Message> = sorted_messages.into_iter().filter(|message| {
-            let message_timestamp = extract_timestamp(&message.sort_key);
+            let message_timestamp = message.timestamp;
             message_timestamp > from_timestamp && message_timestamp <= to_timestamp
         }).collect();
 
@@ -203,25 +184,13 @@ impl SortedMessages {
 
         let edges = filtered_messages.into_iter().map(|message| Edge {
             node: message.clone(),
-            cursor: message.sort_key.clone(),
+            cursor: message.timestamp.clone().to_string(),
         }).collect();
 
         Ok(SortedMessages { page_info, edges })
     }
 }
 
-fn extract_timestamp(sort_key: &str) -> i64 {
-    let parts: Vec<&str> = sort_key.split(',').collect();
-    if parts.len() >= 2 {
-        let num: Result<i64, _> = parts[1].parse();
-        if let Ok(timestamp) = num {
-            return timestamp;
-        } else {
-            return -1;
-        }
-    }
-    -1
-}
 
 #[cfg(test)]
 mod tests {

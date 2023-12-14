@@ -28,13 +28,12 @@ impl From<&str> for ByteErrorType {
 
 #[derive(Clone)]
 pub struct DataBundle {
-    pub items: Vec<DataItem>,
-    pub sort_key: String
+    pub items: Vec<DataItem>
 }
 
 impl DataBundle {
-    pub fn new(sort_key: String) -> Self {
-        DataBundle { items: Vec::new(), sort_key }
+    pub fn new() -> Self {
+        DataBundle { items: Vec::new() }
     }
 
     pub fn add_item(&mut self, item: DataItem) {
@@ -457,7 +456,7 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        let mut data_bundle = DataBundle::new("sort_key".to_string());
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(data_item);
         assert_eq!(data_bundle.items.len(), 1);
         let bundle_bytes = data_bundle.to_bytes();

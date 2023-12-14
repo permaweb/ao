@@ -4,12 +4,14 @@ diesel::table! {
     messages (row_id) {
         row_id -> Int4,
         #[max_length = 255]
-        process_id -> Nullable<Varchar>,
+        process_id -> Varchar,
         #[max_length = 255]
-        message_id -> Nullable<Varchar>,
-        #[max_length = 255]
-        sort_key -> Nullable<Varchar>,
-        message_data -> Nullable<Jsonb>,
+        message_id -> Varchar,
+        message_data -> Jsonb,
+        epoch -> Int4,
+        nonce -> Int4,
+        timestamp -> Int4,
+        bundle -> Bytea,
     }
 }
 
@@ -17,7 +19,7 @@ diesel::table! {
     process_schedulers (row_id) {
         row_id -> Int4,
         process_id -> Varchar,
-        scheduler_row_id -> Nullable<Int4>,
+        scheduler_row_id -> Int4,
     }
 }
 
@@ -25,8 +27,9 @@ diesel::table! {
     processes (row_id) {
         row_id -> Int4,
         #[max_length = 255]
-        process_id -> Nullable<Varchar>,
-        process_data -> Nullable<Jsonb>,
+        process_id -> Varchar,
+        process_data -> Jsonb,
+        bundle -> Bytea,
     }
 }
 
