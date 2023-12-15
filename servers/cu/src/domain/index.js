@@ -8,7 +8,7 @@ import * as AoSuClient from './client/ao-su.js'
 
 import { readResultWith } from './readResult.js'
 import { readStateWith } from './readState.js'
-import { readScheduledMessagesWith } from './readScheduledMessages.js'
+import { readCronOutboxesWith } from './readCronOutboxes.js'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema } from './model.js'
@@ -69,11 +69,11 @@ export const createApis = (ctx) => {
     loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger: readResultLogger })
   })
 
-  const readScheduledMessagesLogger = ctx.logger.child('readScheduledMessages')
-  const readScheduledMessages = readScheduledMessagesWith({
-    ...sharedDeps(readScheduledMessagesLogger),
-    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readScheduledMessagesLogger })
+  const readCronMessagesLogger = ctx.logger.child('readCronMessages')
+  const readCronMessages = readCronOutboxesWith({
+    ...sharedDeps(readCronMessagesLogger),
+    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readCronMessagesLogger })
   })
 
-  return { readState, readResult, readScheduledMessages }
+  return { readState, readResult, readCronMessages }
 }
