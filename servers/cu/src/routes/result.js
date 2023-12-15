@@ -30,6 +30,12 @@ export const withResultRoutes = app => {
             const input = inputSchema.parse({ messageTxId, processId })
 
             return readResult(input)
+              .map((res) => ({
+                Output: res.output,
+                Messages: res.messages,
+                Spawns: res.spawns,
+                Error: res.error
+              }))
               .toPromise()
               /**
                * Will bubble up to the individual load call
