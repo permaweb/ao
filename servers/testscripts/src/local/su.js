@@ -70,7 +70,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
     { name: 'Test', value: 'test' }
   ]
 
-  const dataItem3 = createData(data3, signer, { tags: tags3, target: processId })
+  const dataItem3 = createData(data3, signer, { tags: tags3, target: '2sWgl7kzGl1MlBvENlMri2PIWTuwzZ0sx2PpS18fFK4' })
   await dataItem3.sign(signer)
 
   const response3 = await fetch(

@@ -30,7 +30,6 @@ struct ProcessId {
 
 #[derive(Deserialize)]
 struct ProcessIdRequired {
-    #[serde(rename = "process-id")]
     process_id: String,
 }
 
