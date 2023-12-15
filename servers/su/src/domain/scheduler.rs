@@ -8,6 +8,8 @@ use dashmap::DashMap;
 use tokio::sync::Mutex;
 use base64_url;
 
+use base64;
+
 use crate::domain::clients::store::{StoreClient};
 use crate::domain::core::dal::{ScheduleProvider, Log};
 use crate::config::Config;
@@ -86,22 +88,48 @@ impl ProcessScheduler {
     }
 }
 
-fn gen_hash_chain(previous_or_seed: &str, message_id: Option<&str>) -> Result<String, String> {
+pub trait DecodeHash: Sized {
+    fn from(base64_url_string: &str) -> Result<Self, String>;
+    fn empty() -> Self; 
+}
+
+impl DecodeHash for [u8; 32] {
+    fn from(base64_url_string: &str) -> Result<Self, String> {
+        base64_url::decode(base64_url_string)
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| {
+                bytes
+                    .try_into()
+                    .map_err(|_| format!("Length mismatch 32 - {base64_url_string}"))
+            })
+    }
+
+    fn empty() -> Self {
+        [0u8; 32]
+    }
+}
+
+fn gen_hash_chain(previous_or_seed: &str, previous_message_id: Option<&str>) -> Result<String, String> {
     let mut hasher = Sha256::new();
-    let mut all = previous_or_seed.to_string();
-    match message_id {
+
+    let prev_bytes: [u8; 32] = match DecodeHash::from(previous_or_seed) {
+        Ok(pb) => pb,
+        Err(e) => return Err(e),
+    };
+    
+    match previous_message_id {
         Some(id) => {
-            all = id.to_string() + previous_or_seed;
+            let id_bytes: [u8; 32] = match DecodeHash::from(id) {
+                Ok(idb) => idb,
+                Err(e) => return Err(e),
+            };
+            hasher.update(id_bytes);
         },
         None => ()
     }
 
-    let bytes = match base64_url::decode(&all) {
-        Ok(p) => p,
-        Err(e) => return Err(e.to_string())
-    };
+    hasher.update(prev_bytes);
 
-    hasher.update(bytes);
     let result = hasher.finalize();
 
     Ok(base64_url::encode(&result))
