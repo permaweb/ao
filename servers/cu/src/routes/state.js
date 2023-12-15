@@ -20,8 +20,8 @@ export const withStateRoutes = (app) => {
           const { params: { messageTxId } } = req
           return messageTxId
         },
-        loader: async (reqs) => {
-          return reqs.map(async (req) => {
+        loader: async (requests) => {
+          return requests.map(async ({ req, res }) => {
             const {
               params: { processId },
               query: { to },
@@ -31,6 +31,16 @@ export const withStateRoutes = (app) => {
             const input = inputSchema.parse({ processId, to })
 
             return readState(input)
+              .map((output) => {
+                /**
+                 * The cu sends the array buffer as binary data,
+                 * so make sure to set the header to indicate such
+                 *
+                 * and then return only the buffer received from BL
+                 */
+                res.header('Content-Type', 'application/octet-stream')
+                return output.buffer
+              })
               .toPromise()
               /**
                * Will bubble up to the individual load call

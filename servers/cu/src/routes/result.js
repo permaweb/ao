@@ -19,8 +19,8 @@ export const withResultRoutes = app => {
           const { params: { messageTxId } } = req
           return messageTxId
         },
-        loader: async (reqs) => {
-          return reqs.map(async (req) => {
+        loader: async (requests) => {
+          return requests.map(async ({ req }) => {
             const {
               params: { messageTxId },
               query: { 'process-id': processId },
