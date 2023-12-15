@@ -40,6 +40,7 @@ impl From<std::num::ParseIntError> for JsonErrorType {
 pub struct MessageInner {
     pub id: String,
     pub tags: Vec<Tag>,
+    pub signature: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -136,11 +137,13 @@ impl Message {
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
         let target = data_bundle.items[0].target().clone();
+        let signature = data_bundle.items[0].signature().clone();
         let data = data_bundle.items[0].data().clone();
 
         let message_inner = MessageInner {
-            id: id,
-            tags: tags,
+            id,
+            tags,
+            signature
         };
 
         let owner_bytes = base64_url::decode(&owner)?;
@@ -186,15 +189,8 @@ impl Message {
             epoch,
             nonce,
             timestamp,
-            hash_chain
+            hash_chain,
         })
-    }
-}
-
-fn parse_string_to_i64(input: &str) -> Result<i64, String> {
-    match input.parse::<i64>() {
-        Ok(number) => Ok(number),
-        Err(_) => Err("The string could not be parsed as i64".to_string()),
     }
 }
 

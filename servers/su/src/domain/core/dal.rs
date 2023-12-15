@@ -1,6 +1,4 @@
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /*
 Interfaces for core dependencies. Implement these traits 

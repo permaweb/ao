@@ -1,14 +1,11 @@
 
 use std::sync::Arc;
-use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Sha256, Digest};
 use dashmap::DashMap;
 use tokio::sync::Mutex;
 use base64_url;
-
-use base64;
 
 use crate::domain::clients::store::{StoreClient};
 use crate::domain::core::dal::{ScheduleProvider, Log};

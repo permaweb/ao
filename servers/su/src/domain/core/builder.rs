@@ -4,12 +4,11 @@ use bundlr_sdk::{tags::Tag};
 
 use super::bytes::{DataBundle, DataItem, ByteErrorType};
 use super::verifier::{Verifier, VerifyErrorType};
-use super::dal::{Gateway, Wallet, Signer, Log, ScheduleProvider};
+use super::dal::{Gateway, Signer, Log, ScheduleProvider};
 
 pub struct Builder<'a> {
     verifier: Verifier,
     gateway: Arc<dyn Gateway>,
-    wallet: Arc<dyn Wallet>,
     signer: Arc<dyn Signer>,
     logger: &'a Arc<dyn Log>,
 }
@@ -52,7 +51,6 @@ impl From<String> for BuilderErrorType {
 impl<'a> Builder<'a> {
     pub fn new(
         gateway: Arc<dyn Gateway>, 
-        wallet: Arc<dyn Wallet>,
         signer: Arc<dyn Signer>,
         logger: &'a Arc<dyn Log>,
     ) -> Result<Self, BuilderErrorType> {
@@ -61,7 +59,6 @@ impl<'a> Builder<'a> {
         Ok(Builder {
             verifier,
             gateway,
-            wallet,
             signer,
             logger
         })
@@ -118,7 +115,6 @@ impl<'a> Builder<'a> {
 
     pub async fn build_process(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
         let item = DataItem::from_bytes(tx)?;
-        let process_id = item.target().clone();
 
         self.logger.log(format!("attempting to verify data item id - {}", &item.id()));
         self.logger.log(format!("owner - {}", &item.owner()));

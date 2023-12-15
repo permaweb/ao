@@ -13,8 +13,8 @@ use crate::domain::clients::gateway::ArweaveGateway;
 use crate::domain::clients::wallet::FileWallet;
 use crate::domain::clients::signer::ArweaveSigner;
 use crate::domain::core::json::{Message, Process, SortedMessages};
-use crate::domain::core::builder::{Builder, BuildResult};
-use crate::domain::core::dal::{Gateway, Wallet, Signer, Log};
+use crate::domain::core::builder::{Builder};
+use crate::domain::core::dal::{Gateway, Signer, Log, Wallet};
 use crate::domain::scheduler;
 use crate::config::Config;
 
@@ -34,11 +34,10 @@ modules to produce the desired end result
 pub fn init_builder(deps: &Arc<Deps>) -> Result<Builder, String> {
     dotenv().ok();
     let gateway: Arc<dyn Gateway> = Arc::new(ArweaveGateway);
-    let wallet: Arc<dyn Wallet> = Arc::new(FileWallet);
     let wallet_path = &deps.config.su_wallet_path;
     let arweave_signer = ArweaveSigner::new(wallet_path)?;
     let signer: Arc<dyn Signer> = Arc::new(arweave_signer);
-    let builder = Builder::new(gateway, wallet, signer, &deps.logger)?;
+    let builder = Builder::new(gateway, signer, &deps.logger)?;
     return Ok(builder);
 }
 
