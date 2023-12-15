@@ -417,6 +417,11 @@ impl DataItem {
             Data::None => None
         }
     }
+
+    pub fn signature(&self) -> String {
+        let sig_base64 = base64_url::encode(&self.signature);
+        sig_base64
+    }
 }
 
 #[cfg(test)]
