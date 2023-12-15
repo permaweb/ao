@@ -60,7 +60,7 @@ export const withInMemoryCache = ({
     }
   })
 
-  return (req, res) => dataloader.load(req)
+  return (req, res) => dataloader.load({ req, res })
     .then(result => res.send(result))
     .catch(err => {
       if (evict(req, err)) dataloader.clear(keyer(req))
