@@ -1,33 +1,33 @@
 import { readStateWith } from './readState.js'
-import { gatherScheduledMessagesWith } from './lib/gatherScheduledMessages.js'
+import { gatherCronOutboxesWith } from './lib/gatherCronOutboxes.js'
 
 /**
  * @typedef Env
  *
  * @typedef Result
  *
- * @typedef ReadScheduledMessagesArgs
+ * @typedef ReadCronMessagesArgs
  * @property {string} processId
  * @property {string} from
  * @property {string} to
  *
- * @callback ReadScheduledMessages
- * @param {ReadScheduledMessagesArgs} args
+ * @callback ReadCronMessages
+ * @param {ReadCronMessagesArgs} args
  * @returns {Promise<Result>} result
  *
  * @param {Env} - the environment
- * @returns {ReadScheduledMessages}
+ * @returns {ReadCronMessages}
  */
-export function readScheduledMessagesWith (env) {
-  const gatherScheduledMessages = gatherScheduledMessagesWith(env)
+export function readCronOutboxesWith (env) {
+  const gatherCronMessages = gatherCronOutboxesWith(env)
   const readState = readStateWith(env)
 
   return ({ processId, from, to }) => {
     return readState({ processId, to })
-      .chain(() => gatherScheduledMessages({ processId, from, to }))
+      .chain(() => gatherCronMessages({ processId, from, to }))
       .map(output => output.messages)
       .map(env.logger.tap(
-        'readScheduledMessages result for process %s from "%s" to "%s" and appended to ctx %j',
+        'readCronMessages result for process %s from "%s" to "%s" and appended to ctx %j',
         processId,
         from,
         to || 'latest'

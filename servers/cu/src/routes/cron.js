@@ -1,4 +1,4 @@
-import { always, compose } from 'ramda'
+import { always, compose, map } from 'ramda'
 
 import { withMiddleware } from './middleware/index.js'
 import { z } from 'zod'
@@ -11,7 +11,7 @@ const inputSchema = z.object({
 
 export const withScheduledRoutes = app => {
   app.get(
-    '/scheduled/:processId',
+    '/cron/:processId',
     compose(
       withMiddleware,
       always(async (req, res) => {
@@ -22,7 +22,17 @@ export const withScheduledRoutes = app => {
         } = req
 
         const input = inputSchema.parse({ processId, from, to })
-        return res.send(await readScheduledMessages(input).toPromise())
+
+        const outboxes = await readScheduledMessages(input)
+          .map(map((res) => ({
+            Output: res.output,
+            Messages: res.messages,
+            Spawns: res.spawns,
+            Error: res.error
+          })))
+          .toPromise()
+
+        return res.send(outboxes)
       })
     )()
   )
