@@ -7,7 +7,6 @@ import ms from 'ms'
 
 import { messageSchema, streamSchema } from '../model.js'
 import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, locateSchedulerSchema } from '../dal.js'
-import { padBlockHeight } from '../utils.js'
 
 /**
  * - { name: 'Cron-Interval', value: 'interval' }
@@ -132,6 +131,7 @@ export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
 export function cronMessagesBetweenWith ({
   processId,
   owner: processOwner,
+  tags: processTags,
   originBlock,
   crons,
   blocksMeta
@@ -150,30 +150,12 @@ export function cronMessagesBetweenWith ({
    */
   return async function * cronMessages (left, right) {
     /**
-     * We extract the hash at the end of the left boundary,
-     * so that any cron messages generated between left and right
-     * can simply use that hash as part of their generated sortKey.
-     *
-     * {blockHeight},{timestampMillis},{txIdHash}[,{idx}{intervalName}]
-     *
-     * This should always retrieve the hash portion of the sortKey,
-     * regardless if there is an {idx}{intervalName} portion of not
-     */
-    const leftHash = left.sortKey.split(',')
-      .slice(2)
-      // {txIdHash}[,{idx}{intervalName}]
-      .shift()
-
-    /**
      * { height, timestamp }
      */
     const leftBlock = left.block
     const rightBlock = right.block
 
     /**
-     * This is the first time in a long time that
-     * i've written a vanilla for-loop lol
-     *
      * Start at left's block height, incrementing 1 block per iteration until we get to right's block height
      *  - for each block-based cron, check if any illicits a cron message being produced
      *  - for each second between this block and the next,
@@ -194,24 +176,18 @@ export function cronMessagesBetweenWith ({
         const cron = blockBased[i]
         if (isBlockOnCron({ height: curBlock.height, originHeight: originBlock.height, cron })) {
           yield {
+            cron: `${i}-${cron.interval}`,
             message: {
-              ...cron.message,
-              target: processId,
-              owner: processOwner,
-              from: processOwner
+              Owner: processOwner,
+              Target: processId,
+              From: processOwner,
+              Tags: cron.message.tags,
+              Timestamp: curBlock.timestamp,
+              'Block-Height': curBlock.height,
+              Cron: true
             },
-            /**
-             * TODO: don't know if this is correct, but we need something unique for the sortKey
-             * for the cron message
-             *
-             * append ${cron.interval}${idx} to sortKey to make unique within block/timestamp.
-             * It will also enable performing range queries to fetch all cron messages by simply
-             * appending a ',' to any sortKey
-             */
-            sortKey: padBlockHeight(`${curBlock.height},${curBlock.timestamp},${leftHash},idx${i}-${cron.interval}`),
             AoGlobal: {
-              process: { id: processId, owner: processOwner },
-              block: curBlock
+              Process: { id: processId, owner: processOwner, tags: processTags }
             }
           }
         }
@@ -235,24 +211,18 @@ export function cronMessagesBetweenWith ({
 
           if (isTimestampOnCron({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, cron })) {
             yield {
+              cron: `${i}-${cron.interval}`,
               message: {
-                ...cron.message,
-                target: processId,
-                owner: processOwner,
-                from: processOwner
+                Owner: processOwner,
+                Target: processId,
+                From: processOwner,
+                Tags: cron.message.tags,
+                Timestamp: curTimestamp,
+                'Block-Height': curBlock.height,
+                Cron: true
               },
-              /**
-               * TODO: don't know if this is correct, but we need something unique for the sortKey
-               * for the cron message
-               *
-               * append ${cron.interval}${idx} to sortKey to make unique within block/timestamp.
-               * It will also enable performing range queries to fetch all cron messages by simply
-               * appending a ',' to any sortKey
-               */
-              sortKey: padBlockHeight(`${curHeight},${curTimestamp},${leftHash},idx${i}-${cron.interval}`),
               AoGlobal: {
-                process: { id: processId, owner: processOwner },
-                block: curBlock
+                Process: { id: processId, owner: processOwner, tags: processTags }
               }
             }
           }
@@ -292,34 +262,6 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
   locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
   loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
-
-  function parseSortKeyOrBlock ({ id, sortKey, block }) {
-    if (sortKey) {
-      /**
-       * {blockHeight},{timestampMillis},{txIdHash}[,{idx}{intervalName}]
-       */
-      const [paddedBlockHeight, timestampMillis] = String(sortKey).split(',')
-      return {
-        block: {
-          height: parseInt(paddedBlockHeight),
-          timestamp: parseInt(timestampMillis)
-        },
-        sortKey
-      }
-    }
-
-    return {
-      block,
-      /**
-       * We are masquerading a sortKey in this case, as only the hash portion
-       * is needed as part of any monotonically increasing sort keys
-       * generated for cron messages
-       *
-       * (see 'leftHash' in cronMessagesBetweenWith())
-       */
-      sortKey: `,,${id}`
-    }
-  }
 
   /**
    * Given a left-most and right-most boundary, return an async generator,
@@ -378,29 +320,26 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
        * producing a single merged stream
        */
       return locateScheduler(ctx.id)
-        .chain(({ url }) => loadTimestamp(url))
+        .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: url }))
         .map(logger.tap('loaded current block and tiemstamp from SU'))
         /**
          * In order to generate cron messages and merge them with the
          * scheduled messages, we must first determine our boundaries, which is to say,
          * the left most 'block' and right most 'block' for the span being evaluated.
          *
-         * 'block' should be read loosely, as it's really simply a relative height and timestamp derived from the SU,
-         * either parsed from a sortKey, or derived from the SU's claimed current block and timestamp
+         * 'block' should be read loosely, as it's really simply a relative
+         * height and timestamp ,according to the SU
          */
         .map((currentBlock) => ({
           /**
-           * The left most boundary is determined either using the 'from' sortKey,
-           * or, in the case of 'from' not being defined, the origin block of the process.
-           *
-           * But we also have to take into account the scheduled messages (see findLeftMostBlock above)
+           * The left most boundary is the origin block of the process -- the current block
+           * at the the time the process was sent to a SU
            */
-          leftMost: parseSortKeyOrBlock({ id: ctx.id, sortKey: ctx.from, block: ctx.block }),
+          leftMost: { block: ctx.block },
           /**
-           * The right most boundary is determine either using the 'to' sortKey or,
-           * in the case of 'to' not being defined, the current block according to the SU
+           * The right most boundary is always the current block retrieved from the SU
            */
-          rightMost: parseSortKeyOrBlock({ id: ctx.id, sortKey: ctx.to, block: currentBlock })
+          rightMost: { block: currentBlock }
         }))
         .map(logger.tap('loading blocks meta for scheduled messages in range of %o'))
         .chain(({ leftMost, rightMost }) =>
@@ -418,6 +357,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                 genCronMessages: cronMessagesBetweenWith({
                   processId: ctx.id,
                   owner: ctx.owner,
+                  tags: ctx.tags,
                   originBlock: ctx.block,
                   blocksMeta,
                   crons
@@ -436,10 +376,9 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
            * from the SU.
            *
            * Our messages retrieved from the SU are perfect boundaries, as they each have a
-           * sortKey to parse a hash from (for the purpose of generating monotonically increasing sortKeys for generated cron messages)
-           * and a block that contains a height and timestamp.
+           * block height and timestamp
            *
-           * This will allow the CU to generate cron messages with monotonically increasing sortKeys and accurate block metadata,
+           * This will allow the CU to generate cron messages with monotonically increasing timestamp and accurate block metadata,
            * at least w.r.t the SU's claims.
            */
           return pipeline(
@@ -500,8 +439,8 @@ const ctxSchema = z.object({
 /**
  * @typedef LoadMessagesArgs
  * @property {string} id - the contract id
- * @property {string} [from] - the lowermost sortKey
- * @property {string} [to] - the highest sortKey
+ * @property {string} [from] - the lowermost timestamp
+ * @property {string} [to] - the highest timestamp
  *
  * @typedef LoadMessagesResults
  * @property {any[]} messages

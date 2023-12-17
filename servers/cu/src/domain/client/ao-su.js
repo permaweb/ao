@@ -1,59 +1,12 @@
 /* eslint-disable camelcase */
 import { Transform, pipeline } from 'node:stream'
 import { of } from 'hyper-async'
-import { always, applySpec, evolve, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
+import { always, applySpec, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
-import { findRawTag, padBlockHeight } from '../utils.js'
+import { findRawTag } from '../utils.js'
 
 export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
-
-  /**
-   * The cu will generate sort keys for Cron Messages that match SU sort keys,
-   * but appends an additional 4th section that contains Cron-Interval information, for uniqueness.
-   *
-   * So in case the sortKey is a CU generated Cron Message sortKey, grab only the first 3
-   * sections, dropping the potential 4th section, and use that to query the SU
-   */
-  function suSortKey (sortKey) {
-    if (!sortKey) return sortKey
-    return sortKey.split(',').slice(0, 3).join(',')
-  }
-
-  function mapBounds (args) {
-    return evolve({
-      from: pipe(
-        padBlockHeight,
-        suSortKey
-      ),
-      to: pipe(
-        /**
-         * Potentially add a comma to the end of the block height, so
-         * the scheduler will include any interactions in that block
-         */
-        (sortKey) => {
-          if (!sortKey) return sortKey
-          const parts = String(sortKey).split(',')
-          /**
-           * Full sort key, so no need to increment
-           */
-          if (parts.length > 1) return parts.join(',')
-
-          /**
-           * only the block height is being used as the sort key
-           * so append a ',' so that transactions in that block are included
-           */
-          const [height] = parts
-          return `${height},`
-        },
-        /**
-         * Still ensure the proper padding is added
-         */
-        padBlockHeight,
-        suSortKey
-      )
-    })(args)
-  }
 
   /**
    * Returns an async generator that emits scheduled messages,
@@ -157,39 +110,42 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           prop('node'),
           logger.tap('transforming message retrieved from the SU %o'),
           applySpec({
-            sortKey: path(['sort_key']),
+            cron: always(undefined),
             message: applySpec({
-              id: path(['message', 'id']),
-              owner: path(['owner', 'address']),
-              target: path(['process_id']),
-              anchor: path(['message', 'anchor']),
-              from: mapFrom,
-              'Forwarded-By': mapForwardedBy,
-              'Forwarded-For': mapForwardedFor,
-              tags: pathOr([], ['message', 'tags']),
+              Id: path(['message', 'id']),
+              Signature: path(['message', 'signature']),
               /**
                * SU currently has this outside of message, but we will place it inside message
                * as that seems more kosher (since its part of the message)
                */
-              data: pathOr(undefined, ['data'])
+              Data: pathOr(undefined, ['data']),
+              Owner: path(['owner', 'address']),
+              Target: path(['process_id']),
+              Anchor: path(['message', 'anchor']),
+              From: mapFrom,
+              'Forwarded-By': mapForwardedBy,
+              'Forwarded-For': mapForwardedFor,
+              Tags: pathOr([], ['message', 'tags']),
+              Epoch: path(['epoch']),
+              Nonce: path(['nonce']),
+              Timestamp: path(['timestamp']),
+              'Block-Height': path(['block']),
+              'Hash-Chain': path(['hash_chain']),
+              Cron: always(false)
             }),
             /**
              * We need the block metadata per message,
-             * so that we can calculate implicit messages
+             * so that we can calculate cron messages
+             *
+             * Separating them here, makes it easier to access later
+             * down the pipeline
              */
             block: applySpec({
-              height: path(['block', 'height']),
-              /**
-               * SU is currently sending back timestamp in milliseconds,
-               */
-              timestamp: path(['block', 'timestamp'])
+              height: path(['block']),
+              timestamp: path(['timestamp'])
             }),
             AoGlobal: applySpec({
-              process: always({ id: processId, owner: processOwner, tags: processTags }),
-              block: applySpec({
-                height: path(['block', 'height']),
-                timestamp: path(['block', 'timestamp'])
-              })
+              Process: always({ id: processId, owner: processOwner, tags: processTags })
             })
           })
         )(edge)
@@ -199,7 +155,6 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
 
   return (args) =>
     of(args)
-      .map(mapBounds)
       .map(({ suUrl, processId, owner: processOwner, tags: processTags, from, to }) => {
         return pipeline(
           fetchAllPages({ suUrl, processId, from, to }),
@@ -231,7 +186,7 @@ export const loadProcessWith = ({ fetch }) => {
 }
 
 export const loadTimestampWith = ({ fetch }) => {
-  return (suUrl) => fetch(`${suUrl}/timestamp`)
+  return ({ suUrl, processId }) => fetch(`${suUrl}/timestamp?process-id=${processId}`)
     .then(res => res.json())
     .then(res => ({
       /**
@@ -249,7 +204,7 @@ export const loadMessageMetaWith = ({ fetch }) => {
       .then(res => res.json())
       .then(res => ({
         processId: res.process_id,
-        sortKey: res.sort_key
+        timestamp: res.timestamp
       }))
   }
 }

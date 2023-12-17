@@ -26,25 +26,33 @@ var Module = (() => {
 
 /**
  * @typedef Message
- * @property {string} owner
- * @property {string} target
- * @property {Tag[]} tags
- * @property {DataItem} data
+ * @property {string} [Signature]
+ * @property {string} Owner
+ * @property {string} Target
+ * @property {string} [Anchor]
+ * @property {Tag[]} Tags
+ * @property {DataItem} [Data]
+ * @property {string} From
+ * @property {string} [Forwarded-By]
+ * @property {string} [Epoch]
+ * @property {string} [Nonce]
+ * @property {string} Block-Height
+ * @property {string} Timestamp
+ * @property {string} [Hash-Chain]
+ * @property {boolean} Cron
  */
 
 /**
  * @typedef Environment
  * @property {{id: string, owner: string, tags: Tag[]}} process
- * @property {{id: string, owner: string, tags: Tag[]}} message
- * @property {{height: string, timestamp: string}} block
  */
 
 /**
  * @typedef HandleResponse
- * @property {ArrayBuffer} buffer
- * @property {DataItem} output
- * @property {Message[]} messages
- * @property {Message[]} spawns
+ * @property {ArrayBuffer} Memory
+ * @property {DataItem} Output
+ * @property {Message[]} Messages
+ * @property {Message[]} Spawns
  */
 
 /**
@@ -102,11 +110,11 @@ module.exports = async function (binary) {
       if (!ok) throw response
 
       return {
-        buffer: instance.HEAPU8.slice(),
-        error: response.error,
-        output: response.output,
-        messages: response.messages,
-        spawns: response.spawns
+        Memory: instance.HEAPU8.slice(),
+        Error: response.Error,
+        Output: response.Output,
+        Messages: response.Messages,
+        Spawns: response.Spawns
       }
     } finally {
       /**

@@ -1,5 +1,4 @@
 -- Corresponding local wasm at ./process.wasm
-local JSON = require("json")
 
 local process = { _version = "0.0.6" }
 
@@ -35,25 +34,23 @@ local function dump(o)
 end
 
 local actions = {}
-actions['counter'] = function (state)
-  return assoc('counter', state.counter + 1, state), nil
+actions['count'] = function (state)
+  local _state = assoc('count', state.count + 1, state)
+  return { state = _state, output = "count: " .. tostring(_state.count) }
 end
-actions['errorResult'] = function (state)
-  return state, { code = 123, message = "a handled error within the process" }
-end
-actions['errorThrow'] = function ()
-  return error({ code = 123, message = "a thrown error within the process" })
-end
-actions['errorUnhandled'] = function ()
-  process.field.does_not_exist = 'foo'
+actions['hello'] = function (state, message)
+  return { state = state, output = "Hello " .. findObject(message.Tags, "name", "recipient").value }
 end
 
 function process.handle(message, AoGlobal)
-  if state == nil then state = { counter = 0 } end
+  if state == nil then state = { count = 0 } end
+  local res = actions[findObject(message.Tags, "name", "function").value](state, message, AoGlobal)
+  state = res.state
+  local output = res.output
 
-  state, err = actions[findObject(message.Tags, "name", "function").value](state, message, AoGlobal)
+  print(output)
 
-  return { Error = err, Output = JSON.encode(state.counter) }
+  return { Output = output }
 end
 
 return process

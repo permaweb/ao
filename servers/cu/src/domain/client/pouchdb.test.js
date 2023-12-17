@@ -4,12 +4,12 @@ import assert from 'node:assert'
 import { deflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
-import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageIdSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
 import {
   COLLATION_SEQUENCE_MAX_CHAR,
   findEvaluationsWith,
   findLatestEvaluationWith,
-  findMessageIdWith,
+  findMessageHashWith,
   findProcessWith,
   saveEvaluationWith,
   saveProcessWith
@@ -150,7 +150,7 @@ describe('pouchdb', () => {
   describe('findLatestEvaluation', () => {
     test('return the lastest evaluation', async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
@@ -160,7 +160,7 @@ describe('pouchdb', () => {
                 selector: {
                   _id: {
                     $gte: 'eval-process-123,',
-                    $lte: 'eval-process-123,sortkey-910'
+                    $lte: 'eval-process-123,1702677252111'
                   }
                 },
                 sort: [{ _id: 'desc' }],
@@ -169,11 +169,12 @@ describe('pouchdb', () => {
               return {
                 docs: [
                   {
-                    _id: 'eval-process-123,sortkey-890',
-                    sortKey: 'sortkey-890',
+                    _id: 'eval-process-123,1702677252111',
+                    timestamp: 1702677252111,
                     processId: 'process-123',
+                    messageId: 'message-123',
                     parent: 'proc-process-123',
-                    output: { messages: [{ foo: 'bar' }] },
+                    output: { Messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
                   }
@@ -181,10 +182,10 @@ describe('pouchdb', () => {
               }
             },
             getAttachment: async (_id, name) => {
-              assert.equal(_id, 'eval-process-123,sortkey-890')
-              assert.equal(name, 'buffer.txt')
+              assert.equal(_id, 'eval-process-123,1702677252111')
+              assert.equal(name, 'memory.txt')
               // impl will inflate this buffer
-              return deflateP(buffer)
+              return deflateP(Memory)
             }
           },
           logger
@@ -192,18 +193,18 @@ describe('pouchdb', () => {
 
       const res = await findLatestEvaluation({
         processId: 'process-123',
-        to: 'sortkey-910'
+        to: 1702677252111
       })
 
-      assert.equal(res.sortKey, 'sortkey-890')
+      assert.equal(res.timestamp, 1702677252111)
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { buffer, messages: [{ foo: 'bar' }] })
+      assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
     test("without 'to', return the lastest interaction using collation sequence max char", async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
@@ -222,11 +223,12 @@ describe('pouchdb', () => {
               return {
                 docs: [
                   {
-                    _id: 'eval-process-123,sortkey-890',
-                    sortKey: 'sortkey-890',
+                    _id: 'eval-process-123,1702677252111',
+                    timestamp: 1702677252111,
                     processId: 'process-123',
+                    messageId: 'message-123',
                     parent: 'proc-process-123',
-                    output: { messages: [{ foo: 'bar' }] },
+                    output: { Messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
                   }
@@ -234,10 +236,10 @@ describe('pouchdb', () => {
               }
             },
             getAttachment: async (_id, name) => {
-              assert.equal(_id, 'eval-process-123,sortkey-890')
-              assert.equal(name, 'buffer.txt')
+              assert.equal(_id, 'eval-process-123,1702677252111')
+              assert.equal(name, 'memory.txt')
               // impl will inflate this buffer
-              return deflateP(buffer)
+              return deflateP(Memory)
             }
           },
           logger
@@ -247,9 +249,9 @@ describe('pouchdb', () => {
         processId: 'process-123'
       })
 
-      assert.equal(res.sortKey, 'sortkey-890')
+      assert.equal(res.timestamp, 1702677252111)
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { buffer, messages: [{ foo: 'bar' }] })
+      assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
@@ -264,7 +266,7 @@ describe('pouchdb', () => {
       )
       await findLatestEvaluation({
         processId: 'process-123',
-        to: 'sortkey-910'
+        to: '1702677252111'
       })
         .then(assert.fail)
         .catch(() => assert.ok(true))
@@ -272,9 +274,9 @@ describe('pouchdb', () => {
   })
 
   describe('saveEvaluation', () => {
-    test('save the evaluation to pouchdb with the buffer as an attachment, and the messageId', async () => {
+    test('save the evaluation to pouchdb with the Memory as an attachment, and the messageHash', async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
@@ -283,16 +285,18 @@ describe('pouchdb', () => {
               const { _attachments, evaluatedAt, ...rest } = evaluationDoc
 
               assert.deepStrictEqual(rest, {
-                _id: 'eval-process-123,sortkey-890',
-                sortKey: 'sortkey-890',
+                _id: 'eval-process-123,1702677252111',
+                cron: undefined,
+                timestamp: 1702677252111,
                 processId: 'process-123',
+                messageId: 'message-123',
                 parent: 'proc-process-123',
                 // buffer is omitted from output and moved to _attachments
-                output: { messages: [{ foo: 'bar' }] },
+                output: { Messages: [{ foo: 'bar' }] },
                 type: 'evaluation'
               })
               assert.deepStrictEqual(evaluationDoc._attachments, {
-                'buffer.txt': {
+                'memory.txt': {
                   content_type: 'text/plain',
                   /**
                    * zlib compress the buffer before persisting
@@ -300,15 +304,15 @@ describe('pouchdb', () => {
                    * In testing, this results in orders of magnitude
                    * smaller buffer and smaller persistence times
                    */
-                  data: await deflateP(buffer)
+                  data: await deflateP(Memory)
                 }
               })
               assert.equal(evaluatedAt.toISOString(), evaluatedAt.toISOString())
 
               assert.deepStrictEqual(messageIdDoc, {
-                _id: 'messageId-deepHash-123',
-                parent: 'eval-process-123,sortkey-890',
-                type: 'messageId'
+                _id: 'messageHash-deepHash-123',
+                parent: 'eval-process-123,1702677252111',
+                type: 'messageHash'
               })
               return Promise.resolve(true)
             }
@@ -319,16 +323,17 @@ describe('pouchdb', () => {
 
       await saveEvaluation({
         deepHash: 'deepHash-123',
-        sortKey: 'sortkey-890',
+        timestamp: 1702677252111,
         processId: 'process-123',
-        output: { buffer, messages: [{ foo: 'bar' }] },
+        messageId: 'message-123',
+        output: { Memory, Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
 
     test('save only the evaluation as a doc, if not deepHash', async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memmory = Buffer.from('Hello World', 'utf-8')
 
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
@@ -344,9 +349,10 @@ describe('pouchdb', () => {
 
       await saveEvaluation({
         // no deep hash
-        sortKey: 'sortkey-890',
+        timestamp: 1702677252111,
         processId: 'process-123',
-        output: { buffer, messages: [{ foo: 'bar' }] },
+        messageId: 'message-123',
+        output: { Memmory, Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
@@ -356,11 +362,12 @@ describe('pouchdb', () => {
     test('return the list of all evaluations', async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
-        _id: 'eval-process-123,sortkey-890',
-        sortKey: 'sortkey-890',
+        _id: 'eval-process-123,1702677252111',
+        timestamp: 1702677252111,
         processId: 'process-123',
+        messageId: 'message-123',
         parent: 'proc-process-123',
-        output: { state: { foo: 'bar' } },
+        output: { },
         evaluatedAt,
         type: 'evaluation'
       }
@@ -397,9 +404,10 @@ describe('pouchdb', () => {
     test("return the evaluations between 'from' and 'to'", async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
-        _id: 'eval-process-123,sortkey-890',
-        sortKey: 'sortkey-890',
+        _id: 'eval-process-123,1702677252111',
+        timestamp: 1702677252111,
         processId: 'process-123',
+        messageId: 'message-123',
         parent: 'process-123',
         output: { state: { foo: 'bar' } },
         evaluatedAt,
@@ -412,8 +420,8 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'eval-process-123,sortkey-123,',
-                    $lte: `eval-process-123,sortkey-456,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $gte: 'eval-process-123,1702677252111,',
+                    $lte: `eval-process-123,1702677252111,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
                 sort: [{ _id: 'asc' }],
@@ -432,40 +440,40 @@ describe('pouchdb', () => {
 
       const res = await findEvaluations({
         processId: 'process-123',
-        from: 'sortkey-123',
-        to: 'sortkey-456'
+        from: 1702677252111,
+        to: 1702677252111
       })
 
       assert.equal(res.length, 2)
     })
   })
 
-  describe('findMessageIdWith', () => {
-    test('find the messageId', async () => {
-      const findMessage = findMessageIdSchema.implement(
-        findMessageIdWith({
+  describe('findMessageHashWith', () => {
+    test('find the messageHash', async () => {
+      const findMessageHash = findMessageHashSchema.implement(
+        findMessageHashWith({
           pouchDb: {
             get: async () => ({
               _id: 'proc-process-123',
               parent: 'eval-123',
-              type: 'messageId'
+              type: 'messageHash'
             })
           },
           logger
         })
       )
 
-      const res = await findMessage({ messageId: 'deepHash-123' })
+      const res = await findMessageHash({ messageHash: 'deepHash-123' })
       assert.deepStrictEqual(res, {
         _id: 'proc-process-123',
         parent: 'eval-123',
-        type: 'messageId'
+        type: 'messageHash'
       })
     })
 
     test('return 404 status if not found', async () => {
-      const findMessageId = findMessageIdSchema.implement(
-        findMessageIdWith({
+      const findMessageHash = findMessageHashSchema.implement(
+        findMessageHashWith({
           pouchDb: {
             get: async () => { throw { status: 404 } }
           },
@@ -473,7 +481,7 @@ describe('pouchdb', () => {
         })
       )
 
-      const res = await findMessageId({ messageId: 'process-123' })
+      const res = await findMessageHash({ messageHash: 'process-123' })
         .catch(err => {
           assert.equal(err.status, 404)
           return { ok: true }
@@ -483,8 +491,8 @@ describe('pouchdb', () => {
     })
 
     test('bubble error', async () => {
-      const findMessageId = findMessageIdSchema.implement(
-        findMessageIdWith({
+      const findMessageId = findMessageHashSchema.implement(
+        findMessageHashWith({
           pouchDb: {
             get: async () => { throw { status: 500 } }
           },
@@ -492,7 +500,7 @@ describe('pouchdb', () => {
         })
       )
 
-      await findMessageId({ messageId: 'process-123' })
+      await findMessageId({ messageHash: 'process-123' })
         .catch(assert.ok)
     })
   })

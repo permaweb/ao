@@ -3,9 +3,7 @@ import { describe, test, before } from 'node:test'
 import * as assert from 'node:assert'
 
 import ms from 'ms'
-import { countBy, prop, uniqBy } from 'ramda'
-
-import { padBlockHeight } from '../utils.js'
+import { countBy, uniqBy } from 'ramda'
 
 import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith } from './loadMessages.js'
 
@@ -395,8 +393,7 @@ describe('loadMessages', () => {
         block: {
           height: originHeight + 12,
           timestamp: scheduledMessagesStartTime
-        },
-        sortKey: padBlockHeight(`${originHeight + 12},${scheduledMessagesStartTime},hash-123`)
+        }
         // AoGlobal,
         // message
       },
@@ -405,8 +402,7 @@ describe('loadMessages', () => {
         block: {
           height: originHeight + 16,
           timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
-        },
-        sortKey: padBlockHeight(`${originHeight + 16},${scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')},hash-456`)
+        }
         // AoGlobal,
         // message
       }
@@ -418,15 +414,15 @@ describe('loadMessages', () => {
     })
 
     test('should create cron message according to the crons', async () => {
-      console.log(countBy(prop('sortKey'), cronMessages))
+      console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
       // Two actual messages + 15 cron messages between them
       assert.equal(cronMessages.length + 2, 17)
     })
 
-    test('should create a unique pseudo-sortKey for each generated message', async () => {
+    test('should create a unique cron identifier for each generated message', async () => {
       assert.equal(
         cronMessages.length,
-        uniqBy(prop('sortKey'), cronMessages).length
+        uniqBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages).length
       )
     })
   })

@@ -25,7 +25,6 @@ export function readCronOutboxesWith (env) {
   return ({ processId, from, to }) => {
     return readState({ processId, to })
       .chain(() => gatherCronMessages({ processId, from, to }))
-      .map(output => output.messages)
       .map(env.logger.tap(
         'readCronMessages result for process %s from "%s" to "%s" and appended to ctx %j',
         processId,

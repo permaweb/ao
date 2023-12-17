@@ -1,7 +1,7 @@
 # ao Wasm Loader
 
 This module takes an `ao` Wasm `ArrayBuffer` and returns a `handle` function,
-that given `ao-process` message, will produce a `result`.
+that given an `ao-process` message, will produce a `result`.
 
 <!-- toc -->
 
@@ -21,10 +21,7 @@ import AoLoader from "@permaweb/ao-loader";
 
 /* ao READ-ONLY Env Variables */
 const env = {
-  message: {
-    id: "1",
-  },
-  process: {
+  Process: {
     id: "2",
   },
 };
@@ -34,8 +31,8 @@ const handle = await AoLoader(wasmBinary);
 
 // To spawn a process, pass null as the buffer
 const result = await handle(null, {
-  owner: "OWNER_ADDRESS",
-  tags: [
+  Owner: "OWNER_ADDRESS",
+  Tags: [
     { name: "function", value: "balance" },
     { name: "target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
   ],
@@ -49,15 +46,15 @@ const handle = await AoLoader(wasmBinary);
 const buffer = await LoadFromCache();
 
 const result = await handle(buffer, {
-  owner: "OWNER_ADDRESS",
-  tags: [
+  Owner: "OWNER_ADDRESS",
+  Tags: [
     { name: "function", value: "balance" },
     { name: "target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
   ],
 }, env);
 
-saveToCache(result.buffer);
-console.log(result.output);
+saveToCache(result.Memory);
+console.log(result.Output);
 ```
 
 ### Using a File

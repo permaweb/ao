@@ -2,7 +2,7 @@ import { deflate, inflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, lensPath, map, omit, pipe, prop, set } from 'ramda'
+import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -37,22 +37,22 @@ const processDocSchema = z.object({
   type: z.literal('process')
 })
 
-const messageIdDocSchema = z.object({
+const messageHashDocSchema = z.object({
   _id: z.string().min(1),
   /**
    * The _id of the corresponding cached evaluation
    */
   parent: z.string().min(1),
-  type: z.literal('messageId')
+  type: z.literal('messageHash')
 })
 
-function createEvaluationId ({ processId, sortKey }) {
+function createEvaluationId ({ processId, timestamp, cron }) {
   /**
    * transactions can sometimes start with an underscore,
    * which is not allowed in PouchDB, so prepend to create
    * an _id
    */
-  return `eval-${[processId, sortKey].join(',')}`
+  return `eval-${[processId, timestamp, cron].filter(isNotNil).join(',')}`
 }
 
 function createProcessId ({ processId }) {
@@ -64,13 +64,13 @@ function createProcessId ({ processId }) {
   return `proc-${processId}`
 }
 
-function createMessageId ({ messageId }) {
+function createMessageHashId ({ messageHash }) {
   /**
    * transactions can sometimes start with an underscore,
    * which is not allowed in PouchDB, so prepend to create
    * an _id
    */
-  return `messageId-${messageId}`
+  return `messageHash-${messageHash}`
 }
 
 /**
@@ -147,28 +147,29 @@ export function findLatestEvaluationWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: createEvaluationId({ processId, sortKey: '' }),
-        $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
+        $gte: createEvaluationId({ processId, timestamp: '' }),
+        $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
     /**
-     * overwrite upper range with actual sortKey, since we have it
+     * overwrite upper range with actual timestamp, since we have it
      */
-    if (to) selector._id.$lte = createEvaluationId({ processId, sortKey: to })
+    if (to) selector._id.$lte = createEvaluationId({ processId, timestamp: to })
     return selector
   }
 
   const foundEvaluationDocSchema = z.object({
     _id: z.string().min(1),
-    sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
+    messageId: evaluationSchema.shape.messageId,
+    timestamp: evaluationSchema.shape.timestamp,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     output: evaluationSchema.shape.output,
     type: z.literal('evaluation')
   })
 
-  const bufferLens = lensPath(['output', 'buffer'])
+  const memoryLens = lensPath(['output', 'Memory'])
 
   return ({ processId, to }) => {
     return of({ processId, to })
@@ -196,11 +197,11 @@ export function findLatestEvaluationWith ({ pouchDb }) {
        * and set it on the output.buffer field to match the expected output shape
        */
       .chain(fromPromise(async (doc) => {
-        const buffer = await pouchDb.getAttachment(doc._id, 'buffer.txt')
+        const buffer = await pouchDb.getAttachment(doc._id, 'memory.txt')
         /**
          * Make sure to decompress the state buffer
          */
-        return set(bufferLens, await inflateP(buffer), doc)
+        return set(memoryLens, await inflateP(buffer), doc)
       }))
       /**
        * Ensure the input matches the expected
@@ -208,10 +209,12 @@ export function findLatestEvaluationWith ({ pouchDb }) {
        */
       .map(foundEvaluationDocSchema.parse)
       .map(applySpec({
-        sortKey: prop('sortKey'),
         processId: prop('processId'),
-        output: prop('output'),
-        evaluatedAt: prop('evaluatedAt')
+        messageId: prop('messageId'),
+        timestamp: prop('timestamp'),
+        cron: prop('cron'),
+        evaluatedAt: prop('evaluatedAt'),
+        output: prop('output')
       }))
       .toPromise()
   }
@@ -220,17 +223,19 @@ export function findLatestEvaluationWith ({ pouchDb }) {
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   const logger = _logger.child('pouchDb:saveEvaluation')
 
-  const savedEvaluationDocSchema = z.object({
+  const saveEvaluationInputSchema = z.object({
     _id: z.string().min(1),
     deepHash: z.string().optional(),
-    sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
+    messageId: evaluationSchema.shape.messageId,
+    timestamp: evaluationSchema.shape.timestamp,
+    cron: evaluationSchema.shape.cron,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     /**
      * Omit buffer from the document schema (see _attachments below)
      */
-    output: evaluationSchema.shape.output.omit({ buffer: true }),
+    output: evaluationSchema.shape.output.omit({ Memory: true }),
     type: z.literal('evaluation'),
     /**
      * Since Bibo, the state of a process is a buffer, so we will store it as
@@ -240,7 +245,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
      * See https://pouchdb.com/api.html#save_attachment
      */
     _attachments: z.object({
-      'buffer.txt': z.object({
+      'memory.txt': z.object({
         content_type: z.literal('text/plain'),
         data: z.any()
       })
@@ -252,7 +257,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
       .chain(fromPromise(async (evaluation) =>
         applySpec({
         /**
-         * The processId concatenated with the sortKey
+         * The processId concatenated with the timestamp, and possible the cron (if defined)
          * is used as the _id for an evaluation
          *
          * This makes it easier to query using a range query against the
@@ -261,10 +266,18 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
           _id: (evaluation) =>
             createEvaluationId({
               processId: evaluation.processId,
-              sortKey: evaluation.sortKey
+              timestamp: evaluation.timestamp,
+              /**
+               * By appending the cron identifier to the evaluation doc _id,
+               *
+               * this guarantees the document will have a unique, but sortable, _id
+               */
+              cron: evaluation.cron
             }),
-          sortKey: prop('sortKey'),
           processId: prop('processId'),
+          messageId: prop('messageId'),
+          timestamp: prop('timestamp'),
+          cron: prop('cron'),
           parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
           output: pipe(
             prop('output'),
@@ -273,7 +286,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
              * on the document. We will instead persist the state buffer
              * as an attachment (see below)
              */
-            omit(['buffer'])
+            omit(['Memory'])
           ),
           evaluatedAt: prop('evaluatedAt'),
           type: always('evaluation'),
@@ -285,7 +298,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
            * See https://pouchdb.com/api.html#save_attachment
            */
           _attachments: always({
-            'buffer.txt': {
+            'memory.txt': {
               content_type: 'text/plain',
               /**
                * zlib compress the buffer before persisting
@@ -293,7 +306,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
                * In testing, this results in orders of magnitude
                * smaller buffer and smaller persistence times
                */
-              data: await deflateP(evaluation.output.buffer)
+              data: await deflateP(evaluation.output.Memory)
             }
           })
         })(evaluation)
@@ -301,21 +314,21 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
       /**
        * Ensure the expected shape before writing to the db
        */
-      .map(savedEvaluationDocSchema.parse)
+      .map(saveEvaluationInputSchema.parse)
       .map((evaluationDoc) => {
         if (!evaluation.deepHash) return [evaluationDoc]
 
-        logger('Creating messageId doc for deepHash "%s"', evaluation.deepHash)
+        logger('Creating messageHash doc for deepHash "%s"', evaluation.deepHash)
         /**
-         * Create an messageId doc that we can later query
+         * Create an messageHash doc that we can later query
          * to prevent duplicate evals from duplicate cranks
          */
         return [
           evaluationDoc,
-          messageIdDocSchema.parse({
-            _id: createMessageId({ messageId: evaluation.deepHash }),
+          messageHashDocSchema.parse({
+            _id: createMessageHashId({ messageHash: evaluation.deepHash }),
             parent: evaluationDoc._id,
-            type: 'messageId'
+            type: 'messageHash'
           })
         ]
       })
@@ -339,16 +352,16 @@ export function findEvaluationsWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: createEvaluationId({ processId, sortKey: '' }),
-        $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
+        $gte: createEvaluationId({ processId, timestamp: '' }),
+        $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
 
     /**
      * trim range using sort keys, if provided
      */
-    if (from) selector._id.$gte = `${createEvaluationId({ processId, sortKey: from })},`
-    if (to) selector._id.$lte = `${createEvaluationId({ processId, sortKey: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
+    if (from) selector._id.$gte = `${createEvaluationId({ processId, timestamp: from })},`
+    if (to) selector._id.$lte = `${createEvaluationId({ processId, timestamp: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
 
     return selector
   }
@@ -368,26 +381,28 @@ export function findEvaluationsWith ({ pouchDb }) {
       }))
       .map(
         map(applySpec({
-          sortKey: prop('sortKey'),
           processId: prop('processId'),
-          output: prop('output'),
-          evaluatedAt: prop('evaluatedAt')
+          messageId: prop('messageId'),
+          timestamp: prop('timestamp'),
+          cron: prop('cron'),
+          evaluatedAt: prop('evaluatedAt'),
+          output: prop('output')
         }))
       )
       .toPromise()
   }
 }
 
-export function findMessageIdWith ({ pouchDb }) {
-  return ({ messageId }) => of(messageId)
-    .chain(fromPromise(id => pouchDb.get(createMessageId({ messageId: id }))))
+export function findMessageHashWith ({ pouchDb }) {
+  return ({ messageHash }) => of(messageHash)
+    .chain(fromPromise((hash) => pouchDb.get(createMessageHashId({ messageHash: hash }))))
     .bichain(
       (err) => {
         if (err.status === 404) return Rejected({ status: 404 })
         return Rejected(err)
       },
       (found) => of(found)
-        .map(messageIdDocSchema.parse)
+        .map(messageHashDocSchema.parse)
     )
     .toPromise()
 }

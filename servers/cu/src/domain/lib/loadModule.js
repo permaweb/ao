@@ -46,7 +46,7 @@ function getModuleWith ({ loadTransactionData, loadTransactionMeta }) {
           .chain(([data, meta]) =>
             of(meta.tags)
               .map(parseTags)
-              .chain(checkTag('Module-Format', eqOrIncludes('emscripten'), 'only \'emscripten\' module format is supported by this CU'))
+              .chain(checkTag('Module-Format', eqOrIncludes('wasm32-unknown-emscripten'), 'only \'wasm32-unknown-emscripten\' module format is supported by this CU'))
               .map(() => data)
           )
           .chain(fromPromise((res) => res.arrayBuffer()))

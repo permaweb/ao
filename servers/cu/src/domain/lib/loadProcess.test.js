@@ -38,15 +38,15 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
+    const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
-    assert.deepStrictEqual(res.buffer, null)
+    assert.deepStrictEqual(res.Memory, null)
     assert.deepStrictEqual(res.result, {
-      messages: [],
-      output: '',
-      spawns: []
+      Messages: [],
+      Output: '',
+      Spawns: []
     })
     assert.equal(res.from, undefined)
     assert.equal(res.evaluatedAt, undefined)
@@ -81,10 +81,11 @@ describe('loadProcess', () => {
     assert.equal(res.id, PROCESS)
   })
 
-  test('use latest evaluation from db to set buffer, result, from, and evaluatedAt on ctx', async () => {
+  test('use latest evaluation from db to set Memory, result, from, and evaluatedAt on ctx', async () => {
     const cachedEvaluation = {
-      sortKey: 'sortkey-123',
       processId: PROCESS,
+      messageId: 'message-123',
+      timestamp: 1697574792000,
       evaluatedAt: new Date(),
       message: {
         tags: [
@@ -92,8 +93,8 @@ describe('loadProcess', () => {
         ]
       },
       output: {
-        buffer: Buffer.from('Hello', 'utf-8'),
-        messages: [
+        Memory: Buffer.from('Hello', 'utf-8'),
+        Messages: [
           {
             target: 'foobar',
             tags: [
@@ -101,8 +102,8 @@ describe('loadProcess', () => {
             ]
           }
         ],
-        output: [],
-        spawns: []
+        Output: [],
+        Spawns: []
       }
     }
 
@@ -117,7 +118,7 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async ({ processId, to }) => {
         assert.equal(processId, PROCESS)
-        assert.equal(to, 'sortkey-123')
+        assert.equal(to, '1697574792000')
         return cachedEvaluation
       },
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
@@ -129,10 +130,10 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
-    assert.deepStrictEqual(res.buffer, cachedEvaluation.output.buffer)
-    assert.deepStrictEqual(res.result, omit(['buffer'], cachedEvaluation.output))
-    assert.deepStrictEqual(res.from, cachedEvaluation.sortKey)
+    const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    assert.deepStrictEqual(res.Muffer, cachedEvaluation.output.Buffer)
+    assert.deepStrictEqual(res.result, omit(['Memory'], cachedEvaluation.output))
+    assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)
   })

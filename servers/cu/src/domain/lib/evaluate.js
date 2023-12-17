@@ -7,7 +7,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
-import { findMessageIdSchema, saveEvaluationSchema } from '../dal.js'
+import { findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -44,11 +44,11 @@ function saveEvaluationWith ({ saveEvaluation }) {
       .map(() => evaluation)
 }
 
-function doesMessageIdExistWith ({ findMessageId }) {
-  findMessageId = fromPromise(findMessageIdSchema.implement(findMessageId))
+function doesMessageHashExistWith ({ findMessageHash }) {
+  findMessageHash = fromPromise(findMessageHashSchema.implement(findMessageHash))
 
   return (deepHash) => {
-    return findMessageId({ messageId: deepHash })
+    return findMessageHash({ messageHash: deepHash })
       .bichain(
         err => {
           if (err.status === 404) return Resolved(false)
@@ -63,7 +63,7 @@ function doesMessageIdExistWith ({ findMessageId }) {
  * @typedef EvaluateArgs
  * @property {string} id - the contract id
  * @property {Record<string, any>} state - the initial state
- * @property {string} from - the initial state sortKey
+ * @property {string} from - the initial state timestamp
  * @property {ArrayBuffer} module - the contract wasm as an array buffer
  * @property {Record<string, any>[]} action - an array of interactions to apply
  *
@@ -78,7 +78,7 @@ export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
   env = { ...env, logger }
 
-  const doesMessageIdExist = doesMessageIdExistWith(env)
+  const doesMessageHashExist = doesMessageHashExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
 
   /**
@@ -121,24 +121,24 @@ export function evaluateWith (env) {
        * If the output contains an error, ignore its state,
        * and use the previous message's state
        */
-      buffer: ifElse(
-        pathOr(undefined, ['error']),
-        always(prev.buffer),
-        propOr(prev.buffer, 'buffer')
+      Memory: ifElse(
+        pathOr(undefined, ['Error']),
+        always(prev.Memory),
+        propOr(prev.Memory, 'Memory')
       ),
-      error: pathOr(undefined, ['error']),
-      messages: pathOr([], ['messages']),
-      spawns: pathOr([], ['spawns']),
-      output: pipe(
-        pathOr('', ['output']),
+      Error: pathOr(undefined, ['Error']),
+      Messages: pathOr([], ['Messages']),
+      Spawns: pathOr([], ['Spawns']),
+      Output: pipe(
+        pathOr('', ['Output']),
         /**
-           * Always make sure the output
-           * is a string
-           */
+         * Always make sure the output
+         * is a string or object
+         */
         cond([
           [is(String), identity],
+          [is(Object), identity],
           [is(Number), String],
-          [is(Object), obj => JSON.stringify(obj)],
           [T, identity]
         ])
       )
@@ -154,27 +154,27 @@ export function evaluateWith (env) {
            * Ensure all result fields are initialized
            * to their identity
            */
-          buffer: pathOr(null, ['buffer']),
-          error: pathOr(undefined, ['result', 'error']),
-          messages: pathOr([], ['result', 'messages']),
-          spawns: pathOr([], ['result', 'spawns']),
-          output: pathOr([], ['result', 'output'])
+          Memory: pathOr(null, ['Memory']),
+          Error: pathOr(undefined, ['result', 'Error']),
+          Messages: pathOr([], ['result', 'Messages']),
+          Spawns: pathOr([], ['result', 'Spawns']),
+          Output: pathOr('', ['result', 'Output'])
         })(ctx)
 
         /**
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
-        for await (const { message, deepHash, sortKey, AoGlobal } of ctx.messages) {
+        for await (const { cron, message, deepHash, AoGlobal } of ctx.messages) {
           /**
            * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
            * if their deepHash is found in the cache, this prevents duplicate evals
            */
           if (deepHash) {
-            logger('Checking if "%s" has already been evaluated...', sortKey)
-            const found = await doesMessageIdExist(deepHash).toPromise()
+            logger('Checking if "%s" has already been evaluated...', message.Id)
+            const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
-              logger('Message with deepHash "%s" was found in cache and therefor has already been evaluated. Removing from eval stream', deepHash)
+              logger('Message with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', deepHash)
               continue
             }
           }
@@ -182,31 +182,31 @@ export function evaluateWith (env) {
           prev = await Promise.resolve(prev)
             .then(maybeRejectError)
             .then(prev =>
-              Promise.resolve(prev.buffer)
-                .then(buffer => {
-                  logger('Evaluating message with sortKey "%s" to process "%s"', sortKey, ctx.id)
-                  return buffer
+              Promise.resolve(prev.Memory)
+                .then(Memory => {
+                  logger('Evaluating message with id "%s" to process "%s"', message.Id, ctx.id)
+                  return Memory
                 })
                 /**
                  * Where the actual evaluation is performed
                  */
-                .then((buffer) => ctx.handle(buffer, message, AoGlobal))
+                .then((Memory) => ctx.handle(Memory, message, AoGlobal))
                 /**
                  * Map thrown error to a result.error
                  */
-                .catch((err) => Promise.resolve(assocPath(['error'], err, {})))
+                .catch((err) => Promise.resolve(assocPath(['Error'], err, {})))
                 /**
                  * The the previous interaction output, and merge it
                  * with the output of the current interaction
                  */
                 .then(mergeOutput(prev))
                 .then((output) => {
-                  return output.error
+                  return output.Error
                     ? Promise.reject(output)
                     : Promise.resolve(output)
                 })
                 .then(output => {
-                  logger('Applied message with sortKey "%s" to process "%s"', sortKey, ctx.id)
+                  logger('Applied message with id "%s" to process "%s"', message.Id, ctx.id)
                   return output
                 })
               /**
@@ -215,17 +215,19 @@ export function evaluateWith (env) {
                 .then((output) =>
                   saveEvaluation({
                     deepHash,
-                    sortKey,
+                    cron,
                     processId: ctx.id,
-                    output,
-                    evaluatedAt: new Date()
+                    messageId: message.Id,
+                    timestamp: message.Timestamp,
+                    evaluatedAt: new Date(),
+                    output
                   })
                     .map(() => output)
                     .toPromise()
                 )
                 .catch(logger.tap(
-                  'Error occurred when applying message with sortKey "%s" to process "%s" %o',
-                  sortKey,
+                  'Error occurred when applying message with id "%s" to process "%s" %o',
+                  message.Id,
                   ctx.id
                 ))
             )

@@ -8,7 +8,7 @@ import { loadMessageMetaWith } from './loadMessageMeta.js'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadMessageMeta', () => {
-  test('should append processId and sortKey to ctx', async () => {
+  test('should append processId and timestamp to ctx', async () => {
     const loadMessageMeta = loadMessageMetaWith({
       locateScheduler: async (id) => {
         assert.equal(id, 'process-123')
@@ -20,7 +20,7 @@ describe('loadMessageMeta', () => {
           processId: 'process-123',
           messageTxId: 'message-tx-123'
         })
-        return { processId: 'process-123', sortKey: 'sortkey-123' }
+        return { processId: 'process-123', timestamp: 1697574792000 }
       },
       logger
     })
@@ -28,6 +28,6 @@ describe('loadMessageMeta', () => {
     const res = await loadMessageMeta({ processId: 'process-123', messageTxId: 'message-tx-123' })
       .toPromise()
 
-    assert.deepStrictEqual(res, { processId: 'process-123', sortKey: 'sortkey-123' })
+    assert.deepStrictEqual(res, { processId: 'process-123', timestamp: 1697574792000 })
   })
 })

@@ -17,7 +17,7 @@ describe('loadModule', () => {
           address: 'owner-123'
         },
         tags: [
-          { name: 'Module-Format', value: 'emscripten' },
+          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Module' }
         ]
@@ -40,7 +40,7 @@ describe('loadModule', () => {
           address: 'owner-123'
         },
         tags: [
-          { name: 'Module-Format', value: 'wasi32' },
+          { name: 'Module-Format', value: 'wasm64-unknown-emscripten' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Module' }
         ]
@@ -50,6 +50,6 @@ describe('loadModule', () => {
 
     await loadModule({ id: PROCESS, tags: [{ name: 'Module', value: 'foobar' }] }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.equal(err, "Tag 'Module-Format': only 'emscripten' module format is supported by this CU"))
+      .catch(err => assert.equal(err, "Tag 'Module-Format': only 'wasm32-unknown-emscripten' module format is supported by this CU"))
   })
 })
