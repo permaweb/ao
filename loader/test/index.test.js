@@ -1,3 +1,5 @@
+/* eslint-disable no-prototype-builtins */
+
 import { describe, it } from 'node:test'
 import * as assert from 'node:assert'
 import fs from 'fs'
@@ -19,18 +21,23 @@ describe('loader', async () => {
     const mainResult = mainHandler(
       null,
       {
-        owner: 'tom',
-        target: '',
-        tags: [
-          { name: 'function', value: 'count' }
+        Owner: 'tom',
+        Target: '',
+        Tags: [
+          { name: 'function', value: 'hello' },
+          { name: 'recipient', value: 'World' }
         ]
       },
       {
-        transaction: { id: 'tx-id-123' },
         process: { id: 'ctr-id-456' }
       }
     )
-    assert.equal(mainResult.output, 'Hello World')
+
+    assert.ok(mainResult.Memory)
+    assert.ok(mainResult.hasOwnProperty('Messages'))
+    assert.ok(mainResult.hasOwnProperty('Spawns'))
+    assert.ok(mainResult.hasOwnProperty('Error'))
+    assert.equal(mainResult.Output, 'Hello World')
 
     assert.ok(true)
   })
@@ -38,15 +45,15 @@ describe('loader', async () => {
   it('should load previous memory', async () => {
     const { default: AoLoader } = await import(MODULE_PATH)
 
-    const wasmBinary = fs.readFileSync('./test/contracts/process2.wasm')
+    const wasmBinary = fs.readFileSync('./test/contracts/process.wasm')
     const mainHandler = await AoLoader(wasmBinary)
     // spawn
-    const result = mainHandler(null, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
-    assert.equal(result.output, 'count: 1')
+    const result = mainHandler(null, { Owner: 'tom', Tags: [{ name: 'function', value: 'count' }] }, {})
+    assert.equal(result.Output, 'count: 1')
 
     const nextHandler = await AoLoader(wasmBinary)
-    const result2 = nextHandler(result.buffer, { owner: 'tom', tags: [{ name: 'function', value: 'count' }] }, {})
-    assert.equal(result2.output, 'count: 2')
+    const result2 = nextHandler(result.Memory, { Owner: 'tom', Tags: [{ name: 'function', value: 'count' }] }, {})
+    assert.equal(result2.Output, 'count: 2')
     assert.ok(true)
   })
 })
