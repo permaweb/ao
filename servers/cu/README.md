@@ -33,8 +33,7 @@ There are a few environment variables that you can set:
 
 - `GATEWAY_URL`: Which Arweave Gateway to use (defaults to `arweave.net` in
   development mode)
-- `SEQUENCER_URL`: Which Sequencer to use (defaults to the `Warp` Gateway in
-  development mode)
+- `WALLET`: the JWK Interface stringified JSON that will be used by the CU
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
 - `DB_PATH`: where on the local filesystem to place the PouchDB, which is used
   for persistence. Defaults to `./ao-cache`
