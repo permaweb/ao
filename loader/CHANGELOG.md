@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.12](https://github.com/permaweb/ao/compare/loader@v0.0.11...loader@v0.0.12) (2023-12-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **loader:** return new shape #234
+
+* **loader:** return new shape [#234](https://github.com/permaweb/ao/issues/234) ([8d294f1](https://github.com/permaweb/ao/commit/8d294f12c2e8bf54f1746363918b056573b8c0cc))
+
 ## [0.0.11](https://github.com/permaweb/ao/compare/loader@v0.0.10...loader@v0.0.11) (2023-11-17)
 
 ## [0.0.10](https://github.com/permaweb/ao/compare/loader@v0.0.9...loader@v0.0.10) (2023-11-16)
