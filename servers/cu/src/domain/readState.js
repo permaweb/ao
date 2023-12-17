@@ -33,7 +33,7 @@ export function readStateWith (env) {
       .chain(loadProcess)
       .chain(res => {
         /**
-         * The exact evaluation (identified by its input messages sortKey)
+         * The exact evaluation (identified by its input messages timestamp)
          * was found in the cache, so just return it
          */
         if (res.from === to) {

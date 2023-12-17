@@ -16,7 +16,7 @@ describe('ao-su', () => {
 
             return new Response(JSON.stringify({
               process_id: 'process-123',
-              sort_key: 'block-123,time-456,hash-789'
+              timestamp: 12345
             }))
           }
         })
@@ -30,7 +30,7 @@ describe('ao-su', () => {
 
       assert.deepStrictEqual(res, {
         processId: 'process-123',
-        sortKey: 'block-123,time-456,hash-789'
+        timestamp: 12345
       })
     })
   })

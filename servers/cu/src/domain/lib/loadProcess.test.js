@@ -38,7 +38,7 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
+    const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
@@ -129,7 +129,7 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 'sortkey-123' }).toPromise()
+    const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
     assert.deepStrictEqual(res.buffer, cachedEvaluation.output.buffer)
     assert.deepStrictEqual(res.result, omit(['buffer'], cachedEvaluation.output))
     assert.deepStrictEqual(res.from, cachedEvaluation.sortKey)

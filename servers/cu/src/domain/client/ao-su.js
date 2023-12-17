@@ -231,7 +231,7 @@ export const loadProcessWith = ({ fetch }) => {
 }
 
 export const loadTimestampWith = ({ fetch }) => {
-  return (suUrl) => fetch(`${suUrl}/timestamp`)
+  return ({ suUrl, processId }) => fetch(`${suUrl}/timestamp?process-id=${processId}`)
     .then(res => res.json())
     .then(res => ({
       /**
@@ -249,7 +249,7 @@ export const loadMessageMetaWith = ({ fetch }) => {
       .then(res => res.json())
       .then(res => ({
         processId: res.process_id,
-        sortKey: res.sort_key
+        timestamp: res.timestamp
       }))
   }
 }

@@ -378,7 +378,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
        * producing a single merged stream
        */
       return locateScheduler(ctx.id)
-        .chain(({ url }) => loadTimestamp(url))
+        .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: url }))
         .map(logger.tap('loaded current block and tiemstamp from SU'))
         /**
          * In order to generate cron messages and merge them with the
