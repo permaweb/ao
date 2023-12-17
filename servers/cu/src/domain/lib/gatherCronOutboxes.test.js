@@ -14,6 +14,7 @@ describe('gatherCronOutboxesWith', () => {
     }
     const FROM = 1702841577654
     const TO = 1702841577754
+
     const gatherCronOutboxes = gatherCronOutboxesWith({
       findEvaluations: async ({ processId, from, to }) => {
         assert.equal(processId, 'process-123')
@@ -56,13 +57,16 @@ describe('gatherCronOutboxesWith', () => {
     assert.equal(res.processId, 'process-123')
     assert.equal(res.from, FROM)
     assert.equal(res.to, TO)
-    assert(res.outboxes)
+    assert(res.evaluations)
 
-    assert.equal(res.outboxes.length, 3)
-    const [one, two, three] = res.outboxes
-    assert.equal(one.Messages.length, 2)
-    assert.equal(one.Spawns.length, 1)
-    assert.equal(two.Messages.length, 0)
-    assert.equal(three.Messages.length, 1)
+    assert.equal(res.evaluations.length, 3)
+    const [one, two, three] = res.evaluations
+    assert.ok(one.timestamp)
+    assert.equal(one.output.Messages.length, 2)
+    assert.equal(one.output.Spawns.length, 1)
+    assert.ok(two.timestamp)
+    assert.equal(two.output.Messages.length, 0)
+    assert.ok(three.timestamp)
+    assert.equal(three.output.Messages.length, 1)
   })
 })
