@@ -5,10 +5,12 @@ import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import * as GatewayClient from './client/gateway.js'
 import * as PouchDbClient from './client/pouchdb.js'
 import * as AoSuClient from './client/ao-su.js'
+import * as WalletClient from './client/wallet.js'
 
 import { readResultWith } from './readResult.js'
 import { readStateWith } from './readState.js'
 import { readCronOutboxesWith } from './readCronOutboxes.js'
+import { healthcheckWith } from './healthcheck.js'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema } from './model.js'
@@ -42,9 +44,9 @@ export const createApis = (ctx) => {
     findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb, logger }),
     saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
     findMessageHash: PouchDbClient.findMessageHashWith({ pouchDb, logger }),
-    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
-    loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger }),
-    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, pageSize: 50, logger }),
+    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
+    loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
+    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 50, logger }),
     locateScheduler: locateDataloader.load.bind(locateDataloader),
     logger
   })
@@ -66,7 +68,7 @@ export const createApis = (ctx) => {
   const readResultLogger = ctx.logger.child('readResult')
   const readResult = readResultWith({
     ...sharedDeps(readResultLogger),
-    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, SU_URL: ctx.SEQUENCER_URL, logger: readResultLogger })
+    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: readResultLogger })
   })
 
   const readCronMessagesLogger = ctx.logger.child('readCronMessages')
@@ -75,5 +77,10 @@ export const createApis = (ctx) => {
     findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readCronMessagesLogger })
   })
 
-  return { readState, readResult, readCronMessages }
+  const arweave = WalletClient.createWalletClient()
+  const healthcheck = healthcheckWith({
+    walletAddress: WalletClient.addressWith({ WALLET: ctx.WALLET, arweave })
+  })
+
+  return { readState, readResult, readCronMessages, healthcheck }
 }

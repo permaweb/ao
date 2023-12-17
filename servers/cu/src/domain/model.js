@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 export const domainConfigSchema = z.object({
-  SEQUENCER_URL: z.string().url('SEQUENCER_URL must be a a valid URL'),
   GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL'),
   DB_PATH: z.string().min(1, 'DB_PATH set to the location of the database on disk must be provided'),
-  DB_MAX_LISTENERS: z.number().int('DB_MAX_LISTENERS must be an integer')
+  DB_MAX_LISTENERS: z.number().int('DB_MAX_LISTENERS must be an integer'),
+  WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface')
 })
 
 export const streamSchema = z.any().refine(stream => {
