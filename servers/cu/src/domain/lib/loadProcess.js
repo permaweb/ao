@@ -159,7 +159,7 @@ const ctxSchema = z.object({
    * This will be used to subsequently determine which messaged
    * need to be fetched from the SU in order to perform the evaluation
    */
-  from: z.number().optional(),
+  from: z.coerce.number().optional(),
   /**
    * When the evaluation record was created in the local db. If the initial state had to be retrieved
    * from Arweave, due to no state being cached in the local db, then this will be undefined.
