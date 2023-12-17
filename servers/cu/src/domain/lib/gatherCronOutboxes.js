@@ -1,6 +1,6 @@
 import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { applySpec, compose, defaultTo, filter, map, mergeRight, path, pathOr, pipe, transduce } from 'ramda'
+import { applySpec, compose, filter, map, mergeRight, pathOr, pipe, prop, transduce } from 'ramda'
 
 import { findEvaluationsSchema } from '../dal.js'
 
@@ -12,7 +12,7 @@ import { findEvaluationsSchema } from '../dal.js'
  * is always added to context
  */
 const ctxSchema = z.object({
-  outboxes: z.array(z.any())
+  evaluations: z.array(z.any())
 }).passthrough()
 
 /**
@@ -45,29 +45,38 @@ export function gatherCronOutboxesWith (env) {
              * so filter out all evalations that did not result from a Cron Message
              */
             filter((evaluation) => !!evaluation.cron),
-            /**
-             * Extract the Outbox as a result of evaluating the Cron Message
-             */
-            map(path(['output'])),
-            map(pipe(
-              defaultTo({}),
-              applySpec({
-                Messages: pathOr([], ['Messages']),
-                Spawns: pathOr([], ['Spawns']),
-                Output: pathOr(undefined, ['Output']),
-                Error: pathOr(undefined, ['Error'])
-              })
-            ))
+            map(applySpec({
+              timestamp: prop('timestamp'),
+              /**
+               * Extract the Outbox as a result of evaluating the Cron Message
+               */
+              output: pipe(
+                pathOr({}, ['output']),
+                /**
+                 * If there is no outbox, then simply return the Outbox identity:
+                 * - Empty Messages
+                 * - Empty Spawns
+                 * - Nil Output
+                 * - Nil Error
+                 */
+                applySpec({
+                  Messages: pathOr([], ['Messages']),
+                  Spawns: pathOr([], ['Spawns']),
+                  Output: pathOr(undefined, ['Output']),
+                  Error: pathOr(undefined, ['Error'])
+                })
+              )
+            }))
           ),
-          (acc, outbox) => {
-            acc.push(outbox)
+          (acc, evaluation) => {
+            acc.push(evaluation)
             return acc
           },
           [],
           evaluations
         )
       )
-      .map(outboxes => ({ outboxes }))
+      .map(evaluations => ({ evaluations }))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
   }
