@@ -131,6 +131,7 @@ export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
 export function cronMessagesBetweenWith ({
   processId,
   owner: processOwner,
+  tags: processTags,
   originBlock,
   crons,
   blocksMeta
@@ -186,7 +187,7 @@ export function cronMessagesBetweenWith ({
               Cron: true
             },
             AoGlobal: {
-              process: { id: processId, owner: processOwner }
+              Process: { id: processId, owner: processOwner, tags: processTags }
             }
           }
         }
@@ -221,8 +222,7 @@ export function cronMessagesBetweenWith ({
                 Cron: true
               },
               AoGlobal: {
-                process: { id: processId, owner: processOwner },
-                block: curBlock
+                Process: { id: processId, owner: processOwner, tags: processTags }
               }
             }
           }
@@ -357,6 +357,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                 genCronMessages: cronMessagesBetweenWith({
                   processId: ctx.id,
                   owner: ctx.owner,
+                  tags: ctx.tags,
                   originBlock: ctx.block,
                   blocksMeta,
                   crons
