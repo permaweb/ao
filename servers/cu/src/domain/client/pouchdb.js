@@ -37,13 +37,13 @@ const processDocSchema = z.object({
   type: z.literal('process')
 })
 
-const messageIdDocSchema = z.object({
+const messageHashDocSchema = z.object({
   _id: z.string().min(1),
   /**
    * The _id of the corresponding cached evaluation
    */
   parent: z.string().min(1),
-  type: z.literal('messageId')
+  type: z.literal('messageHash')
 })
 
 function createEvaluationId ({ processId, sortKey }) {
@@ -64,13 +64,13 @@ function createProcessId ({ processId }) {
   return `proc-${processId}`
 }
 
-function createMessageId ({ messageId }) {
+function createMessageHashId ({ messageHash }) {
   /**
    * transactions can sometimes start with an underscore,
    * which is not allowed in PouchDB, so prepend to create
    * an _id
    */
-  return `messageId-${messageId}`
+  return `messageHash-${messageHash}`
 }
 
 /**
@@ -305,17 +305,17 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
       .map((evaluationDoc) => {
         if (!evaluation.deepHash) return [evaluationDoc]
 
-        logger('Creating messageId doc for deepHash "%s"', evaluation.deepHash)
+        logger('Creating messageHash doc for deepHash "%s"', evaluation.deepHash)
         /**
-         * Create an messageId doc that we can later query
+         * Create an messageHash doc that we can later query
          * to prevent duplicate evals from duplicate cranks
          */
         return [
           evaluationDoc,
-          messageIdDocSchema.parse({
-            _id: createMessageId({ messageId: evaluation.deepHash }),
+          messageHashDocSchema.parse({
+            _id: createMessageHashId({ messageHash: evaluation.deepHash }),
             parent: evaluationDoc._id,
-            type: 'messageId'
+            type: 'messageHash'
           })
         ]
       })
@@ -378,16 +378,16 @@ export function findEvaluationsWith ({ pouchDb }) {
   }
 }
 
-export function findMessageIdWith ({ pouchDb }) {
-  return ({ messageId }) => of(messageId)
-    .chain(fromPromise(id => pouchDb.get(createMessageId({ messageId: id }))))
+export function findMessageHashWith ({ pouchDb }) {
+  return ({ messageHash }) => of(messageHash)
+    .chain(fromPromise((hash) => pouchDb.get(createMessageHashId({ messageHash: hash }))))
     .bichain(
       (err) => {
         if (err.status === 404) return Rejected({ status: 404 })
         return Rejected(err)
       },
       (found) => of(found)
-        .map(messageIdDocSchema.parse)
+        .map(messageHashDocSchema.parse)
     )
     .toPromise()
 }

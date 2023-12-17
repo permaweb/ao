@@ -4,12 +4,12 @@ import assert from 'node:assert'
 import { deflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
-import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageIdSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
 import {
   COLLATION_SEQUENCE_MAX_CHAR,
   findEvaluationsWith,
   findLatestEvaluationWith,
-  findMessageIdWith,
+  findMessageHashWith,
   findProcessWith,
   saveEvaluationWith,
   saveProcessWith
@@ -306,9 +306,9 @@ describe('pouchdb', () => {
               assert.equal(evaluatedAt.toISOString(), evaluatedAt.toISOString())
 
               assert.deepStrictEqual(messageIdDoc, {
-                _id: 'messageId-deepHash-123',
+                _id: 'messageHash-deepHash-123',
                 parent: 'eval-process-123,sortkey-890',
-                type: 'messageId'
+                type: 'messageHash'
               })
               return Promise.resolve(true)
             }
@@ -440,32 +440,32 @@ describe('pouchdb', () => {
     })
   })
 
-  describe('findMessageIdWith', () => {
-    test('find the messageId', async () => {
-      const findMessage = findMessageIdSchema.implement(
-        findMessageIdWith({
+  describe('findMessageHashWith', () => {
+    test('find the messageHash', async () => {
+      const findMessageHash = findMessageHashSchema.implement(
+        findMessageHashWith({
           pouchDb: {
             get: async () => ({
               _id: 'proc-process-123',
               parent: 'eval-123',
-              type: 'messageId'
+              type: 'messageHash'
             })
           },
           logger
         })
       )
 
-      const res = await findMessage({ messageId: 'deepHash-123' })
+      const res = await findMessageHash({ messageHash: 'deepHash-123' })
       assert.deepStrictEqual(res, {
         _id: 'proc-process-123',
         parent: 'eval-123',
-        type: 'messageId'
+        type: 'messageHash'
       })
     })
 
     test('return 404 status if not found', async () => {
-      const findMessageId = findMessageIdSchema.implement(
-        findMessageIdWith({
+      const findMessageHash = findMessageHashSchema.implement(
+        findMessageHashWith({
           pouchDb: {
             get: async () => { throw { status: 404 } }
           },
@@ -473,7 +473,7 @@ describe('pouchdb', () => {
         })
       )
 
-      const res = await findMessageId({ messageId: 'process-123' })
+      const res = await findMessageHash({ messageHash: 'process-123' })
         .catch(err => {
           assert.equal(err.status, 404)
           return { ok: true }
@@ -483,8 +483,8 @@ describe('pouchdb', () => {
     })
 
     test('bubble error', async () => {
-      const findMessageId = findMessageIdSchema.implement(
-        findMessageIdWith({
+      const findMessageId = findMessageHashSchema.implement(
+        findMessageHashWith({
           pouchDb: {
             get: async () => { throw { status: 500 } }
           },
@@ -492,7 +492,7 @@ describe('pouchdb', () => {
         })
       )
 
-      await findMessageId({ messageId: 'process-123' })
+      await findMessageId({ messageHash: 'process-123' })
         .catch(assert.ok)
     })
   })

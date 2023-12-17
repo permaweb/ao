@@ -16,7 +16,7 @@ describe('evaluate', () => {
   describe('output', () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
-      findMessageId: async () => { throw { status: 404 } },
+      findMessageHash: async () => { throw { status: 404 } },
       logger
     })
 
@@ -133,7 +133,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageId: async () => { throw { status: 404 } },
+      findMessageHash: async () => { throw { status: 404 } },
       logger
     }
 
@@ -180,7 +180,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageId: async () => {
+      findMessageHash: async () => {
         if (!messageIdCount) {
           messageIdCount++
           throw { status: 404 }
@@ -245,7 +245,7 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async (interaction) =>
         assert.fail('cache should not be interacted with on a noop of state'),
-      findMessageId: async () =>
+      findMessageHash: async () =>
         assert.fail('cache should not be interacted with on a noop of state'),
       logger
     }
@@ -282,7 +282,7 @@ describe('evaluate', () => {
   test('error returned in process result', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
-      findMessageId: async () => { throw { status: 404 } },
+      findMessageHash: async () => { throw { status: 404 } },
       logger
     }
 
@@ -329,7 +329,7 @@ describe('evaluate', () => {
   test('error thrown by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
-      findMessageId: async () => { throw { status: 404 } },
+      findMessageHash: async () => { throw { status: 404 } },
       logger
     }
 
@@ -369,7 +369,7 @@ describe('evaluate', () => {
   test('error unhandled by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
-      findMessageId: async () => { throw { status: 404 } },
+      findMessageHash: async () => { throw { status: 404 } },
       logger
     }
 
@@ -408,7 +408,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageId: async () => { throw { status: 404 } },
+      findMessageHash: async () => { throw { status: 404 } },
       logger
     }
 

@@ -53,12 +53,12 @@ export const findEvaluationsSchema = z.function()
   }))
   .returns(z.promise(z.array(evaluationSchema)))
 
-export const findMessageIdSchema = z.function()
+export const findMessageHashSchema = z.function()
   .args(z.object({
-    messageId: z.string().optional()
+    messageHash: z.string().optional()
   }))
   /**
-   * Our business logic does use the output of findMessageId,
+   * Our business logic doesn't use the output of findMessageHash,
    * only the presence or absence of the document,
    *
    * So we don't need to enforce a shape to return here,
