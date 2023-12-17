@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy the statically-linked binary from your local file system to the container
 COPY ./su /app/su
+COPY ./.wallet.json /app/su
 
 # Make the binary executable
 RUN chmod +x /app/su
