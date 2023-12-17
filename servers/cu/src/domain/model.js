@@ -83,7 +83,7 @@ export const messageSchema = z.object({
     Cron: z.boolean()
   }),
   AoGlobal: z.object({
-    process: z.object({
+    Process: z.object({
       id: z.string(),
       owner: z.string(),
       tags: z.array(rawTagSchema)
