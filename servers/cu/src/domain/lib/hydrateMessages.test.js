@@ -38,27 +38,29 @@ describe('hydrateMessages', () => {
   describe('maybeMessageIdWith', () => {
     const notForwarded = {
       message: {
-        id: 'message-tx-345',
-        tags: [
+        Id: 'message-tx-345',
+        Signature: 'sig-123',
+        Tags: [
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'message' },
           { name: 'function', value: 'notify' }
         ],
-        data: 'foobar'
+        Data: 'foobar'
       }
     }
 
     const forwarded = {
       message: {
-        id: 'message-tx-456',
+        Id: 'message-tx-456',
+        Signature: 'sig-123',
         'Forwarded-For': 'process-123',
-        tags: [
+        Tags: [
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'message' },
           { name: 'function', value: 'notify' },
           { name: 'Forwarded-For', value: 'process-123' }
         ],
-        data: 'foobar'
+        Data: 'foobar'
       }
     }
 
@@ -93,25 +95,29 @@ describe('hydrateMessages', () => {
     test('should build the ao-load message', async () => {
       const notAoLoad = {
         message: {
-          id: 'message-tx-345',
-          tags: [
+          Id: 'message-tx-345',
+          Signature: 'sig-345',
+          Owner: 'owner-345',
+          Tags: [
             { name: 'Data-Protocol', value: 'ao' },
-            { name: 'ao-type', value: 'message' },
+            { name: 'Type', value: 'Message' },
             { name: 'function', value: 'notify' }
           ],
-          data: 'foobar'
+          Data: 'foobar'
         }
       }
       const aoLoad = {
         message: {
-          id: 'message-tx-456',
-          tags: [
+          Id: 'message-tx-456',
+          Signature: 'sig-456',
+          Owner: 'owner-456',
+          Tags: [
             { name: 'Data-Protocol', value: 'ao' },
-            { name: 'ao-type', value: 'message' },
+            { name: 'Type', value: 'Message' },
             { name: 'function', value: 'notify' },
-            { name: 'ao-load', value: 'message-tx-123' }
+            { name: 'Load', value: 'message-tx-123' }
           ],
-          data: 'overwritten'
+          Data: 'overwritten'
         }
       }
 
@@ -130,6 +136,7 @@ describe('hydrateMessages', () => {
           assert.equal(id, 'message-tx-123')
           return {
             id: 'message-tx-123',
+            signature: 'sig-123',
             anchor: 'anchor-123',
             owner: {
               address: 'owner-123'
@@ -158,13 +165,14 @@ describe('hydrateMessages', () => {
           ...aoLoad.message,
           // original data overwritten with constructed data item
           data: {
-            id: 'message-tx-123',
-            anchor: 'anchor-123',
-            owner: 'owner-123',
-            tags: [
+            Id: 'message-tx-123',
+            Signature: 'sig-123',
+            Owner: 'owner-123',
+            Tags: [
               { name: 'foo', value: 'bar' }
             ],
-            data: bytesToBase64(await new Response('Hello World 🤖❌⚡️').arrayBuffer())
+            Anchor: 'anchor-123',
+            Data: bytesToBase64(await new Response('Hello World 🤖❌⚡️').arrayBuffer())
           }
         }
       })

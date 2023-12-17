@@ -131,21 +131,3 @@ export function findRawTag (name, tags) {
     head
   )(tags)
 }
-
-/**
-* Pad the block height portion of the sortKey to 12 characters
-*
-* This should work to increment and properly pad any sort key:
-* - 000001257294,1694181441598,fb1ebd7d621d1398acc03e108b7a593c6960c6e522772c974cd21c2ba7ac11d5 (full Sequencer sort key)
-* - 000001257294,fb1ebd7d621d1398acc03e108b7a593c6960c6e522772c974cd21c2ba7ac11d5 (Smartweave protocol sort key)
-* - 1257294,1694181441598,fb1ebd7d621d1398acc03e108b7a593c6960c6e522772c974cd21c2ba7ac11d5 (missing padding)
-* - 1257294 (just block height)
-*
-* @param {string} sortKey - the sortKey to be padded. If the sortKey is of sufficient length, then no padding
-* is added.
-*/
-export function padBlockHeight (sortKey) {
-  if (!sortKey) return sortKey
-  const [height, ...rest] = String(sortKey).split(',')
-  return [height.padStart(12, '0'), ...rest].join(',')
-}

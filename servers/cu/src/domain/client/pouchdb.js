@@ -2,7 +2,7 @@ import { deflate, inflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, lensPath, map, omit, pipe, prop, set } from 'ramda'
+import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -46,13 +46,13 @@ const messageHashDocSchema = z.object({
   type: z.literal('messageHash')
 })
 
-function createEvaluationId ({ processId, sortKey }) {
+function createEvaluationId ({ processId, timestamp, cron }) {
   /**
    * transactions can sometimes start with an underscore,
    * which is not allowed in PouchDB, so prepend to create
    * an _id
    */
-  return `eval-${[processId, sortKey].join(',')}`
+  return `eval-${[processId, timestamp, cron].filter(isNotNil).join(',')}`
 }
 
 function createProcessId ({ processId }) {
@@ -147,22 +147,22 @@ export function findLatestEvaluationWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: createEvaluationId({ processId, sortKey: '' }),
-        $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
+        $gte: createEvaluationId({ processId, timestamp: '' }),
+        $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
     /**
-     * overwrite upper range with actual sortKey, since we have it
+     * overwrite upper range with actual timestamp, since we have it
      */
-    if (to) selector._id.$lte = createEvaluationId({ processId, sortKey: to })
+    if (to) selector._id.$lte = createEvaluationId({ processId, timestamp: to })
     return selector
   }
 
   const foundEvaluationDocSchema = z.object({
     _id: z.string().min(1),
-    sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
+    timestamp: evaluationSchema.shape.timestamp,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     output: evaluationSchema.shape.output,
@@ -209,11 +209,10 @@ export function findLatestEvaluationWith ({ pouchDb }) {
        */
       .map(foundEvaluationDocSchema.parse)
       .map(applySpec({
-        sortKey: prop('sortKey'),
         processId: prop('processId'),
         messageId: prop('messageId'),
-        evaluatedAt: prop('evaluatedAt')
-        isCron: prop('isCron'),
+        timestamp: prop('timestamp'),
+        cron: prop('cron'),
         evaluatedAt: prop('evaluatedAt'),
         output: prop('output')
       }))
@@ -224,13 +223,13 @@ export function findLatestEvaluationWith ({ pouchDb }) {
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   const logger = _logger.child('pouchDb:saveEvaluation')
 
-  const savedEvaluationDocSchema = z.object({
+  const saveEvaluationInputSchema = z.object({
     _id: z.string().min(1),
     deepHash: z.string().optional(),
-    sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
-    isCron: evaluationSchema.shape.isCron,
+    timestamp: evaluationSchema.shape.timestamp,
+    cron: evaluationSchema.shape.cron,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     /**
@@ -258,7 +257,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
       .chain(fromPromise(async (evaluation) =>
         applySpec({
         /**
-         * The processId concatenated with the sortKey
+         * The processId concatenated with the timestamp, and possible the cron (if defined)
          * is used as the _id for an evaluation
          *
          * This makes it easier to query using a range query against the
@@ -267,12 +266,18 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
           _id: (evaluation) =>
             createEvaluationId({
               processId: evaluation.processId,
-              sortKey: evaluation.sortKey
+              timestamp: evaluation.timestamp,
+              /**
+               * By appending the cron identifier to the evaluation doc _id,
+               *
+               * this guarantees the document will have a unique, but sortable, _id
+               */
+              cron: evaluation.cron
             }),
-          sortKey: prop('sortKey'),
           processId: prop('processId'),
           messageId: prop('messageId'),
-          isCron: prop('isCron'),
+          timestamp: prop('timestamp'),
+          cron: prop('cron'),
           parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
           output: pipe(
             prop('output'),
@@ -309,7 +314,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
       /**
        * Ensure the expected shape before writing to the db
        */
-      .map(savedEvaluationDocSchema.parse)
+      .map(saveEvaluationInputSchema.parse)
       .map((evaluationDoc) => {
         if (!evaluation.deepHash) return [evaluationDoc]
 
@@ -347,16 +352,16 @@ export function findEvaluationsWith ({ pouchDb }) {
      */
     const selector = {
       _id: {
-        $gte: createEvaluationId({ processId, sortKey: '' }),
-        $lte: createEvaluationId({ processId, sortKey: COLLATION_SEQUENCE_MAX_CHAR })
+        $gte: createEvaluationId({ processId, timestamp: '' }),
+        $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
 
     /**
      * trim range using sort keys, if provided
      */
-    if (from) selector._id.$gte = `${createEvaluationId({ processId, sortKey: from })},`
-    if (to) selector._id.$lte = `${createEvaluationId({ processId, sortKey: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
+    if (from) selector._id.$gte = `${createEvaluationId({ processId, timestamp: from })},`
+    if (to) selector._id.$lte = `${createEvaluationId({ processId, timestamp: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
 
     return selector
   }
@@ -376,11 +381,10 @@ export function findEvaluationsWith ({ pouchDb }) {
       }))
       .map(
         map(applySpec({
-          sortKey: prop('sortKey'),
           processId: prop('processId'),
           messageId: prop('messageId'),
-          evaluatedAt: prop('evaluatedAt')
-          isCron: prop('isCron'),
+          timestamp: prop('timestamp'),
+          cron: prop('cron'),
           evaluatedAt: prop('evaluatedAt'),
           output: prop('output')
         }))

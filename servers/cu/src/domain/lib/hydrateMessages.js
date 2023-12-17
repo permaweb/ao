@@ -67,8 +67,13 @@ export function maybeMessageIdWith ({ logger }) {
         continue
       }
 
-      logger('Message "%s" is forwarded. Calculating messageId...', cur.sortKey)
-      cur.deepHash = await calcDataItemDeepHash(cur.message)
+      logger('Message "%s" is forwarded. Calculating messageId...', cur.message.Id)
+      cur.deepHash = await calcDataItemDeepHash({
+        data: cur.message.Data,
+        tags: cur.message.Tags,
+        target: cur.message.Target,
+        anchor: cur.message.Anchor
+      })
       yield cur
     }
   }
@@ -85,30 +90,31 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
    */
   function messageFromParts ({ data, meta }) {
     return {
-      id: meta.id,
-      owner: meta.owner.address,
-      tags: meta.tags,
-      anchor: meta.anchor,
+      Id: meta.id,
+      Signature: meta.signature,
+      Owner: meta.owner.address,
+      Tags: meta.tags,
+      Anchor: meta.anchor,
       /**
        * Encode the array buffer of the raw data as base64
        */
-      data: bytesToBase64(data)
+      Data: bytesToBase64(data)
     }
   }
 
   return async function * maybeAoLoad (messages) {
     for await (const cur of messages) {
-      const tag = findRawTag('ao-load', cur.message.tags)
+      const tag = findRawTag('Load', cur.message.Tags)
       /**
-       * Either a scheduled message (which has no id)
+       * Either a cron message (which has no id)
        * or not an ao-load message, so no work is needed
        */
-      if (!tag || !cur.message.id) {
+      if (!tag || !cur.message.Id) {
         yield cur
         continue
       }
 
-      logger('Hydrating ao-load message for "%s" from transaction "%s"', cur.sortKey, tag.value)
+      logger('Hydrating ao-load message for "%s" from transaction "%s"', cur.message.Id, tag.value)
       /**
        * - Fetch raw data and meta from gateway
        * - contruct the data item JSON, encoding the raw data as base64
@@ -119,7 +125,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         loadTransactionMeta(tag.value)
       ]).then(([data, meta]) => messageFromParts({ data, meta }))
 
-      logger('Hydrated ao-load message for "%s" from transaction "%s" and attached as data', cur.sortKey, tag.value)
+      logger('Hydrated ao-load message for "%s" from transaction "%s" and attached as data', cur.message.Id, tag.value)
 
       yield cur
     }
