@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.19](https://github.com/permaweb/ao/compare/sdk@v0.0.18...sdk@v0.0.19) (2023-12-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sdk:** post process and message to root of MU #208
+* **sdk:** messageId -> message on result api
+* **sdk:** add proper tags to ao Message and verify proper process tags. Allow passing data #216
+* **sdk:** verify presence of scheduler tag on spawn. remove id suffix from inputs #210 #212
+* **sdk:** verify tags on module #212
+* **sdk:** srcId -> moduleId on spawn and set proper tags #210
+* **sdk:** sendMessage -> message, spawnProcess -> spawn, readResult -> result #207
+
+* **sdk:** post process and message to root of MU [#208](https://github.com/permaweb/ao/issues/208) ([436863a](https://github.com/permaweb/ao/commit/436863a0bb4d79aa09e4f558b27534c7de7b3617))
+
+
+### Features
+
+* **sdk:** add proper tags to ao Message and verify proper process tags. Allow passing data [#216](https://github.com/permaweb/ao/issues/216) ([34699c8](https://github.com/permaweb/ao/commit/34699c80221add25cc08cc1d9b83c4b7a585682d))
+* **sdk:** allow passing data to spawn [#210](https://github.com/permaweb/ao/issues/210) ([4d11262](https://github.com/permaweb/ao/commit/4d1126236ebbeb9ea6b63853e7a2d52f853e156f))
+* **sdk:** locate process scheduler on message in order to verify ao Process [#229](https://github.com/permaweb/ao/issues/229) ([4c71c28](https://github.com/permaweb/ao/commit/4c71c28297b723e7db7eca155ca371a665729454))
+* **sdk:** messageId -> message on result api ([95fb277](https://github.com/permaweb/ao/commit/95fb277fc50e76fe53c8f855dcec112013accda1))
+* **sdk:** sendMessage -> message, spawnProcess -> spawn, readResult -> result [#207](https://github.com/permaweb/ao/issues/207) ([b3cdc3a](https://github.com/permaweb/ao/commit/b3cdc3ab72518a122255591964c6f018aa58c559))
+* **sdk:** srcId -> moduleId on spawn and set proper tags [#210](https://github.com/permaweb/ao/issues/210) ([8693881](https://github.com/permaweb/ao/commit/86938811cc7e51cfc23cc942da3e095741cd361e))
+* **sdk:** validate provided scheduler on spawn [#214](https://github.com/permaweb/ao/issues/214) ([04c212f](https://github.com/permaweb/ao/commit/04c212f70f488c0dc6375cce50c5d4d3ffe85e43))
+* **sdk:** verify presence of scheduler tag on spawn. remove id suffix from inputs [#210](https://github.com/permaweb/ao/issues/210) [#212](https://github.com/permaweb/ao/issues/212) ([fc9f22e](https://github.com/permaweb/ao/commit/fc9f22e43f1da0a5f214bc5951f2babf25b30aef))
+* **sdk:** verify tags on module [#212](https://github.com/permaweb/ao/issues/212) ([8b6b329](https://github.com/permaweb/ao/commit/8b6b329cbb804ad44a6e19e6f17f296f9274612b))
+
 ## [0.0.18](https://github.com/permaweb/ao/compare/sdk@v0.0.17...sdk@v0.0.18) (2023-11-10)
 
 
