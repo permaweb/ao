@@ -15,7 +15,6 @@ export const server = pipe(
   (app) => app.use(express.static(config.DUMP_PATH)),
   (app) => app.use(cors()),
   (app) => app.use(express.json({ type: 'application/json' })),
-  (app) => app.get('/', (_req, res) => res.send('ao compute unit')),
   withRoutes,
   app => {
     const server = app.listen(config.port, () => {
