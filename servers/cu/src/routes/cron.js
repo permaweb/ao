@@ -26,7 +26,7 @@ const inputSchema = z.object({
   to: z.string().optional()
 })
 
-export const withScheduledRoutes = app => {
+export const withCronRoutes = app => {
   const cronConnection = toConnection({
     nodeFn: (evaluation) => evaluation.output,
     cursorFn: (evaluation) => evaluation.timestamp
