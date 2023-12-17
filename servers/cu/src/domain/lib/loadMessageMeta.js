@@ -14,7 +14,7 @@ const ctxSchema = z.object({
   processId: z.any().refine((val) => !!val, {
     message: 'processId must be attached to context'
   }),
-  timestamp: z.string().refine((val) => !!val, {
+  timestamp: z.number().refine((val) => !!val, {
     message: 'timestamp must be attached to context'
   })
 }).passthrough()

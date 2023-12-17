@@ -165,13 +165,13 @@ export function evaluateWith (env) {
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
-        for await (const { message, deepHash, sortKey, AoGlobal } of ctx.messages) {
+        for await (const { cron, message, deepHash, AoGlobal } of ctx.messages) {
           /**
            * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
            * if their deepHash is found in the cache, this prevents duplicate evals
            */
           if (deepHash) {
-            logger('Checking if "%s" has already been evaluated...', sortKey)
+            logger('Checking if "%s" has already been evaluated...', message.Id)
             const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
               logger('Message with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', deepHash)
@@ -184,7 +184,7 @@ export function evaluateWith (env) {
             .then(prev =>
               Promise.resolve(prev.Memory)
                 .then(Memory => {
-                  logger('Evaluating message with sortKey "%s" to process "%s"', sortKey, ctx.id)
+                  logger('Evaluating message with id "%s" to process "%s"', message.Id, ctx.id)
                   return Memory
                 })
                 /**
@@ -206,7 +206,7 @@ export function evaluateWith (env) {
                     : Promise.resolve(output)
                 })
                 .then(output => {
-                  logger('Applied message with sortKey "%s" to process "%s"', sortKey, ctx.id)
+                  logger('Applied message with id "%s" to process "%s"', message.Id, ctx.id)
                   return output
                 })
               /**
@@ -215,17 +215,19 @@ export function evaluateWith (env) {
                 .then((output) =>
                   saveEvaluation({
                     deepHash,
-                    sortKey,
+                    cron,
                     processId: ctx.id,
-                    output,
-                    evaluatedAt: new Date()
+                    messageId: message.Id,
+                    timestamp: message.Timestamp,
+                    evaluatedAt: new Date(),
+                    output
                   })
                     .map(() => output)
                     .toPromise()
                 )
                 .catch(logger.tap(
-                  'Error occurred when applying message with sortKey "%s" to process "%s" %o',
-                  sortKey,
+                  'Error occurred when applying message with id "%s" to process "%s" %o',
+                  message.Id,
                   ctx.id
                 ))
             )

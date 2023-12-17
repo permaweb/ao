@@ -35,7 +35,6 @@ describe('evaluate', () => {
                 { name: 'function', value: 'hello' }
               ]
             },
-            sortKey: 'a',
             AoGlobal: {}
           },
           {
@@ -45,7 +44,6 @@ describe('evaluate', () => {
                 { name: 'function', value: 'world' }
               ]
             },
-            sortKey: 'b',
             AoGlobal: {}
           }
         ])
@@ -152,7 +150,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'hello' }
             ]
           },
-          sortKey: 'a',
           AoGlobal: {}
         },
         {
@@ -162,7 +159,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'world' }
             ]
           },
-          sortKey: 'b',
           AoGlobal: {}
         }
       ])
@@ -208,7 +204,6 @@ describe('evaluate', () => {
             ]
           },
           deepHash: 'deephash-123',
-          sortKey: 'a',
           AoGlobal: {}
         },
         {
@@ -219,7 +214,6 @@ describe('evaluate', () => {
             ]
           },
           deepHash: 'deephash-456',
-          sortKey: 'b',
           AoGlobal: {}
         },
         // no deep hash
@@ -230,7 +224,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'world' }
             ]
           },
-          sortKey: 'b',
           AoGlobal: {}
         }
       ])
@@ -302,7 +295,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'errorResult' }
             ]
           },
-          sortKey: 'a',
           AoGlobal: {}
         }
       ])
@@ -349,7 +341,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'errorThrow' }
             ]
           },
-          sortKey: 'a',
           AoGlobal: {}
         }
       ])
@@ -389,7 +380,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'errorUnhandled' }
             ]
           },
-          sortKey: 'a',
           AoGlobal: {}
         }
       ])
@@ -428,7 +418,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'errorResult' }
             ]
           },
-          sortKey: 'a',
           AoGlobal: {}
         },
         {
@@ -439,7 +428,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'counter' }
             ]
           },
-          sortKey: 'b',
           AoGlobal: {}
         },
         {
@@ -450,7 +438,6 @@ describe('evaluate', () => {
               { name: 'function', value: 'counter' }
             ]
           },
-          sortKey: 'c',
           AoGlobal: {}
         }
       ])

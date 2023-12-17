@@ -41,10 +41,10 @@ export function gatherCronOutboxesWith (env) {
             /**
              * Evaluations from a Cron message have a flag set indicating they it
              * came from a Cron message
-             * 
+             *
              * so filter out all evalations that did not result from a Cron Message
              */
-            filter((evaluation) => evaluation.isCron),
+            filter((evaluation) => !!evaluation.cron),
             /**
              * Extract the Outbox as a result of evaluating the Cron Message
              */

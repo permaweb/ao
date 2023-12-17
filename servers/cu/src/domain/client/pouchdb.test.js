@@ -160,7 +160,7 @@ describe('pouchdb', () => {
                 selector: {
                   _id: {
                     $gte: 'eval-process-123,',
-                    $lte: 'eval-process-123,sortkey-910'
+                    $lte: 'eval-process-123,1702677252111'
                   }
                 },
                 sort: [{ _id: 'desc' }],
@@ -169,8 +169,8 @@ describe('pouchdb', () => {
               return {
                 docs: [
                   {
-                    _id: 'eval-process-123,sortkey-890',
-                    sortKey: 'sortkey-890',
+                    _id: 'eval-process-123,1702677252111',
+                    timestamp: 1702677252111,
                     processId: 'process-123',
                     messageId: 'message-123',
                     parent: 'proc-process-123',
@@ -182,7 +182,7 @@ describe('pouchdb', () => {
               }
             },
             getAttachment: async (_id, name) => {
-              assert.equal(_id, 'eval-process-123,sortkey-890')
+              assert.equal(_id, 'eval-process-123,1702677252111')
               assert.equal(name, 'memory.txt')
               // impl will inflate this buffer
               return deflateP(Memory)
@@ -193,10 +193,10 @@ describe('pouchdb', () => {
 
       const res = await findLatestEvaluation({
         processId: 'process-123',
-        to: 'sortkey-910'
+        to: 1702677252111
       })
 
-      assert.equal(res.sortKey, 'sortkey-890')
+      assert.equal(res.timestamp, 1702677252111)
       assert.equal(res.processId, 'process-123')
       assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
@@ -223,8 +223,8 @@ describe('pouchdb', () => {
               return {
                 docs: [
                   {
-                    _id: 'eval-process-123,sortkey-890',
-                    sortKey: 'sortkey-890',
+                    _id: 'eval-process-123,1702677252111',
+                    timestamp: 1702677252111,
                     processId: 'process-123',
                     messageId: 'message-123',
                     parent: 'proc-process-123',
@@ -236,7 +236,7 @@ describe('pouchdb', () => {
               }
             },
             getAttachment: async (_id, name) => {
-              assert.equal(_id, 'eval-process-123,sortkey-890')
+              assert.equal(_id, 'eval-process-123,1702677252111')
               assert.equal(name, 'memory.txt')
               // impl will inflate this buffer
               return deflateP(Memory)
@@ -249,7 +249,7 @@ describe('pouchdb', () => {
         processId: 'process-123'
       })
 
-      assert.equal(res.sortKey, 'sortkey-890')
+      assert.equal(res.timestamp, 1702677252111)
       assert.equal(res.processId, 'process-123')
       assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
@@ -266,7 +266,7 @@ describe('pouchdb', () => {
       )
       await findLatestEvaluation({
         processId: 'process-123',
-        to: 'sortkey-910'
+        to: '1702677252111'
       })
         .then(assert.fail)
         .catch(() => assert.ok(true))
@@ -274,7 +274,7 @@ describe('pouchdb', () => {
   })
 
   describe('saveEvaluation', () => {
-    test('save the evaluation to pouchdb with the buffer as an attachment, and the messageHash', async () => {
+    test('save the evaluation to pouchdb with the Memory as an attachment, and the messageHash', async () => {
       const evaluatedAt = new Date().toISOString()
       const Memory = Buffer.from('Hello World', 'utf-8')
 
@@ -285,8 +285,9 @@ describe('pouchdb', () => {
               const { _attachments, evaluatedAt, ...rest } = evaluationDoc
 
               assert.deepStrictEqual(rest, {
-                _id: 'eval-process-123,sortkey-890',
-                sortKey: 'sortkey-890',
+                _id: 'eval-process-123,1702677252111',
+                cron: undefined,
+                timestamp: 1702677252111,
                 processId: 'process-123',
                 messageId: 'message-123',
                 parent: 'proc-process-123',
@@ -310,7 +311,7 @@ describe('pouchdb', () => {
 
               assert.deepStrictEqual(messageIdDoc, {
                 _id: 'messageHash-deepHash-123',
-                parent: 'eval-process-123,sortkey-890',
+                parent: 'eval-process-123,1702677252111',
                 type: 'messageHash'
               })
               return Promise.resolve(true)
@@ -322,7 +323,7 @@ describe('pouchdb', () => {
 
       await saveEvaluation({
         deepHash: 'deepHash-123',
-        sortKey: 'sortkey-890',
+        timestamp: 1702677252111,
         processId: 'process-123',
         messageId: 'message-123',
         output: { Memory, Messages: [{ foo: 'bar' }] },
@@ -348,7 +349,7 @@ describe('pouchdb', () => {
 
       await saveEvaluation({
         // no deep hash
-        sortKey: 'sortkey-890',
+        timestamp: 1702677252111,
         processId: 'process-123',
         messageId: 'message-123',
         output: { Memmory, Messages: [{ foo: 'bar' }] },
@@ -361,8 +362,8 @@ describe('pouchdb', () => {
     test('return the list of all evaluations', async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
-        _id: 'eval-process-123,sortkey-890',
-        sortKey: 'sortkey-890',
+        _id: 'eval-process-123,1702677252111',
+        timestamp: 1702677252111,
         processId: 'process-123',
         messageId: 'message-123',
         parent: 'proc-process-123',
@@ -403,8 +404,8 @@ describe('pouchdb', () => {
     test("return the evaluations between 'from' and 'to'", async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
-        _id: 'eval-process-123,sortkey-890',
-        sortKey: 'sortkey-890',
+        _id: 'eval-process-123,1702677252111',
+        timestamp: 1702677252111,
         processId: 'process-123',
         messageId: 'message-123',
         parent: 'process-123',
@@ -419,8 +420,8 @@ describe('pouchdb', () => {
               assert.deepStrictEqual(op, {
                 selector: {
                   _id: {
-                    $gte: 'eval-process-123,sortkey-123,',
-                    $lte: `eval-process-123,sortkey-456,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $gte: 'eval-process-123,1702677252111,',
+                    $lte: `eval-process-123,1702677252111,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
                 sort: [{ _id: 'asc' }],
@@ -439,8 +440,8 @@ describe('pouchdb', () => {
 
       const res = await findEvaluations({
         processId: 'process-123',
-        from: 'sortkey-123',
-        to: 'sortkey-456'
+        from: 1702677252111,
+        to: 1702677252111
       })
 
       assert.equal(res.length, 2)
