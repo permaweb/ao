@@ -41,20 +41,20 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
-    SEQUENCER_URL: process.env.SEQUENCER_URL || 'https://ao-su-1.onrender.com',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     DB_PATH: process.env.DB_PATH || 'ao-cache',
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
-    DUMP_PATH: process.env.DUMP_PATH || './static'
+    DUMP_PATH: process.env.DUMP_PATH || './static',
+    WALLET: process.env.WALLET
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
-    SEQUENCER_URL: process.env.SEQUENCER_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
     DB_PATH: process.env.DB_PATH,
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
-    DUMP_PATH: process.env.DUMP_PATH
+    DUMP_PATH: process.env.DUMP_PATH,
+    WALLET: process.env.WALLET
   }
 }
 
