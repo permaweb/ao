@@ -38,7 +38,7 @@ export const saveProcessSchema = z.function()
   .returns(z.promise(z.any()))
 
 export const findLatestEvaluationSchema = z.function()
-  .args(z.object({ processId: z.string(), to: z.number().optional() }))
+  .args(z.object({ processId: z.string(), to: z.coerce.number().optional() }))
   .returns(z.promise(evaluationSchema))
 
 export const saveEvaluationSchema = z.function()
@@ -48,8 +48,8 @@ export const saveEvaluationSchema = z.function()
 export const findEvaluationsSchema = z.function()
   .args(z.object({
     processId: z.string(),
-    from: z.number().optional(),
-    to: z.number().optional()
+    from: z.coerce.number().optional(),
+    to: z.coerce.number().optional()
   }))
   .returns(z.promise(z.array(evaluationSchema)))
 
@@ -74,8 +74,8 @@ export const loadMessagesSchema = z.function()
       suUrl: z.string().url(),
       processId: z.string(),
       owner: z.string(),
-      from: z.number().optional(),
-      to: z.number().optional()
+      from: z.coerce.string().optional(),
+      to: z.coerce.string().optional()
     })
   )
   /**

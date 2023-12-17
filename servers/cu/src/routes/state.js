@@ -17,8 +17,11 @@ export const withStateRoutes = (app) => {
       withMiddleware,
       withInMemoryCache({
         keyer: (req) => {
-          const { params: { messageTxId } } = req
-          return messageTxId
+          const {
+            params: { processId },
+            query: { to }
+          } = req
+          return `${processId}${to}`
         },
         loader: async (requests) => {
           return requests.map(async ({ req, res }) => {
@@ -39,7 +42,7 @@ export const withStateRoutes = (app) => {
                  * and then return only the buffer received from BL
                  */
                 res.header('Content-Type', 'application/octet-stream')
-                return output.buffer
+                return output.Memory
               })
               .toPromise()
               /**
