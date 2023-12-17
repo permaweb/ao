@@ -1,14 +1,27 @@
-# Use the latest version of the Rust base image
-FROM rust:latest
+# Stage 1: Build the static binary
+FROM clux/muslrust:latest as builder
 
-# Set the working directory in the container to /my
+# Set the working directory in the container
 WORKDIR /usr/src/su
 
-# Copy the Rust project files to the working directory
-COPY . .
+# Copy the manifests
+COPY Cargo.toml Cargo.lock ./
 
-# Build the Rust app
-RUN cargo build
+# This step is to cache your dependencies
+RUN mkdir src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo build --release --target x86_64-unknown-linux-musl && \
+    rm -f target/x86_64-unknown-linux-musl/release/deps/su*
 
-# Set the command to run the Rust app
-CMD cargo run
+# Now copy the actual source code and build the application
+COPY src ./src
+RUN cargo build --release --target x86_64-unknown-linux-musl
+
+# Stage 2: Create the runtime image
+# FROM scratch
+
+# Copy the statically-linked binary from the builder stage
+# COPY --from=builder /usr/src/su/target/x86_64-unknown-linux-musl/release/su .
+
+# Run the binary
+# CMD ["./su"]
