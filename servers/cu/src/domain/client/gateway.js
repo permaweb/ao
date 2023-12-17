@@ -23,6 +23,7 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
         edges {
           node {
             id
+            signature
             anchor
             owner {
               address

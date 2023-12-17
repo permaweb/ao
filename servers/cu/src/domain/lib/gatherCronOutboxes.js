@@ -39,10 +39,12 @@ export function gatherCronOutboxesWith (env) {
         transduce(
           compose(
             /**
-             * cron messages have the interval and idx appended to their "sortKey"
-             * and so can be distinguished by how many parts after splitting on ','
+             * Evaluations from a Cron message have a flag set indicating they it
+             * came from a Cron message
+             * 
+             * so filter out all evalations that did not result from a Cron Message
              */
-            filter((evaluation) => evaluation.sortKey.split(',').length > 3),
+            filter((evaluation) => evaluation.isCron),
             /**
              * Extract the Outbox as a result of evaluating the Cron Message
              */
@@ -50,10 +52,10 @@ export function gatherCronOutboxesWith (env) {
             map(pipe(
               defaultTo({}),
               applySpec({
-                messages: pathOr([], ['messages']),
-                spawns: pathOr([], ['spawns']),
-                output: pathOr(undefined, ['output']),
-                error: pathOr(undefined, ['error'])
+                Messages: pathOr([], ['Messages']),
+                Spawns: pathOr([], ['Spawns']),
+                Output: pathOr(undefined, ['Output']),
+                Error: pathOr(undefined, ['Error'])
               })
             ))
           ),

@@ -162,13 +162,14 @@ export function findLatestEvaluationWith ({ pouchDb }) {
     _id: z.string().min(1),
     sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
+    messageId: evaluationSchema.shape.messageId,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     output: evaluationSchema.shape.output,
     type: z.literal('evaluation')
   })
 
-  const bufferLens = lensPath(['output', 'buffer'])
+  const memoryLens = lensPath(['output', 'Memory'])
 
   return ({ processId, to }) => {
     return of({ processId, to })
@@ -196,11 +197,11 @@ export function findLatestEvaluationWith ({ pouchDb }) {
        * and set it on the output.buffer field to match the expected output shape
        */
       .chain(fromPromise(async (doc) => {
-        const buffer = await pouchDb.getAttachment(doc._id, 'buffer.txt')
+        const buffer = await pouchDb.getAttachment(doc._id, 'memory.txt')
         /**
          * Make sure to decompress the state buffer
          */
-        return set(bufferLens, await inflateP(buffer), doc)
+        return set(memoryLens, await inflateP(buffer), doc)
       }))
       /**
        * Ensure the input matches the expected
@@ -210,8 +211,11 @@ export function findLatestEvaluationWith ({ pouchDb }) {
       .map(applySpec({
         sortKey: prop('sortKey'),
         processId: prop('processId'),
-        output: prop('output'),
+        messageId: prop('messageId'),
         evaluatedAt: prop('evaluatedAt')
+        isCron: prop('isCron'),
+        evaluatedAt: prop('evaluatedAt'),
+        output: prop('output')
       }))
       .toPromise()
   }
@@ -225,12 +229,14 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
     deepHash: z.string().optional(),
     sortKey: evaluationSchema.shape.sortKey,
     processId: evaluationSchema.shape.processId,
+    messageId: evaluationSchema.shape.messageId,
+    isCron: evaluationSchema.shape.isCron,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     /**
      * Omit buffer from the document schema (see _attachments below)
      */
-    output: evaluationSchema.shape.output.omit({ buffer: true }),
+    output: evaluationSchema.shape.output.omit({ Memory: true }),
     type: z.literal('evaluation'),
     /**
      * Since Bibo, the state of a process is a buffer, so we will store it as
@@ -240,7 +246,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
      * See https://pouchdb.com/api.html#save_attachment
      */
     _attachments: z.object({
-      'buffer.txt': z.object({
+      'memory.txt': z.object({
         content_type: z.literal('text/plain'),
         data: z.any()
       })
@@ -265,6 +271,8 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
             }),
           sortKey: prop('sortKey'),
           processId: prop('processId'),
+          messageId: prop('messageId'),
+          isCron: prop('isCron'),
           parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
           output: pipe(
             prop('output'),
@@ -273,7 +281,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
              * on the document. We will instead persist the state buffer
              * as an attachment (see below)
              */
-            omit(['buffer'])
+            omit(['Memory'])
           ),
           evaluatedAt: prop('evaluatedAt'),
           type: always('evaluation'),
@@ -285,7 +293,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
            * See https://pouchdb.com/api.html#save_attachment
            */
           _attachments: always({
-            'buffer.txt': {
+            'memory.txt': {
               content_type: 'text/plain',
               /**
                * zlib compress the buffer before persisting
@@ -293,7 +301,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
                * In testing, this results in orders of magnitude
                * smaller buffer and smaller persistence times
                */
-              data: await deflateP(evaluation.output.buffer)
+              data: await deflateP(evaluation.output.Memory)
             }
           })
         })(evaluation)
@@ -370,8 +378,11 @@ export function findEvaluationsWith ({ pouchDb }) {
         map(applySpec({
           sortKey: prop('sortKey'),
           processId: prop('processId'),
-          output: prop('output'),
+          messageId: prop('messageId'),
           evaluatedAt: prop('evaluatedAt')
+          isCron: prop('isCron'),
+          evaluatedAt: prop('evaluatedAt'),
+          output: prop('output')
         }))
       )
       .toPromise()

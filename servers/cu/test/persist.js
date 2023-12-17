@@ -58,7 +58,7 @@ console.time('put')
 await pouchDb.put({
   _id: 'process_1,a',
   _attachments: {
-    'buffer.txt': {
+    'memory.txt': {
       content_type: 'text/plain',
       data: compressed
     }
@@ -68,7 +68,7 @@ console.timeEnd('put')
 
 // Retrieve from Database
 console.time('get')
-const fromDb = await pouchDb.getAttachment('process_1,a', 'buffer.txt')
+const fromDb = await pouchDb.getAttachment('process_1,a', 'memory.txt')
 console.timeEnd('get')
 const inflated = promisify(inflate)(fromDb)
 

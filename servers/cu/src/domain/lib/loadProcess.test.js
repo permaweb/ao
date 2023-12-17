@@ -85,6 +85,8 @@ describe('loadProcess', () => {
     const cachedEvaluation = {
       sortKey: 'sortkey-123',
       processId: PROCESS,
+      messageId: 'message-123',
+      timestamp: 1697574792000,
       evaluatedAt: new Date(),
       message: {
         tags: [
@@ -117,7 +119,7 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findLatestEvaluation: async ({ processId, to }) => {
         assert.equal(processId, PROCESS)
-        assert.equal(to, 'sortkey-123')
+        assert.equal(to, '1697574792000')
         return cachedEvaluation
       },
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
@@ -132,7 +134,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
     assert.deepStrictEqual(res.buffer, cachedEvaluation.output.buffer)
     assert.deepStrictEqual(res.result, omit(['buffer'], cachedEvaluation.output))
-    assert.deepStrictEqual(res.from, cachedEvaluation.sortKey)
+    assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)
   })
