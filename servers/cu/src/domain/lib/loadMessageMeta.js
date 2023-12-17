@@ -14,8 +14,8 @@ const ctxSchema = z.object({
   processId: z.any().refine((val) => !!val, {
     message: 'processId must be attached to context'
   }),
-  sortKey: z.string().refine((val) => !!val, {
-    message: 'sortKey must be attached to context'
+  timestamp: z.string().refine((val) => !!val, {
+    message: 'timestamp must be attached to context'
   })
 }).passthrough()
 
@@ -25,7 +25,7 @@ const ctxSchema = z.object({
  *
  * @typedef Result
  * @property {string} processId - the id of the process that the message is for
- * @property {string} sortKey - the sort key of the message
+ * @property {string} timestamp - the timestamp of the message
  *
  * @callback LoadMessageMeta
  * @param {Args} args
@@ -49,6 +49,6 @@ export function loadMessageMetaWith (env) {
         messageTxId: ctx.messageTxId
       }))
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded message process and sortKey and appended to ctx %j'))
+      .map(logger.tap('Loaded message process and timestamp and appended to ctx %j'))
   }
 }

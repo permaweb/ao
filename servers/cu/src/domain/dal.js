@@ -98,7 +98,10 @@ export const loadProcessSchema = z.function()
   ))
 
 export const loadTimestampSchema = z.function()
-  .args(z.string().url())
+  .args(z.object({
+    suUrl: z.string().url(),
+    processId: z.string().min(1)
+  }))
   .returns(z.promise(z.object({
     height: z.number(),
     timestamp: z.number()
@@ -113,7 +116,7 @@ export const loadMessageMetaSchema = z.function()
   .returns(z.promise(
     z.object({
       processId: z.string().min(1),
-      sortKey: z.string().min(1)
+      timestamp: z.coerce.number()
     })
   ))
 
