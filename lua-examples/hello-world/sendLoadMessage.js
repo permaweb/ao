@@ -10,14 +10,13 @@ if (!PROCESS_ID) throw new Error('PROCESS_ID env var is required, so as to know 
 
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 
-const { sendMessage } = connect()
+const { message } = connect()
 
-await sendMessage({
-  processId: PROCESS_ID,
+await message({
+  process: PROCESS_ID,
   tags: [
-    { name: 'Data-Protocol', value: 'ao' },
     { name: 'function', value: 'say' },
-    { name: 'ao-load', value: SAY_ID }
+    { name: 'Load', value: SAY_ID }
   ],
   signer: createDataItemSigner(wallet)
 }).then(console.log)

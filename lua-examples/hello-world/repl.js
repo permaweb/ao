@@ -11,7 +11,7 @@ const rl = readline.createInterface({
 })
 
 const env = {
-  process: {
+  Process: {
     id: 'PROCESS_TEST',
     owner: 'OWNER'
   }
@@ -38,10 +38,10 @@ async function repl (state) {
     // Evaluate the JavaScript code and print the result
     try {
       const message = await createMessage(line)
-      const { buffer, output } = handle(state, message, env)
-      if (output) console.log(JSON.parse(output))
+      const { Memory, Output } = handle(state, message, env)
+      if (Output) console.log(JSON.parse(Output))
       // Continue the REPL
-      await repl(buffer)
+      await repl(Memory)
     } catch (err) {
       console.log('Error:', err)
       process.exit(0)
@@ -53,13 +53,13 @@ repl(null)
 
 async function createMessage (expr) {
   const message = {
-    owner: 'OWNER',
-    target: 'PROCESS',
-    tags: [
+    Owner: 'OWNER',
+    Target: 'PROCESS',
+    Tags: [
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'message' }
+      { name: 'Type', value: 'Message' }
     ],
-    data: undefined
+    Data: undefined
   }
 
   /**
@@ -68,35 +68,35 @@ async function createMessage (expr) {
    */
   if (expr.startsWith('say')) {
     const [, txId] = expr.split(' ').map(s => s.trim())
-    message.tags.push(
+    message.Tags.push(
       { name: 'function', value: 'say' },
-      { name: 'ao-load', value: txId }
+      { name: 'Load', value: txId }
     )
-    message.data = await fetch(`https://arweave.net/raw/${txId}`)
+    message.Data = await fetch(`https://arweave.net/raw/${txId}`)
       .then(res => res.arrayBuffer())
       .then(bytesToBase64)
-      .then(data => ({ data }))
+      .then(data => ({ Data: data }))
   } else if (expr.startsWith('friend')) {
     const [, srcId] = expr.split(' ').map(s => s.trim())
-    message.tags.push(
+    message.Tags.push(
       { name: 'function', value: 'friend' },
       { name: 'src-id', value: srcId },
       { name: 'extra-spawn-tag', value: 'this should reach the final process' }
     )
   } else if (expr.startsWith('ping')) {
     const [, friend] = expr.split(' ').map(s => s.trim())
-    message.tags.push(
+    message.Tags.push(
       { name: 'function', value: 'ping' },
       { name: 'friend', value: friend }
     )
   } else if (expr.startsWith('pong')) {
     const [, friend] = expr.split(' ').map(s => s.trim())
-    message.tags.push(
+    message.Tags.push(
       { name: 'function', value: 'pong' },
       { name: 'friend', value: friend }
     )
   } else {
-    message.tags.push({ name: 'function', value: expr })
+    message.Tags.push({ name: 'function', value: expr })
   }
 
   return message
