@@ -63,7 +63,7 @@ function doesMessageHashExistWith ({ findMessageHash }) {
  * @typedef EvaluateArgs
  * @property {string} id - the contract id
  * @property {Record<string, any>} state - the initial state
- * @property {string} from - the initial state sortKey
+ * @property {string} from - the initial state timestamp
  * @property {ArrayBuffer} module - the contract wasm as an array buffer
  * @property {Record<string, any>[]} action - an array of interactions to apply
  *
@@ -121,24 +121,24 @@ export function evaluateWith (env) {
        * If the output contains an error, ignore its state,
        * and use the previous message's state
        */
-      buffer: ifElse(
-        pathOr(undefined, ['error']),
-        always(prev.buffer),
-        propOr(prev.buffer, 'buffer')
+      Memory: ifElse(
+        pathOr(undefined, ['Error']),
+        always(prev.Memory),
+        propOr(prev.Memory, 'Memory')
       ),
-      error: pathOr(undefined, ['error']),
-      messages: pathOr([], ['messages']),
-      spawns: pathOr([], ['spawns']),
-      output: pipe(
-        pathOr('', ['output']),
+      Error: pathOr(undefined, ['Error']),
+      Messages: pathOr([], ['Messages']),
+      Spawns: pathOr([], ['Spawns']),
+      Output: pipe(
+        pathOr('', ['Output']),
         /**
-           * Always make sure the output
-           * is a string
-           */
+         * Always make sure the output
+         * is a string or object
+         */
         cond([
           [is(String), identity],
+          [is(Object), identity],
           [is(Number), String],
-          [is(Object), obj => JSON.stringify(obj)],
           [T, identity]
         ])
       )
@@ -154,11 +154,11 @@ export function evaluateWith (env) {
            * Ensure all result fields are initialized
            * to their identity
            */
-          buffer: pathOr(null, ['buffer']),
-          error: pathOr(undefined, ['result', 'error']),
-          messages: pathOr([], ['result', 'messages']),
-          spawns: pathOr([], ['result', 'spawns']),
-          output: pathOr([], ['result', 'output'])
+          Memory: pathOr(null, ['Memory']),
+          Error: pathOr(undefined, ['result', 'Error']),
+          Messages: pathOr([], ['result', 'Messages']),
+          Spawns: pathOr([], ['result', 'Spawns']),
+          Output: pathOr('', ['result', 'Output'])
         })(ctx)
 
         /**
@@ -182,26 +182,26 @@ export function evaluateWith (env) {
           prev = await Promise.resolve(prev)
             .then(maybeRejectError)
             .then(prev =>
-              Promise.resolve(prev.buffer)
-                .then(buffer => {
+              Promise.resolve(prev.Memory)
+                .then(Memory => {
                   logger('Evaluating message with sortKey "%s" to process "%s"', sortKey, ctx.id)
-                  return buffer
+                  return Memory
                 })
                 /**
                  * Where the actual evaluation is performed
                  */
-                .then((buffer) => ctx.handle(buffer, message, AoGlobal))
+                .then((Memory) => ctx.handle(Memory, message, AoGlobal))
                 /**
                  * Map thrown error to a result.error
                  */
-                .catch((err) => Promise.resolve(assocPath(['error'], err, {})))
+                .catch((err) => Promise.resolve(assocPath(['Error'], err, {})))
                 /**
                  * The the previous interaction output, and merge it
                  * with the output of the current interaction
                  */
                 .then(mergeOutput(prev))
                 .then((output) => {
-                  return output.error
+                  return output.Error
                     ? Promise.reject(output)
                     : Promise.resolve(output)
                 })

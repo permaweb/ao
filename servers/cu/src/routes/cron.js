@@ -1,4 +1,4 @@
-import { always, compose, map } from 'ramda'
+import { always, compose } from 'ramda'
 
 import { withMiddleware } from './middleware/index.js'
 import { z } from 'zod'
@@ -24,12 +24,6 @@ export const withScheduledRoutes = app => {
         const input = inputSchema.parse({ processId, from, to })
 
         const outboxes = await readScheduledMessages(input)
-          .map(map((res) => ({
-            Output: res.output,
-            Messages: res.messages,
-            Spawns: res.spawns,
-            Error: res.error
-          })))
           .toPromise()
 
         return res.send(outboxes)

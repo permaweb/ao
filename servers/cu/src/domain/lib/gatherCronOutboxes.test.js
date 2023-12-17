@@ -6,11 +6,10 @@ import { gatherCronOutboxesWith } from './gatherCronOutboxes.js'
 
 describe('gatherCronOutboxesWith', () => {
   test('should filter down to only the cron outboxes, and append to ctx', async () => {
-    const cronSortKey = 'block-123,time-456,hash-789,idx1-10-blocks'
-    const notCronSortKey = 'block-123,time-456,hash-789'
-
     const mockEval = {
       processId: 'process-123',
+      messageId: 'message-123',
+      timestamp: new Date().getTime(),
       evaluatedAt: new Date()
     }
     const gatherCronOutboxes = gatherCronOutboxesWith({
@@ -21,26 +20,26 @@ describe('gatherCronOutboxesWith', () => {
 
         return [
           {
+            isCron: true,
             ...mockEval,
-            sortKey: cronSortKey,
-            output: { messages: [{ foo: '1' }, { fizz: '2' }], spawns: [{ foo: '3' }] }
+            output: { Messages: [{ foo: '1' }, { fizz: '2' }], Spawns: [{ foo: '3' }] }
           },
           // Cron message, but no output.result.messages
           {
-            sortKey: cronSortKey,
+            isCron: true,
             ...mockEval,
             output: {}
           },
           // Not a cron message
           {
-            sortKey: notCronSortKey,
+            isCron: false,
             ...mockEval,
-            output: { messages: [{ foo: '3' }, { fizz: '4' }] }
+            output: { Messages: [{ foo: '3' }, { fizz: '4' }] }
           },
           {
+            isCron: true,
             ...mockEval,
-            sortKey: cronSortKey,
-            output: { messages: [{ foo: '5' }] }
+            output: { Messages: [{ foo: '5' }] }
           }
         ]
       }
@@ -57,12 +56,11 @@ describe('gatherCronOutboxesWith', () => {
     assert.equal(res.to, 'block-124,time-456,hash-789')
     assert(res.outboxes)
 
-    console.log(res.outboxes)
     assert.equal(res.outboxes.length, 3)
     const [one, two, three] = res.outboxes
-    assert.equal(one.messages.length, 2)
-    assert.equal(one.spawns.length, 1)
-    assert.equal(two.messages.length, 0)
-    assert.equal(three.messages.length, 1)
+    assert.equal(one.Messages.length, 2)
+    assert.equal(one.Spawns.length, 1)
+    assert.equal(two.Messages.length, 0)
+    assert.equal(three.Messages.length, 1)
   })
 })

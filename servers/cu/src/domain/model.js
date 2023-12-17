@@ -19,8 +19,8 @@ export const rawTagSchema = z.object({
 })
 
 export const rawBlockSchema = z.object({
-  height: z.number(),
-  timestamp: z.number()
+  height: z.coerce.number(),
+  timestamp: z.coerce.number()
 })
 
 export const processSchema = z.object({
@@ -88,6 +88,9 @@ export const evaluationSchema = z.object({
    * the id of the process that the message was performed upon
    */
   processId: z.string().min(1),
+  messageId: z.string().min(1),
+  timestamp: z.coerce.number(),
+  isCron: z.boolean().default(false),
   /**
    * The date when this record was created, effectively
    * when this record was evaluated
@@ -101,15 +104,15 @@ export const evaluationSchema = z.object({
     z.date()
   ),
   /**
-   * ao processes return { state, messages, spawns, output, error } }
+   * ao processes return { Memory, Message, Spawns, Output, Error } }
    *
    * This is the output of process, after the action was applied
    */
   output: z.object({
-    buffer: z.any().optional(),
-    messages: z.array(z.any()).optional(),
-    spawns: z.array(z.any()).optional(),
-    output: z.any().optional(),
-    error: z.any().optional()
+    Memory: z.any().optional(),
+    Messages: z.array(z.any()).optional(),
+    Spawns: z.array(z.any()).optional(),
+    Output: z.any().optional(),
+    Error: z.any().optional()
   })
 })

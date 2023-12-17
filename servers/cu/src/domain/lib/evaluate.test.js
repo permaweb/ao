@@ -26,7 +26,7 @@ describe('evaluate', () => {
         id: 'ctr-1234',
         from: 'sort-key-start',
         module: readFileSync('./test/processes/happy/process.wasm'),
-        buffer: null,
+        Memory: null,
         messages: toAsyncIterable([
           {
             message: {
@@ -63,9 +63,9 @@ describe('evaluate', () => {
     test('folds the state', async () => {
       const { output } = await evaluate(ctx).toPromise()
       /**
-       * Assert the buffer of the internal process state is returned
+       * Assert the memory of the internal process state is returned
        */
-      assert.ok(output.buffer)
+      assert.ok(output.Memory)
       assert.deepStrictEqual(
         /**
          * Our process used in the unit tests serializes the state being mutated
@@ -95,7 +95,7 @@ describe('evaluate', () => {
         ]
       }
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.messages, [expectedMessage])
+      assert.deepStrictEqual(output.Messages, [expectedMessage])
     })
 
     test('returns spawns', async () => {
@@ -107,7 +107,7 @@ describe('evaluate', () => {
         ]
       }
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.spawns, [expectedSpawn])
+      assert.deepStrictEqual(output.Spawns, [expectedSpawn])
     })
 
     test('returns output', async () => {
@@ -143,7 +143,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       module: readFileSync('./test/processes/happy/process.wasm'),
-      buffer: null,
+      Memory: null,
       messages: toAsyncIterable([
         {
           message: {
@@ -198,7 +198,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       module: readFileSync('./test/processes/happy/process.wasm'),
-      buffer: null,
+      Memory: null,
       messages: toAsyncIterable([
         {
           message: {
@@ -261,21 +261,21 @@ describe('evaluate', () => {
        * will be determined by whatever the underlying runtime is, in this case,
        * Lua
        */
-      buffer: Buffer.from('Hello', 'utf-8'),
+      Memory: Buffer.from('Hello', 'utf-8'),
       result: {
-        messages: [],
-        output: '',
-        spawns: []
+        Messages: [],
+        Output: '',
+        Spawns: []
       },
       messages: toAsyncIterable([])
     }
 
     const { output } = await evaluate(ctx).toPromise()
     assert.deepStrictEqual(output, {
-      buffer: Buffer.from('Hello', 'utf-8'),
-      messages: [],
-      spawns: [],
-      output: ''
+      Memory: Buffer.from('Hello', 'utf-8'),
+      Messages: [],
+      Spawns: [],
+      Output: ''
     })
   })
 
@@ -292,7 +292,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       module: readFileSync('./test/processes/sad/process.wasm'),
-      buffer: Buffer.from('Hello', 'utf-8'),
+      Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will include an error in error
@@ -312,17 +312,17 @@ describe('evaluate', () => {
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
       /**
-       * When an error occurs in eval, its output buffer is ignored
-       * and the output buffer from the previous eval is used.
+       * When an error occurs in eval, its output Memory is ignored
+       * and the output Memory from the previous eval is used.
        *
-       * So we assert that the original buffer that was passed in is returned
+       * So we assert that the original Memory that was passed in is returned
        * from eval
        */
-      buffer: Buffer.from('Hello', 'utf-8'),
-      error: { code: 123, message: 'a handled error within the process' },
-      messages: [],
-      spawns: [],
-      output: '0'
+      Memory: Buffer.from('Hello', 'utf-8'),
+      Error: { code: 123, message: 'a handled error within the process' },
+      Messages: [],
+      Spawns: [],
+      Output: '0'
     })
   })
 
@@ -339,7 +339,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       module: readFileSync('./test/processes/sad/process.wasm'),
-      buffer: Buffer.from('Hello', 'utf-8'),
+      Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will intentionally throw from the lua process
@@ -358,11 +358,11 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.deepStrictEqual(res.output, {
-      buffer: Buffer.from('Hello', 'utf-8'),
-      error: { code: 123, message: 'a thrown error within the process' },
-      messages: [],
-      spawns: [],
-      output: ''
+      Memory: Buffer.from('Hello', 'utf-8'),
+      Error: { code: 123, message: 'a thrown error within the process' },
+      Messages: [],
+      Spawns: [],
+      Output: ''
     })
   })
 
@@ -379,7 +379,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       module: readFileSync('./test/processes/sad/process.wasm'),
-      buffer: Buffer.from('Hello', 'utf-8'),
+      Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will unintentionally throw from the lua contract
@@ -397,8 +397,8 @@ describe('evaluate', () => {
 
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
-    assert.ok(res.output.error)
-    assert.deepStrictEqual(res.buffer, Buffer.from('Hello', 'utf-8'))
+    assert.ok(res.output.Error)
+    assert.deepStrictEqual(res.Memory, Buffer.from('Hello', 'utf-8'))
   })
 
   test('continue evaluating, ignoring output of errored message', async () => {
@@ -418,7 +418,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 'sort-key-start',
       module: readFileSync('./test/processes/sad/process.wasm'),
-      buffer: null,
+      Memory: null,
       messages: toAsyncIterable([
         {
           // Will include an error in result.error
@@ -458,7 +458,7 @@ describe('evaluate', () => {
 
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
-    assert.equal(JSON.parse(res.output.output), 2)
+    assert.equal(JSON.parse(res.output.Output), 2)
     // Only cache the evals that did not produce errors
     assert.equal(cacheCount, 2)
   })

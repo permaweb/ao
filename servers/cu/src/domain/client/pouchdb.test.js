@@ -150,7 +150,7 @@ describe('pouchdb', () => {
   describe('findLatestEvaluation', () => {
     test('return the lastest evaluation', async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
@@ -172,8 +172,9 @@ describe('pouchdb', () => {
                     _id: 'eval-process-123,sortkey-890',
                     sortKey: 'sortkey-890',
                     processId: 'process-123',
+                    messageId: 'message-123',
                     parent: 'proc-process-123',
-                    output: { messages: [{ foo: 'bar' }] },
+                    output: { Messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
                   }
@@ -182,9 +183,9 @@ describe('pouchdb', () => {
             },
             getAttachment: async (_id, name) => {
               assert.equal(_id, 'eval-process-123,sortkey-890')
-              assert.equal(name, 'buffer.txt')
+              assert.equal(name, 'memory.txt')
               // impl will inflate this buffer
-              return deflateP(buffer)
+              return deflateP(Memory)
             }
           },
           logger
@@ -197,13 +198,13 @@ describe('pouchdb', () => {
 
       assert.equal(res.sortKey, 'sortkey-890')
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { buffer, messages: [{ foo: 'bar' }] })
+      assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
     test("without 'to', return the lastest interaction using collation sequence max char", async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
@@ -225,8 +226,9 @@ describe('pouchdb', () => {
                     _id: 'eval-process-123,sortkey-890',
                     sortKey: 'sortkey-890',
                     processId: 'process-123',
+                    messageId: 'message-123',
                     parent: 'proc-process-123',
-                    output: { messages: [{ foo: 'bar' }] },
+                    output: { Messages: [{ foo: 'bar' }] },
                     evaluatedAt,
                     type: 'evaluation'
                   }
@@ -235,9 +237,9 @@ describe('pouchdb', () => {
             },
             getAttachment: async (_id, name) => {
               assert.equal(_id, 'eval-process-123,sortkey-890')
-              assert.equal(name, 'buffer.txt')
+              assert.equal(name, 'memory.txt')
               // impl will inflate this buffer
-              return deflateP(buffer)
+              return deflateP(Memory)
             }
           },
           logger
@@ -249,7 +251,7 @@ describe('pouchdb', () => {
 
       assert.equal(res.sortKey, 'sortkey-890')
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { buffer, messages: [{ foo: 'bar' }] })
+      assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
@@ -272,9 +274,9 @@ describe('pouchdb', () => {
   })
 
   describe('saveEvaluation', () => {
-    test('save the evaluation to pouchdb with the buffer as an attachment, and the messageId', async () => {
+    test('save the evaluation to pouchdb with the buffer as an attachment, and the messageHash', async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
@@ -286,13 +288,14 @@ describe('pouchdb', () => {
                 _id: 'eval-process-123,sortkey-890',
                 sortKey: 'sortkey-890',
                 processId: 'process-123',
+                messageId: 'message-123',
                 parent: 'proc-process-123',
                 // buffer is omitted from output and moved to _attachments
-                output: { messages: [{ foo: 'bar' }] },
+                output: { Messages: [{ foo: 'bar' }] },
                 type: 'evaluation'
               })
               assert.deepStrictEqual(evaluationDoc._attachments, {
-                'buffer.txt': {
+                'memory.txt': {
                   content_type: 'text/plain',
                   /**
                    * zlib compress the buffer before persisting
@@ -300,7 +303,7 @@ describe('pouchdb', () => {
                    * In testing, this results in orders of magnitude
                    * smaller buffer and smaller persistence times
                    */
-                  data: await deflateP(buffer)
+                  data: await deflateP(Memory)
                 }
               })
               assert.equal(evaluatedAt.toISOString(), evaluatedAt.toISOString())
@@ -321,14 +324,15 @@ describe('pouchdb', () => {
         deepHash: 'deepHash-123',
         sortKey: 'sortkey-890',
         processId: 'process-123',
-        output: { buffer, messages: [{ foo: 'bar' }] },
+        messageId: 'message-123',
+        output: { Memory, Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
 
     test('save only the evaluation as a doc, if not deepHash', async () => {
       const evaluatedAt = new Date().toISOString()
-      const buffer = Buffer.from('Hello World', 'utf-8')
+      const Memmory = Buffer.from('Hello World', 'utf-8')
 
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
@@ -346,7 +350,8 @@ describe('pouchdb', () => {
         // no deep hash
         sortKey: 'sortkey-890',
         processId: 'process-123',
-        output: { buffer, messages: [{ foo: 'bar' }] },
+        messageId: 'message-123',
+        output: { Memmory, Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
@@ -359,8 +364,9 @@ describe('pouchdb', () => {
         _id: 'eval-process-123,sortkey-890',
         sortKey: 'sortkey-890',
         processId: 'process-123',
+        messageId: 'message-123',
         parent: 'proc-process-123',
-        output: { state: { foo: 'bar' } },
+        output: { },
         evaluatedAt,
         type: 'evaluation'
       }
@@ -400,6 +406,7 @@ describe('pouchdb', () => {
         _id: 'eval-process-123,sortkey-890',
         sortKey: 'sortkey-890',
         processId: 'process-123',
+        messageId: 'message-123',
         parent: 'process-123',
         output: { state: { foo: 'bar' } },
         evaluatedAt,

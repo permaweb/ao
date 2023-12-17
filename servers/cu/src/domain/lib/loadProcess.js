@@ -97,12 +97,12 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
          * With BiBo, the initial state is simply nothing.
          * It is up to the process to set up it's own initial state
          */
-        buffer: null,
+        Memory: null,
         result: {
-          error: undefined,
-          messages: [],
-          output: '',
-          spawns: []
+          Error: undefined,
+          Messages: [],
+          Output: '',
+          Spawns: []
         },
         from: undefined,
         evaluatedAt: undefined
@@ -111,9 +111,9 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * State from evaluation we found in cache
        */
       (evaluation) => Resolved({
-        buffer: evaluation.output.buffer,
-        result: omit(['buffer'], evaluation.output),
-        from: evaluation.sortKey,
+        Memory: evaluation.output.Memory,
+        result: omit(['Memory'], evaluation.output),
+        from: evaluation.timestamp,
         evaluatedAt: evaluation.evaluatedAt
       })
     )
@@ -145,7 +145,7 @@ const ctxSchema = z.object({
    * cached buffer, or potentially null if there is no recently
    * cached state
    */
-  buffer: z.any().nullable(),
+  Memory: z.any().nullable(),
   /**
    * The most recent result. This could be the most recent
    * cached result, or potentially nothing
@@ -153,7 +153,7 @@ const ctxSchema = z.object({
    */
   result: z.record(z.any()),
   /**
-   * The most recent message sortKey. This could be from the most recent
+   * The most recent message timestamp. This could be from the most recent
    * cached evaluation, or undefined, if no evaluations were cached
    *
    * This will be used to subsequently determine which messaged
@@ -196,11 +196,11 @@ export function loadProcessWith (env) {
       .chain(getProcessMeta)
       // { id, owner, block }
       .map(mergeRight(ctx))
-      // { buffer, result, from, evaluatedAt }
+      // { Memory, result, from, evaluatedAt }
       .chain(ctx =>
         loadLatestEvaluation(ctx)
           .map(mergeRight(ctx))
-          // { id, owner, tags, ..., buffer, result, from, evaluatedAt }
+          // { id, owner, tags, ..., Memory, result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded process and appended to ctx'))
