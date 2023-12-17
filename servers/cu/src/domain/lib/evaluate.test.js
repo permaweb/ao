@@ -24,14 +24,16 @@ describe('evaluate', () => {
     beforeEach(() => {
       ctx = {
         id: 'ctr-1234',
-        from: 'sort-key-start',
+        from: new Date().getTime(),
         module: readFileSync('./test/processes/happy/process.wasm'),
         Memory: null,
         messages: toAsyncIterable([
           {
             message: {
-              owner: 'owner-123',
-              tags: [
+              Id: 'message-123',
+              Timestamp: 1702846520559,
+              Owner: 'owner-123',
+              Tags: [
                 { name: 'function', value: 'hello' }
               ]
             },
@@ -39,8 +41,10 @@ describe('evaluate', () => {
           },
           {
             message: {
-              owner: 'owner-456',
-              tags: [
+              Id: 'message-123',
+              Timestamp: 1702846520559,
+              Owner: 'owner-456',
+              Tags: [
                 { name: 'function', value: 'world' }
               ]
             },
@@ -69,14 +73,16 @@ describe('evaluate', () => {
          * Our process used in the unit tests serializes the state being mutated
          * by the process, so we can parse it here and run assertions
          */
-        JSON.parse(output.output),
+        JSON.parse(output.Output),
         {
           heardHello: true,
           heardWorld: true,
           happy: true,
           lastMessage: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'world' }
             ]
           }
@@ -86,8 +92,8 @@ describe('evaluate', () => {
 
     test('returns messages', async () => {
       const expectedMessage = {
-        target: 'process-foo-123',
-        tags: [
+        Target: 'process-foo-123',
+        Tags: [
           { name: 'foo', value: 'bar' },
           { name: 'function', value: 'noop' }
         ]
@@ -98,8 +104,8 @@ describe('evaluate', () => {
 
     test('returns spawns', async () => {
       const expectedSpawn = {
-        owner: 'owner-123',
-        tags: [
+        Owner: 'owner-123',
+        Tags: [
           { name: 'foo', value: 'bar' },
           { name: 'balances', value: '{"myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc": 1000 }' }
         ]
@@ -110,13 +116,15 @@ describe('evaluate', () => {
 
     test('returns output', async () => {
       const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(JSON.parse(output.output), {
+      assert.deepStrictEqual(JSON.parse(output.Output), {
         heardHello: true,
         heardWorld: true,
         happy: true,
         lastMessage: {
-          owner: 'owner-456',
-          tags: [
+          Id: 'message-123',
+          Timestamp: 1702846520559,
+          Owner: 'owner-456',
+          Tags: [
             { name: 'function', value: 'world' }
           ]
         }
@@ -139,14 +147,16 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
       Memory: null,
       messages: toAsyncIterable([
         {
           message: {
-            owner: 'owner-123',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
               { name: 'function', value: 'hello' }
             ]
           },
@@ -154,8 +164,10 @@ describe('evaluate', () => {
         },
         {
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'world' }
             ]
           },
@@ -170,20 +182,20 @@ describe('evaluate', () => {
 
   test('skip over messages that are already evaluated', async () => {
     let cacheCount = 0
-    let messageIdCount = 0
+    let messageHash = 0
     const env = {
       saveEvaluation: async (evaluation) => {
         cacheCount++
         return undefined
       },
       findMessageHash: async () => {
-        if (!messageIdCount) {
-          messageIdCount++
+        if (!messageHash) {
+          messageHash++
           throw { status: 404 }
         }
 
-        messageIdCount++
-        return { _id: 'messageId-doc-123' }
+        messageHash++
+        return { _id: 'messageHash-doc-123' }
       },
       logger
     }
@@ -192,14 +204,16 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
       Memory: null,
       messages: toAsyncIterable([
         {
           message: {
-            owner: 'owner-123',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
               { name: 'function', value: 'hello' }
             ]
           },
@@ -208,8 +222,10 @@ describe('evaluate', () => {
         },
         {
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'world' }
             ]
           },
@@ -219,8 +235,10 @@ describe('evaluate', () => {
         // no deep hash
         {
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'world' }
             ]
           },
@@ -230,7 +248,7 @@ describe('evaluate', () => {
     }
 
     await evaluate(ctx).toPromise()
-    assert.equal(messageIdCount, 2)
+    assert.equal(messageHash, 2)
     assert.equal(cacheCount, 2)
   })
 
@@ -247,7 +265,7 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: new Date().getTime(),
       module: readFileSync('./test/processes/happy/process.wasm'),
       /**
        * In reality this would be an illegible byte array, since it's format
@@ -283,15 +301,17 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
       Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will include an error in error
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'errorResult' }
             ]
           },
@@ -329,15 +349,17 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
       Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will intentionally throw from the lua process
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'errorThrow' }
             ]
           },
@@ -368,15 +390,17 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
       Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
           // Will unintentionally throw from the lua contract
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'errorUnhandled' }
             ]
           },
@@ -406,15 +430,17 @@ describe('evaluate', () => {
 
     const ctx = {
       id: 'ctr-1234',
-      from: 'sort-key-start',
+      from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
       Memory: null,
       messages: toAsyncIterable([
         {
           // Will include an error in result.error
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'errorResult' }
             ]
           },
@@ -423,8 +449,10 @@ describe('evaluate', () => {
         {
           // Will increment a counter in global state
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'counter' }
             ]
           },
@@ -433,8 +461,10 @@ describe('evaluate', () => {
         {
           // Will increment a counter in global state
           message: {
-            owner: 'owner-456',
-            tags: [
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
               { name: 'function', value: 'counter' }
             ]
           },

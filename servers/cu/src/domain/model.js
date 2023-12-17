@@ -45,9 +45,10 @@ export const messageSchema = z.object({
    */
   deepHash: z.string().optional(),
   /**
+   * If the message was generated as the result of a Cron-Interval,
    * The unique identifier of the cron that produced this message
    */
-  cron: z.string(),
+  cron: z.string().optional(),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id

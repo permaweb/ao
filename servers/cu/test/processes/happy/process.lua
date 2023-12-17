@@ -45,36 +45,33 @@ end
 function process.handle(message, AoGlobal)
   if state == nil then state = {} end
 
-  local func = findObject(message.tags, "name", "function")
-  if func == nil then return error({ code = 500, message = 'no function tag in the message'}) end
-
-  state = actions[func.value](state, message, AoGlobal)
+  state = actions[findObject(message.Tags, "name", "function").value](state, message, AoGlobal)
   state = assoc('lastMessage', message, state)
   if (state.heardHello and state.heardWorld) then state = assoc('happy', true, state) end
 
   return {
     -- stub messages
-    messages = {
+    Messages = {
       {
-        target = 'process-foo-123',
-        tags = {
+        Target = 'process-foo-123',
+        Tags = {
           { name = 'foo', value = 'bar' },
           { name = 'function', value = 'noop' }
         }
       }
     },
     -- stub spawns
-    spawns = {
+    Spawns = {
       {
-        owner = 'owner-123',
-        tags = {
+        Owner = 'owner-123',
+        Tags = {
           { name = 'foo', value = 'bar' },
           { name = 'balances', value = "{\"myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc\": 1000 }" }
         }
       }
     },
     -- So we can assert the state in tests
-    output = JSON.encode(state)
+    Output = JSON.encode(state)
   }
 end
 
