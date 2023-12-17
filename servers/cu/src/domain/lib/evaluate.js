@@ -7,7 +7,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
-import { findMessageIdSchema, saveEvaluationSchema } from '../dal.js'
+import { findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -44,11 +44,11 @@ function saveEvaluationWith ({ saveEvaluation }) {
       .map(() => evaluation)
 }
 
-function doesMessageIdExistWith ({ findMessageId }) {
-  findMessageId = fromPromise(findMessageIdSchema.implement(findMessageId))
+function doesMessageHashExistWith ({ findMessageHash }) {
+  findMessageHash = fromPromise(findMessageHashSchema.implement(findMessageHash))
 
   return (deepHash) => {
-    return findMessageId({ messageId: deepHash })
+    return findMessageHash({ messageHash: deepHash })
       .bichain(
         err => {
           if (err.status === 404) return Resolved(false)
@@ -78,7 +78,7 @@ export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
   env = { ...env, logger }
 
-  const doesMessageIdExist = doesMessageIdExistWith(env)
+  const doesMessageHashExist = doesMessageHashExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
 
   /**
@@ -172,9 +172,9 @@ export function evaluateWith (env) {
            */
           if (deepHash) {
             logger('Checking if "%s" has already been evaluated...', sortKey)
-            const found = await doesMessageIdExist(deepHash).toPromise()
+            const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
-              logger('Message with deepHash "%s" was found in cache and therefor has already been evaluated. Removing from eval stream', deepHash)
+              logger('Message with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', deepHash)
               continue
             }
           }
