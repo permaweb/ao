@@ -106,10 +106,9 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
     for await (const cur of messages) {
       const tag = findRawTag('Load', cur.message.Tags)
       /**
-       * Either a cron message (which has no id)
-       * or not an ao-load message, so no work is needed
+       * Either a cron message or not an ao-load message, so no work is needed
        */
-      if (!tag || !cur.message.Id) {
+      if (!tag || cur.message.Cron) {
         yield cur
         continue
       }
@@ -120,7 +119,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
        * - contruct the data item JSON, encoding the raw data as base64
        * - set as 'data' on the ao-load message
        */
-      cur.message.data = await Promise.all([
+      cur.message.Data = await Promise.all([
         loadTransactionData(tag.value).then(res => res.arrayBuffer()),
         loadTransactionMeta(tag.value)
       ]).then(([data, meta]) => messageFromParts({ data, meta }))

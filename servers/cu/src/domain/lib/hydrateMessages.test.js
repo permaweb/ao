@@ -106,6 +106,20 @@ describe('hydrateMessages', () => {
           Data: 'foobar'
         }
       }
+      const cronMessage = {
+        message: {
+          Id: 'message-tx-345',
+          Signature: 'sig-345',
+          Owner: 'owner-345',
+          Tags: [
+            { name: 'Data-Protocol', value: 'ao' },
+            { name: 'Type', value: 'Message' },
+            { name: 'function', value: 'notify' }
+          ],
+          Data: 'foobar',
+          Cron: true
+        }
+      }
       const aoLoad = {
         message: {
           Id: 'message-tx-456',
@@ -124,7 +138,7 @@ describe('hydrateMessages', () => {
       async function * messageStream () {
         yield notAoLoad
         yield aoLoad
-        yield notAoLoad
+        yield cronMessage
       }
 
       const maybeAoLoad = maybeAoLoadWith({
@@ -157,14 +171,14 @@ describe('hydrateMessages', () => {
       assert.equal(messages.length, 3)
       const [one, two, three] = messages
       assert.deepStrictEqual(one, notAoLoad)
-      assert.deepStrictEqual(three, notAoLoad)
+      assert.deepStrictEqual(three, cronMessage)
 
       assert.deepStrictEqual(two, {
         ...aoLoad,
         message: {
           ...aoLoad.message,
           // original data overwritten with constructed data item
-          data: {
+          Data: {
             Id: 'message-tx-123',
             Signature: 'sig-123',
             Owner: 'owner-123',
