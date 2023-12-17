@@ -51,12 +51,9 @@ end
 function process.handle(message, AoGlobal)
   if state == nil then state = { counter = 0 } end
 
-  local func = findObject(message.tags, "name", "function")
-  if func == nil then return error({ code = 500, message = 'no function tag in the message'}) end
+  state, err = actions[findObject(message.Tags, "name", "function").value](state, message, AoGlobal)
 
-  state, err = actions[func.value](state, message, AoGlobal)
-
-  return { error = err, output = JSON.encode(state.counter) }
+  return { Error = err, Output = JSON.encode(state.counter) }
 end
 
 return process
