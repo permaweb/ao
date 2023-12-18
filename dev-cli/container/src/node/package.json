@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@irys/sdk": "^0.0.4",
-    "@permaweb/ao-sdk": "0.0.18"
+    "@permaweb/ao-sdk": "0.0.19"
   },
   "engines": {
     "node": ">=18"
