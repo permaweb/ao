@@ -74,7 +74,7 @@ export async function publish ({ wallet, host, tag, value }, contractWasmPath) {
 
 export const command = new Command()
   .description('Publish the file to Arweave')
-  .usage('-w ./wallet.json -b "https://node2.irys.xyz" -t "App-Name:Foo" -t "Type:Bar" contract.wasm')
+  .usage('-w ./wallet.json -b "https://up.arweave.net" --tag="Foo" --value="Bar" contract.wasm')
   .option(
     '-w, --wallet <path:string>',
     'the path to the wallet that should be used to sign the transaction',
