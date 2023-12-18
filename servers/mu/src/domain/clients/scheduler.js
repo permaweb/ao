@@ -4,12 +4,12 @@ import { of, fromPromise, Rejected } from 'hyper-async'
 
 import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
-function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
+function writeMessageWith ({ fetch, SCHEDULER_URL, logger }) {
   return async (data) => {
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap(`Forwarding message to SU ${SEQUENCER_URL}`))
+      .map(logger.tap(`Forwarding message to SU ${SCHEDULER_URL}`))
       .chain(fromPromise((body) =>
-        fetch(`${SEQUENCER_URL}/message`, {
+        fetch(`${SCHEDULER_URL}/message`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',
@@ -37,9 +37,9 @@ function writeMessageWith ({ fetch, SEQUENCER_URL, logger }) {
   }
 }
 
-function writeProcessTxWith ({ SEQUENCER_URL, MU_WALLET }) {
+function writeProcessTxWith ({ SCHEDULER_URL, MU_WALLET }) {
   return async ({ initState, src, tags }) => {
-    const { spawnProcess } = connect({ SU_URL: SEQUENCER_URL })
+    const { spawnProcess } = connect({ SU_URL: SCHEDULER_URL })
 
     const processId = await spawnProcess({
       srcId: src,
@@ -52,11 +52,11 @@ function writeProcessTxWith ({ SEQUENCER_URL, MU_WALLET }) {
   }
 }
 
-function fetchSequencerProcessWith ({ SEQUENCER_URL, logger }) {
+function fetchSequencerProcessWith ({ SCHEDULER_URL, logger }) {
   return async (processId) => {
-    logger(`${SEQUENCER_URL}/processes/${processId}`)
+    logger(`${SCHEDULER_URL}/processes/${processId}`)
 
-    return fetch(`${SEQUENCER_URL}/processes/${processId}`)
+    return fetch(`${SCHEDULER_URL}/processes/${processId}`)
       .then(res => res.json())
       .then(res => res || {})
   }

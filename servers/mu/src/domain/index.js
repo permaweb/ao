@@ -3,7 +3,7 @@ import warpArBundles from 'warp-arbundles'
 
 import dbInstance, { createDbClient } from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
-import sequencerClient from './clients/sequencer.js'
+import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 
 import dataStoreClient from './lib/datastore.js'
@@ -38,7 +38,7 @@ export const createScheduledApis = (ctx) => {
 }
 
 export const domainConfigSchema = z.object({
-  SEQUENCER_URL: z.string().url('SEQUENCER_URL must be a a valid URL'),
+  SCHEDULER_URL: z.string().url('SCHEDULER_URL must be a a valid URL'),
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
   MU_WALLET: z.record(z.any()),
   MU_DATABASE_URL: z.string(),
@@ -48,7 +48,7 @@ export const domainConfigSchema = z.object({
 })
 
 export const createApis = (ctx) => {
-  const SEQUENCER_URL = ctx.SEQUENCER_URL
+  const SCHEDULER_URL = ctx.SCHEDULER_URL
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
   const MU_DATABASE_URL = ctx.MU_DATABASE_URL
@@ -65,7 +65,7 @@ export const createApis = (ctx) => {
   const processMsg = processMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
     createDataItem,
-    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processMsgLogger }),
+    writeSequencerTx: schedulerClient.writeMessageWith({ fetch, SCHEDULER_URL, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),
@@ -78,7 +78,7 @@ export const createApis = (ctx) => {
 
   const sendSpawnLogger = logger.child('sendSpawn')
   const sendSpawn = sendSpawnWith({
-    writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: sendSpawnLogger }),
+    writeProcessTx: schedulerClient.writeProcessTxWith({ SCHEDULER_URL, MU_WALLET, logger: sendSpawnLogger }),
     createDataItem,
     logger: sendSpawnLogger
   })
@@ -86,9 +86,9 @@ export const createApis = (ctx) => {
   const processSpawnLogger = logger.child('processSpawn')
   const processSpawn = processSpawnWith({
     logger: processSpawnLogger,
-    writeProcessTx: sequencerClient.writeProcessTxWith({ SEQUENCER_URL, MU_WALLET, logger: processSpawnLogger }),
+    writeProcessTx: schedulerClient.writeProcessTxWith({ SCHEDULER_URL, MU_WALLET, logger: processSpawnLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: processSpawnLogger }),
+    writeSequencerTx: schedulerClient.writeMessageWith({ fetch, SCHEDULER_URL, logger: processSpawnLogger }),
     deleteSpawn: dataStoreClient.deleteSpawnWith({ dbInstance, logger: processSpawnLogger })
   })
 
@@ -104,7 +104,7 @@ export const createApis = (ctx) => {
   const sendMsg = sendMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendMsgLogger }),
     createDataItem,
-    writeSequencerTx: sequencerClient.writeMessageWith({ fetch, SEQUENCER_URL, logger: sendMsgLogger }),
+    writeSequencerTx: schedulerClient.writeMessageWith({ fetch, SCHEDULER_URL, logger: sendMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: sendMsgLogger }),
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: sendMsgLogger }),
@@ -118,7 +118,7 @@ export const createApis = (ctx) => {
   const monitorProcess = monitorProcessWith({
     saveProcessToMonitor: dataStoreClient.saveMonitoredProcessWith({ dbInstance, logger: monitorProcessLogger }),
     createDataItem,
-    fetchSequencerProcess: sequencerClient.fetchSequencerProcessWith({ logger: monitorProcessLogger, SEQUENCER_URL }),
+    fetchSequencerProcess: schedulerClient.fetchSequencerProcessWith({ logger: monitorProcessLogger, SCHEDULER_URL }),
     logger: monitorProcessLogger
   })
 

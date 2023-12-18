@@ -61,7 +61,7 @@ There are a few environment variables that you can set:
 
 - `CU_URL`: Which `ao` Compute Unit to use (defaults to
   `https://ao-cu-2.onrender.com` in development mode)
-- `SEQUENCER_URL`: Which Sequencer to use (defaults to
+- `SCHEDULER_URL`: Which Sequencer to use (defaults to
   `https://ao-su-1.onrender.com` in development mode)
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
 - `PATH_TO_WALLET`: the path to the wallet JWK interface you would like the `mu`
