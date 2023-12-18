@@ -64,7 +64,7 @@ const isValid = validate('<wallet-address>')
 Return the url in the `Scheduler-Location` record for the given wallet address
 
 ```js
-import { validate } from "@permaweb/ao-scheduler-utils";
+import { raw } from "@permaweb/ao-scheduler-utils";
 
 const { url } = raw('<wallet-address>')
 ```
