@@ -5,19 +5,17 @@ export function validateWith ({ loadScheduler, cache }) {
    * Validate whether the given wallet address is an ao Scheduler
    *
    * @param {string} address - the wallet address used by the Scheduler
-   * @returns {Promise<{ url: string, ttl: string }>} whether the wallet address is Scheduler
+   * @returns {Promise<boolean>} whether the wallet address is Scheduler
    */
   return (address) =>
     cache.getByOwner(address)
       .then((url) => {
-        if (url) return { url }
+        if (url) return true
         return loadScheduler(address)
-          .then((scheduler) =>
-            cache.setByOwner(address, scheduler.url, scheduler.ttl)
-              .then(() => ({ url: scheduler.url }))
-          )
+          .then((scheduler) => cache.setByOwner(address, scheduler.url, scheduler.ttl))
+          .then(() => true)
           .catch((err) => {
-            if (err instanceof InvalidSchedulerLocationError) return undefined
+            if (err instanceof InvalidSchedulerLocationError) return false
             /**
              * Unknown error continue to bubble
              */
