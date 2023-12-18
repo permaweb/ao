@@ -56,7 +56,7 @@ export async function fund ({ wallet, host }, amount) {
 
 const Balance = new Command()
   .description('Check the balance on a bundler')
-  .usage('-w ./wallet.json -b "https://node2.irys.xyz"')
+  .usage('-w ./wallet.json -b "https://up.arweave.net"')
   .option(
     '-w, --wallet <path:file>',
     'the path to the wallet that has funded the bundler',
@@ -64,13 +64,13 @@ const Balance = new Command()
   )
   .option(
     '-b, --bundler <bundler:string>',
-    'the url of the funded bundler you would like to balance check. Defaults to Irys Node 2'
+    'the url of the funded bundler you would like to balance check. Defaults to https://up.arweave.net'
   )
   .action(balance)
 
 const Fund = new Command()
   .description('Fund the balance on a bundler with the specified amount of winston')
-  .usage('-w ./wallet.json -h https://node2.irys.xyz 500000000000')
+  .usage('-w ./wallet.json -b "https://up.arweave.net" 500000000000')
   .option(
     '-w, --wallet <path:file>',
     'the path to the wallet that will be used to fund the bundler',
@@ -78,7 +78,7 @@ const Fund = new Command()
   )
   .option(
     '-b, --bundler <bundler:string>',
-    'the url of the bundler you would like to fund. Defaults to Irys Node 2'
+    'the url of the bundler you would like to fund. Defaults to https://up.arweave.net'
   )
   .arguments(
     '<amount:integer>',

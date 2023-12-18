@@ -3,7 +3,7 @@ export const DEFAULT_INPUT_ENCODING_TAG = { name: 'Input-Encoding', value: 'JSON
 export const DEFAULT_OUTPUT_ENCODING_TAG = { name: 'Output-Encoding', value: 'JSON-1' }
 export const DEFAULT_VARIANT_TAG = { name: 'Variant', value: 'ao.TN.1' }
 
-export const DEFAULT_BUNDLER_HOST = 'https://node2.irys.xyz'
+export const DEFAULT_BUNDLER_HOST = 'https://up.arweave.net'
 
 export const AoModuleTags = [
   { name: 'Data-Protocol', value: 'ao' },
