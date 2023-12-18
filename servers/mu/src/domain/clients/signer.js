@@ -9,8 +9,7 @@ function buildAndSignWith ({ MU_WALLET }) {
     const allTags = [
       ...tags,
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'message' },
-      { name: 'SDK', value: 'ao' }
+      { name: 'Type', value: 'Message' }
     ]
 
     const interactionDataItem = createData(data, signer, { target: processId, anchor, tags: allTags })

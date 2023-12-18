@@ -1,15 +1,12 @@
 import { identity } from 'ramda'
-
 import { of, fromPromise, Rejected } from 'hyper-async'
 
-import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
-
-function writeMessageWith ({ fetch, SCHEDULER_URL, logger }) {
+function writeDataItemWith ({ fetch, SCHEDULER_URL, logger }) {
   return async (data) => {
     return of(Buffer.from(data, 'base64'))
       .map(logger.tap(`Forwarding message to SU ${SCHEDULER_URL}`))
       .chain(fromPromise((body) =>
-        fetch(`${SCHEDULER_URL}/message`, {
+        fetch(SCHEDULER_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',
@@ -37,21 +34,6 @@ function writeMessageWith ({ fetch, SCHEDULER_URL, logger }) {
   }
 }
 
-function writeProcessTxWith ({ SCHEDULER_URL, MU_WALLET }) {
-  return async ({ initState, src, tags }) => {
-    const { spawnProcess } = connect({ SU_URL: SCHEDULER_URL })
-
-    const processId = await spawnProcess({
-      srcId: src,
-      initialState: initState,
-      signer: createDataItemSigner(MU_WALLET),
-      tags
-    })
-
-    return processId
-  }
-}
-
 function fetchSequencerProcessWith ({ SCHEDULER_URL, logger }) {
   return async (processId) => {
     logger(`${SCHEDULER_URL}/processes/${processId}`)
@@ -63,7 +45,6 @@ function fetchSequencerProcessWith ({ SCHEDULER_URL, logger }) {
 }
 
 export default {
-  writeMessageWith,
-  writeProcessTxWith,
+  writeDataItemWith,
   fetchSequencerProcessWith
 }
