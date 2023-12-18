@@ -2,6 +2,7 @@ import * as GatewayClient from './client/gateway.js'
 import * as InMemoryClient from './client/in-memory.js'
 
 import { locateWith } from './locate.js'
+import { rawWith } from './raw.js'
 import { validateWith } from './validate.js'
 
 /**
@@ -49,8 +50,17 @@ export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL } 
     cache: { getByProcess, getByOwner, setByProcess, setByOwner }
   })
 
-  return { locate, validate }
+  /**
+   * Return the `Scheduler-Location` record for the address
+   * or undefined, if it cannot be found
+   */
+  const raw = rawWith({
+    loadScheduler: GatewayClient.loadSchedulerWith({ fetch, GATEWAY_URL }),
+    cache: { getByProcess, getByOwner, setByProcess, setByOwner }
+  })
+
+  return { locate, validate, raw }
 }
 
-const { locate, validate } = connect()
-export { locate, validate }
+const { locate, validate, raw } = connect()
+export { locate, validate, raw }

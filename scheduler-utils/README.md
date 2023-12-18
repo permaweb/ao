@@ -13,6 +13,7 @@ This sdk will run in a browser or server environment.
   - [API](#api)
     - [`locate`](#locate)
     - [`validate`](#validate)
+    - [`raw`](#raw)
     - [Internal Cache](#internal-cache)
     - [`connect`](#connect)
 
@@ -25,13 +26,13 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { locate, validate } from "@permaweb/ao-scheduler-utils";
+import { locate, validate, raw } from "@permaweb/ao-scheduler-utils";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { locate, validate } = require("@permaweb/ao-scheduler-utils");
+const { locate, validate, raw } = require("@permaweb/ao-scheduler-utils");
 ```
 
 The duration of this document will use `ESM` for examples
@@ -58,6 +59,16 @@ import { validate } from "@permaweb/ao-scheduler-utils";
 const isValid = validate('<wallet-address>')
 ```
 
+#### `raw`
+
+Return the url in the `Scheduler-Location` record for the given wallet address
+
+```js
+import { validate } from "@permaweb/ao-scheduler-utils";
+
+const { url } = raw('<wallet-address>')
+```
+
 #### Internal Cache
 
 The library maintains an internal in-memory LRU cache of `Scheduler-Location` `Url`s, caching each for their
@@ -79,7 +90,7 @@ specify those coonfigurations by providing their values `connect`. You can curre
 ```js
 import { connect } from "@permaweb/ao-scheduler-utils";
 
-const { validate, locate } = connect({
+const { validate, locate, raw } = connect({
   GATEWAY_URL: "...",
   cacheSize: 1000
 });
@@ -93,9 +104,10 @@ using the top-lvl exports of the library:
 import {
  locate,
  validate,
+ raw,
  connect
 } from "@permaweb/ao-scheduler-utils";
 
 // These are functionally equivalent
-connect() == { validate, locate }
+connect() == { validate, locate, raw }
 ```
