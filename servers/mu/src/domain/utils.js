@@ -1,6 +1,7 @@
 import {
-  T, always, chain, concat, cond, equals,
-  has, identity, is, join, pipe, prop, reduce
+  F,
+  T, __, always, append, assoc, chain, concat, cond, defaultTo, equals,
+  has, identity, includes, is, join, map, pipe, prop, propOr, reduce
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
@@ -81,4 +82,41 @@ function mapZodErr (zodErr) {
       ),
     join(' | ')
   )(zodErr)
+}
+
+/**
+* Parse tags into a object with key-value pairs of name -> values.
+*
+* If multiple tags with the same name exist, it's value will be the array of tag values
+* in order of appearance
+*/
+export function parseTags (rawTags) {
+  return pipe(
+    defaultTo([]),
+    reduce(
+      (map, tag) => pipe(
+        // [value, value, ...] || []
+        propOr([], tag.name),
+        // [value]
+        append(tag.value),
+        // { [name]: [value, value, ...] }
+        assoc(tag.name, __, map)
+      )(map),
+      {}
+    ),
+    /**
+    * If the field is only a singly list, then extract the one value.
+    *
+    * Otherwise, keep the value as a list.
+    */
+    map((values) => values.length > 1 ? values : values[0])
+  )(rawTags)
+}
+
+export function eqOrIncludes (val) {
+  return cond([
+    [is(String), equals(val)],
+    [is(Array), includes(val)],
+    [T, F]
+  ])
 }
