@@ -27,6 +27,8 @@ export function sendDataItemWith ({
   selectNode,
   createDataItem,
   writeDataItem,
+  locateScheduler,
+  locateProcess,
   fetchResult,
   saveMsg,
   saveSpawn,
@@ -38,10 +40,10 @@ export function sendDataItemWith ({
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeTx = writeMessageTxWith({ writeDataItem, logger })
+  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
 
-  const writeProcess = writeProcessTxWith({ logger, writeDataItem })
+  const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
 
   /**
    * If the data item is a Message, then cranking and tracing
@@ -70,7 +72,7 @@ export function sendDataItemWith ({
     }))
     .chain(({ message, tracer, ...rest }) =>
       of({ ...rest, tracer })
-        .chain(writeTx)
+        .chain(writeMessage)
         .map(res => ({
           /**
            * An opaque method to fetch the result of the message just forwarded
@@ -127,6 +129,7 @@ export function sendDataItemWith ({
  * the input to this is a cached cu result
  */
 export function processMsgWith ({
+  locateProcess,
   selectNode,
   writeDataItem,
   fetchResult,
@@ -140,14 +143,14 @@ export function processMsgWith ({
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeTx = writeMessageTxWith({ writeDataItem, logger })
+  const writeMessage = writeMessageTxWith({ writeDataItem, locateProcess, logger })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
   const deleteMsgData = deleteMsgDataWith({ deleteMsg, logger })
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTx)
-      .chain(writeTx)
+      .chain(writeMessage)
       .chain(getCuAddress)
       .chain(fetchAndSaveResult)
       .chain(deleteMsgData)
@@ -159,14 +162,15 @@ export function processMsgWith ({
  */
 export function processSpawnWith ({
   logger,
-  writeProcessTx,
+  locateScheduler,
+  locateProcess,
   writeDataItem,
   buildAndSign,
   deleteSpawn
 }) {
-  const spawnProcess = spawnProcessWith({ logger, writeProcessTx })
+  const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler })
   const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
-  const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeDataItem })
+  const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeDataItem, locateProcess })
   const deleteSpawnData = deleteSpawnDataWith({ logger, deleteSpawn })
 
   return (ctx) => {

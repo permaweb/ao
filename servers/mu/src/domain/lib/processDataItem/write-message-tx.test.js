@@ -6,18 +6,23 @@ import { writeMessageTxWith } from './write-message-tx.js'
 
 const logger = createLogger('ao-mu:processMsg')
 
-async function writeDataItem () {
-  return {
-    id: 'id-3',
-    timestamp: 1234567,
-    block: 1234567
-  }
-}
-
 describe('writeMessageTxWith', () => {
-  test('write a tx to the sequencer', async () => {
+  test('write a tx to the scheduler', async () => {
     const writeMessageTx = writeMessageTxWith({
-      writeDataItem,
+      locateProcess: async (processId) => {
+        assert.equal(processId, 'id-1')
+        return { url: 'https://foo.bar' }
+      },
+      writeDataItem: async ({ suUrl, data }) => {
+        assert.equal(suUrl, 'https://foo.bar')
+        assert.equal(data, 'raw-123')
+
+        return {
+          id: 'id-3',
+          timestamp: 1234567,
+          block: 1234567
+        }
+      },
       logger
     })
 
@@ -25,7 +30,7 @@ describe('writeMessageTxWith', () => {
       tx: {
         processId: 'id-1',
         id: 'id-2',
-        data: Buffer.alloc(0)
+        data: 'raw-123'
       },
       tracer: ({
         child: (id) => {
@@ -39,10 +44,10 @@ describe('writeMessageTxWith', () => {
       })
     }).toPromise()
 
-    assert.equal(result.schedulerTx.id, 'id-3')
-    assert.notStrictEqual(result.schedulerTx.timestamp, undefined)
-    assert.notStrictEqual(result.schedulerTx.block, undefined)
-    assert.notStrictEqual(result.schedulerTx.timestamp, null)
-    assert.notStrictEqual(result.schedulerTx.block, null)
+    assert.deepStrictEqual(result.schedulerTx, {
+      id: 'id-3',
+      timestamp: 1234567,
+      block: 1234567
+    })
   })
 })
