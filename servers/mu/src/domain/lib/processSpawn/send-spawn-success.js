@@ -7,14 +7,14 @@ const ctxSchema = z.object({
 }).passthrough()
 
 export function sendSpawnSuccessWith (env) {
-  const { logger, writeSequencerTx } = env
+  const { logger, writeDataItem } = env
 
   return (ctx) => {
     return of(ctx.spawnSuccessTx.data)
-      .chain(fromPromise(writeSequencerTx))
+      .chain(fromPromise(writeDataItem))
       .bichain(
         (error) => {
-          console.error('writeSequencerTx failed. Recovering and returning original ctx.', error)
+          console.error('writeDataItem failed. Recovering and returning original ctx.', error)
           return of(ctx)
         },
         (result) => {
