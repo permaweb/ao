@@ -30,7 +30,7 @@ describe('validateWith', () => {
       })
 
       await validate(SCHEDULER)
-        .then(assert.ok)
+        .then(res => assert.deepStrictEqual(res, { url: DOMAIN }))
     })
 
     test('not valid', async () => {
@@ -43,17 +43,12 @@ describe('validateWith', () => {
           getByOwner: async (scheduler) => {
             assert.equal(scheduler, SCHEDULER)
             return undefined
-          },
-          setByOwner: async (owner, url, ttl) => {
-            assert.equal(owner, SCHEDULER)
-            assert.equal(url, DOMAIN)
-            assert.equal(ttl, TEN_MS)
           }
         }
       })
 
       await validate(SCHEDULER)
-        .then((valid) => assert.equal(valid, false))
+        .then((valid) => assert.equal(valid, undefined))
     })
   })
 
@@ -71,6 +66,6 @@ describe('validateWith', () => {
     })
 
     await validate(SCHEDULER)
-      .then(assert.ok)
+      .then(res => assert.deepStrictEqual(res, { url: DOMAIN }))
   })
 })
