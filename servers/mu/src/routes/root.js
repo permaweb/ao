@@ -7,19 +7,21 @@ import { withMiddleware } from './middleware/index.js'
 
 const { DataItem } = WarpArBundles
 
-export const withMessageRoutes = (app) => {
+export const withRootRoutes = (app) => {
+  // TODO: add healthcheck endpoint
+
   app.post(
-    '/message',
+    '/',
     compose(
       withMiddleware,
       always(async (req, res) => {
         const {
           body,
           logger: _logger,
-          domain: { apis: { sendMsg } }
+          domain: { apis: { sendDataItem } }
         } = req
 
-        const logger = _logger.child('POST_message')
+        const logger = _logger.child('POST_root')
 
         const inputSchema = z.object({
           body: z.any().refine(
@@ -34,25 +36,21 @@ export const withMessageRoutes = (app) => {
         const input = await inputSchema.parseAsync({ body })
 
         /**
-         * Forward the message
+         * Forward the DataItem
          */
         await of({ raw: input.body })
-          .chain(sendMsg)
+          .chain(sendDataItem)
           .bimap(
-            logger.tap('Failed to forward initial message to the SU and read result from the CU'),
-            logger.tap('Successfully forwarded initial message to the SU and read result from the CU. Beginning to crank...')
+            logger.tap('Failed to send the DataItem'),
+            logger.tap('Successfully sent DataItem. Beginning to crank...')
           )
           .chain(({ tx, crank: crankIt }) => {
             /**
-             * Respond to the client after the initial message has been forwarded,
+             * Respond to the client after the initial data item has been forwarded,
              * then transparently continue cranking its results
              */
-            res.status(202).send({ message: 'Processing message', id: tx.id })
-
-            return crankIt().bimap(
-              logger.tap('Failed to crank messages'),
-              logger.tap('Successfully cranked messages')
-            )
+            res.status(202).send({ message: 'Processing DataItem', id: tx.id })
+            return crankIt()
           })
           .toPromise()
       })

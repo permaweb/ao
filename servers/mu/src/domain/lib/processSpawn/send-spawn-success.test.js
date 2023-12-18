@@ -13,7 +13,7 @@ describe('sendSpawnSucess', () => {
     }
 
     const sendSpawnSucess = sendSpawnSuccessWith({
-      writeSequencerTx: async (data) => {
+      writeDataItem: async (data) => {
         assert.deepStrictEqual(data, spawnSucessTx1.data)
         return {
           id: 'id-1',

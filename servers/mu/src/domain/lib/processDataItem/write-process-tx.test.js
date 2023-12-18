@@ -2,11 +2,11 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../../logger.js'
-import { writeTxWith } from './write-tx.js'
+import { writeProcessTxWith } from './write-process-tx.js'
 
 const logger = createLogger('ao-mu:processMsg')
 
-async function writeSequencerTx () {
+async function writeDataItem () {
   return {
     id: 'id-3',
     timestamp: 1234567,
@@ -14,14 +14,14 @@ async function writeSequencerTx () {
   }
 }
 
-describe('writeTx', () => {
+describe('writeProcessTxWith', () => {
   test('write a tx to the sequencer', async () => {
-    const writeTx = writeTxWith({
-      writeSequencerTx,
+    const writeProcessTx = writeProcessTxWith({
+      writeDataItem,
       logger
     })
 
-    const result = await writeTx({
+    const result = await writeProcessTx({
       tx: {
         processId: 'id-1',
         id: 'id-2',
@@ -39,10 +39,10 @@ describe('writeTx', () => {
       })
     }).toPromise()
 
-    assert.equal(result.sequencerTx.id, 'id-3')
-    assert.notStrictEqual(result.sequencerTx.timestamp, undefined)
-    assert.notStrictEqual(result.sequencerTx.block, undefined)
-    assert.notStrictEqual(result.sequencerTx.timestamp, null)
-    assert.notStrictEqual(result.sequencerTx.block, null)
+    assert.equal(result.schedulerTx.id, 'id-3')
+    assert.notStrictEqual(result.schedulerTx.timestamp, undefined)
+    assert.notStrictEqual(result.schedulerTx.block, undefined)
+    assert.notStrictEqual(result.schedulerTx.timestamp, null)
+    assert.notStrictEqual(result.schedulerTx.block, null)
   })
 })

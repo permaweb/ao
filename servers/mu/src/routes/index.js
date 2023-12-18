@@ -1,13 +1,13 @@
 import { pipe } from 'ramda'
 
-import { withMessageRoutes } from './message.js'
+import { withRootRoutes } from './root.js'
 import { withSpawnRoutes } from './spawn.js'
 import { withMonitorRoutes } from './monitor.js'
 import { withTraceRoutes } from './trace.js'
 
 export const withRoutes = pipe(
+  withRootRoutes,
   withTraceRoutes,
-  withMessageRoutes,
   withSpawnRoutes,
   withMonitorRoutes
 )
