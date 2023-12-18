@@ -3,7 +3,7 @@ import { isNil, isEmpty, anyPass } from 'ramda'
 
 import { tracerFor } from '../tracer.js'
 
-const isNilOrEmpty = anyPass(isNil, isEmpty)
+const isNilOrEmpty = anyPass([isNil, isEmpty])
 
 async function eventQueue (init) {
   const iters = [init]
