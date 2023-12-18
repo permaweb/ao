@@ -2,6 +2,7 @@
 -- published at IKZzFN5JvCf3XCOx1kw940sjY9zAbsd6Wm7MMRgf_Zk
 -- with 'say' function support at QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY
 -- with 'friend' function support at V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
+-- with "new ao" API at nnYHq4NRKsKl6eMBC3rGq_Gm_Ddx1FDjDdUKuWOVfG8
 
 local JSON = require("json")
 local base64 = require(".base64")
