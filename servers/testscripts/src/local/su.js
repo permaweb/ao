@@ -19,7 +19,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem2.sign(signer)
 
   const response2 = await fetch(
-    'https://ao-su-1.onrender.com/',
+    'http://localhost:8001',
     {
       method: 'POST',
       headers: {
@@ -47,7 +47,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem.sign(signer)
 
   const response = await fetch(
-    'https://ao-su-1.onrender.com/',
+    'http://localhost:8001',
     {
       method: 'POST',
       headers: {
@@ -74,7 +74,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem3.sign(signer)
 
   const response3 = await fetch(
-    'https://ao-su-1.onrender.com/',
+    'http://localhost:8001',
     {
       method: 'POST',
       headers: {

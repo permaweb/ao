@@ -24,7 +24,6 @@ impl From<UploaderErrorType> for String {
 pub struct UploadResult{
     pub id: String,
     pub timestamp: u64,
-    pub block: u64,
 }
 
 pub struct UploaderClient<'a> {
