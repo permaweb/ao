@@ -1,12 +1,12 @@
 import { identity } from 'ramda'
 import { of, fromPromise, Rejected } from 'hyper-async'
 
-function writeDataItemWith ({ fetch, SCHEDULER_URL, logger }) {
-  return async (data) => {
+function writeDataItemWith ({ fetch, logger }) {
+  return async ({ data, suUrl }) => {
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap(`Forwarding message to SU ${SCHEDULER_URL}`))
+      .map(logger.tap(`Forwarding message to SU ${suUrl}`))
       .chain(fromPromise((body) =>
-        fetch(SCHEDULER_URL, {
+        fetch(suUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',

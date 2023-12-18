@@ -1,13 +1,28 @@
-import { of, fromPromise, Rejected } from 'hyper-async'
-import { __, assoc, tap } from 'ramda'
+import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
+import { __, assoc, is, tap } from 'ramda'
 import z from 'zod'
+
+import { parseTags } from '../../utils.js'
 
 const ctxSchema = z.object({
   processTx: z.any()
 }).passthrough()
 
 export function spawnProcessWith (env) {
-  const { logger, writeProcessTx } = env
+  let { logger, writeDataItem, locateScheduler } = env
+
+  writeDataItem = fromPromise(writeDataItem)
+  locateScheduler = fromPromise(locateScheduler)
+
+  function findSchedulerTag (tags) {
+    return of(tags)
+      .map(parseTags)
+      .chain((tags) => {
+        if (!tags.Scheduler) return Rejected('No Scheduler tag found on \'Process\' DataItem')
+        if (is(Array, tags.Scheduler)) return Resolved(tags.Scheduler[0])
+        return Resolved(tags.Scheduler)
+      })
+  }
 
   return (ctx) => {
     ctx.tracer.trace('Constructing message from spawn')
@@ -35,7 +50,13 @@ export function spawnProcessWith (env) {
     const transformedData = { initState, src: srcTag.value, tags: tagsIn }
 
     return of(transformedData)
-      .chain(fromPromise(writeProcessTx))
+      .chain((tData) =>
+        of(tData.tags)
+          .map(findSchedulerTag)
+          .chain((schedulerAddress) => locateScheduler(schedulerAddress))
+          .chain(() => Rejected('NOT IMPLEMENTED. Need to transform data'))
+          .chain(({ url, data }) => writeDataItem({ suUrl: url, data }))
+      )
       .bimap(
         tap(() => ctx.tracer.trace('Failed to write spawn to SU')),
         tap(() => ctx.tracer.trace('Wrote spawn to SU'))

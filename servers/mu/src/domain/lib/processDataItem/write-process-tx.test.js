@@ -6,18 +6,23 @@ import { writeProcessTxWith } from './write-process-tx.js'
 
 const logger = createLogger('ao-mu:processMsg')
 
-async function writeDataItem () {
-  return {
-    id: 'id-3',
-    timestamp: 1234567,
-    block: 1234567
-  }
-}
-
 describe('writeProcessTxWith', () => {
-  test('write a tx to the sequencer', async () => {
+  test('write a tx to the scheduler', async () => {
     const writeProcessTx = writeProcessTxWith({
-      writeDataItem,
+      writeDataItem: async ({ suUrl, data }) => {
+        assert.equal(suUrl, 'https://foo.bar')
+        assert.equal(data, 'raw-123')
+
+        return {
+          id: 'id-3',
+          timestamp: 1234567,
+          block: 1234567
+        }
+      },
+      locateScheduler: async (walletAddress) => {
+        assert.equal(walletAddress, 'wallet-123')
+        return { url: 'https://foo.bar' }
+      },
       logger
     })
 
@@ -25,7 +30,12 @@ describe('writeProcessTxWith', () => {
       tx: {
         processId: 'id-1',
         id: 'id-2',
-        data: Buffer.alloc(0)
+        data: 'raw-123'
+      },
+      dataItem: {
+        tags: [
+          { name: 'Scheduler', value: 'wallet-123' }
+        ]
       },
       tracer: ({
         child: (id) => {
@@ -39,10 +49,51 @@ describe('writeProcessTxWith', () => {
       })
     }).toPromise()
 
-    assert.equal(result.schedulerTx.id, 'id-3')
-    assert.notStrictEqual(result.schedulerTx.timestamp, undefined)
-    assert.notStrictEqual(result.schedulerTx.block, undefined)
-    assert.notStrictEqual(result.schedulerTx.timestamp, null)
-    assert.notStrictEqual(result.schedulerTx.block, null)
+    assert.deepStrictEqual(result.schedulerTx, {
+      id: 'id-3',
+      timestamp: 1234567,
+      block: 1234567
+    })
+  })
+
+  test('throw if a Scheduler tag is not found', async () => {
+    const writeProcessTx = writeProcessTxWith({
+      writeDataItem: async ({ suUrl, data }) => {
+        return {
+          id: 'id-3',
+          timestamp: 1234567,
+          block: 1234567
+        }
+      },
+      locateScheduler: async (walletAddress) => {
+        return { url: 'https://foo.bar' }
+      },
+      logger
+    })
+
+    await writeProcessTx({
+      tx: {
+        processId: 'id-1',
+        id: 'id-2',
+        data: 'raw-123'
+      },
+      dataItem: {
+        tags: [
+          { name: 'Not_scheduler', value: 'wallet-123' }
+        ]
+      },
+      tracer: ({
+        child: (id) => {
+          assert.equal(id, 'id-2')
+          return 1
+        },
+        trace: (s) => {
+          assert.ok(typeof s === 'string')
+          return 1
+        }
+      })
+    }).toPromise()
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.equal(err, 'No Scheduler tag found on \'Process\' DataItem'))
   })
 })

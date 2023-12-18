@@ -32,7 +32,7 @@ describe('parseDataItem', () => {
     assert.equal(result.tx.processId, 'target-1')
     assert.deepStrictEqual(result.tx.data, raw1)
 
-    assert.deepStrictEqual(result.message, {
+    assert.deepStrictEqual(result.dataItem, {
       id: 'id-1',
       target: 'target-1',
       anchor: 'foobar'

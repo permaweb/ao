@@ -11,14 +11,18 @@ const ctxSchema = z.object({
 }).passthrough()
 
 export function writeMessageTxWith (env) {
-  const { logger, writeDataItem } = env
+  let { logger, writeDataItem, locateProcess } = env
 
-  const writeScheduler = fromPromise(writeDataItem)
+  writeDataItem = fromPromise(writeDataItem)
+  locateProcess = fromPromise(locateProcess)
 
   return (ctx) => {
-    return of(ctx.tx.data)
+    return of()
       .map(tap(() => ctx.tracer.trace('Sending message to SU')))
-      .chain(writeScheduler)
+      .chain(() =>
+        locateProcess(ctx.tx.processId)
+          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data }))
+      )
       .map(assoc('schedulerTx', __, ctx))
       /**
        * Make sure to add the message's id

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import warpArBundles from 'warp-arbundles'
+import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 
 import dbInstance, { createDbClient } from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
@@ -7,7 +8,7 @@ import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 
 import dataStoreClient from './lib/datastore.js'
-import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith, sendSpawnWith } from './lib/main.js'
+import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith } from './lib/main.js'
 
 import runScheduledWith from './bg/manager.js'
 
@@ -56,6 +57,8 @@ export const createApis = (ctx) => {
   const logger = ctx.logger
   const fetch = ctx.fetch
 
+  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL: ctx.GATEWAY_URL })
+
   /**
    * hate side effects like this, see TODO in ./dbInstance.js
    */
@@ -65,6 +68,8 @@ export const createApis = (ctx) => {
   const processMsg = processMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
     createDataItem,
+    locateScheduler: raw,
+    locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, SCHEDULER_URL, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
@@ -76,17 +81,11 @@ export const createApis = (ctx) => {
     logger
   })
 
-  const sendSpawnLogger = logger.child('sendSpawn')
-  const sendSpawn = sendSpawnWith({
-    writeProcessTx: schedulerClient.writeProcessTxWith({ SCHEDULER_URL, MU_WALLET, logger: sendSpawnLogger }),
-    createDataItem,
-    logger: sendSpawnLogger
-  })
-
   const processSpawnLogger = logger.child('processSpawn')
   const processSpawn = processSpawnWith({
     logger: processSpawnLogger,
-    writeProcessTx: schedulerClient.writeProcessTxWith({ SCHEDULER_URL, MU_WALLET, logger: processSpawnLogger }),
+    locateScheduler: raw,
+    locateProcess: locate,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, SCHEDULER_URL, logger: processSpawnLogger }),
     deleteSpawn: dataStoreClient.deleteSpawnWith({ dbInstance, logger: processSpawnLogger })
@@ -104,6 +103,8 @@ export const createApis = (ctx) => {
   const sendDataItem = sendDataItemWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
     createDataItem,
+    locateScheduler: raw,
+    locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, SCHEDULER_URL, logger: sendDataItemLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: sendDataItemLogger }),
@@ -122,5 +123,5 @@ export const createApis = (ctx) => {
     logger: monitorProcessLogger
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess, sendSpawn }
+  return { sendDataItem, crankMsgs, monitorProcess }
 }
