@@ -16,7 +16,7 @@ async function up (db) {
       "to" VARCHAR(255),
       "msg" JSONB,
       "trace"  VARCHAR(255)[],
-      "tracedAt" TIMESTAMP WITH TIME ZONE,
+      "tracedAt" TIMESTAMP WITH TIME ZONE
     )
   `)
 }

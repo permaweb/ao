@@ -31,7 +31,7 @@ export const messageTraceSchema = z.object({
    *
    * If null, then this message's evaluation produced no outbox messages.
    */
-  children: z.array(z.string.min(1)).optional(),
+  children: z.array(z.string().min(1)).optional(),
   /**
    * Any messages produced as a result of this messages evaluation.
    * In other words, these are the messages placed in the process outbox,
@@ -41,7 +41,7 @@ export const messageTraceSchema = z.object({
    *
    * If null, then this message's evaluation produced no outbox messages.
    */
-  spawns: z.array(z.string.min(1)).optional(),
+  spawns: z.array(z.string().min(1)).optional(),
   /**
    * The process that sent this message
    *

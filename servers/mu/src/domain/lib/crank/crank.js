@@ -1,6 +1,7 @@
 import { of, fromPromise } from 'hyper-async'
 import { isNil, isEmpty, anyPass } from 'ramda'
-import { tracerFor } from '../tracer'
+
+import { tracerFor } from '../tracer.js'
 
 const isNilOrEmpty = anyPass(isNil, isEmpty)
 
