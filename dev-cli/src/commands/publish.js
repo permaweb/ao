@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command, basename, resolve } from '../deps.js'
-import { hostArgs } from '../utils.js'
+import { hostArgs, tagsArg } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
@@ -42,10 +42,6 @@ function contractSourceArgs (contractWasmPath) {
   ]
 }
 
-function tagArg (tags) {
-  return tags ? ['-e', `TAGS=${tags.join(',')}`] : []
-}
-
 /**
  * TODO:
  * - Validate existence of wallet
@@ -53,12 +49,12 @@ function tagArg (tags) {
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
-export async function publish ({ wallet, host, tag }, contractWasmPath) {
+export async function publish ({ wallet, host, tag, value }, contractWasmPath) {
   const cmdArgs = [
     ...walletArgs(wallet),
     ...hostArgs(host),
     ...contractSourceArgs(contractWasmPath),
-    ...tagArg(tag)
+    ...tagsArg({ tags: tag, values: value })
   ]
 
   const p = Deno.run({
@@ -90,7 +86,12 @@ export const command = new Command()
   )
   .option(
     '-t, --tag <tag:string>',
-    '"name:value" additional tag to add to the transaction',
+    'additional tag to add to the transaction. MUST have a corresponding --value',
+    { collect: true }
+  )
+  .option(
+    '-v, --value <value:string>',
+    'value of the preceding tag name',
     { collect: true }
   )
   .arguments('<wasmfile:string>')

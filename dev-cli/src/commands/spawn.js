@@ -16,11 +16,11 @@ function sourceArgs (src) {
  * - Validate existence of wallet
  * - require confirmation and bypass with --yes
  */
-export async function spawn ({ wallet, tag, source }) {
+export async function spawn ({ wallet, tag, value, source }) {
   const cmdArgs = [
     ...walletArgs(wallet),
     ...sourceArgs(source),
-    ...tagsArg(tag)
+    ...tagsArg({ tags: tag, values: value })
   ]
 
   const p = Deno.run({
@@ -52,7 +52,12 @@ export const command = new Command()
   )
   .option(
     '-t, --tag <tag:string>',
-    '"name:value" additional tag to add to the transaction',
+    'additional tag to add to the transaction. MUST have a corresponding --value',
+    { collect: true }
+  )
+  .option(
+    '-v, --value <value:string>',
+    'value of the preceding tag name',
     { collect: true }
   )
   .action(spawn)

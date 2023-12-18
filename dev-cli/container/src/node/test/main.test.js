@@ -10,9 +10,35 @@ import {
   checkBalanceWith,
   spawnProcessWith,
   fundWith,
-  uploadModuleWith
+  uploadModuleWith,
+  parseTags
 } from '../src/main.js'
 import { AoModuleTags, DEFAULT_BUNDLER_HOST } from '../src/defaults.js'
+
+describe('parseTags', () => {
+  it('should parse the zip', () => {
+    assert.deepStrictEqual(
+      parseTags(JSON.stringify([['foo', 'bar'], ['fizz', 'buzz']])),
+      [
+        { name: 'foo', value: 'fizz' },
+        { name: 'bar', value: 'buzz' }
+      ]
+    )
+
+    assert.deepStrictEqual(
+      parseTags(JSON.stringify([['foo', 'bar'], ['fizz', 'buzz', 'extra']])),
+      [
+        { name: 'foo', value: 'fizz' },
+        { name: 'bar', value: 'buzz' }
+      ]
+    )
+
+    assert.deepStrictEqual(
+      parseTags(JSON.stringify([[], []])),
+      []
+    )
+  })
+})
 
 describe('uploadModuleWith', () => {
   const happy = {

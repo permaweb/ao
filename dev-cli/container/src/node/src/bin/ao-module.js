@@ -40,7 +40,7 @@ Promise.resolve()
       artifactPath: process.env.MODULE_WASM_PATH,
       to: process.env.BUNDLER_HOST,
       tags: [
-        ...parseTags(process.env.TAGS || ''),
+        ...parseTags(process.env.TAGS || JSON.stringify([[], []])),
         // Add the proper tags for ao contract source
         ...AoModuleTags
       ]

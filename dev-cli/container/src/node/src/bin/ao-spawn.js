@@ -35,7 +35,7 @@ Promise.resolve()
     uploadAoProcess({
       walletPath: process.env.WALLET_PATH,
       module: process.env.MODULE_TX,
-      tags: parseTags(process.env.TAGS || '')
+      tags: parseTags(process.env.TAGS || JSON.stringify([[], []]))
     })
   )
   // log transaction id

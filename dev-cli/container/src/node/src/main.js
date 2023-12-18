@@ -50,14 +50,16 @@ export const determineBundlerHost = (host) => {
  * @param {string} tagsStr
  * @returns {Tag[]} an array of parsed tags
  */
-export const parseTags = (tagsStr) =>
-  tagsStr
-    ? tagsStr
-      .split(',')
-      .map((pairs) => pairs.trim()) // ['foo:bar', 'fizz: buzz']
-      .map((pairs) => pairs.split(':').map((v) => v.trim())) // [['foo', 'bar'], ['fizz', 'buzz']]
-      .map(([name, value]) => ({ name, value }))
-    : [] // TODO: filter out dups?
+export const parseTags = (tagZipStr) => {
+  // [ [name1, name2], [value1, value2] ]
+  const [names, values] = JSON.parse(tagZipStr)
+  const len = Math.min(names.length, values.length)
+
+  const tags = []
+  for (let i = 0; i < len; i++) tags.push({ name: names[i], value: values[i] })
+
+  return tags
+}
 
 export const useFirstTag = (name) => (tags = []) => {
   let found = false

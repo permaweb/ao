@@ -21,8 +21,16 @@ export function walletArgs (wallet) {
     : []
 }
 
-export function tagsArg (tags) {
-  return tags ? ['-e', `TAGS=${tags.join(',')}`] : []
+export function tagsArg ({ tags, values }) {
+  if (!tags && !values) return []
+  if (tags && !values) throw new Error('tag values required')
+  if (values && !tags) throw new Error('tag names required')
+  if (tags.length !== values.length) throw new Error('tag value length mismatch')
+
+  /**
+   * Pass a stringified zip of [ [tag1, tag2], [value1, value2] ]
+   */
+  return ['-e', `TAGS=${JSON.stringify([tags, values])}`]
 }
 
 export function hostArgs (host) {
