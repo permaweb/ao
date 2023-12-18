@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.4](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.3...scheduler-utils@v0.0.4) (2023-12-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **scheduler-utils:** return { url } from validate if found instead of boolean
+
+* **scheduler-utils:** return { url } from validate if found instead of boolean ([dcb575f](https://github.com/permaweb/ao/commit/dcb575fb5e8c29e40e85f5e5e147e30a874e0c29))
+
+
+### Features
+
+* **scheduler-utils:** add raw api ([cd4d846](https://github.com/permaweb/ao/commit/cd4d846204310cd4fd589c1eca5bf774f8cd49c5))
+
 ## [0.0.3](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.2...scheduler-utils@v0.0.3) (2023-12-13)
 
 
