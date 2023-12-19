@@ -10,16 +10,17 @@ const { createData, ArweaveSigner } = WarpArBundles;
   const data2 = Math.random().toString().slice(-4)
   const tags2 = [
     { name: 'Data-Protocol', value: 'ao' },
-    { name: 'Type', value: 'Process' },
-    { name: 'Module', value: 'V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs' },
-    { name: 'Scheduler', value: 'mx8zvkz0jWNwAiBnBqkGcZqqfcFYptbrL4RIKMd4anc' }
+    { name: 'Type', value: 'Scheduler-Location' },
+    { name: 'Variant', value: 'ao.TN.1' },
+    { name: 'Url', value: 'https://ao-su-1.onrender.com/' },
+    { name: 'Time-To-Live', value: '86400000' }
   ]
 
   const dataItem2 = createData(data2, signer, { tags: tags2 })
   await dataItem2.sign(signer)
 
   const response2 = await fetch(
-    'http://localhost:8001',
+    'https://up.arweave.net/tx/arweave',
     {
       method: 'POST',
       headers: {
