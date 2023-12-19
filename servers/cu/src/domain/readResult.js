@@ -27,7 +27,7 @@ export function readResultWith (env) {
     return of({ processId, messageTxId })
       .chain(loadMessageMeta)
       .chain(res => readState({ processId: res.processId, to: res.timestamp }))
-      .map(omit(['buffer']))
+      .map(omit(['Memory']))
       .map(
         env.logger.tap(
           'readResult result for message with txId %s to process %s',

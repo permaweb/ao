@@ -194,7 +194,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
       .chain((doc) => doc ? Resolved(doc) : Rejected(undefined))
       /**
        * Also retrieve the state buffer, persisted as an attachment
-       * and set it on the output.buffer field to match the expected output shape
+       * and set it on the output.Memory field to match the expected output shape
        */
       .chain(fromPromise(async (doc) => {
         const buffer = await pouchDb.getAttachment(doc._id, 'memory.txt')
