@@ -148,7 +148,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
               timestamp: path(['timestamp'])
             }),
             AoGlobal: applySpec({
-              Process: always({ id: processId, owner: processOwner, tags: processTags })
+              Process: always({ Id: processId, Owner: processOwner, Tags: processTags })
             })
           })
         )(edge)

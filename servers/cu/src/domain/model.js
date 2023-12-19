@@ -85,9 +85,9 @@ export const messageSchema = z.object({
   }),
   AoGlobal: z.object({
     Process: z.object({
-      id: z.string(),
-      owner: z.string(),
-      tags: z.array(rawTagSchema)
+      Id: z.string(),
+      Owner: z.string(),
+      Tags: z.array(rawTagSchema)
     })
   }).passthrough() // TODO: remove once AoGlobal is more defined
 }).passthrough()

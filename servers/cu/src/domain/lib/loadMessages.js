@@ -200,7 +200,7 @@ export function cronMessagesBetweenWith ({
               Cron: true
             },
             AoGlobal: {
-              Process: { id: processId, owner: processOwner, tags: processTags }
+              Process: { Id: processId, Owner: processOwner, Tags: processTags }
             }
           }
         }
@@ -236,7 +236,7 @@ export function cronMessagesBetweenWith ({
                 Cron: true
               },
               AoGlobal: {
-                Process: { id: processId, owner: processOwner, tags: processTags }
+                Process: { Id: processId, Owner: processOwner, Tags: processTags }
               }
             }
           }
