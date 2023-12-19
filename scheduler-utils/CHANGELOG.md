@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.5](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.4...scheduler-utils@v0.0.5) (2023-12-19)
+
+
+### Features
+
+* **scheduler-utils:** more informative error message when transaction not found on gateway ([f4515ed](https://github.com/permaweb/ao/commit/f4515ed82d814117696e98fe19dcc670311802c8))
+
 ## [0.0.4](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.3...scheduler-utils@v0.0.4) (2023-12-18)
 
 
