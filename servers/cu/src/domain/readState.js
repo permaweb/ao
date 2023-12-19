@@ -36,7 +36,7 @@ export function readStateWith (env) {
          * The exact evaluation (identified by its input messages timestamp)
          * was found in the cache, so just return it
          */
-        if (res.from === to) {
+        if (res.from && res.from === to) {
           env.logger('Exact match to cached evaluation for message "%s" to process "%s"', to, processId)
           return Resolved(res.result)
         }
