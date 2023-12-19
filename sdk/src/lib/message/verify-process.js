@@ -14,7 +14,7 @@ import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
  * @param {Env5} env
  * @returns {any} VerifyTags
  */
-function verifyProcessTagsWith ({ loadProcessMeta, locateScheduler }) {
+function verifyProcessTagsWith ({ loadProcessMeta, locateScheduler, logger }) {
   const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
     : Rejected(`Tag '${name}': ${err}`)
@@ -24,6 +24,8 @@ function verifyProcessTagsWith ({ loadProcessMeta, locateScheduler }) {
 
   return (id) => {
     return of(id)
+      .map(logger.tap('Verifying Process'))
+      .map(logger.tap('Locating Scheduler for Process to retrieve Process meta'))
       .chain(locateScheduler)
       .chain(({ url }) => loadProcessMeta({ suUrl: trimSlash(url), processId: id }))
       .map(prop('tags'))
