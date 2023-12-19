@@ -15,7 +15,7 @@ const env = {
     Id: 'PROCESS_TEST',
     Owner: 'OWNER',
     Tags: [
-      { name: 'Module', value: 'HVrC6zGchfLPgfNda2yBRzGulGzGPeuLRIq-H7qBcPY' }
+      { name: 'Module', value: '6xSB_-rcVEc8znlSe3JZBYHRsFw5lcgjhLyR8b6leLA' }
     ]
   }
 }

@@ -88,7 +88,7 @@ hello world > pong <friend_id>
 
 There are convenient scripts included that you can run to spin up your own
 `hello-world` Process. The current source is already published to
-`QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY`.
+`6xSB_-rcVEc8znlSe3JZBYHRsFw5lcgjhLyR8b6leLA`.
 
 > Make sure to set `PATH_TO_WALLET` environment variable to the path to a wallet
 > JWK file

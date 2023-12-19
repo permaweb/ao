@@ -7,7 +7,7 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 const { spawn } = connect()
 
 await spawn({
-  module: 'HVrC6zGchfLPgfNda2yBRzGulGzGPeuLRIq-H7qBcPY',
+  module: '6xSB_-rcVEc8znlSe3JZBYHRsFw5lcgjhLyR8b6leLA',
   scheduler: 'TZ7o7SIZ06ZEJ14lXwVtng1EtSx60QkPy-kh-kdAXog',
   tags: [
     { name: 'Cron-Interval', value: '1-hour' },

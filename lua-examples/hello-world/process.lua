@@ -3,7 +3,7 @@
 -- with 'say' function support at QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY
 -- with 'friend' function support at V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
 -- with "new ao" API at nnYHq4NRKsKl6eMBC3rGq_Gm_Ddx1FDjDdUKuWOVfG8
--- with "spawn" using AoGlobal.Process.Tags HVrC6zGchfLPgfNda2yBRzGulGzGPeuLRIq-H7qBcPY
+-- with "spawn" using AoGlobal.Process.Tags 6xSB_-rcVEc8znlSe3JZBYHRsFw5lcgjhLyR8b6leLA
 
 local JSON = require("json")
 local base64 = require(".base64")
@@ -91,7 +91,7 @@ local function send(tags, target, AoGlobal)
   }
 
   for k,v in pairs(tags) do
-    table.insert(message.Tags, { name = k, value = v })
+    table.insert(message.Tags, { name = v.name, value = v.value })
   end
 
   return message
