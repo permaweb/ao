@@ -1,7 +1,10 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
+import { createLogger } from '../../logger.js'
 import { verifyProcessWith } from './verify-process.js'
+
+const logger = createLogger('message')
 
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 
@@ -23,7 +26,8 @@ describe('verify-process', () => {
       locateScheduler: async (id) => {
         assert.equal(id, PROCESS)
         return { url: 'https://foo.bar' }
-      }
+      },
+      logger
     })
 
     await verifyProcess({ id: PROCESS }).toPromise()
@@ -42,7 +46,8 @@ describe('verify-process', () => {
               { name: 'Module', value: 'module-123' }
             ]
           }),
-        locateScheduler: async (id) => ({ url: 'https://foo.bar' })
+        locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
+        logger
       })
 
       await verifyProcess({ id: PROCESS }).toPromise()
@@ -64,7 +69,8 @@ describe('verify-process', () => {
               { name: 'Type', value: 'Not_process' }
             ]
           }),
-        locateScheduler: async (id) => ({ url: 'https://foo.bar' })
+        locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
+        logger
       })
 
       await verifyProcess({ id: PROCESS }).toPromise()
@@ -86,7 +92,8 @@ describe('verify-process', () => {
               { name: 'Type', value: 'Process' }
             ]
           }),
-        locateScheduler: async (id) => ({ url: 'https://foo.bar' })
+        locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
+        logger
       })
 
       await verifyProcess({ id: PROCESS }).toPromise()
