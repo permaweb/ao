@@ -1,23 +1,27 @@
 import {
-  F, T, __, always, append, assoc, chain, concat, cond, defaultTo, equals,
-  filter, has, head, identity, includes, is, join, map, pipe, prop, propOr, reduce
+  F, T, __, append, assoc, chain, concat, cond, defaultTo, equals,
+  filter, has, head, includes, is, join, map, pipe, propOr, reduce
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
 export function errFrom (err) {
-  err = err || { message: 'An error occurred' }
+  let e
+  /**
+   * Imperative to not inflate the stack trace
+   */
+  if (is(ZodError, err)) {
+    e = new Error(mapZodErr(err))
+    e.stack += err.stack
+  } else if (is(Error, err)) {
+    e = err
+  } else if (has('message', err)) {
+    e = new Error(err.message)
+  } else if (is(String, err)) {
+    e = new Error(err)
+  } else {
+    e = new Error('An error occurred')
+  }
 
-  const message = pipe(
-    cond([
-      [is(ZodError), mapZodErr],
-      [has('message'), prop('message')],
-      [is(String), identity],
-      [T, always('An error occurred')]
-    ])
-  )(err)
-
-  const e = new Error(message)
-  e.stack += err.stack || ''
   return e
 }
 
