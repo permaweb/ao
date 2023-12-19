@@ -1,17 +1,17 @@
 function resultWith ({ fetch, CU_URL, logger }) {
-  return async (txId) => {
-    logger(`${CU_URL}/result/${txId}`)
+  return async (txId, processId) => {
+    logger(`${CU_URL}/result/${txId}?process-id=${processId}`)
 
     const requestOptions = {
       timeout: 0
     }
 
-    return fetch(`${CU_URL}/result/${txId}`, requestOptions)
+    return fetch(`${CU_URL}/result/${txId}?process-id=${processId}`, requestOptions)
       .then(res => res.json())
       .then(res => res || {
-        messages: [],
-        spawns: [],
-        output: ''
+        Messages: [],
+        Spawns: [],
+        Output: ''
       })
   }
 }

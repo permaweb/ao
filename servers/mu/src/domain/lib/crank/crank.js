@@ -101,16 +101,16 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
      * The last event pushed onto the queue is to persist
      * the message trace record
      */
-    events.push(async () => {
-      return of()
-        .map(() => tracer.unwrap())
-        .chain(fromPromise(saveMessageTrace))
-        /**
-         * No more events to push onto the event queue
-         */
-        .map(() => [])
-        .toPromise()
-    })
+    // events.push(async () => {
+    //   return of()
+    //     .map(() => tracer.unwrap())
+    //     .chain(fromPromise(saveMessageTrace))
+    //     /**
+    //      * No more events to push onto the event queue
+    //      */
+    //     .map(() => [])
+    //     .toPromise()
+    // })
 
     return events
   }
