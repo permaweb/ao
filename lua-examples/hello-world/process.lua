@@ -3,7 +3,7 @@
 -- with 'say' function support at QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY
 -- with 'friend' function support at V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
 -- with "new ao" API at nnYHq4NRKsKl6eMBC3rGq_Gm_Ddx1FDjDdUKuWOVfG8
--- with "spawn" using AoGlobal.Process.Tags yp6YQztlpQRNVAVexy_WjlyVQmLnXAdkloB5bdZMXPo
+-- with "spawn" using AoGlobal.Process.Tags HVrC6zGchfLPgfNda2yBRzGulGzGPeuLRIq-H7qBcPY
 
 local JSON = require("json")
 local base64 = require(".base64")
@@ -119,10 +119,11 @@ actions['friend'] = function (state, message, AoGlobal)
   local o = { friendlyMessage = 'Spawn returned in result.Spawns' }
   return { state = state, output = JSON.encode(o), spawns = { spawn(message.Tags, AoGlobal) } }
 end
-actions['ping'] = function (state, message)
+actions['ping'] = function (state, message, AoGlobal)
   local target = findObject(message.Tags, "name", "friend").value
   local tags = {
-    { name = "function", value = "pong" }
+    { name = "function", value = "pong" },
+    { name = "friend", value = AoGlobal.Process.Id }
   }
 
   local o = { friendlyMessage = 'sending ping to ' .. target }
