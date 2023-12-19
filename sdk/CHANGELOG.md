@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.20](https://github.com/permaweb/ao/compare/sdk@v0.0.19...sdk@v0.0.20) (2023-12-19)
+
+
+### Features
+
+* **cu,mu,sdk:** better preservation of error on bubble to errFrom ([f706951](https://github.com/permaweb/ao/commit/f7069513d8c02e3422c484b3b34642d6d29ad408))
+* **sdk:** add Variant tag on spawn and message ([cc4436c](https://github.com/permaweb/ao/commit/cc4436c813450a2910853e3415f2a3c88228ca6c))
+
 ## [0.0.19](https://github.com/permaweb/ao/compare/sdk@v0.0.18...sdk@v0.0.19) (2023-12-17)
 
 
