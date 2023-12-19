@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
 import { rawBlockSchema, rawTagSchema } from '../model.js'
-import { eqOrIncludes, parseTags } from '../utils.js'
+import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
 
 function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, saveProcess, logger }) {
   locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
@@ -22,7 +22,7 @@ function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, savePr
    */
   function loadFromSu (processId) {
     return locateScheduler(processId)
-      .chain(({ url }) => loadProcess({ suUrl: url, processId }))
+      .chain(({ url }) => loadProcess({ suUrl: trimSlash(url), processId }))
       /**
        * Verify the process by examining the tags
        */

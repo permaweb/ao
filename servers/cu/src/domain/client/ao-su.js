@@ -141,7 +141,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
              * down the pipeline
              */
             block: applySpec({
-              height: path(['block']),
+              height: pipe(
+                path(['block']),
+                (block) => parseInt(block)
+              ),
               timestamp: path(['timestamp'])
             }),
             AoGlobal: applySpec({
@@ -160,7 +163,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           fetchAllPages({ suUrl, processId, from, to }),
           Transform.from(mapAoMessage({ processId, processOwner, processTags })),
           (err) => {
-            if (err) logger('Encountered err when mapping Sequencer Messages', err)
+            if (err) logger('Encountered err when mapping Scheduled Messages', err)
           }
         )
       })
@@ -175,11 +178,14 @@ export const loadProcessWith = ({ fetch }) => {
         owner: path(['owner', 'address']),
         tags: path(['tags']),
         block: applySpec({
-          height: path(['block', 'height']),
+          height: pipe(
+            path(['block']),
+            (block) => parseInt(block)
+          ),
           /**
            * SU is currently sending back timestamp in milliseconds,
            */
-          timestamp: path(['block', 'timestamp'])
+          timestamp: path(['timestamp'])
         })
       }))
   }

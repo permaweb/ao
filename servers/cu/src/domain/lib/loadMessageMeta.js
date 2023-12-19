@@ -2,6 +2,7 @@ import { fromPromise } from 'hyper-async'
 import { z } from 'zod'
 
 import { loadMessageMetaSchema, locateSchedulerSchema } from '../dal.js'
+import { trimSlash } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -44,7 +45,7 @@ export function loadMessageMetaWith (env) {
   return (ctx) => {
     return locateScheduler(ctx.processId)
       .chain(({ url }) => loadMessageMeta({
-        suUrl: url,
+        suUrl: trimSlash(url),
         processId: ctx.processId,
         messageTxId: ctx.messageTxId
       }))

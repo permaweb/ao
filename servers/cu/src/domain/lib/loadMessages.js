@@ -7,6 +7,7 @@ import ms from 'ms'
 
 import { messageSchema, streamSchema } from '../model.js'
 import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, locateSchedulerSchema } from '../dal.js'
+import { trimSlash } from '../utils.js'
 
 /**
  * - { name: 'Cron-Interval', value: 'interval' }
@@ -242,13 +243,13 @@ function loadScheduledMessagesWith ({ locateScheduler, loadMessages, loadBlocksM
   return (ctx) =>
     of(ctx)
       .map(ctx => {
-        logger('Initializing AsyncIterable of Sequenced messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest')
+        logger('Initializing AsyncIterable of Scheduled messages for process "%s" between "%s" and "%s"', ctx.id, ctx.from || 'initial', ctx.to || 'latest')
         return ctx
       })
       .chain((ctx) =>
         locateScheduler(ctx.id)
           .chain(({ url }) => loadMessages({
-            suUrl: url,
+            suUrl: trimSlash(url),
             processId: ctx.id,
             owner: ctx.owner,
             tags: ctx.tags,
@@ -320,7 +321,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
        * producing a single merged stream
        */
       return locateScheduler(ctx.id)
-        .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: url }))
+        .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: trimSlash(url) }))
         .map(logger.tap('loaded current block and tiemstamp from SU'))
         /**
          * In order to generate cron messages and merge them with the
@@ -366,7 +367,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
             })
         )
         .map(ctx => {
-          logger('Merging Streams of Sequenced and Scheduled Messages...')
+          logger('Merging Streams of Scheduled and Cron Messages...')
           return ctx
         })
         .map(({ leftMost, rightMost, $scheduled, genCronMessages }) => {

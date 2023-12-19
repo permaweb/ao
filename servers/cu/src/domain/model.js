@@ -69,8 +69,8 @@ export const messageSchema = z.object({
     'Forwarded-By': z.string().optional(),
     'Forwarded-For': z.string().optional(),
     Tags: z.array(rawTagSchema),
-    Epoch: z.number(),
-    Nonce: z.number(),
+    Epoch: z.number().optional(),
+    Nonce: z.number().optional(),
     Timestamp: z.coerce.number(),
     'Block-Height': z.coerce.number(),
     /**

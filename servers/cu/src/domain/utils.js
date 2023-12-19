@@ -120,6 +120,11 @@ export function eqOrIncludes (val) {
   ])
 }
 
+export function trimSlash (str = '') {
+  if (!str.endsWith('/')) return str
+  return trimSlash(str.slice(0, -1))
+}
+
 export function findRawTag (name, tags) {
   return pipe(
     defaultTo([]),
