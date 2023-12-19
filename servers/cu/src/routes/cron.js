@@ -22,8 +22,8 @@ const toConnection = ({ cursorFn, nodeFn = identity }) => ({ nodes, pageSize }) 
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
-  from: z.string().optional(),
-  to: z.string().optional()
+  from: z.coerce.number().optional(),
+  to: z.coerce.number().optional()
 })
 
 export const withCronRoutes = app => {
