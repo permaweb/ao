@@ -13,9 +13,9 @@ const findTagValue = (name) => pipe(
   prop('value')
 )
 
-const findTransactionTags = pipe(
+const findTransactionTags = (err) => pipe(
   (transaction) => {
-    if (!transaction) throw new TransactionNotFoundError()
+    if (!transaction) throw new TransactionNotFoundError(err)
     return transaction
   },
   prop('tags'),
@@ -55,7 +55,7 @@ export function loadProcessSchedulerWith ({ fetch, GATEWAY_URL }) {
   return async (process) => {
     return gateway({ query: GET_TRANSACTIONS_QUERY, variables: { transactionIds: [process] } })
       .then(path(['data', 'transactions', 'edges', '0', 'node']))
-      .then(findTransactionTags)
+      .then(findTransactionTags(`Process ${process} was not found on gateway ${GATEWAY_URL}`))
       .then(findTagValue(SCHEDULER_TAG))
       .then((walletAddress) => {
         if (!walletAddress) throw new SchedulerTagNotFoundError('No "Scheduler" tag found on process')
@@ -94,7 +94,7 @@ export function loadSchedulerWith ({ fetch, GATEWAY_URL }) {
   return async (walletAddress) =>
     gateway({ query: GET_SCHEDULER_LOCATION, variables: { owner: walletAddress } })
       .then(path(['data', 'transactions', 'edges', '0', 'node']))
-      .then(findTransactionTags)
+      .then(findTransactionTags(`Could not find 'Scheduler-Location' owner by wallet ${walletAddress}`))
       .then(juxt([
         findTagValue(URL_TAG),
         findTagValue(TTL_TAG)
