@@ -385,7 +385,7 @@ describe('loadMessages', () => {
        */
     ]
 
-    const cronMessagesBetween = cronMessagesBetweenWith({ processId, owner, originBlock, crons, blocksMeta })
+    const cronMessagesBetween = cronMessagesBetweenWith({ logger: () => {}, processId, owner, originBlock, crons, blocksMeta })
 
     const genCronMessages = cronMessagesBetween(
       // left

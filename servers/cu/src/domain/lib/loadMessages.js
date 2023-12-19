@@ -109,6 +109,11 @@ export const CRON_TAG_REGEX = /^Cron-Tag-(.+)$/
  * matches the provided cron
  */
 export function isBlockOnCron ({ height, originHeight, cron }) {
+  /**
+   * Don't count the origin height as a match
+   */
+  if (height === originHeight) return false
+
   return (height - originHeight) % cron.value === 0
 }
 
@@ -126,10 +131,15 @@ export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
    */
   timestamp = Math.floor(timestamp / 1000)
   originTimestamp = Math.floor(originTimestamp / 1000)
+  /**
+   * don't count the origin timestamp as a match
+   */
+  if (timestamp === originTimestamp) return false
   return (timestamp - originTimestamp) % cron.value === 0
 }
 
 export function cronMessagesBetweenWith ({
+  logger,
   processId,
   owner: processOwner,
   tags: processTags,
@@ -175,7 +185,9 @@ export function cronMessagesBetweenWith ({
        */
       for (let i = 0; i < blockBased.length; i++) {
         const cron = blockBased[i]
+
         if (isBlockOnCron({ height: curBlock.height, originHeight: originBlock.height, cron })) {
+          logger('Generating Block based Cron Message for cron "%s" at block "%s"', `${i}-${cron.interval}`, curBlock.height)
           yield {
             cron: `${i}-${cron.interval}`,
             message: {
@@ -211,6 +223,7 @@ export function cronMessagesBetweenWith ({
           const cron = timeBased[i]
 
           if (isTimestampOnCron({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, cron })) {
+            logger('Generating Time based Cron Message for cron "%s" at timestamp "%s"', `${i}-${cron.interval}`, curTimestamp)
             yield {
               cron: `${i}-${cron.interval}`,
               message: {
@@ -305,7 +318,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
       logger.tap('Failed to parse crons:'),
       ifElse(
         length,
-        logger.tap('Crons found. Generating cron messages accoding to Crons'),
+        logger.tap('Crons found. Generating cron messages according to Crons'),
         logger.tap('No crons found. No cron messages to generate')
       )
     )
@@ -356,6 +369,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                  * that are between those boundaries
                  */
                 genCronMessages: cronMessagesBetweenWith({
+                  logger,
                   processId: ctx.id,
                   owner: ctx.owner,
                   tags: ctx.tags,
