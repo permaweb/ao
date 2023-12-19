@@ -62,7 +62,7 @@ export function sendDataItemWith ({
          * Since this message was sent to the MU, it was not cranked by the MU,
          * and hence has no parent message
          */
-        parent: null,
+        parent: undefined,
         /**
          * Since this message was sent to the MU, it was not cranked by the MU,
          * and hence is from the wallet that signed the message
