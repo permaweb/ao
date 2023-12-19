@@ -7,9 +7,7 @@ function buildAndSignWith ({ MU_WALLET }) {
     const signer = new ArweaveSigner(MU_WALLET)
 
     const allTags = [
-      ...tags,
-      { name: 'Data-Protocol', value: 'ao' },
-      { name: 'Type', value: 'Message' }
+      ...tags
     ]
 
     const interactionDataItem = createData(data, signer, { target: processId, anchor, tags: allTags })

@@ -2,26 +2,25 @@ import { readFileSync } from 'node:fs'
 
 import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
-const PROCESS_ID = process.env.PROCESS_ID
-
-if (!PROCESS_ID) throw new Error('PROCESS_ID env var is required, so as to know which process is receiving the message')
-
-console.log(process.env.PATH_TO_WALLET)
-
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 
-const { sendMessage } = connect({
-  GATEWAY_URL: "https://arweave.net", 
-  MU_URL: "http://localhost:3004",
-  CU_URL: "http://localhost:6363",
-  SU_URL: "http://localhost:9000"
-})
+const { message } = connect({ MU_URL: 'http://localhost:3004' })
 
-await sendMessage({
-  processId: 'S8zZ1KFStLB8fYMq7rB_XEwVl0mbeMlhg4RxiuFp6tU',
+await message({
+  process: 'rXhw86nP-NemRdZaEaG6HzUBGt3EdJ_jnkNoVj-CsaI',
   tags: [
-    { name: 'Data-Protocol', value: 'ao' },
-    { name: 'function', value: 'raw' }
+    { name: 'function', value: 'ping' },
+    { name: 'friend', value: 'oPjLE8-Ux28KHcW78u655rdMTogLQ54r86yI-H595zs' }
+  ],
+  signer: createDataItemSigner(wallet)
+}).then(console.log)
+  .catch(console.error)
+
+await message({
+  process: 'rXhw86nP-NemRdZaEaG6HzUBGt3EdJ_jnkNoVj-CsaI',
+  tags: [
+    { name: 'function', value: 'ping' },
+    { name: 'friend', value: 'oPjLE8-Ux28KHcW78u655rdMTogLQ54r86yI-H595zs' }
   ],
   signer: createDataItemSigner(wallet)
 }).then(console.log)

@@ -15,15 +15,15 @@ export function buildTxWith ({ buildAndSign, logger }) {
     return of(ctx)
       .map(tap(() => ctx.tracer.trace('Building and signing message from outbox')))
       .chain(fromPromise(() => buildAndSign({
-        processId: ctx.cachedMsg.msg.target,
+        processId: ctx.cachedMsg.msg.Target,
         tags: [
-          ...ctx.cachedMsg.msg.tags,
+          ...ctx.cachedMsg.msg.Tags,
           { name: 'Data-Protocol', value: 'ao' },
-          { name: 'ao-type', value: 'message' },
-          { name: 'SDK', value: 'ao' }
+          { name: 'Type', value: 'Message' },
+          { name: 'Variant', value: 'ao.TN.1' }
         ],
-        anchor: ctx.cachedMsg.msg.anchor,
-        data: ctx.cachedMsg.msg.data
+        anchor: ctx.cachedMsg.msg.Anchor,
+        data: ctx.cachedMsg.msg.Data
       })))
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)

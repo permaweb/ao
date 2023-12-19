@@ -26,28 +26,10 @@ export function spawnProcessWith (env) {
 
   return (ctx) => {
     ctx.tracer.trace('Constructing message from spawn')
+    // const { buildAndSign } = ctx;
+    // const { Tags, Data } = ctx.cachedSpawn.spawn
 
-    const { tags } = ctx.cachedSpawn.spawn
-    let initState = {}
-    const initStateTag = tags.find((tag) =>
-      tag.name === 'Initial-State'
-    )
-    if (initStateTag) {
-      initState = JSON.parse(initStateTag.value)
-    }
-    const srcTag = tags.find((tag) =>
-      tag.name === 'Contract-Src'
-    )
-    if (!srcTag) return Rejected(ctx)
-
-    const tagsIn = tags.filter(tag => ![
-      'Contract-Src',
-      'Initial-State',
-      'Data-Protocol',
-      'AO-Type'
-    ].includes(tag.name))
-
-    const transformedData = { initState, src: srcTag.value, tags: tagsIn }
+    const transformedData = {}
 
     return of(transformedData)
       .chain((tData) =>

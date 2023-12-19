@@ -37,9 +37,9 @@ function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
   const tryFetchAndSave = (ctx) =>
-    fetchResultAsync(ctx.tx.id)
+    fetchResultAsync(ctx.tx.id, ctx.tx.processId)
       .chain(fetchedResult => {
-        const savePromises = fetchedResult.messages.map(msg => {
+        const savePromises = fetchedResult.Messages.map(msg => {
           return saveMsg({
             id: Math.floor(Math.random() * 1e18).toString(),
             fromTxId: ctx.tx.id,
@@ -51,7 +51,7 @@ function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
             .catch(tap(() => ctx.tracer.trace('Failed to cache outbox message')))
         })
 
-        const saveSpawnPromises = fetchedResult.spawns.map(spawn => {
+        const saveSpawnPromises = fetchedResult.Spawns.map(spawn => {
           return saveSpawn({
             id: Math.floor(Math.random() * 1e18).toString(),
             fromTxId: ctx.tx.id,
