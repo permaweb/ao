@@ -3,7 +3,6 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../../logger.js'
 import { parseDataItemWith } from './parse-data-item.js'
-import { omit } from 'ramda'
 
 const logger = createLogger('ao-mu:processMsg')
 
@@ -11,10 +10,14 @@ describe('parseDataItem', () => {
   test('parse data item into tx object', async () => {
     const raw1 = Buffer.alloc(0)
     const item1 = {
-      id: 'id-1',
+      id: Promise.resolve('id-1'),
+      signature: 'foobar',
+      owner: 'owner-1',
       target: 'target-1',
       anchor: 'foobar',
-      toJSON: () => omit(['toJSON'], item1)
+      tags: [
+        { name: 'Foo', value: 'Bar' }
+      ]
     }
     const parseDataItem = parseDataItemWith({
       createDataItem: (raw) => {
@@ -34,8 +37,13 @@ describe('parseDataItem', () => {
 
     assert.deepStrictEqual(result.dataItem, {
       id: 'id-1',
+      signature: 'foobar',
+      owner: 'owner-1',
       target: 'target-1',
-      anchor: 'foobar'
+      anchor: 'foobar',
+      tags: [
+        { name: 'Foo', value: 'Bar' }
+      ]
     })
   })
 })
