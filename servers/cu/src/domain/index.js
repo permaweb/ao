@@ -71,10 +71,10 @@ export const createApis = (ctx) => {
     loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: readResultLogger })
   })
 
-  const readCronMessagesLogger = ctx.logger.child('readCronMessages')
-  const readCronMessages = readCronOutboxesWith({
-    ...sharedDeps(readCronMessagesLogger),
-    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readCronMessagesLogger })
+  const readCronOutboxesLogger = ctx.logger.child('readCronOutboxes')
+  const readCronOutboxes = readCronOutboxesWith({
+    ...sharedDeps(readCronOutboxesLogger),
+    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readCronOutboxesLogger })
   })
 
   const arweave = WalletClient.createWalletClient()
@@ -82,5 +82,5 @@ export const createApis = (ctx) => {
     walletAddress: WalletClient.addressWith({ WALLET: ctx.WALLET, arweave })
   })
 
-  return { readState, readResult, readCronMessages, healthcheck }
+  return { readState, readResult, readCronOutboxes, healthcheck }
 }

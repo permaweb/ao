@@ -40,12 +40,12 @@ export const withCronRoutes = app => {
         const {
           params: { processId },
           query: { from, to },
-          domain: { apis: { readScheduledMessages } }
+          domain: { apis: { readCronOutboxes } }
         } = req
 
         const input = inputSchema.parse({ processId, from, to })
 
-        await readScheduledMessages(input)
+        await readCronOutboxes(input)
           .map(({ evaluations }) => res.send(cronConnection({
             nodes: evaluations,
             /**
