@@ -74,6 +74,7 @@ export function sendDataItemWith ({
       of({ ...rest, tracer })
         .chain(writeMessage)
         .map(res => ({
+          ...res,
           /**
            * An opaque method to fetch the result of the message just forwarded
            * and then crank its results
@@ -100,7 +101,8 @@ export function sendDataItemWith ({
    */
   const sendProcess = (ctx) => of(ctx)
     .chain(writeProcess)
-    .map(() => ({
+    .map((res) => ({
+      ...res,
       /**
        * There is nothing to crank for a process sent to the MU,
        *

@@ -21,7 +21,11 @@ export function parseDataItemWith ({ createDataItem, logger }) {
         async (dataItem) => ({
           tx: { id: await dataItem.id, processId: dataItem.target, data: ctx.raw },
           dataItem: {
-            ...dataItem.toJSON(),
+            id: await dataItem.id,
+            signature: dataItem.signature,
+            owner: dataItem.owner,
+            target: dataItem.target,
+            tags: dataItem.tags,
             /**
              * For some reason, anchor is not included in the toJSON api on DataItem,
              * so we make sure to include it here
