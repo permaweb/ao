@@ -42,6 +42,11 @@ export function eqOrIncludes (val) {
   ])
 }
 
+export function trimSlash (str = '') {
+  if (!str.endsWith('/')) return str
+  return trimSlash(str.slice(0, -1))
+}
+
 export function errFrom (err) {
   err = err || { message: 'An error occurred' }
 
