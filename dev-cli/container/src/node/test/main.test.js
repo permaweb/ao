@@ -60,7 +60,7 @@ describe('uploadModuleWith', () => {
              * custom tag, plus default tags, then only use
              * the first Module-Format tag
              */
-            assert.equal(params.tags.length, 7)
+            assert.equal(params.tags.length, 8)
             return { params, id: '123' }
           }
         }
@@ -87,7 +87,7 @@ describe('uploadModuleWith', () => {
              * custom tag, plus default tags, then only use
              * the first Input-Encoding tag
              */
-            assert.equal(params.tags.length, 7)
+            assert.equal(params.tags.length, 8)
             return { params, id: '123' }
           }
         }
@@ -114,7 +114,7 @@ describe('uploadModuleWith', () => {
              * custom tag, plus default tags, then only use
              * the first Input-Encoding tag
              */
-            assert.equal(params.tags.length, 7)
+            assert.equal(params.tags.length, 8)
             return { params, id: '123' }
           }
         }
