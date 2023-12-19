@@ -16,6 +16,8 @@
     "docker-build": "docker build -t cu-app .",
     "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
     "heapdump": "kill -USR2",
+    "migrate": "node -r dotenv/config db/migrations.js",
+    "rebuild-db": "node -r dotenv/config db/rollback.js && node -r dotenv/config db/migrations.js",
     "start": "node src/app.js",
     "test": "node --test ./src"
   },

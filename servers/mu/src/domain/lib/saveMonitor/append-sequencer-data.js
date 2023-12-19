@@ -11,15 +11,6 @@ export function appendSequencerDataWith ({ logger, fetchSequencerProcess }) {
     return of(ctx.tx.processId)
       .chain(fromPromise(fetchSequencerProcess))
       .map(assoc('sequencerData', __, ctx))
-      .map((updatedCtx) => {
-        updatedCtx.tx.block = updatedCtx.sequencerData.block
-        const tags = updatedCtx.sequencerData.tags
-        const scheduledIntervalObj = tags.find(obj => obj.name === 'Scheduled-Interval')
-        if (scheduledIntervalObj) {
-          updatedCtx.tx.interval = scheduledIntervalObj.value
-        }
-        return updatedCtx
-      })
       .map(ctxSchema.parse)
       .map(logger.tap('Added "sequencerData" to ctx'))
   }

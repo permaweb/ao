@@ -1,42 +1,33 @@
 import db from './db.js'
 
 import createInitialMigrations from './migrations/20231031_create_initial_tables.js'
+import dropTransactionTable from './migrations/20231110_drop_transaction_table.js'
+import addProcessIdToSpawns from './migrations/20231116_add_processid_to_spawn.js'
+import addMessageTracesTable from './migrations/20231206_create_message_traces_table.js'
+import modifyMonitorTable from './migrations/20231219_modify_monitor_table.js'
 
 const migrations = [
+  modifyMonitorTable,
+  addMessageTracesTable,
+  addProcessIdToSpawns,
+  dropTransactionTable,
   createInitialMigrations
 ]
 
-async function runMigrationByName (migrationName) {
-  const migration = migrations.find((m) => m.name === migrationName)
-
-  if (!migration) {
-    console.error(`Migration with name "${migrationName}" not found.`)
-    throw new Error('No migration found')
-  }
-
-  try {
+async function revertMigrations () {
+  // Iterate over migrations in reverse order
+  for (const migration of migrations) {
     await migration.down(db)
-    console.log(`Rolled back migration: ${migration.name}`)
-  } catch (error) {
-    console.error(`Error rolling back migration ${migration.name}:`, error)
-    throw new Error('Error rolling back migration')
+    console.log(`Reverted migration: ${migration.name}`)
   }
 }
 
-const args = process.argv.slice(2)
-if (args.length !== 1) {
-  console.error('Usage: node rollback.js <migrationName>')
-  process.exit(1)
-}
-
-const migrationName = args[0]
-
-runMigrationByName(migrationName)
+revertMigrations()
   .then(() => {
-    console.log('Migration rolled back successfully.')
+    console.log('All migrations reverted successfully.')
     process.exit(0)
   })
   .catch((error) => {
-    console.error('Rollback error:', error)
+    console.error('Error in reverting migrations:', error)
     process.exit(1)
   })

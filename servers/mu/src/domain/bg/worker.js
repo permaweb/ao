@@ -25,9 +25,8 @@ const apis = createApis(apiCtx)
 const monitorSchema = z.object({
   id: z.string(),
   authorized: z.boolean(),
-  lastFromSortKey: z.nullable(z.string()),
-  interval: z.string(),
-  block: z.any(),
+  lastFromTimestamp: z.nullable(z.string()),
+  processData: z.any(),
   createdAt: z.number()
 })
 
@@ -109,11 +108,11 @@ function removeMonitorFromRunningList (monitorId) {
  * If an error occurs during fetching, logs the error and monitor details to the console.
  */
 async function fetchScheduled (monitor) {
-  const lastFromSortKey = monitor.lastFromSortKey
+  const lastFromTimestamp = monitor.lastFromTimestamp
   let requestUrl = `${config.CU_URL}/scheduled/${monitor.id}`
 
-  if (lastFromSortKey) {
-    requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromSortKey}`
+  if (lastFromTimestamp) {
+    requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromTimestamp}`
   }
 
   try {

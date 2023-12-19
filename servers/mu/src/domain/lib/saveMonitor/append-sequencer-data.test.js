@@ -12,7 +12,7 @@ describe('appendSequencerData', () => {
       fetchSequencerProcess: async (processId) => {
         assert.equal(processId, 'pid-1')
         return {
-          block: 1234567,
+          id: 'pid-1',
           tags: [
             { name: 'Scheduled-Interval', value: '5-seconds' }
           ]
@@ -27,8 +27,6 @@ describe('appendSequencerData', () => {
       }
     }).toPromise()
 
-    assert.equal(result.tx.block, 1234567)
-    assert.equal(result.tx.interval, '5-seconds')
-    assert.equal(result.sequencerData.block, 1234567)
+    assert.equal(result.sequencerData.id, 'pid-1')
   })
 })

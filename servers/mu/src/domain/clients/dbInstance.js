@@ -88,13 +88,13 @@ export async function putMonitor (doc) {
 
     if (existingMonitor) {
       await db.none(
-        'UPDATE "monitored_processes" SET "lastFromSortKey" = $1 WHERE "_id" = $2',
-        [doc.lastFromSortKey, doc._id]
+        'UPDATE "monitored_processes" SET "lastFromTimestamp" = $1 WHERE "_id" = $2',
+        [doc.lastFromTimestamp, doc._id]
       )
     } else {
       await db.none(
-        'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromSortKey", "interval", "block", "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
-        [doc._id, doc.authorized, doc.lastFromSortKey, doc.interval, JSON.stringify(doc.block), doc.createdAt]
+        'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromTimestamp", "processData", "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
+        [doc._id, doc.authorized, doc.lastFromTimestamp, doc.processData, doc.createdAt]
       )
     }
 
