@@ -15,6 +15,7 @@ describe('upload-message', () => {
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Message' },
           { name: 'SDK', value: 'ao' },
           { name: 'Content-Type', value: 'text/plain' }

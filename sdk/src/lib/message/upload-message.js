@@ -37,6 +37,7 @@ function buildTagsWith () {
       .map(defaultTo([]))
       .map(concat(__, [
         { name: 'Data-Protocol', value: 'ao' },
+        { name: 'Variant', value: 'ao.TN.1' },
         { name: 'Type', value: 'Message' },
         { name: 'SDK', value: 'ao' }
       ]))
