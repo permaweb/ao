@@ -14,6 +14,7 @@ describe('upload-process', () => {
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
           { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
@@ -51,6 +52,7 @@ describe('upload-process', () => {
       deployProcess: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
           { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
           { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
@@ -81,6 +83,7 @@ describe('upload-process', () => {
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
           { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
