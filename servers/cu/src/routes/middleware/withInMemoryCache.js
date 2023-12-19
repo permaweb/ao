@@ -38,7 +38,7 @@ export const withInMemoryCache = ({
   const logger = _logger.child('InMemoryCache')
 
   const dataloader = new Dataloader(loader, {
-    cacheKeyFn: keyer,
+    cacheKeyFn: ({ req }) => keyer(req),
     cacheMap: {
       get: (key) => {
         /**

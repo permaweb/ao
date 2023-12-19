@@ -4,7 +4,6 @@ let arweave
 export function createWalletClient () {
   if (arweave) return arweave
   arweave = Arweave.init()
-  console.log(Arweave)
   return arweave
 }
 

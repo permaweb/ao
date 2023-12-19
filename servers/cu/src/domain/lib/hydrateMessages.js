@@ -113,7 +113,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         continue
       }
 
-      logger('Hydrating ao-load message for "%s" from transaction "%s"', cur.message.Id, tag.value)
+      logger('Hydrating Load message for "%s" from transaction "%s"', cur.message.Id, tag.value)
       /**
        * - Fetch raw data and meta from gateway
        * - contruct the data item JSON, encoding the raw data as base64
@@ -124,7 +124,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         loadTransactionMeta(tag.value)
       ]).then(([data, meta]) => messageFromParts({ data, meta }))
 
-      logger('Hydrated ao-load message for "%s" from transaction "%s" and attached as data', cur.message.Id, tag.value)
+      logger('Hydrated Load message for "%s" from transaction "%s" and attached as data', cur.message.Id, tag.value)
 
       yield cur
     }
@@ -160,7 +160,7 @@ export function hydrateMessagesWith (env) {
           Transform.from(maybeMessageId),
           Transform.from(maybeAoLoad),
           (err) => {
-            if (err) logger('Encountered err when hydrating ao-load and forwarded-for messages', err)
+            if (err) logger('Encountered err when hydrating Load and forwarded-for messages', err)
           }
         )
       })
