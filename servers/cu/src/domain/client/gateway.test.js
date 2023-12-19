@@ -84,9 +84,22 @@ describe('gateway', () => {
 
   describe('loadBlocksMeta', () => {
     test('load the block data across multiple pages', async () => {
-      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({ fetch, GATEWAY_URL, pageSize: 10, logger }))
+      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
+        fetch,
+        GATEWAY_URL,
+        /**
+         * Weird page size, so we know we are chopping off the excess
+         * from the last page, correctly
+         */
+        pageSize: 17,
+        logger
+      }))
 
-      const res = await loadBlocksMeta({ min: 1276343, max: 1276343 + 50 })
+      /**
+       * 1696633559000 is 1 second after block's timestamp, 51 blocks away
+       * from the block at height 1276343
+       */
+      const res = await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 })
       assert.equal(res[0].timestamp, 1696627369 * 1000)
       assert.equal(res.length, 51)
       assert.equal(res.length, uniqBy(prop('height'), res).length)

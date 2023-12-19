@@ -1,5 +1,5 @@
 import { fromPromise, of } from 'hyper-async'
-import { last, map, path, pipe, pluck, prop } from 'ramda'
+import { last, map, path, pathSatisfies, pipe, pluck, prop } from 'ramda'
 import { z } from 'zod'
 
 /**
@@ -82,9 +82,9 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_BLOCKS_QUERY = `
-    query GetBlocks($min: Int!, $max: Int!, $limit: Int!) {
+    query GetBlocks($min: Int!, $limit: Int!) {
       blocks(
-        height: { min: $min, max: $max },
+        height: { min: $min },
         first: $limit,
         sort: HEIGHT_ASC
       ) {
@@ -101,16 +101,22 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
     }
   `
 
-  async function fetchAllPages ({ min, max }) {
-    async function fetchPage ({ min: newMin }) {
+  async function fetchAllPages ({ min, maxTimestamp }) {
+    /**
+     * Need to convert to seconds, since block timestamp
+     * from arweave is in seconds
+     */
+    maxTimestamp = Math.floor(maxTimestamp / 1000)
+
+    async function fetchPage ({ min: newMin, maxTimestamp }) {
       // deno-fmt-ignore-start
-      return Promise.resolve({ min: newMin, max, limit: pageSize })
+      return Promise.resolve({ min: newMin, limit: pageSize })
         .then(variables => {
           logger(
-            'Loading page of up to %s blocks after %s up to %s',
+            'Loading page of up to %s blocks after height %s up to timestamp %s',
             pageSize,
             newMin,
-            max
+            maxTimestamp
           )
           return variables
         })
@@ -126,40 +132,62 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
         )
         .then((res) => res.json())
         .then(path(['data', 'blocks']))
+        .then((res) => ({ ...res, maxTimestamp }))
     }
 
-    async function maybeFetchNext ({ pageInfo, edges }) {
+    async function maybeFetchNext ({ pageInfo, edges, maxTimestamp }) {
+      if (!pageInfo.hasNextPage) return { pageInfo, edges }
+
+      /**
+       * HACK to incrementally fetch the correct range of blocks with only
+       * a timestamp as the right most limit.
+       *
+       * (we no longer have a sortKey to extract a block height from)
+       *
+       * If the last block has a timestamp greater than the maxTimestamp
+       * then we're done.
+       *
+       * We then slice off the results in the page, not within our range.
+       * So we overfetch a little on the final page, but at MOST pageSize - 1
+       */
+      const surpassedMaxTimestampIdx = edges.findIndex(
+        pathSatisfies(
+          (timestamp) => timestamp > maxTimestamp,
+          ['node', 'timestamp']
+        )
+      )
+      if (surpassedMaxTimestampIdx !== -1) return { pageInfo, edges: edges.slice(0, surpassedMaxTimestampIdx) }
+
       /**
        * Either have reached the end and resolve,
        * or fetch the next page and recurse
        */
-      return !pageInfo.hasNextPage
-        ? { pageInfo, edges }
-        : Promise.resolve({
-          /**
-           * The next page will start on the next block
-           */
-          min: pipe(
-            last,
-            path(['node', 'height']),
-            height => height + 1
-          )(edges)
-        })
-          .then(fetchPage)
-          .then(maybeFetchNext)
-          .then(({ pageInfo, edges: e }) => ({ pageInfo, edges: edges.concat(e) }))
+      return Promise.resolve({
+        /**
+         * The next page will start on the next block
+         */
+        min: pipe(
+          last,
+          path(['node', 'height']),
+          height => height + 1
+        )(edges),
+        maxTimestamp
+      })
+        .then(fetchPage)
+        .then(maybeFetchNext)
+        .then(({ pageInfo, edges: e }) => ({ pageInfo, edges: edges.concat(e) }))
     }
 
     /**
      * Start with the first page, then keep going
      */
-    return fetchPage({ min, max }).then(maybeFetchNext)
+    return fetchPage({ min, maxTimestamp }).then(maybeFetchNext)
   }
 
   return (args) =>
     of(args)
-      .chain(fromPromise(({ min, max }) =>
-        fetchAllPages({ min, max })
+      .chain(fromPromise(({ min, maxTimestamp }) =>
+        fetchAllPages({ min, maxTimestamp })
           .then(prop('edges'))
           .then(pluck('node'))
           .then(map(block => ({
@@ -170,7 +198,7 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
              */
             timestamp: block.timestamp * 1000
           })))
-          .then(logger.tap('Loaded blocks meta after %s up to %s', min, max))
+          .then(logger.tap('Loaded blocks meta after height %s up to timestamp %s', min, maxTimestamp))
       ))
       .toPromise()
 }

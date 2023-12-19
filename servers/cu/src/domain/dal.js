@@ -20,7 +20,17 @@ export const loadTransactionDataSchema = z.function()
   .returns(z.promise(z.any()))
 
 export const loadBlocksMetaSchema = z.function()
-  .args(z.object({ min: z.number(), max: z.number() }))
+  .args(z.object({
+    min: z.number(),
+    /**
+     * Since we don't have access to the max block we're evaluating,
+     * only the timestamp, we will provide that timestamp.
+     *
+     * Then the impl will load blocks between min and max, but nost past the
+     * maxTimestamp, whichever comes first
+     */
+    maxTimestamp: z.coerce.number()
+  }))
   .returns(z.promise(
     z.array(
       rawBlockSchema.passthrough()
@@ -75,8 +85,8 @@ export const loadMessagesSchema = z.function()
       processId: z.string(),
       owner: z.string(),
       tags: z.array(rawTagSchema),
-      from: z.coerce.string().optional(),
-      to: z.coerce.string().optional()
+      from: z.coerce.number().optional(),
+      to: z.coerce.number().optional()
     })
   )
   /**

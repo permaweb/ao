@@ -1,7 +1,7 @@
 import { Transform, pipeline } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, ifElse, length, mergeRight, pipe, prop, reduce } from 'ramda'
+import { T, always, ascend, cond, equals, ifElse, last, length, mergeRight, pipe, prop, reduce } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -351,17 +351,21 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
            */
           leftMost: { block: ctx.block },
           /**
-           * The right most boundary is always the current block retrieved from the SU
+           * The right most boundary is always the provided to
+           * OR the current block according to the su
            */
-          rightMost: { block: currentBlock }
+          rightMostTimestamp: ctx.to || currentBlock.timestamp
         }))
         .map(logger.tap('loading blocks meta for scheduled messages in range of %o'))
-        .chain(({ leftMost, rightMost }) =>
-          loadBlocksMeta({ min: leftMost.block.height, max: rightMost.block.height })
+        .chain(({ leftMost, rightMostTimestamp }) =>
+          loadBlocksMeta({
+            min: leftMost.block.height,
+            maxTimestamp: rightMostTimestamp
+          })
             .map(blocksMeta => {
               return {
                 leftMost,
-                rightMost,
+                rightMost: { block: last(blocksMeta) },
                 $scheduled: ctx.$scheduled,
                 /**
                  * Our iterating function that accepts a left and right boundary
