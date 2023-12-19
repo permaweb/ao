@@ -10,21 +10,20 @@ describe('saveWith', () => {
   test('save a process to monitor', async () => {
     const save = saveWith({
       saveProcessToMonitor: async (process) => {
+        console.log('zzzzzzzzzzzzzzzzz')
+        console.log(process)
         assert.equal(process.id, 'pid-1')
-        assert.equal(process.block, 1234567)
-        assert.equal(process.interval, '5-seconds')
-        assert.notEqual(process.createdAt, null)
+        assert.equal(process.lastFromTimestamp, null)
+        assert.equal(process.processData.id, 'pid-1')
       },
       logger
     })
 
     await save({
       tx: {
-        processId: 'pid-1',
-        block: 1234567,
-        interval: '5-seconds',
-        lastFromSortKey: 'sort-key'
-      }
+        processId: 'pid-1'
+      },
+      sequencerData: { id: 'pid-1', tags: [] }
     }).toPromise()
   })
 })

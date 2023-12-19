@@ -213,9 +213,8 @@ const monitoredProcessSchema = z.object({
   _id: z.string().min(1),
   // is this monitored process authorized to run by the server (is it funded)
   authorized: z.boolean(),
-  lastFromSortKey: z.string().optional().nullable(),
-  interval: z.string().min(1),
-  block: z.any(),
+  lastFromTimestamp: z.number,
+  processData: z.any(),
   _rev: z.string().optional(),
   createdAt: z.number()
 })
@@ -227,9 +226,8 @@ function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
       .map(applySpec({
         _id: prop('id'),
         authorized: prop('authorized'),
-        lastFromSortKey: prop('lastFromSortKey'),
-        interval: prop('interval'),
-        block: prop('block'),
+        lastFromTimestamp: prop('lastFromTimestamp'),
+        processData: prop('processData'),
         createdAt: prop('createdAt')
       }))
       .map(monitoredProcessSchema.parse)
@@ -266,9 +264,8 @@ function findLatestMonitorsWith ({ dbInstance }) {
         return Resolved(parsedDocs.map(doc => ({
           id: prop('_id', doc),
           authorized: prop('authorized', doc),
-          lastFromSortKey: prop('lastFromSortKey', doc),
-          interval: prop('interval', doc),
-          block: prop('block', doc),
+          lastFromTimestamp: prop('lastFromTimestamp', doc),
+          processData: prop('processData', doc),
           createdAt: prop('createdAt', doc)
         })))
       })
@@ -279,10 +276,10 @@ function findLatestMonitorsWith ({ dbInstance }) {
 function updateMonitorWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('updateMonitor')
 
-  return ({ id, lastFromSortKey }) => {
+  return ({ id, lastFromTimestamp }) => {
     return of({ id })
       .chain(fromPromise(() => dbInstance.getMonitor(id)))
-      .map(doc => ({ ...doc, lastFromSortKey }))
+      .map(doc => ({ ...doc, lastFromTimestamp }))
       .map(monitoredProcessSchema.parse)
       .chain(updatedDoc =>
         of(updatedDoc)
