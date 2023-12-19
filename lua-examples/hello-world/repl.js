@@ -12,8 +12,11 @@ const rl = readline.createInterface({
 
 const env = {
   Process: {
-    id: 'PROCESS_TEST',
-    owner: 'OWNER'
+    Id: 'PROCESS_TEST',
+    Owner: 'OWNER',
+    Tags: [
+      { name: 'Module', value: 'yp6YQztlpQRNVAVexy_WjlyVQmLnXAdkloB5bdZMXPo' }
+    ]
   }
 }
 
@@ -77,10 +80,8 @@ async function createMessage (expr) {
       .then(bytesToBase64)
       .then(data => ({ Data: data }))
   } else if (expr.startsWith('friend')) {
-    const [, srcId] = expr.split(' ').map(s => s.trim())
     message.Tags.push(
       { name: 'function', value: 'friend' },
-      { name: 'src-id', value: srcId },
       { name: 'extra-spawn-tag', value: 'this should reach the final process' }
     )
   } else if (expr.startsWith('ping')) {

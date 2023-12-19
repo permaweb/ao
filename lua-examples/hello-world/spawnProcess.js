@@ -1,11 +1,14 @@
 import { readFileSync } from 'node:fs'
 
-import { spawn, createDataItemSigner } from '@permaweb/ao-sdk'
+import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 
+const { spawn } = connect()
+
 await spawn({
-  module: 'nnYHq4NRKsKl6eMBC3rGq_Gm_Ddx1FDjDdUKuWOVfG8',
+  module: 'yp6YQztlpQRNVAVexy_WjlyVQmLnXAdkloB5bdZMXPo',
+  scheduler: 'TZ7o7SIZ06ZEJ14lXwVtng1EtSx60QkPy-kh-kdAXog',
   tags: [
     { name: 'Cron-Interval', value: '1-hour' },
     { name: 'Cron-Tag-function', value: 'hello' }

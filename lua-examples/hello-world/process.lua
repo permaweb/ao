@@ -3,6 +3,7 @@
 -- with 'say' function support at QU75imHrJN1bOnzlLvLVXiVcSr1EQgA4aLCQG5tvklY
 -- with 'friend' function support at V4Z_o704ILkjFX6Dy93ycoKerywfip94j07dRjxMCPs
 -- with "new ao" API at nnYHq4NRKsKl6eMBC3rGq_Gm_Ddx1FDjDdUKuWOVfG8
+-- with "spawn" using AoGlobal.Process.Tags yp6YQztlpQRNVAVexy_WjlyVQmLnXAdkloB5bdZMXPo
 
 local JSON = require("json")
 local base64 = require(".base64")
@@ -54,30 +55,30 @@ local function dedup(originalTable)
   return dedupTable
 end
 
-local function spawn(tags, AoGlobal) 
-  local srcId = findObject(tags, "name", "src-id").value
+local function spawn(tags, AoGlobal)
+  -- Grab the Module tag off of the Process from the AoGlobal
+  -- the spawn will use the Module code as this Process
+  local moduleId = findObject(AoGlobal.Process.Tags, "name", "Module").value
 
-  -- data = srcId doesnt have any effect were just using srcId as a placeholder,
-  -- { name = "Contract-Src", value = srcId } is what a mu will use to spawn
-  local newFriend = {
-    Data = srcId,
+  -- data = moduleId doesnt have any effect were just using mdouleId as a placeholder,
+  -- { name = "Module", value = moduleId } is what a mu will use to spawn
+  local newSpawn = {
+    Data = moduleId,
     Tags = {
-      { name = "Data-Protocol", value = "ao" },
-      { name = "Type", value = "Process" },
-      { name = "Module", value = srcId }
+      { name = "Module", value = moduleId }
     }
   }
 
   for k,v in pairs(tags) do
     -- skip the tags used by this contract internally
-    if v.name ~= 'function' and v.name ~= 'src-id' then
-      table.insert(newFriend.Tags, { name = v.name, value = v.value })
+    if v.name ~= 'function' and v.name ~= 'Module' then
+      table.insert(newSpawn.Tags, { name = v.name, value = v.value })
     end
   end
 
-  newFriend.Tags = dedup(newFriend.Tags)
+  newSpawn.Tags = dedup(newSpawn.Tags)
 
-  return newFriend
+  return newSpawn
 end
 
 local function send(tags, target, AoGlobal)
@@ -114,12 +115,9 @@ actions['say'] = function (state, message)
   return { state = state , output = JSON.encode(data) }
 end
 actions['friend'] = function (state, message, AoGlobal)
-  local friends = {}
-  local friend = spawn(message.Tags, AoGlobal)
-  table.insert(friends, friend)
   -- result.output is just for display in the repl here 
-  local o = { friendlyMessage = 'Spawn returned in result.spawns' }
-  return { state = state, output = JSON.encode(o), spawns = friends }
+  local o = { friendlyMessage = 'Spawn returned in result.Spawns' }
+  return { state = state, output = JSON.encode(o), spawns = { spawn(message.Tags, AoGlobal) } }
 end
 actions['ping'] = function (state, message)
   local target = findObject(message.Tags, "name", "friend").value
