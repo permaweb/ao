@@ -159,20 +159,29 @@ async fn main() -> io::Result<()> {
     };
 
     let logger: Arc<dyn Log> = SuLog::init();
+
     let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
+    match data_store.run_migrations() {
+        Ok(m) => logger.log(m),
+        Err(e) => logger.log(format!("{:?}", e))
+    }
+
     let config = Arc::new(Config::new(mode).expect("Failed to read configuration"));
+
     let scheduler_deps = Arc::new(scheduler::SchedulerDeps {
         data_store: data_store.clone(),
         config: config.clone(),
         logger: logger.clone()
     });
     let scheduler = Arc::new(scheduler::ProcessScheduler::new(scheduler_deps));
+    
     let deps: Deps = Deps {
         data_store,
         logger,
         config,
         scheduler
     };
+    
     let wrapped = web::Data::new(Arc::new(deps));
 
     /*

@@ -1,14 +1,16 @@
-
+use std::env::VarError;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
-use std::env::VarError;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use super::super::core::json::{Message, Process};
 use super::super::router::{Scheduler, ProcessScheduler};
 use crate::config::Config;
+
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[derive(Debug)]
 pub enum StoreErrorType {
@@ -73,6 +75,19 @@ impl StoreClient {
         self.pool.get().map_err(
             |_| StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string())
         )
+    }
+
+    /*
+        run at server startup to modify the database as needed
+    */
+    pub fn run_migrations(&self) -> Result<String, StoreErrorType>{
+        let conn = &mut self.get_conn()?;
+        match conn.run_pending_migrations(MIGRATIONS) {
+            Ok(m) => Ok(format!("Migrations applied... {:?}", m)),
+            Err(e) => Err(StoreErrorType::DatabaseError(
+                format!("Error applying migrations: {}", e.to_string())
+            ))
+        }
     }
 
     pub fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
