@@ -20,9 +20,10 @@ describe('locateWith', () => {
           assert.equal(process, PROCESS)
           return undefined
         },
-        setByProcess: async (process, url, ttl) => {
+        setByProcess: async (process, { url, address }, ttl) => {
           assert.equal(process, PROCESS)
           assert.equal(url, DOMAIN)
+          assert.equal(address, SCHEDULER)
           assert.equal(ttl, TEN_MS)
         },
         setByOwner: async (owner, url, ttl) => {
@@ -34,7 +35,7 @@ describe('locateWith', () => {
     })
 
     await locate(PROCESS)
-      .then((res) => assert.deepStrictEqual(res, { url: DOMAIN }))
+      .then((res) => assert.deepStrictEqual(res, { url: DOMAIN, address: SCHEDULER }))
   })
 
   test('should serve the cached value', async () => {
@@ -45,12 +46,12 @@ describe('locateWith', () => {
       cache: {
         getByProcess: async (process) => {
           assert.equal(process, PROCESS)
-          return DOMAIN
+          return { url: DOMAIN, address: SCHEDULER }
         }
       }
     })
 
     await locate(PROCESS)
-      .then((res) => assert.deepStrictEqual(res, { url: DOMAIN }))
+      .then((res) => assert.deepStrictEqual(res, { url: DOMAIN, address: SCHEDULER }))
   })
 })

@@ -1,14 +1,30 @@
-import LruCache from 'mnemonist/lru-cache-with-delete.js'
+import { LRUCache } from 'lru-cache'
 
 /**
- * @type {LruCache}
+ * @type {LRUCache}
  */
 let internalCache
 let internalSize
 export function createLruCache ({ size }) {
   if (internalCache) return internalCache
   internalSize = size
-  internalCache = new LruCache(size)
+  internalCache = new LRUCache({
+    /**
+     * number of entries
+     */
+    max: size,
+    /**
+     * max size of cache, as a scalar.
+     *
+     * In our case, characters (see sizeCalculation)
+     */
+    maxSize: 1_000_000 * 5,
+    /**
+     * Simply stringify to get the bytes
+     */
+    sizeCalculation: (v) => JSON.stringify(v).length,
+    allowStale: true
+  })
   return internalCache
 }
 
@@ -20,10 +36,9 @@ export function getByProcessWith ({ cache = internalCache }) {
 }
 
 export function setByProcessWith ({ cache = internalCache }) {
-  return async (process, url, ttl) => {
+  return async (process, { url, owner }, ttl) => {
     if (!internalSize) return
-    setTimeout(() => cache.delete(process), ttl)
-    return cache.set(process, url)
+    return cache.set(process, { url, owner }, { ttl })
   }
 }
 
@@ -35,9 +50,8 @@ export function getByOwnerWith ({ cache = internalCache }) {
 }
 
 export function setByOwnerWith ({ cache = internalCache }) {
-  return async (owner, url, ttl) => {
+  return async (owner, { url }, ttl) => {
     if (!internalSize) return
-    setTimeout(() => cache.delete(owner), ttl)
-    return cache.set(owner, url)
+    return cache.set(owner, { url, address: owner }, { ttl })
   }
 }
