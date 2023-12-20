@@ -60,7 +60,7 @@ describe('rawWith', () => {
       cache: {
         getByOwner: async (walletAddress) => {
           assert.equal(walletAddress, SCHEDULER)
-          return DOMAIN
+          return { url: DOMAIN, address: SCHEDULER }
         }
       }
     })

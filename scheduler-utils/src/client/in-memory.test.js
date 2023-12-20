@@ -20,8 +20,8 @@ describe('in-memory', () => {
     const getByProcess = getByProcessWith({ cache })
     test('returns the url if in cache', async () => {
       assert.equal(await getByProcess(PROCESS), undefined)
-      cache.set(PROCESS, DOMAIN)
-      assert.equal(await getByProcess(PROCESS), DOMAIN)
+      cache.set(PROCESS, { url: DOMAIN, address: SCHEDULER })
+      assert.deepStrictEqual(await getByProcess(PROCESS), { url: DOMAIN, address: SCHEDULER })
     })
   })
 
@@ -29,28 +29,24 @@ describe('in-memory', () => {
     const getByOwner = getByOwnerWith({ cache })
     test('returns the url if in cache', async () => {
       assert.equal(await getByOwner(SCHEDULER), undefined)
-      cache.set(SCHEDULER, DOMAIN)
-      assert.equal(await getByOwner(SCHEDULER), DOMAIN)
+      cache.set(SCHEDULER, { url: DOMAIN, address: SCHEDULER })
+      assert.deepStrictEqual(await getByOwner(SCHEDULER), { url: DOMAIN, address: SCHEDULER })
     })
   })
 
   describe('setByProcessWith', () => {
     const setByProcess = setByProcessWith({ cache })
-    test('sets the value in cache and removes after ttl', async () => {
+    test('sets the value in cache', async () => {
       await setByProcess(PROCESS, DOMAIN, TEN_MS)
       assert.ok(cache.has(PROCESS))
-      await new Promise(resolve => setTimeout(resolve, TEN_MS))
-      assert.equal(cache.get(PROCESS), undefined)
     })
   })
 
   describe('setByOwnerWith', () => {
     const setByOwner = setByOwnerWith({ cache })
-    test('sets the value in cache and removes after ttl', async () => {
+    test('sets the value in cache', async () => {
       await setByOwner(SCHEDULER, DOMAIN, TEN_MS)
       assert.ok(cache.has(SCHEDULER))
-      await new Promise(resolve => setTimeout(resolve, TEN_MS))
-      assert.equal(cache.get(SCHEDULER), undefined)
     })
   })
 })

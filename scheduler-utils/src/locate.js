@@ -6,20 +6,19 @@ export function locateWith ({ loadProcessScheduler, cache }) {
    * of decentralized sequencers
    *
    * @param {string} process - the id of the process
-   * @returns {Promise<{ url: string }>} - an object whose url field is the Scheduler Location
+   * @returns {Promise<{ url: string, address: string }>} - an object whose url field is the Scheduler Location
    */
   return (process) =>
     cache.getByProcess(process)
-      .then((url) => {
-        if (url) return url
+      .then((cached) => {
+        if (cached) return cached
         return loadProcessScheduler(process)
           .then((scheduler) => {
             return Promise.all([
-              cache.setByProcess(process, scheduler.url, scheduler.ttl),
+              cache.setByProcess(process, { url: scheduler.url, address: scheduler.owner }, scheduler.ttl),
               cache.setByOwner(scheduler.owner, scheduler.url, scheduler.ttl)
             ])
-              .then(() => scheduler.url)
+              .then(() => ({ url: scheduler.url, address: scheduler.owner }))
           })
       })
-      .then((url) => ({ url }))
 }
