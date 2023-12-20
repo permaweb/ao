@@ -359,7 +359,7 @@ export function findEvaluationsWith ({ pouchDb }) {
     const selector = {
       _id: {
         $gte: createEvaluationId({ processId, timestamp: '' }),
-        $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
+        $lt: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
       }
     }
 
@@ -367,7 +367,7 @@ export function findEvaluationsWith ({ pouchDb }) {
      * trim range using sort keys, if provided
      */
     if (from) selector._id.$gte = `${createEvaluationId({ processId, timestamp: from })},`
-    if (to) selector._id.$lte = `${createEvaluationId({ processId, timestamp: to })},${COLLATION_SEQUENCE_MAX_CHAR}`
+    if (to) selector._id.$lt = `${createEvaluationId({ processId, timestamp: to })},`
 
     return selector
   }
