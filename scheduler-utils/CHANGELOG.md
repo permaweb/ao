@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.6](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.5...scheduler-utils@v0.0.6) (2023-12-20)
+
+
+### Features
+
+* **scheduler-utils:** add address to return. remove setTimeouts in favor of lru-cache ttl ([8c7467e](https://github.com/permaweb/ao/commit/8c7467efd77357befa7aaa62cc0f6917bde480b4))
+
 ## [0.0.5](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.4...scheduler-utils@v0.0.5) (2023-12-19)
 
 
