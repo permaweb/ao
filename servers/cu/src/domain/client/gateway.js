@@ -136,8 +136,6 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
     }
 
     async function maybeFetchNext ({ pageInfo, edges, maxTimestamp }) {
-      if (!pageInfo.hasNextPage) return { pageInfo, edges }
-
       /**
        * HACK to incrementally fetch the correct range of blocks with only
        * a timestamp as the right most limit.
@@ -157,6 +155,8 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
         )
       )
       if (surpassedMaxTimestampIdx !== -1) return { pageInfo, edges: edges.slice(0, surpassedMaxTimestampIdx) }
+
+      if (!pageInfo.hasNextPage) return { pageInfo, edges }
 
       /**
        * Either have reached the end and resolve,
