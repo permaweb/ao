@@ -171,6 +171,7 @@ describe('pouchdb', () => {
                   {
                     _id: 'eval-process-123,1702677252111',
                     timestamp: 1702677252111,
+                    blockHeight: 1234,
                     processId: 'process-123',
                     messageId: 'message-123',
                     parent: 'proc-process-123',
@@ -197,6 +198,7 @@ describe('pouchdb', () => {
       })
 
       assert.equal(res.timestamp, 1702677252111)
+      assert.equal(res.blockHeight, 1234)
       assert.equal(res.processId, 'process-123')
       assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
@@ -225,6 +227,7 @@ describe('pouchdb', () => {
                   {
                     _id: 'eval-process-123,1702677252111',
                     timestamp: 1702677252111,
+                    blockHeight: 1234,
                     processId: 'process-123',
                     messageId: 'message-123',
                     parent: 'proc-process-123',
@@ -250,6 +253,7 @@ describe('pouchdb', () => {
       })
 
       assert.equal(res.timestamp, 1702677252111)
+      assert.equal(res.blockHeight, 1234)
       assert.equal(res.processId, 'process-123')
       assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
@@ -288,6 +292,7 @@ describe('pouchdb', () => {
                 _id: 'eval-process-123,1702677252111',
                 cron: undefined,
                 timestamp: 1702677252111,
+                blockHeight: 1234,
                 processId: 'process-123',
                 messageId: 'message-123',
                 parent: 'proc-process-123',
@@ -324,6 +329,7 @@ describe('pouchdb', () => {
       await saveEvaluation({
         deepHash: 'deepHash-123',
         timestamp: 1702677252111,
+        blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
         output: { Memory, Messages: [{ foo: 'bar' }] },
@@ -350,6 +356,7 @@ describe('pouchdb', () => {
       await saveEvaluation({
         // no deep hash
         timestamp: 1702677252111,
+        blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
         output: { Memmory, Messages: [{ foo: 'bar' }] },
@@ -364,6 +371,7 @@ describe('pouchdb', () => {
       const mockEval = {
         _id: 'eval-process-123,1702677252111',
         timestamp: 1702677252111,
+        blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
         parent: 'proc-process-123',
@@ -379,7 +387,7 @@ describe('pouchdb', () => {
                 selector: {
                   _id: {
                     $gte: 'eval-process-123,',
-                    $lte: `eval-process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $lt: `eval-process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
                   }
                 },
                 sort: [{ _id: 'asc' }],
@@ -406,6 +414,7 @@ describe('pouchdb', () => {
       const mockEval = {
         _id: 'eval-process-123,1702677252111',
         timestamp: 1702677252111,
+        blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
         parent: 'process-123',
@@ -421,7 +430,7 @@ describe('pouchdb', () => {
                 selector: {
                   _id: {
                     $gte: 'eval-process-123,1702677252111,',
-                    $lte: `eval-process-123,1702677252111,${COLLATION_SEQUENCE_MAX_CHAR}`
+                    $lt: 'eval-process-123,1702677252111,'
                   }
                 },
                 sort: [{ _id: 'asc' }],

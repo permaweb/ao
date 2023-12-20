@@ -10,6 +10,7 @@ describe('gatherCronOutboxesWith', () => {
       processId: 'process-123',
       messageId: 'message-123',
       timestamp: new Date().getTime(),
+      blockHeight: 1234,
       evaluatedAt: new Date()
     }
     const FROM = 1702841577654
