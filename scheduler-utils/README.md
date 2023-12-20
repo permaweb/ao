@@ -46,7 +46,7 @@ Locate the `ao` Scheduler assigned to an `ao` Process.
 ```js
 import { locate } from "@permaweb/ao-scheduler-utils";
 
-let { url, owner } = await locate('<process-id>');
+let { url, address } = await locate('<process-id>');
 ```
 
 #### `validate`
