@@ -5,6 +5,16 @@ tasks:
   - name: Init Repo Tooling
     init: npm i
 
+  - name: Start CU Database
+    init: docker build -t cu-couch servers/cu/.couchdb
+    command:
+      mkdir -p /workspace/cu-data
+      docker run -it \
+        -p 5984:5984 \
+        -v /workspace/cu-data:/opt/couchdb/data \
+        --env-file servers/cu/.couchdb/couchdb.conf \
+        cu-couch
+
   - name: Start MU Database
     init: docker build -t mu-postgres servers/mu/.postgres
     command:

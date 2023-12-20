@@ -42,7 +42,8 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 3005,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
-    DB_PATH: process.env.DB_PATH || 'ao-cache',
+    DB_MODE: process.env.DB_MODE || 'embedded',
+    DB_URL: process.env.DB_URL || 'ao-cache',
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
     DUMP_PATH: process.env.DUMP_PATH || './static',
     WALLET: process.env.WALLET
@@ -51,7 +52,8 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 3005,
     GATEWAY_URL: process.env.GATEWAY_URL,
-    DB_PATH: process.env.DB_PATH,
+    DB_MODE: process.env.DB_MODE || 'remote',
+    DB_URL: process.env.DB_URL,
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
     DUMP_PATH: process.env.DUMP_PATH,
     WALLET: process.env.WALLET

@@ -33,7 +33,12 @@ export const createApis = (ctx) => {
       (processId) => locate(processId).catch(err => err)
     ))
   })
-  const pouchDb = PouchDbClient.createPouchDbClient({ maxListeners: ctx.DB_MAX_LISTENERS, path: ctx.DB_PATH })
+  const pouchDb = PouchDbClient.createPouchDbClient({
+    logger: ctx.logger,
+    mode: ctx.DB_MODE,
+    maxListeners: ctx.DB_MAX_LISTENERS,
+    url: ctx.DB_URL
+  })
 
   const sharedDeps = (logger) => ({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),

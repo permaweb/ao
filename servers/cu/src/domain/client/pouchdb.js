@@ -7,7 +7,8 @@ import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
 import PouchDbFind from 'pouchdb-find'
-import LevelDb from 'pouchdb-adapter-leveldb'
+import PouchDbHttp from 'pouchdb-adapter-http'
+import PouchDbLevel from 'pouchdb-adapter-leveldb'
 
 import { evaluationSchema, processSchema } from '../model.js'
 
@@ -18,13 +19,25 @@ const inflateP = promisify(inflate)
  * An implementation of the db client using pouchDB
  */
 let internalPouchDb
-export function createPouchDbClient ({ maxListeners, path }) {
+export function createPouchDbClient ({ logger, maxListeners, mode, url }) {
   if (internalPouchDb) return internalPouchDb
 
-  PouchDb.plugin(LevelDb)
+  let adapter
+  if (mode === 'embedded') {
+    logger('Using embedded PouchDB')
+    PouchDb.plugin(PouchDbLevel)
+    adapter = 'leveldb'
+  } else if (mode === 'remote') {
+    logger('Using remote CouchDB')
+    PouchDb.plugin(PouchDbHttp)
+    adapter = 'http'
+  } else {
+    throw new Error(`Unsupported db mode: '${mode}'`)
+  }
+
   PouchDb.plugin(PouchDbFind)
   PouchDb.setMaxListeners(maxListeners)
-  internalPouchDb = new PouchDb(path, { adapter: 'leveldb' })
+  internalPouchDb = new PouchDb(url, { adapter })
   return internalPouchDb
 }
 

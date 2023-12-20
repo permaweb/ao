@@ -2,7 +2,8 @@ import { z } from 'zod'
 
 export const domainConfigSchema = z.object({
   GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL'),
-  DB_PATH: z.string().min(1, 'DB_PATH set to the location of the database on disk must be provided'),
+  DB_MODE: z.enum(['remote', 'embedded']),
+  DB_URL: z.string().min(1, 'DB_URL must be set to the database connection string'),
   DB_MAX_LISTENERS: z.number().int('DB_MAX_LISTENERS must be an integer'),
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface')
 })

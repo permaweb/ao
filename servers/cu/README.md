@@ -5,8 +5,10 @@ Server.
 
 <!-- toc -->
 
+- [Getting Started](#getting-started)
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
+  - [Running With CouchDB](#running-with-couchdb)
 - [Tests](#tests)
 - [Debug Logging](#debug-logging)
 - [Heap Snapshot](#heap-snapshot)
@@ -18,6 +20,10 @@ Server.
     - [Middleware](#middleware)
 
 <!-- tocstop -->
+
+## Getting Started
+
+> For ease of development, this Compute Unit will use an embedded PouchDB, by default, when starting in development mode
 
 ## Usage
 
@@ -35,12 +41,46 @@ There are a few environment variables that you can set:
   development mode)
 - `WALLET`: the JWK Interface stringified JSON that will be used by the CU
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
-- `DB_PATH`: where on the local filesystem to place the PouchDB, which is used
-  for persistence. Defaults to `./ao-cache`
+- `DB_MODE`: the database mode to run the service in. Can be either `embedded` or `remote` (defaults to `embedded` during development)
+- `DB_URL`: The connection string to the database (when using `DB_MODE=embedded`, defaults to `ao-cache`)
 - `DB_MAX_LISTENERS`: the maximum number of event listeners for DB events.
   Defaults to `100`
 - `DUMP_PATH`: the path to send `heap` snapshots to. (See
   [Heap Snapshots](#heap-snapshot))
+
+### Running With CouchDB
+
+This Compute Unit can be ran using a remote CouchDB. Simply set set `DB_MODE=remote` and `DB_URL` to the CouchDB connection string.
+
+You will need a CouchDB database running. For convenience, a CouchDB
+`Dockefile` and configuration is included in the `.couchdb` directory that you
+can use to spin up a local Postgres instance
+
+> The `.couchdb` directory is purely a convenience for local development
+
+> If you use Gitpod, this is already done for you, as part of spinning up a new
+> workspace
+
+First, build the image by running this at the root of the `mu` module:
+
+```sh
+docker build -t cu-couchdb .couchdb
+```
+
+Then start up a container using that image. You can optionally mount a local
+directory for CouchDB to store persistent data ie. `/workspace/cu-data`
+
+```sh
+mkdir -p /workspace/cu-data
+docker run -it \
+  -p 5984:5984 \
+  -v /workspace/cu-data:/opt/couchdb/data \
+  --env-file servers/cu/.couchdb/couchdb.conf \
+  cu-couch
+```
+
+This will start a CouchDB database listening on port `5432` with credentials in
+the `./couchdb/couchdb.conf` file
 
 ## Tests
 
