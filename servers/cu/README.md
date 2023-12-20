@@ -5,7 +5,6 @@ Server.
 
 <!-- toc -->
 
-- [Getting Started](#getting-started)
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
   - [Running With CouchDB](#running-with-couchdb)
@@ -21,13 +20,12 @@ Server.
 
 <!-- tocstop -->
 
-## Getting Started
-
-> For ease of development, this Compute Unit will use an embedded PouchDB, by default, when starting in development mode
-
 ## Usage
 
 First install dependencies using `npm i`
+
+> For ease of development, this Compute Unit can use an embedded PouchDB, great for local development. By default, when running via `npm run dev`,
+> this is what is used
 
 Then simply start the server using `npm start` or `npm run dev` if you are
 working on the project locally. This will start a hot-reload process listening
@@ -50,13 +48,12 @@ There are a few environment variables that you can set:
 
 ### Running With CouchDB
 
-This Compute Unit can be ran using a remote CouchDB. Simply set set `DB_MODE=remote` and `DB_URL` to the CouchDB connection string.
+This Compute Unit can be ran using a remote CouchDB. Simply set set `DB_MODE=remote`
+and `DB_URL` to the CouchDB connection string.
 
-You will need a CouchDB database running. For convenience, a CouchDB
+Of course, you will need a CouchDB database running. For convenience, a CouchDB
 `Dockefile` and configuration is included in the `.couchdb` directory that you
-can use to spin up a local Postgres instance
-
-> The `.couchdb` directory is purely a convenience for local development
+can use to spin up a CouchDB instance.
 
 > If you use Gitpod, this is already done for you, as part of spinning up a new
 > workspace
