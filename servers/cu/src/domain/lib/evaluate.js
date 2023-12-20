@@ -31,12 +31,19 @@ function addHandler (ctx) {
     .map((handle) => ({ handle, ...ctx }))
 }
 
-function saveEvaluationWith ({ saveEvaluation }) {
+function saveEvaluationWith ({ saveEvaluation, logger }) {
   saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
 
   return (evaluation) =>
     of(evaluation)
       .chain(saveEvaluation)
+      .bimap(
+        logger.tap('Failed to save evaluation'),
+        (res) => {
+          logger('Saved Evaluation %s', evaluation.messageId || `Cron Message ${evaluation.cron}`)
+          return res
+        }
+      )
       /**
        * Always ensure this Async resolves
        */
@@ -184,7 +191,7 @@ export function evaluateWith (env) {
             .then(prev =>
               Promise.resolve(prev.Memory)
                 .then(Memory => {
-                  logger('Evaluating message with id "%s" to process "%s"', message.Id || `Cron Message ${cron}`, ctx.id)
+                  logger('Evaluating message "%s" to process "%s"', message.Id || `Cron Message ${cron}`, ctx.id)
                   return Memory
                 })
                 /**
@@ -206,7 +213,7 @@ export function evaluateWith (env) {
                     : Promise.resolve(output)
                 })
                 .then(output => {
-                  logger('Applied message with id "%s" to process "%s"', message.Id || `Cron Message ${cron}`, ctx.id)
+                  logger('Applied message "%s" to process "%s"', message.Id || `Cron Message ${cron}`, ctx.id)
                   return output
                 })
               /**
@@ -219,6 +226,7 @@ export function evaluateWith (env) {
                     processId: ctx.id,
                     messageId: message.Id,
                     timestamp: message.Timestamp,
+                    blockHeight: message['Block-Height'],
                     evaluatedAt: new Date(),
                     output
                   })

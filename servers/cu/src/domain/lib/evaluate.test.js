@@ -35,7 +35,8 @@ describe('evaluate', () => {
               Owner: 'owner-123',
               Tags: [
                 { name: 'function', value: 'hello' }
-              ]
+              ],
+              'Block-Height': 1234
             },
             AoGlobal: {}
           },
@@ -46,7 +47,8 @@ describe('evaluate', () => {
               Owner: 'owner-456',
               Tags: [
                 { name: 'function', value: 'world' }
-              ]
+              ],
+              'Block-Height': 1235
             },
             AoGlobal: {}
           }
@@ -84,7 +86,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'world' }
-            ]
+            ],
+            'Block-Height': 1235
           }
         }
       )
@@ -126,7 +129,8 @@ describe('evaluate', () => {
           Owner: 'owner-456',
           Tags: [
             { name: 'function', value: 'world' }
-          ]
+          ],
+          'Block-Height': 1235
         }
       })
     })
@@ -158,7 +162,8 @@ describe('evaluate', () => {
             Owner: 'owner-123',
             Tags: [
               { name: 'function', value: 'hello' }
-            ]
+            ],
+            'Block-Height': 1234
           },
           AoGlobal: {}
         },
@@ -169,7 +174,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'world' }
-            ]
+            ],
+            'Block-Height': 1235
           },
           AoGlobal: {}
         }
@@ -215,7 +221,8 @@ describe('evaluate', () => {
             Owner: 'owner-123',
             Tags: [
               { name: 'function', value: 'hello' }
-            ]
+            ],
+            'Block-Height': 1234
           },
           deepHash: 'deephash-123',
           AoGlobal: {}
@@ -227,7 +234,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'world' }
-            ]
+            ],
+            'Block-Height': 1235
           },
           deepHash: 'deephash-456',
           AoGlobal: {}
@@ -240,7 +248,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'world' }
-            ]
+            ],
+            'Block-Height': 1236
           },
           AoGlobal: {}
         }
@@ -313,7 +322,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'errorResult' }
-            ]
+            ],
+            'Block-Height': 1234
           },
           AoGlobal: {}
         }
@@ -361,7 +371,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'errorThrow' }
-            ]
+            ],
+            'Block-Height': 1234
           },
           AoGlobal: {}
         }
@@ -402,7 +413,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'errorUnhandled' }
-            ]
+            ],
+            'Block-Height': 1234
           },
           AoGlobal: {}
         }
@@ -442,7 +454,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'errorResult' }
-            ]
+            ],
+            'Block-Height': 1234
           },
           AoGlobal: {}
         },
@@ -454,7 +467,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'counter' }
-            ]
+            ],
+            'Block-Height': 1235
           },
           AoGlobal: {}
         },
@@ -466,7 +480,8 @@ describe('evaluate', () => {
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'counter' }
-            ]
+            ],
+            'Block-Height': 1236
           },
           AoGlobal: {}
         }

@@ -348,11 +348,12 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
           /**
            * The left most boundary is the origin block of the process -- the current block
            * at the the time the process was sent to a SU
+           * OR the block height and timestamp of the most recently evaluated message
            */
-          leftMost: { block: ctx.block },
+          leftMost: { block: ctx.from ? { height: ctx.fromBlockHeight, timestamp: ctx.from } : ctx.block },
           /**
-           * The right most boundary is always the provided to
-           * OR the current block according to the su
+           * The right most boundary is always the provided to timestamp
+           * OR the current block timestamp according to the su
            */
           rightMostTimestamp: ctx.to || currentBlock.timestamp
         }))

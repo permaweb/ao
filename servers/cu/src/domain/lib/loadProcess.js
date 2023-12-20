@@ -114,6 +114,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
         Memory: evaluation.output.Memory,
         result: omit(['Memory'], evaluation.output),
         from: evaluation.timestamp,
+        fromBlockHeight: evaluation.blockHeight,
         evaluatedAt: evaluation.evaluatedAt
       })
     )
@@ -160,6 +161,14 @@ const ctxSchema = z.object({
    * need to be fetched from the SU in order to perform the evaluation
    */
   from: z.coerce.number().optional(),
+  /**
+   * The most recent message block height. This could be from the most recent
+   * cached evaluation, or undefined, if no evaluations were cached
+   *
+   * This will be used to subsequently determine the range of block metadata
+   * to fetch from the gateway
+   */
+  fromBlockHeight: z.coerce.number().optional(),
   /**
    * When the evaluation record was created in the local db. If the initial state had to be retrieved
    * from Arweave, due to no state being cached in the local db, then this will be undefined.

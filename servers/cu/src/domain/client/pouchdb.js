@@ -73,6 +73,16 @@ function createMessageHashId ({ messageHash }) {
   return `messageHash-${messageHash}`
 }
 
+const toEvaluation = applySpec({
+  processId: prop('processId'),
+  messageId: prop('messageId'),
+  timestamp: prop('timestamp'),
+  blockHeight: prop('blockHeight'),
+  cron: prop('cron'),
+  evaluatedAt: prop('evaluatedAt'),
+  output: prop('output')
+})
+
 /**
  * PouchDB does Comparison of string using ICU which implements the Unicode Collation Algorithm,
  * giving a dictionary sorting of keys.
@@ -163,6 +173,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
     timestamp: evaluationSchema.shape.timestamp,
+    blockHeight: evaluationSchema.shape.blockHeight,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
     output: evaluationSchema.shape.output,
@@ -208,14 +219,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
        * shape
        */
       .map(foundEvaluationDocSchema.parse)
-      .map(applySpec({
-        processId: prop('processId'),
-        messageId: prop('messageId'),
-        timestamp: prop('timestamp'),
-        cron: prop('cron'),
-        evaluatedAt: prop('evaluatedAt'),
-        output: prop('output')
-      }))
+      .map(toEvaluation)
       .toPromise()
   }
 }
@@ -229,6 +233,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
     timestamp: evaluationSchema.shape.timestamp,
+    blockHeight: evaluationSchema.shape.blockHeight,
     cron: evaluationSchema.shape.cron,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
@@ -277,6 +282,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
           processId: prop('processId'),
           messageId: prop('messageId'),
           timestamp: prop('timestamp'),
+          blockHeight: prop('blockHeight'),
           cron: prop('cron'),
           parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
           output: pipe(
@@ -379,16 +385,7 @@ export function findEvaluationsWith ({ pouchDb }) {
           return res.docs
         })
       }))
-      .map(
-        map(applySpec({
-          processId: prop('processId'),
-          messageId: prop('messageId'),
-          timestamp: prop('timestamp'),
-          cron: prop('cron'),
-          evaluatedAt: prop('evaluatedAt'),
-          output: prop('output')
-        }))
-      )
+      .map(map(toEvaluation))
       .toPromise()
   }
 }

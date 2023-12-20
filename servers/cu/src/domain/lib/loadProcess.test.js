@@ -49,6 +49,7 @@ describe('loadProcess', () => {
       Spawns: []
     })
     assert.equal(res.from, undefined)
+    assert.equal(res.fromBlockHeight, undefined)
     assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
   })
@@ -86,12 +87,8 @@ describe('loadProcess', () => {
       processId: PROCESS,
       messageId: 'message-123',
       timestamp: 1697574792000,
+      blockHeight: 1234,
       evaluatedAt: new Date(),
-      message: {
-        tags: [
-          { name: 'message', value: 'tags' }
-        ]
-      },
       output: {
         Memory: Buffer.from('Hello', 'utf-8'),
         Messages: [
@@ -134,6 +131,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.Muffer, cachedEvaluation.output.Buffer)
     assert.deepStrictEqual(res.result, omit(['Memory'], cachedEvaluation.output))
     assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
+    assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)
   })

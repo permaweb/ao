@@ -104,8 +104,15 @@ export const evaluationSchema = z.object({
    * the id of the process that the message was performed upon
    */
   processId: z.string().min(1),
-  messageId: z.string().min(1),
+  /**
+   * Cron messages do not have a messageId
+   */
+  messageId: z.string().min(1).optional(),
   timestamp: z.coerce.number(),
+  blockHeight: z.number(),
+  /**
+   * Scheduled messages do not have a cron
+   */
   cron: z.string().optional(),
   /**
    * The date when this record was created, effectively
