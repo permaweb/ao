@@ -11,7 +11,9 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
     module: '6xSB_-rcVEc8znlSe3JZBYHRsFw5lcgjhLyR8b6leLA',
     scheduler: '4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck',
     tags: [
-
+      { name: 'Cron-Interval', value: '5-minutes' },
+      { name: 'Cron-Tag-function', value: 'ping' },
+      { name: 'Cron-Tag-friend', value: '3CZkzbrEjA34oUY2DfQhMHgu90Ni253NF5KIrDXja3o' }
     ],
     signer: createDataItemSigner(wallet)
   })

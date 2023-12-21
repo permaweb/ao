@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "~0.0.7",
-    "@permaweb/ao-sdk": "^0.0.18",
+    "@permaweb/ao-sdk": "^0.0.21",
     "arweave": "^1.14.4",
     "cors": "^2.8.5",
     "debug": "^4.3.4",

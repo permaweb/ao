@@ -7,7 +7,7 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 const { message } = connect({ MU_URL: 'http://localhost:3004' })
 
 await message({
-  process: '3CZkzbrEjA34oUY2DfQhMHgu90Ni253NF5KIrDXja3o',
+  process: 'foAX4zt0LvRHmwez277bJDLp9u056-eEWTy6-PJp_wc',
   tags: [
     { name: 'function', value: 'ping' },
     { name: 'friend', value: '3CZkzbrEjA34oUY2DfQhMHgu90Ni253NF5KIrDXja3o' }
