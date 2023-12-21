@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.7](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.6...scheduler-utils@v0.0.7) (2023-12-21)
+
+
+### Bug Fixes
+
+* **scheduler-utils:** cache and return correct shape ([931dd94](https://github.com/permaweb/ao/commit/931dd94f392cd1b8e075f2180df6463dec66f9b1))
+* **scheduler-utils:** only return url on raw ([f8ccc17](https://github.com/permaweb/ao/commit/f8ccc17f93575e83003502be193f93de42ffbf17))
+
 ## [0.0.6](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.5...scheduler-utils@v0.0.6) (2023-12-20)
 
 
