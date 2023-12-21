@@ -107,6 +107,13 @@ jobs:
           VER=`npm --version`; echo "npm ver:    $VER"
           VER=`deno --version`; echo "deno ver:    $VER"
 
+      - name: 🔬 Decode Wallet JSON File
+        uses: timheuer/base64-to-file@v1
+        id: wallet_file
+        with:
+          fileName: wallet.json
+          encodedString: ${{ secrets.CI_WALLET }}
+
       # The version in the manifest is used to set the version
       # displayed for the CI. So we need to update version,
       # prior to building the binaries
@@ -133,52 +140,69 @@ jobs:
         env:
           CI: true
 
-      - name: Install Irys Client
+      - name: Install ArDrive CLI
         run: |
-          npm i -g @irys/sdk@0.0.3
+          npm i -g ardrive-cli@2
 
       - name: 💾 Publish Binaries to Arweave
         id: publish_binaries
-        # Irys may fail to deploy the binaries to Arweave for a number of reasons
-        # 
-        # So before attempting to extract the transaction id from the output
-        # We first check to make sure the success message is output
-        # 
-        # If the deploy was successful, We output text to stdout, the final line containing
-        # the url of the transaction. We only need the transaction id
-        # 
-        # So we tail the output and strip the last part of the printed url
-        # which should be the transaction id
+
         #
+        # Use the ArDrive CLI to:
+        # - create a new folder in the ao CLI Artifacts Drive
+        # - upload binaries to that folder
+        # - create a manifest of the folder
         # We also add additional tags in order to mint $U
+        #
         run: |
-          irys balance ${CI_WALLET_ADDRESS} \
-            -h ${IRYS_NODE} \
-            -t arweave
+          echo "Creating folder for binaries on ArDrive..."
 
-          irys price $(du -b "${BINARIES_OUTPUT_DIR}" | cut -f1) \
-            -h ${IRYS_NODE} \
-            -t arweave
-
-          IRYS_RESULT=$(deno task deploy-binaries)
-
-          echo "${IRYS_RESULT}"
-          if [[ -z $(echo "${IRYS_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
-            echo "Binaries were not successfully deployed to Irys! See above logs."
-            exit 1
-          fi
-
-          TRANSACTION_ID=$(\
-            echo "${IRYS_RESULT}" \
-            | tail -1 \
-            | awk -F/ '{print $NF}'
+          ARDRIVE_FOLDER_RESULT=$(\
+            ardrive create-folder \
+              --turbo \
+              --parent-folder-id "${ARDRIVE_FOLDER_ID}" \
+              --folder-name "${VERSION}" \
+              -w "${WALLET}"
           )
-          echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
+
+          echo "${ARDRIVE_FOLDER_RESULT}"
+
+          FOLDER_ID=$(\
+            echo "${ARDRIVE_FOLDER_RESULT}" \
+            | jq -r '.created[0].entityId'
+          )
+
+          echo "Uploading Binaries..."
+
+          ardrive upload-file \
+            --turbo \
+            --parent-folder-id "${FOLDER_ID}" \
+            --local-paths "${BINARIES_OUTPUT_DIR}"/*.zip \
+            -w "${WALLET}"
+
+          echo "Generating Manifest..."
+
+          ARDRIVE_MANIFEST_RESULTS=$(\
+            ardrive create-manifest \
+              --turbo \
+              -f "${FOLDER_ID}" \
+              -w "${WALLET}"
+          )
+
+          echo "${ARDRIVE_MANIFEST_RESULTS}"
+
+          BINARIES_TRANSACTION_ID=$(\
+            echo "${ARDRIVE_MANIFEST_RESULTS}" \
+            | jq -r '.created[0].dataTxId'
+          )
+          
+          echo "folder_id=${FOLDER_ID}" >> $GITHUB_OUTPUT
+          echo "tx_id=${BINARIES_TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
-          CI_WALLET_ADDRESS: ${{ secrets.CI_WALLET_ADDRESS }}
+          WALLET: ${{ steps.wallet_file.outputs.filePath }}
+          VERSION: ${{ steps.version.outputs.version }}
           BINARIES_OUTPUT_DIR: ${{ steps.build_binaries.outputs.binaries_output_dir }}
-          IRYS_NODE: https://node2.irys.xyz
-          CI_WALLET: ${{ secrets.CI_WALLET }}
+          ARDRIVE_FOLDER_ID: ${{ secrets.CLI_ARDRIVE_FOLDER_ID }}
 
       - name: 🛠 Build Install Script
         id: build_install_script
@@ -189,6 +213,11 @@ jobs:
           CI: true
           BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
 
+      # 
+      # Use the ArDrive CLI to:
+      # - upload the install script to the same folder
+      # 
+      # Then finally trigger script to update ArNS for install-ao
       - name: 🛠 Publish Install Script to Arweave
         id: publish_install
         # We output text to stdout, the final line containing
@@ -197,23 +226,29 @@ jobs:
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          IRYS_RESULT=$(deno task deploy-install-script)
-
-          echo "${IRYS_RESULT}"
-          if [[ -z $(echo "${IRYS_RESULT}" | awk '/^Uploaded to https:\/\/arweave.net\//') ]]; then
-            echo "Binaries were not successfully deployed to Irys! See above logs."
-            exit 1
-          fi
-
-          TRANSACTION_ID=$(\
-            echo "${IRYS_RESULT}" \
-            | tail -1 \
-            | awk -F/ '{print $NF}'
+          echo "Uploading Install Script..."
+          
+          ARDRIVE_FILE_RESULTS=$(\
+            ardrive upload-file \
+              --turbo \
+              --parent-folder-id "${FOLDER_ID}" \
+              --local-path "${INSTALL_SCRIPT}" \
+              -w "${WALLET}"
           )
-          echo "tx_id=${TRANSACTION_ID}" >> $GITHUB_OUTPUT
+
+          echo "${ARDRIVE_FILE_RESULTS}"
+
+          INSTALL_TRANSACTION_ID=$(\
+            echo "${ARDRIVE_FILE_RESULTS}" \
+            | jq -r '.created[0].dataTxId'
+          )
+
+          INSTALL_SCRIPT_ID="${INSTALL_TRANSACTION_ID}" deno task arns-install-script
+
+          echo "tx_id=${INSTALL_TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
-          IRYS_NODE: https://node2.irys.xyz
-          CI_WALLET: ${{ secrets.CI_WALLET }}
+          WALLET: ${{ steps.wallet_file.outputs.filePath }}
+          FOLDER_ID: ${{ steps.publish_binaries.outputs.folder_id }}
           INSTALL_SCRIPT: ${{ steps.build_install_script.outputs.install_script }}
 
       - name: 🤓 Set Git User
