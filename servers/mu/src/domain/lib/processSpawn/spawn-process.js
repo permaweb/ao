@@ -58,7 +58,6 @@ export function spawnProcessWith (env) {
           return of(ctx.cachedSpawn.processId)
             .chain(locateProcess)
             .chain((schedulerResult) => {
-              console.log('p1')
               transformedData.tags.push({ name: 'Scheduler', value: schedulerResult.address })
               return of(transformedData.tags)
                 .chain(findModuleTag) // just needs to throw an error if not there

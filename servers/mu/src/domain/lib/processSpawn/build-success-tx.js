@@ -8,8 +8,6 @@ const ctxSchema = z.object({
 
 export function buildSuccessTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
-    console.log('ddddddddddd')
-    console.log(ctx)
     const tags = [
       { name: 'Data-Protocol', value: 'ao' },
       { name: 'Type', value: 'Message' },
