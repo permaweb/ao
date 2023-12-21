@@ -1,5 +1,5 @@
 {
-  "version": "0.0.25",
+  "version": "0.0.27",
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
     "build-binaries": "./tools/build.sh",
@@ -25,7 +25,7 @@
   },
   "txMappings": {
     "binaries": {
-      "latest": "xYIYbHoLYF4lArwo1PrmXWai0763P9qNHY3BasHquCg",
+      "latest": "Y0QPOBy4Lq1Ug6wtWMKGYVu5BRpzMFm-GTtkDPSUOTo",
       "0.0.4": "1k3Iygu7AFk_VUhz0HNcKbiGt3x_NQyfkv5Q1U9Ov9M",
       "0.0.5": "-vGb25sGLntIypV5zZ2rWmglEuoa6S4gQyD9vgHp7Xs",
       "0.0.6": "OLPkro6U63h0ZOheQ1eOg0Qfogg3aPJ6NZ6EIOibVRY",
@@ -47,10 +47,11 @@
       "0.0.22": "eKzhdNT1Qgf7ufKw-6bonNErWoCLtRUazSpPfQVmOTA",
       "0.0.23": "wEakoN4PKR3ITonDVpmB8eebc_0yJcgPaLpvc3j0tuE",
       "0.0.24": "u0PU-DnGabCP0AqGXcLH96wx69zZhquvLuDCgAT9MiI",
-      "0.0.25": "xYIYbHoLYF4lArwo1PrmXWai0763P9qNHY3BasHquCg"
+      "0.0.25": "xYIYbHoLYF4lArwo1PrmXWai0763P9qNHY3BasHquCg",
+      "0.0.27": "Y0QPOBy4Lq1Ug6wtWMKGYVu5BRpzMFm-GTtkDPSUOTo"
     },
     "install": {
-      "latest": "1109DD5XCSM6y7HVNWI6LiIrC08Uc6MebI-yumQ1LWE",
+      "latest": "Syx_vjUuYae-QE9iD8OFT-e_4dDKaIbdWrXX5OIOw9Y",
       "0.0.4": "FgjlKbVNKV5WR2pyxn4sqNT25Pge6IAXdEvd3_-3y4k",
       "0.0.5": "mn9In69KjyAaWJEJOKbCI40Iq686ermXI5f13phuGrQ",
       "0.0.6": "bS0bFMGBgcsA9Uhsxta8S1gkp7DHrLY6r18k-jc7yak",
@@ -72,7 +73,8 @@
       "0.0.22": "IhS2khqXUZYhR4RYK8zgpFrlky1TvhkijQymP_L2fvM",
       "0.0.23": "NY88eMDEMq70yk1jZCpma1qGraA80P7l7rz2mh0PUzI",
       "0.0.24": "mjX3Z8G4gzpuZVZP-5Aik4Q3mzy7wWDQvea-nLxwjFw",
-      "0.0.25": "1109DD5XCSM6y7HVNWI6LiIrC08Uc6MebI-yumQ1LWE"
+      "0.0.25": "1109DD5XCSM6y7HVNWI6LiIrC08Uc6MebI-yumQ1LWE",
+      "0.0.27": "Syx_vjUuYae-QE9iD8OFT-e_4dDKaIbdWrXX5OIOw9Y"
     }
   }
 }
