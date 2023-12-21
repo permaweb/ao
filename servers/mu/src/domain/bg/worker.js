@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { createApis, domainConfigSchema, createLogger, dataStoreClient, dbInstance } from '../index.js'
 import { config } from '../../config.js'
+import { tracerFor } from '../lib/tracer.js'
 
 /**
  * a Worker which processes scheduled messages.
@@ -25,14 +26,16 @@ const apis = createApis(apiCtx)
 const monitorSchema = z.object({
   id: z.string(),
   authorized: z.boolean(),
-  lastFromTimestamp: z.nullable(z.string()),
+  lastFromTimestamp: z.nullable(z.number()),
   processData: z.any(),
   createdAt: z.number()
 })
 
 const findLatestMonitors = dataStoreClient.findLatestMonitorsWith({ dbInstance, logger })
 const saveMsg = dataStoreClient.saveMsgWith({ dbInstance, logger })
+const saveSpawn = dataStoreClient.saveSpawnWith({ dbInstance, logger })
 const findLatestMsgs = dataStoreClient.findLatestMsgsWith({ dbInstance, logger })
+const findLatestSpawns = dataStoreClient.findLatestSpawnsWith({ dbInstance, logger })
 const updateMonitor = dataStoreClient.updateMonitorWith({ dbInstance, logger })
 
 /**
@@ -62,30 +65,25 @@ parentPort.on('message', (message) => {
 const runningMonitorList = []
 
 async function processMonitors () {
-  // eslint-disable-next-line
-  try {
-    const monitorList = await findLatestMonitors()
-    for (const monitor of monitorList) {
-      const validationResult = monitorSchema.safeParse(monitor)
-      if (validationResult.success) {
-        if (shouldRun(monitor)) {
-          try {
-            await processMonitor(monitor)
-            removeMonitorFromRunningList(monitor.id)
-          } catch (error) {
-            removeMonitorFromRunningList(monitor.id)
-            console.log(`Error processing monitor ${monitor.id}:`, error)
-          }
+  const monitorList = await findLatestMonitors()
+  for (const monitor of monitorList) {
+    const validationResult = monitorSchema.safeParse(monitor)
+    if (validationResult.success) {
+      if (shouldRun(monitor)) {
+        try {
+          await processMonitor(monitor)
+          removeMonitorFromRunningList(monitor.id)
+        } catch (error) {
+          removeMonitorFromRunningList(monitor.id)
+          console.log(`Error processing monitor ${monitor.id}:`, error)
         }
-      } else {
-        console.log('Invalid monitor:', validationResult.error)
       }
+    } else {
+      console.log('Invalid monitor:', validationResult.error)
     }
-
-    return 'finished processing'
-  } catch (e) {
-    throw e
   }
+
+  return 'finished processing'
 }
 
 function removeMonitorFromRunningList (monitorId) {
@@ -95,25 +93,101 @@ function removeMonitorFromRunningList (monitorId) {
   }
 }
 
-/**
- * Asynchronously fetches scheduled data for a given monitor.
- * The function makes a GET request to a URL constructed from the monitor's ID.
- * If the monitor has a 'lastFromSortKey', it is included as a query parameter in the request URL.
- *
- * @param {Object} monitor - The monitor object containing the necessary information for the request.
- * @param {string} monitor.id - The unique identifier of the monitor.
- * @param {string} [monitor.lastFromSortKey] - Optional sort key indicating the starting point for fetching data.
- *
- * @returns {Promise<Object>} A promise that resolves to the fetched scheduled data.
- * If an error occurs during fetching, logs the error and monitor details to the console.
- */
+async function processMonitor (monitor) {
+  runningMonitorList.push(monitor)
+
+  try {
+    const scheduled = await fetchScheduled(monitor)
+
+    if (!scheduled || !scheduled.edges || (scheduled.edges.length < 1)) return []
+
+    const fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
+
+    const msgSavePromises = []
+    const spawnSavePromises = []
+
+    // scheduled.edges is a list of result objects ({Messages, Spawns, Output})
+    for (let i = 0; i < scheduled.edges.length; i++) {
+      const messages = scheduled.edges[i].node.Messages
+      const spawns = scheduled.edges[i].node.Spawns
+
+      const msgPromises = messages.map(msg => {
+        return saveMsg({
+          id: Math.floor(Math.random() * 1e18).toString(),
+          fromTxId,
+          msg,
+          cachedAt: new Date(),
+          processId: monitor.id
+        })
+      })
+
+      const spawnPromises = spawns.map(spawn => {
+        return saveSpawn({
+          id: Math.floor(Math.random() * 1e18).toString(),
+          fromTxId,
+          spawn,
+          cachedAt: new Date(),
+          processId: monitor.id
+        })
+      })
+
+      msgSavePromises.push(...msgPromises)
+      spawnSavePromises.push(...spawnPromises)
+    }
+
+    await Promise.all(msgSavePromises)
+    await Promise.all(spawnSavePromises)
+
+    if (msgSavePromises.length > 0) {
+      const dbMsgs = await findLatestMsgs({ fromTxId })
+      const tracer = tracerFor({
+        message: { id: fromTxId },
+        parent: undefined,
+        from: monitor.processId
+      })
+      await of(dbMsgs)
+        .map(dbMsgs => ({ msgs: dbMsgs, spawns: [], message: { id: fromTxId }, tracer }))
+        .chain(res =>
+          apis.crankMsgs(res)
+            .bimap(
+              logger.tap('Failed to crank messages'),
+              logger.tap('Successfully cranked messages')
+            )
+        )
+        .toPromise()
+    }
+
+    if (spawnSavePromises.length > 0) {
+      const dbSpawns = await findLatestSpawns({ fromTxId })
+      for (let i = 0; i < dbSpawns.length; i++) {
+        await of({ cachedSpawn: dbSpawns[i] })
+          .chain(apis.processSpawn)
+          .toPromise()
+      }
+    }
+
+    const lastScheduled = scheduled.edges[scheduled.edges.length - 1]
+
+    monitor.lastFromTimestamp = lastScheduled.cursor
+
+    await updateMonitor(monitor)
+
+    return { status: 'ok' }
+  } catch (e) {
+    console.error('Error in processMonitor:', e)
+    throw e
+  }
+}
+
 async function fetchScheduled (monitor) {
   const lastFromTimestamp = monitor.lastFromTimestamp
-  let requestUrl = `${config.CU_URL}/scheduled/${monitor.id}`
+  let requestUrl = `${config.CU_URL}/cron/${monitor.id}`
 
   if (lastFromTimestamp) {
-    requestUrl = `${config.CU_URL}/scheduled/${monitor.id}?from=${lastFromTimestamp}`
+    requestUrl = `${config.CU_URL}/cron/${monitor.id}?from=${lastFromTimestamp}`
   }
+
+  console.log(requestUrl)
 
   try {
     const response = await fetch(requestUrl)
@@ -126,73 +200,6 @@ async function fetchScheduled (monitor) {
   }
 }
 
-/**
- * Asynchronously processes a given monitor object. The function includes several steps:
- * 1. Adding the monitor to a running monitor list.
- * 2. Fetching scheduled data for the monitor.
- * 3. If scheduled data exists, generating a unique transaction ID and saving each message
- *    after removing its 'scheduledSortKey'.
- * 4. Fetching the latest messages from the database using the generated transaction ID.
- * 5. Processing these messages through an external API.
- * 6. Updating the monitor with the sort key of the last scheduled message.
- *
- * @param {Object} monitor - The monitor object to be processed.
- * @returns {Promise<Object>} A promise that resolves to an object indicating the status
- */
-async function processMonitor (monitor) {
-  runningMonitorList.push(monitor)
-
-  try {
-    const scheduled = await fetchScheduled(monitor)
-
-    if (!scheduled || scheduled.length < 1) return []
-
-    const fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
-
-    const savePromises = scheduled.map(msg => {
-      const msgWithoutScheduledSortKey = { ...msg }
-      delete msgWithoutScheduledSortKey.scheduledSortKey
-      return saveMsg({
-        id: Math.floor(Math.random() * 1e18).toString(),
-        fromTxId,
-        msg: msgWithoutScheduledSortKey,
-        cachedAt: new Date()
-      })
-    })
-
-    await Promise.all(savePromises)
-    const dbMsgs = await findLatestMsgs({ fromTxId })
-
-    await of(dbMsgs)
-      .map(dbMsgs => ({ msgs: dbMsgs, spawns: [] }))
-      .chain(res =>
-        apis.crankMsgs(res)
-          .bimap(
-            logger.tap('Failed to crank messages'),
-            logger.tap('Successfully cranked messages')
-          )
-      )
-      .toPromise()
-
-    const lastScheduled = scheduled[scheduled.length - 1]
-
-    monitor.lastFromSortKey = lastScheduled.scheduledSortKey
-
-    await updateMonitor(monitor)
-
-    return { status: 'ok' }
-  } catch (e) {
-    console.error('Error in processMonitor:', e)
-    throw e
-  }
-}
-
-/**
- * determine if we should crank scheduled for this monitor record
- *
- * @param {Object} monitor
- * @returns {boolean}
- */
 function shouldRun (monitor) {
   const index = runningMonitorList.findIndex(item => item.id === monitor.id)
 

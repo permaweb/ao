@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
-const { spawn } = connect({ MU_URL: 'http://localhost:3004' })
+const { spawn, message } = connect({ MU_URL: 'http://localhost:3004' })
 
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
 
@@ -19,4 +19,15 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
   })
 
   console.log(r)
+  await new Promise(resolve => setTimeout(resolve, 5000))
+
+  await message({
+    process: r,
+    tags: [
+      { name: 'function', value: 'ping' },
+      { name: 'friend', value: '3CZkzbrEjA34oUY2DfQhMHgu90Ni253NF5KIrDXja3o' }
+    ],
+    signer: createDataItemSigner(wallet)
+  }).then(console.log)
+    .catch(console.error)
 })()

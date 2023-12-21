@@ -213,7 +213,7 @@ const monitoredProcessSchema = z.object({
   _id: z.string().min(1),
   // is this monitored process authorized to run by the server (is it funded)
   authorized: z.boolean(),
-  lastFromTimestamp: z.number,
+  lastFromTimestamp: z.number().nullable(),
   processData: z.any(),
   _rev: z.string().optional(),
   createdAt: z.number()
@@ -222,6 +222,8 @@ const monitoredProcessSchema = z.object({
 function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveMonitoredProcess')
   return (process) => {
+    console.log('zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz')
+    console.log(process)
     return of(process)
       .map(applySpec({
         _id: prop('id'),
@@ -279,7 +281,8 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
   return ({ id, lastFromTimestamp }) => {
     return of({ id })
       .chain(fromPromise(() => dbInstance.getMonitor(id)))
-      .map(doc => ({ ...doc, lastFromTimestamp }))
+      // createdAt comes out of the db as a string so we put it back to int
+      .map(doc => ({ ...doc, lastFromTimestamp, createdAt: parseInt(doc.createdAt) }))
       .map(monitoredProcessSchema.parse)
       .chain(updatedDoc =>
         of(updatedDoc)

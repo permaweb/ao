@@ -11,7 +11,7 @@ async function up (db) {
   await db.none(`
       ALTER TABLE "monitored_processes"
       ADD COLUMN "processData" JSONB NOT NULL,
-      ADD COLUMN "lastFromTimestamp" INTEGER NOT NULL
+      ADD COLUMN "lastFromTimestamp" BIGINT
     `)
 }
 
@@ -27,7 +27,8 @@ async function down (db) {
   // Remove the column 'processData'
   await db.none(`
       ALTER TABLE "monitored_processes"
-      DROP COLUMN IF EXISTS "processData"
+      DROP COLUMN IF EXISTS "processData",
+      DROP COLUMN IF EXISTS "lastFromTimestamp"
     `)
 }
 
