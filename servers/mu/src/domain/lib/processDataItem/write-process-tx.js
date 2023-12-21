@@ -34,7 +34,7 @@ export function writeProcessTxWith (env) {
       .chain(findSchedulerTag)
       .chain((schedulerAddress) =>
         locateScheduler(schedulerAddress)
-          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data }))
+          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64') }))
       )
       .map(assoc('schedulerTx', __, ctx))
       .map(ctxSchema.parse)

@@ -21,7 +21,7 @@ export function writeMessageTxWith (env) {
       .map(tap(() => ctx.tracer.trace('Sending message to SU')))
       .chain(() =>
         locateProcess(ctx.tx.processId)
-          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data }))
+          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64') }))
       )
       .map(assoc('schedulerTx', __, ctx))
       /**

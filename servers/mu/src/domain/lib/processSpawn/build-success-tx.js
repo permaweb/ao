@@ -8,11 +8,12 @@ const ctxSchema = z.object({
 
 export function buildSuccessTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
+    console.log('ddddddddddd')
+    console.log(ctx)
     const tags = [
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'message' },
-      { name: 'SDK', value: 'ao' },
-      { name: 'ao-spawn-success', value: ctx.processTx }
+      { name: 'Type', value: 'Message' },
+      { name: 'AO-Spawn-Success', value: ctx.processTx }
     ]
 
     return of(ctx)

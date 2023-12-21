@@ -170,7 +170,7 @@ export function processSpawnWith ({
   buildAndSign,
   deleteSpawn
 }) {
-  const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler })
+  const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler, locateProcess, buildAndSign })
   const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
   const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeDataItem, locateProcess })
   const deleteSpawnData = deleteSpawnDataWith({ logger, deleteSpawn })

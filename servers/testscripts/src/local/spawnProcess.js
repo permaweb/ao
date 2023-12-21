@@ -9,7 +9,7 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
 (async function () {
   const r = await spawn({
     module: '6xSB_-rcVEc8znlSe3JZBYHRsFw5lcgjhLyR8b6leLA',
-    scheduler: 'lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps',
+    scheduler: '4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck',
     tags: [
 
     ],

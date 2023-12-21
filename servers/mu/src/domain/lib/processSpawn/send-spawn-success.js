@@ -7,10 +7,14 @@ const ctxSchema = z.object({
 }).passthrough()
 
 export function sendSpawnSuccessWith (env) {
-  const { logger, writeDataItem } = env
+  let { logger, writeDataItem, locateProcess } = env
+
+  locateProcess = fromPromise(locateProcess)
 
   return (ctx) => {
-    return of(ctx.spawnSuccessTx.data)
+    return of(ctx.cachedSpawn.processId)
+      .chain(locateProcess)
+      .map((schedulerResult) => { return { suUrl: schedulerResult.url, data: ctx.spawnSuccessTx.data.toString('base64') } })
       .chain(fromPromise(writeDataItem))
       .bichain(
         (error) => {
