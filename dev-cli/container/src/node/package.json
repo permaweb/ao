@@ -16,7 +16,11 @@
   },
   "dependencies": {
     "@irys/sdk": "^0.0.4",
-    "@permaweb/ao-sdk": "0.0.20"
+    "@permaweb/ao-sdk": "0.0.21",
+    "arweave": "^1.14.4",
+    "mime-types": "^2.1.35",
+    "url-join": "^5.0.0",
+    "warp-arbundles": "^1.0.4"
   },
   "engines": {
     "node": ">=18"
