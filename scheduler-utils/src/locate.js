@@ -14,11 +14,12 @@ export function locateWith ({ loadProcessScheduler, cache }) {
         if (cached) return cached
         return loadProcessScheduler(process)
           .then((scheduler) => {
+            const res = { url: scheduler.url, address: scheduler.owner }
             return Promise.all([
-              cache.setByProcess(process, { url: scheduler.url, address: scheduler.owner }, scheduler.ttl),
+              cache.setByProcess(process, res, scheduler.ttl),
               cache.setByOwner(scheduler.owner, scheduler.url, scheduler.ttl)
             ])
-              .then(() => ({ url: scheduler.url, address: scheduler.owner }))
+              .then(() => res)
           })
       })
 }

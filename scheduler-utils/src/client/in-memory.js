@@ -36,9 +36,9 @@ export function getByProcessWith ({ cache = internalCache }) {
 }
 
 export function setByProcessWith ({ cache = internalCache }) {
-  return async (process, { url, owner }, ttl) => {
+  return async (process, { url, address }, ttl) => {
     if (!internalSize) return
-    return cache.set(process, { url, owner }, { ttl })
+    return cache.set(process, { url, address }, { ttl })
   }
 }
 
@@ -50,7 +50,7 @@ export function getByOwnerWith ({ cache = internalCache }) {
 }
 
 export function setByOwnerWith ({ cache = internalCache }) {
-  return async (owner, { url }, ttl) => {
+  return async (owner, url, ttl) => {
     if (!internalSize) return
     return cache.set(owner, { url, address: owner }, { ttl })
   }

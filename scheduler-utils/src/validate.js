@@ -9,8 +9,8 @@ export function validateWith ({ loadScheduler, cache }) {
    */
   return (address) =>
     cache.getByOwner(address)
-      .then((url) => {
-        if (url) return true
+      .then((cached) => {
+        if (cached) return true
         return loadScheduler(address)
           .then((scheduler) => cache.setByOwner(address, scheduler.url, scheduler.ttl))
           .then(() => true)
