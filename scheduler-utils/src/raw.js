@@ -11,7 +11,7 @@ export function rawWith ({ loadScheduler, cache }) {
   return (address) =>
     cache.getByOwner(address)
       .then((cached) => {
-        if (cached) return cached
+        if (cached) return { url: cached.url }
         return loadScheduler(address)
           .then((scheduler) =>
             cache.setByOwner(address, scheduler.url, scheduler.ttl)
