@@ -51,7 +51,7 @@ const CONFIG_ENVS = {
     CU_URL: process.env.CU_URL || 'https://ao-cu-2.onrender.com',
     MU_DATABASE_URL: process.env.MU_DATABASE_URL || 'postgres://admin:admin@localhost:5432/mu',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
-    SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 1000,
+    SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 5000,
     DUMP_PATH: process.env.DUMP_PATH || './static'
   },
   production: {
@@ -62,7 +62,7 @@ const CONFIG_ENVS = {
     CU_URL: process.env.CU_URL,
     MU_DATABASE_URL: process.env.MU_DATABASE_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
-    SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 1000,
+    SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 5000,
     DUMP_PATH: process.env.DUMP_PATH || './static'
   }
 }

@@ -4,6 +4,6 @@ import { withRootRoutes } from './root.js'
 import { withMonitorRoutes } from './monitor.js'
 
 export const withRoutes = pipe(
-  withRootRoutes,
-  withMonitorRoutes
+  withMonitorRoutes,
+  withRootRoutes
 )
