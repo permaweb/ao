@@ -3,9 +3,8 @@
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
     "build-binaries": "./tools/build.sh",
-    "deploy-binaries": "ACTION=UPLOAD_BINARIES node tools/deploy/index.js",
     "build-install-script": "deno run -A tools/create-install-script.js",
-    "deploy-install-script": "ACTION=UPLOAD_INSTALL_SCRIPT node tools/deploy/index.js",
+    "arns-install-script": "ACTION=UPDATE_ARNS node tools/deploy/index.js",
     "bump": "deno run -A tools/update-version.js",
     "test": "echo 'NOT IMPLEMENTED'",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
