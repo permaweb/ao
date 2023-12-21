@@ -60,9 +60,9 @@ jobs:
           node-version: 18
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: dev-cli/container/src/node
+        working-directory: dev-cli/container/src/node
+        run: |
+          npm i
 
       - name: ⚡ Run Tests
         working-directory: dev-cli/container/src/node
@@ -93,9 +93,9 @@ jobs:
           node-version: 18
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: dev-cli/tools/deploy
+        working-directory: dev-cli/tools/deploy
+        run: |
+          npm i
 
       - name: 👀 Env
         run: |

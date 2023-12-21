@@ -38,9 +38,9 @@ jobs:
           node-version: 18
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: scheduler-utils
+        working-directory: scheduler-utils
+        run: |
+          npm i
 
       - name: ⚡ Run Tests
         working-directory: scheduler-utils
@@ -95,9 +95,9 @@ jobs:
           git push --tags
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: scheduler-utils
+        working-directory: scheduler-utils
+        run: |
+          npm i
       
       - name: 🦠 Publish to NPM
         working-directory: scheduler-utils

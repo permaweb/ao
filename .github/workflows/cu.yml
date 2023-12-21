@@ -30,9 +30,9 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: servers/cu
+        working-directory: servers/cu
+        run: |
+          npm i
 
       - name: ⚡ Run Tests
         working-directory: servers/cu
@@ -60,9 +60,9 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: servers/cu
+        working-directory: servers/cu
+        run: |
+          npm i
 
       - name: 👀 Env
         run: |
