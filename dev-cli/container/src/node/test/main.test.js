@@ -46,7 +46,7 @@ describe('uploadModuleWith', () => {
     artifactExists: async () => ({ foo: 'bar' }),
     readWallet: async () => ({ id: 'id-123' }),
     uploaders: {
-      [SUPPORTED_BUNDLERS.IRYS]: async (params) => ({ params, id: '123' })
+      [SUPPORTED_BUNDLERS.UP]: async (params) => ({ params, id: '123' })
     }
   }
 
@@ -55,7 +55,7 @@ describe('uploadModuleWith', () => {
       const upload = uploadModuleWith({
         ...happy,
         uploaders: {
-          [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          [SUPPORTED_BUNDLERS.UP]: async (params) => {
             /**
              * custom tag, plus default tags, then only use
              * the first Module-Format tag
@@ -82,7 +82,7 @@ describe('uploadModuleWith', () => {
       const upload = uploadModuleWith({
         ...happy,
         uploaders: {
-          [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          [SUPPORTED_BUNDLERS.UP]: async (params) => {
             /**
              * custom tag, plus default tags, then only use
              * the first Input-Encoding tag
@@ -109,7 +109,7 @@ describe('uploadModuleWith', () => {
       const upload = uploadModuleWith({
         ...happy,
         uploaders: {
-          [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+          [SUPPORTED_BUNDLERS.UP]: async (params) => {
             /**
              * custom tag, plus default tags, then only use
              * the first Input-Encoding tag
@@ -152,7 +152,7 @@ describe('uploadModuleWith', () => {
     const upload = uploadModuleWith({
       ...happy,
       uploaders: {
-        [SUPPORTED_BUNDLERS.IRYS]: (params) => {
+        [SUPPORTED_BUNDLERS.UP]: (params) => {
           assert.deepStrictEqual(params, {
             path: '/path/to/artifact.wasm',
             wallet: { id: 'id-123' },
@@ -180,7 +180,7 @@ describe('uploadModuleWith', () => {
     const upload = uploadModuleWith({
       ...happy,
       uploaders: {
-        [SUPPORTED_BUNDLERS.IRYS]: (params) => {
+        [SUPPORTED_BUNDLERS.UP]: (params) => {
           assert.deepStrictEqual(params, {
             path: '/path/to/artifact.wasm',
             wallet: { id: 'id-123' },
@@ -316,7 +316,7 @@ describe('checkBalanceWith', () => {
     walletExists: async () => true,
     readWallet: async () => ({ id: 'id-123' }),
     balancers: {
-      [SUPPORTED_BUNDLERS.IRYS]: async () => ({ balance: 123 })
+      [SUPPORTED_BUNDLERS.UP]: async () => ({ balance: 123 })
     }
   }
 
@@ -335,7 +335,7 @@ describe('checkBalanceWith', () => {
     const balance = checkBalanceWith({
       ...happy,
       balancers: {
-        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+        [SUPPORTED_BUNDLERS.UP]: async (params) => {
           assert.deepStrictEqual(params, {
             wallet: { id: 'id-123' },
             to: DEFAULT_BUNDLER_HOST
@@ -355,7 +355,7 @@ describe('checkBalanceWith', () => {
     const balance = checkBalanceWith({
       ...happy,
       balancers: {
-        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+        [SUPPORTED_BUNDLERS.UP]: async (params) => {
           assert.deepStrictEqual(params, {
             wallet: { id: 'id-123' },
             to: DEFAULT_BUNDLER_HOST
@@ -398,7 +398,7 @@ describe('fundWith', () => {
     walletExists: async () => true,
     readWallet: async () => ({ id: 'id-123' }),
     funders: {
-      [SUPPORTED_BUNDLERS.IRYS]: async () => ({ id: '123' })
+      [SUPPORTED_BUNDLERS.UP]: async () => ({ id: '123' })
     }
   }
 
@@ -418,7 +418,7 @@ describe('fundWith', () => {
     const fund = fundWith({
       ...happy,
       funders: {
-        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+        [SUPPORTED_BUNDLERS.UP]: async (params) => {
           assert.deepStrictEqual(params, {
             wallet: { id: 'id-123' },
             to: DEFAULT_BUNDLER_HOST,
@@ -440,7 +440,7 @@ describe('fundWith', () => {
     const fund = fundWith({
       ...happy,
       funders: {
-        [SUPPORTED_BUNDLERS.IRYS]: async (params) => {
+        [SUPPORTED_BUNDLERS.UP]: async (params) => {
           assert.deepStrictEqual(params, {
             wallet: { id: 'id-123' },
             to: DEFAULT_BUNDLER_HOST,
