@@ -13,7 +13,7 @@ This is an spec compliant `ao` Scheduler Unit, implemented as a Rust actix web s
   - [Compiling a binary (mainly for production/other live environments)](#compiling-a-binary-mainly-for-productionother-live-environments)
   - [Running the binary, su MODE](#running-the-binary-su-mode)
   - [Running a router in front of multiple scheduler units](#running-a-router-in-front-of-multiple-scheduler-units)
-    - [Running the binary, router MODE](#running-the-binary-router-mode)
+  - [Running the binary, router MODE](#running-the-binary-router-mode)
 
 <!-- tocstop -->
 
@@ -107,7 +107,7 @@ Also set the `MODE` environment variable to `router`
 
 Now the url for the router can be used as a single entry point to all the sus. In this configuration all sus and the router should share the same wallet configured in the environment variable `SU_WALLET_PATH`
 
-#### Running the binary, router MODE
+### Running the binary, router MODE
 ```sh
 docker build -f RunDockerfile -t su-runner .
 docker run --name su-app su-runner
