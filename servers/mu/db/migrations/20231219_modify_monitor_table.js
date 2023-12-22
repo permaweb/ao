@@ -10,8 +10,8 @@ async function up (db) {
   // Add a new column 'processData' of type JSONB
   await db.none(`
       ALTER TABLE "monitored_processes"
-      ADD COLUMN "processData" JSONB NOT NULL,
-      ADD COLUMN "lastFromTimestamp" BIGINT
+      ADD COLUMN IF NOT EXISTS "processData" JSONB NOT NULL,
+      ADD COLUMN IF NOT EXISTS "lastFromTimestamp" BIGINT
     `)
 }
 
