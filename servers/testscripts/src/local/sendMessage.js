@@ -7,10 +7,10 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString())
 const { message } = connect({ MU_URL: 'http://localhost:3004' })
 
 await message({
-  process: 'foAX4zt0LvRHmwez277bJDLp9u056-eEWTy6-PJp_wc',
+  process: 'DIF0J77lxdwOektUZW_BWzCALg9G-w2UNNlXmHyPemw',
   tags: [
     { name: 'function', value: 'ping' },
-    { name: 'friend', value: '3CZkzbrEjA34oUY2DfQhMHgu90Ni253NF5KIrDXja3o' }
+    { name: 'friend', value: 'aKoff7cbRj42McU36pgaqQMtRIiaiNZzzYnLkDiCTMQ' }
   ],
   signer: createDataItemSigner(wallet)
 }).then(console.log)

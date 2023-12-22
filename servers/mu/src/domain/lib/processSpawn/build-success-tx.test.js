@@ -10,9 +10,8 @@ describe('buildSuccessTx', () => {
   test('build spawn success msg', async () => {
     const tags1 = [
       { name: 'Data-Protocol', value: 'ao' },
-      { name: 'ao-type', value: 'message' },
-      { name: 'SDK', value: 'ao' },
-      { name: 'ao-spawn-success', value: 'pid-2' }
+      { name: 'Type', value: 'Message' },
+      { name: 'AO-Spawn-Success', value: 'pid-2' }
     ]
 
     const buildSuccessTx = buildSuccessTxWith({
