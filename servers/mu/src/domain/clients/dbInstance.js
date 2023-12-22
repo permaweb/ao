@@ -108,6 +108,14 @@ export async function getMonitor (id) {
   return await withRetry(db.oneOrNone, ['SELECT * FROM "monitored_processes" WHERE "_id" = $1', [id]])
 }
 
+export async function deleteMonitor (processId) {
+  await withRetry(db.none, [
+    'DELETE FROM "monitored_processes" WHERE "_id" = $1',
+    [processId]
+  ])
+  return { _id: processId }
+}
+
 export async function findMonitors () {
   return await withRetry(async () => {
     const docs = await db.any('SELECT * FROM "monitored_processes"')
@@ -152,6 +160,7 @@ export default {
   putMsg,
   getMsg,
   getMonitor,
+  deleteMonitor,
   findMsgs,
   putSpawn,
   findSpawns,

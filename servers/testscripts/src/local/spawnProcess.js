@@ -19,7 +19,7 @@ const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
   })
 
   console.log(r)
-  await new Promise(resolve => setTimeout(resolve, 5000))
+  await new Promise(resolve => setTimeout(resolve, 15000))
 
   await message({
     process: r,

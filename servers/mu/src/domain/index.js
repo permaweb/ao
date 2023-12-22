@@ -8,7 +8,7 @@ import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 
 import dataStoreClient from './lib/datastore.js'
-import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith } from './lib/main.js'
+import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith, deleteProcessWith } from './lib/main.js'
 
 import runScheduledWith from './bg/manager.js'
 
@@ -123,5 +123,12 @@ export const createApis = (ctx) => {
     logger: monitorProcessLogger
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess }
+  const deleteProcessLogger = logger.child('deleteProcess')
+  const deleteProcess = deleteProcessWith({
+    deleteProcess: dataStoreClient.deleteMonitorWith({ dbInstance, logger: deleteProcessLogger }),
+    createDataItem,
+    logger: monitorProcessLogger
+  })
+
+  return { sendDataItem, crankMsgs, monitorProcess, deleteProcess }
 }

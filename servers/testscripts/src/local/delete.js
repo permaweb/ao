@@ -16,7 +16,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   const response = await fetch(
     'http://localhost:3004/monitor/5krpSnFujUTbfOwR_NCOYLDBXDyWVn2MiwS-5w53_Ss',
     {
-      method: 'POST',
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/octet-stream',
         Accept: 'application/json'

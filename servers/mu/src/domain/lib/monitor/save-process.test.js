@@ -10,8 +10,6 @@ describe('saveWith', () => {
   test('save a process to monitor', async () => {
     const save = saveWith({
       saveProcessToMonitor: async (process) => {
-        console.log('zzzzzzzzzzzzzzzzz')
-        console.log(process)
         assert.equal(process.id, 'pid-1')
         assert.equal(process.lastFromTimestamp, null)
         assert.equal(process.processData.id, 'pid-1')
