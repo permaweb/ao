@@ -7,8 +7,7 @@ import { parseTags } from '../../utils.js'
 const ctxSchema = z.object({
   schedulerTx: z.object({
     id: z.string(),
-    timestamp: z.number(),
-    block: z.number()
+    timestamp: z.number()
   })
 }).passthrough()
 
