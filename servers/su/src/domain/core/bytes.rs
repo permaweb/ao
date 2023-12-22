@@ -462,7 +462,11 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        let mut data_bundle = DataBundle::new();
+        let tags = vec![
+            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
+            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
+        ];
+        let mut data_bundle = DataBundle::new(tags);
         data_bundle.add_item(data_item);
         assert_eq!(data_bundle.items.len(), 1);
         let bundle_bytes = data_bundle.to_bytes();
