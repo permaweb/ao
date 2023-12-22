@@ -8,8 +8,8 @@ const logger = createLogger('ao-mu:processMsg')
 
 describe('fetchAndSaveResult', () => {
   test('fetch result by transaction id', async () => {
-    const msg1 = { tags: [{ name: 'Data-Protocol', value: 'ao' }] }
-    const spawn1 = { tags: [{ name: 'Data-Protocol', value: 'ao' }] }
+    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
+    const spawn1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
     const cachedMsg1 = {
       id: Math.floor(Math.random() * 1e18).toString(),
       fromTxId: 'id-1',
@@ -28,8 +28,8 @@ describe('fetchAndSaveResult', () => {
       fetchResult: async (id) => {
         assert.equal(id, 'id-1')
         return {
-          messages: [msg1],
-          spawns: [spawn1]
+          Messages: [msg1],
+          Spawns: [spawn1]
         }
       },
       saveMsg: async (msg) => {
