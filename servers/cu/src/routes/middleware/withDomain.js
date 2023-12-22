@@ -11,7 +11,7 @@ const domain = {
   fetch,
   logger
 }
-domain.apis = createApis(domain)
+domain.apis = await createApis(domain)
 
 /**
  * A middleware that exposes the domain business logic to a request

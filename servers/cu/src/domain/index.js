@@ -16,7 +16,7 @@ export { createLogger } from './logger.js'
 export { domainConfigSchema } from './model.js'
 export { errFrom } from './utils.js'
 
-export const createApis = (ctx) => {
+export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
 
   const { locate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL: ctx.GATEWAY_URL })
@@ -33,7 +33,7 @@ export const createApis = (ctx) => {
       (processId) => locate(processId).catch(err => err)
     ))
   })
-  const pouchDb = PouchDbClient.createPouchDbClient({
+  const pouchDb = await PouchDbClient.createPouchDbClient({
     logger: ctx.logger,
     mode: ctx.DB_MODE,
     maxListeners: ctx.DB_MAX_LISTENERS,

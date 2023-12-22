@@ -21,7 +21,7 @@ const inflateP = promisify(inflate)
  * @type {PouchDB.Database}
  */
 let internalPouchDb
-export function createPouchDbClient ({ logger, maxListeners, mode, url }) {
+export async function createPouchDbClient ({ logger, maxListeners, mode, url }) {
   if (internalPouchDb) return internalPouchDb
 
   let adapter
@@ -40,7 +40,23 @@ export function createPouchDbClient ({ logger, maxListeners, mode, url }) {
   PouchDb.plugin(PouchDbFind)
   PouchDb.setMaxListeners(maxListeners)
   internalPouchDb = new PouchDb(url, { adapter })
-  return internalPouchDb
+
+  /**
+   * Transparently create any indexes we need.
+   *
+   * Will noop if the index already exists
+   */
+  return internalPouchDb.createIndex({
+    index: {
+      name: 'cron-evaluations',
+      fields: ['cron'],
+      partial_filter_selector: {
+        cron: {
+          $exists: true
+        }
+      }
+    }
+  }).then(() => internalPouchDb)
 }
 
 const processDocSchema = z.object({
@@ -369,7 +385,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   }
 }
 
-export function findEvaluationsWith ({ pouchDb }) {
+export function findEvaluationsWith ({ pouchDb = internalPouchDb }) {
   function createSelector ({ processId, from, to, cron }) {
     /**
      * grab all evaluations for the processId, by default
@@ -398,7 +414,8 @@ export function findEvaluationsWith ({ pouchDb }) {
         return pouchDb.find({
           selector,
           sort: [{ _id: 'asc' }],
-          limit: Number.MAX_SAFE_INTEGER
+          limit: Number.MAX_SAFE_INTEGER,
+          ...(cron ? { use_index: 'cron-evaluations' } : {})
         }).then((res) => {
           if (res.warning) console.warn(res.warning)
           return res.docs
