@@ -19,25 +19,17 @@ export const withResultRoutes = app => {
           const { params: { messageTxId } } = req
           return messageTxId
         },
-        loader: async (requests) => {
-          return requests.map(async ({ req }) => {
-            const {
-              params: { messageTxId },
-              query: { 'process-id': processId },
-              domain: { apis: { readResult } }
-            } = req
+        loader: async ({ req }) => {
+          const {
+            params: { messageTxId },
+            query: { 'process-id': processId },
+            domain: { apis: { readResult } }
+          } = req
 
-            const input = inputSchema.parse({ messageTxId, processId })
+          const input = inputSchema.parse({ messageTxId, processId })
 
-            return readResult(input)
-              .toPromise()
-              /**
-               * Will bubble up to the individual load call
-               * on the dataloader, where it can be handled
-               * individually
-               */
-              .catch(err => err)
-          })
+          return readResult(input)
+            .toPromise()
         }
       })
     )()

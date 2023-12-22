@@ -1,4 +1,3 @@
-import Dataloader from 'dataloader'
 import { LRUCache } from 'lru-cache'
 
 import { logger as _logger } from '../../logger.js'
@@ -37,37 +36,31 @@ export const withInMemoryCache = ({
 
   const logger = _logger.child('InMemoryCache')
 
-  const dataloader = new Dataloader(loader, {
-    cacheKeyFn: ({ req }) => keyer(req),
-    cacheMap: {
-      get: (key) => {
-        /**
-         * See https://www.npmjs.com/package/lru-cache#status-tracking
-         *
-         * This allows us to log when our InMemoryCache has a HIT or MISS
-         */
-        const status = {}
-        const res = cache.get(key, { status })
-        logger(`"%s" for key ${key}`, status.get.toUpperCase())
-        return res
-      },
-      set: cache.set.bind(cache),
-      clear: cache.clear.bind(cache),
-      delete: (key) => {
-        logger('Removing "%s"', key)
-        return cache.delete(key)
-      }
-    }
-  })
+  return async (req, res) => {
+    const key = keyer(req)
 
-  return (req, res) => dataloader.load({ req, res })
-    .then(result => res.send(result))
-    .catch(err => {
-      if (evict(req, err)) dataloader.clear(keyer(req))
-      /**
-       * After optionally clearing the cache on err,
-       * continue bubbling
-       */
-      throw err
-    })
+    /**
+     * See https://www.npmjs.com/package/lru-cache#status-tracking
+     *
+     * This allows us to log when our InMemoryCache has a HIT or MISS
+     */
+    const status = {}
+    const cached = cache.get(key, { status })
+    logger(`"%s" for key ${key}`, status.get.toUpperCase())
+
+    if (cached) return res.send(cached)
+
+    return loader({ req, res })
+      .then((result) => {
+        cache.set(key, result)
+        res.send(result)
+      })
+      .catch((err) => {
+        if (evict(req, err)) {
+          logger('Removing "%s"', key)
+          cache.delete(key)
+        }
+        throw err
+      })
+  }
 }
