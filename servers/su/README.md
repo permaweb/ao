@@ -9,7 +9,7 @@ This is an spec compliant `ao` Scheduler Unit, implemented as a Rust actix web s
 - [Environment Variables](#environment-variables)
 - [Usage](#usage)
   - [Setup and run local development server with hot reloading](#setup-and-run-local-development-server-with-hot-reloading)
-- [Tests](#tests)
+  - [Tests](#tests)
   - [Compiling a binary (mainly for production/other live environments)](#compiling-a-binary-mainly-for-productionother-live-environments)
   - [Running the binary, su MODE](#running-the-binary-su-mode)
   - [Running a router in front of multiple scheduler units](#running-a-router-in-front-of-multiple-scheduler-units)
@@ -50,7 +50,7 @@ cargo install systemfd cargo-watch
 systemfd --no-pid -s http::8999 -- cargo watch -x 'run su 9000'
 ```
 
-## Tests
+### Tests
 
 You can execute unit tests by running `cargo test`
 
