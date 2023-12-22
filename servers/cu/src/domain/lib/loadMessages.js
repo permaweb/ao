@@ -364,18 +364,6 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
         .map(({ leftMost, rightMost, $scheduled, genCronMessages }) => {
           return pipeline(
             /**
-             * Each set of cron messages will be generated between a left and right boundary,
-             * So we need to procure a set of boundaries to use, while ALSO merging with the scheduled messages
-             * from the SU.
-             *
-             * Our messages retrieved from the SU are perfect boundaries, as they each have a
-             * block height and timestamp, as well as a ordinate set to its nonce.
-             *
-             * This will allow the CU to generate cron messages that orderable in and amongst the scheduled message,
-             * and with accurate block metadata, at least w.r.t the SU's claims.
-             */
-            $scheduled,
-            /**
              * Given a left-most and right-most boundary, return an async generator,
              * that given a list of values, emits sequential binary tuples dervied from those values,
              * with an additional element appended and prepended to the list of values.
@@ -392,24 +380,33 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
              *
              * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
              */
-            Transform.from(
-              async function * genBoundariesAsTuples (boundaries) {
-                /**
-                 * the initial prev is the left-most boundary
-                 */
-                let prev = leftMost
+            async function * genBoundariesAsTuples () {
+              /**
+               * the initial prev is the left-most boundary
+               */
+              let prev = leftMost
 
-                for await (const boundary of boundaries) {
-                  yield [prev, boundary]
-                  prev = boundary
-                }
-
-                /**
-                 * Emit the last boundary
-                 */
-                yield [prev, rightMost]
+              /**
+               * Each set of cron messages will be generated between a left and right boundary,
+               * So we need to procure a set of boundaries to use, while ALSO merging with the scheduled messages
+               * from the SU, producing a single ordered sequence of messages to be evaluated by the process.
+               *
+               * Our messages retrieved from the SU are perfect boundaries, as they each have a
+               * block height and timestamp, as well as a ordinate set to its nonce.
+               *
+               * This will allow the CU to generate cron messages that orderable in and amongst the scheduled message,
+               * and with accurate block metadata, at least w.r.t the SU's claims.
+               */
+              for await (const boundary of $scheduled) {
+                yield [prev, boundary]
+                prev = boundary
               }
-            ),
+
+              /**
+               * Emit the last boundary
+               */
+              yield [prev, rightMost]
+            },
             Transform.from(async function * (boundaries) {
               let tuple = await boundaries.next()
               while (!tuple.done) {
