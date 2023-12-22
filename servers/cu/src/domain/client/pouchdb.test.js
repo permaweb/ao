@@ -161,6 +161,7 @@ describe('pouchdb', () => {
                     doc: {
                       _id: 'eval-process-123,1702677252111',
                       timestamp: 1702677252111,
+                      ordinate: 1,
                       blockHeight: 1234,
                       processId: 'process-123',
                       messageId: 'message-123',
@@ -189,6 +190,7 @@ describe('pouchdb', () => {
       })
 
       assert.equal(res.timestamp, 1702677252111)
+      assert.equal(res.ordinate, 1)
       assert.equal(res.blockHeight, 1234)
       assert.equal(res.processId, 'process-123')
       assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
@@ -209,6 +211,7 @@ describe('pouchdb', () => {
                     doc: {
                       _id: 'eval-process-123,1702677252111',
                       timestamp: 1702677252111,
+                      ordinate: 1,
                       blockHeight: 1234,
                       processId: 'process-123',
                       messageId: 'message-123',
@@ -236,6 +239,7 @@ describe('pouchdb', () => {
       })
 
       assert.equal(res.timestamp, 1702677252111)
+      assert.equal(res.ordinate, 1)
       assert.equal(res.blockHeight, 1234)
       assert.equal(res.processId, 'process-123')
       assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
@@ -272,9 +276,10 @@ describe('pouchdb', () => {
               const { _attachments, evaluatedAt, ...rest } = evaluationDoc
 
               assert.deepStrictEqual(rest, {
-                _id: 'eval-process-123,1702677252111',
+                _id: 'eval-process-123,1702677252111,1',
                 cron: undefined,
                 timestamp: 1702677252111,
+                ordinate: '1',
                 blockHeight: 1234,
                 processId: 'process-123',
                 messageId: 'message-123',
@@ -299,7 +304,7 @@ describe('pouchdb', () => {
 
               assert.deepStrictEqual(messageIdDoc, {
                 _id: 'messageHash-deepHash-123',
-                parent: 'eval-process-123,1702677252111',
+                parent: 'eval-process-123,1702677252111,1',
                 type: 'messageHash'
               })
               return Promise.resolve(true)
@@ -312,6 +317,7 @@ describe('pouchdb', () => {
       await saveEvaluation({
         deepHash: 'deepHash-123',
         timestamp: 1702677252111,
+        ordinate: 1,
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
@@ -339,6 +345,7 @@ describe('pouchdb', () => {
       await saveEvaluation({
         // no deep hash
         timestamp: 1702677252111,
+        ordinate: 1,
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
@@ -354,6 +361,7 @@ describe('pouchdb', () => {
       const mockEval = {
         _id: 'eval-process-123,1702677252111',
         timestamp: 1702677252111,
+        ordinate: 1,
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
@@ -387,6 +395,7 @@ describe('pouchdb', () => {
       const mockEval = {
         _id: 'eval-process-123,1702677252111',
         timestamp: 1702677252111,
+        ordinate: 1,
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',

@@ -393,7 +393,8 @@ describe('loadMessages', () => {
         block: {
           height: originHeight + 12,
           timestamp: scheduledMessagesStartTime
-        }
+        },
+        ordinate: 1
         // AoGlobal,
         // message
       },
@@ -422,7 +423,7 @@ describe('loadMessages', () => {
     test('should create a unique cron identifier for each generated message', async () => {
       assert.equal(
         cronMessages.length,
-        uniqBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages).length
+        uniqBy((node) => `${node.message.Timestamp},${node.ordinate},${node.cron}`, cronMessages).length
       )
     })
   })

@@ -111,6 +111,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           logger.tap('transforming message retrieved from the SU %o'),
           applySpec({
             cron: always(undefined),
+            /**
+             * Set the ordinate to the message's nonce value
+             */
+            ordinate: path(['nonce']),
             message: applySpec({
               Id: path(['message', 'id']),
               Signature: path(['message', 'signature']),

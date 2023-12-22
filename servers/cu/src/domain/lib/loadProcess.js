@@ -105,6 +105,18 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
           Spawns: []
         },
         from: undefined,
+        /**
+         * No cached evaluation was found, but we still need an ordinate,
+         * in case there are Cron messages to generate prior to any scheduled
+         * messages existing in the sequence.
+         *
+         * The important attribute we need is forthe ordinate to be lexicographically
+         * sortable.
+         *
+         * So we use a very small unicode character, as a pseudo-ordinate, which gets
+         * us exactly what we need
+         */
+        ordinate: '^',
         evaluatedAt: undefined
       }),
       /**
@@ -114,6 +126,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
         Memory: evaluation.output.Memory,
         result: omit(['Memory'], evaluation.output),
         from: evaluation.timestamp,
+        ordinate: evaluation.ordinate,
         fromBlockHeight: evaluation.blockHeight,
         evaluatedAt: evaluation.evaluatedAt
       })
@@ -154,13 +167,18 @@ const ctxSchema = z.object({
    */
   result: z.record(z.any()),
   /**
-   * The most recent message timestamp. This could be from the most recent
-   * cached evaluation, or undefined, if no evaluations were cached
+   * The timestamp for the most recent message evaluated,
+   * or undefined, no cached evaluation exists
    *
    * This will be used to subsequently determine which messaged
    * need to be fetched from the SU in order to perform the evaluation
    */
   from: z.coerce.number().optional(),
+  /**
+   * The ordinate from the most recent evaluation
+   * or undefined, no cached evaluation exists
+   */
+  ordinate: z.coerce.string().optional(),
   /**
    * The most recent message block height. This could be from the most recent
    * cached evaluation, or undefined, if no evaluations were cached

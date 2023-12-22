@@ -49,6 +49,7 @@ describe('loadProcess', () => {
       Spawns: []
     })
     assert.equal(res.from, undefined)
+    assert.equal(res.ordinate, '^')
     assert.equal(res.fromBlockHeight, undefined)
     assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
@@ -87,6 +88,7 @@ describe('loadProcess', () => {
       processId: PROCESS,
       messageId: 'message-123',
       timestamp: 1697574792000,
+      ordinate: '1',
       blockHeight: 1234,
       evaluatedAt: new Date(),
       output: {
@@ -131,6 +133,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.Muffer, cachedEvaluation.output.Buffer)
     assert.deepStrictEqual(res.result, omit(['Memory'], cachedEvaluation.output))
     assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
+    assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
     assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)

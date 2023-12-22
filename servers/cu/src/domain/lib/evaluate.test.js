@@ -29,6 +29,7 @@ describe('evaluate', () => {
         Memory: null,
         messages: toAsyncIterable([
           {
+            ordinate: 1,
             message: {
               Id: 'message-123',
               Timestamp: 1702846520559,
@@ -41,6 +42,7 @@ describe('evaluate', () => {
             AoGlobal: {}
           },
           {
+            ordinate: 1,
             message: {
               Id: 'message-123',
               Timestamp: 1702846520559,
@@ -156,6 +158,7 @@ describe('evaluate', () => {
       Memory: null,
       messages: toAsyncIterable([
         {
+          ordinate: 1,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -168,6 +171,7 @@ describe('evaluate', () => {
           AoGlobal: {}
         },
         {
+          ordinate: 1,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -215,6 +219,7 @@ describe('evaluate', () => {
       Memory: null,
       messages: toAsyncIterable([
         {
+          ordinate: 1,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -228,6 +233,7 @@ describe('evaluate', () => {
           AoGlobal: {}
         },
         {
+          ordinate: 1,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -242,6 +248,7 @@ describe('evaluate', () => {
         },
         // no deep hash
         {
+          ordinate: 1,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -315,6 +322,7 @@ describe('evaluate', () => {
       Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
+          ordinate: 1,
           // Will include an error in error
           message: {
             Id: 'message-123',
@@ -364,6 +372,7 @@ describe('evaluate', () => {
       Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
+          ordinate: 1,
           // Will intentionally throw from the lua process
           message: {
             Id: 'message-123',
@@ -406,6 +415,7 @@ describe('evaluate', () => {
       Memory: Buffer.from('Hello', 'utf-8'),
       messages: toAsyncIterable([
         {
+          ordinate: 1,
           // Will unintentionally throw from the lua contract
           message: {
             Id: 'message-123',
@@ -448,6 +458,7 @@ describe('evaluate', () => {
       messages: toAsyncIterable([
         {
           // Will include an error in result.error
+          ordinate: 1,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -460,6 +471,7 @@ describe('evaluate', () => {
           AoGlobal: {}
         },
         {
+          ordinate: 1,
           // Will increment a counter in global state
           message: {
             Id: 'message-123',
@@ -473,6 +485,7 @@ describe('evaluate', () => {
           AoGlobal: {}
         },
         {
+          ordinate: 1,
           // Will increment a counter in global state
           message: {
             Id: 'message-123',

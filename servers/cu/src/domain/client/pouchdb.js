@@ -77,13 +77,13 @@ const messageHashDocSchema = z.object({
   type: z.literal('messageHash')
 })
 
-function createEvaluationId ({ processId, timestamp, cron }) {
+function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
   /**
    * transactions can sometimes start with an underscore,
    * which is not allowed in PouchDB, so prepend to create
    * an _id
    */
-  return `eval-${[processId, timestamp, cron].filter(isNotNil).join(',')}`
+  return `eval-${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
 }
 
 function createProcessId ({ processId }) {
@@ -108,6 +108,7 @@ const toEvaluation = applySpec({
   processId: prop('processId'),
   messageId: prop('messageId'),
   timestamp: prop('timestamp'),
+  ordinate: prop('ordinate'),
   blockHeight: prop('blockHeight'),
   cron: prop('cron'),
   evaluatedAt: prop('evaluatedAt'),
@@ -125,6 +126,10 @@ const toEvaluation = applySpec({
  * This will cause only string with a given prefix to match a range query
  */
 export const COLLATION_SEQUENCE_MAX_CHAR = '\ufff0'
+/**
+ * This technically isn't the smallest char, but it's small enough for our needs
+ */
+export const COLLATION_SEQUENCE_MIN_CHAR = '^'
 
 export function findProcessWith ({ pouchDb }) {
   return ({ processId }) => of(processId)
@@ -216,6 +221,7 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
     timestamp: evaluationSchema.shape.timestamp,
+    ordinate: evaluationSchema.shape.ordinate,
     blockHeight: evaluationSchema.shape.blockHeight,
     parent: z.string().min(1),
     evaluatedAt: evaluationSchema.shape.evaluatedAt,
@@ -267,6 +273,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
     timestamp: evaluationSchema.shape.timestamp,
+    ordinate: evaluationSchema.shape.ordinate,
     blockHeight: evaluationSchema.shape.blockHeight,
     cron: evaluationSchema.shape.cron,
     parent: z.string().min(1),
@@ -306,6 +313,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
             createEvaluationId({
               processId: evaluation.processId,
               timestamp: evaluation.timestamp,
+              ordinate: evaluation.ordinate,
               /**
                * By appending the cron identifier to the evaluation doc _id,
                *
@@ -316,6 +324,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
           processId: prop('processId'),
           messageId: prop('messageId'),
           timestamp: prop('timestamp'),
+          ordinate: prop('ordinate'),
           blockHeight: prop('blockHeight'),
           cron: prop('cron'),
           parent: (evaluation) => createProcessId({ processId: evaluation.processId }),

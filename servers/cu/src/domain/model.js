@@ -50,6 +50,18 @@ export const messageSchema = z.object({
    * The unique identifier of the cron that produced this message
    */
   cron: z.string().optional(),
+  /**
+   * Used as part of guaranteeing ordering for evaluations in the CU.
+   *
+   * For scheduled messages, this is simply set to the nonce.
+   * For cron messages, this is set to the most recent scheduled messages nonce,
+   * or a small unicode code.
+   *
+   * The important bit is that this value is lexicographically sortable
+   *
+   * This way, all messages, scheduled and cron, remain orderable.
+   */
+  ordinate: z.coerce.string(),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id
@@ -70,6 +82,11 @@ export const messageSchema = z.object({
     'Forwarded-By': z.string().optional(),
     'Forwarded-For': z.string().optional(),
     Tags: z.array(rawTagSchema),
+    /**
+     * cron messages do not have a nonce or epoch
+     * since they are generated "between" nonces received
+     * from a SU
+     */
     Epoch: z.number().optional(),
     Nonce: z.number().optional(),
     Timestamp: z.coerce.number(),
@@ -110,6 +127,7 @@ export const evaluationSchema = z.object({
    */
   messageId: z.string().min(1).optional(),
   timestamp: z.coerce.number(),
+  ordinate: z.coerce.string(),
   blockHeight: z.number(),
   /**
    * Scheduled messages do not have a cron

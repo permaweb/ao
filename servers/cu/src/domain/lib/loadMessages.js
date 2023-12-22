@@ -165,6 +165,7 @@ export function cronMessagesBetweenWith ({
      */
     const leftBlock = left.block
     const rightBlock = right.block
+    const leftOrdinate = left.ordinate
 
     /**
      * Start at left's block height, incrementing 1 block per iteration until we get to right's block height
@@ -190,6 +191,7 @@ export function cronMessagesBetweenWith ({
           logger('Generating Block based Cron Message for cron "%s" at block "%s"', `${i}-${cron.interval}`, curBlock.height)
           yield {
             cron: `${i}-${cron.interval}`,
+            ordinate: leftOrdinate,
             message: {
               Owner: processOwner,
               Target: processId,
@@ -226,6 +228,7 @@ export function cronMessagesBetweenWith ({
             logger('Generating Time based Cron Message for cron "%s" at timestamp "%s"', `${i}-${cron.interval}`, curTimestamp)
             yield {
               cron: `${i}-${cron.interval}`,
+              ordinate: leftOrdinate,
               message: {
                 Owner: processOwner,
                 Target: processId,
@@ -314,8 +317,12 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
            * The left most boundary is the origin block of the process -- the current block
            * at the the time the process was sent to a SU
            * OR the block height and timestamp of the most recently evaluated message
+           *
+           * We also initilize the ordinate here, which will be used to "generate" an orderable
+           * ordinate for generated Cron messages. This value is usually the nonce of the most recent
+           * schedule message. So in sense, Cron message exists "between" scheduled message nonces
            */
-          leftMost: { block: ctx.from ? { height: ctx.fromBlockHeight, timestamp: ctx.from } : ctx.block },
+          leftMost: { ordinate: ctx.ordinate, block: ctx.from ? { height: ctx.fromBlockHeight, timestamp: ctx.from } : ctx.block },
           /**
            * The right most boundary is always the provided to timestamp
            * OR the current block timestamp according to the su
@@ -362,10 +369,10 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
              * from the SU.
              *
              * Our messages retrieved from the SU are perfect boundaries, as they each have a
-             * block height and timestamp
+             * block height and timestamp, as well as a ordinate set to its nonce.
              *
-             * This will allow the CU to generate cron messages with monotonically increasing timestamp and accurate block metadata,
-             * at least w.r.t the SU's claims.
+             * This will allow the CU to generate cron messages that orderable in and amongst the scheduled message,
+             * and with accurate block metadata, at least w.r.t the SU's claims.
              */
             $scheduled,
             /**
@@ -378,10 +385,10 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
              *
              * Since we added our left and right bounds, there should always
              * be at least one tuple emitted, which will account for any time
-             * we have <2 cron messages to use as boundaries.
+             * we have <2 scheduled messages to use as boundaries.
              *
              * If our leftMost and rightMost boundary are the only boundaries, this effectively means
-             * that we have no cron messages to merge and evaluate, and only cron messages to generate
+             * that we have no scheduled messages to merge and evaluate, and only cron messages to generate
              *
              * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
              */

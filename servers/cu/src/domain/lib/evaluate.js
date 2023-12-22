@@ -172,7 +172,7 @@ export function evaluateWith (env) {
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
-        for await (const { cron, message, deepHash, AoGlobal } of ctx.messages) {
+        for await (const { cron, ordinate, message, deepHash, AoGlobal } of ctx.messages) {
           /**
            * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
            * if their deepHash is found in the cache, this prevents duplicate evals
@@ -223,6 +223,7 @@ export function evaluateWith (env) {
                   saveEvaluation({
                     deepHash,
                     cron,
+                    ordinate,
                     processId: ctx.id,
                     messageId: message.Id,
                     timestamp: message.Timestamp,
