@@ -15,13 +15,5 @@ RUN mkdir src && \
 
 # Now copy the actual source code and build the application
 COPY src ./src
+COPY migrations ./migrations
 RUN cargo build --release --target x86_64-unknown-linux-musl
-
-# Stage 2: Create the runtime image
-# FROM scratch
-
-# Copy the statically-linked binary from the builder stage
-# COPY --from=builder /usr/src/su/target/x86_64-unknown-linux-musl/release/su .
-
-# Run the binary
-# CMD ["./su"]
