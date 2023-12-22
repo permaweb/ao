@@ -222,8 +222,6 @@ const monitoredProcessSchema = z.object({
 function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveMonitoredProcess')
   return (process) => {
-    console.log('zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz')
-    console.log(process)
     return of(process)
       .map(applySpec({
         _id: prop('id'),
@@ -293,6 +291,22 @@ function updateMonitorWith ({ dbInstance, logger: _logger }) {
           )
           .bichain(Resolved, Resolved)
           .map(always(updatedDoc._id))
+      )
+      .toPromise()
+  }
+}
+
+function deleteMonitorWith ({ dbInstance, logger: _logger }) {
+  const logger = _logger.child('deleteMonitor')
+
+  return ({ id }) => {
+    return of({ id })
+      .chain(fromPromise(() => dbInstance.deleteMonitor(id)))
+      .map(doc => ({ ...doc }))
+      .chain(deletedDoc =>
+        of(deletedDoc)
+          .map(always(deletedDoc._id))
+          .map(logger.tap('Deleted monitor'))
       )
       .toPromise()
   }
@@ -372,6 +386,7 @@ export default {
   saveMsgWith,
   saveSpawnWith,
   updateMonitorWith,
+  deleteMonitorWith,
   findLatestMsgsWith,
   findLatestSpawnsWith,
   findLatestMonitorsWith,

@@ -9,8 +9,9 @@ import { spawnProcessWith } from './processSpawn/spawn-process.js'
 import { sendSpawnSuccessWith } from './processSpawn/send-spawn-success.js'
 import { buildSuccessTxWith } from './processSpawn/build-success-tx.js'
 import { parseDataItemWith } from './processDataItem/parse-data-item.js'
-import { saveWith } from './saveMonitor/save-process.js'
-import { appendSequencerDataWith } from './saveMonitor/append-sequencer-data.js'
+import { saveWith } from './monitor/save-process.js'
+import { deleteWith } from './monitor/delete-process.js'
+import { appendSequencerDataWith } from './monitor/append-sequencer-data.js'
 import { deleteMsgDataWith } from './processDataItem/delete-msg-data.js'
 import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 import { tracerFor } from './tracer.js'
@@ -217,6 +218,21 @@ export function monitorProcessWith ({
       .chain(parseDataItem)
       .chain(appendSequencerData)
       .chain(save)
+  }
+}
+
+export function deleteProcessWith ({
+  logger,
+  createDataItem,
+  deleteProcess
+}) {
+  const parseDataItem = parseDataItemWith({ createDataItem, logger })
+  const deleteProc = deleteWith({ logger, deleteProcess })
+
+  return (ctx) => {
+    return of(ctx)
+      .chain(parseDataItem)
+      .chain(deleteProc)
   }
 }
 

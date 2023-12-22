@@ -187,8 +187,6 @@ async function fetchScheduled (monitor) {
     requestUrl = `${config.CU_URL}/cron/${monitor.id}?from=${lastFromTimestamp}`
   }
 
-  console.log(requestUrl)
-
   try {
     const response = await fetch(requestUrl)
     const scheduled = await response.json()

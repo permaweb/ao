@@ -38,5 +38,27 @@ export const withMonitorRoutes = (app) => {
     )()
   )
 
+  app.delete(
+    '/monitor/:processId',
+    compose(
+      withMiddleware,
+      always(async (req, res) => {
+        const {
+          body,
+          domain: { apis: { deleteProcess } }
+        } = req
+
+        if (!body) return res.status(400).send('Signed data item is required')
+        // const input = await inputSchema.parseAsync(body)
+
+        await of({ raw: body })
+          .chain(deleteProcess)
+          .toPromise()
+
+        return res.status(200).send('Process deleted')
+      })
+    )()
+  )
+
   return app
 }

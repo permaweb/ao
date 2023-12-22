@@ -43,8 +43,6 @@ describe('fetchAndSaveResult', () => {
         assert.deepStrictEqual(spawn.spawn, spawn1)
       },
       findLatestMsgs: async ({ fromTxId }) => {
-        console.log('hello')
-        console.log([cachedMsg1])
         assert.equal(fromTxId, 'id-1')
         return [cachedMsg1]
       },
