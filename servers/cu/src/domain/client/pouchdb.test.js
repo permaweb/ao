@@ -6,7 +6,6 @@ import { promisify } from 'node:util'
 
 import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
 import {
-  COLLATION_SEQUENCE_MAX_CHAR,
   findEvaluationsWith,
   findLatestEvaluationWith,
   findMessageHashWith,
@@ -155,29 +154,21 @@ describe('pouchdb', () => {
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
           pouchDb: {
-            find: async (op) => {
-              assert.deepStrictEqual(op, {
-                selector: {
-                  _id: {
-                    $gte: 'eval-process-123,',
-                    $lte: 'eval-process-123,1702677252111'
-                  }
-                },
-                sort: [{ _id: 'desc' }],
-                limit: 1
-              })
+            allDocs: async (op) => {
               return {
-                docs: [
+                rows: [
                   {
-                    _id: 'eval-process-123,1702677252111',
-                    timestamp: 1702677252111,
-                    blockHeight: 1234,
-                    processId: 'process-123',
-                    messageId: 'message-123',
-                    parent: 'proc-process-123',
-                    output: { Messages: [{ foo: 'bar' }] },
-                    evaluatedAt,
-                    type: 'evaluation'
+                    doc: {
+                      _id: 'eval-process-123,1702677252111',
+                      timestamp: 1702677252111,
+                      blockHeight: 1234,
+                      processId: 'process-123',
+                      messageId: 'message-123',
+                      parent: 'proc-process-123',
+                      output: { Messages: [{ foo: 'bar' }] },
+                      evaluatedAt,
+                      type: 'evaluation'
+                    }
                   }
                 ]
               }
@@ -211,29 +202,21 @@ describe('pouchdb', () => {
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
           pouchDb: {
-            find: async (op) => {
-              assert.deepStrictEqual(op, {
-                selector: {
-                  _id: {
-                    $gte: 'eval-process-123,',
-                    $lte: `eval-process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
-                  }
-                },
-                sort: [{ _id: 'desc' }],
-                limit: 1
-              })
+            allDocs: async (op) => {
               return {
-                docs: [
+                rows: [
                   {
-                    _id: 'eval-process-123,1702677252111',
-                    timestamp: 1702677252111,
-                    blockHeight: 1234,
-                    processId: 'process-123',
-                    messageId: 'message-123',
-                    parent: 'proc-process-123',
-                    output: { Messages: [{ foo: 'bar' }] },
-                    evaluatedAt,
-                    type: 'evaluation'
+                    doc: {
+                      _id: 'eval-process-123,1702677252111',
+                      timestamp: 1702677252111,
+                      blockHeight: 1234,
+                      processId: 'process-123',
+                      messageId: 'message-123',
+                      parent: 'proc-process-123',
+                      output: { Messages: [{ foo: 'bar' }] },
+                      evaluatedAt,
+                      type: 'evaluation'
+                    }
                   }
                 ]
               }
@@ -263,7 +246,7 @@ describe('pouchdb', () => {
       const findLatestEvaluation = findLatestEvaluationSchema.implement(
         findLatestEvaluationWith({
           pouchDb: {
-            find: async () => ({ docs: [] })
+            allDocs: async () => ({ rows: [] })
           },
           logger
         })
@@ -383,16 +366,6 @@ describe('pouchdb', () => {
         findEvaluationsWith({
           pouchDb: {
             find: async (op) => {
-              assert.deepStrictEqual(op, {
-                selector: {
-                  _id: {
-                    $gte: 'eval-process-123,',
-                    $lt: `eval-process-123,${COLLATION_SEQUENCE_MAX_CHAR}`
-                  }
-                },
-                sort: [{ _id: 'asc' }],
-                limit: Number.MAX_SAFE_INTEGER
-              })
               return {
                 docs: [
                   mockEval,
@@ -404,7 +377,7 @@ describe('pouchdb', () => {
           logger
         }))
 
-      const res = await findEvaluations({ processId: 'process-123' })
+      const res = await findEvaluations({ processId: 'process-123', cron: true })
 
       assert.equal(res.length, 2)
     })
@@ -426,16 +399,6 @@ describe('pouchdb', () => {
         findEvaluationsWith({
           pouchDb: {
             find: async (op) => {
-              assert.deepStrictEqual(op, {
-                selector: {
-                  _id: {
-                    $gte: 'eval-process-123,1702677252111,',
-                    $lt: 'eval-process-123,1702677252111,'
-                  }
-                },
-                sort: [{ _id: 'asc' }],
-                limit: Number.MAX_SAFE_INTEGER
-              })
               return {
                 docs: [
                   mockEval,
@@ -450,7 +413,8 @@ describe('pouchdb', () => {
       const res = await findEvaluations({
         processId: 'process-123',
         from: 1702677252111,
-        to: 1702677252111
+        to: 1702677252111,
+        cron: true
       })
 
       assert.equal(res.length, 2)

@@ -2,7 +2,7 @@ import { deflate, inflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
+import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, pluck, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -17,6 +17,8 @@ const inflateP = promisify(inflate)
 
 /**
  * An implementation of the db client using pouchDB
+ *
+ * @type {PouchDB.Database}
  */
 let internalPouchDb
 export function createPouchDbClient ({ logger, maxListeners, mode, url }) {
@@ -162,22 +164,34 @@ export function saveProcessWith ({ pouchDb }) {
   }
 }
 
-export function findLatestEvaluationWith ({ pouchDb }) {
+export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
   function createSelector ({ processId, to }) {
-    /**
-     * By using the max collation sequence, this will give us all docs whose _id
-     * is prefixed with the processId id
-     */
     const selector = {
-      _id: {
-        $gte: createEvaluationId({ processId, timestamp: '' }),
-        $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
-      }
+      /**
+       * Because we want a descending order, our startkey is the largest key in the range
+       * and endkey is the smallest key in the range
+       *
+       * By using the max collation sequence char, this will give us all docs whose _id
+       * is prefixed with the processId id
+       */
+      descending: true,
+      startkey: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR }),
+      endkey: createEvaluationId({ processId, timestamp: '' }),
+      include_docs: true,
+      /**
+       * Only get the latest document within the range,
+       * aka the latest evaluation
+       */
+      limit: 1
     }
+
     /**
-     * overwrite upper range with actual timestamp, since we have it
+     * overwrite upper range with actual timestamp, since we have it.
+     *
+     * By appending the max collation sequence char, we ensure we capture the latest
+     * message within the range, including CRON messages
      */
-    if (to) selector._id.$lte = createEvaluationId({ processId, timestamp: to })
+    if (to) selector.startkey = `${createEvaluationId({ processId, timestamp: to })}${COLLATION_SEQUENCE_MAX_CHAR}`
     return selector
   }
 
@@ -199,20 +213,11 @@ export function findLatestEvaluationWith ({ pouchDb }) {
     return of({ processId, to })
       .map(createSelector)
       .chain(fromPromise((selector) => {
-        /**
-         * Find the most recent evaluation:
-         * - sort key less than or equal to the sort key we're interested in
-         *
-         * This will give us the most recent evaluation
-         */
-        return pouchDb.find({
-          selector,
-          sort: [{ _id: 'desc' }],
-          limit: 1
-        }).then((res) => {
-          if (res.warning) console.warn(res.warning)
-          return res.docs
-        })
+        return pouchDb.allDocs(selector)
+          .then((res) => {
+            if (res.warning) console.warn(res.warning)
+            return pluck('doc', res.rows)
+          })
       }))
       .map(head)
       .chain((doc) => doc ? Resolved(doc) : Rejected(undefined))
@@ -365,7 +370,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
 }
 
 export function findEvaluationsWith ({ pouchDb }) {
-  function createSelector ({ processId, from, to }) {
+  function createSelector ({ processId, from, to, cron }) {
     /**
      * grab all evaluations for the processId, by default
      */
@@ -373,20 +378,21 @@ export function findEvaluationsWith ({ pouchDb }) {
       _id: {
         $gte: createEvaluationId({ processId, timestamp: '' }),
         $lt: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
-      }
+      },
+      ...(cron ? { cron: { $exists: true } } : {})
     }
 
     /**
-     * trim range using sort keys, if provided
+     * trim range using timestamps, if provided.
      */
     if (from) selector._id.$gte = `${createEvaluationId({ processId, timestamp: from })},`
-    if (to) selector._id.$lt = `${createEvaluationId({ processId, timestamp: to })},`
+    if (to) selector._id.$lt = `${createEvaluationId({ processId, timestamp: to })}`
 
     return selector
   }
 
-  return ({ processId, from, to }) => {
-    return of({ processId, from, to })
+  return ({ processId, from, to, cron }) => {
+    return of({ processId, from, to, cron })
       .map(createSelector)
       .chain(fromPromise((selector) => {
         return pouchDb.find({

@@ -59,7 +59,8 @@ export const findEvaluationsSchema = z.function()
   .args(z.object({
     processId: z.string(),
     from: z.coerce.number().optional(),
-    to: z.coerce.number().optional()
+    to: z.coerce.number().optional(),
+    cron: z.boolean().default(false)
   }))
   .returns(z.promise(z.array(evaluationSchema)))
 
