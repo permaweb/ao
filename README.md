@@ -1,4 +1,4 @@
-# AO - SmartWeave Contract Interoperability Platform
+# ao - The decentralized computer with infinite threads.
 
 `ao` takes a messaging based approach to interoperability with smartweave
 contracts. Having a decentralized deterministic execution environment is a
