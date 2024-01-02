@@ -20,7 +20,8 @@ export function buildTxWith ({ buildAndSign, logger }) {
           ...ctx.cachedMsg.msg.Tags,
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
-          { name: 'Variant', value: 'ao.TN.1' }
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'From-Process', value: ctx.cachedMsg.processId }
         ],
         anchor: ctx.cachedMsg.msg.Anchor,
         data: ctx.cachedMsg.msg.Data
