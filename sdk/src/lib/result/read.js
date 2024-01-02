@@ -20,7 +20,7 @@ export function readWith ({ loadResult }) {
   loadResult = fromPromise(loadResultSchema.implement(loadResult))
 
   return (ctx) => {
-    return of({ id: ctx.id })
+    return of({ id: ctx.id, processId: ctx.processId })
       .chain(loadResult)
   }
 }

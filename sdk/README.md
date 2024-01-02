@@ -54,7 +54,8 @@ Read the result of the message evaluation from an `ao` Compute Unit `cu`
 import { result } from "@permaweb/ao-sdk";
 
 let { messages, spawns, output, error } = await result({
-  message: "VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro",
+  message: "l3hbt-rIJ_dr9at-eQ3EVajHWMnxPNm9eBtXpzsFWZc",
+  process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg"
 });
 ```
 
@@ -99,7 +100,6 @@ specify those components by providing their urls to `connect`. You can currently
 - The GATEWAY_URL
 - The Messenger Unit URL
 - The Compute Unit URL
-- The Scheduler Unit URL
 
 ```js
 import { connect } from "@permaweb/ao-sdk";
@@ -107,8 +107,7 @@ import { connect } from "@permaweb/ao-sdk";
 const { spawn, message, result } = connect({
   GATEWAY_URL: "...",
   MU_URL: "...",
-  CU_URL: "...",
-  SU_URL: "...",
+  CU_URL: "..."
 });
 ```
 

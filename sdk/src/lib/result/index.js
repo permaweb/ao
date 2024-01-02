@@ -14,6 +14,7 @@ import { readWith } from './read.js'
  *
  * @typedef ReadResultArgs
  * @property {string} message - the transaction id of the message
+ * @property {string} process - the transaction id of the process that received the message
  *
  * @callback ReadResult
  * @param {ReadResultArgs} args
@@ -25,8 +26,8 @@ export function resultWith (env) {
   const verifyInput = verifyInputWith(env)
   const read = readWith(env)
 
-  return ({ message }) => {
-    return of({ id: message })
+  return ({ message, process }) => {
+    return of({ id: message, processId: process })
       .chain(verifyInput)
       .chain(read)
       .map(

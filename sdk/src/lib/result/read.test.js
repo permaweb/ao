@@ -8,7 +8,8 @@ describe('read', () => {
     const read = readWith({
       loadResult: async (args) => {
         assert.deepStrictEqual(args, {
-          id: 'message-123'
+          id: 'message-123',
+          processId: 'process-123'
         })
 
         return {
@@ -36,7 +37,8 @@ describe('read', () => {
     })
 
     const res = await read({
-      id: 'message-123'
+      id: 'message-123',
+      processId: 'process-123'
     }).toPromise()
 
     assert.deepStrictEqual(res, {

@@ -9,7 +9,8 @@ const tagSchema = z.object({
 
 export const loadResultSchema = z.function()
   .args(z.object({
-    id: z.string().min(1, { message: 'message id is required' })
+    id: z.string().min(1, { message: 'message id is required' }),
+    processId: z.string().min(1, { message: 'process id is required' })
   }))
   .returns(z.promise(z.any()))
 
