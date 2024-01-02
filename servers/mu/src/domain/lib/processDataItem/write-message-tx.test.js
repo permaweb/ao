@@ -19,8 +19,7 @@ describe('writeMessageTxWith', () => {
 
         return {
           id: 'id-3',
-          timestamp: 1234567,
-          block: 1234567
+          timestamp: 1234567
         }
       },
       logger
@@ -46,8 +45,7 @@ describe('writeMessageTxWith', () => {
 
     assert.deepStrictEqual(result.schedulerTx, {
       id: 'id-3',
-      timestamp: 1234567,
-      block: 1234567
+      timestamp: 1234567
     })
   })
 })

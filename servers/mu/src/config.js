@@ -48,7 +48,7 @@ const CONFIG_ENVS = {
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
     SCHEDULER_URL: process.env.SCHEDULER_URL || 'https://ao-su-1.onrender.com',
-    CU_URL: process.env.CU_URL || 'https://ao-cu-2.onrender.com',
+    CU_URL: process.env.CU_URL || 'https://ao-cu-1.onrender.com',
     MU_DATABASE_URL: process.env.MU_DATABASE_URL || 'postgres://admin:admin@localhost:5432/mu',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 1000,
