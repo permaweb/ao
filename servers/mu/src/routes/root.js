@@ -102,8 +102,8 @@ const withTraceRoutes = (app) => {
         const inputSchema = z.object({
           process: z.string().optional(),
           message: z.string().optional(),
-          page: z.coerce(z.number().int()).default(1),
-          pageSize: z.coerce(z.number().int()).default(DEFAULT_PAGE_SIZE)
+          page: z.coerce.number().int().default(1),
+          pageSize: z.coerce.number().int().default(DEFAULT_PAGE_SIZE)
         })
 
         const input = inputSchema.parse(query)
