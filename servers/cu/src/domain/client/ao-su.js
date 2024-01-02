@@ -133,7 +133,15 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
               Epoch: path(['epoch']),
               Nonce: path(['nonce']),
               Timestamp: path(['timestamp']),
-              'Block-Height': path(['block']),
+              'Block-Height': pipe(
+                /**
+                 * Returns a left padded integer like '000001331218'
+                 *
+                 * So use parseInt to convert it into a number
+                 */
+                path(['block']),
+                (str) => parseInt(`${str}`)
+              ),
               'Hash-Chain': path(['hash_chain']),
               Cron: always(false)
             }),
