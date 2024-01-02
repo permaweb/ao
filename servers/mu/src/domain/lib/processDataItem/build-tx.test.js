@@ -15,6 +15,10 @@ async function buildAndSign ({ processId, tags, anchor }) {
   assert.equal(tags.find((tag) =>
     tag.name === 'Type'
   ).value, 'Message')
+  assert.equal(tags.find((tag) =>
+    tag.name === 'From-Process'
+  ).value, 'process-123')
+
   return {
     id: 'id-1',
     // the real function doesnt return tags as data
@@ -38,7 +42,8 @@ describe('buildTx', () => {
           Tags: [],
           Anchor: 'anchor-1',
           Data: 'data-1'
-        }
+        },
+        processId: 'process-123'
       },
       tracer: ({
         trace: (s) => {

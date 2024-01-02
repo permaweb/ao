@@ -36,7 +36,7 @@ const cachedMsgSchema = z.object({
     z.date()
   ),
   /**
-   * The target process of the message -- which process evaluated this message
+   * The target process of the message -- which process produced this message in its outbox
    */
   processId: z.string().min(1)
 })
