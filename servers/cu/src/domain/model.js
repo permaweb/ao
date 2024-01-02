@@ -80,7 +80,6 @@ export const messageSchema = z.object({
     Anchor: z.string().optional(),
     From: z.string().min(1),
     'Forwarded-By': z.string().optional(),
-    'Forwarded-For': z.string().optional(),
     Tags: z.array(rawTagSchema),
     /**
      * cron messages do not have a nonce or epoch

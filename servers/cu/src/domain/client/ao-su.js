@@ -69,20 +69,20 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   }
 
   function mapFrom (node) {
-    const tag = findRawTag('Forwarded-For', node.message.tags)
+    const tag = findRawTag('From-Process', node.message.tags)
     /**
      * Not forwarded, so the signer is the who the message is from
      */
     if (!tag || !tag.value) return node.owner.address
     /**
      * Forwarded, so the owner is who the message was forwarded on behalf of
-     * (the Forwarded-For) value
+     * (the From-Process) value
      */
     return tag.value
   }
 
   function mapForwardedBy (node) {
-    const tag = findRawTag('Forwarded-For', node.message.tags)
+    const tag = findRawTag('From-Process', node.message.tags)
     /**
      * Not forwarded by a MU, so simply not set
      */
@@ -92,15 +92,6 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
      * as the Forwarded-By value
      */
     return node.owner.address
-  }
-
-  /**
-   * Simply derived from the tag added by the MU, when cranking a message
-   */
-  function mapForwardedFor (node) {
-    const tag = findRawTag('Forwarded-For', node.message.tags)
-    if (!tag) return undefined
-    return tag.value
   }
 
   function mapAoMessage ({ processId, processOwner, processTags }) {
@@ -128,7 +119,6 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
               Anchor: path(['message', 'anchor']),
               From: mapFrom,
               'Forwarded-By': mapForwardedBy,
-              'Forwarded-For': mapForwardedFor,
               Tags: pathOr([], ['message', 'tags']),
               Epoch: path(['epoch']),
               Nonce: path(['nonce']),
