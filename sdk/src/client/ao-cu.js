@@ -16,9 +16,8 @@ import { fromPromise, of } from 'hyper-async'
  * @returns {LoadResult}
  */
 export function loadResultWith ({ fetch, CU_URL, logger }) {
-  return ({ id }) => {
-    return of({ id })
-      .map(({ id }) => `${CU_URL}/result/${id}`)
+  return ({ id, processId }) => {
+    return of(`${CU_URL}/result/${id}?process-id=${processId}`)
       .map(logger.tap('fetching message result from CU'))
       .chain(fromPromise(async (url) =>
         fetch(url, {

@@ -14,7 +14,7 @@ describe('ao-cu', () => {
         loadResultWith({
           CU_URL: 'https://foo.bar',
           fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/result/message-123')
+            assert.equal(url, 'https://foo.bar/result/message-123?process-id=process-123')
             assert.deepStrictEqual(options, {
               method: 'GET',
               headers: {
@@ -48,7 +48,7 @@ describe('ao-cu', () => {
         })
       )
 
-      await loadResult({ id: 'message-123' })
+      await loadResult({ id: 'message-123', processId: 'process-123' })
         .then(res => assert.deepStrictEqual(res, {
           output: '',
           messages: [
