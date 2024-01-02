@@ -128,7 +128,7 @@ export const evaluationSchema = z.object({
   messageId: z.string().min(1).optional(),
   timestamp: z.coerce.number(),
   ordinate: z.coerce.string(),
-  blockHeight: z.number(),
+  blockHeight: z.coerce.number(),
   /**
    * Scheduled messages do not have a cron
    */
