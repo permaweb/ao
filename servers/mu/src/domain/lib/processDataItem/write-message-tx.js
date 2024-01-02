@@ -6,7 +6,7 @@ const ctxSchema = z.object({
   schedulerTx: z.object({
     id: z.string(),
     timestamp: z.number()
-  })
+  }).passthrough()
 }).passthrough()
 
 export function writeMessageTxWith (env) {

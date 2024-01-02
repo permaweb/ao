@@ -7,9 +7,8 @@ import { parseTags } from '../../utils.js'
 const ctxSchema = z.object({
   schedulerTx: z.object({
     id: z.string(),
-    timestamp: z.number(),
-    block: z.coerce.number()
-  })
+    timestamp: z.number()
+  }).passthrough()
 }).passthrough()
 
 export function writeProcessTxWith (env) {
