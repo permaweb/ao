@@ -6,7 +6,7 @@
   "main": "index.js",
   "dependencies": {
     "@permaweb/ao-loader": "^0.0.12",
-    "@permaweb/ao-sdk": "^0.0.20"
+    "@permaweb/ao-sdk": "^0.0.22"
   },
   "devDependencies": {
     "heapdump": "^0.3.15"
