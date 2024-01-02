@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.22](https://github.com/permaweb/ao/compare/sdk@v0.0.21...sdk@v0.0.22) (2024-01-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sdk:** result requires to be provided process id #263
+
+### Bug Fixes
+
+* **sdk:** result requires to be provided process id [#263](https://github.com/permaweb/ao/issues/263) ([8965dee](https://github.com/permaweb/ao/commit/8965deeb93ded85a2d5f4864bf81f2389aa82b2e))
+
 ## [0.0.21](https://github.com/permaweb/ao/compare/sdk@v0.0.20...sdk@v0.0.21) (2023-12-21)
 
 ## [0.0.20](https://github.com/permaweb/ao/compare/sdk@v0.0.19...sdk@v0.0.20) (2023-12-19)
