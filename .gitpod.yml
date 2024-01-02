@@ -7,7 +7,7 @@ tasks:
 
   - name: Start CU Database
     init: docker build -t cu-couch servers/cu/.couchdb
-    command:
+    command: |
       mkdir -p /workspace/cu-data
       docker run -it \
         -p 5984:5984 \
@@ -17,7 +17,7 @@ tasks:
 
   - name: Start MU Database
     init: docker build -t mu-postgres servers/mu/.postgres
-    command:
+    command: |
       mkdir -p /workspace/mu-data
       docker run -it \
        -p 5432:5432 \
