@@ -48,6 +48,7 @@ export function spawnProcessWith (env) {
     tagsIn.push({ name: 'Data-Protocol', value: 'ao' })
     tagsIn.push({ name: 'Type', value: 'Process' })
     tagsIn.push({ name: 'Variant', value: 'ao.TN.1' })
+    tagsIn.push({ name: 'From-Process', value: ctx.cachedSpawn.processId })
 
     const transformedData = { data: Data, tags: tagsIn }
 
