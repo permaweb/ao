@@ -12,7 +12,7 @@ async function eventQueue (init) {
   }
 }
 
-function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
+function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) {
   async function processOutboxFor ({ message, tracer, msgs = [], spawns = [] }) {
     /**
      * Nothing was produced in the outbox, so simply return no events
@@ -23,9 +23,12 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
 
     /**
      * Immediately push thunks to spawn processes from this outbox
+     *
+     * TODO TRACER: catch err and add to trace via tracer.trace
      */
     events.push(...spawns.map((cachedSpawn) =>
       async () => of({ cachedSpawn, tracer })
+        .map(logger.tap('Processing outbox spawn from result of message %s', message.id))
         .chain(processSpawn)
         /**
          * No more events to push onto the event queue
@@ -44,10 +47,13 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
      *
      * This will result in this invocation being immediately popped off the callstack, before another invocation
      * is pushed onto the stack. Hence, there are no nested calls, and the stack does not grow unboundly.
+     *
+     * TODO TRACER: catch err, add to trace via tracer.trace, and return empty array [] to short-circuit crank
      */
     events.push(...msgs.map((cachedMsg) =>
       async () => {
         const { tx, msgs, spawns } = await of({ cachedMsg, tracer })
+          .map(logger.tap('Processing outbox message from result of message %s', message.id))
           .chain(processMsg)
           .toPromise()
 
@@ -74,6 +80,7 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
          */
         const from = cachedMsg.msg.target
 
+        logger('Processing and tracing result outbox for message %s whose parent is %s', next.id, parent)
         /**
          * Process the outbox of each subsequent message
          * This will return the next set of events, that will be appended to the top level event queue
@@ -100,10 +107,14 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace }) {
     /**
      * The last event pushed onto the queue is to persist
      * the message trace record
+     *
+     * TODO TRACER: uncomment and persist this trace record
      */
     // events.push(async () => {
     //   return of()
     //     .map(() => tracer.unwrap())
+    //     .map(logger.tap('Persisting trace for message %s', message.id))
+
     //     .chain(fromPromise(saveMessageTrace))
     //     /**
     //      * No more events to push onto the event queue
