@@ -8,7 +8,7 @@ import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 
 import dataStoreClient from './lib/datastore.js'
-import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith, deleteProcessWith } from './lib/main.js'
+import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith, deleteProcessWith, traceMsgsWith } from './lib/main.js'
 
 import runScheduledWith from './bg/manager.js'
 
@@ -130,5 +130,11 @@ export const createApis = (ctx) => {
     logger: monitorProcessLogger
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess, deleteProcess }
+  const traceMessagesLogger = logger.child('traceMessages')
+  const traceMsgs = traceMsgsWith({
+    logger,
+    findMessageTraces: dataStoreClient.findMessageTracesWith({ dbInstance, logger: traceMessagesLogger })
+  })
+
+  return { sendDataItem, crankMsgs, monitorProcess, deleteProcess, traceMsgs }
 }

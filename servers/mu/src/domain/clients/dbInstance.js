@@ -1,5 +1,5 @@
 import pgPromise from 'pg-promise'
-import { always, identity, ifElse } from 'ramda'
+import { always, identity, ifElse, cond, T } from 'ramda'
 
 let db
 export function createDbClient ({ MU_DATABASE_URL }) {
@@ -13,11 +13,11 @@ export function createDbClient ({ MU_DATABASE_URL }) {
 const maxRetries = 5
 const retryDelay = 500
 
-const maybeCriteria = (col, value) =>
+const maybeCriteria = (col, value, operator = 'AND') =>
   ifElse(
     always(value),
     // Add id parameter
-    ([query, params]) => [`${query} AND ${col} = $${params.length + 1}`, [...params, value]],
+    ([query, params]) => [`${query} ${operator} "${col}" = $${params.length + 1}`, [...params, value]],
     // do nothing
     identity
   )
@@ -129,31 +129,34 @@ export async function findMonitors () {
 
 export async function putMessageTrace (doc) {
   await withRetry(db.none, [
-    'INSERT INTO "message_traces" ("_id", "parent", "children", "spawns, "from", "to", "msg", "trace", "tracedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-    [doc._id, doc.parent, doc.children, doc.spawns, doc.from, doc.to, JSON.stringify(doc.msg), doc.trace, doc.tracedAt]
+    'INSERT INTO "message_traces" ("_id", "parent", "children", "spawns", "from", "to", "message", "trace", "tracedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+    [doc._id, doc.parent, doc.children, doc.spawns, doc.from, doc.to, JSON.stringify(doc.message), doc.trace, doc.tracedAt]
   ])
   return doc
 }
 
-export async function findMessageTraces ({ id, from, to, limit, offset }) {
-  const operation = [
+export async function findMessageTraces ({ id, process, wallet, limit, offset }) {
+  const operation = [[
     'SELECT * FROM "message_traces" WHERE id > 0',
     []
-  ]
+  ]]
     .map(maybeCriteria('_id', id))
-    .map(maybeCriteria('from', from))
-    .map(maybeCriteria('to', to))
+    .map(cond([
+      [always(process), ([query, params]) => [`${query} AND ("to" = $${params.length + 1} OR "from" = $${params.length + 1})`, [...params, process]]],
+      [always(wallet), ([query, params]) => [`${query} AND ("from" = $${params.length + 1})`, [...params, wallet]]],
+      [T, identity]
+    ]))
     .map(([query, params]) => [`${query} ORDER BY "tracedAt" DESC`, params])
     .map(([query, params]) => limit
-      ? [`${query} LIMIT $${params.length}`, [...params, limit]]
+      ? [`${query} LIMIT $${params.length + 1}`, [...params, limit]]
       : [query, params]
     )
     .map(([query, params]) => offset
-      ? [`${query} OFFSET $${params.length}`, [...params, offset]]
+      ? [`${query} OFFSET $${params.length + 1}`, [...params, offset]]
       : [query, params]
     )
 
-  return await withRetry(db.any, operation)
+  return await withRetry(db.any, operation.pop())
 }
 
 export default {

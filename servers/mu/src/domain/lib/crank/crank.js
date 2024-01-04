@@ -110,18 +110,18 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
      *
      * TODO TRACER: uncomment and persist this trace record
      */
-    // events.push(async () => {
-    //   return of()
-    //     .map(() => tracer.unwrap())
-    //     .map(logger.tap('Persisting trace for message %s', message.id))
+    events.push(async () => {
+      return of()
+        .map(() => tracer.unwrap())
+        .map(logger.tap('Persisting trace for message %s', message.id))
 
-    //     .chain(fromPromise(saveMessageTrace))
-    //     /**
-    //      * No more events to push onto the event queue
-    //      */
-    //     .map(() => [])
-    //     .toPromise()
-    // })
+        .chain(fromPromise(saveMessageTrace))
+        /**
+         * No more events to push onto the event queue
+         */
+        .map(() => [])
+        .toPromise()
+    })
 
     return events
   }
