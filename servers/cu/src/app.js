@@ -3,6 +3,7 @@ import heapdump from 'heapdump'
 import { pipe } from 'ramda'
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 
 import { logger } from './logger.js'
 import { config } from './config.js'
@@ -12,6 +13,7 @@ export const server = pipe(
   /**
    * Allows us to download heapdumps, if created
    */
+  (app) => app.use(helmet()),
   (app) => app.use(express.static(config.DUMP_PATH)),
   (app) => app.use(cors()),
   (app) => app.use(express.json({ type: 'application/json' })),
