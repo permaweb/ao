@@ -10,12 +10,12 @@ async function up (db) {
       "id" SERIAL PRIMARY KEY,
       "_id" VARCHAR(255) NOT NULL UNIQUE,
       "parent" VARCHAR(255),
-      "children" VARCHAR(255)[],
-      "spawns" VARCHAR(255)[],
-      "from" VARCHAR(255),
-      "to" VARCHAR(255),
-      "msg" JSONB,
-      "trace"  VARCHAR(255)[],
+      "children" TEXT[],
+      "spawns" TEXT[],
+      "from" TEXT,
+      "to" TEXT,
+      "message" JSONB,
+      "trace"  TEXT[],
       "tracedAt" TIMESTAMP WITH TIME ZONE
     )
   `)

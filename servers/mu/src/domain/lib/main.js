@@ -17,6 +17,7 @@ import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 import { tracerFor } from './tracer.js'
 import { verifyParsedDataItemWith } from './processDataItem/verify-parsed-data-item.js'
 import { writeProcessTxWith } from './processDataItem/write-process-tx.js'
+import { loadTracesWith } from './traceMsgs/load-traces.js'
 
 /**
  * Forward along the DataItem to the SU,
@@ -237,7 +238,7 @@ export function deleteProcessWith ({
 }
 
 export function traceMsgsWith ({ logger, findMessageTraces }) {
-  const traceMsgs = traceMsgsWith({ logger, findMessageTraces })
+  const traceMsgs = loadTracesWith({ logger, findMessageTraces })
 
   return (ctx) => {
     return of(ctx)

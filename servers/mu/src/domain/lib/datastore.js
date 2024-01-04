@@ -317,6 +317,7 @@ function saveMessageTraceWith ({ dbInstance, logger: _logger }) {
 
   return (messageTrace) => {
     return of(messageTrace)
+      .map(messageTraceSchema.parse)
       .map(applySpec({
         _id: prop('id'),
         parent: prop('parent'),
@@ -328,7 +329,6 @@ function saveMessageTraceWith ({ dbInstance, logger: _logger }) {
         trace: prop('trace'),
         tracedAt: prop('tracedAt')
       }))
-      .map(messageTraceSchema.parse)
       .chain((doc) =>
         of(doc)
           .chain(fromPromise((doc) => dbInstance.putMessageTrace(doc)))
@@ -346,35 +346,33 @@ function saveMessageTraceWith ({ dbInstance, logger: _logger }) {
 function findMessageTracesWith ({ dbInstance, logger: _logger }) {
   const criteria = z.object({
     id: z.string().optional(),
-    from: z.string().optional(),
-    to: z.string().optional(),
+    process: z.string().optional(),
+    wallet: z.string().optional(),
     /**
      * Always require a limit, so the database does not get bogged down
      * with sending too large of a response
      */
     limit: z.number().int().positive(),
-    offset: z.number().int().positive().optional()
+    offset: z.number().int().optional()
   })
 
-  return ({ id, from, to, limit, offset }) => {
-    return of({ id, from, to, limit, offset })
+  return ({ id, process, wallet, limit, offset }) => {
+    return of({ id, process, wallet, limit, offset })
       .map(params => criteria.parse(params))
       .chain(fromPromise((params) => dbInstance.findMessageTraces(params)))
       .chain((docs) => {
         return Resolved(
-          docs.map((doc) => messageTraceSchema.parse(
-            applySpec({
-              _id: prop('_id'),
-              parent: prop('parent'),
-              children: prop('children'),
-              spawns: prop('spawns'),
-              from: prop('from'),
-              to: prop('to'),
-              message: prop('message'),
-              trace: prop('trace'),
-              tracedAt: prop('tracedAt')
-            }, doc)
-          ))
+          docs.map((doc) => ({
+            id: prop('_id', doc),
+            parent: prop('parent', doc),
+            children: prop('children', doc),
+            spawns: prop('spawns', doc),
+            from: prop('from', doc),
+            to: prop('to', doc),
+            message: prop('message', doc),
+            trace: prop('trace', doc),
+            tracedAt: prop('tracedAt', doc)
+          }))
         )
       })
       .toPromise()

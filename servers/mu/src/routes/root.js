@@ -102,11 +102,12 @@ const withTraceRoutes = (app) => {
         const inputSchema = z.object({
           process: z.string().optional(),
           message: z.string().optional(),
+          wallet: z.string().optional(),
           page: z.coerce.number().int().default(1),
           pageSize: z.coerce.number().int().default(DEFAULT_PAGE_SIZE)
         })
 
-        const input = inputSchema.parse(query)
+        const input = inputSchema.parse({ ...query, pageSize: query['page-size'] })
 
         if (input.process && input.message) {
           const err = new Error('Only one of process or message query parameters can be provided')
@@ -117,13 +118,14 @@ const withTraceRoutes = (app) => {
         /**
          * Retrieve all message traces for the given input
          */
+
         await of({ ...input, limit: input.pageSize, offset: input.pageSize * (input.page - 1) })
           .chain(traceMsgs)
           .bimap(
             logger.tap('Failed to retrieve trace for process "%s" or message "%s"', input.process, input.message),
             logger.tap('Successfully retrieved trace for process "%s" or message "%s"', input.process, input.message)
           )
-          .map(({ traces }) => res.send(traceConnection({ nodes: traces, pageSize: input.pageSize })))
+          .map((traces) => res.send(traceConnection({ nodes: traces, pageSize: input.pageSize })))
           .toPromise()
       })
     )()

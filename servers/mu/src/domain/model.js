@@ -11,7 +11,7 @@ export const messageTraceSchema = z.object({
   /**
    * The transactionId of the message
    */
-  _id: z.string().min(1),
+  id: z.string().min(1),
   /**
    * The id of the message that produced this message.
    * In other words, this message was retrieved from an outbox and cranked
