@@ -78,10 +78,9 @@ jobs:
     concurrency:
       group: release
     steps:
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
-      
+
       - name: 🦕 Setup Deno
         uses: denoland/setup-deno@v1
         with:
@@ -117,7 +116,7 @@ jobs:
       # The version in the manifest is used to set the version
       # displayed for the CI. So we need to update version,
       # prior to building the binaries
-      # 
+      #
       # So we update version here. If CI fails, then that bump is
       # never pushed. If it succeeds, the CI will push any changes to the
       # manifest, including the version bump, which is what we want
@@ -172,6 +171,8 @@ jobs:
             | jq -r '.created[0].entityId'
           )
 
+          sleep 10s
+
           echo "Uploading Binaries..."
 
           ardrive upload-file \
@@ -195,7 +196,7 @@ jobs:
             echo "${ARDRIVE_MANIFEST_RESULTS}" \
             | jq -r '.created[0].dataTxId'
           )
-          
+
           echo "folder_id=${FOLDER_ID}" >> $GITHUB_OUTPUT
           echo "tx_id=${BINARIES_TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
@@ -213,21 +214,21 @@ jobs:
           CI: true
           BINARIES_TRANSACTION_ID: ${{ steps.publish_binaries.outputs.tx_id }}
 
-      # 
+      #
       # Use the ArDrive CLI to:
       # - upload the install script to the same folder
-      # 
+      #
       # Then finally trigger script to update ArNS for install-ao
       - name: 🛠 Publish Install Script to Arweave
         id: publish_install
         # We output text to stdout, the final line containing
         # the url of the transaction. We only need the transaction id
-        # 
+        #
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
           echo "Uploading Install Script..."
-          
+
           ARDRIVE_FILE_RESULTS=$(\
             ardrive upload-file \
               --turbo \
