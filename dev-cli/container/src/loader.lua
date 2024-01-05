@@ -1,11 +1,12 @@
 local json = require "json"
 local process = require ".process"
+ao = require "ao"
 
 function handle(msgJSON, aoJSON)
   -- decode inputs
   local msg = json.decode(msgJSON)
-  local ao = json.decode(aoJSON)
-
+  local env = json.decode(aoJSON)
+  ao.init(env)
   -- handle process
   --
   -- The process may throw an error, either intentionally or unintentionally
