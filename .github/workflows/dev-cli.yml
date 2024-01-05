@@ -171,8 +171,13 @@ jobs:
             | jq -r '.created[0].entityId'
           )
 
-          echo "Sleeping for 10 seconds to allow ArDrive Folder to sync..."
-          sleep 10
+          until ardrive folder-info \
+            --folder-id \
+            "${FOLDER_ID}"; do
+            echo "ArDrive folder has not yet synced. Sleeping for 2 seconds..."
+            sleep 2
+          done
+          
           echo "Uploading Binaries..."
 
           ardrive upload-file \
@@ -181,8 +186,13 @@ jobs:
             --local-paths "${BINARIES_OUTPUT_DIR}"/*.zip \
             -w "${WALLET}"
 
-          echo "Sleeping for 10 seconds to allow ArDrive Files to sync..."
-          sleep 10
+          until [[ $(ardrive list-folder \
+            --parent-folder-id "${FOLDER_ID}" \
+            | jq 'length') -gt 0 ]]; do
+            echo "ArDrive folder binaries have not yet synced. Sleeping for 2 seconds..."
+            sleep 2
+          done
+
           echo "Generating Manifest..."
 
           ARDRIVE_MANIFEST_RESULTS=$(\
@@ -229,8 +239,6 @@ jobs:
         # So we tail the output and strip the last part of the printed url
         # which should be the transaction id
         run: |
-          echo "Sleeping for 10 seconds to allow ArDrive Manifest to sync..."
-          sleep 10
           echo "Uploading Install Script..."
 
           ARDRIVE_FILE_RESULTS=$(\
