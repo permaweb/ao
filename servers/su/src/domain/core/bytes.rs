@@ -411,8 +411,10 @@ impl DataItem {
     pub fn data(&self) -> Option<String> {
         match &self.data {
             Data::Bytes(d) => {
-                let data_base64 = base64_url::encode(&d);
-                Some(data_base64)
+                match String::from_utf8(d.clone()) {
+                    Ok(s) => Some(s),
+                    Err(_) => None, 
+                }
             },
             Data::None => None
         }
