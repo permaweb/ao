@@ -10,17 +10,17 @@ const { createData, ArweaveSigner } = WarpArBundles;
   const data2 = Math.random().toString().slice(-4)
   const tags2 = [
     { name: 'Data-Protocol', value: 'ao' },
-    { name: 'Type', value: 'Scheduler-Location' },
+    { name: 'Type', value: 'Process' },
     { name: 'Variant', value: 'ao.TN.1' },
-    { name: 'Url', value: 'https://ao-su-1.onrender.com/' },
-    { name: 'Time-To-Live', value: '86400000' }
+    { name: 'Module', value: 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no' },
+    { name: 'Scheduler', value: 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no' }
   ]
 
   const dataItem2 = createData(data2, signer, { tags: tags2 })
   await dataItem2.sign(signer)
 
   const response2 = await fetch(
-    'https://up.arweave.net/tx/arweave',
+    'http://localhost:8001',
     {
       method: 'POST',
       headers: {
@@ -37,7 +37,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   console.log('Su Spawn Response 1 for Contract 1')
   console.log(responseText2)
 
-  const data = Math.random().toString().slice(-4)
+  const data = 'ping'
   const tags = [
     { name: 'Data-Protocol', value: 'ao' },
     { name: 'Type', value: 'Message' },
@@ -64,7 +64,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   console.log('Su MessageResponse 1 for Contract 1')
   console.log(responseText)
 
-  const data3 = Math.random().toString().slice(-4)
+  const data3 = 'pong'
   const tags3 = [
     { name: 'Data-Protocol', value: 'ao' },
     { name: 'Type', value: 'Message' },
