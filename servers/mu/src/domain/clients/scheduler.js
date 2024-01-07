@@ -34,11 +34,11 @@ function writeDataItemWith ({ fetch, logger }) {
   }
 }
 
-function fetchSequencerProcessWith ({ SCHEDULER_URL, logger }) {
-  return async (processId) => {
-    logger(`${SCHEDULER_URL}/processes/${processId}`)
+function fetchSequencerProcessWith ({ logger }) {
+  return async (processId, suUrl) => {
+    logger(`${suUrl}/processes/${processId}`)
 
-    return fetch(`${SCHEDULER_URL}/processes/${processId}`)
+    return fetch(`${suUrl}/processes/${processId}`)
       .then(res => res.json())
       .then(res => res || {})
   }
