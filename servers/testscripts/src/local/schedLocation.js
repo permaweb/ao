@@ -10,6 +10,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   const data2 = Math.random().toString().slice(-4)
   const tags2 = [
     { name: 'Data-Protocol', value: 'ao' },
+    { name: 'Variant', value: 'ao.TN.1' },
     { name: 'Type', value: 'Scheduler-Location' },
     { name: 'Url', value: 'https://ao-su-1.onrender.com' },
     { name: 'Time-To-Live', value: '86400000' }
