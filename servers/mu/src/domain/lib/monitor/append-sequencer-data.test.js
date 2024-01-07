@@ -9,14 +9,19 @@ const logger = createLogger('ao-mu:saveMonitor')
 describe('appendSequencerData', () => {
   test('append sequencer data to ctx.tx', async () => {
     const appendSequencerData = appendSequencerDataWith({
-      fetchSequencerProcess: async (processId) => {
+      fetchSequencerProcess: async (processId, suUrl) => {
         assert.equal(processId, 'pid-1')
+        assert.equal(suUrl, 'su-1')
         return {
           id: 'pid-1',
           tags: [
             { name: 'Scheduled-Interval', value: '5-seconds' }
           ]
         }
+      },
+      locateProcess: async (processId) => {
+        assert.equal(processId, 'pid-1')
+        return { url: 'su-1' }
       },
       logger
     })

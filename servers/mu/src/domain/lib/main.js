@@ -208,11 +208,12 @@ export function monitorProcessWith ({
   logger,
   createDataItem,
   saveProcessToMonitor,
+  locateProcess,
   fetchSequencerProcess
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const save = saveWith({ logger, saveProcessToMonitor })
-  const appendSequencerData = appendSequencerDataWith({ logger, fetchSequencerProcess })
+  const appendSequencerData = appendSequencerDataWith({ logger, locateProcess, fetchSequencerProcess })
 
   return (ctx) => {
     return of(ctx)

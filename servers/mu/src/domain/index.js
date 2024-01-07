@@ -39,7 +39,6 @@ export const createScheduledApis = (ctx) => {
 }
 
 export const domainConfigSchema = z.object({
-  SCHEDULER_URL: z.string().url('SCHEDULER_URL must be a a valid URL'),
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
   MU_WALLET: z.record(z.any()),
   MU_DATABASE_URL: z.string(),
@@ -49,7 +48,6 @@ export const domainConfigSchema = z.object({
 })
 
 export const createApis = (ctx) => {
-  const SCHEDULER_URL = ctx.SCHEDULER_URL
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
   const MU_DATABASE_URL = ctx.MU_DATABASE_URL
@@ -70,7 +68,7 @@ export const createApis = (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, SCHEDULER_URL, logger: processMsgLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),
@@ -87,7 +85,7 @@ export const createApis = (ctx) => {
     locateScheduler: raw,
     locateProcess: locate,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, SCHEDULER_URL, logger: processSpawnLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processSpawnLogger }),
     deleteSpawn: dataStoreClient.deleteSpawnWith({ dbInstance, logger: processSpawnLogger })
   })
 
@@ -105,7 +103,7 @@ export const createApis = (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, SCHEDULER_URL, logger: sendDataItemLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: sendDataItemLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: sendDataItemLogger }),
     saveSpawn: dataStoreClient.saveSpawnWith({ dbInstance, logger: sendDataItemLogger }),
@@ -119,7 +117,8 @@ export const createApis = (ctx) => {
   const monitorProcess = monitorProcessWith({
     saveProcessToMonitor: dataStoreClient.saveMonitoredProcessWith({ dbInstance, logger: monitorProcessLogger }),
     createDataItem,
-    fetchSequencerProcess: schedulerClient.fetchSequencerProcessWith({ logger: monitorProcessLogger, SCHEDULER_URL }),
+    locateProcess: locate,
+    fetchSequencerProcess: schedulerClient.fetchSequencerProcessWith({ logger: monitorProcessLogger }),
     logger: monitorProcessLogger
   })
 
