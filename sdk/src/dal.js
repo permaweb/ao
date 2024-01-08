@@ -101,6 +101,6 @@ export const signerSchema = z.function()
  * We can simply define types here as needed
  *
  * @typedef Types
- * @property {z.infer<typeof signerSchema} signer
+ * @property {z.infer<typeof signerSchema>} signer
  */
 export const Types = {}

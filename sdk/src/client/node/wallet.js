@@ -1,5 +1,8 @@
 import WarpArBundles from 'warp-arbundles'
 
+// eslint-disable-next-line no-unused-vars
+import { Types } from '../../dal.js'
+
 const { createData, ArweaveSigner } = WarpArBundles
 
 /**
@@ -8,6 +11,8 @@ const { createData, ArweaveSigner } = WarpArBundles
  *
  * This is provided as a convenience for consumers of the SDK
  * to use, but consumers can also implement their own signer
+ *
+ * @returns {Types['signer']}
  */
 export function createDataItemSigner (wallet) {
   const signer = async ({ data, tags, target, anchor }) => {
