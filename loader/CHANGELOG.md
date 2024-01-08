@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.13](https://github.com/permaweb/ao/compare/loader@v0.0.12...loader@v0.0.13) (2024-01-08)
+
+
+### Bug Fixes
+
+* **loader:** immediately remove emscripten interop module listeners effectively disabling them [#167](https://github.com/permaweb/ao/issues/167) ([455413d](https://github.com/permaweb/ao/commit/455413de0090120a3ca75da908e296a096d8357e))
+
 ## [0.0.12](https://github.com/permaweb/ao/compare/loader@v0.0.11...loader@v0.0.12) (2023-12-17)
 
 
