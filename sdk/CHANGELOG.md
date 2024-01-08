@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.23](https://github.com/permaweb/ao/compare/sdk@v0.0.22...sdk@v0.0.23) (2024-01-08)
+
+
+### Features
+
+* update readme to show support for data [#285](https://github.com/permaweb/ao/issues/285) ([604975a](https://github.com/permaweb/ao/commit/604975ae650e96ec86f7dd1e36b665fd96924fcd))
+
+
+### Bug Fixes
+
+* **sdk:** ts types for signer on spawn and message ([e622619](https://github.com/permaweb/ao/commit/e622619cc516a7b0a6e45a07a6c70eb5e3cdb9e2))
+* **sdk:** use signer type on node and browser implementations JSDocs ([5271e66](https://github.com/permaweb/ao/commit/5271e6660532990caa660f62032d7371317c5837))
+
 ## [0.0.22](https://github.com/permaweb/ao/compare/sdk@v0.0.21...sdk@v0.0.22) (2024-01-02)
 
 
