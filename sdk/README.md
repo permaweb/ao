@@ -1,7 +1,7 @@
 # `ao` SDK
 
-The `ao` SDK provides an abstraction for spawning, evaluating, and
-interacting with `ao` Processes.
+The `ao` SDK provides an abstraction for spawning, evaluating, and interacting
+with `ao` Processes.
 
 This sdk will run in a browser or server environment.
 
@@ -33,7 +33,7 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { spawn, message, result } from "@permaweb/ao-sdk";
+import { message, result, spawn } from "@permaweb/ao-sdk";
 ```
 
 #### CJS (Node) type: `commonjs`
@@ -55,7 +55,7 @@ import { result } from "@permaweb/ao-sdk";
 
 let { messages, spawns, output, error } = await result({
   message: "l3hbt-rIJ_dr9at-eQ3EVajHWMnxPNm9eBtXpzsFWZc",
-  process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg"
+  process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg",
 });
 ```
 
@@ -71,11 +71,11 @@ const messageId = await message({
   signer: createDataItemSigner(wallet),
   anchor,
   tags,
+  data,
 });
 ```
 
-> You can pass a 32 byte `anchor` to `message` which will be set on the
-> DataItem
+> You can pass a 32 byte `anchor` to `message` which will be set on the DataItem
 
 #### `spawn`
 
@@ -89,13 +89,15 @@ const processId = await spawn({
   scheduler,
   signer: createDataItemSigner(wallet),
   tags,
+  data,
 });
 ```
 
 #### `connect`
 
 If you would like the sdk to use ao components other than the defaults, you can
-specify those components by providing their urls to `connect`. You can currently specify
+specify those components by providing their urls to `connect`. You can currently
+specify
 
 - The GATEWAY_URL
 - The Messenger Unit URL
@@ -107,7 +109,7 @@ import { connect } from "@permaweb/ao-sdk";
 const { spawn, message, result } = connect({
   GATEWAY_URL: "...",
   MU_URL: "...",
-  CU_URL: "..."
+  CU_URL: "...",
 });
 ```
 
@@ -129,12 +131,11 @@ connect() == { spawn, message, result }
 
 #### `createDataItemSigner`
 
-`message` and `spawn` both require signing a DataItem with a
-wallet.
+`message` and `spawn` both require signing a DataItem with a wallet.
 
 `createDataItemSigner` is a convenience api that, given a wallet, returns a
-function that can be passed to both `message` and `spawn` in order
-to properly sign DataItems.
+function that can be passed to both `message` and `spawn` in order to properly
+sign DataItems.
 
 The SDK provides a browser compatible and node compatible version that you can
 use OOTB.
