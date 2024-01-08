@@ -1,6 +1,8 @@
 import { identity } from 'ramda'
 import { of } from 'hyper-async'
 
+// eslint-disable-next-line no-unused-vars
+import { Types } from '../../dal.js'
 import { errFrom } from '../utils.js'
 import { verifyProcessWith } from './verify-process.js'
 import { uploadMessageWith } from './upload-message.js'
@@ -11,9 +13,9 @@ import { uploadMessageWith } from './upload-message.js'
  * @typedef SendMessageArgs
  * @property {string} process
  * @property {string} [data]
- * @property {string} [anchor]
  * @property {{ name: string, value: string }[]} [tags]
- * @property {any} signer
+ * @property {string} [anchor]
+ * @property {Types['signer']} signer
  *
  * @callback SendMessage
  * @param {SendMessageArgs} args

@@ -10,7 +10,7 @@ import { readWith } from './read.js'
  * @property {any} output
  * @property {any[]} messages
  * @property {any[]} spawns
- * @property {string} [error]
+ * @property {any} [error]
  *
  * @typedef ReadResultArgs
  * @property {string} message - the transaction id of the message

@@ -1,6 +1,8 @@
 import { identity } from 'ramda'
 import { of } from 'hyper-async'
 
+// eslint-disable-next-line no-unused-vars
+import { Types } from '../../dal.js'
 import { errFrom } from '../utils.js'
 import { verifyInputsWith } from './verify-inputs.js'
 import { uploadProcessWith } from './upload-process.js'
@@ -11,7 +13,7 @@ import { uploadProcessWith } from './upload-process.js'
  * @typedef SpawnProcessArgs
  * @property {string} module
  * @property {string} scheduler
- * @property {string} signer
+ * @property {Types['signer']} signer
  * @property {{ name: string, value: string }[]} [tags]
  * @property {string} [data]
  *

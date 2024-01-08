@@ -93,3 +93,14 @@ export const signerSchema = z.function()
       raw: z.any()
     })
   ))
+
+/**
+ * A hack to get reuse JSDoc types in other files
+ * See https://stackoverflow.com/questions/49836644/how-to-import-a-typedef-from-one-file-to-another-in-jsdoc-using-node-js
+ *
+ * We can simply define types here as needed
+ *
+ * @typedef Types
+ * @property {z.infer<typeof signerSchema} signer
+ */
+export const Types = {}
