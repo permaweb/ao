@@ -1,16 +1,16 @@
-name: 🧰 Test & Deploy AO SDK
+name: 🧰 Test & Deploy AO Connect
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "sdk/**"
+      - "connect/**"
   push:
     branches:
       - main
     paths:
-      - "sdk/**"
+      - "connect/**"
   
   # Perform a release using a workflow dispatch
   workflow_dispatch:
@@ -38,12 +38,12 @@ jobs:
           node-version: 18
 
       - name: 📥 Download deps
-        working-directory: sdk
+        working-directory: connect
         run: |
           npm i
 
       - name: ⚡ Run Tests
-        working-directory: sdk
+        working-directory: connect
         run: |
           npm test
         env:
@@ -64,10 +64,10 @@ jobs:
   #     - name: 📥 Download deps
   #       uses: bahmutov/npm-install@v1
   #       with:
-  #         working-directory: sdk
+  #         working-directory: connect
 
   #     - name: ⚡ Run Tests
-  #       working-directory: sdk
+  #       working-directory: connect
   #       run: |
   #         npm run test:integration
   #       env:
@@ -111,7 +111,7 @@ jobs:
         uses: hyper63/hyper-ci-bump@v2.0.3
         with:
           bump-to: ${{ github.event.inputs.version }}
-          package: sdk
+          package: connect
 
       - name: ⬆️ Push
         run: |
@@ -119,12 +119,12 @@ jobs:
           git push --tags
 
       - name: 📥 Download deps
-        working-directory: sdk
+        working-directory: connect
         run: |
           npm i
       
       - name: 🦠 Publish to NPM
-        working-directory: sdk
+        working-directory: connect
         run: |
           npm run build
           npm publish
