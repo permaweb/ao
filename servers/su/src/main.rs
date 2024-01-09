@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::io::{self, Error, ErrorKind};
 
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, middleware::Logger, http::header::LOCATION};
+use actix_cors::Cors;
 use serde::Deserialize;
 
 use su::domain::{flows, router, StoreClient, Deps, Log, scheduler};
@@ -198,6 +199,12 @@ async fn main() -> io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header()
+            )
             .wrap(Logger::default())
             .app_data(wrapped.clone())
             .route("/", web::get().to(base))
