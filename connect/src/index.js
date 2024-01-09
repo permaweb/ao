@@ -2,7 +2,11 @@ import { connect } from './index.common.js'
 
 import { WalletClient } from './client/node/index.js'
 
-const { result, message, spawn } = connect()
+const GATEWAY_URL = process.env.GATEWAY_URL || undefined
+const MU_URL = process.env.MU_URL || undefined
+const CU_URL = process.env.CU_URL || undefined
+
+const { result, message, spawn } = connect({ GATEWAY_URL, MU_URL, CU_URL })
 
 export { result, message, spawn }
 export { connect }

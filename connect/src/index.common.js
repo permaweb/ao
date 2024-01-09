@@ -10,9 +10,9 @@ import { resultWith } from './lib/result/index.js'
 import { messageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
 
-const DEFAULT_GATEWAY_URL = globalThis.GATEWAY_URL || 'https://arweave.net'
-const DEFAULT_MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
-const DEFAULT_CU_URL = globalThis.CU_URL || 'https://ao-cu-1.onrender.com'
+const DEFAULT_GATEWAY_URL = 'https://arweave.net'
+const DEFAULT_MU_URL = 'https://ao-mu-1.onrender.com'
+const DEFAULT_CU_URL = 'https://ao-cu-1.onrender.com'
 
 /**
  * Build the sdk apis using the provided ao component urls. You can currently specify
