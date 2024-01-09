@@ -1,9 +1,9 @@
-# `ao` SDK
+# `ao` Connect
 
-The `ao` SDK provides an abstraction for spawning, evaluating, and interacting
+The `ao-connect` library provides an abstraction for spawning, evaluating, and interacting
 with `ao` Processes.
 
-This sdk will run in a browser or server environment.
+This module will run in a browser or server environment.
 
 - Read the result of an `ao` Message evaluation from a `ao` Compute Unit `cu`
 - Send a Message targeting an `ao` Process to an `ao` Message Unit `mu`
@@ -33,13 +33,13 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { message, result, spawn } from "@permaweb/ao-sdk";
+import { message, result, spawn } from "@permaweb/ao-connect";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { spawn, message, result } = require("@permaweb/ao-sdk");
+const { spawn, message, result } = require("@permaweb/ao-connect");
 ```
 
 The duration of this document will use `ESM` for examples
@@ -51,7 +51,7 @@ The duration of this document will use `ESM` for examples
 Read the result of the message evaluation from an `ao` Compute Unit `cu`
 
 ```js
-import { result } from "@permaweb/ao-sdk";
+import { result } from "@permaweb/ao-connect";
 
 let { messages, spawns, output, error } = await result({
   message: "l3hbt-rIJ_dr9at-eQ3EVajHWMnxPNm9eBtXpzsFWZc",
@@ -64,7 +64,7 @@ let { messages, spawns, output, error } = await result({
 send a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
-import { createDataItemSigner, message } from "@permaweb/ao-sdk";
+import { createDataItemSigner, message } from "@permaweb/ao-connect";
 
 const messageId = await message({
   process,
@@ -82,7 +82,7 @@ const messageId = await message({
 Spawn an `ao` process, assigning the `ao` Scheduler to schedule its messages
 
 ```js
-import { createDataItemSigner, spawn } from "@permaweb/ao-sdk";
+import { createDataItemSigner, spawn } from "@permaweb/ao-connect";
 
 const processId = await spawn({
   module,
@@ -95,7 +95,7 @@ const processId = await spawn({
 
 #### `connect`
 
-If you would like the sdk to use ao components other than the defaults, you can
+If you would like the connect to use ao components other than the defaults, you can
 specify those components by providing their urls to `connect`. You can currently
 specify
 
@@ -104,7 +104,7 @@ specify
 - The Compute Unit URL
 
 ```js
-import { connect } from "@permaweb/ao-sdk";
+import { connect } from "@permaweb/ao-connect";
 
 const { spawn, message, result } = connect({
   GATEWAY_URL: "...",
@@ -113,9 +113,9 @@ const { spawn, message, result } = connect({
 });
 ```
 
-If any url is not provided, an SDK default will be used. In this sense, invoking
+If any url is not provided, a library default will be used. In this sense, invoking
 `connect()` with no parameters or an empty object is functionally equivalent to
-using the top-lvl exports of the SDK:
+using the top-lvl exports of the library:
 
 ```js
 import {
@@ -123,7 +123,7 @@ import {
  message,
  result
  connect
-} from '@permaweb/ao-sdk';
+} from '@permaweb/ao-connect';
 
 // These are functionally equivalent
 connect() == { spawn, message, result }
@@ -137,14 +137,14 @@ connect() == { spawn, message, result }
 function that can be passed to both `message` and `spawn` in order to properly
 sign DataItems.
 
-The SDK provides a browser compatible and node compatible version that you can
+The library provides a browser compatible and node compatible version that you can
 use OOTB.
 
 The `browser` compatible versions expects an instance of `window.arweaveWallet`
 to be passed to it:
 
 ```js
-import { createDataItemSigner } from "@permaweb/ao-sdk";
+import { createDataItemSigner } from "@permaweb/ao-connect";
 
 const signer = createDataItemSigner(globalThis.arweaveWallet);
 ```
@@ -153,7 +153,7 @@ The `node` compatible versions expects a JWK interface to be passed to it:
 
 ```js
 import fs from "node:fs";
-import { createDataItemSigner } from "@permaweb/ao-sdk";
+import { createDataItemSigner } from "@permaweb/ao-connect";
 
 const wallet = JSON.parse(fs.readFileSync(process.env.PATH_TO_WALLET));
 const signer = createDataItemSigner(wallet);
@@ -170,9 +170,9 @@ type CreateDataItemSigner = (wallet: any):
 
 ## Debug Logging
 
-You can enable verbose debug logging on the SDK. All logging is scoped under the
-name `@permaweb/ao-sdk*`. You can use wildcards to enable a subset of logs ie.
-`@permaweb/ao-sdk/result*`
+You can enable verbose debug logging on the library. All logging is scoped under the
+name `@permaweb/ao-connect*`. You can use wildcards to enable a subset of logs ie.
+`@permaweb/ao-connect/result*`
 
 For Node, set the `DEBUG` environment variable to the logs you're interested in.
 
@@ -187,7 +187,7 @@ Run `npm run test:integration` to run the integration tests.
 
 ## Project Structure
 
-The `ao` SDK project loosely implements the
+The `ao-connect` project loosely implements the
 [Ports and Adapters](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0)
 Architecture.
 

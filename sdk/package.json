@@ -1,5 +1,5 @@
 {
-  "name": "@permaweb/ao-sdk",
+  "name": "@permaweb/ao-connect",
   "version": "0.0.23",
   "license": "MIT",
   "sideEffects": false,
