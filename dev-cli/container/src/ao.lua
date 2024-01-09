@@ -73,6 +73,9 @@ function ao.send(msg)
     end
   end
 
+  if msg.Owner == msg.From then
+    table.insert(message.Tags, { name = "External", value = "true" })
+  end
   -- add message to outbox
   table.insert(ao.outbox.Messages, message)
   
