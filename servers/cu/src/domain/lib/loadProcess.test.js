@@ -32,6 +32,9 @@ describe('loadProcess', () => {
         return {
           owner: 'woohoo',
           tags,
+          signature: 'sig-123',
+          anchor: null,
+          data: 'data-123',
           block: { height: 123, timestamp: 1697574792000 }
         }
       },
@@ -39,8 +42,13 @@ describe('loadProcess', () => {
     })
 
     const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
+
+    console.log({ res })
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
+    assert.deepStrictEqual(res.signature, 'sig-123')
+    assert.deepStrictEqual(res.anchor, null)
+    assert.deepStrictEqual(res.data, 'data-123')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
     assert.deepStrictEqual(res.Memory, null)
     assert.deepStrictEqual(res.result, {
@@ -66,6 +74,9 @@ describe('loadProcess', () => {
       findProcess: async () => ({
         id: PROCESS,
         owner: 'woohoo',
+        signature: 'sig-123',
+        anchor: null,
+        data: 'data-123',
         tags,
         block: { height: 123, timestamp: 1697574792 }
       }),
@@ -79,6 +90,9 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS }).toPromise()
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
+    assert.deepStrictEqual(res.signature, 'sig-123')
+    assert.deepStrictEqual(res.anchor, null)
+    assert.deepStrictEqual(res.data, 'data-123')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792 })
     assert.equal(res.id, PROCESS)
   })

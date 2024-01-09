@@ -70,6 +70,9 @@ function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, savePr
         Resolved
       )
       .map(process => ({
+        signature: process.signature,
+        data: process.data,
+        anchor: process.anchor,
         owner: process.owner,
         tags: process.tags,
         block: process.block
@@ -141,6 +144,22 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
  * is always added to context
  */
 const ctxSchema = z.object({
+  /**
+   * the signature of the process
+   *
+   * only nullish for backwards compatibility
+   */
+  signature: z.string().nullish(),
+  /**
+     * the data of the process
+     *
+     * only nullish for backwards compatibility
+     */
+  data: z.any().nullish(),
+  /**
+     * The anchor for the process
+     */
+  anchor: z.string().nullish(),
   /**
    * The wallet address of of the process owner
    */

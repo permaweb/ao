@@ -30,6 +30,9 @@ describe('pouchdb', () => {
               processId: 'process-123',
               owner: 'woohoo',
               tags: [{ name: 'foo', value: 'bar' }],
+              signature: 'sig-123',
+              anchor: null,
+              data: 'data-123',
               block: {
                 height: 123,
                 timestamp: now
@@ -46,6 +49,9 @@ describe('pouchdb', () => {
         id: 'process-123',
         owner: 'woohoo',
         tags: [{ name: 'foo', value: 'bar' }],
+        signature: 'sig-123',
+        anchor: null,
+        data: 'data-123',
         block: {
           height: 123,
           timestamp: now
@@ -100,6 +106,9 @@ describe('pouchdb', () => {
                 processId: 'process-123',
                 owner: 'woohoo',
                 tags: [{ name: 'foo', value: 'bar' }],
+                signature: 'sig-123',
+                anchor: null,
+                data: 'data-123',
                 block: {
                   height: 123,
                   timestamp: now
@@ -116,6 +125,9 @@ describe('pouchdb', () => {
       await saveProcess({
         id: 'process-123',
         owner: 'woohoo',
+        signature: 'sig-123',
+        anchor: null,
+        data: 'data-123',
         tags: [{ name: 'foo', value: 'bar' }],
         block: {
           height: 123,
@@ -138,6 +150,9 @@ describe('pouchdb', () => {
         id: 'process-123',
         owner: 'woohoo',
         tags: [{ name: 'foo', value: 'bar' }],
+        signature: 'sig-123',
+        anchor: null,
+        data: 'data-123',
         block: {
           height: 123,
           timestamp: now
