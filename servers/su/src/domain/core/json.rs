@@ -41,6 +41,7 @@ pub struct MessageInner {
     pub id: String,
     pub tags: Vec<Tag>,
     pub signature: String,
+    pub anchor: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -56,6 +57,9 @@ pub struct Process {
     pub owner: Owner,
     pub tags: Vec<Tag>,
     pub timestamp: i64,
+    pub data: Option<String>,
+    pub anchor: Option<String>,
+    pub signature: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -100,6 +104,9 @@ impl Process {
         let id = data_bundle.items[0].id().clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
+        let signature = data_bundle.items[0].signature().clone();
+        let data = data_bundle.items[0].data().clone();
+        let anchor = data_bundle.items[0].anchor().clone();
         
         let owner_bytes = base64_url::decode(&owner)?;
         let address_hash = hash(&owner_bytes);
@@ -121,12 +128,21 @@ impl Process {
             key: owner,
         };
 
+        let ac = anchor.clone();
+        let anchor_r = match &*anchor {
+            "" => None,
+            _ => Some(ac)
+        };
+
         Ok(Process {
             process_id: id,
             block: block,
             timestamp: timestamp,
             owner: owner,
-            tags: tags
+            tags: tags,
+            signature: Some(signature),
+            anchor: anchor_r,
+            data: data
         })
     }
 }
@@ -139,11 +155,19 @@ impl Message {
         let target = data_bundle.items[0].target().clone();
         let signature = data_bundle.items[0].signature().clone();
         let data = data_bundle.items[0].data().clone();
+        let anchor = data_bundle.items[0].anchor().clone();
+
+        let ac = anchor.clone();
+        let anchor_r = match &*anchor {
+            "" => None,
+            _ => Some(ac)
+        };
 
         let message_inner = MessageInner {
             id,
             tags,
-            signature
+            signature,
+            anchor: anchor_r
         };
 
         let owner_bytes = base64_url::decode(&owner)?;
