@@ -19,6 +19,7 @@ This module will run in a browser or server environment.
     - [`message`](#message)
     - [`spawn`](#spawn)
     - [`connect`](#connect)
+    - [Environment Variables](#environment-variables)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
 - [Testing](#testing)
@@ -97,11 +98,11 @@ const processId = await spawn({
 
 If you would like the connect to use ao components other than the defaults, you can
 specify those components by providing their urls to `connect`. You can currently
-specify
+specify:
 
-- The GATEWAY_URL
-- The Messenger Unit URL
-- The Compute Unit URL
+- The GATEWAY_URL (`GATEWAY_URL`)
+- The Messenger Unit URL (`MU_URL`)
+- The Compute Unit URL (`CU_URL`)
 
 ```js
 import { connect } from "@permaweb/ao-connect";
@@ -128,6 +129,16 @@ import {
 // These are functionally equivalent
 connect() == { spawn, message, result }
 ```
+
+#### Environment Variables
+
+The library also allows configuring ao components described above, using environment variables.
+
+On `NodeJS`, you can use `process.env` to set these values.
+
+In the browser, you can use `globalThis` to set these values.
+
+> In both cases, you should set environment variables prior to importing the module. If this is not possible, consider using [`connect`](#connect) and passing in values from the environment that way.
 
 #### `createDataItemSigner`
 
