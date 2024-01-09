@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.27](https://github.com/permaweb/ao/compare/connect@v0.0.26...connect@v0.0.27) (2024-01-09)
+
+
+### Features
+
+* **connect:** use process.env for node and globalThis for browser entrypoint defaults [#294](https://github.com/permaweb/ao/issues/294) ([51a30f3](https://github.com/permaweb/ao/commit/51a30f3dccbcbd65b933cddb88666f39337cbaca))
+
 ## [0.0.26](https://github.com/permaweb/ao/compare/connect@v0.0.25...connect@v0.0.26) (2024-01-09)
 
 
