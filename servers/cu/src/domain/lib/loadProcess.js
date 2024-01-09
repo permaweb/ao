@@ -173,12 +173,12 @@ const ctxSchema = z.object({
    * This will be used to subsequently determine which messaged
    * need to be fetched from the SU in order to perform the evaluation
    */
-  from: z.coerce.number().optional(),
+  from: z.coerce.number().nullish(),
   /**
    * The ordinate from the most recent evaluation
    * or undefined, no cached evaluation exists
    */
-  ordinate: z.coerce.string().optional(),
+  ordinate: z.coerce.string().nullish(),
   /**
    * The most recent message block height. This could be from the most recent
    * cached evaluation, or undefined, if no evaluations were cached
@@ -186,12 +186,12 @@ const ctxSchema = z.object({
    * This will be used to subsequently determine the range of block metadata
    * to fetch from the gateway
    */
-  fromBlockHeight: z.coerce.number().optional(),
+  fromBlockHeight: z.coerce.number().nullish(),
   /**
    * When the evaluation record was created in the local db. If the initial state had to be retrieved
    * from Arweave, due to no state being cached in the local db, then this will be undefined.
    */
-  evaluatedAt: z.date().optional()
+  evaluatedAt: z.date().nullish()
 }).passthrough()
 
 /**

@@ -269,7 +269,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
 
   const saveEvaluationInputSchema = z.object({
     _id: z.string().min(1),
-    deepHash: z.string().optional(),
+    deepHash: z.string().nullish(),
     processId: evaluationSchema.shape.processId,
     messageId: evaluationSchema.shape.messageId,
     timestamp: evaluationSchema.shape.timestamp,
