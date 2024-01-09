@@ -127,6 +127,6 @@ jobs:
         working-directory: connect
         run: |
           npm run build
-          npm publish
+          npm publish --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
