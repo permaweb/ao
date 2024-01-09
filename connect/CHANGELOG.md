@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.26](https://github.com/permaweb/ao/compare/connect@v0.0.25...connect@v0.0.26) (2024-01-09)
+
+
+### Bug Fixes
+
+* **connect:** return typings for result match actual shape ([5360ccb](https://github.com/permaweb/ao/commit/5360ccb50681737e862525d5043c79a13d9c303e))
+
 ## [0.0.25](https://github.com/permaweb/ao/compare/connect@v0.0.24...connect@v0.0.25) (2024-01-09)
 
 ## 0.0.24 (2024-01-09)
