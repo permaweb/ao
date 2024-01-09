@@ -48,25 +48,25 @@ export const saveProcessSchema = z.function()
   .returns(z.promise(z.any()))
 
 export const findLatestEvaluationSchema = z.function()
-  .args(z.object({ processId: z.string(), to: z.coerce.number().optional() }))
+  .args(z.object({ processId: z.string(), to: z.coerce.number().nullish() }))
   .returns(z.promise(evaluationSchema))
 
 export const saveEvaluationSchema = z.function()
-  .args(evaluationSchema.extend({ deepHash: z.string().optional() }))
+  .args(evaluationSchema.extend({ deepHash: z.string().nullish() }))
   .returns(z.promise(z.any()))
 
 export const findEvaluationsSchema = z.function()
   .args(z.object({
     processId: z.string(),
-    from: z.coerce.number().optional(),
-    to: z.coerce.number().optional(),
+    from: z.coerce.number().nullish(),
+    to: z.coerce.number().nullish(),
     cron: z.boolean().default(false)
   }))
   .returns(z.promise(z.array(evaluationSchema)))
 
 export const findMessageHashSchema = z.function()
   .args(z.object({
-    messageHash: z.string().optional()
+    messageHash: z.string().nullish()
   }))
   /**
    * Our business logic doesn't use the output of findMessageHash,
@@ -86,8 +86,8 @@ export const loadMessagesSchema = z.function()
       processId: z.string(),
       owner: z.string(),
       tags: z.array(rawTagSchema),
-      from: z.coerce.number().optional(),
-      to: z.coerce.number().optional()
+      from: z.coerce.number().nullish(),
+      to: z.coerce.number().nullish()
     })
   )
   /**
