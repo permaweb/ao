@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "arweave": "^1.14.4",
-    "esbuild": "^0.19.9",
+    "esbuild": "^0.19.11",
     "typescript": "^5.3.3"
   },
   "engines": {
