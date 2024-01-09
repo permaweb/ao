@@ -54,8 +54,8 @@ First, run `npm i` at the root to install those dependencies.
   -> WASM Contracts
 - [`ao` JS Loader](./loader): The `ao` JavaScript Loader that enabled invoking
   an `ao` Contract, built into WASM, from a JavaScript context.
-- [`ao` JS SDK](./sdk): The `ao` JavaScript SDK that can be used in Node and
-  Browser environment to interact and manage `ao` components
+- [`ao` Connect](./connect): The `ao` JavaScript library that provides an abstraction for spawning, evaluating, and interacting
+with `ao` Processes on node or in the browser.
 - [`ao` Compute Unit (`cu`)](./servers/cu): An implementation of the `ao`
   Compute Unit, aka a `cu` (pronounced "koo" 🦘)
 - [`ao` Messenger Unit (`mu`)](./servers/mu): An implementation of the `ao`
