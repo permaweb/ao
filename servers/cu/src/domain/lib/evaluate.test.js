@@ -157,6 +157,21 @@ describe('evaluate', () => {
       module: readFileSync('./test/processes/happy/process.wasm'),
       Memory: null,
       messages: toAsyncIterable([
+        // noSave should noop and not call saveInteraction
+        {
+          noSave: true,
+          ordinate: 0,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
+              { name: 'function', value: 'hello' }
+            ],
+            'Block-Height': 1234
+          },
+          AoGlobal: {}
+        },
         {
           ordinate: 1,
           message: {
