@@ -26,17 +26,25 @@ export const rawBlockSchema = z.object({
 
 export const processSchema = z.object({
   id: z.string().min(1),
+  /**
+   * nullish for backwards compatibility
+   */
+  signature: z.string().nullish(),
+  data: z.any().nullish(),
+  anchor: z.string().nullish(),
   owner: z.string().min(1),
   tags: z.array(rawTagSchema),
-  /**
-   * The block that the process is in.
-   *
-   * Needed in order to calculate implicit messages
-   */
   block: rawBlockSchema
 })
 
 export const messageSchema = z.object({
+  /**
+   * Whether or not this message's evaluation should be saved.
+   *
+   * This is currently used ONLY for the initial message on a process
+   * cold start
+   */
+  noSave: z.boolean().default(false),
   /**
    * The deep hash for the message. Only calculated by the CU
    * for messages with a Forwarded-For tag.

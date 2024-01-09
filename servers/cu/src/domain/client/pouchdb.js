@@ -62,6 +62,9 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
 const processDocSchema = z.object({
   _id: z.string().min(1),
   processId: processSchema.shape.id,
+  signature: processSchema.shape.signature,
+  data: processSchema.shape.data,
+  anchor: processSchema.shape.anchor,
   owner: processSchema.shape.owner,
   tags: processSchema.shape.tags,
   block: processSchema.shape.block,
@@ -143,6 +146,9 @@ export function findProcessWith ({ pouchDb }) {
         .map(processDocSchema.parse)
         .map(applySpec({
           id: prop('processId'),
+          signature: prop('signature'),
+          data: prop('data'),
+          anchor: prop('anchor'),
           owner: prop('owner'),
           tags: prop('tags'),
           block: prop('block')
@@ -157,6 +163,9 @@ export function saveProcessWith ({ pouchDb }) {
       .map(applySpec({
         _id: process => createProcessId({ processId: process.id }),
         processId: prop('id'),
+        signature: prop('signature'),
+        data: prop('data'),
+        anchor: prop('anchor'),
         owner: prop('owner'),
         tags: prop('tags'),
         block: prop('block'),
