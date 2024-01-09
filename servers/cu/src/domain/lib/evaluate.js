@@ -172,7 +172,7 @@ export function evaluateWith (env) {
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
-        for await (const { cron, ordinate, message, deepHash, AoGlobal } of ctx.messages) {
+        for await (const { noSave, cron, ordinate, message, deepHash, AoGlobal } of ctx.messages) {
           /**
            * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
            * if their deepHash is found in the cache, this prevents duplicate evals
@@ -219,8 +219,13 @@ export function evaluateWith (env) {
               /**
                * Create a new evaluation to be cached in the local db
                */
-                .then((output) =>
-                  saveEvaluation({
+                .then((output) => {
+                  /**
+                   * Noop saving the evaluation is noSave flag is set
+                   */
+                  if (noSave) return output
+
+                  return saveEvaluation({
                     deepHash,
                     cron,
                     ordinate,
@@ -233,7 +238,7 @@ export function evaluateWith (env) {
                   })
                     .map(() => output)
                     .toPromise()
-                )
+                })
                 .catch(logger.tap(
                   'Error occurred when applying message with id "%s" to process "%s" %o',
                   message.Id || `Cron Message ${cron}`,
