@@ -424,6 +424,11 @@ impl DataItem {
         let sig_base64 = base64_url::encode(&self.signature);
         sig_base64
     }
+
+    pub fn anchor(&self) -> String {
+        let anchor_base64 = base64_url::encode(&self.anchor);
+        anchor_base64
+    }
 }
 
 #[cfg(test)]
