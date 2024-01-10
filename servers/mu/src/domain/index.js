@@ -6,6 +6,7 @@ import dbInstance, { createDbClient } from './clients/dbInstance.js'
 import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
+import uploaderClient from './clients/uploader.js'
 
 import dataStoreClient from './lib/datastore.js'
 import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith, deleteProcessWith, traceMsgsWith } from './lib/main.js'
@@ -44,13 +45,15 @@ export const domainConfigSchema = z.object({
   MU_DATABASE_URL: z.string(),
   SCHEDULED_INTERVAL: z.number(),
   DUMP_PATH: z.string(),
-  GATEWAY_URL: z.string()
+  GATEWAY_URL: z.string(),
+  UPLOADER_URL: z.string()
 })
 
 export const createApis = (ctx) => {
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
   const MU_DATABASE_URL = ctx.MU_DATABASE_URL
+  const UPLOADER_URL = ctx.UPLOADER_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -76,7 +79,8 @@ export const createApis = (ctx) => {
     findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: processMsgLogger }),
     deleteMsg: dataStoreClient.deleteMsgWith({ dbInstance, logger: processMsgLogger }),
     findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance }),
-    logger
+    logger,
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
