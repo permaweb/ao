@@ -1,4 +1,4 @@
-import { Transform, pipeline } from 'node:stream'
+import { PassThrough, Transform, pipeline } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
 import { T, always, ascend, cond, equals, ifElse, last, length, mergeRight, pipe, prop, reduce } from 'ramda'
@@ -436,69 +436,77 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                 tuple = next
               }
             }),
-            /**
-             * If this is a process cold start, the first 'message' evaluated by the module
-             * will be the process, itself, meaning the process tags, data, etc.
-             *
-             * So we check to see if this is a cold state, by checking if the 'from' is undefined.
-             * If so, we know the evaluation is starting from the beginning (cold start), and we will
-             * construct and emit a 'message' for the process
-             */
-            Transform.from(async function * (messages) {
-              const isColdStart = !ctx.from
-
-              /**
-               * Generate and emit a message that represents the process itself.
-               *
-               * It will be the first message evaluated by the module
-               */
-              if (isColdStart) {
-                const processMessage = messageSchema.parse({
-                  /**
-                   * Ensure the noSave flag is set, so evaluation does not persist
-                   * this process message
-                   */
-                  noSave: true,
-                  ordinate: '^',
-                  message: {
-                    Id: ctx.id,
-                    Signature: ctx.signature,
-                    Data: ctx.data,
-                    Owner: ctx.owner,
-                    /**
-                     * the target of the process message is itself
-                     */
-                    Target: ctx.id,
-                    Anchor: ctx.anchor,
-                    /**
-                     * the process message is from the owner of the process
-                     */
-                    From: ctx.owner,
-                    Tags: ctx.tags,
-                    Epoch: undefined,
-                    Nonce: undefined,
-                    Timestamp: ctx.block.timestamp,
-                    'Block-Height': ctx.block.height,
-                    Cron: false
-                  },
-                  AoGlobal: {
-                    Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags }
-                  }
-                })
-                logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id, processMessage)
-                yield processMessage
-              }
-
-              /**
-               * Emit the merged stream of Cron and Scheduled Messages
-               */
-              for await (const message of messages) yield messageSchema.parse(message)
-            }),
             (err) => {
               if (err) logger('Encountered err when merging scheduled and cron messages', err)
             }
           )
         })
+    })
+    /**
+     * If this is a process cold start, the first 'message' evaluated by the module
+     * will be the process, itself, meaning the process tags, data, etc.
+     *
+     * So we check to see if this is a cold start, by checking if the 'from' is undefined.
+     * If so, we know the evaluation is starting from the beginning (cold start), and we will
+     * construct and emit a 'message' for the process
+     */
+    .map($messages => {
+      return pipeline(
+        async function * () {
+          const isColdStart = !ctx.from
+
+          /**
+           * Generate and emit a message that represents the process itself.
+           *
+           * It will be the first message evaluated by the module
+           */
+          if (isColdStart) {
+            const processMessage = messageSchema.parse({
+              /**
+               * Ensure the noSave flag is set, so evaluation does not persist
+               * this process message
+               */
+              noSave: true,
+              ordinate: '^',
+              message: {
+                Id: ctx.id,
+                Signature: ctx.signature,
+                Data: ctx.data,
+                Owner: ctx.owner,
+                /**
+                 * the target of the process message is itself
+                 */
+                Target: ctx.id,
+                Anchor: ctx.anchor,
+                /**
+                 * the process message is from the owner of the process
+                 */
+                From: ctx.owner,
+                Tags: ctx.tags,
+                Epoch: undefined,
+                Nonce: undefined,
+                Timestamp: ctx.block.timestamp,
+                'Block-Height': ctx.block.height,
+                Cron: false
+              },
+              AoGlobal: {
+                Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags }
+              }
+            })
+            logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id, processMessage)
+            yield processMessage
+          }
+
+          /**
+           * Emit the merged stream of Cron and Scheduled Messages
+           */
+          for await (const message of $messages) yield messageSchema.parse(message)
+        },
+        new PassThrough({ objectMode: true }),
+        (err) => {
+          if (err) logger('Encountered err when emitting messages to eval', err)
+        }
+      )
     })
     .map(messages => ({ messages }))
 }
