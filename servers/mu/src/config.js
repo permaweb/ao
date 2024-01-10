@@ -51,7 +51,8 @@ const CONFIG_ENVS = {
     MU_DATABASE_URL: process.env.MU_DATABASE_URL || 'postgres://admin:admin@localhost:5432/mu',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 1000,
-    DUMP_PATH: process.env.DUMP_PATH || './static'
+    DUMP_PATH: process.env.DUMP_PATH || './static',
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   },
   production: {
     MODE,
@@ -61,7 +62,8 @@ const CONFIG_ENVS = {
     MU_DATABASE_URL: process.env.MU_DATABASE_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 1000,
-    DUMP_PATH: process.env.DUMP_PATH || './static'
+    DUMP_PATH: process.env.DUMP_PATH || './static',
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   }
 }
 
