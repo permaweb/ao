@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.8](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.7...scheduler-utils@v0.0.8) (2024-01-10)
+
+
+### Features
+
+* **scheduler-utils:** expose domain errors and add documentation in README ([b5450d6](https://github.com/permaweb/ao/commit/b5450d66a76a79d223ecf941d59cab4502bc0ac4))
+
 ## [0.0.7](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.6...scheduler-utils@v0.0.7) (2023-12-21)
 
 
