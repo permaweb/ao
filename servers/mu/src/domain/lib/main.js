@@ -2,7 +2,6 @@ import { of } from 'hyper-async'
 
 import { getCuAddressWith } from './processDataItem/get-cu-address.js'
 import { writeMessageTxWith } from './processDataItem/write-message-tx.js'
-import { writeMessageTxExternalWith } from './processDataItem/write-message-tx-external.js'
 import { fetchAndSaveResultWith } from './processDataItem/fetch-and-save-result.js'
 import { buildTxWith } from './processDataItem/build-tx.js'
 import { crankWith } from './crank/crank.js'
@@ -149,31 +148,29 @@ export function processMsgWith ({
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeMessage = writeMessageTxWith({ writeDataItem, locateProcess, logger })
+  const writeMessage = writeMessageTxWith({ writeDataItem, locateProcess, logger, writeDataItemArweave })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
   const deleteMsgData = deleteMsgDataWith({ deleteMsg, logger })
-  const writeMessageExternal = writeMessageTxExternalWith({ writeDataItemArweave, logger })
-
-  const isExternal = (ctx) =>
-    ctx?.cachedMsg?.msg?.Tags?.some(
-      tag => tag.name === 'External' && tag.value === 'true'
-    ) || false
 
   return (ctx) => {
     return of(ctx)
       .chain(buildTx)
       /*
-        If the tx contains an External: "true" tag we just write
-        it to Arweave. Otherwise we go through the regular message
-        passing process.
+        If the tx has a target that is not a process, it has
+        been written directly to Arweave. So we dont go through
+        the rest of the message passing process we just return
+        ctx.
       */
       .chain((ctx) => {
-        return isExternal(ctx)
-          ? writeMessageExternal(ctx)
-          : writeMessage(ctx)
-            .chain(getCuAddress)
-            .chain(fetchAndSaveResult)
-            .chain(deleteMsgData)
+        return writeMessage(ctx)
+          .chain((ctx) => {
+            return ctx.arweaveTx
+              ? of(ctx)
+              : of(ctx)
+                .chain(getCuAddress)
+                .chain(fetchAndSaveResult)
+                .chain(deleteMsgData)
+          })
       })
   }
 }
