@@ -16,6 +16,7 @@ This sdk will run in a browser or server environment.
     - [`raw`](#raw)
     - [Internal Cache](#internal-cache)
     - [`connect`](#connect)
+    - [Errors](#errors)
 
 <!-- tocstop -->
 
@@ -110,4 +111,30 @@ import {
 
 // These are functionally equivalent
 connect() == { validate, locate, raw }
+```
+
+#### Errors
+
+This module's APIs will reject with certain `Error`s for certain sad-paths:
+
+- `TransactionNotFoundError` - the transaction id provided can not be found on the gateway. It's `name` property will be `TransactionNotFound`
+- `SchedulerTagNotFoundError` - a `Scheduler` tag was not found on the provided process transaction id. It's `name` property will be `SchedulerTagNotFound`
+- `InvalidSchedulerLocationError` - the `Scheduler-Location` record retrieved does not adhere to the `ao` `Scheduler-Location` specification. It's `name` property will be `InvalidSchedulerLocation`:
+  - It does not have a `Url` tag
+  - It does not have a `Time-To-Live` tag
+ 
+You can check for these errors in your code, and handle according to your use-case:
+
+```js
+import { locate, TransactionNotFoundError } from "@permaweb/ao-scheduler-utils";
+
+await locate('<process-id>')
+  .catch((err) => {
+    if (err instanceof TransactionNotFoundError) // using instanceof
+    if (err.name === TransactionNotFoundError.name) // use static name on constructor
+    if (err.name === 'TransactionNotFound') // use a static string
+
+    throw err // bubble unknown error
+  })
+
 ```

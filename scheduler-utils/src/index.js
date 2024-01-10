@@ -5,6 +5,8 @@ import { locateWith } from './locate.js'
 import { rawWith } from './raw.js'
 import { validateWith } from './validate.js'
 
+export * from './err.js'
+
 /**
  * @type {string}
  */
