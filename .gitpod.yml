@@ -31,3 +31,4 @@ vscode:
     - "rust-lang.rust-analyzer"
     - "graphql.vscode-graphql"
     - "svelte.svelte-vscode"
+    - "koihik.vscode-lua-format"
