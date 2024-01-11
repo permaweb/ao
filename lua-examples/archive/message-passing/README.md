@@ -1,5 +1,13 @@
 # Message Passing
 
+<!-- toc -->
+
+- [Usage](#usage)
+- [Stuff](#stuff)
+- [Bonus](#bonus)
+
+<!-- tocstop -->
+
 ## Usage
 
 Install packages:

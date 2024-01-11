@@ -2,14 +2,14 @@
   "name": "message-passing",
   "version": "1.0.0",
   "description": "",
+  "license": "ISC",
+  "author": "Justin Shaw",
   "main": "index.js",
   "scripts": {
     "install": "(cd app && npm i)",
     "launch": "node ./scripts/launch.mjs",
     "run": "node ./scripts/run.mjs"
   },
-  "author": "Justin Shaw",
-  "license": "ISC",
   "devDependencies": {
     "@bundlr-network/client": "0.11.17",
     "@permaweb/ao-sdk": "0.0.10",

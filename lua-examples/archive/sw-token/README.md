@@ -6,6 +6,13 @@ An example of a smartweave token with functions:
 - transfer
 - mint
 
+<!-- toc -->
+
+- [Usage](#usage)
+- [Testing](#testing)
+
+<!-- tocstop -->
+
 ## Usage
 
 ## Testing
