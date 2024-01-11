@@ -1,0 +1,6 @@
+column_limit: 120
+indent_width: 2
+use_tab: false
+spaces_before_call: 1
+double_quote_to_single_quote: true
+spaces_inside_table_braces: true
