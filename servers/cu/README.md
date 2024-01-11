@@ -17,6 +17,7 @@ Server.
     - [Entrypoint](#entrypoint)
   - [Routes](#routes)
     - [Middleware](#middleware)
+- [System Requirements](#system-requirements)
 
 <!-- tocstop -->
 
@@ -196,3 +197,22 @@ Business logic is injected into routes via a composed middleware `withDomain.js`
 that attached `config` and business logic apis to `req.domain`. This is how
 routes call into business logic, thus completing the Ports and Adapters
 Architecture.
+
+## System Requirements
+
+The `ao` Compute Unit Server is containerized stateless application, and can be deployed to any containerized environment using its `Dockerfile`. It will also need a CouchDB database, and some way to receive secrets injected from it's environment ie. some sort of Parameter Store. See [Environment Variables](#environment-variables).
+
+It will need to accept ingress from the Internet over `HTTPS` in order to fulfill incoming requests, and egress to other `ao` Units over `HTTP` or `HTTPS`.
+
+Finally, in order to support the [Heap Snapshot feature](#heap-snapshot), it will need some sort of file system mounted, whether it be persistent between deployments or ephemeral. This filesystem does not need to be large, and ephemeral storage typicaly of containerization environments would most likely suffice for most use-cases.
+
+The Server scales primarily on Memory, and so should auto-scale based on Memory-Usage %, if auto-scaling is desirable.
+
+So in summary, this `ao` Compute Unit system requirments are:
+
+- a Containerization Environment to run the application
+- a CouchDB Database
+- a small Filesystem
+- an ability for secrets to be Injected into the Environment
+- an ability to accept Ingress from the Internet
+- an ability to Egress to other `ao` Units and to the Internet
