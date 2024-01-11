@@ -211,6 +211,7 @@ The Server scales primarily on Memory, and so should auto-scale based on Memory-
 So in summary, this `ao` Compute Unit system requirments are:
 
 - a Containerization Environment to run the application
+- Memory scaling
 - a CouchDB Database
 - a small Filesystem
 - an ability for secrets to be Injected into the Environment
