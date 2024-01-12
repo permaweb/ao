@@ -91,7 +91,10 @@ export function connect ({
    * - post a signed message via the MU /monitor/:process endpoint
    */
   const monitorLogger = logger.child('monitor')
-  const monitor = monitorWith({ postMonitor: MuClient.postMonitor({ fetch, MU_URL, logger: monitorLogger }) })
+  const monitor = monitorWith({
+    deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
+    logger: monitorLogger
+  })
 
   return { result, message, spawn, monitor }
 }

@@ -2,44 +2,58 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { deployMessageSchema, deployProcessSchema, signerSchema } from '../dal.js'
-import { deployMessageWith, deployProcessWith, postMonitor } from './ao-mu.js'
+import { deployMessageSchema, deployMonitorSchema, deployProcessSchema, signerSchema } from '../dal.js'
+import { deployMessageWith, deployProcessWith, deployMonitorWith } from './ao-mu.js'
 
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
 const logger = createLogger('@permaweb/ao-sdk:readState')
 
 describe('ao-mu', () => {
-  describe('postMonitor', () => {
+  describe('deployMonitorWith', () => {
     test('sign process id and post to mu', async () => {
-      const doPostMonitor = postMonitor({
-        MU_URL,
-        logger,
-        fetch: async (url, options) => {
-          assert.equal(url, MU_URL + '/monitor/process-id-1234')
-          assert.deepStrictEqual(options, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              Accept: 'application/json'
-            },
-            body: 'raw-buffer'
-          })
+      const deployMonitor = deployMonitorSchema.implement(
+        deployMonitorWith({
+          MU_URL,
+          logger,
+          fetch: async (url, options) => {
+            assert.equal(url, MU_URL + '/monitor/process-id-1234')
+            assert.deepStrictEqual(options, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body: 'raw-buffer'
+            })
 
-          return new Response(JSON.stringify({ ok: true }))
-        }
-      })
-      const res = await doPostMonitor({
-        data: 'process-id-1234',
+            return new Response(JSON.stringify({ ok: true }))
+          }
+        })
+      )
+
+      const res = await deployMonitor({
+        processId: 'process-id-1234',
+        data: 'data-123',
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' }
+        ],
         signer: signerSchema.implement(
-          async ({ data, tags, target, anchor }) => {
+          async ({ data, tags, target }) => {
             assert.ok(data)
-            return { id: 'process-id-1234', raw: 'raw-buffer' }
+            assert.deepStrictEqual(tags, [
+              { name: 'foo', value: 'bar' },
+              { name: 'Content-Type', value: 'text/plain' }
+            ])
+            assert.equal(target, 'process-id-1234')
+            return { id: 'monitor-id-1234', raw: 'raw-buffer' }
           }
         )
       })
-      const body = await res.json()
-      assert.deepStrictEqual(body, {
-        ok: true
+
+      assert.deepStrictEqual(res, {
+        res: { ok: true },
+        messageId: 'monitor-id-1234'
       })
     })
   })

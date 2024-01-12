@@ -135,26 +135,48 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
  * @param {Env4} env
  * @returns {MonitorResult}
  */
-export function postMonitor ({ fetch, MU_URL, logger: _logger }) {
-  const logger = _logger.child('postMonitor')
-  return args => of(args)
-    .chain(fromPromise(({ data, signer }) => signer({ data, tags: [] })))
-    .chain(fromPromise(async (signedDataItem) =>
-      fetch(
-        MU_URL + '/monitor/' + args.data,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            Accept: 'application/json'
-          },
-          body: signedDataItem.raw
-        }
-      )
-    ))
-    .bimap(
-      logger.tap('Error encountered when subscribing to process via MU'),
-      logger.tap('Successfully subscribed to process via MU')
+export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('deployMonitor')
+
+  return (args) => of(args)
+    /**
+     * Sign with the provided signer
+     */
+    .chain(
+      fromPromise(({ processId, data, tags, anchor, signer }) =>
+        /**
+         * The processId is the target set on the data item
+         */
+        signer({ data, tags, target: processId, anchor }))
+    )
+    .chain((signedDataItem) =>
+      of(signedDataItem)
+        .chain(fromPromise(async (signedDataItem) =>
+          fetch(
+            MU_URL + '/monitor/' + args.processId,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body: signedDataItem.raw
+            }
+          )
+        )).bichain(
+          err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
+          fromPromise(
+            async res => {
+              if (res.ok) return res.json()
+              throw new Error(`${res.status}: ${await res.text()}`)
+            }
+          )
+        )
+        .bimap(
+          logger.tap('Error encountered when subscribing to process via MU'),
+          logger.tap('Successfully subscribed to process via MU')
+        )
+        .map(res => ({ res, messageId: signedDataItem.id }))
     )
     .toPromise()
 }

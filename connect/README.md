@@ -141,7 +141,7 @@ cron messages.
 import { createDataItemSigner, monitor } from "@permaweb/aoconnect";
 
 const result = await monitor({
-  id,
+  process,
   signer: createDataItemSigner(wallet),
 });
 ```

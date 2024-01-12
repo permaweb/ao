@@ -42,6 +42,11 @@ export const deployProcessSchema = z.function()
     }).passthrough()
   ))
 
+/**
+ * Same contract shape
+ */
+export const deployMonitorSchema = deployMessageSchema
+
 // SU
 
 export const loadProcessMetaSchema = z.function()
