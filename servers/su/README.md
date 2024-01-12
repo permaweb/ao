@@ -109,3 +109,21 @@ Now the url for the router can be used as a single entry point to all the sus. I
 docker build -f RunDockerfile -t su-runner .
 docker run --name su-app su-runner
 ```
+
+
+# System Requirements
+
+The SU + SU-R runs as a cluster of nodes. The SU-R acts as a redirector to a set of SU's. In order to run the cluster you need at least 2 nodes. 1 SU and one SU-R (a SU running in router mode). In order for the SU-R to initialize properly when it boots up, it has to be started up with a configured set of SU's in the SCHEDULER_LIST_PATH environment variable.
+
+So the workflow for setting up the SU/SU-R cluster properly the workflow is, start a set of SU nodes, configure the SU-R SCHEDULER_LIST_PATH with all the nodes, and then start the SU-R. To add more SU's later just add them into the SCHEDULER_LIST_PATH and reboot the SU-R.
+
+The production SU is a Rust application built into a binary which can be run with the RunDockerfile. The SU-R can be run with the RunRouterDockerfile. They currently run on port 9000 so will require a web server to point to 9000. These containers need to have the ability to copy defined secret files .wallet.json and .schedulers.json into their container when deploying and also have a set of environment variables.
+
+Lastly the SU and SU-R require a postgresql database for each node that is already initialized with the database name being "su" upon the first deployment. Subsequent deployments will migrate themselves at server start up. Each SU and SU-R should have its own database URL but all databases should be named su.
+
+In summary the SU + SU-R requirements are
+- A docker environment to run 2 different dockerfiles
+- A server pointing to port 9000
+- Ablity to define and modify secrect files availabe in the same path as the dockerfiles, .wallet.json and .schedulers.json
+- Environement variables available in the container.
+- a postgresql database per node, defined with a database called "su" at the time of deployment.
