@@ -1,6 +1,6 @@
 # `ao` Connect
 
-The `ao-connect` library provides an abstraction for spawning, evaluating, and interacting
+The `aoconnect` library provides an abstraction for spawning, evaluating, and interacting
 with `ao` Processes.
 
 This module will run in a browser or server environment.
@@ -34,13 +34,13 @@ This module can be used on the server, as well as the browser:
 #### ESM (Node & Browser) aka type: `module`
 
 ```js
-import { message, result, spawn } from "@permaweb/ao-connect";
+import { message, result, spawn } from "@permaweb/aoconnect";
 ```
 
 #### CJS (Node) type: `commonjs`
 
 ```js
-const { spawn, message, result } = require("@permaweb/ao-connect");
+const { spawn, message, result } = require("@permaweb/aoconnect");
 ```
 
 The duration of this document will use `ESM` for examples
@@ -52,7 +52,7 @@ The duration of this document will use `ESM` for examples
 Read the result of the message evaluation from an `ao` Compute Unit `cu`
 
 ```js
-import { result } from "@permaweb/ao-connect";
+import { result } from "@permaweb/aoconnect";
 
 let { messages, spawns, output, error } = await result({
   message: "l3hbt-rIJ_dr9at-eQ3EVajHWMnxPNm9eBtXpzsFWZc",
@@ -65,7 +65,7 @@ let { messages, spawns, output, error } = await result({
 send a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
-import { createDataItemSigner, message } from "@permaweb/ao-connect";
+import { createDataItemSigner, message } from "@permaweb/aoconnect";
 
 const messageId = await message({
   process,
@@ -83,7 +83,7 @@ const messageId = await message({
 Spawn an `ao` process, assigning the `ao` Scheduler to schedule its messages
 
 ```js
-import { createDataItemSigner, spawn } from "@permaweb/ao-connect";
+import { createDataItemSigner, spawn } from "@permaweb/aoconnect";
 
 const processId = await spawn({
   module,
@@ -105,7 +105,7 @@ specify:
 - The Compute Unit URL (`CU_URL`)
 
 ```js
-import { connect } from "@permaweb/ao-connect";
+import { connect } from "@permaweb/aoconnect";
 
 const { spawn, message, result } = connect({
   GATEWAY_URL: "...",
@@ -124,7 +124,7 @@ import {
  message,
  result
  connect
-} from '@permaweb/ao-connect';
+} from '@permaweb/aoconnect';
 
 // These are functionally equivalent
 connect() == { spawn, message, result }
@@ -155,7 +155,7 @@ The `browser` compatible versions expects an instance of `window.arweaveWallet`
 to be passed to it:
 
 ```js
-import { createDataItemSigner } from "@permaweb/ao-connect";
+import { createDataItemSigner } from "@permaweb/aoconnect";
 
 const signer = createDataItemSigner(globalThis.arweaveWallet);
 ```
@@ -164,7 +164,7 @@ The `node` compatible versions expects a JWK interface to be passed to it:
 
 ```js
 import fs from "node:fs";
-import { createDataItemSigner } from "@permaweb/ao-connect";
+import { createDataItemSigner } from "@permaweb/aoconnect";
 
 const wallet = JSON.parse(fs.readFileSync(process.env.PATH_TO_WALLET));
 const signer = createDataItemSigner(wallet);
@@ -182,8 +182,8 @@ type CreateDataItemSigner = (wallet: any):
 ## Debug Logging
 
 You can enable verbose debug logging on the library. All logging is scoped under the
-name `@permaweb/ao-connect*`. You can use wildcards to enable a subset of logs ie.
-`@permaweb/ao-connect/result*`
+name `@permaweb/aoconnect*`. You can use wildcards to enable a subset of logs ie.
+`@permaweb/aoconnect/result*`
 
 For Node, set the `DEBUG` environment variable to the logs you're interested in.
 
@@ -198,7 +198,7 @@ Run `npm run test:integration` to run the integration tests.
 
 ## Project Structure
 
-The `ao-connect` project loosely implements the
+The `aoconnect` project loosely implements the
 [Ports and Adapters](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0)
 Architecture.
 
