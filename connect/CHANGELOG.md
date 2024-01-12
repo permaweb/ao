@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.28](https://github.com/permaweb/ao/compare/connect@v0.0.27...connect@v0.0.28) (2024-01-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connect:** update package name from ao-connect -> aoconnect
+
+* **connect:** update package name from ao-connect -> aoconnect ([c0c7b14](https://github.com/permaweb/ao/commit/c0c7b14f614c05c0666b3767249c69e4493969e6))
+
 ## [0.0.27](https://github.com/permaweb/ao/compare/connect@v0.0.26...connect@v0.0.27) (2024-01-09)
 
 
