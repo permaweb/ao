@@ -1,7 +1,7 @@
 # `ao` Connect
 
-The `aoconnect` library provides an abstraction for spawning, evaluating, and interacting
-with `ao` Processes.
+The `aoconnect` library provides an abstraction for spawning, evaluating, and
+interacting with `ao` Processes.
 
 This module will run in a browser or server environment.
 
@@ -19,6 +19,7 @@ This module will run in a browser or server environment.
     - [`message`](#message)
     - [`spawn`](#spawn)
     - [`connect`](#connect)
+    - [`monitor`](#monitor)
     - [Environment Variables](#environment-variables)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
@@ -96,9 +97,9 @@ const processId = await spawn({
 
 #### `connect`
 
-If you would like the connect to use ao components other than the defaults, you can
-specify those components by providing their urls to `connect`. You can currently
-specify:
+If you would like the connect to use ao components other than the defaults, you
+can specify those components by providing their urls to `connect`. You can
+currently specify:
 
 - The GATEWAY_URL (`GATEWAY_URL`)
 - The Messenger Unit URL (`MU_URL`)
@@ -114,9 +115,9 @@ const { spawn, message, result } = connect({
 });
 ```
 
-If any url is not provided, a library default will be used. In this sense, invoking
-`connect()` with no parameters or an empty object is functionally equivalent to
-using the top-lvl exports of the library:
+If any url is not provided, a library default will be used. In this sense,
+invoking `connect()` with no parameters or an empty object is functionally
+equivalent to using the top-lvl exports of the library:
 
 ```js
 import {
@@ -130,15 +131,33 @@ import {
 connect() == { spawn, message, result }
 ```
 
+#### `monitor`
+
+When using cron messages, ao users need a way to start injesting the messages,
+using this monitor method, ao users can initiate the subscription service for
+cron messages.
+
+```js
+import { createDataItemSigner, monitor } from "@permaweb/aoconnect";
+
+const result = await monitor({
+  id,
+  signer: createDataItemSigner(wallet),
+});
+```
+
 #### Environment Variables
 
-The library also allows configuring ao components described above, using environment variables.
+The library also allows configuring ao components described above, using
+environment variables.
 
 On `NodeJS`, you can use `process.env` to set these values.
 
 In the browser, you can use `globalThis` to set these values.
 
-> In both cases, you should set environment variables prior to importing the module. If this is not possible, consider using [`connect`](#connect) and passing in values from the environment that way.
+> In both cases, you should set environment variables prior to importing the
+> module. If this is not possible, consider using [`connect`](#connect) and
+> passing in values from the environment that way.
 
 #### `createDataItemSigner`
 
@@ -148,8 +167,8 @@ In the browser, you can use `globalThis` to set these values.
 function that can be passed to both `message` and `spawn` in order to properly
 sign DataItems.
 
-The library provides a browser compatible and node compatible version that you can
-use OOTB.
+The library provides a browser compatible and node compatible version that you
+can use OOTB.
 
 The `browser` compatible versions expects an instance of `window.arweaveWallet`
 to be passed to it:
@@ -181,9 +200,9 @@ type CreateDataItemSigner = (wallet: any):
 
 ## Debug Logging
 
-You can enable verbose debug logging on the library. All logging is scoped under the
-name `@permaweb/aoconnect*`. You can use wildcards to enable a subset of logs ie.
-`@permaweb/aoconnect/result*`
+You can enable verbose debug logging on the library. All logging is scoped under
+the name `@permaweb/aoconnect*`. You can use wildcards to enable a subset of
+logs ie. `@permaweb/aoconnect/result*`
 
 For Node, set the `DEBUG` environment variable to the logs you're interested in.
 

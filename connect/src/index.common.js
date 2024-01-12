@@ -9,6 +9,7 @@ import { createLogger } from './logger.js'
 import { resultWith } from './lib/result/index.js'
 import { messageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
+import { monitorWith } from './lib/monitor/index.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://ao-mu-1.onrender.com'
@@ -29,12 +30,13 @@ const DEFAULT_CU_URL = 'https://ao-cu-1.onrender.com'
  * import {
  *  spawn,
  *  message,
- *  result
+ *  result,
+ *  monitor,
  *  connect
  * } from '@permaweb/ao-sdk';
  *
  * // These are functionally equivalent
- * connect() == { spawn, message, result }
+ * connect() == { spawn, message, result, monitor }
  *
  * @typedef Services
  * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
@@ -83,5 +85,13 @@ export function connect ({
     logger: spawnLogger
   })
 
-  return { result, message, spawn }
+  /**
+   * default monitor that works OOTB
+   * - Verifies the inputs
+   * - post a signed message via the MU /monitor/:process endpoint
+   */
+  const monitorLogger = logger.child('monitor')
+  const monitor = monitorWith({ postMonitor: MuClient.postMonitor({ fetch, MU_URL, logger: monitorLogger }) })
+
+  return { result, message, spawn, monitor }
 }
