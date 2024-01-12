@@ -7,6 +7,6 @@ foo.js
 ao-cache
 
 # terraform
-*.terraform.*
+.terraform
 .terragrunt-cache
 terraform/*.plan
