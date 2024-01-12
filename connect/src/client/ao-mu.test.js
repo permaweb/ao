@@ -3,12 +3,47 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { deployMessageSchema, deployProcessSchema, signerSchema } from '../dal.js'
-import { deployMessageWith, deployProcessWith } from './ao-mu.js'
+import { deployMessageWith, deployProcessWith, postMonitor } from './ao-mu.js'
 
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
 const logger = createLogger('@permaweb/ao-sdk:readState')
 
 describe('ao-mu', () => {
+  describe('postMonitor', () => {
+    test('sign process id and post to mu', async () => {
+      const doPostMonitor = postMonitor({
+        MU_URL,
+        logger,
+        fetch: async (url, options) => {
+          assert.equal(url, MU_URL + '/monitor/process-id-1234')
+          assert.deepStrictEqual(options, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              Accept: 'application/json'
+            },
+            body: 'raw-buffer'
+          })
+
+          return new Response(JSON.stringify({ ok: true }))
+        }
+      })
+      const res = await doPostMonitor({
+        data: 'process-id-1234',
+        signer: signerSchema.implement(
+          async ({ data, tags, target, anchor }) => {
+            assert.ok(data)
+            return { id: 'process-id-1234', raw: 'raw-buffer' }
+          }
+        )
+      })
+      const body = await res.json()
+      assert.deepStrictEqual(body, {
+        ok: true
+      })
+    })
+  })
+
   describe('deployMessageWith', () => {
     test('sign and deploy the message, and return the id', async () => {
       const deployMessage = deployMessageSchema.implement(

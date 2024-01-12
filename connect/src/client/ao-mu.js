@@ -123,3 +123,38 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
       .toPromise()
   }
 }
+
+/**
+ * @typedef Env4
+ * @property {fetch} fetch
+ * @property {string} MU_URL
+ * @property {Logger} logger
+ *
+ * @callback MonitorResult
+ * @returns {Promise<Record<string, any>}
+ * @param {Env4} env
+ * @returns {MonitorResult}
+ */
+export function postMonitor ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('postMonitor')
+  return args => of(args)
+    .chain(fromPromise(({ data, signer }) => signer({ data, tags: [] })))
+    .chain(fromPromise(async (signedDataItem) =>
+      fetch(
+        MU_URL + '/monitor/' + args.data,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Accept: 'application/json'
+          },
+          body: signedDataItem.raw
+        }
+      )
+    ))
+    .bimap(
+      logger.tap('Error encountered when subscribing to process via MU'),
+      logger.tap('Successfully subscribed to process via MU')
+    )
+    .toPromise()
+}
