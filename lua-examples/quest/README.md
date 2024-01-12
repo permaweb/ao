@@ -5,7 +5,7 @@ This Process is a list of ao ecosystem projects open for completion. Anyone runn
 Quest is an aos Process running the quest.lua program included in this directory. The current Process ID for the Quest Process is - 
 
 ```sh
-kubffA8LxXV6Q1YRhzM0NbiBFOgbtKdk4QnURMpJDG8
+obV9iL-w_K7DOMAV-Ze7dpgdJS3usxXdqz3mZ4Mn_zk
 ```
 
 # Interacting with Quest
@@ -19,7 +19,7 @@ npm i -g https://get_ao.g8way.io
 Once aos is running you can Forge a new Quest, or update your Quest using the below aos command.
 
 ```lua
-send({ Target = "kubffA8LxXV6Q1YRhzM0NbiBFOgbtKdk4QnURMpJDG8", Tags = { Action = "Forge", Description = "Custom description", Url = "Your Url (not required)", Points = "500", Name = "Custom Quest Name"}})
+Send({ Target = "obV9iL-w_K7DOMAV-Ze7dpgdJS3usxXdqz3mZ4Mn_zk", Tags = { Action = "Forge", Name = "Example Quest", Description = "Create a Quest", Url = "link to your site", Points = "500"}})
 ```
 
 Quests are unique by Name so if you send the same same it will update. If you send a name someone else used it will not let you.
@@ -27,17 +27,17 @@ Quests are unique by Name so if you send the same same it will update. If you se
 Once a Quest has been completed by someone in the real world, you can Conclude it using the below aos command.
 
 ```lua
-send({ Target = "kubffA8LxXV6Q1YRhzM0NbiBFOgbtKdk4QnURMpJDG8", Tags = { Action = "Conclude", Name = "Custom Quest Name"}})
+Send({ Target = "obV9iL-w_K7DOMAV-Ze7dpgdJS3usxXdqz3mZ4Mn_zk", Tags = { Action = "Conclude", Name = "Example Quest" }})
 ```
 
 To List all the available Quests you can send a List Action
 
 ```lua
-send({ Target = "kubffA8LxXV6Q1YRhzM0NbiBFOgbtKdk4QnURMpJDG8", Tags = { Action = "List" }})
+Send({ Target = "obV9iL-w_K7DOMAV-Ze7dpgdJS3usxXdqz3mZ4Mn_zk", Tags = { Action = "List" }})
 ```
 
 Or if you want a JSON response
 
 ```lua
-send({ Target = "kubffA8LxXV6Q1YRhzM0NbiBFOgbtKdk4QnURMpJDG8", Tags = { Action = "List", Format = "json" }})
+Send({ Target = "obV9iL-w_K7DOMAV-Ze7dpgdJS3usxXdqz3mZ4Mn_zk", Tags = { Action = "List", Format = "json" }})
 ```
