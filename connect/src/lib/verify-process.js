@@ -1,8 +1,8 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { isNotNil, prop } from 'ramda'
 
-import { loadProcessMetaSchema, locateSchedulerSchema } from '../../dal.js'
-import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
+import { loadProcessMetaSchema, locateSchedulerSchema } from '../dal.js'
+import { eqOrIncludes, parseTags, trimSlash } from './utils.js'
 
 /**
  * @typedef Env5
