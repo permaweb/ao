@@ -17,7 +17,7 @@ describe('upload-message', () => {
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Message' },
-          { name: 'SDK', value: 'ao' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Content-Type', value: 'text/plain' }
         ])
         assert.equal(anchor, 'idempotent-123')

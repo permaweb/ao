@@ -18,7 +18,7 @@ describe('upload-process', () => {
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
           { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
-          { name: 'SDK', value: 'ao' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Content-Type', value: 'text/plain' }
         ])
         assert.ok(signer)
@@ -56,7 +56,7 @@ describe('upload-process', () => {
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
           { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
-          { name: 'SDK', value: 'ao' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Content-Type', value: 'text/plain' }
         ])
 
@@ -87,7 +87,7 @@ describe('upload-process', () => {
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
           { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
-          { name: 'SDK', value: 'ao' }
+          { name: 'SDK', value: 'aoconnect' }
         ])
         return {
           res: 'foobar',
