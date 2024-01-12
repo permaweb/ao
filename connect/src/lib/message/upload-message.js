@@ -39,7 +39,7 @@ function buildTagsWith () {
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'Variant', value: 'ao.TN.1' },
         { name: 'Type', value: 'Message' },
-        { name: 'SDK', value: 'ao' }
+        { name: 'SDK', value: 'aoconnect' }
       ]))
       .map(tagSchema.parse)
       .map(assoc('tags', __, ctx))

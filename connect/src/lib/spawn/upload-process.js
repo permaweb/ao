@@ -35,7 +35,7 @@ function buildTagsWith () {
         { name: 'Type', value: 'Process' },
         { name: 'Module', value: ctx.module },
         { name: 'Scheduler', value: ctx.scheduler },
-        { name: 'SDK', value: 'ao' }
+        { name: 'SDK', value: 'aoconnect' }
       ]))
       .map(tagSchema.parse)
       .map(assoc('tags', __, ctx))
