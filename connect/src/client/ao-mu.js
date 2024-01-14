@@ -167,7 +167,10 @@ export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
           err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
           fromPromise(
             async res => {
-              if (res.ok) return res.json()
+              /**
+               * Response from MU is not used, so just return some json
+               */
+              if (res.ok) return { ok: true }
               throw new Error(`${res.status}: ${await res.text()}`)
             }
           )

@@ -26,7 +26,7 @@ describe('ao-mu', () => {
               body: 'raw-buffer'
             })
 
-            return new Response(JSON.stringify({ ok: true }))
+            return new Response(JSON.stringify({ foo: 'bar' }))
           }
         })
       )
