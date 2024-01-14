@@ -92,6 +92,8 @@ export function connect ({
    */
   const monitorLogger = logger.child('monitor')
   const monitor = monitorWith({
+    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch }),
+    locateScheduler: locate,
     deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
     logger: monitorLogger
   })
