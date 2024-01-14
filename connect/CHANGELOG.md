@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.30](https://github.com/permaweb/ao/compare/connect@v0.0.29...connect@v0.0.30) (2024-01-14)
+
+
+### Bug Fixes
+
+* **connect:** inject dependencies into monitorWith [#314](https://github.com/permaweb/ao/issues/314) [#312](https://github.com/permaweb/ao/issues/312) ([9b257ae](https://github.com/permaweb/ao/commit/9b257ae37b53f930981df05e28d2f91bc7d306d2))
+
 ## [0.0.29](https://github.com/permaweb/ao/compare/connect@v0.0.28...connect@v0.0.29) (2024-01-14)
 
 
