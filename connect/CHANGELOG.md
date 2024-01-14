@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.29](https://github.com/permaweb/ao/compare/connect@v0.0.28...connect@v0.0.29) (2024-01-14)
+
+
+### Features
+
+* add monitor method to connect [#312](https://github.com/permaweb/ao/issues/312) ([5536120](https://github.com/permaweb/ao/commit/5536120665e2d7b8ea178711bf8d75439c9162a2))
+* **connect:** set process id as target on monitor data item. Wrap side effect in contract [#312](https://github.com/permaweb/ao/issues/312) ([2fd21ad](https://github.com/permaweb/ao/commit/2fd21ad0727482352925bd1a205121413713ea6a))
+
+
+### Bug Fixes
+
+* added monitor lib ([1ccb6cf](https://github.com/permaweb/ao/commit/1ccb6cf453e7b07c25dc260585bfbb87fac3e172))
+
 ## [0.0.28](https://github.com/permaweb/ao/compare/connect@v0.0.27...connect@v0.0.28) (2024-01-12)
 
 
