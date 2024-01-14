@@ -12,13 +12,7 @@ describe('upload-monitor', () => {
       deployMonitor: async ({ processId, data, tags, signer }) => {
         assert.ok(data)
         assert.equal(processId, 'process-asdf')
-        assert.deepStrictEqual(tags, [
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Variant', value: 'ao.TN.1' },
-          { name: 'Type', value: 'Monitor' },
-          { name: 'SDK', value: 'aoconnect' },
-          { name: 'Content-Type', value: 'text/plain' }
-        ])
+        assert.deepStrictEqual(tags, [])
         assert.ok(signer)
 
         return { messageId: 'monitor-id-123' }
