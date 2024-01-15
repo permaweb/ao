@@ -1,0 +1,30 @@
+{
+  "name": "@permaweb/ao-cu-router",
+  "version": "1.0.0",
+  "description": "A Node Express server to serve as a reverse proxy for the underlying hosts",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "nodemon",
+    "docker-build": "docker build -t cu-app .",
+    "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
+    "heapdump": "kill -USR2",
+    "start": "node src/app.js",
+    "test": "node --test ./src"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "debug": "^4.3.4",
+    "express": "^4.18.2",
+    "http-proxy": "^1.18.1",
+    "ramda": "^0.29.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.1",
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": "18"
+  }
+}
