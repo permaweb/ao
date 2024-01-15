@@ -6,9 +6,9 @@ const GATEWAY_URL = process.env.GATEWAY_URL || undefined
 const MU_URL = process.env.MU_URL || undefined
 const CU_URL = process.env.CU_URL || undefined
 
-const { result, message, spawn, monitor } = connect({ GATEWAY_URL, MU_URL, CU_URL })
+const { result, message, spawn, monitor, unmonitor } = connect({ GATEWAY_URL, MU_URL, CU_URL })
 
-export { result, message, spawn, monitor }
+export { result, message, spawn, monitor, unmonitor }
 export { connect }
 
 /**

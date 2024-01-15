@@ -10,6 +10,7 @@ import { resultWith } from './lib/result/index.js'
 import { messageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
+import { unmonitorWith } from './lib/unmonitor/index.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://ao-mu-1.onrender.com'
@@ -98,5 +99,18 @@ export function connect ({
     logger: monitorLogger
   })
 
-  return { result, message, spawn, monitor }
+  /**
+   * default unmonitor that works OOTB
+   * - Verifies the inputs
+   * - post a signed message via the MU /monitor/:process endpoint
+   */
+  const unmonitorLogger = logger.child('unmonitor')
+  const unmonitor = unmonitorWith({
+    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch }),
+    locateScheduler: locate,
+    deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
+    logger: monitorLogger
+  })
+
+  return { result, message, spawn, monitor, unmonitor }
 }

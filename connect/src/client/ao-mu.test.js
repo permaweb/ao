@@ -3,12 +3,61 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { deployMessageSchema, deployMonitorSchema, deployProcessSchema, signerSchema } from '../dal.js'
-import { deployMessageWith, deployProcessWith, deployMonitorWith } from './ao-mu.js'
+import { deployMessageWith, deployProcessWith, deployMonitorWith, deployUnmonitorWith } from './ao-mu.js'
 
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
 const logger = createLogger('@permaweb/ao-sdk:readState')
 
 describe('ao-mu', () => {
+  describe('deployUnmonitorWith', () => {
+    test('sign process id and post to mu', async () => {
+      const deployUnmonitor = deployMonitorSchema.implement(
+        deployUnmonitorWith({
+          MU_URL,
+          logger,
+          fetch: async (url, options) => {
+            assert.equal(url, MU_URL + '/monitor/process-id-1234')
+            assert.deepStrictEqual(options, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body: 'raw-buffer'
+            })
+
+            return new Response(JSON.stringify({ foo: 'bar' }))
+          }
+        })
+      )
+
+      const res = await deployUnmonitor({
+        processId: 'process-id-1234',
+        data: 'data-123',
+        tags: [
+          { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' }
+        ],
+        signer: signerSchema.implement(
+          async ({ data, tags, target }) => {
+            assert.ok(data)
+            assert.deepStrictEqual(tags, [
+              { name: 'foo', value: 'bar' },
+              { name: 'Content-Type', value: 'text/plain' }
+            ])
+            assert.equal(target, 'process-id-1234')
+            return { id: 'monitor-id-1234', raw: 'raw-buffer' }
+          }
+        )
+      })
+
+      assert.deepStrictEqual(res, {
+        res: { ok: true },
+        messageId: 'monitor-id-1234'
+      })
+    })
+  })
+
   describe('deployMonitorWith', () => {
     test('sign process id and post to mu', async () => {
       const deployMonitor = deployMonitorSchema.implement(

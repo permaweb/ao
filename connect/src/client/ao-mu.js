@@ -183,3 +183,63 @@ export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
     )
     .toPromise()
 }
+
+/**
+ * @typedef Env5
+ * @property {fetch} fetch
+ * @property {string} MU_URL
+ * @property {Logger} logger
+ *
+ * @callback MonitorResult
+ * @returns {Promise<Record<string, any>}
+ * @param {Env5} env
+ * @returns {MonitorResult}
+ */
+export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('deployUnmonitor')
+
+  return (args) => of(args)
+    /**
+     * Sign with the provided signer
+     */
+    .chain(
+      fromPromise(({ processId, data, tags, anchor, signer }) =>
+        /**
+         * The processId is the target set on the data item
+         */
+        signer({ data, tags, target: processId, anchor }))
+    )
+    .chain((signedDataItem) =>
+      of(signedDataItem)
+        .chain(fromPromise(async (signedDataItem) =>
+          fetch(
+            MU_URL + '/monitor/' + args.processId,
+            {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body: signedDataItem.raw
+            }
+          )
+        )).bichain(
+          err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
+          fromPromise(
+            async res => {
+              /**
+               * Response from MU is not used, so just return some json
+               */
+              if (res.ok) return { ok: true }
+              throw new Error(`${res.status}: ${await res.text()}`)
+            }
+          )
+        )
+        .bimap(
+          logger.tap('Error encountered when unsubscribing to process via MU'),
+          logger.tap('Successfully unsubscribed to process via MU')
+        )
+        .map(res => ({ res, messageId: signedDataItem.id }))
+    )
+    .toPromise()
+}
