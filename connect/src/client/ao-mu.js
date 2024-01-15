@@ -236,8 +236,8 @@ export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
           )
         )
         .bimap(
-          logger.tap('Error encountered when subscribing to process via MU'),
-          logger.tap('Successfully subscribed to process via MU')
+          logger.tap('Error encountered when unsubscribing to process via MU'),
+          logger.tap('Successfully unsubscribed to process via MU')
         )
         .map(res => ({ res, messageId: signedDataItem.id }))
     )

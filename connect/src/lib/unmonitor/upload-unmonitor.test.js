@@ -6,8 +6,8 @@ import { uploadUnmonitorWith } from './upload-unmonitor.js'
 
 const logger = createLogger('monitor')
 
-describe('upload-monitor', () => {
-  test('add the tags, sign, and upload the monitor, and return the monitorId', async () => {
+describe('upload-unmonitor', () => {
+  test('add the tags, sign, and upload the unmonitor, and return the monitorId', async () => {
     const uploadUnmonitor = uploadUnmonitorWith({
       deployUnmonitor: async ({ processId, data, tags, signer }) => {
         assert.ok(data)
