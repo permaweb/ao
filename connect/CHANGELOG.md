@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.32](https://github.com/permaweb/ao/compare/connect@v0.0.31...connect@v0.0.32) (2024-01-15)
+
+
+### Features
+
+* add unmonitor feature [#310](https://github.com/permaweb/ao/issues/310) ([bb41e91](https://github.com/permaweb/ao/commit/bb41e9180dfe4d8ee27fd3211501c2c479fdda58))
+
+
+### Bug Fixes
+
+* resolved conversation for [#316](https://github.com/permaweb/ao/issues/316) ([fd4a577](https://github.com/permaweb/ao/commit/fd4a57750b8151901f4890f278fee432545b4254))
+
 ## [0.0.31](https://github.com/permaweb/ao/compare/connect@v0.0.30...connect@v0.0.31) (2024-01-14)
 
 ## [0.0.30](https://github.com/permaweb/ao/compare/connect@v0.0.29...connect@v0.0.30) (2024-01-14)
