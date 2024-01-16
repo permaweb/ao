@@ -117,7 +117,8 @@ async function processMonitor (monitor) {
           fromTxId,
           msg,
           cachedAt: new Date(),
-          processId: monitor.id
+          processId: monitor.id,
+          initialTxId: null
         })
       })
 
@@ -127,7 +128,8 @@ async function processMonitor (monitor) {
           fromTxId,
           spawn,
           cachedAt: new Date(),
-          processId: monitor.id
+          processId: monitor.id,
+          initialTxId: null
         })
       })
 
@@ -146,7 +148,7 @@ async function processMonitor (monitor) {
         from: monitor.processId
       })
       await of(dbMsgs)
-        .map(dbMsgs => ({ msgs: dbMsgs, spawns: [], message: { id: fromTxId }, tracer }))
+        .map(dbMsgs => ({ msgs: dbMsgs, spawns: [], message: { id: fromTxId }, tracer, initialTxId: null }))
         .chain(res =>
           apis.crankMsgs(res)
             .bimap(
@@ -160,7 +162,7 @@ async function processMonitor (monitor) {
     if (spawnSavePromises.length > 0) {
       const dbSpawns = await findLatestSpawns({ fromTxId })
       for (let i = 0; i < dbSpawns.length; i++) {
-        await of({ cachedSpawn: dbSpawns[i] })
+        await of({ cachedSpawn: dbSpawns[i], initialTxId: null })
           .chain(apis.processSpawn)
           .toPromise()
       }

@@ -5,13 +5,15 @@ import dropTransactionTable from './migrations/20231110_drop_transaction_table.j
 import addProcessIdToSpawns from './migrations/20231116_add_processid_to_spawn.js'
 import addMessageTracesTable from './migrations/20231206_create_message_traces_table.js'
 import modifyMonitorTable from './migrations/20231219_modify_monitor_table.js'
+import addInitialTxId from './migrations/20240115_add_initial_txid_column.js'
 
 const migrations = [
   createInitialMigrations,
   dropTransactionTable,
   addProcessIdToSpawns,
   addMessageTracesTable,
-  modifyMonitorTable
+  modifyMonitorTable,
+  addInitialTxId
 ]
 
 async function runMigrations () {

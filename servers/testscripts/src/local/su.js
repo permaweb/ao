@@ -13,14 +13,14 @@ const { createData, ArweaveSigner } = WarpArBundles;
     { name: 'Type', value: 'Process' },
     { name: 'Variant', value: 'ao.TN.1' },
     { name: 'Module', value: 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no' },
-    { name: 'Scheduler', value: 'Isk_GYo30Tyf5nLbVI6zEJIfFpiXQJd58IKcIkTu4no' }
+    { name: 'Scheduler', value: 'TZ7o7SIZ06ZEJ14lXwVtng1EtSx60QkPy-kh-kdAXog' }
   ]
 
   const dataItem2 = createData(data2, signer, { tags: tags2 })
   await dataItem2.sign(signer)
 
   const response2 = await fetch(
-    'http://localhost:8001',
+    'https://ao-su-1.onrender.com',
     {
       method: 'POST',
       headers: {
@@ -48,7 +48,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem.sign(signer)
 
   const response = await fetch(
-    'http://localhost:8001',
+    'https://ao-su-1.onrender.com',
     {
       method: 'POST',
       headers: {
@@ -75,7 +75,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem3.sign(signer)
 
   const response3 = await fetch(
-    'http://localhost:8001',
+    'https://ao-su-1.onrender.com',
     {
       method: 'POST',
       headers: {

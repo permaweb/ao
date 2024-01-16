@@ -4,7 +4,8 @@ import z from 'zod'
 
 const ctxSchema = z.object({
   msgs: z.any(),
-  spawns: z.any()
+  spawns: z.any(),
+  initialTxId: z.string()
 }).passthrough()
 
 function findMsgsWith ({ findLatestMsgs }) {
@@ -45,7 +46,8 @@ function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
             fromTxId: ctx.tx.id,
             msg,
             cachedAt: new Date(),
-            processId: ctx.tx.processId
+            processId: ctx.tx.processId,
+            initialTxId: ctx.initialTxId
           })
             .then(tap(() => ctx.tracer.trace('Cached outbox message')))
             .catch(tap(() => ctx.tracer.trace('Failed to cache outbox message')))
@@ -57,7 +59,8 @@ function cacheResultWith ({ fetchResult, saveMsg, saveSpawn }) {
             fromTxId: ctx.tx.id,
             spawn,
             cachedAt: new Date(),
-            processId: ctx.tx.processId
+            processId: ctx.tx.processId,
+            initialTxId: ctx.initialTxId
           })
             .then(tap(() => ctx.tracer.trace('Cached spawn')))
             .catch(tap(() => ctx.tracer.trace('Failed to cache spawn')))

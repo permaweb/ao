@@ -50,6 +50,10 @@ export function spawnProcessWith (env) {
     tagsIn.push({ name: 'Variant', value: 'ao.TN.1' })
     tagsIn.push({ name: 'From-Process', value: ctx.cachedSpawn.processId })
 
+    if (ctx.cachedSpawn.initialTxId) {
+      tagsIn.push({ name: 'Cranked-For', value: ctx.cachedSpawn.initialTxId })
+    }
+
     const transformedData = { data: Data, tags: tagsIn }
 
     return of(transformedData.tags)
