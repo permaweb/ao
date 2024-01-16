@@ -9,11 +9,19 @@ function env (key) {
   return res.data
 }
 
-const deploy = async (deployHook) => {
-  const response = await fetch(deployHook, { method: 'POST' })
-    .then((res) => res.json())
-    .catch((err) => err)
-  console.log('Deploying To Render. Response:', response)
+const deploy = async (deployHooksStr) => {
+  const deployHooks = z.preprocess(
+    (arg) => (typeof arg === 'string' ? arg.split(',').map(str => str.trim()) : arg),
+    z.array(z.string().url())
+  ).parse(deployHooksStr)
+
+  const responses = await Promise.all(deployHooks.map(
+    (deployHook) => fetch(deployHook, { method: 'POST' })
+      .then((res) => res.json())
+      .catch((err) => err)
+  ))
+
+  console.log('Deploy Responses:', responses)
 }
 
-deploy(env('DEPLOY_HOOK'))
+deploy(env('DEPLOY_HOOKS'))

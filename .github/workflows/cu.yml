@@ -76,6 +76,6 @@ jobs:
       - name: 🚀 Deploy
         working-directory: servers/cu
         env:
-          DEPLOY_HOOK: ${{ secrets.CU_RENDER_DEPLOY_HOOK }}
+          DEPLOY_HOOKS: ${{ secrets.CU_RENDER_DEPLOY_HOOKS }}
         run: |
           node deploy.js
