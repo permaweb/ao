@@ -1,16 +1,16 @@
-name: 🦘🔀 Test & Deploy AO Compute Unit Router
+name: 🦘🔀 Test & Deploy AO Unit Router
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "servers/cu-r/**"
+      - "servers/ur/**"
   push:
     branches:
       - main
     paths:
-      - "servers/cu-r/**"
+      - "servers/ur/**"
 
 defaults:
   run:
@@ -30,12 +30,12 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        working-directory: servers/cu-r
+        working-directory: servers/ur
         run: |
           npm i
 
       - name: ⚡ Run Tests
-        working-directory: servers/cu-r
+        working-directory: servers/ur
         run: |
           npm test
         env:
@@ -60,7 +60,7 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        working-directory: servers/cu-r
+        working-directory: servers/ur
         run: |
           npm i
 
@@ -74,7 +74,7 @@ jobs:
           VER=`npm --version`; echo "npm ver:    $VER"
 
       - name: 🚀 Deploy
-        working-directory: servers/cu-r
+        working-directory: servers/ur
         env:
           DEPLOY_HOOKS: ${{ secrets.CU_R_RENDER_DEPLOY_HOOKS }}
         run: |
