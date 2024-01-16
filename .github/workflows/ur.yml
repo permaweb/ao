@@ -1,4 +1,4 @@
-name: 🦘🔀 Test & Deploy AO Unit Router
+name: 🔀 Test & Deploy AO Unit Router
 
 on:
   pull_request:
