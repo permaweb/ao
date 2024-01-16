@@ -38,7 +38,14 @@ function aoMessengerUnitMount ({ app, revProxy }) {
   const isMessage = (dataItem) => !!dataItem.tags.find(isTagEqualTo({ name: 'Type', value: 'Message' }))
   const isProcess = (dataItem) => !!dataItem.tags.find(isTagEqualTo({ name: 'Type', value: 'Process' }))
 
-  app.get('/', (_req, res) => res.status(501).send('MU Tracing not implemented on the Router'))
+  app.get('/', (req, res, next) => {
+    if (req.query.debug) return res.status(501).send('MU Tracing not implemented on the Router')
+
+    /**
+     * Continue the request, rev proxying with a static value in order to get the roout info response from a MU
+     */
+    return revProxy({ processIdFromRequest: () => 'process' })(req, res, next)
+  })
 
   /**
    * Since the MU receives opaque data items, we have to unpack it, to know which MU
