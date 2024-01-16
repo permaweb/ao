@@ -1,9 +1,12 @@
 import { always, compose, pipe } from 'ramda'
 import express from 'express'
 import cors from 'cors'
-import { createProxyServer } from 'http-proxy'
+import httpProxy from 'http-proxy'
 import { LRUCache } from 'lru-cache'
 
+/**
+ * TODO: we could inject these, but just keeping simple for now
+ */
 import { logger } from './logger.js'
 import { config } from './config.js'
 
@@ -18,11 +21,14 @@ import { config } from './config.js'
  */
 export function determineHostWith ({ hosts = [], maxSize = 1_000_000 * 10 }) {
   const cache = new LRUCache({
+    /**
+     * Defaulted to 10MB above
+     */
     maxSize,
     /**
-     * Simply get length of string
+     * A number is 8 bytes
      */
-    sizeCalculation: (value) => value.length
+    sizeCalculation: () => 8
   })
 
   function stringToUniqueId (str) {
@@ -30,7 +36,7 @@ export function determineHostWith ({ hosts = [], maxSize = 1_000_000 * 10 }) {
   }
 
   return ({ processId, failoverAttempt }) => {
-    if (failoverAttempt >= hosts.length - 1) return
+    if (failoverAttempt >= hosts.length) return
 
     /**
      * Check cache, and hydrate if necessary
@@ -46,7 +52,7 @@ export function determineHostWith ({ hosts = [], maxSize = 1_000_000 * 10 }) {
 }
 
 function withRevProxies ({ mount, hosts }) {
-  const proxy = createProxyServer({})
+  const proxy = httpProxy.createProxyServer({})
   const determineHost = determineHostWith({ hosts })
 
   async function trampoline (init) {
@@ -73,8 +79,6 @@ function withRevProxies ({ mount, hosts }) {
     return Promise.resolve()
       .then(() => handler(req, res))
       .catch((err) => {
-        const { domain: { logger } } = req
-
         logger(err)
         if (res.writableEnded) return
         return res.status(err.status || 500).send(err || 'Internal Server Error')
@@ -99,7 +103,7 @@ function withRevProxies ({ mount, hosts }) {
          * are unimpeded by extra work
          */
         async function revProxy ({ failoverAttempt, err }) {
-          await new Promise((resolve, reject) => {
+          return new Promise((resolve, reject) => {
             const host = determineHost({ processId, failoverAttempt })
 
             /**
