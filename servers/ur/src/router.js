@@ -66,13 +66,25 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
    * If the failoverAttempts for a request are exhausted, then simply bubble the error
    * in the response.
    */
-  const withRevProxyHandler = ({ processIdFromRequest }) => {
+  const withRevProxyHandler = ({ processIdFromRequest, restreamBody }) => {
     return compose(
       withErrorHandler,
       always(async (req, res) => {
-        const processId = processIdFromRequest(req)
+        const processId = await processIdFromRequest(req)
 
         async function revProxy ({ failoverAttempt, err }) {
+          /**
+           * In cases where we have to consume the request stream before proxying
+           * it, we allow passing a restreamBody to get a fresh stream to send along
+           * on the proxied request.
+           *
+           * If not needed, then this is simply set to undefined, which uses the unconsumed
+           * request stream fro the original request object
+           *
+           * See buffer option on https://www.npmjs.com/package/http-proxy#options
+           */
+          const buffer = restreamBody ? await restreamBody(req) : undefined
+
           return new Promise((resolve, reject) => {
             const host = determineHost({ processId, failoverAttempt })
 
@@ -89,7 +101,7 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
              * Reverse proxy the request to the underlying selected host.
              * If an error occurs, return the next iteration for our trampoline to invoke.
              */
-            proxy.web(req, res, { target: host }, (err) => {
+            proxy.web(req, res, { target: host, buffer }, (err) => {
               /**
                * No error occurred, so we're done
                */
