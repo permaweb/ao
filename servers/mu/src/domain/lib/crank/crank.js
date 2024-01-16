@@ -78,7 +78,7 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
          * a message and producing an outbox. Ergo, the 'from' for subsequent messages to be cranked
          * will always be the target of the message evaluated
          */
-        const from = cachedMsg.msg.target
+        const from = cachedMsg.msg.Target
 
         logger('Processing and tracing result outbox for message %s whose parent is %s', next.id, parent)
         /**
