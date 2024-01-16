@@ -1,23 +1,19 @@
-# Use the official Node.js image as a base image
-FROM node:18-slim
+FROM node:21
 
-# Placeholder for the private key environment variable
-ENV WALLET=
+RUN apt update && apt install -y bash git
 
-# Set the working directory inside the container
-WORKDIR /ao
+WORKDIR /usr/app
 
-# Copy the package.json and package-lock.json (if available)
-COPY package*.json ./
+COPY ./package.json .
+COPY ./package-lock.json .
+COPY ./src ./src
 
-# Install the dependencies inside the container
-RUN npm install
+RUN npm install --ignore-engines
 
-# Copy the rest of the application code into the container
-COPY src ./src
+ENV NODE_ENV=production
 
-# Set the API's port number
-EXPOSE 3004
+EXPOSE 3005
 
-# Define the command to run the application
-CMD ["npm", "start"]
+ENTRYPOINT ["node"]
+
+CMD ["src/app.js"]
