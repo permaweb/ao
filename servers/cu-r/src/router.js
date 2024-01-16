@@ -85,6 +85,7 @@ function withRevProxies ({ mount, hosts, maxSize = 1_000_000 * 10 }) {
               return reject(err)
             }
 
+            logger('Reverse Proxying process %s to host %s', processId, host)
             /**
              * Reverse proxy the request to the underlying selected host.
              * If an error occurs, return the next iteration for our trampoline to invoke.
