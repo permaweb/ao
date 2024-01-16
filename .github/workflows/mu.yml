@@ -76,6 +76,6 @@ jobs:
       - name: 🚀 Deploy
         working-directory: servers/mu
         env:
-          DEPLOY_HOOK: ${{ secrets.MU_RENDER_DEPLOY_HOOK }}
+          DEPLOY_HOOKS: ${{ secrets.MU_RENDER_DEPLOY_HOOKS }}
         run: |
           node deploy.js
