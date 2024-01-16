@@ -11,7 +11,7 @@ import { logger } from './logger.js'
 import { config } from './config.js'
 import { determineHostWith } from './domain.js'
 
-function withRevProxies ({ mount, hosts, maxSize = 1_000_000 * 10 }) {
+function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
   const proxy = httpProxy.createProxyServer({})
   const cache = new LRUCache({
     /**
@@ -24,7 +24,10 @@ function withRevProxies ({ mount, hosts, maxSize = 1_000_000 * 10 }) {
     sizeCalculation: () => 8
   })
 
+  logger('Configuring to reverse proxy ao %s units...', config.aoUnit)
+
   const determineHost = determineHostWith({ hosts, cache })
+  const mount = aoUnitConfig[config.aoUnit]
 
   async function trampoline (init) {
     let result = init
@@ -123,9 +126,9 @@ function withRevProxies ({ mount, hosts, maxSize = 1_000_000 * 10 }) {
   }
 }
 
-export const router = ({ mount }) => pipe(
+export const router = (aoUnitConfig) => pipe(
   (app) => app.use(cors()),
-  withRevProxies({ ...config, mount }),
+  withRevProxies({ ...config, aoUnitConfig }),
   (app) => {
     const server = app.listen(config.port, () => {
       logger(`Server is running on http://localhost:${config.port}`)

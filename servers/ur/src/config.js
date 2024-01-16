@@ -29,7 +29,8 @@ const serverConfigSchema = z.object({
   hosts: z.preprocess(
     (arg) => (typeof arg === 'string' ? arg.split(',').map(str => str.trim()) : arg),
     z.array(z.string().url())
-  )
+  ),
+  aoUnit: z.enum(['cu', 'mu'])
 })
 
 /**
@@ -42,12 +43,19 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
-    hosts: process.env.HOSTS || ['http://127.0.0.1:3005']
+    hosts: process.env.HOSTS || ['http://127.0.0.1:3005'],
+    /**
+     * default to the CU for no hassle startup in development mode,
+     *
+     * but should consider setting explicitly in your .env
+     */
+    aoUnit: process.env.AO_UNIT || 'cu'
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
-    hosts: process.env.HOSTS
+    hosts: process.env.HOSTS,
+    aoUnit: process.env.AO_UNIT
   }
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "@permaweb/ao-cu-router",
+  "name": "@permaweb/ao-router",
   "version": "1.0.0",
   "description": "A Node Express server to serve as a reverse proxy for the underlying hosts",
   "type": "module",
