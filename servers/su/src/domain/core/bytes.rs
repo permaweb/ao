@@ -426,8 +426,10 @@ impl DataItem {
     }
 
     pub fn anchor(&self) -> String {
-        let anchor_base64 = base64_url::encode(&self.anchor);
-        anchor_base64
+        match String::from_utf8(self.anchor.clone()) {
+            Ok(s) => s,
+            Err(_) => "".to_string(), 
+        }
     }
 }
 

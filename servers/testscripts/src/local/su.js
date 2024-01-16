@@ -20,7 +20,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem2.sign(signer)
 
   const response2 = await fetch(
-    'https://ao-su-1.onrender.com',
+    'http://localhost:9000',
     {
       method: 'POST',
       headers: {
@@ -48,7 +48,7 @@ const { createData, ArweaveSigner } = WarpArBundles;
   await dataItem.sign(signer)
 
   const response = await fetch(
-    'https://ao-su-1.onrender.com',
+    'http://localhost:9000',
     {
       method: 'POST',
       headers: {
@@ -71,11 +71,11 @@ const { createData, ArweaveSigner } = WarpArBundles;
     { name: 'Test', value: 'test' }
   ]
 
-  const dataItem3 = createData(data3, signer, { tags: tags3, target: processId })
+  const dataItem3 = createData(data3, signer, { tags: tags3, target: processId, anchor: '00000000000000000000000000000001' })
   await dataItem3.sign(signer)
 
   const response3 = await fetch(
-    'https://ao-su-1.onrender.com',
+    'http://localhost:9000',
     {
       method: 'POST',
       headers: {
