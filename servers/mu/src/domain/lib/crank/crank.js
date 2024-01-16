@@ -13,7 +13,7 @@ async function eventQueue (init) {
 }
 
 function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) {
-  async function processOutboxFor ({ message, tracer, msgs = [], spawns = [] }) {
+  async function processOutboxFor ({ message, tracer, msgs = [], spawns = [], initialTxId = null }) {
     /**
      * Nothing was produced in the outbox, so simply return no events
      */
@@ -27,7 +27,7 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
      * TODO TRACER: catch err and add to trace via tracer.trace
      */
     events.push(...spawns.map((cachedSpawn) =>
-      async () => of({ cachedSpawn, tracer })
+      async () => of({ cachedSpawn, tracer, initialTxId })
         .map(logger.tap('Processing outbox spawn from result of message %s', message.id))
         .chain(processSpawn)
         /**
@@ -52,7 +52,7 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
      */
     events.push(...msgs.map((cachedMsg) =>
       async () => {
-        const { tx, msgs, spawns } = await of({ cachedMsg, tracer })
+        const { tx, msgs, spawns } = await of({ cachedMsg, tracer, initialTxId })
           .map(logger.tap('Processing outbox message from result of message %s', message.id))
           .chain(processMsg)
           .toPromise()
@@ -99,7 +99,8 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
             from
           }),
           msgs,
-          spawns
+          spawns,
+          initialTxId
         })
       }
     ))
@@ -129,7 +130,7 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
   /**
    * Begin the event queue with the initial outbox processing
    */
-  return ({ message, tracer, msgs, spawns }) => eventQueue(() => processOutboxFor({ message, tracer, msgs, spawns }))
+  return ({ message, tracer, msgs, spawns, initialTxId }) => eventQueue(() => processOutboxFor({ message, tracer, msgs, spawns, initialTxId }))
 }
 
 export function crankWith ({ processMsg, processSpawn, saveMessageTrace, logger }) {

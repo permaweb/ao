@@ -81,14 +81,15 @@ export function sendDataItemWith ({
            * An opaque method to fetch the result of the message just forwarded
            * and then crank its results
            */
-          crank: () => of(res)
+          crank: () => of({ ...res, initialTxId: res.tx.id })
             .chain(getCuAddress)
             .chain(fetchAndSaveResult)
-            .chain(({ msgs, spawns }) => crank({
+            .chain(({ msgs, spawns, initialTxId }) => crank({
               message,
               tracer,
               msgs,
-              spawns
+              spawns,
+              initialTxId
             }))
             .bimap(
               logger.tap('Failed to crank messages'),

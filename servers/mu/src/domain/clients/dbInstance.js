@@ -46,8 +46,8 @@ async function withRetry (operation, args, retryCount = 0) {
 
 export async function putMsg (doc) {
   await withRetry(db.none, [
-    'INSERT INTO "messages" ("_id", "fromTxId", "toTxId", "msg", "cachedAt", "processId") VALUES ($1, $2, $3, $4, $5, $6)',
-    [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.msg), doc.cachedAt, doc.processId]
+    'INSERT INTO "messages" ("_id", "fromTxId", "toTxId", "msg", "cachedAt", "processId", "initialTxId") VALUES ($1, $2, $3, $4, $5, $6, $7)',
+    [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.msg), doc.cachedAt, doc.processId, doc.initialTxId]
   ])
   return doc
 }
@@ -67,8 +67,8 @@ export async function deleteMsg (id) {
 
 export async function putSpawn (doc) {
   await withRetry(db.none, [
-    'INSERT INTO "spawns" ("_id", "fromTxId", "toTxId", "spawn", "cachedAt", "processId") VALUES ($1, $2, $3, $4, $5, $6)',
-    [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.spawn), doc.cachedAt, doc.processId]
+    'INSERT INTO "spawns" ("_id", "fromTxId", "toTxId", "spawn", "cachedAt", "processId", "initialTxId") VALUES ($1, $2, $3, $4, $5, $6, $7)',
+    [doc._id, doc.fromTxId, doc.toTxId, JSON.stringify(doc.spawn), doc.cachedAt, doc.processId, doc.initialTxId]
   ])
   return doc
 }

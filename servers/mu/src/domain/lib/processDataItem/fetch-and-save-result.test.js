@@ -15,14 +15,16 @@ describe('fetchAndSaveResult', () => {
       fromTxId: 'id-1',
       msg: msg1,
       cachedAt: new Date(),
-      processId: 'pid-1'
+      processId: 'pid-1',
+      initialTxId: 'i-1'
     }
     const cachedSpawn1 = {
       id: Math.floor(Math.random() * 1e18).toString(),
       fromTxId: 'id-1',
       spawn: spawn1,
       cachedAt: new Date(),
-      processId: 'pid-1'
+      processId: 'pid-1',
+      initialTxId: 'i-1'
     }
     const fetchAndSaveResult = fetchAndSaveResultWith({
       fetchResult: async (id) => {
@@ -63,7 +65,8 @@ describe('fetchAndSaveResult', () => {
           assert.ok(typeof s === 'string')
           return 1
         }
-      })
+      }),
+      initialTxId: 'i-1'
     }).toPromise()
 
     assert.deepStrictEqual(result.msgs[0], cachedMsg1)
