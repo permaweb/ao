@@ -188,7 +188,7 @@ jobs:
 
           until [[ $(ardrive list-folder \
             --parent-folder-id "${FOLDER_ID}" \
-            | jq 'length') -gt 0 ]]; do
+            | jq 'length') -ge 4 ]]; do
             echo "ArDrive folder binaries have not yet synced. Sleeping for 2 seconds..."
             sleep 2
           done
