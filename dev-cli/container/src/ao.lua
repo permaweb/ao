@@ -7,7 +7,7 @@ local ao = {
     outbox = {Messages = {}, Spawns = {}}
 }
 
-function isArray(table)
+local function isArray(table)
     if type(table) == "table" then
         local maxIndex = 0
         for k, v in pairs(table) do
@@ -21,6 +21,8 @@ function isArray(table)
     end
     return false
 end
+
+local function padZero32(num) return string.format("%032d", num) end
 
 function ao.init(env)
     if ao.id == "" then ao.id = env.Process.Id end
@@ -54,7 +56,7 @@ function ao.send(msg)
     local message = {
         Target = msg.Target,
         Data = msg.Data,
-        Anchor = tostring(ao._ref),
+        Anchor = padZero32(ao._ref),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
@@ -93,7 +95,7 @@ function ao.spawn(module, msg)
 
     local spawn = {
         Data = data,
-        Anchor = tostring(ao._ref),
+        Anchor = padZero32(ao._ref),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
@@ -134,6 +136,7 @@ function ao.isTrusted(msg)
 end
 
 function ao.result(result)
+    ao._ref = 0
     return {
         Output = result.Output or '',
         Messages = ao.outbox.Messages,
