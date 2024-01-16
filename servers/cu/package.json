@@ -6,8 +6,6 @@
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon",
-    "docker-build": "docker build -t cu-app .",
-    "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
     "heapdump": "kill -USR2",
     "start": "node src/app.js",
     "test": "node --test ./src"
