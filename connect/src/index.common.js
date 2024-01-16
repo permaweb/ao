@@ -13,8 +13,8 @@ import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
-const DEFAULT_MU_URL = 'https://ao-mu-1.onrender.com'
-const DEFAULT_CU_URL = 'https://ao-cu-1.onrender.com'
+const DEFAULT_MU_URL = 'https://ao-mu-router-1.onrender.com'
+const DEFAULT_CU_URL = 'https://ao-cu-router-1.onrender.com'
 
 /**
  * Build the sdk apis using the provided ao component urls. You can currently specify
