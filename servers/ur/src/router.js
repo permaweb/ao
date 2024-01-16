@@ -72,10 +72,6 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
       always(async (req, res) => {
         const processId = processIdFromRequest(req)
 
-        /**
-         * designed to only log in error cases, so that happy paths
-         * are unimpeded by extra work
-         */
         async function revProxy ({ failoverAttempt, err }) {
           return new Promise((resolve, reject) => {
             const host = determineHost({ processId, failoverAttempt })
