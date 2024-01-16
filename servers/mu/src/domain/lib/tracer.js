@@ -23,7 +23,7 @@ export function tracerFor ({ message, parent, from }) {
       children,
       spawns,
       from,
-      to: message.target,
+      to: message.Target || message.target,
       message,
       trace,
       tracedAt
