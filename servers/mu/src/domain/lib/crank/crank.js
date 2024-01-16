@@ -1,7 +1,8 @@
-import { of, fromPromise } from 'hyper-async'
+import { of, fromPromise, Resolved } from 'hyper-async'
 import { isNil, isEmpty, anyPass } from 'ramda'
 
 import { tracerFor } from '../tracer.js'
+import { errFrom } from '../../utils.js'
 
 const isNilOrEmpty = anyPass([isNil, isEmpty])
 
@@ -30,6 +31,14 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
       async () => of({ cachedSpawn, tracer, initialTxId })
         .map(logger.tap('Processing outbox spawn from result of message %s', message.id))
         .chain(processSpawn)
+        .bichain(
+          (error) => {
+            const parsedError = errFrom(error)
+            tracer.trace(`Error occured processing outbox spawn ${parsedError.message} ${parsedError.stack}`)
+            return Resolved({ error })
+          },
+          (res) => Resolved(res)
+        )
         /**
          * No more events to push onto the event queue
          */
@@ -52,10 +61,24 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
      */
     events.push(...msgs.map((cachedMsg) =>
       async () => {
-        const { tx, msgs, spawns } = await of({ cachedMsg, tracer, initialTxId })
+        const result = await of({ cachedMsg, tracer, initialTxId })
           .map(logger.tap('Processing outbox message from result of message %s', message.id))
           .chain(processMsg)
+          .bichain(
+            (error) => {
+              const parsedError = errFrom(error)
+              tracer.trace(`Error occured processing outbox ${parsedError.message} ${parsedError.stack}`)
+              return Resolved({ error })
+            },
+            (res) => Resolved(res)
+          )
           .toPromise()
+
+        if (result.error) {
+          return []
+        }
+
+        const { tx, msgs, spawns } = result
 
         /**
          * The id for cachedMsg is not determined until the MU parses it into a data item,

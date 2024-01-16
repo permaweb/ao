@@ -114,7 +114,8 @@ export const createApis = (ctx) => {
     findLatestMsgs: dataStoreClient.findLatestMsgsWith({ dbInstance, logger: sendDataItemLogger }),
     findLatestSpawns: dataStoreClient.findLatestSpawnsWith({ dbInstance, logger: sendDataItemLogger }),
     crank: crankMsgs,
-    logger: sendDataItemLogger
+    logger: sendDataItemLogger,
+    saveMessageTrace: dataStoreClient.saveMessageTraceWith({ dbInstance, logger: sendDataItemLogger })
   })
 
   const monitorProcessLogger = logger.child('monitorProcess')

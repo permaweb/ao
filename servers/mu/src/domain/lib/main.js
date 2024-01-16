@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
 
 import { getCuAddressWith } from './processDataItem/get-cu-address.js'
 import { writeMessageTxWith } from './processDataItem/write-message-tx.js'
@@ -18,6 +18,7 @@ import { tracerFor } from './tracer.js'
 import { verifyParsedDataItemWith } from './processDataItem/verify-parsed-data-item.js'
 import { writeProcessTxWith } from './processDataItem/write-process-tx.js'
 import { loadTracesWith } from './traceMsgs/load-traces.js'
+import { errFrom } from '../utils.js'
 
 /**
  * Forward along the DataItem to the SU,
@@ -37,7 +38,8 @@ export function sendDataItemWith ({
   findLatestMsgs,
   findLatestSpawns,
   crank,
-  logger
+  logger,
+  saveMessageTrace
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -75,6 +77,20 @@ export function sendDataItemWith ({
     .chain(({ message, tracer, ...rest }) =>
       of({ ...rest, tracer })
         .chain(writeMessage)
+        .bichain(
+          (error) => {
+            return of(error)
+              .map((e) => {
+                tracer.trace(errFrom(e).stack)
+                return tracer
+              })
+              .map((trc) => trc.unwrap())
+              .map(logger.tap('Initial message failed %s', message.id))
+              .chain(fromPromise(saveMessageTrace))
+              .chain(() => Rejected(error))
+          },
+          (res) => Resolved(res)
+        )
         .map(res => ({
           ...res,
           /**
@@ -93,7 +109,7 @@ export function sendDataItemWith ({
             }))
             .bimap(
               logger.tap('Failed to crank messages'),
-              logger.tap('Successfully cranked messages')
+              logger.tap('Cranking complete')
             )
         }))
     )
