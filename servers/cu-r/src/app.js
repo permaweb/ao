@@ -2,6 +2,7 @@ import { always, compose, pipe } from 'ramda'
 import express from 'express'
 import cors from 'cors'
 import { createProxyServer } from 'http-proxy'
+import { LRUCache } from 'lru-cache'
 
 import { logger } from './logger.js'
 import { config } from './config.js'
@@ -15,14 +16,32 @@ import { config } from './config.js'
  * If the failoverAttempt exceeds the length of valid hosts list, then every host has
  * been attempted, and so return undefined, to be handled upstream
  */
-export function determineHostWith ({ hosts = [] }) {
+export function determineHostWith ({ hosts = [], maxSize = 1_000_000 * 10 }) {
+  const cache = new LRUCache({
+    maxSize,
+    /**
+     * Simply get length of string
+     */
+    sizeCalculation: (value) => value.length
+  })
+
   function stringToUniqueId (str) {
     return str.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
   }
 
   return ({ processId, failoverAttempt }) => {
     if (failoverAttempt >= hosts.length - 1) return
-    return hosts[(stringToUniqueId(processId) + failoverAttempt) % hosts.length]
+
+    /**
+     * Check cache, and hydrate if necessary
+     */
+    let uniqueId = cache.get(processId)
+    if (!uniqueId) {
+      uniqueId = stringToUniqueId(processId)
+      cache.set(processId, uniqueId)
+    }
+
+    return hosts[(uniqueId + failoverAttempt) % hosts.length]
   }
 }
 
