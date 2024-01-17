@@ -1,4 +1,4 @@
-import { pipeline, Transform } from 'node:stream'
+import { pipeline, Readable, Transform } from 'node:stream'
 
 import { of } from 'hyper-async'
 import { mergeRight } from 'ramda'
@@ -51,17 +51,11 @@ export function maybeMessageIdWith ({ logger }) {
    * has already been evaluated, and therefore should be skipped during the current eval
    * (ie. a message was cranked twice)
    */
-  async function calcDataItemDeepHash ({ id, data, tags, target, anchor }) {
+  async function calcDataItemDeepHash ({ data, tags, target, anchor }) {
     return Promise.resolve()
       .then(() => createData(data, signer, { tags, target, anchor }))
       .then((dataItem) => dataItem.getSignatureData())
       .then(bytesToBase64)
-      .catch((err) => {
-        const newErr = errFrom(err)
-        newErr.message = `Encountered err when calculating deephash of forwarded message '${id}' to 'process' ${target}: ` + `'${newErr.message}'`
-        newErr.status = 422
-        return Promise.reject(newErr)
-      })
   }
 
   return async function * maybeMessageId (messages) {
@@ -75,13 +69,25 @@ export function maybeMessageIdWith ({ logger }) {
       }
 
       logger('Message "%s" is forwarded. Calculating messageId...', cur.message.Id)
-      cur.deepHash = await calcDataItemDeepHash({
-        id: cur.message.Id,
-        data: cur.message.Data,
-        tags: cur.message.Tags,
-        target: cur.message.Target,
-        anchor: cur.message.Anchor
-      })
+      try {
+        cur.deepHash = await calcDataItemDeepHash({
+          data: cur.message.Data,
+          tags: cur.message.Tags,
+          target: cur.message.Target,
+          anchor: cur.message.Anchor
+        })
+      } catch (err) {
+        // TODO: is skipping over the message the proper thing to do here?
+        const newErr = errFrom(err)
+        logger(
+          'Encountered err when calculating deephash of forwarded message %s to %s. Skipping its evaluation...',
+          cur.message.Id,
+          cur.message.Target,
+          newErr
+        )
+        continue
+      }
+
       yield cur
     }
   }
@@ -163,9 +169,24 @@ export function hydrateMessagesWith (env) {
   return (ctx) => {
     return of(ctx)
       .map(({ messages: $messages }) => {
+        const maybeMessageIdStream = Readable.from(maybeMessageId($messages), { objectMode: true })
+
+        /**
+         * There is some sort of bug in pipeline which will consistently cause this stream
+         * to not end IFF it emits an error.
+         *
+         * When errors are thrown in other places, pipeline seems to work and close the stream just fine.
+         * So not sure what's going on here.
+         *
+         * This seemed to be the only way to successfully
+         * end the stream, thus closing the pipeline.
+         *
+         * See https://github.com/nodejs/node/issues/40279#issuecomment-1061124430
+         */
+        maybeMessageIdStream.on('error', () => maybeMessageIdStream.emit('end'))
+
         return pipeline(
-          $messages,
-          Transform.from(maybeMessageId),
+          maybeMessageIdStream,
           Transform.from(maybeAoLoad),
           (err) => {
             if (err) logger('Encountered err when hydrating Load and forwarded-for messages', err)
