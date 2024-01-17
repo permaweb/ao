@@ -7,7 +7,7 @@ import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { streamSchema } from '../model.js'
-import { findRawTag } from '../utils.js'
+import { errFrom, findRawTag } from '../utils.js'
 
 const { createData } = WarpArBundles
 
@@ -51,10 +51,17 @@ export function maybeMessageIdWith ({ logger }) {
    * has already been evaluated, and therefore should be skipped during the current eval
    * (ie. a message was cranked twice)
    */
-  async function calcDataItemDeepHash ({ data, tags, target, anchor }) {
-    const dataItem = createData(data, signer, { tags, target, anchor })
-    const deepHashBinary = await dataItem.getSignatureData()
-    return bytesToBase64(deepHashBinary)
+  async function calcDataItemDeepHash ({ id, data, tags, target, anchor }) {
+    return Promise.resolve()
+      .then(() => createData(data, signer, { tags, target, anchor }))
+      .then((dataItem) => dataItem.getSignatureData())
+      .then(bytesToBase64)
+      .catch((err) => {
+        const newErr = errFrom(err)
+        newErr.message = `Encountered err when calculating deephash of forwarded message '${id}' to 'process' ${target}: ` + `'${newErr.message}'`
+        newErr.status = 422
+        return Promise.reject(newErr)
+      })
   }
 
   return async function * maybeMessageId (messages) {
@@ -69,6 +76,7 @@ export function maybeMessageIdWith ({ logger }) {
 
       logger('Message "%s" is forwarded. Calculating messageId...', cur.message.Id)
       cur.deepHash = await calcDataItemDeepHash({
+        id: cur.message.Id,
         data: cur.message.Data,
         tags: cur.message.Tags,
         target: cur.message.Target,
