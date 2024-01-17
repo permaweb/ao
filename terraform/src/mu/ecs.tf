@@ -32,7 +32,7 @@ resource "aws_ecs_task_definition" "mu_task" {
       name        = "mu-task-definition"
       image       = "${aws_ecr_repository.mu_ecr.0.repository_url}:${aws_ssm_parameter.mu_ecr_image_revision.0.value}"
       essential   = true
-      environment = var.ecs_environment_variables
+      environment = concat(var.ecs_environment_variables, [])
       logConfiguration : {
         logDriver : "awslogs"
         options : {

@@ -28,3 +28,8 @@ variable "private_subnet_ids" {
   description = "list of private subnet ids"
   type        = list(string)
 }
+
+variable "ao_wallet_arn" {
+  description = "The ARN of the AWS Secrets Manager secret that contains the AO wallet json string"
+  type        = string
+}

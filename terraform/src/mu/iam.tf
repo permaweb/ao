@@ -91,6 +91,13 @@ EOF
           ]
           Effect   = "Allow"
           Resource = "*"
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "SecretsManager:GetSecretValue"
+          ]
+          Resource = var.ao_wallet_arn
         }
       ]
     })
