@@ -62,7 +62,7 @@ export function maybeMessageIdWith ({ logger }) {
       /**
        * Not forwarded, so no need to calculate a message id
        */
-      if (!cur.message['Forwarded-By']) {
+      if (!cur.message['Forwarded-For']) {
         yield cur
         continue
       }

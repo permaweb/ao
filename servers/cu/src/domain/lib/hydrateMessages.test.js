@@ -53,12 +53,12 @@ describe('hydrateMessages', () => {
       message: {
         Id: 'message-tx-456',
         Signature: 'sig-123',
-        'Forwarded-By': 'process-123',
+        'Forwarded-For': 'process-123',
         Tags: [
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'ao-type', value: 'message' },
           { name: 'function', value: 'notify' },
-          { name: 'Forwarded-By', value: 'process-123' }
+          { name: 'Forwarded-For', value: 'process-123' }
         ],
         Data: 'foobar'
       }
