@@ -1,20 +1,20 @@
-# Use the official Node.js image as a base image
-FROM node:18-slim
+FROM node:21
 
-# Set the working directory inside the container
-WORKDIR /ao
+RUN apt update && apt install -y bash git awscli
 
-# Copy the package.json and package-lock.json (if available)
-COPY package*.json ./
+WORKDIR /usr/app
 
-# Install the dependencies inside the container
-RUN npm install
+COPY ./package.json .
+COPY ./package-lock.json .
+COPY ./src ./src
+COPY ./entrypoint.sh ./entrypoint.sh
 
-# Copy the rest of the application code into the container
-COPY src ./src
+RUN chmod +x /usr/app/entrypoint.sh
 
-# Set the API's port number
-EXPOSE 3005
+RUN npm install --ignore-engines
 
-# Define the command to run the application
-CMD ["npm", "start"]
+ENV NODE_ENV=production
+
+EXPOSE 6363
+
+ENTRYPOINT ["/usr/app/entrypoint.sh"]

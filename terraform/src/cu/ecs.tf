@@ -1,10 +1,10 @@
 locals {
-  container_port = 3005
+  container_port = 6363
 }
 
-resource "aws_ecs_cluster" "mu_cluster" {
+resource "aws_ecs_cluster" "cu_cluster" {
   count = var.enabled ? 1 : 0
-  name  = "mu-cluster"
+  name  = "cu-cluster"
 
   setting {
     name  = "containerInsights"
@@ -12,29 +12,29 @@ resource "aws_ecs_cluster" "mu_cluster" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "mu_cluster" {
+resource "aws_cloudwatch_log_group" "cu_cluster" {
   count = var.enabled ? 1 : 0
-  name  = "/ecs/mu-cluster"
+  name  = "/ecs/cu-cluster"
 }
 
-resource "aws_ecs_task_definition" "mu_task" {
+resource "aws_ecs_task_definition" "cu_task" {
   count  = var.enabled ? 1 : 0
-  family = "mu"
+  family = "cu"
 
   requires_compatibilities = [
     "FARGATE",
   ]
 
-  execution_role_arn = aws_iam_role.mu_fargate_role.0.arn
-  task_role_arn      = aws_iam_role.mu_task_role.0.arn
+  execution_role_arn = aws_iam_role.cu_fargate_role.0.arn
+  task_role_arn      = aws_iam_role.cu_task_role.0.arn
   network_mode       = "awsvpc"
   cpu                = 512
   memory             = 1024
 
   container_definitions = jsonencode([
     {
-      name      = "mu-task-definition"
-      image     = "${aws_ecr_repository.mu_ecr.0.repository_url}:${aws_ssm_parameter.mu_ecr_image_revision.0.value}"
+      name      = "cu-task-definition"
+      image     = "${aws_ecr_repository.cu_ecr.0.repository_url}:${aws_ssm_parameter.cu_ecr_image_revision.0.value}"
       essential = true
       environment = concat(var.ecs_environment_variables, [{
         name  = "PORT"
@@ -49,7 +49,7 @@ resource "aws_ecs_task_definition" "mu_task" {
       logConfiguration : {
         logDriver : "awslogs"
         options : {
-          awslogs-group : aws_cloudwatch_log_group.mu_cluster.0.name
+          awslogs-group : aws_cloudwatch_log_group.cu_cluster.0.name
           awslogs-region : var.region
           awslogs-stream-prefix : "ecs"
         }
@@ -58,10 +58,10 @@ resource "aws_ecs_task_definition" "mu_task" {
   ])
 }
 
-resource "aws_security_group" "mu_ecs_security_group" {
+resource "aws_security_group" "cu_ecs_security_group" {
   count       = var.enabled ? 1 : 0
-  name        = "MU Security Group"
-  description = "MU Security Group"
+  name        = "CU Security Group"
+  description = "CU Security Group"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -80,15 +80,15 @@ resource "aws_security_group" "mu_ecs_security_group" {
 
 }
 
-resource "aws_ecs_service" "mu_service" {
+resource "aws_ecs_service" "cu_service" {
   count           = var.enabled ? 1 : 0
-  name            = "mu-service"
-  cluster         = aws_ecs_cluster.mu_cluster.0.id
-  task_definition = aws_ecs_task_definition.mu_task.0.arn
+  name            = "cu-service"
+  cluster         = aws_ecs_cluster.cu_cluster.0.id
+  task_definition = aws_ecs_task_definition.cu_task.0.arn
   desired_count   = 1
 
   network_configuration {
-    security_groups = [aws_security_group.mu_ecs_security_group.0.id]
+    security_groups = [aws_security_group.cu_ecs_security_group.0.id]
     subnets         = var.private_subnet_ids
   }
 

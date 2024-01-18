@@ -21,16 +21,15 @@ variable "ecs_environment_variables" {
 variable "vpc_id" {
   description = "vpc id"
   type        = string
-
-}
-
-variable "private_subnet_ids" {
-  description = "list of private subnet ids"
-  type        = list(string)
 }
 
 variable "private_subnet_cidrs" {
   description = "list of private subnet cidrs"
+  type        = list(string)
+}
+
+variable "private_subnet_ids" {
+  description = "list of private subnet ids"
   type        = list(string)
 }
 
