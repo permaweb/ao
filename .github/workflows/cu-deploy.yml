@@ -30,7 +30,7 @@ jobs:
 
       - name: Build and push the tagged docker image to Amazon ECR
         id: build-image
-        working-directory: servers/mu
+        working-directory: servers/cu
         run: |
           aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REGISTRY
           docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_IMAGE_NAME }}:$GITHUB_SHA .
