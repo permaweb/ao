@@ -122,7 +122,8 @@ export const loadMessageMetaSchema = z.function()
   .returns(z.promise(
     z.object({
       processId: z.string().min(1),
-      timestamp: z.number()
+      timestamp: z.number(),
+      nonce: z.number()
     })
   ))
 

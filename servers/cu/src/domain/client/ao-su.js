@@ -212,7 +212,8 @@ export const loadMessageMetaWith = ({ fetch }) => {
       .then(res => res.json())
       .then(res => ({
         processId: res.process_id,
-        timestamp: res.timestamp
+        timestamp: res.timestamp,
+        nonce: res.nonce
       }))
   }
 }
