@@ -20,7 +20,7 @@ describe('loadMessageMeta', () => {
           processId: 'process-123',
           messageTxId: 'message-tx-123'
         })
-        return { processId: 'process-123', timestamp: 1697574792000 }
+        return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
       },
       logger
     })
@@ -28,6 +28,6 @@ describe('loadMessageMeta', () => {
     const res = await loadMessageMeta({ processId: 'process-123', messageTxId: 'message-tx-123' })
       .toPromise()
 
-    assert.deepStrictEqual(res, { processId: 'process-123', timestamp: 1697574792000 })
+    assert.deepStrictEqual(res, { processId: 'process-123', timestamp: 1697574792000, nonce: 1 })
   })
 })

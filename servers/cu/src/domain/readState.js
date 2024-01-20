@@ -28,16 +28,21 @@ export function readStateWith (env) {
   const loadModule = loadModuleWith(env)
   const evaluate = evaluateWith(env)
 
-  return ({ processId, to }) => {
-    return of({ id: processId, to })
+  return ({ processId, to, ordinate }) => {
+    return of({ id: processId, to, ordinate })
       .chain(loadProcess)
       .chain(res => {
         /**
          * The exact evaluation (identified by its input messages timestamp)
          * was found in the cache, so just return it
          */
-        if (res.from && res.from === to) {
-          env.logger('Exact match to cached evaluation for message "%s" to process "%s"', to, processId)
+        if (res.from && res.from === to && res.ordinate === ordinate) {
+          env.logger(
+            'Exact match to cached evaluation for message "%s:%s" to process "%s"',
+            to,
+            ordinate,
+            processId
+          )
           return Resolved(res.result)
         }
 
