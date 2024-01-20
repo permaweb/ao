@@ -4,7 +4,7 @@ local ao = {
     _module = "",
     authorities = {},
     _ref = 0,
-    outbox = {Messages = {}, Spawns = {}}
+    outbox = {Output = {}, Messages = {}, Spawns = {}}
 }
 
 local function isArray(table)
@@ -41,13 +41,20 @@ function ao.init(env)
         end
     end
 
-    ao.outbox = {Messages = {}, Spawns = {}}
+    ao.outbox = {Output = {}, Messages = {}, Spawns = {}}
     ao.env = env
 
 end
 
+function ao.log(txt)
+    if type(ao.outbox.Output) == 'string' then
+        ao.outbox.Output = {ao.outbox.Output}
+    end
+    table.insert(ao.outbox.Output, txt)
+end
+
 -- clears outbox
-function ao.clearOutbox() ao.outbox = {Messages = {}, Spawns = {}} end
+function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}} end
 
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
@@ -138,7 +145,7 @@ end
 function ao.result(result)
     ao._ref = 0
     return {
-        Output = result.Output or '',
+        Output = result.Output or ao.outbox.Output,
         Messages = ao.outbox.Messages,
         Spawns = ao.outbox.Spawns
     }
