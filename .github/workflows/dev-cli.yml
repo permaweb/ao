@@ -75,6 +75,7 @@ jobs:
     # Releases are performed via a workflow dispatch
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     concurrency:
       group: release
     steps:
