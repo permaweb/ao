@@ -168,64 +168,45 @@ export function cronMessagesBetweenWith ({
     const leftOrdinate = left.ordinate
 
     /**
-     * Start at left's block height, incrementing 1 block per iteration until we get to right's block height
-     *  - for each block-based cron, check if any illicits a cron message being produced
-     *  - for each second between this block and the next,
-     *    check if any time-based crons illicit a cron message being produced
-     *
-     * We must iterate by block, in order to pass the correct block information to the process
+     * Grab the blocks that are between the left and right boundary,
+     * according to their timestamp
      */
-    for (let curHeight = leftBlock.height; curHeight < rightBlock.height; curHeight++) {
-      const curBlock = blocksMeta.find((b) => b.height === curHeight)
-      const nextBlock = blocksMeta.find((b) => b.height === curHeight + 1)
+    const blocksInRange = blocksMeta.filter((b) =>
+      b.timestamp > leftBlock.timestamp &&
+      b.timestamp < rightBlock.timestamp
+    )
+
+    /**
+     * Start at the left block timestamp, incrementing one second per iteration.
+     * - if our current time gets up to the next block, then check for any block-based cron messages to generate
+     * - Check for any timebased crons to generate on each tick
+     *
+     * The curBlock always starts at the leftBlock, then increments as we tick
+     */
+    let curBlock = leftBlock
+    for (let curTimestamp = leftBlock.timestamp; curTimestamp < rightBlock.timestamp; curTimestamp += 1000) {
       /**
-       * Block-based cron messages
+       * We've ticked up to our next block
+       * so check if it's on a Cron Interval
        *
-       * Block-based messages will always be pushed onto the stream of messages
-       * before time-based messages, which is predictable and deterministic
+       * This way, Block-based messages will always be pushed onto the stream of messages
+       * before time-based messages
        */
-      for (let i = 0; i < blockBased.length; i++) {
-        const cron = blockBased[i]
+      const nextBlock = blocksInRange[0]
+      if (nextBlock && Math.floor(curTimestamp / 1000) >= Math.floor(nextBlock.timestamp / 1000)) {
+        /**
+         * Make sure to remove the block from our range,
+         * since we've ticked past it,
+         *
+         * and save it as the new current block
+         */
+        curBlock = blocksInRange.shift()
 
-        if (isBlockOnCron({ height: curBlock.height, originHeight: originBlock.height, cron })) {
-          logger('Generating Block based Cron Message for cron "%s" at block "%s"', `${i}-${cron.interval}`, curBlock.height)
-          yield {
-            cron: `${i}-${cron.interval}`,
-            ordinate: leftOrdinate,
-            message: {
-              Owner: processOwner,
-              Target: processId,
-              From: processOwner,
-              Tags: cron.message.tags,
-              Timestamp: curBlock.timestamp,
-              'Block-Height': curBlock.height,
-              Cron: true
-            },
-            AoGlobal: {
-              Process: { Id: processId, Owner: processOwner, Tags: processTags }
-            }
-          }
-        }
-      }
+        for (let i = 0; i < blockBased.length; i++) {
+          const cron = blockBased[i]
 
-      /**
-       * If there are no time-based crons, then there is no reason to tick
-       * through epochs, so simply skip to the next block
-       */
-      if (!timeBased.length) continue
-
-      /**
-       * Time based cron messages.
-       *
-       * For each second between the current block and the next block, check if any time-based
-       * crons need to generate an implicit message
-       */
-      for (let curTimestamp = curBlock.timestamp; curTimestamp < nextBlock.timestamp; curTimestamp += 1000) {
-        for (let i = 0; i < timeBased.length; i++) {
-          const cron = timeBased[i]
-
-          if (isTimestampOnCron({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, cron })) {
-            logger('Generating Time based Cron Message for cron "%s" at timestamp "%s"', `${i}-${cron.interval}`, curTimestamp)
+          if (isBlockOnCron({ height: curBlock.height, originHeight: originBlock.height, cron })) {
+            logger('Generating Block based Cron Message for cron "%s" at block "%s"', `${i}-${cron.interval}`, curBlock.height)
             yield {
               cron: `${i}-${cron.interval}`,
               ordinate: leftOrdinate,
@@ -234,7 +215,7 @@ export function cronMessagesBetweenWith ({
                 Target: processId,
                 From: processOwner,
                 Tags: cron.message.tags,
-                Timestamp: curTimestamp,
+                Timestamp: curBlock.timestamp,
                 'Block-Height': curBlock.height,
                 Cron: true
               },
@@ -246,7 +227,29 @@ export function cronMessagesBetweenWith ({
         }
       }
 
-      // TODO implement CRON string based cron messages
+      for (let i = 0; i < timeBased.length; i++) {
+        const cron = timeBased[i]
+
+        if (isTimestampOnCron({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, cron })) {
+          logger('Generating Time based Cron Message for cron "%s" at timestamp "%s"', `${i}-${cron.interval}`, curTimestamp)
+          yield {
+            cron: `${i}-${cron.interval}`,
+            ordinate: leftOrdinate,
+            message: {
+              Owner: processOwner,
+              Target: processId,
+              From: processOwner,
+              Tags: cron.message.tags,
+              Timestamp: curTimestamp,
+              'Block-Height': curBlock.height,
+              Cron: true
+            },
+            AoGlobal: {
+              Process: { Id: processId, Owner: processOwner, Tags: processTags }
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -315,8 +318,8 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
         .map((currentBlock) => ({
           /**
            * The left most boundary is:
-           * 1. when cold starting: is the origin block of the process -- the current block at the the time the process was sent to a SU
-           * 2. when hot-starting: the block height and timestamp of the most recently evaluated message
+           * a. when cold starting: is the origin block of the process -- the current block at the the time the process was sent to a SU
+           * b. when hot-starting: the block height and timestamp of the most recently evaluated message
            *
            * We also initilize the ordinate here, which will be used to "generate" an orderable
            * ordinate for generated Cron messages. This value is usually the nonce of the most recent

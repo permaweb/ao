@@ -131,13 +131,15 @@ export const evaluationSchema = z.object({
   processId: z.string().min(1),
   /**
    * Cron messages do not have a messageId
+   * and so can be undefined
    */
   messageId: z.string().min(1).nullish(),
   timestamp: z.coerce.number(),
   ordinate: z.coerce.string(),
   blockHeight: z.coerce.number(),
   /**
-   * Scheduled messages do not have a cron
+   * Scheduled messages do not have a cron,
+   * and so can be undefined
    */
   cron: z.string().nullish(),
   /**

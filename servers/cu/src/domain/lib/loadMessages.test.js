@@ -307,7 +307,7 @@ describe('loadMessages', () => {
      * Should produce 15 cron messages,
      * for a total of 17 including the actual messages
      */
-    const scheduledMessagesStartTime = originTime + ms('35m')
+    const scheduledMessagesStartTime = originTime + ms('20m')
     const blocksMeta = [
       // {
       //   height: originHeight + 10,
@@ -320,7 +320,7 @@ describe('loadMessages', () => {
       // The first scheduled message is on this block
       {
         height: originHeight + 12,
-        timestamp: scheduledMessagesStartTime // 35m
+        timestamp: scheduledMessagesStartTime + ms('15m') // 35m
       },
       /**
        * 2 block-based:
@@ -334,7 +334,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 13,
-        timestamp: scheduledMessagesStartTime + ms('16m') // 51m
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') // 51m
       },
       /**
        * 0 block-based
@@ -348,7 +348,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 14,
-        timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') // 80m
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') + ms('29m') // 80m
       },
       /**
        * 2 block-based
@@ -361,7 +361,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 15,
-        timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') // 95m
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') + ms('29m') + ms('15m') // 95m
       },
       /**
        * 0 block-based
@@ -372,7 +372,7 @@ describe('loadMessages', () => {
        */
       {
         height: originHeight + 16,
-        timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
       }
       /**
        * NOT SCHEDULED BECAUSE OUTSIDE BLOCK RANGE
@@ -391,7 +391,7 @@ describe('loadMessages', () => {
       // left
       {
         block: {
-          height: originHeight + 12,
+          height: originHeight + 11,
           timestamp: scheduledMessagesStartTime
         },
         ordinate: 1
