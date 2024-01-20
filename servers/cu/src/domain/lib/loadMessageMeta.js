@@ -18,7 +18,12 @@ const ctxSchema = z.object({
   timestamp: z.number().refine((val) => !!val, {
     message: 'timestamp must be attached to context'
   }),
-  nonce: z.number().refine((val) => !!val, {
+  /**
+   * nonce can be 0, so we can't just use falsey here.
+   *
+   * So instead cast to null and compare
+   */
+  nonce: z.number().refine((val) => val != null, {
     message: 'nonce must be attached to context'
   })
 }).passthrough()
