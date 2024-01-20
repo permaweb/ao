@@ -314,9 +314,9 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
          */
         .map((currentBlock) => ({
           /**
-           * The left most boundary is the origin block of the process -- the current block
-           * at the the time the process was sent to a SU
-           * OR the block height and timestamp of the most recently evaluated message
+           * The left most boundary is:
+           * 1. when cold starting: is the origin block of the process -- the current block at the the time the process was sent to a SU
+           * 2. when hot-starting: the block height and timestamp of the most recently evaluated message
            *
            * We also initilize the ordinate here, which will be used to "generate" an orderable
            * ordinate for generated Cron messages. This value is usually the nonce of the most recent
@@ -324,8 +324,12 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
            */
           leftMost: { ordinate: ctx.ordinate, block: ctx.from ? { height: ctx.fromBlockHeight, timestamp: ctx.from } : ctx.block },
           /**
-           * The right most boundary is always the provided to timestamp
-           * OR the current block timestamp according to the su
+           * The right most boundary is derived from:
+           * 1. when evaluating up to a specific scheduled message: the provided 'to' which is the messages timestamp
+           * 2. when evaluating up to the present: the current block timestamp according to the su
+           *
+           * This timestamp is then used to load the block metadata from the gateway,
+           * so generated Cron Messages can have accurate block height metadata
            */
           rightMostTimestamp: ctx.to || currentBlock.timestamp
         }))
@@ -338,7 +342,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
             .map(blocksMeta => {
               return {
                 leftMost,
-                rightMost: { block: last(blocksMeta) },
+                blocksMeta,
                 $scheduled: ctx.$scheduled,
                 /**
                  * Our iterating function that accepts a left and right boundary
@@ -361,22 +365,18 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
           logger('Merging Streams of Scheduled and Cron Messages...')
           return ctx
         })
-        .map(({ leftMost, rightMost, $scheduled, genCronMessages }) => {
+        .map(({ leftMost, blocksMeta, $scheduled, genCronMessages }) => {
           return pipeline(
             /**
              * Given a left-most and right-most boundary, return an async generator,
-             * that given a list of values, emits sequential binary tuples dervied from those values,
-             * with an additional element appended and prepended to the list of values.
+             * that given a list of values, emits sequential binary tuples dervied from those values.
              *
-             * This effectively places an tuple aperture on the incoming stream of single values,
-             * and with andditional element at the beginning and end of the list
+             * This effectively places an tuple aperture on the incoming stream of single values
              *
-             * Since we added our left and right bounds, there should always
-             * be at least one tuple emitted, which will account for any time
-             * we have <2 scheduled messages to use as boundaries.
-             *
-             * If our leftMost and rightMost boundary are the only boundaries, this effectively means
-             * that we have no scheduled messages to merge and evaluate, and only cron messages to generate
+             * There should always be at least one tuple emitted. We will always have a leftMost boundary,
+             * but the right boundary will depend on which value is greater:
+             * a. the right most (newest) scheduled message OR
+             * b. the right most (newest) block from blocksMeta
              *
              * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
              */
@@ -394,24 +394,71 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                * Our messages retrieved from the SU are perfect boundaries, as they each have a
                * block height and timestamp, as well as a ordinate set to its nonce.
                *
-               * This will allow the CU to generate cron messages that orderable in and amongst the scheduled message,
-               * and with accurate block metadata, at least w.r.t the SU's claims.
+               * This will allow the CU to generate cron messages that are orderable in and
+               * amongst the scheduled message, and with accurate block metadata, at least w.r.t the SU's claims.
                */
-              for await (const boundary of $scheduled) {
-                yield [prev, boundary]
-                prev = boundary
+              const scheduled = $scheduled[Symbol.asyncIterator]()
+
+              let message = await scheduled.next()
+              while (true) {
+                const { value, done } = message
+                /**
+                 * We're done, so break the loop
+                 */
+                if (done) break
+
+                const next = await scheduled.next()
+                /**
+                 * Only set the flag to emit left, if it is NOT the leftMost boundary,
+                 * since the leftMost boundary is not a message. Every left boundary after that _will_ be,
+                 * and so should be emitted.
+                 *
+                 * The right boundary should not be emitted, since it will become the next iterations left,
+                 * UNLESS this is the final iteration, in which case there won't _be_ a next iteration,
+                 * and therefore 'right' should be emitted now.
+                 *
+                 * If we didn't make this no-emit/emit distinction on the right boundary,
+                 * we would end up with duplicate emits at each boundary
+                 */
+                yield [prev !== leftMost, prev, next.done, value]
+                prev = value
+                message = next
               }
 
               /**
-               * Emit the last boundary
+               * The right most block, as determined by the rightMostTimestamp,
+               * is later than the latest 'prev' block, according to their timestamps. This means we have to emit
+               * one more tuple to in order to generate any potential Cron Messages between the last
+               * 'prev' and the actual right-most boundary.
+               *
+               * In this case, neither boundary should be emitted down the stream, because 'prev' will
+               * have already been emitted by the loop above, and 'right' is not a message.
+               *
+               * NOTE:
+               * This should only ever happen if a scheduled message is not the right-most boundary,
+               * which would subsequently only happen in the case of an arbitrary timestamp being provided as 'to'
+               * (like someone calling readState with a 'to' or no 'to' at all).
+               *
+               * If a scheduled message result is being read (the vast majority of use-cases),
+               * this last tuple won't be fired
                */
-              yield [prev, rightMost]
+              const rightMostBlock = last(blocksMeta)
+              if (prev.block.timestamp < rightMostBlock.timestamp) {
+                logger(
+                  'rightMostBlock at timestamp "%s" is later than latest scheduled message "%s" at timestamp "%s". Emitting extra set of boundaries on end...',
+                  rightMostBlock.timestamp,
+                  prev.message.Id,
+                  prev.block.timestamp
+                )
+                yield [false, prev, false, { block: rightMostBlock }]
+              }
             },
             Transform.from(async function * (boundaries) {
-              let tuple = await boundaries.next()
-              while (!tuple.done) {
-                const [left, right] = tuple.value
+              for await (const [doEmitLeft, left, doEmitRight, right] of boundaries) {
                 logger('Calculating all cron messages between %o and %o', left.block, right.block)
+
+                if (doEmitLeft) yield left
+
                 /**
                  * Emit each cron message as a top-lvl generated value.
                  *
@@ -420,20 +467,8 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                  * backpressure.
                  */
                 for await (const message of genCronMessages(left, right)) yield message
-                /**
-                 * We need to emit the right boundary since it will always be a message,
-                 * EXCEPT for final tuple, since THAT right boundary will be our right-most boundary,
-                 * and NOT a message. We will not emit right, if there is no next tuple
-                 *
-                 * There is no need to unshift the left boundary, as the left will be the next iterations right boundary.
-                 * Otherwise, we would end up with duplicates at each boundary
-                 */
-                const next = await boundaries.next()
-                if (!next.done) yield right
-                /**
-                 * Set up the next boundary to generate cron messages between
-                 */
-                tuple = next
+
+                if (doEmitRight) yield right
               }
             }),
             (err) => {
