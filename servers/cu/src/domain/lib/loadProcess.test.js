@@ -43,7 +43,6 @@ describe('loadProcess', () => {
 
     const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
 
-    console.log({ res })
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.signature, 'sig-123')

@@ -15,7 +15,7 @@ import { evaluationSchema, processSchema } from '../model.js'
 const deflateP = promisify(deflate)
 const inflateP = promisify(inflate)
 
-const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX] = ['cron-evals-ascending', 'evals-ascending']
+export const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX] = ['cron-evals-ascending', 'evals-ascending']
 
 /**
  * An implementation of the db client using pouchDB
@@ -453,37 +453,36 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
 }
 
 export function findEvaluationsWith ({ pouchDb = internalPouchDb }) {
-  function createSelector ({ processId, from, to, cron }) {
-    /**
-     * grab all evaluations for the processId, by default
-     */
-    const selector = {
-      _id: {
-        $gte: createEvaluationId({ processId, timestamp: '' }),
-        $lt: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
+  function createQuery ({ processId, from, to, onlyCron, sort, limit }) {
+    const query = {
+      selector: {
+        _id: {
+          $gt: createEvaluationId({ processId, timestamp: '' }),
+          $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
+        },
+        ...(onlyCron ? { cron: { $exists: true } } : {})
       },
-      ...(cron ? { cron: { $exists: true } } : {})
+      limit,
+      sort: [{ _id: sort }],
+      use_index: onlyCron ? CRON_EVALS_ASC_IDX : EVALS_ASC_IDX
     }
 
     /**
-     * trim range using timestamps, if provided.
+     * trim range using criteria, if provided.
+     *
+     * from is exclusive, while to is inclusive
      */
-    if (from) selector._id.$gte = `${createEvaluationId({ processId, timestamp: from })},`
-    if (to) selector._id.$lt = `${createEvaluationId({ processId, timestamp: to })}`
+    if (from) query.selector._id.$gt = `${createEvaluationId({ processId, timestamp: from.timestamp, ordinate: from.ordinate, cron: from.cron })}`
+    if (to) query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate, cron: to.cron })}`
 
-    return selector
+    return query
   }
 
-  return ({ processId, from, to, cron }) => {
-    return of({ processId, from, to, cron })
-      .map(createSelector)
-      .chain(fromPromise((selector) => {
-        return pouchDb.find({
-          selector,
-          sort: [{ _id: 'asc' }],
-          limit: Number.MAX_SAFE_INTEGER,
-          ...(cron ? { use_index: 'cron-evaluations' } : {})
-        }).then((res) => {
+  return ({ processId, from, to, onlyCron, sort, limit }) => {
+    return of({ processId, from, to, onlyCron, sort: sort.toLowerCase(), limit })
+      .map(createQuery)
+      .chain(fromPromise((query) => {
+        return pouchDb.find(query).then((res) => {
           if (res.warning) console.warn(res.warning)
           return res.docs
         })

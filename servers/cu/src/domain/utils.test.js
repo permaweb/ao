@@ -3,7 +3,7 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 
-import { errFrom } from './utils.js'
+import { errFrom, evaluationToCursor, maybeParseCursor } from './utils.js'
 
 describe('utils', () => {
   describe('errFrom', () => {
@@ -49,6 +49,59 @@ describe('utils', () => {
       // eslint-disable-next-line
       const err = await Promise.reject([]).catch(errFrom)
       assert.equal(err.message, 'An error occurred')
+    })
+  })
+
+  describe('evaluationToCursor', () => {
+    test('should create cursor from evaluation and sort direction', () => {
+      const now = new Date().getTime()
+
+      assert.deepStrictEqual(
+        JSON.parse(atob(evaluationToCursor({ timestamp: now, ordinate: '3', cron: '1-10-minutes' }, 'ASC'))),
+        { timestamp: now, ordinate: '3', cron: '1-10-minutes', sort: 'ASC' }
+      )
+    })
+  })
+
+  describe('maybeParseCursor', () => {
+    test('should parse the cursor into criteria and attach to ctx', async () => {
+      const now = new Date().getTime()
+
+      const res = await maybeParseCursor('from')({
+        foo: 'bar',
+        from: evaluationToCursor({ timestamp: now, ordinate: '3', cron: '1-10-minutes' }, 'ASC')
+      }).toPromise()
+
+      assert.deepStrictEqual(res, {
+        foo: 'bar',
+        from: { timestamp: now, ordinate: '3', cron: '1-10-minutes', sort: 'ASC' }
+      })
+    })
+
+    test('should set as timestamp if failed to parse criteria from cursor', async () => {
+      const now = new Date().getTime()
+
+      const res = await maybeParseCursor('from')({
+        foo: 'bar',
+        from: now
+      }).toPromise()
+
+      assert.deepStrictEqual(res, {
+        foo: 'bar',
+        from: { timestamp: now }
+      })
+    })
+
+    test('should map falsey values to undefined', async () => {
+      const res = await maybeParseCursor('from')({
+        foo: 'bar',
+        from: ''
+      }).toPromise()
+
+      assert.deepStrictEqual(res, {
+        foo: 'bar',
+        from: undefined
+      })
     })
   })
 })
