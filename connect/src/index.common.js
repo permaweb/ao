@@ -11,6 +11,7 @@ import { messageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
+import { resultsWith } from './lib/results/index.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://ao-mu-router-1.onrender.com'
@@ -32,6 +33,7 @@ const DEFAULT_CU_URL = 'https://ao-cu-router-1.onrender.com'
  *  spawn,
  *  message,
  *  result,
+ *  results,
  *  monitor,
  *  connect
  * } from '@permaweb/ao-sdk';
@@ -112,5 +114,14 @@ export function connect ({
     logger: monitorLogger
   })
 
-  return { result, message, spawn, monitor, unmonitor }
+  /**
+   * results - returns batch of Process Results given a specified range
+   */
+  const resultsLogger = logger.child('results')
+  const results = resultsWith({
+    queryResults: CuClient.queryResultsWith({ fetch, CU_URL, logger: resultsLogger }),
+    logger: resultsLogger
+  })
+
+  return { result, results, message, spawn, monitor, unmonitor }
 }

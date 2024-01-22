@@ -16,6 +16,7 @@ This module will run in a browser or server environment.
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
   - [API](#api)
     - [`result`](#result)
+    - [`results`](#results)
     - [`message`](#message)
     - [`spawn`](#spawn)
     - [`connect`](#connect)
@@ -60,6 +61,32 @@ let { messages, spawns, output, error } = await result({
   process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg",
 });
 ```
+
+#### `results`
+
+Read a batch of results from a process, this feature can be used as a polling
+mechanism looking for new results
+
+```js
+import { results } from "@permaweb/aoconnect";
+
+let results = await results({
+  process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg",
+  from: cursor,
+  sort: "ASC",
+  limit: 25,
+});
+```
+
+Parameters
+
+| Name    | Description                                                       | Optional? |
+| ------- | ----------------------------------------------------------------- | --------- |
+| process | the process identifier                                            | false     |
+| from    | cursor starting point                                             | true      |
+| to      | cursor ending point                                               | true      |
+| sort    | list results in decending or ascending order, default will be ASC | true      |
+| limit   | the number of results to return (default: 25)                     | true      |
 
 #### `message`
 

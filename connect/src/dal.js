@@ -14,6 +14,24 @@ export const loadResultSchema = z.function()
   }))
   .returns(z.promise(z.any()))
 
+export const queryResultsSchema = z.function()
+  .args(z.object({
+    process: z.string().min(1, { message: 'process id is required' }),
+    from: z.string().optional(),
+    to: z.string().optional(),
+    sort: z.string().default('ASC')
+  }))
+  .returns(z.promise(z.object({
+    edges: z.array(z.object({
+      node: z.object({
+        Output: z.any().optional(),
+        Messages: z.array(z.any()).optional(),
+        Spawns: z.array(z.any()).optional(),
+        Error: z.any().optional()
+      })
+    }))
+  })))
+
 // MU
 
 export const deployMessageSchema = z.function()
