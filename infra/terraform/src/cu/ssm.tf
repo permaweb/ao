@@ -1,6 +1,6 @@
-resource "aws_ssm_parameter" "cu_ecr_image_revision" {
+resource "aws_ssm_parameter" "cu_ami_id" {
   count = var.enabled ? 1 : 0
-  name  = "cu-ecr-image-revision"
+  name  = "cu-ami-id"
   type  = "String"
   value = "dummy"
 
