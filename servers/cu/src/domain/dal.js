@@ -73,7 +73,7 @@ export const findEvaluationsSchema = z.function()
       cron: z.string().nullish()
     }).default({}),
     sort: z.enum(['ASC', 'DESC']).default('ASC'),
-    limit: z.number().default(25),
+    limit: z.number(),
     onlyCron: z.boolean().default(false)
   }))
   .returns(z.promise(z.array(evaluationSchema)))

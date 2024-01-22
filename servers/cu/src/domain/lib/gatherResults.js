@@ -63,7 +63,7 @@ export function gatherResultsWith (env) {
                *
                * or resuming from where was last read
                */
-              cursor: (evaluation) => evaluationToCursor(evaluation, 'ASC'),
+              cursor: (evaluation) => evaluationToCursor(evaluation, ctx.sort || ctx.from.sort || ctx.to.sort),
               /**
                * Extract the Outbox as a result of evaluating the Cron Message
                */

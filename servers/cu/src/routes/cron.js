@@ -22,14 +22,19 @@ const toConnection = ({ cursorFn, nodeFn = identity }) => ({ nodes, pageSize }) 
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
-  from: z.coerce.number().optional(),
-  to: z.coerce.number().optional()
+  from: z.coerce.string().optional(),
+  to: z.coerce.string().optional(),
+  /**
+   * Default to just a large number, which will effectively
+   * fetch all evaluations in the range within a single page
+   */
+  limit: z.coerce.number().default(Number.MAX_SAFE_INTEGER - 10)
 })
 
 export const withCronRoutes = app => {
   const cronConnection = toConnection({
     nodeFn: (evaluation) => evaluation.output,
-    cursorFn: (evaluation) => evaluation.timestamp
+    cursorFn: (evaluation) => evaluation.cursor
   })
 
   app.get(
@@ -39,21 +44,16 @@ export const withCronRoutes = app => {
       always(async (req, res) => {
         const {
           params: { processId },
-          query: { from, to },
-          domain: { apis: { readCronOutboxes } }
+          query: { from, to, limit },
+          domain: { apis: { readCronResults } }
         } = req
 
-        const input = inputSchema.parse({ processId, from, to })
+        const input = inputSchema.parse({ processId, from, to, limit })
 
-        await readCronOutboxes(input)
+        await readCronResults(input)
           .map(({ evaluations }) => res.send(cronConnection({
             nodes: evaluations,
-            /**
-             * For now, always send back a page the size of the total results
-             *
-             * TODO: allow pagniating between from and to?
-             */
-            pageSize: evaluations.length
+            pageSize: input.limit
           })))
           .toPromise()
       })

@@ -5,7 +5,7 @@ import { withMiddleware } from './middleware/index.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
-  to: z.coerce.number().optional()
+  to: z.coerce.string().optional()
 })
 
 export const withStateRoutes = (app) => {
