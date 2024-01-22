@@ -37,62 +37,87 @@ export function gatherResultsWith (env) {
     return of(ctx)
       .chain(maybeParseCursor('from'))
       .chain(maybeParseCursor('to'))
-      .chain((ctx) => findEvaluations({
-        processId: ctx.processId,
-        from: ctx.from,
-        to: ctx.to,
-        sort: ctx.sort || ctx.from.sort || ctx.to.sort,
-        limit: ctx.limit,
-        onlyCron: ctx.onlyCron
-      }))
-      .map((evaluations) =>
-        transduce(
-          compose(
-            /**
-             * NOTE: this is redundant since we pass onlyCron above, which ought
-             * to filter to evalutations we want.
-             *
-             * But having this is safe, and doesn't add a lot of overhead as part
-             * of the transduce
-             */
-            filter((evaluation) => ctx.onlyCron ? !!evaluation.cron : true),
-            map(applySpec({
-              /**
-               * Create the cursor that represents this evaluation,
-               * so that it can be used for paginating results,
-               *
-               * or resuming from where was last read
-               */
-              cursor: (evaluation) => evaluationToCursor(evaluation, ctx.sort || ctx.from.sort || ctx.to.sort),
-              /**
-               * Extract the Outbox as a result of evaluating the Cron Message
-               */
-              output: pipe(
-                pathOr({}, ['output']),
+      .chain((ctx) => {
+        /**
+         * The sort in either cursor takes precedent.
+         *
+         * If the sort does not exist in the cursor, meaning that a timestamp was used,
+         * then use the provided sort.
+         *
+         * A flag can be set by the caller to override this behavior and instead prefer the top-lvl
+         * provided sort
+         *
+         * Kind of hacky and not pretty but works for now. Prevents the caller from having to
+         * parse the cursor.
+         */
+        let sort
+        if (ctx.overrideCursorSort) {
+          sort = ctx.sort ||
+            pathOr(undefined, ['from', 'sort'], ctx) ||
+            pathOr(undefined, ['to', 'sort'], ctx)
+        } else {
+          sort = pathOr(undefined, ['from', 'sort'], ctx) ||
+            pathOr(undefined, ['to', 'sort'], ctx) ||
+            ctx.sort
+        }
+
+        return findEvaluations({
+          processId: ctx.processId,
+          from: ctx.from,
+          to: ctx.to,
+          sort,
+          limit: ctx.limit,
+          onlyCron: ctx.onlyCron
+        })
+          .map((evaluations) =>
+            transduce(
+              compose(
                 /**
-                 * If there is no outbox, then simply return the Outbox identity:
-                 * - Empty Messages
-                 * - Empty Spawns
-                 * - Nil Output
-                 * - Nil Error
+                 * NOTE: this is redundant since we pass onlyCron above, which ought
+                 * to filter to evalutations we want.
+                 *
+                 * But having this is safe, and doesn't add a lot of overhead as part
+                 * of the transduce
                  */
-                applySpec({
-                  Messages: pathOr([], ['Messages']),
-                  Spawns: pathOr([], ['Spawns']),
-                  Output: pathOr(undefined, ['Output']),
-                  Error: pathOr(undefined, ['Error'])
-                })
-              )
-            }))
-          ),
-          (acc, evaluation) => {
-            acc.push(evaluation)
-            return acc
-          },
-          [],
-          evaluations
-        )
-      )
+                filter((evaluation) => ctx.onlyCron ? !!evaluation.cron : true),
+                map(applySpec({
+                  /**
+                   * Create the cursor that represents this evaluation,
+                   * so that it can be used for paginating results,
+                   *
+                   * or resuming from where was last read
+                   */
+                  cursor: (evaluation) => evaluationToCursor(evaluation, sort),
+                  /**
+                   * Extract the Outbox as a result of evaluating the Cron Message
+                   */
+                  output: pipe(
+                    pathOr({}, ['output']),
+                    /**
+                     * If there is no outbox, then simply return the Outbox identity:
+                     * - Empty Messages
+                     * - Empty Spawns
+                     * - Nil Output
+                     * - Nil Error
+                     */
+                    applySpec({
+                      Messages: pathOr([], ['Messages']),
+                      Spawns: pathOr([], ['Spawns']),
+                      Output: pathOr(undefined, ['Output']),
+                      Error: pathOr(undefined, ['Error'])
+                    })
+                  )
+                }))
+              ),
+              (acc, evaluation) => {
+                acc.push(evaluation)
+                return acc
+              },
+              [],
+              evaluations
+            )
+          )
+      })
       .map(evaluations => ({ evaluations }))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)

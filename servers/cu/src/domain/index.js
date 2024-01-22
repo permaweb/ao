@@ -11,6 +11,7 @@ import { readResultWith } from './readResult.js'
 import { readStateWith } from './readState.js'
 import { readCronResultsWith } from './readCronResults.js'
 import { healthcheckWith } from './healthcheck.js'
+import { readResultsWith } from './readResults.js'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema } from './model.js'
@@ -82,10 +83,16 @@ export const createApis = async (ctx) => {
     findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readCronResultsLogger })
   })
 
+  const readResultsLogger = ctx.logger.child('readResults')
+  const readResults = readResultsWith({
+    ...sharedDeps(readCronResultsLogger),
+    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
+  })
+
   const arweave = WalletClient.createWalletClient()
   const healthcheck = healthcheckWith({
     walletAddress: WalletClient.addressWith({ WALLET: ctx.WALLET, arweave })
   })
 
-  return { readState, readResult, readCronResults, healthcheck }
+  return { readState, readResult, readResults, readCronResults, healthcheck }
 }
