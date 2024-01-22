@@ -14,6 +14,15 @@ export const loadResultSchema = z.function()
   }))
   .returns(z.promise(z.any()))
 
+export const queryResultsSchema = z.function()
+  .args(z.object({
+    process: z.string().min(1, { message: 'process id is required' }),
+    from: z.string().optional(),
+    to: z.string().optional(),
+    sort: z.string().default('ASC')
+  }))
+  .returns(z.promise(z.any()))
+
 // MU
 
 export const deployMessageSchema = z.function()

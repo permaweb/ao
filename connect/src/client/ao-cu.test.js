@@ -2,12 +2,56 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { loadResultSchema } from '../dal.js'
-import { loadResultWith } from './ao-cu.js'
+import { loadResultSchema, queryResultsSchema } from '../dal.js'
+import { loadResultWith, queryResultsWith } from './ao-cu.js'
 
 const logger = createLogger('ao-cu')
 
 describe('ao-cu', () => {
+  describe('queryResultsWith', () => {
+    test('queries the results for a process', async () => {
+      const queryResult = queryResultsSchema.implement(
+        queryResultsWith({
+          CU_URL: 'https://foo.bar',
+          fetch: async (url, options) => {
+            assert.equal(url, 'https://foo.bar/results/process-123?process-id=process-123&sort=ASC')
+            assert.deepStrictEqual(options, {
+              method: 'GET',
+              headers: {
+                Accept: 'application/json'
+              }
+            })
+
+            return new Response(JSON.stringify({
+              edges: [
+                {
+                  node: {
+                    output: { data: 'foobar' },
+                    messages: [],
+                    spawns: []
+                  }
+                }
+              ]
+            }))
+          },
+          logger
+        })
+      )
+      await queryResult({ process: 'process-123' })
+        .then(res => assert.deepStrictEqual(res, {
+          edges: [
+            {
+              node: {
+                output: { data: 'foobar' },
+                messages: [],
+                spawns: []
+              }
+            }
+          ]
+        }))
+    })
+  })
+
   describe('loadResultWith', () => {
     test('fetches the state from the CU and passes it through', async () => {
       const loadResult = loadResultSchema.implement(
