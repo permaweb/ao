@@ -1,6 +1,7 @@
 import { readStateWith } from './readState.js'
 import { gatherResultsWith } from './lib/gatherResults.js'
 import { maybeParseCursor } from './utils.js'
+import { pathOr } from 'ramda'
 
 /**
  * @typedef Env
@@ -29,7 +30,11 @@ export function readCronResultsWith (env) {
      * we need to potentially parse it, then grab the timestamp and ordinate from the parsed data
      */
     return maybeParseCursor('to')({ processId, from, to, limit })
-      .chain((ctx) => readState({ processId, to: ctx.to.timestamp, ordinate: ctx.to.ordinate }))
+      .chain((ctx) => readState({
+        processId,
+        to: pathOr(undefined, ['to', 'timestamp'], ctx),
+        ordinate: pathOr(undefined, ['to', 'ordinate'], ctx)
+      }))
       /**
        * Now 'caught up' on evaluations, so now we can gather the results, using the filtering
        * criteria
@@ -42,7 +47,11 @@ export function readCronResultsWith (env) {
          * Crons may only be traversed in ascending order
          */
         sort: 'ASC',
-        limit: limit || Number.MAX_SAFE_INTEGER,
+        /**
+         * We fetch an additional evaluation to know whether or not
+         * there are additional pages to fetch.
+         */
+        limit: limit + 1,
         /**
          * Only gather Cron Message evaluation results
          */
@@ -52,7 +61,7 @@ export function readCronResultsWith (env) {
         env.logger(
           'gathered Cron Evaluation results for process %s from "%s" to "%s"',
           processId,
-          from,
+          from || 'earliest',
           to || 'latest'
         )
 
