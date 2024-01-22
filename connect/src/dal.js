@@ -19,7 +19,8 @@ export const queryResultsSchema = z.function()
     process: z.string().min(1, { message: 'process id is required' }),
     from: z.string().optional(),
     to: z.string().optional(),
-    sort: z.string().default('ASC')
+    sort: z.enum(['ASC', 'DESC']).default('ASC'),
+    limit: z.string().optional()
   }))
   .returns(z.promise(z.object({
     edges: z.array(z.object({
