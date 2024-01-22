@@ -1,8 +1,9 @@
 import { fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { applySpec, compose, filter, map, mergeRight, pathOr, pipe, prop, transduce } from 'ramda'
+import { applySpec, compose, filter, map, mergeRight, pathOr, pipe, transduce } from 'ramda'
 
 import { findEvaluationsSchema } from '../dal.js'
+import { evaluationToCursor, maybeParseCursor } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -29,24 +30,40 @@ const ctxSchema = z.object({
  * @param {Env} env
  * @returns {GatherCronMessages}
  */
-export function gatherCronOutboxesWith (env) {
+export function gatherResultsWith (env) {
   const findEvaluations = fromPromise(findEvaluationsSchema.implement(env.findEvaluations))
 
   return (ctx) => {
     return of(ctx)
-      .chain(ctx => findEvaluations({ processId: ctx.processId, from: ctx.from, to: ctx.to }))
-      .map(evaluations =>
+      .chain(maybeParseCursor('from'))
+      .chain(maybeParseCursor('to'))
+      .chain((ctx) => findEvaluations({
+        processId: ctx.processId,
+        from: ctx.from,
+        to: ctx.to,
+        sort: ctx.sort || ctx.from.sort || ctx.to.sort,
+        limit: ctx.limit,
+        onlyCron: ctx.onlyCron
+      }))
+      .map((evaluations) =>
         transduce(
           compose(
             /**
-             * Evaluations from a Cron message have a flag set indicating they it
-             * came from a Cron message
+             * NOTE: this is redundant since we pass onlyCron above, which ought
+             * to filter to evalutations we want.
              *
-             * so filter out all evalations that did not result from a Cron Message
+             * But having this is safe, and doesn't add a lot of overhead as part
+             * of the transduce
              */
-            filter((evaluation) => !!evaluation.cron),
+            filter((evaluation) => ctx.onlyCron ? !!evaluation.cron : true),
             map(applySpec({
-              timestamp: prop('timestamp'),
+              /**
+               * Create the cursor that represents this evaluation,
+               * so that it can be used for paginating results,
+               *
+               * or resuming from where was last read
+               */
+              cursor: (evaluation) => evaluationToCursor(evaluation, 'ASC'),
               /**
                * Extract the Outbox as a result of evaluating the Cron Message
                */

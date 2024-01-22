@@ -6,6 +6,8 @@ import { promisify } from 'node:util'
 
 import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
 import {
+  CRON_EVALS_ASC_IDX,
+  EVALS_ASC_IDX,
   findEvaluationsWith,
   findLatestEvaluationWith,
   findMessageHashWith,
@@ -373,7 +375,7 @@ describe('pouchdb', () => {
   })
 
   describe('findEvaluations', () => {
-    test('return the list of all evaluations', async () => {
+    test('return the list of all cron evaluations', async () => {
       const evaluatedAt = new Date().toISOString()
       const mockEval = {
         _id: 'eval-process-123,1702677252111',
@@ -391,6 +393,12 @@ describe('pouchdb', () => {
         findEvaluationsWith({
           pouchDb: {
             find: async (op) => {
+              assert.deepStrictEqual(op.selector.cron, { $exists: true })
+              assert.equal(op.use_index, CRON_EVALS_ASC_IDX)
+
+              assert.equal(op.limit, 10)
+              assert.deepStrictEqual(op.sort, [{ _id: 'asc' }])
+
               return {
                 docs: [
                   mockEval,
@@ -402,7 +410,7 @@ describe('pouchdb', () => {
           logger
         }))
 
-      const res = await findEvaluations({ processId: 'process-123', cron: true })
+      const res = await findEvaluations({ processId: 'process-123', limit: 10, sort: 'ASC', onlyCron: true })
 
       assert.equal(res.length, 2)
     })
@@ -425,6 +433,18 @@ describe('pouchdb', () => {
         findEvaluationsWith({
           pouchDb: {
             find: async (op) => {
+              assert.deepStrictEqual(op.selector, {
+                _id: {
+                  $gt: 'eval-process-123,1702677252111,3',
+                  $lte: 'eval-process-123,1702677252111'
+                }
+              })
+
+              /**
+               * no onlyCron
+               */
+              assert.equal(op.use_index, EVALS_ASC_IDX)
+
               return {
                 docs: [
                   mockEval,
@@ -438,9 +458,10 @@ describe('pouchdb', () => {
 
       const res = await findEvaluations({
         processId: 'process-123',
-        from: 1702677252111,
-        to: 1702677252111,
-        cron: true
+        from: { timestamp: 1702677252111, ordinate: '3' },
+        to: { timestamp: 1702677252111 },
+        limit: 10,
+        sort: 'ASC'
       })
 
       assert.equal(res.length, 2)

@@ -1,3 +1,4 @@
+import { Rejected, Resolved } from 'hyper-async'
 import {
   F, T, __, append, assoc, chain, concat, cond, defaultTo, equals,
   filter, has, head, includes, is, join, map, pipe, propOr, reduce
@@ -139,4 +140,43 @@ export function findRawTag (name, tags) {
      */
     head
   )(tags)
+}
+
+export function maybeBase64Object (base64) {
+  if (!base64) return Rejected('falsey is not a base64 encoded object')
+
+  try {
+    return Resolved(JSON.parse(atob(base64)))
+  } catch (err) {
+    return Rejected(`Not a base64 encoded object: ${err.message}`)
+  }
+}
+
+export function evaluationToCursor (evaluation, sort) {
+  return btoa(JSON.stringify({
+    timestamp: evaluation.timestamp,
+    ordinate: evaluation.ordinate,
+    cron: evaluation.cron,
+    sort
+  }))
+}
+
+export function maybeParseCursor (name) {
+  return (ctx) => ctx[name]
+    ? maybeBase64Object(ctx[name])
+      .bichain(
+        /**
+         * Defined, but not base64 cursor, so assume it's a timestamp,
+         * and construct the criteria only containing the timestamp
+         */
+        () => Resolved(assoc(name, { timestamp: ctx[name] }, ctx)),
+        /**
+         * The value was a cursor, so continue
+         */
+        (criteria) => Resolved(assoc(name, criteria, ctx))
+      )
+    /**
+     * Map all falsey values to undefined
+     */
+    : Resolved(assoc(name, undefined, ctx))
 }

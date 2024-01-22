@@ -62,9 +62,19 @@ export const saveEvaluationSchema = z.function()
 export const findEvaluationsSchema = z.function()
   .args(z.object({
     processId: z.string(),
-    from: z.coerce.number().nullish(),
-    to: z.coerce.number().nullish(),
-    cron: z.boolean().default(false)
+    from: z.object({
+      timestamp: z.coerce.number().nullish(),
+      ordinate: z.coerce.string().nullish(),
+      cron: z.string().nullish()
+    }).default({}),
+    to: z.object({
+      timestamp: z.coerce.number().nullish(),
+      ordinate: z.coerce.string().nullish(),
+      cron: z.string().nullish()
+    }).default({}),
+    sort: z.enum(['ASC', 'DESC']).default('ASC'),
+    limit: z.number().default(25),
+    onlyCron: z.boolean().default(false)
   }))
   .returns(z.promise(z.array(evaluationSchema)))
 
