@@ -7,20 +7,20 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "terraform-state-project-ao-production"
+    bucket         = "terraform-state-project-ao-testnet"
     key            = "terragrunt.tfstate"
     region         = "us-west-1"
-    dynamodb_table = "ao-production-terraform-state-lock"
+    dynamodb_table = "ao-testnet-terraform-state-lock"
   }
 
 }
 
-resource "aws_s3_bucket" "terraform_states_storage" {
-  bucket = "terraform-state-project-ao-production"
+resource "aws_s3_bucket" "terraform_state_bucket" {
+  bucket = "terraform-state-project-ao-testnet"
 }
 
-resource "aws_dynamodb_table" "terraform_state_lock" {
-  name           = "ao-production-terraform-state-lock"
+resource "aws_dynamodb_table" "tf_state_lock" {
+  name           = "ao-testnet-terraform-state-lock"
   read_capacity  = 1
   write_capacity = 1
   hash_key       = "LockID"
