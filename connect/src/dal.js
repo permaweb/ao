@@ -21,7 +21,16 @@ export const queryResultsSchema = z.function()
     to: z.string().optional(),
     sort: z.string().default('ASC')
   }))
-  .returns(z.promise(z.any()))
+  .returns(z.promise(z.object({
+    edges: z.array(z.object({
+      node: z.object({
+        Output: z.any().optional(),
+        Messages: z.array(z.any()).optional(),
+        Spawns: z.array(z.any()).optional(),
+        Error: z.any().optional()
+      })
+    }))
+  })))
 
 // MU
 

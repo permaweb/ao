@@ -14,7 +14,7 @@ describe('ao-cu', () => {
         queryResultsWith({
           CU_URL: 'https://foo.bar',
           fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/results/process-123?process-id=process-123&sort=ASC')
+            assert.equal(url, 'https://foo.bar/results/process-123?sort=ASC')
             assert.deepStrictEqual(options, {
               method: 'GET',
               headers: {

@@ -50,12 +50,13 @@ export function loadResultWith ({ fetch, CU_URL, logger }) {
  * @returns {QueryResults}
  */
 export function queryResultsWith ({ fetch, CU_URL, logger }) {
-  return ({ process, from, to, sort }) => {
-    const target = new URL(`${CU_URL}/results/${process}?process-id=${process}`)
+  return ({ process, from, to, sort, limit }) => {
+    const target = new URL(`${CU_URL}/results/${process}`)
     const params = new URLSearchParams(target.search)
     if (from) { params.append('from', from) }
     if (to) { params.append('to', to) }
     if (sort) { params.append('sort', sort) }
+    if (limit) { params.append('limit', limit) }
     target.search = params
 
     return of(target.toString())

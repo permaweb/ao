@@ -18,9 +18,9 @@ describe('query', () => {
           edges: [
             {
               node: {
-                output: { data: 'foobar' },
-                messages: [],
-                spawns: []
+                Output: { data: 'foobar' },
+                Messages: [],
+                Spawns: []
               }
             }
           ]
@@ -39,9 +39,9 @@ describe('query', () => {
       edges: [
         {
           node: {
-            output: { data: 'foobar' },
-            messages: [],
-            spawns: []
+            Output: { data: 'foobar' },
+            Messages: [],
+            Spawns: []
           }
         }
       ]

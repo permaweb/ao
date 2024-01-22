@@ -74,6 +74,7 @@ let results = await results({
   process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg",
   from: cursor,
   sort: "ASC",
+  limit: 25,
 });
 ```
 
@@ -85,6 +86,7 @@ Parameters
 | from    | cursor starting point                                             | true      |
 | to      | cursor ending point                                               | true      |
 | sort    | list results in decending or ascending order, default will be ASC | true      |
+| limit   | the number of results to return (default: 25)                     | true      |
 
 #### `message`
 
