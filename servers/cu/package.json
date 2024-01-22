@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon",
     "heapdump": "kill -USR2",
-    "start": "node src/app.js",
+    "start": "node -r dotenv/config src/app.js",
     "test": "node --test ./src"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
     "cors": "^2.8.5",
     "dataloader": "^2.2.2",
     "debug": "^4.3.4",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "heapdump": "^0.3.15",
     "helmet": "^7.1.0",
@@ -32,7 +33,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "dotenv": "^16.3.1",
     "nodemon": "^3.0.2"
   },
   "engines": {
