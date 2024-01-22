@@ -5,7 +5,7 @@ const inputSchema = z.object({
   process: z.string().min(1, { message: 'process identifier is required' }),
   from: z.string().optional(),
   to: z.string().optional(),
-  sort: z.string().default('ASC'),
+  sort: z.enum(['ASC', 'DESC']).default('ASC'),
   limit: z.string().optional()
 })
 
