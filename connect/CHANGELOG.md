@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.34](https://github.com/permaweb/ao/compare/connect@v0.0.33...connect@v0.0.34) (2024-01-22)
+
+
+### Features
+
+* added results to index.common and fixed issue with Result response [#343](https://github.com/permaweb/ao/issues/343) ([b8ca4e6](https://github.com/permaweb/ao/commit/b8ca4e6dfb7f7955a802d8ed3b99c0b7733014a1))
+* added results to index.common and fixed test [#343](https://github.com/permaweb/ao/issues/343) ([25cb33a](https://github.com/permaweb/ao/commit/25cb33ab18ba42ccc4ffd8aaa70065b82bcea0a3))
+* **connect:** results method [#343](https://github.com/permaweb/ao/issues/343) ([1bea78b](https://github.com/permaweb/ao/commit/1bea78b4ec6bd05ad2acca23e001ad14eb35943e))
+
 ## [0.0.33](https://github.com/permaweb/ao/compare/connect@v0.0.32...connect@v0.0.33) (2024-01-16)
 
 ## [0.0.32](https://github.com/permaweb/ao/compare/connect@v0.0.31...connect@v0.0.32) (2024-01-15)
