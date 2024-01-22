@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  environment = "production"
+  environment = "testnet"
   region      = "us-west-1"
   azs         = ["us-west-1a", "us-west-1c"]
   account_id  = "429478883069"
