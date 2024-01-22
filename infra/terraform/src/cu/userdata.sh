@@ -105,6 +105,14 @@ EOF
 
 systemctl restart amazon-cloudwatch-agent
 
+
+cd /home/ubuntu/cu
+
+echo 'PORT=6363' >> .env
+echo 'NODE_CONFIG_ENV=production' >> .env
+echo "WALLET=$(aws secretsmanager get-secret-value --region us-west-1 --secret-id ao-wallet --query SecretString --output text)" >> .env
+echo 'DB_MODE="embedded"' >> .env
+
 cat <<EOF > /etc/systemd/system/cu.service
 [Unit]
 After=network-online.target

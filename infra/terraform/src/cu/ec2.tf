@@ -93,8 +93,8 @@ resource "aws_autoscaling_group" "cu_asg_cluster" {
   ]
   name                      = "cu-asg-cluster"
   desired_capacity          = 1
-  max_size                  = 2
-  min_size                  = 1
+  max_size                  = 1
+  min_size                  = 0
   vpc_zone_identifier       = var.public_subnet_ids
   health_check_type         = "EC2"
   health_check_grace_period = 300

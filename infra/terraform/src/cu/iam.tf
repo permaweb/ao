@@ -59,6 +59,16 @@ resource "aws_iam_policy" "cu_task_policy" {
           Resource = [
             "${aws_ssm_parameter.cu_ami_id.0.arn}"
           ]
+        },
+        {
+          Action = [
+            "SecretsManager:GetSecretValue"
+          ]
+          Effect = "Allow"
+          Resource = [
+            var.ao_wallet_arn,
+            "${var.ao_wallet_arn}*"
+          ]
         }
       ]
       Version = "2012-10-17"
