@@ -26,9 +26,9 @@ describe('ao-cu', () => {
               edges: [
                 {
                   node: {
-                    output: { data: 'foobar' },
-                    messages: [],
-                    spawns: []
+                    Output: { data: 'foobar' },
+                    Messages: [],
+                    Spawns: []
                   }
                 }
               ]
@@ -42,9 +42,9 @@ describe('ao-cu', () => {
           edges: [
             {
               node: {
-                output: { data: 'foobar' },
-                messages: [],
-                spawns: []
+                Output: { data: 'foobar' },
+                Messages: [],
+                Spawns: []
               }
             }
           ]
