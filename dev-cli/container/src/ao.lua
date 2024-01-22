@@ -7,6 +7,20 @@ local ao = {
     outbox = {Output = {}, Messages = {}, Spawns = {}}
 }
 
+local function _includes(list)
+    return function(key)
+        local exists = false
+        for _, listKey in ipairs(list) do
+            if key == listKey then
+                exists = true
+                break
+            end
+        end
+        if not exists then return false end
+        return true
+    end
+end
+
 local function isArray(table)
     if type(table) == "table" then
         local maxIndex = 0
@@ -23,6 +37,16 @@ local function isArray(table)
 end
 
 local function padZero32(num) return string.format("%032d", num) end
+
+function ao.normalize(msg)
+    for _, o in ipairs(msg.Tags) do
+        if not _includes({
+            'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
+            'Ref_'
+        })(o.name) then msg[o.name] = o.value end
+    end
+    return msg
+end
 
 function ao.init(env)
     if ao.id == "" then ao.id = env.Process.Id end
@@ -74,6 +98,13 @@ function ao.send(msg)
         }
     }
 
+    -- if custom tags in root move them to tags
+    for k, v in pairs(msg) do
+        if not _includes({"Target", "Data", "Anchor", "Tags"})(k) then
+            table.insert(message.Tags, {name = k, value = v})
+        end
+    end
+
     if msg.Tags then
         if isArray(msg.Tags) then
             for _, o in ipairs(msg.Tags) do
@@ -113,6 +144,13 @@ function ao.spawn(module, msg)
             {name = "Ref_", value = tostring(ao._ref)}
         }
     }
+
+    -- if custom tags in root move them to tags
+    for k, v in pairs(msg) do
+        if not _includes({"Target", "Data", "Anchor", "Tags"})(k) then
+            table.insert(spawn.Tags, {name = k, value = v})
+        end
+    end
 
     if msg.Tags then
         if isArray(msg.Tags) then
