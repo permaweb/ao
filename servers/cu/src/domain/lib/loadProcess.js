@@ -83,7 +83,15 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
 
   return (ctx) => of(ctx)
-    .chain(args => findLatestEvaluation({ processId: args.id, to: args.to })) // 'to' could be undefined
+    .chain(args => findLatestEvaluation({
+      processId: args.id,
+      /**
+       * 'to' and 'ordinate' could be undefined, which is to say
+       * 'eval up to the present, according to the SU's timestamp'
+       */
+      to: args.to,
+      ordinate: args.ordinate
+    }))
     .bimap(
       (_) => {
         logger('Could not find latest evaluation in db. Starting with initial state of null...')

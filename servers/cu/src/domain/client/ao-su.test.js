@@ -16,7 +16,8 @@ describe('ao-su', () => {
 
             return new Response(JSON.stringify({
               process_id: 'process-123',
-              timestamp: 12345
+              timestamp: 12345,
+              nonce: 3
             }))
           }
         })
@@ -30,7 +31,8 @@ describe('ao-su', () => {
 
       assert.deepStrictEqual(res, {
         processId: 'process-123',
-        timestamp: 12345
+        timestamp: 12345,
+        nonce: 3
       })
     })
   })

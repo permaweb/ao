@@ -178,7 +178,7 @@ export function evaluateWith (env) {
            * if their deepHash is found in the cache, this prevents duplicate evals
            */
           if (deepHash) {
-            logger('Checking if "%s" has already been evaluated...', message.Id || `Cron Message ${cron}`)
+            logger('Checking if "%s" has already been evaluated...', message.Id || `Cron Message ${message.Timestamp},${ordinate},${cron}`)
             const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
               logger('Message with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', deepHash)
@@ -191,7 +191,7 @@ export function evaluateWith (env) {
             .then(prev =>
               Promise.resolve(prev.Memory)
                 .then(Memory => {
-                  logger('Evaluating message "%s" to process "%s"', message.Id || `Cron Message ${cron}`, ctx.id)
+                  logger('Evaluating message "%s" to process "%s"', message.Id || `Cron Message ${message.Timestamp},${ordinate},${cron}`, ctx.id)
                   return Memory
                 })
                 /**
@@ -213,7 +213,7 @@ export function evaluateWith (env) {
                     : Promise.resolve(output)
                 })
                 .then(output => {
-                  logger('Applied message "%s" to process "%s"', message.Id || `Cron Message ${cron}`, ctx.id)
+                  logger('Applied message "%s" to process "%s"', message.Id || `Cron Message ${message.Timestamp},${ordinate},${cron}`, ctx.id)
                   return output
                 })
               /**

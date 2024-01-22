@@ -2,7 +2,7 @@ import { deflate, inflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, pluck, prop, set } from 'ramda'
+import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -14,6 +14,8 @@ import { evaluationSchema, processSchema } from '../model.js'
 
 const deflateP = promisify(deflate)
 const inflateP = promisify(inflate)
+
+const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX] = ['cron-evals-ascending', 'evals-ascending']
 
 /**
  * An implementation of the db client using pouchDB
@@ -46,17 +48,49 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
    *
    * Will noop if the index already exists
    */
-  return internalPouchDb.createIndex({
-    index: {
-      name: 'cron-evaluations',
-      fields: ['cron'],
-      partial_filter_selector: {
-        cron: {
-          $exists: true
+  return Promise.all([
+    /**
+     * delete a previously used index
+     */
+    internalPouchDb.getIndexes()
+      .then((res) => {
+        const old = res.indexes.find((i) => i.name === 'cron-evaluations')
+        return old
+          ? internalPouchDb.deleteIndex(old).then(res => {
+            console.log('deleted old index', res)
+          }).catch((err) => {
+            console.error('Error deleting old index', err)
+          })
+          : Promise.resolve()
+      }),
+    /**
+     * We can this index to traverse ONLY cron evaluations
+     * ascending or descending
+     */
+    internalPouchDb.createIndex({
+      index: {
+        fields: [{ _id: 'asc' }],
+        partial_filter_selector: {
+          cron: {
+            $exists: true
+          }
         }
-      }
-    }
-  }).then(() => internalPouchDb)
+      },
+      ddoc: CRON_EVALS_ASC_IDX,
+      name: CRON_EVALS_ASC_IDX
+    }),
+    /**
+     * We can use this index traverse evaluations ascending
+     * or descending
+     */
+    internalPouchDb.createIndex({
+      index: {
+        fields: [{ _id: 'asc' }, { cron: 'asc' }]
+      },
+      ddoc: EVALS_ASC_IDX,
+      name: EVALS_ASC_IDX
+    })
+  ]).then(() => internalPouchDb)
 }
 
 const processDocSchema = z.object({
@@ -195,34 +229,49 @@ export function saveProcessWith ({ pouchDb }) {
 }
 
 export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
-  function createSelector ({ processId, to }) {
-    const selector = {
-      /**
-       * Because we want a descending order, our startkey is the largest key in the range
-       * and endkey is the smallest key in the range
-       *
-       * By using the max collation sequence char, this will give us all docs whose _id
-       * is prefixed with the processId id
-       */
-      descending: true,
-      startkey: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR }),
-      endkey: createEvaluationId({ processId, timestamp: '' }),
-      include_docs: true,
+  function createQuery ({ processId, to, ordinate }) {
+    const query = {
+      selector: {
+        _id: {
+          /**
+           * find any evaluations for the process
+           */
+          $gte: createEvaluationId({ processId, timestamp: '' }),
+          /**
+           * up to the latest evaluation.
+           *
+           * By using the max collation sequence char, this will give us all evaluations
+           * for the process, all the way up to the latest
+           */
+          $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
+        }
+      },
+      sort: [{ _id: 'desc' }],
       /**
        * Only get the latest document within the range,
        * aka the latest evaluation
        */
-      limit: 1
+      limit: 1,
+      use_index: EVALS_ASC_IDX
     }
 
     /**
-     * overwrite upper range with actual timestamp, since we have it.
-     *
-     * By appending the max collation sequence char, we ensure we capture the latest
-     * message within the range, including CRON messages
+     * A 'to' was provided, so overwrite upper range with actual upper range, which is 'to'
      */
-    if (to) selector.startkey = `${createEvaluationId({ processId, timestamp: to })}${COLLATION_SEQUENCE_MAX_CHAR}`
-    return selector
+    if (to) query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to, ordinate })}`
+    /**
+     * A specific ordinate was provided, which means we're looking
+     * for a Schedule Message's eval.
+     *
+     * So in this case, fetch the latest eval that is NOT the result of a Cron Message.
+     * We do this, so the Schedule Message's result is returned, and not a Cron Message's,
+     * whose schedule happened to coincide with the Scheduled Messages timestamp.
+     *
+     * Otherwise, we DO want to include the latest Cron Message eval
+     */
+    if (ordinate) query.selector.cron = { $exists: false }
+
+    return query
   }
 
   const foundEvaluationDocSchema = z.object({
@@ -240,14 +289,14 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
 
   const memoryLens = lensPath(['output', 'Memory'])
 
-  return ({ processId, to }) => {
-    return of({ processId, to })
-      .map(createSelector)
-      .chain(fromPromise((selector) => {
-        return pouchDb.allDocs(selector)
+  return ({ processId, to, ordinate }) => {
+    return of({ processId, to, ordinate })
+      .map(createQuery)
+      .chain(fromPromise((query) => {
+        return pouchDb.find(query)
           .then((res) => {
             if (res.warning) console.warn(res.warning)
-            return pluck('doc', res.rows)
+            return res.docs
           })
       }))
       .map(head)
