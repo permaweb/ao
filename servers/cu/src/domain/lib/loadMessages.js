@@ -448,9 +448,8 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
               const rightMostBlock = last(blocksMeta)
               if (prev.block.timestamp < rightMostBlock.timestamp) {
                 logger(
-                  'rightMostBlock at timestamp "%s" is later than latest scheduled message "%s" at timestamp "%s". Emitting extra set of boundaries on end...',
+                  'rightMostBlock at timestamp "%s" is later than latest message at timestamp "%s". Emitting extra set of boundaries on end...',
                   rightMostBlock.timestamp,
-                  prev.message.Id,
                   prev.block.timestamp
                 )
                 yield [false, prev, false, { block: rightMostBlock }]
