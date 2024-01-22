@@ -19,6 +19,7 @@ const { DataItem } = WarpArBundles
 function aoComputeUnitMount ({ app, revProxy }) {
   app.get('/', revProxy({ processIdFromRequest: (req) => 'process' }))
   app.get('/result/:messageTxId', revProxy({ processIdFromRequest: (req) => req.query['process-id'] }))
+  app.get('/results/:processId', revProxy({ processIdFromRequest: (req) => req.params.processId }))
   app.get('/state/:processId', revProxy({ processIdFromRequest: (req) => req.params.processId }))
   app.get('/cron/:processId', revProxy({ processIdFromRequest: (req) => req.params.processId }))
 }
