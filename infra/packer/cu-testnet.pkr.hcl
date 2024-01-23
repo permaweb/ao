@@ -16,7 +16,7 @@ locals {
 
 data "amazon-ami" "ubuntu-latest" {
   filters = {
-    name                = "ubuntu/images/*ubuntu*"
+    name                = "ubuntu/images/*ubuntu-jammy*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = "arm64"
@@ -65,7 +65,11 @@ build {
 
   provisioner "shell" {
     inline = [
-      "sudo apt-get update && sudo apt-get install -y awscli bash build-essential git apt-utils curl apt-transport-https gnupg",
+      "sudo apt-get update",
+      # https://serverfault.com/a/1087736
+      "sudo apt-get update",
+      "sudo apt-get install -y bash build-essential git apt-utils curl apt-transport-https gnupg",
+      "sudo snap install aws-cli --classic",
       "curl -O https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/arm64/latest/amazon-cloudwatch-agent.deb",
       "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
       "sudo snap switch --channel=candidate amazon-ssm-agent",

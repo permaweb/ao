@@ -112,6 +112,11 @@ echo 'PORT=6363' >> .env
 echo 'NODE_CONFIG_ENV=production' >> .env
 echo "WALLET=$(aws secretsmanager get-secret-value --region us-west-1 --secret-id ao-wallet --query SecretString --output text)" >> .env
 echo 'DB_MODE="embedded"' >> .env
+echo 'GATEWAY_URL="https://arweave.net"' >> .env
+echo 'DB_URL="ao-cache"' >> .env
+echo 'DB_MAX_LISTENERS=100' >> .env
+echo 'DUMP_PATH="static"' >> .env
+echo 'NODE_HEAPDUMP_OPTIONS="nosignal"' >> .env
 
 cat <<EOF > /etc/systemd/system/cu.service
 [Unit]
@@ -123,7 +128,7 @@ Description=CU Service
 WorkingDirectory=/home/ubuntu/cu
 Restart=always
 RestartSec=30s
-ExecStart=/usr/bin/node src/app.js
+ExecStart=/usr/bin/node -r dotenv/config src/app.js
 TimeoutStartSec=30
 TimeoutStopSec=30
 User=ubuntu
