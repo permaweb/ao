@@ -6,7 +6,7 @@ export function saveWith ({ logger, saveProcessToMonitor }) {
   return (ctx) => {
     return of(ctx.tx)
       .map(assoc('authorized', true, __))
-      .map(assoc('lastFromTimestamp', null, __))
+      .map(assoc('lastFromCursor', null, __))
       .map(assoc('processData', ctx.sequencerData, __))
       .map(assoc('createdAt', Date.now(), __))
       .map(assoc('id', ctx.tx.processId, __))

@@ -26,7 +26,7 @@ const apis = createApis(apiCtx)
 const monitorSchema = z.object({
   id: z.string(),
   authorized: z.boolean(),
-  lastFromTimestamp: z.nullable(z.number()),
+  lastFromCursor: z.nullable(z.string()),
   processData: z.any(),
   createdAt: z.number()
 })
@@ -170,7 +170,7 @@ async function processMonitor (monitor) {
 
     const lastScheduled = scheduled.edges[scheduled.edges.length - 1]
 
-    monitor.lastFromTimestamp = lastScheduled.cursor
+    monitor.lastFromCursor = lastScheduled.cursor
 
     await updateMonitor(monitor)
 
@@ -182,21 +182,31 @@ async function processMonitor (monitor) {
 }
 
 async function fetchScheduled (monitor) {
-  const lastFromTimestamp = monitor.lastFromTimestamp
+  const lastFromCursor = monitor.lastFromCursor
   let requestUrl = `${config.CU_URL}/cron/${monitor.id}`
 
-  if (lastFromTimestamp) {
-    requestUrl = `${config.CU_URL}/cron/${monitor.id}?from=${lastFromTimestamp}`
+  if (lastFromCursor) {
+    requestUrl = `${config.CU_URL}/cron/${monitor.id}?from=${lastFromCursor}`
   }
+
+  let txt = ''
 
   try {
     const response = await fetch(requestUrl)
-    const scheduled = await response.json()
+
+    const teedOff = response.body.tee()
+    const r1 = new Response(teedOff[0])
+    const r2 = new Response(teedOff[1])
+    txt = await r1.text()
+
+    const scheduled = await r2.json()
     return scheduled
   } catch (error) {
     console.log('Error in fetchScheduled:', error)
     console.log('for monitor: ')
     console.log(monitor)
+    console.log('cu response')
+    console.log(txt)
   }
 }
 
