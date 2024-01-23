@@ -110,7 +110,8 @@ export const messageSchema = z.object({
     /**
      * Whether the message is a cron generated message or not
      */
-    Cron: z.boolean()
+    Cron: z.boolean(),
+    'Read-Only': z.boolean().default(false)
   }),
   AoGlobal: z.object({
     Process: z.object({

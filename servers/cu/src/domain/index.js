@@ -12,6 +12,7 @@ import { readStateWith } from './readState.js'
 import { readCronResultsWith } from './readCronResults.js'
 import { healthcheckWith } from './healthcheck.js'
 import { readResultsWith } from './readResults.js'
+import { dryRunWith } from './dryRun.js'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema } from './model.js'
@@ -66,6 +67,12 @@ export const createApis = async (ctx) => {
   const readStateLogger = ctx.logger.child('readState')
   const readState = readStateWith(sharedDeps(readStateLogger))
 
+  const dryRunLogger = ctx.logger.child('dryRun')
+  const dryRun = dryRunWith({
+    ...sharedDeps(dryRunLogger),
+    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger })
+  })
+
   /**
    * default readResult that works OOTB
    * - Uses PouchDB to cache evaluations and processes
@@ -95,5 +102,5 @@ export const createApis = async (ctx) => {
     walletAddress: WalletClient.addressWith({ WALLET: ctx.WALLET, arweave })
   })
 
-  return { readState, readResult, readResults, readCronResults, healthcheck }
+  return { readState, dryRun, readResult, readResults, readCronResults, healthcheck }
 }
