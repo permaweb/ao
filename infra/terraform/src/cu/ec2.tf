@@ -23,6 +23,14 @@ resource "aws_security_group" "cu_asg_cluster" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "Allow inbound HTTP traffic to cu"
+    from_port   = 6363
+    to_port     = 6363
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description = "Allow outbound traffic to the internet"
     from_port   = 0
