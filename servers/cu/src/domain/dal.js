@@ -51,7 +51,8 @@ export const findLatestEvaluationSchema = z.function()
   .args(z.object({
     processId: z.string(),
     to: z.coerce.number().nullish(),
-    ordinate: z.coerce.string().nullish()
+    ordinate: z.coerce.string().nullish(),
+    cron: z.string().nullish()
   }))
   .returns(z.promise(evaluationSchema))
 

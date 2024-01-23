@@ -229,7 +229,7 @@ export function saveProcessWith ({ pouchDb }) {
 }
 
 export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
-  function createQuery ({ processId, to, ordinate }) {
+  function createQuery ({ processId, to, ordinate, cron }) {
     const query = {
       selector: {
         _id: {
@@ -246,6 +246,13 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
           $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
         }
       },
+      /**
+       * _ids for sequential evals are monotonically increasing
+       * and lexicographically sortable
+       *
+       * so by sorting descending, the first document will also be the latest
+       * in the evaluation stream
+       */
       sort: [{ _id: 'desc' }],
       /**
        * Only get the latest document within the range,
@@ -256,20 +263,20 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
     }
 
     /**
-     * A 'to' was provided, so overwrite upper range with actual upper range, which is 'to'
+     * Criteria was provided, so overwrite upper range with actual upper range
      */
-    if (to) query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to, ordinate })}`
+    if (to || ordinate || cron) {
+      query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to, ordinate, cron })}`
+    }
     /**
-     * A specific ordinate was provided, which means we're looking
-     * for a Schedule Message's eval.
+     * No cron was provided, which means we're looking
+     * for a Scheduled Message's eval.
      *
      * So in this case, fetch the latest eval that is NOT the result of a Cron Message.
      * We do this, so the Schedule Message's result is returned, and not a Cron Message's,
      * whose schedule happened to coincide with the Scheduled Messages timestamp.
-     *
-     * Otherwise, we DO want to include the latest Cron Message eval
      */
-    if (ordinate) query.selector.cron = { $exists: false }
+    if (!cron) query.selector.cron = { $exists: false }
 
     return query
   }
@@ -289,8 +296,8 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
 
   const memoryLens = lensPath(['output', 'Memory'])
 
-  return ({ processId, to, ordinate }) => {
-    return of({ processId, to, ordinate })
+  return ({ processId, to, ordinate, cron }) => {
+    return of({ processId, to, ordinate, cron })
       .map(createQuery)
       .chain(fromPromise((query) => {
         return pouchDb.find(query)

@@ -203,7 +203,9 @@ describe('pouchdb', () => {
 
       const res = await findLatestEvaluation({
         processId: 'process-123',
-        to: 1702677252111
+        to: 1702677252111,
+        ordinate: '1',
+        cron: '1-10-minutes'
       })
 
       assert.equal(res.timestamp, 1702677252111)
@@ -254,7 +256,7 @@ describe('pouchdb', () => {
       const res = await findLatestEvaluation({
         processId: 'process-123',
         to: 1702677252111,
-        ordinate: 1
+        ordinate: '1'
       })
 
       assert.equal(res.timestamp, 1702677252111)

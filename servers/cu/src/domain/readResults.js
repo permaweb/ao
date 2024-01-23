@@ -34,7 +34,8 @@ export function readResultsWith (env) {
       .chain((ctx) => readState({
         processId,
         to: pathOr(undefined, ['to', 'timestamp'], ctx),
-        ordinate: pathOr(undefined, ['to', 'ordinate'], ctx)
+        ordinate: pathOr(undefined, ['to', 'ordinate'], ctx),
+        cron: pathOr(undefined, ['to', 'cron'], ctx)
       }))
       /**
        * Now 'caught up' on evaluations, so now we can gather the results, using the filtering

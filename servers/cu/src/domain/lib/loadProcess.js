@@ -83,14 +83,14 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
   findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
 
   return (ctx) => of(ctx)
-    .chain(args => findLatestEvaluation({
+    .chain((args) => findLatestEvaluation({
       processId: args.id,
       /**
-       * 'to' and 'ordinate' could be undefined, which is to say
-       * 'eval up to the present, according to the SU's timestamp'
+       * 'to', 'ordinate', or "cron" could each be undefined
        */
       to: args.to,
-      ordinate: args.ordinate
+      ordinate: args.ordinate,
+      cron: args.cron
     }))
     .bimap(
       (_) => {

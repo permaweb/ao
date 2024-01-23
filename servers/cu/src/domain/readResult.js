@@ -26,7 +26,21 @@ export function readResultWith (env) {
   return ({ processId, messageTxId }) => {
     return of({ processId, messageTxId })
       .chain(loadMessageMeta)
-      .chain(res => readState({ processId: res.processId, to: res.timestamp, ordinate: `${res.nonce}` }))
+      .chain(res => readState({
+        processId: res.processId,
+        to: res.timestamp,
+        /**
+         * The ordinate for a scheduled message is it's nonce
+         */
+        ordinate: `${res.nonce}`,
+        /**
+         * We know this is a scheduled message, and so has no
+         * associated cron.
+         *
+         * So we explicitly set cron to undefined, for posterity
+         */
+        cron: undefined
+      }))
       .map(omit(['Memory']))
       .map(
         env.logger.tap(
