@@ -2,7 +2,7 @@ import { deflate, inflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
+import { always, applySpec, head, isEmpty, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -472,8 +472,8 @@ export function findEvaluationsWith ({ pouchDb = internalPouchDb }) {
      *
      * from is exclusive, while to is inclusive
      */
-    if (from) query.selector._id.$gt = `${createEvaluationId({ processId, timestamp: from.timestamp, ordinate: from.ordinate, cron: from.cron })}`
-    if (to) query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate, cron: to.cron })}`
+    if (!isEmpty(from)) query.selector._id.$gt = `${createEvaluationId({ processId, timestamp: from.timestamp, ordinate: from.ordinate, cron: from.cron })}`
+    if (!isEmpty(to)) query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate, cron: to.cron })}`
 
     return query
   }
