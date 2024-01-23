@@ -26,7 +26,9 @@ describe('evaluate', () => {
         id: 'ctr-1234',
         from: new Date().getTime(),
         module: readFileSync('./test/processes/happy/process.wasm'),
-        Memory: null,
+        result: {
+          Memory: null
+        },
         messages: toAsyncIterable([
           {
             ordinate: 1,
@@ -155,7 +157,9 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
-      Memory: null,
+      result: {
+        Memory: null
+      },
       messages: toAsyncIterable([
         // noSave should noop and not call saveInteraction
         {
@@ -231,7 +235,9 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
-      Memory: null,
+      result: {
+        Memory: null
+      },
       messages: toAsyncIterable([
         {
           ordinate: 1,
@@ -298,13 +304,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: new Date().getTime(),
       module: readFileSync('./test/processes/happy/process.wasm'),
-      /**
-       * In reality this would be an illegible byte array, since it's format
-       * will be determined by whatever the underlying runtime is, in this case,
-       * Lua
-       */
-      Memory: Buffer.from('Hello', 'utf-8'),
       result: {
+        /**
+         * In reality this would be an illegible byte array, since it's format
+         * will be determined by whatever the underlying runtime is, in this case,
+         * Lua
+         */
+        Memory: Buffer.from('Hello', 'utf-8'),
         Messages: [],
         Output: '',
         Spawns: []
@@ -334,7 +340,14 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
-      Memory: Buffer.from('Hello', 'utf-8'),
+      result: {
+        /**
+         * In reality this would be an illegible byte array, since it's format
+         * will be determined by whatever the underlying runtime is, in this case,
+         * Lua
+         */
+        Memory: Buffer.from('Hello', 'utf-8')
+      },
       messages: toAsyncIterable([
         {
           ordinate: 1,
@@ -384,7 +397,14 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
-      Memory: Buffer.from('Hello', 'utf-8'),
+      result: {
+        /**
+         * In reality this would be an illegible byte array, since it's format
+         * will be determined by whatever the underlying runtime is, in this case,
+         * Lua
+         */
+        Memory: Buffer.from('Hello', 'utf-8')
+      },
       messages: toAsyncIterable([
         {
           ordinate: 1,
@@ -427,7 +447,14 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
-      Memory: Buffer.from('Hello', 'utf-8'),
+      result: {
+        /**
+         * In reality this would be an illegible byte array, since it's format
+         * will be determined by whatever the underlying runtime is, in this case,
+         * Lua
+         */
+        Memory: Buffer.from('Hello', 'utf-8')
+      },
       messages: toAsyncIterable([
         {
           ordinate: 1,
@@ -449,7 +476,7 @@ describe('evaluate', () => {
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
     assert.ok(res.output.Error)
-    assert.deepStrictEqual(res.Memory, Buffer.from('Hello', 'utf-8'))
+    assert.deepStrictEqual(res.output.Memory, Buffer.from('Hello', 'utf-8'))
   })
 
   test('continue evaluating, ignoring output of errored message', async () => {
@@ -469,7 +496,9 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
-      Memory: null,
+      result: {
+        Memory: null
+      },
       messages: toAsyncIterable([
         {
           // Will include an error in result.error

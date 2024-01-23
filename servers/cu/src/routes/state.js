@@ -24,7 +24,7 @@ export const withStateRoutes = (app) => {
         const input = inputSchema.parse({ processId, to })
 
         return readState(input)
-          .map((output) => {
+          .map(({ output }) => {
             /**
              * The cu sends the array buffer as binary data,
              * so make sure to set the header to indicate such

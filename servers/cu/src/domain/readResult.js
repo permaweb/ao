@@ -45,13 +45,7 @@ export function readResultWith (env) {
          */
         exact: true
       }))
+      .map((res) => res.output)
       .map(omit(['Memory']))
-      .map(
-        env.logger.tap(
-          'readResult result for message with txId %s to process %s',
-          messageTxId,
-          processId
-        )
-      )
   }
 }
