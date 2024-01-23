@@ -47,7 +47,7 @@ export const saveProcessSchema = z.function()
   .args(processSchema)
   .returns(z.promise(z.any()))
 
-export const findLatestEvaluationSchema = z.function()
+export const findEvaluationSchema = z.function()
   .args(z.object({
     processId: z.string(),
     to: z.coerce.number().nullish(),
@@ -55,6 +55,8 @@ export const findLatestEvaluationSchema = z.function()
     cron: z.string().nullish()
   }))
   .returns(z.promise(evaluationSchema))
+
+export const findLatestEvaluationSchema = findEvaluationSchema
 
 export const saveEvaluationSchema = z.function()
   .args(evaluationSchema.extend({ deepHash: z.string().nullish() }))

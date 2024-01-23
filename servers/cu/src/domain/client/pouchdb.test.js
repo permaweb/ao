@@ -164,7 +164,7 @@ describe('pouchdb', () => {
   })
 
   describe('findLatestEvaluation', () => {
-    test('return the lastest evaluation for the process, including from Cron Messages', async () => {
+    test('return the lastest evaluation for the process', async () => {
       const evaluatedAt = new Date().toISOString()
       const Memory = Buffer.from('Hello World', 'utf-8')
 
@@ -172,8 +172,6 @@ describe('pouchdb', () => {
         findLatestEvaluationWith({
           pouchDb: {
             find: async (op) => {
-              assert.equal(op.selector.cron, undefined)
-
               return {
                 docs: [
                   {
@@ -206,57 +204,6 @@ describe('pouchdb', () => {
         to: 1702677252111,
         ordinate: '1',
         cron: '1-10-minutes'
-      })
-
-      assert.equal(res.timestamp, 1702677252111)
-      assert.equal(res.ordinate, '1')
-      assert.equal(res.blockHeight, 1234)
-      assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
-      assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
-    })
-
-    test("with 'to' and 'ordinate', return the lastest evaluation from a scheduled message", async () => {
-      const evaluatedAt = new Date().toISOString()
-      const Memory = Buffer.from('Hello World', 'utf-8')
-
-      const findLatestEvaluation = findLatestEvaluationSchema.implement(
-        findLatestEvaluationWith({
-          pouchDb: {
-            find: async (op) => {
-              assert.deepStrictEqual(op.selector.cron, { $exists: false })
-
-              return {
-                docs: [
-                  {
-                    _id: 'eval-process-123,1702677252111',
-                    timestamp: 1702677252111,
-                    ordinate: 1,
-                    blockHeight: 1234,
-                    processId: 'process-123',
-                    messageId: 'message-123',
-                    parent: 'proc-process-123',
-                    output: { Messages: [{ foo: 'bar' }] },
-                    evaluatedAt,
-                    type: 'evaluation'
-                  }
-                ]
-              }
-            },
-            getAttachment: async (_id, name) => {
-              assert.equal(_id, 'eval-process-123,1702677252111')
-              assert.equal(name, 'memory.txt')
-              // impl will inflate this buffer
-              return deflateP(Memory)
-            }
-          },
-          logger
-        }))
-
-      const res = await findLatestEvaluation({
-        processId: 'process-123',
-        to: 1702677252111,
-        ordinate: '1'
       })
 
       assert.equal(res.timestamp, 1702677252111)

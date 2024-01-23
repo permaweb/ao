@@ -105,6 +105,19 @@ const processDocSchema = z.object({
   type: z.literal('process')
 })
 
+const evaluationDocSchema = z.object({
+  _id: z.string().min(1),
+  processId: evaluationSchema.shape.processId,
+  messageId: evaluationSchema.shape.messageId,
+  timestamp: evaluationSchema.shape.timestamp,
+  ordinate: evaluationSchema.shape.ordinate,
+  blockHeight: evaluationSchema.shape.blockHeight,
+  parent: z.string().min(1),
+  evaluatedAt: evaluationSchema.shape.evaluatedAt,
+  output: evaluationSchema.shape.output,
+  type: z.literal('evaluation')
+})
+
 const messageHashDocSchema = z.object({
   _id: z.string().min(1),
   /**
@@ -228,6 +241,40 @@ export function saveProcessWith ({ pouchDb }) {
   }
 }
 
+export function findEvaluationWith ({ pouchDb = internalPouchDb }) {
+  const memoryLens = lensPath(['output', 'Memory'])
+
+  return ({ processId, to, ordinate, cron }) => {
+    return of({ processId, to, ordinate, cron })
+      .chain(fromPromise(() => pouchDb.get(createEvaluationId({ processId, timestamp: to, ordinate, cron }))))
+      .bichain(
+        (err) => {
+          if (err.status === 404) return Rejected({ status: 404 })
+          return Rejected(err)
+        },
+        (found) => of(found)
+          /**
+           * Also retrieve the state buffer, persisted as an attachment
+           * and set it on the output.Memory field to match the expected output shape
+           */
+          .chain(fromPromise(async (doc) => {
+            const buffer = await pouchDb.getAttachment(doc._id, 'memory.txt')
+            /**
+             * Make sure to decompress the state buffer
+             */
+            return set(memoryLens, await inflateP(buffer), doc)
+          }))
+          /**
+           * Ensure the input matches the expected
+           * shape
+           */
+          .map(evaluationDocSchema.parse)
+          .map(toEvaluation)
+      )
+      .toPromise()
+  }
+}
+
 export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
   function createQuery ({ processId, to, ordinate, cron }) {
     const query = {
@@ -266,17 +313,9 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
      * Criteria was provided, so overwrite upper range with actual upper range
      */
     if (to || ordinate || cron) {
-      query.selector._id.$lte = `${createEvaluationId({ processId, timestamp: to, ordinate, cron })}`
+      query.selector._id.$lte =
+        `${createEvaluationId({ processId, timestamp: to, ordinate, cron })}${COLLATION_SEQUENCE_MAX_CHAR}`
     }
-    /**
-     * No cron was provided, which means we're looking
-     * for a Scheduled Message's eval.
-     *
-     * So in this case, fetch the latest eval that is NOT the result of a Cron Message.
-     * We do this, so the Schedule Message's result is returned, and not a Cron Message's,
-     * whose schedule happened to coincide with the Scheduled Messages timestamp.
-     */
-    if (!cron) query.selector.cron = { $exists: false }
 
     return query
   }

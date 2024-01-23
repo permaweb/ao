@@ -9,6 +9,8 @@ import { messageSchema, streamSchema } from '../model.js'
 import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, locateSchedulerSchema } from '../dal.js'
 import { trimSlash } from '../utils.js'
 
+export const toSeconds = (millis) => Math.floor(millis / 1000)
+
 /**
  * - { name: 'Cron-Interval', value: 'interval' }
  * - { name: 'Cron-Tag-Foo', value: 'Bar' }
@@ -39,7 +41,7 @@ export function parseCrons ({ tags }) {
        * TODO: harden
        */
       [T, pipe(
-        always({ interval, unit: 'seconds', value: Math.floor(ms([value, unit].join(' ')) / 1000) }),
+        always({ interval, unit: 'seconds', value: toSeconds(ms([value, unit].join(' '))) }),
         (cron) => {
           if (cron.value <= 0) throw new Error('time-based cron cannot be less than 1 second')
           return cron
@@ -129,8 +131,8 @@ export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
    *
    * So convert the times to seconds perform applying modulo
    */
-  timestamp = Math.floor(timestamp / 1000)
-  originTimestamp = Math.floor(originTimestamp / 1000)
+  timestamp = toSeconds(timestamp)
+  originTimestamp = toSeconds(originTimestamp)
   /**
    * don't count the origin timestamp as a match
    */
@@ -193,7 +195,7 @@ export function cronMessagesBetweenWith ({
        * before time-based messages
        */
       const nextBlock = blocksInRange[0]
-      if (nextBlock && Math.floor(curTimestamp / 1000) >= Math.floor(nextBlock.timestamp / 1000)) {
+      if (nextBlock && toSeconds(curTimestamp) >= toSeconds(nextBlock.timestamp)) {
         /**
          * Make sure to remove the block from our range,
          * since we've ticked past it,
@@ -446,7 +448,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                * this last tuple won't be fired
                */
               const rightMostBlock = last(blocksMeta)
-              if (prev.block.timestamp < rightMostBlock.timestamp) {
+              if (toSeconds(prev.block.timestamp) < toSeconds(rightMostBlock.timestamp)) {
                 logger(
                   'rightMostBlock at timestamp "%s" is later than latest message at timestamp "%s". Emitting extra set of boundaries on end...',
                   rightMostBlock.timestamp,

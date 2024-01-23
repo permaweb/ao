@@ -47,6 +47,7 @@ export const createApis = async (ctx) => {
     loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: logger.child('gateway') }),
     findProcess: PouchDbClient.findProcessWith({ pouchDb, logger }),
     saveProcess: PouchDbClient.saveProcessWith({ pouchDb, logger }),
+    findEvaluation: PouchDbClient.findEvaluationWith({ pouchDb, logger }),
     findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb, logger }),
     saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
     findMessageHash: PouchDbClient.findMessageHashWith({ pouchDb, logger }),
