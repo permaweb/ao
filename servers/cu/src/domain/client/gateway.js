@@ -14,7 +14,7 @@ import { z } from 'zod'
  * @param {Env1} env
  * @returns {LoadTransactionMeta}
  */
-export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
+export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_PROCESSES_QUERY = `
@@ -58,7 +58,15 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
             variables: { processIds: [id] }
           })
         })
-          .then((res) => res.json())
+          .then(async (res) => {
+            if (res.ok) return res.json()
+            logger(
+              'Error Encountered when fetching transaction \'%s\' from gateway \'%s\'',
+              id,
+              GATEWAY_URL
+            )
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
           .then(transactionConnectionSchema.parse)
           .then(path(['data', 'transactions', 'edges', '0', 'node']))
       ))
@@ -130,7 +138,16 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
             })
           })
         )
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (res.ok) return res.json()
+          logger(
+            'Error Encountered when fetching page of block metadata from gateway \'%s\' with minBlock \'%s\' and maxTimestamp \'%s\'',
+            GATEWAY_URL,
+            newMin,
+            maxTimestamp
+          )
+          throw new Error(`${res.status}: ${await res.text()}`)
+        })
         .then(path(['data', 'blocks']))
         .then((res) => ({ ...res, maxTimestamp }))
     }
@@ -215,11 +232,22 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
    * @param {Env2} env
    * @returns {LoadTransactionData}
    */
-export function loadTransactionDataWith ({ fetch, GATEWAY_URL }) {
+export function loadTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
   // TODO: create a dataloader and use that to batch load processes
 
   return (id) =>
     of(id)
-      .chain(fromPromise((id) => fetch(`${GATEWAY_URL}/raw/${id}`)))
+      .chain(fromPromise((id) =>
+        fetch(`${GATEWAY_URL}/raw/${id}`)
+          .then(async (res) => {
+            if (res.ok) return res
+            logger(
+              'Error Encountered when fetching raw data for transaction \'%s\' from gateway \'%s\'',
+              id,
+              GATEWAY_URL
+            )
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
+      ))
       .toPromise()
 }

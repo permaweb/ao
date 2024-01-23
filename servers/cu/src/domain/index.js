@@ -44,7 +44,7 @@ export const createApis = async (ctx) => {
   const sharedDeps = (logger) => ({
     loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-    loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger: logger.child('gateway') }),
+    loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
     findProcess: PouchDbClient.findProcessWith({ pouchDb, logger }),
     saveProcess: PouchDbClient.saveProcessWith({ pouchDb, logger }),
     findEvaluation: PouchDbClient.findEvaluationWith({ pouchDb, logger }),

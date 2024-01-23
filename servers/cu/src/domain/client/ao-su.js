@@ -24,7 +24,17 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
         .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`))
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (res.ok) return res.json()
+          logger(
+            'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
+            suUrl,
+            processId,
+            from,
+            to
+          )
+          throw new Error(`${res.status}: ${await res.text()}`)
+        })
     }
 
     return async function * scheduled () {
