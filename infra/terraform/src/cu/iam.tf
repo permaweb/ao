@@ -53,15 +53,6 @@ resource "aws_iam_policy" "cu_task_policy" {
         },
         {
           Action = [
-            "ssm:GetParameter"
-          ]
-          Effect = "Allow"
-          Resource = [
-            "${aws_ssm_parameter.cu_ami_id.0.arn}"
-          ]
-        },
-        {
-          Action = [
             "SecretsManager:GetSecretValue"
           ]
           Effect = "Allow"

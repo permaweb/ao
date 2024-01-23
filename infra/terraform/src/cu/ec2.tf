@@ -1,3 +1,14 @@
+data "aws_ami" "latest_ami_id" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["cu-testnet-*"]
+  }
+
+  owners = [var.principal_account_id]
+}
+
 resource "aws_security_group" "cu_asg_cluster" {
   count       = var.enabled ? 1 : 0
   name        = "cu-asg-cluster-sg"
@@ -29,7 +40,7 @@ resource "aws_cloudwatch_log_group" "cu_asg_cluster_log_group" {
 resource "aws_launch_template" "cu_asg_cluster_launch_template" {
   count         = var.enabled ? 1 : 0
   name          = "cu-asg-cluster"
-  image_id      = aws_ssm_parameter.cu_ami_id.0.value
+  image_id      = data.aws_ami.latest_ami_id.id
   instance_type = var.ec2_instance_type
 
   network_interfaces {
@@ -82,7 +93,7 @@ resource "aws_launch_template" "cu_asg_cluster_launch_template" {
 }
 
 resource "aws_elb" "cu_asg_cluster_elb" {
-  count              = var.enabled ? 1 : 0
+  count              = 0 # var.enabled ? 1 : 0
   availability_zones = var.azs
 
   health_check {
