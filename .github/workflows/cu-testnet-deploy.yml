@@ -1,0 +1,74 @@
+name: "cu-testnet-deploy"
+
+concurrency:
+  group: cu-testnet-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+
+env:
+  ACCOUNT_ID: 429478883069
+  AWS_REGION: us-west-1
+  ASG_GROUP_NAME: cu-asg-cluster
+  PACKER_FILENAME: cu-testnet.pkr.hcl
+
+jobs:
+  build-ami-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_AO_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
+        with:
+          version: latest
+
+      - name: Run `packer init`
+        id: init
+        working-directory: infra/packer
+        run: "packer init ./${{ env.PACKER_FILENAME }}"
+
+      - name: Run `packer validate`
+        id: validate
+        working-directory: infra/packer
+        run: "packer validate ./${{ env.PACKER_FILENAME }}"
+
+      - name: Run `packer build`
+        id: build
+        working-directory: infra/packer
+        run: "packer build ./${{ env.PACKER_FILENAME }}"
+
+  deploy-launch-template:
+    runs-on: ubuntu-latest
+    needs: build-ami-image
+    env:
+      tf_version: "1.5.7"
+      tg_version: "0.53.2"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_AO_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Update launch template with new AMI
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: infra/terraform/environments/testnet
+          tg_command: apply -target module.cu.aws_launch_template.cu_asg_cluster_launch_template
+      - name: Start ec2 instance refresh on new AMI
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name ${{ env.ASG_GROUP_NAME }} \
+            --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 100}'

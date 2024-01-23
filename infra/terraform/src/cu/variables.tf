@@ -13,6 +13,12 @@ variable "region" {
   type        = string
 }
 
+variable "principal_account_id" {
+  description = "AWS account id of the target environment"
+  type        = string
+
+}
+
 variable "azs" {
   description = "list of availability zones"
   type        = list(string)
