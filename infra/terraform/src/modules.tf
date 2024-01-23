@@ -34,6 +34,7 @@ module "cu" {
   enabled       = true
   environment   = var.environment
   region        = var.region
+  azs           = var.azs
   vpc_id        = aws_vpc.default.id
   ao_wallet_arn = data.aws_secretsmanager_secret.ao-wallet.arn
 
