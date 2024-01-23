@@ -85,7 +85,7 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
      */
     internalPouchDb.createIndex({
       index: {
-        fields: [{ _id: 'asc' }, { cron: 'asc' }]
+        fields: [{ _id: 'asc' }]
       },
       ddoc: EVALS_ASC_IDX,
       name: EVALS_ASC_IDX
