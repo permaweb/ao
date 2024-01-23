@@ -24,6 +24,7 @@ export const queryResultsSchema = z.function()
   }))
   .returns(z.promise(z.object({
     edges: z.array(z.object({
+      cursor: z.string(),
       node: z.object({
         Output: z.any().optional(),
         Messages: z.array(z.any()).optional(),

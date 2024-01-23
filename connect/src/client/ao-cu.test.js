@@ -25,6 +25,7 @@ describe('ao-cu', () => {
             return new Response(JSON.stringify({
               edges: [
                 {
+                  cursor: '2',
                   node: {
                     Output: { data: 'foobar' },
                     Messages: [],
@@ -41,6 +42,7 @@ describe('ao-cu', () => {
         .then(res => assert.deepStrictEqual(res, {
           edges: [
             {
+              cursor: '2',
               node: {
                 Output: { data: 'foobar' },
                 Messages: [],
