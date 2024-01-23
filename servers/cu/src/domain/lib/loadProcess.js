@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, isNotNil, mergeRight, omit } from 'ramda'
+import { always, isNotNil, mergeRight } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
@@ -104,12 +104,12 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * Initial Process State
        */
       () => Resolved({
-        /**
-         * With BiBo, the initial state is simply nothing.
-         * It is up to the process to set up it's own initial state
-         */
-        Memory: null,
         result: {
+          /**
+           * With BiBo, the initial state is simply nothing.
+           * It is up to the process to set up it's own initial state
+           */
+          Memory: null,
           Error: undefined,
           Messages: [],
           Output: '',
@@ -134,8 +134,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
        * State from evaluation we found in cache
        */
       (evaluation) => Resolved({
-        Memory: evaluation.output.Memory,
-        result: omit(['Memory'], evaluation.output),
+        result: evaluation.output,
         from: evaluation.timestamp,
         ordinate: evaluation.ordinate,
         fromBlockHeight: evaluation.blockHeight,
@@ -181,12 +180,6 @@ const ctxSchema = z.object({
    * that was most recent when this process was spawned
    */
   block: rawBlockSchema,
-  /**
-   * The most recent state. This could be the most recent
-   * cached buffer, or potentially null if there is no recently
-   * cached state
-   */
-  Memory: z.any().nullable(),
   /**
    * The most recent result. This could be the most recent
    * cached result, or potentially nothing
@@ -254,7 +247,7 @@ export function loadProcessWith (env) {
       .chain(ctx =>
         loadLatestEvaluation(ctx)
           .map(mergeRight(ctx))
-          // { id, owner, tags, ..., Memory, result, from, evaluatedAt }
+          // { id, owner, tags, ..., result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
       .map(logger.tap('Loaded process and appended to ctx'))

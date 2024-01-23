@@ -55,13 +55,22 @@ export function readStateWith (env) {
             ordinate,
             processId
           )
-          return Resolved(res.result)
+
+          /**
+           * evaluate sets output below, so since we've found the output
+           * without evaluating, we simply set output to the result of the cached
+           * evaluation.
+           *
+           * This exposes a single api for upstream to consume
+           */
+          return Resolved({ ...res, output: res.result })
         }
 
         return of(res)
           .chain(loadMessages)
           .chain(hydrateMessages)
           .chain(loadModule)
+          // { output }
           .chain(evaluate)
           .chain((ctx) => {
             /**
@@ -76,10 +85,24 @@ export function readStateWith (env) {
              * and reduce the chances of unnecessary 409s, due to concurrent evalutions of the same messages,
              * across multiple requests.
              */
-            if (exact) return findEvaluation({ processId, to, ordinate, cron })
+            if (exact) {
+              return findEvaluation({ processId, to, ordinate, cron })
+                /**
+                 * Mirror output shape from loadProcess, using the exact evaluation
+                 * as the "starting point"
+                 */
+                .map((evaluation) => ({
+                  ...ctx,
+                  output: evaluation.output,
+                  from: evaluation.timestamp,
+                  ordinate: evaluation.ordinate,
+                  fromBlockHeight: evaluation.blockHeight,
+                  evaluatedAt: evaluation.evaluatedAt
+                }))
+            }
+
             return Resolved(ctx)
           })
-          .map((ctx) => ctx.output)
       })
   }
 }

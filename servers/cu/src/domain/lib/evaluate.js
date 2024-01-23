@@ -161,7 +161,7 @@ export function evaluateWith (env) {
            * Ensure all result fields are initialized
            * to their identity
            */
-          Memory: pathOr(null, ['Memory']),
+          Memory: pathOr(null, ['result', 'Memory']),
           Error: pathOr(undefined, ['result', 'Error']),
           Messages: pathOr([], ['result', 'Messages']),
           Spawns: pathOr([], ['result', 'Spawns']),

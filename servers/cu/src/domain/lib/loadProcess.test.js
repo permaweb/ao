@@ -4,7 +4,6 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
-import { omit } from 'ramda'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
@@ -49,8 +48,8 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.anchor, null)
     assert.deepStrictEqual(res.data, 'data-123')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
-    assert.deepStrictEqual(res.Memory, null)
     assert.deepStrictEqual(res.result, {
+      Memory: null,
       Messages: [],
       Output: '',
       Spawns: []
@@ -143,8 +142,7 @@ describe('loadProcess', () => {
     })
 
     const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
-    assert.deepStrictEqual(res.Muffer, cachedEvaluation.output.Buffer)
-    assert.deepStrictEqual(res.result, omit(['Memory'], cachedEvaluation.output))
+    assert.deepStrictEqual(res.result, cachedEvaluation.output)
     assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
     assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
     assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
