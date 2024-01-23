@@ -17,6 +17,7 @@ describe('query', () => {
         return {
           edges: [
             {
+              cursor: '1',
               node: {
                 Output: { data: 'foobar' },
                 Messages: [],
@@ -38,6 +39,7 @@ describe('query', () => {
     assert.deepStrictEqual(res, {
       edges: [
         {
+          cursor: '1',
           node: {
             Output: { data: 'foobar' },
             Messages: [],
