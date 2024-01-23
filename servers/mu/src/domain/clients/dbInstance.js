@@ -88,13 +88,13 @@ export async function putMonitor (doc) {
 
     if (existingMonitor) {
       await db.none(
-        'UPDATE "monitored_processes" SET "lastFromTimestamp" = $1 WHERE "_id" = $2',
-        [doc.lastFromTimestamp, doc._id]
+        'UPDATE "monitored_processes" SET "lastFromCursor" = $1 WHERE "_id" = $2',
+        [doc.lastFromCursor, doc._id]
       )
     } else {
       await db.none(
-        'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromTimestamp", "processData", "createdAt") VALUES ($1, $2, $3, $4, $5)',
-        [doc._id, doc.authorized, doc.lastFromTimestamp, doc.processData, doc.createdAt]
+        'INSERT INTO "monitored_processes" ("_id", "authorized", "lastFromCursor", "processData", "createdAt") VALUES ($1, $2, $3, $4, $5)',
+        [doc._id, doc.authorized, doc.lastFromCursor, doc.processData, doc.createdAt]
       )
     }
 
@@ -122,7 +122,7 @@ export async function findMonitors () {
     return docs.map(doc => ({
       ...doc,
       createdAt: parseInt(doc.createdAt),
-      lastFromTimestamp: doc.lastFromTimestamp ? parseInt(doc.lastFromTimestamp) : null
+      lastFromCursor: doc.lastFromCursor ? doc.lastFromCursor : null
     }))
   }, [])
 }

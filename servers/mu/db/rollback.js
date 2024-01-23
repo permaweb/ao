@@ -6,8 +6,10 @@ import addProcessIdToSpawns from './migrations/20231116_add_processid_to_spawn.j
 import addMessageTracesTable from './migrations/20231206_create_message_traces_table.js'
 import modifyMonitorTable from './migrations/20231219_modify_monitor_table.js'
 import addInitialTxId from './migrations/20240115_add_initial_txid_column.js'
+import addLastFromCursor from './migrations/20240123_add_last_from_cursor.js'
 
 const migrations = [
+  addLastFromCursor,
   addInitialTxId,
   modifyMonitorTable,
   addMessageTracesTable,

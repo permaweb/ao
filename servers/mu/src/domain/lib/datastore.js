@@ -227,7 +227,7 @@ const monitoredProcessSchema = z.object({
   _id: z.string().min(1),
   // is this monitored process authorized to run by the server (is it funded)
   authorized: z.boolean(),
-  lastFromTimestamp: z.number().nullable(),
+  lastFromCursor: z.string().nullable(),
   processData: z.any(),
   _rev: z.string().optional(),
   createdAt: z.number()
@@ -240,7 +240,7 @@ function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
       .map(applySpec({
         _id: prop('id'),
         authorized: prop('authorized'),
-        lastFromTimestamp: prop('lastFromTimestamp'),
+        lastFromCursor: prop('lastFromCursor'),
         processData: prop('processData'),
         createdAt: prop('createdAt')
       }))
@@ -278,7 +278,7 @@ function findLatestMonitorsWith ({ dbInstance }) {
         return Resolved(parsedDocs.map(doc => ({
           id: prop('_id', doc),
           authorized: prop('authorized', doc),
-          lastFromTimestamp: prop('lastFromTimestamp', doc),
+          lastFromCursor: prop('lastFromCursor', doc),
           processData: prop('processData', doc),
           createdAt: prop('createdAt', doc)
         })))
@@ -290,11 +290,11 @@ function findLatestMonitorsWith ({ dbInstance }) {
 function updateMonitorWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('updateMonitor')
 
-  return ({ id, lastFromTimestamp }) => {
+  return ({ id, lastFromCursor }) => {
     return of({ id })
       .chain(fromPromise(() => dbInstance.getMonitor(id)))
       // createdAt comes out of the db as a string so we put it back to int
-      .map(doc => ({ ...doc, lastFromTimestamp, createdAt: parseInt(doc.createdAt) }))
+      .map(doc => ({ ...doc, lastFromCursor, createdAt: parseInt(doc.createdAt) }))
       .map(monitoredProcessSchema.parse)
       .chain(updatedDoc =>
         of(updatedDoc)
