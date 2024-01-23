@@ -13,12 +13,7 @@ jobs:
     env:
       ACCOUNT_ID: 429478883069
       AWS_REGION: us-west-1
-      ECR_REGISTRY: 429478883069.dkr.ecr.us-west-1.amazonaws.com
-      ECR_IMAGE_NAME: cu-ecr
-      ECS_CLUSTER: cu-cluster
-      ECS_SERVICE: cu-service
-      ECS_TASK: cu
-      IMAGE_NAME: cu
+      PACKER_FILENAME: cu-testnet.pkr.hcl
     steps:
       - uses: actions/checkout@v4
       - name: Configure AWS credentials
@@ -28,42 +23,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_PROD }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Build and push the tagged docker image to Amazon ECR
-        id: build-image
-        working-directory: servers/cu
-        run: |
-          aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REGISTRY
-          docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_IMAGE_NAME }}:$GITHUB_SHA .
-          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_IMAGE_NAME }}:$GITHUB_SHA
-          echo "image=${{ env.ECR_REGISTRY }}/${{ env.ECR_IMAGE_NAME }}:$GITHUB_SHA" >> $GITHUB_OUTPUT
-
-      - name: Download task definition
-        run: |
-          AWS_REGION=${{ env.AWS_REGION }} \
-          aws ecs describe-task-definition \
-            --task-definition ${{ env.ECS_TASK }} \
-            --query taskDefinition > task-definition.json
-
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def-upload
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
         with:
-          task-definition: task-definition.json
-          container-name: ${{ env.IMAGE_NAME }}-task-definition
-          image: ${{ steps.build-image.outputs.image }}
+          version: latest
 
-      - name: Deploy to ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def-upload.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
+      - name: Run `packer init`
+        id: init
+        working-directory: infra/packer
+        run: "packer init ./${{ env.PACKER_FILENAME }}"
 
-      - name: Deploy ECS task
-        run: |
-          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }}
-          aws ssm put-parameter \
-            --name cu-ecr-image-revision \
-            --value $GITHUB_SHA \
-            --overwrite
-          aws ecs wait services-stable --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }}
+      - name: Run `packer validate`
+        id: validate
+        working-directory: infra/packer
+        run: "packer validate ./${{ env.PACKER_FILENAME }}"
+
+      - name: Run `packer build`
+        id: build
+        working-directory: infra/packer
+        run: "packer build ./${{ env.PACKER_FILENAME }}"

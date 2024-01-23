@@ -13,6 +13,11 @@ variable "region" {
   type        = string
 }
 
+variable "azs" {
+  description = "list of availability zones"
+  type        = list(string)
+}
+
 variable "vpc_id" {
   description = "vpc id"
   type        = string

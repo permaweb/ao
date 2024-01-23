@@ -81,6 +81,26 @@ resource "aws_launch_template" "cu_asg_cluster_launch_template" {
 
 }
 
+resource "aws_elb" "cu_asg_cluster_elb" {
+  count              = var.enabled ? 1 : 0
+  availability_zones = var.azs
+
+  health_check {
+    target              = "HTTP:80/"
+    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+  }
+
+  listener {
+    instance_port     = 80
+    instance_protocol = "HTTP"
+    lb_port           = 80
+    lb_protocol       = "HTTP"
+  }
+
+}
 
 resource "aws_autoscaling_group" "cu_asg_cluster" {
   count = var.enabled ? 1 : 0
@@ -91,12 +111,15 @@ resource "aws_autoscaling_group" "cu_asg_cluster" {
     "GroupTerminatingInstances",
     "GroupTotalInstances"
   ]
+
+  # load_balancers = [aws_elb.cu_asg_cluster_elb.0.name]
+
   name                      = "cu-asg-cluster"
   desired_capacity          = 1
   max_size                  = 1
   min_size                  = 0
   vpc_zone_identifier       = var.public_subnet_ids
-  health_check_type         = "EC2"
+  health_check_type         = "ELB"
   health_check_grace_period = 300
   wait_for_capacity_timeout = 0
 
