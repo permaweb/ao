@@ -31,7 +31,11 @@ describe('upload-message', () => {
     await uploadMessage({
       id: 'process-asdf',
       signer: () => {},
-      tags: [{ name: 'foo', value: 'bar' }],
+      tags: [
+        { name: 'foo', value: 'bar' },
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'Variant', value: 'ao.TN.1' }
+      ],
       anchor: 'idempotent-123'
     }).toPromise()
       .then(res => assert.equal(res.messageId, 'data-item-123'))

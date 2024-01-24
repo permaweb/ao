@@ -1,8 +1,9 @@
 import { fromPromise, of, Resolved } from 'hyper-async'
 import { z } from 'zod'
-import { __, always, append, assoc, concat, defaultTo, ifElse, pipe, prop, propEq, reject } from 'ramda'
+import { __, always, append, assoc, concat, defaultTo, ifElse, pipe, prop } from 'ramda'
 
 import { deployProcessSchema, signerSchema } from '../../dal.js'
+import { removeTagsByNameMaybeValue } from '../utils.js'
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -29,6 +30,12 @@ function buildTagsWith () {
     return of(ctx)
       .map(prop('tags'))
       .map(defaultTo([]))
+      .map(removeTagsByNameMaybeValue('Data-Protocol', 'ao'))
+      .map(removeTagsByNameMaybeValue('Variant'))
+      .map(removeTagsByNameMaybeValue('Type'))
+      .map(removeTagsByNameMaybeValue('Module'))
+      .map(removeTagsByNameMaybeValue('Scheduler'))
+      .map(removeTagsByNameMaybeValue('SDK'))
       .map(concat(__, [
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'Variant', value: 'ao.TN.1' },
@@ -43,10 +50,6 @@ function buildTagsWith () {
 }
 
 function buildDataWith ({ logger }) {
-  function removeTagsByName (name) {
-    return (tags) => reject(propEq(name, 'name'), tags)
-  }
-
   return (ctx) => {
     return of(ctx)
       .chain(ifElse(
@@ -67,7 +70,7 @@ function buildDataWith ({ logger }) {
           .map(
             (ctx) => pipe(
               prop('tags'),
-              removeTagsByName('Content-Type'),
+              removeTagsByNameMaybeValue('Content-Type'),
               append({ name: 'Content-Type', value: 'text/plain' }),
               assoc('tags', __, ctx)
             )(ctx)

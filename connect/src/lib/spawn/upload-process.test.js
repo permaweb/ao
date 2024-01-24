@@ -40,7 +40,9 @@ describe('upload-process', () => {
       module: 'module-id-123',
       scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       tags: [
-        { name: 'foo', value: 'bar' }
+        { name: 'foo', value: 'bar' },
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'Variant', value: 'ao.TN.1' }
       ],
       signer: async () => ({ id: 'process-id-123', raw: 'raw-buffer' })
     }).toPromise()
