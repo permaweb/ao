@@ -46,11 +46,11 @@ const deleteMonitor = dataStoreClient.deleteMonitorWith({ dbInstance, logger })
 parentPort.on('message', (message) => {
   if (message.label === 'start') {
     setInterval(() => {
-      processMonitors()
+      syncAndProcessMonitors()
         .then(
           _result => {},
           error => {
-            console.log(`processMonitors error ${error}`)
+            console.log(`syncAndProcessMonitors error ${error}`)
           }
         )
     }, config.SCHEDULED_INTERVAL)
@@ -66,28 +66,62 @@ parentPort.on('message', (message) => {
  */
 const runningMonitorList = []
 
-async function processMonitors () {
-  const monitorList = await findLatestMonitors()
+async function syncAndProcessMonitors () {
+  let monitorList = await findLatestMonitors()
+
+  const toDelete = monitorList.filter((monitor) => shouldDelete(monitor))
+  toDelete.map((monitor) => deleteMonitor({ id: monitor.id }))
+
+  monitorList = await findLatestMonitors()
+
+  /**
+   * All the monitored processes that should run on this tick.
+   * Based on tags and runningMonitorList
+   */
+  const runners = monitorList.filter((monitor) => {
+    if (shouldRun(monitor)) {
+      /**
+       * The monitor is already in the process of running so filter it out.
+       * It may have been running on a previous tick and is still in the process.
+       */
+      const index = runningMonitorList.findIndex(item => item.id === monitor.id)
+      if (index !== -1) {
+        return false
+      }
+
+      /**
+       * it is going to run to push it into the list so it doesn't
+       * get picked up on another tick of the interval before completing
+       */
+      runningMonitorList.push(monitor)
+      return true
+    }
+    return false
+  })
+
+  processMonitors(runners)
+    .then(
+      _result => {
+        runners.map((monitor) => removeMonitorFromRunningList(monitor.id))
+      },
+      error => {
+        runners.map((monitor) => removeMonitorFromRunningList(monitor.id))
+        console.log(`processMonitors error ${error}`)
+      }
+    )
+}
+
+async function processMonitors (monitorList) {
   for (const monitor of monitorList) {
     const validationResult = monitorSchema.safeParse(monitor)
     if (validationResult.success) {
-      if (shouldDelete(monitor)) {
-        console.log('Monitor has been running for 12 hours, removing it now.')
-        await deleteMonitor({ id: monitor.id })
-        continue
-      }
-      if (shouldRun(monitor)) {
-        runningMonitorList.push(monitor)
-        try {
-          const { lastFromCursor } = await processMonitor(monitor)
-          monitor.lastFromCursor = lastFromCursor
-          monitor.lastRunTime = Date.now()
-          await updateMonitor(monitor)
-          removeMonitorFromRunningList(monitor.id)
-        } catch (error) {
-          removeMonitorFromRunningList(monitor.id)
-          console.log(`Error processing monitor ${monitor.id}:`, error)
-        }
+      try {
+        const { lastFromCursor } = await processMonitor(monitor)
+        monitor.lastFromCursor = lastFromCursor
+        monitor.lastRunTime = Date.now()
+        await updateMonitor(monitor)
+      } catch (error) {
+        console.log(`Error processing monitor ${monitor.id}:`, error)
       }
     } else {
       console.log('Invalid monitor:', validationResult.error)
@@ -215,13 +249,10 @@ async function fetchScheduled (monitor) {
   }
 }
 
+/**
+ * Should it run based on tags and the last time it ran.
+ */
 function shouldRun (monitor) {
-  const index = runningMonitorList.findIndex(item => item.id === monitor.id)
-
-  if (index !== -1) {
-    return false
-  }
-
   const tags = monitor.processData.tags
   const lastRunTime = monitor.lastRunTime
   const now = Date.now()
