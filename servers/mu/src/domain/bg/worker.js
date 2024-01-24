@@ -28,7 +28,8 @@ const monitorSchema = z.object({
   authorized: z.boolean(),
   lastFromCursor: z.nullable(z.string()),
   processData: z.any(),
-  createdAt: z.number()
+  createdAt: z.number(),
+  lastRunTime: z.number().nullable()
 })
 
 const findLatestMonitors = dataStoreClient.findLatestMonitorsWith({ dbInstance, logger })
@@ -70,8 +71,12 @@ async function processMonitors () {
     const validationResult = monitorSchema.safeParse(monitor)
     if (validationResult.success) {
       if (shouldRun(monitor)) {
+        runningMonitorList.push(monitor)
         try {
-          await processMonitor(monitor)
+          const { lastFromCursor } = await processMonitor(monitor)
+          monitor.lastFromCursor = lastFromCursor
+          monitor.lastRunTime = Date.now()
+          await updateMonitor(monitor)
           removeMonitorFromRunningList(monitor.id)
         } catch (error) {
           removeMonitorFromRunningList(monitor.id)
@@ -94,12 +99,10 @@ function removeMonitorFromRunningList (monitorId) {
 }
 
 async function processMonitor (monitor) {
-  runningMonitorList.push(monitor)
-
   try {
     const scheduled = await fetchScheduled(monitor)
 
-    if (!scheduled || !scheduled.edges || (scheduled.edges.length < 1)) return []
+    if (!scheduled || !scheduled.edges || (scheduled.edges.length < 1)) return { lastFromCursor: monitor.lastFromCursor }
 
     const fromTxId = `scheduled-${Math.floor(Math.random() * 1e18).toString()}`
 
@@ -170,11 +173,7 @@ async function processMonitor (monitor) {
 
     const lastScheduled = scheduled.edges[scheduled.edges.length - 1]
 
-    monitor.lastFromCursor = lastScheduled.cursor
-
-    await updateMonitor(monitor)
-
-    return { status: 'ok' }
+    return { lastFromCursor: lastScheduled.cursor }
   } catch (e) {
     console.error('Error in processMonitor:', e)
     throw e
@@ -217,5 +216,33 @@ function shouldRun (monitor) {
     return false
   }
 
-  return true
+  const tags = monitor.processData.tags
+  const lastRunTime = monitor.lastRunTime
+  const now = Date.now()
+
+  const intervalTag = tags.find((tag) => tag.name === 'Cron-Interval')
+
+  if (!intervalTag || !intervalTag.value) return false
+
+  const [value, unit] = intervalTag.value.split('-')
+  const intervalMilliseconds = convertToMilliseconds(parseInt(value, 10), unit)
+
+  return (now - lastRunTime) >= intervalMilliseconds
+}
+
+function convertToMilliseconds (value, unit) {
+  switch (unit) {
+    case 'seconds':
+      return value * 1000
+    case 'minutes':
+      return value * 60 * 1000
+    case 'hours':
+      return value * 60 * 60 * 1000
+    case 'days':
+      return value * 24 * 60 * 60 * 1000
+    case 'years':
+      return value * 365 * 24 * 60 * 60 * 1000 // ignores leap years
+    default:
+      return 0
+  }
 }
