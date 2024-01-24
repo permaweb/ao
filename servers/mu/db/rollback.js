@@ -7,8 +7,10 @@ import addMessageTracesTable from './migrations/20231206_create_message_traces_t
 import modifyMonitorTable from './migrations/20231219_modify_monitor_table.js'
 import addInitialTxId from './migrations/20240115_add_initial_txid_column.js'
 import addLastFromCursor from './migrations/20240123_add_last_from_cursor.js'
+import addLastRunTime from './migrations/20240124_add_last_run_time.js'
 
 const migrations = [
+  addLastRunTime,
   addLastFromCursor,
   addInitialTxId,
   modifyMonitorTable,
