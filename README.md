@@ -60,8 +60,8 @@ with `ao` Processes on node or in the browser.
   Compute Unit, aka a `cu` (pronounced "koo" 🦘)
 - [`ao` Messenger Unit (`mu`)](./servers/mu): An implementation of the `ao`
   Messaenger Unit, aka a `mu` (pronounced "moo" 🐄)
-- [`ao` Sequencer Unit (`su`)](./servers/su): An implementation of the `ao`
-  Sequencer Unit, aka a `su` (pronounced "soo" 👧)
+- [`ao` Scheduler Unit (`su`)](./servers/su): An implementation of the `ao`
+  Scheduler Unit, aka a `su` (pronounced "soo" 👧)
 - [`ao` Unit Router (`ur`)](./servers/ur): A Simple Reverse Proxy whose API can mirror an underlying set of `ao` Unit Hosts (`mu`s or `cu`s) (pronounced "youwer" 🔀)
 - [`ao` Lua Examples](./lua-examples): Various examples of projects leveraging
   `ao` Contracts and components.
