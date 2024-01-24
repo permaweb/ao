@@ -38,6 +38,7 @@ const saveSpawn = dataStoreClient.saveSpawnWith({ dbInstance, logger })
 const findLatestMsgs = dataStoreClient.findLatestMsgsWith({ dbInstance, logger })
 const findLatestSpawns = dataStoreClient.findLatestSpawnsWith({ dbInstance, logger })
 const updateMonitor = dataStoreClient.updateMonitorWith({ dbInstance, logger })
+const deleteMonitor = dataStoreClient.deleteMonitorWith({ dbInstance, logger })
 
 /**
  * once started set the interval
@@ -70,6 +71,11 @@ async function processMonitors () {
   for (const monitor of monitorList) {
     const validationResult = monitorSchema.safeParse(monitor)
     if (validationResult.success) {
+      if (shouldDelete(monitor)) {
+        console.log('Monitor has been running for 12 hours, removing it now.')
+        await deleteMonitor({ id: monitor.id })
+        continue
+      }
       if (shouldRun(monitor)) {
         runningMonitorList.push(monitor)
         try {
@@ -227,6 +233,8 @@ function shouldRun (monitor) {
   const [value, unit] = intervalTag.value.split('-')
   const intervalMilliseconds = convertToMilliseconds(parseInt(value, 10), unit)
 
+  if (!intervalMilliseconds) return false
+
   return (now - lastRunTime) >= intervalMilliseconds
 }
 
@@ -238,11 +246,23 @@ function convertToMilliseconds (value, unit) {
       return value * 60 * 1000
     case 'hours':
       return value * 60 * 60 * 1000
-    case 'days':
-      return value * 24 * 60 * 60 * 1000
-    case 'years':
-      return value * 365 * 24 * 60 * 60 * 1000 // ignores leap years
+    // add these cases back in later when we aren't deleting after 12 hours
+    // case 'days':
+    //   return value * 24 * 60 * 60 * 1000
+    // case 'years':
+    //   return value * 365 * 24 * 60 * 60 * 1000 // ignores leap years
     default:
-      return 0
+      return null
   }
+}
+
+/**
+ * If a monitor has been running for 12 hours we should delete it.
+ * The user will have to resubscribe it
+ */
+function shouldDelete (monitor) {
+  const createdAt = monitor.createdAt
+  const now = Date.now()
+  const intervalMilliseconds = 12 * 60 * 60 * 1000 // 12 hours
+  return (now - createdAt) >= intervalMilliseconds
 }

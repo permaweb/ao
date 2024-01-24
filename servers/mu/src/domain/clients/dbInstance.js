@@ -123,7 +123,7 @@ export async function findMonitors () {
       ...doc,
       createdAt: parseInt(doc.createdAt),
       lastFromCursor: doc.lastFromCursor ? doc.lastFromCursor : null,
-      lastRunTime: parseInt(doc.lastRunTime)
+      lastRunTime: doc.lastRunTime ? parseInt(doc.lastRunTime) : null
     }))
   }, [])
 }
