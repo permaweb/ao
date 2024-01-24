@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.36](https://github.com/permaweb/ao/compare/connect@v0.0.35...connect@v0.0.36) (2024-01-24)
+
+
+### Features
+
+* **connect:** dedupe protocol specific tags on spawn and message ([7e3073e](https://github.com/permaweb/ao/commit/7e3073e372c8efc8a9bf138f80aa34a17f36da53))
+
 ## [0.0.35](https://github.com/permaweb/ao/compare/connect@v0.0.34...connect@v0.0.35) (2024-01-23)
 
 ## [0.0.34](https://github.com/permaweb/ao/compare/connect@v0.0.33...connect@v0.0.34) (2024-01-22)
