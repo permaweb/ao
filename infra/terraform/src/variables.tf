@@ -32,3 +32,8 @@ variable "public_subnets_cidr" {
   type        = list(string)
   description = "CIDR blocks for the public subnets"
 }
+
+variable "su_unit_count" {
+  type        = number
+  description = "Number of su units"
+}

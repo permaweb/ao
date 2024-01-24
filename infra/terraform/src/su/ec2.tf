@@ -1,21 +1,17 @@
-locals {
-  application_port = 6363
-}
-
 data "aws_ami" "latest_ami_id" {
   most_recent = true
 
   filter {
     name   = "name"
-    values = ["cu-testnet-*"]
+    values = ["su-testnet-*"]
   }
 
   owners = [var.principal_account_id]
 }
 
-resource "aws_security_group" "cu_asg_cluster" {
+resource "aws_security_group" "su_asg_cluster" {
   count       = var.enabled ? 1 : 0
-  name        = "cu-asg-cluster-sg"
+  name        = "su-asg-cluster-sg"
   description = "Allow inbound traffic from the internet"
   vpc_id      = var.vpc_id
 
@@ -28,9 +24,9 @@ resource "aws_security_group" "cu_asg_cluster" {
   }
 
   ingress {
-    description = "Allow inbound HTTP traffic to cu"
-    from_port   = local.application_port
-    to_port     = local.application_port
+    description = "Allow inbound HTTP traffic to su"
+    from_port   = 6363
+    to_port     = 6363
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -44,19 +40,19 @@ resource "aws_security_group" "cu_asg_cluster" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "cu_asg_cluster_log_group" {
+resource "aws_cloudwatch_log_group" "su_asg_cluster_log_group" {
   count = var.enabled ? 1 : 0
-  name  = "/ec2/cu-asg-cluster"
+  name  = "/ec2/su-asg-cluster"
 }
 
-resource "aws_launch_template" "cu_asg_cluster_launch_template" {
+resource "aws_launch_template" "su_asg_cluster_launch_template" {
   count         = var.enabled ? 1 : 0
-  name          = "cu-asg-cluster"
+  name          = "su-asg-cluster"
   image_id      = data.aws_ami.latest_ami_id.id
   instance_type = var.ec2_instance_type
 
   network_interfaces {
-    security_groups = [aws_security_group.cu_asg_cluster.0.id]
+    security_groups = [aws_security_group.su_asg_cluster.0.id]
   }
 
   monitoring {
@@ -64,12 +60,12 @@ resource "aws_launch_template" "cu_asg_cluster_launch_template" {
   }
 
   iam_instance_profile {
-    name = aws_iam_instance_profile.cu_task_profile.0.name
+    name = aws_iam_instance_profile.su_task_profile.0.name
   }
 
   user_data = base64encode(templatefile("${path.module}/userdata.sh", {
     region         = var.region
-    log_group_name = aws_cloudwatch_log_group.cu_asg_cluster_log_group.0.name
+    log_group_name = aws_cloudwatch_log_group.su_asg_cluster_log_group.0.name
   }))
 
   block_device_mappings {
@@ -85,7 +81,7 @@ resource "aws_launch_template" "cu_asg_cluster_launch_template" {
     resource_type = "instance"
     tags = tomap({
       AoEnvironment = var.environment,
-      AoServer      = "cu"
+      AoServer      = "su"
     })
   }
 
@@ -93,37 +89,37 @@ resource "aws_launch_template" "cu_asg_cluster_launch_template" {
     resource_type = "volume"
     tags = tomap({
       AoEnvironment = var.environment,
-      AoServer      = "cu"
+      AoServer      = "su"
     })
   }
 
   tags = tomap({
     AoEnvironment = var.environment,
-    AoServer      = "cu"
+    AoServer      = "su"
   })
 
 }
 
-resource "aws_elb" "cu_asg_cluster_elb" {
-  count   = var.enabled ? 1 : 0
-  subnets = var.public_subnet_ids
+# resource "aws_elb" "su_asg_cluster_elb" {
+#   count              = 0 # var.enabled ? 1 : 0
+#   availability_zones = var.azs
 
-  health_check {
-    target              = "HTTP:${local.application_port}/"
-    interval            = 30
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-  }
+#   health_check {
+#     target              = "HTTP:80/"
+#     interval            = 30
+#     healthy_threshold   = 2
+#     unhealthy_threshold = 2
+#     timeout             = 5
+#   }
 
-  listener {
-    instance_port     = local.application_port
-    instance_protocol = "HTTP"
-    lb_port           = local.application_port
-    lb_protocol       = "HTTP"
-  }
+#   listener {
+#     instance_port     = 80
+#     instance_protocol = "HTTP"
+#     lb_port           = 80
+#     lb_protocol       = "HTTP"
+#   }
 
-}
+# }
 
 resource "aws_autoscaling_group" "cu_asg_cluster" {
   count = var.enabled ? 1 : 0
@@ -135,12 +131,12 @@ resource "aws_autoscaling_group" "cu_asg_cluster" {
     "GroupTotalInstances"
   ]
 
-  load_balancers = [aws_elb.cu_asg_cluster_elb.0.name]
+  # load_balancers = [aws_elb.cu_asg_cluster_elb.0.name]
 
   name                      = "cu-asg-cluster"
-  desired_capacity          = 3
-  max_size                  = 10
-  min_size                  = 2
+  desired_capacity          = 1
+  max_size                  = 1
+  min_size                  = 0
   vpc_zone_identifier       = var.public_subnet_ids
   health_check_type         = "ELB"
   health_check_grace_period = 300
@@ -148,17 +144,18 @@ resource "aws_autoscaling_group" "cu_asg_cluster" {
 
   tag {
     key                 = "Name"
-    value               = "cu-asg-cluster"
+    value               = "su-asg-cluster"
     propagate_at_launch = true
   }
 
   launch_template {
-    id      = aws_launch_template.cu_asg_cluster_launch_template.0.id
-    version = aws_launch_template.cu_asg_cluster_launch_template.0.latest_version
+    id      = aws_launch_template.su_asg_cluster_launch_template.0.id
+    version = aws_launch_template.su_asg_cluster_launch_template.0.latest_version
   }
 
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [launch_template]
   }
+
 }

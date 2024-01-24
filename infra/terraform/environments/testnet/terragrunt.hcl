@@ -15,4 +15,6 @@ inputs = {
 
   private_subnets_cidr = ["12.25.1.0/24", "12.25.3.0/24"]
   public_subnets_cidr  = ["12.25.0.0/24", "12.25.2.0/24"]
+
+  su_unit_count = 5
 }

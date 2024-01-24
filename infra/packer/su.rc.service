@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+
+user="alpine"
+group="alpine"
+command="/home/alpine/su"
+directory="/home/alpine"
+command_args="su 9000"
+command_user="${user}:${group}"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="${output_log}"
+
+depend() {
+	use net
+}
+
+# Make the binary executable
+RUN chmod +x /app/su
+
+# Run the binary
+CMD ["/app/su", "su", "9000"]
