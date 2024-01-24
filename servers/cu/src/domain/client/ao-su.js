@@ -104,6 +104,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     return node.owner.address
   }
 
+  function mapName (node) {
+    return `Scheduled Message ${node.message.id} ${node.timestamp}:${node.nonce}`
+  }
+
   function mapAoMessage ({ processId, processOwner, processTags }) {
     return async function * (edges) {
       for await (const edge of edges) {
@@ -116,6 +120,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
              * Set the ordinate to the message's nonce value
              */
             ordinate: path(['nonce']),
+            name: mapName,
             message: applySpec({
               Id: path(['message', 'id']),
               Signature: path(['message', 'signature']),

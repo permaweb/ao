@@ -70,6 +70,10 @@ export const messageSchema = z.object({
    * This way, all messages, scheduled and cron, remain orderable.
    */
   ordinate: z.coerce.string(),
+  /**
+   * A canonical name that can used for logging purposes
+   */
+  name: z.string(),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id

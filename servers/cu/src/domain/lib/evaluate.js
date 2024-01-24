@@ -34,13 +34,13 @@ function addHandler (ctx) {
 function saveEvaluationWith ({ saveEvaluation, logger }) {
   saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
 
-  return (evaluation) =>
+  return ({ name, ...evaluation }) =>
     of(evaluation)
       .chain(saveEvaluation)
       .bimap(
         logger.tap('Failed to save evaluation'),
         (res) => {
-          logger('Saved Evaluation %s', evaluation.messageId || `Cron Message ${evaluation.cron}`)
+          logger('Saved Evaluation "%s"', name)
           return res
         }
       )
@@ -172,13 +172,13 @@ export function evaluateWith (env) {
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
-        for await (const { noSave, cron, ordinate, message, deepHash, AoGlobal } of ctx.messages) {
+        for await (const { noSave, cron, ordinate, name, message, deepHash, AoGlobal } of ctx.messages) {
           /**
            * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
            * if their deepHash is found in the cache, this prevents duplicate evals
            */
           if (deepHash) {
-            logger('Checking if "%s" has already been evaluated...', message.Id || `Cron Message ${message.Timestamp},${ordinate},${cron}`)
+            logger('Checking if "%s" has already been evaluated...', name)
             const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
               logger('Message with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', deepHash)
@@ -191,7 +191,7 @@ export function evaluateWith (env) {
             .then(prev =>
               Promise.resolve(prev.Memory)
                 .then(Memory => {
-                  logger('Evaluating message "%s" to process "%s"', message.Id || `Cron Message ${message.Timestamp},${ordinate},${cron}`, ctx.id)
+                  logger('Evaluating message "%s" to process "%s"', name, ctx.id)
                   return Memory
                 })
                 /**
@@ -213,7 +213,7 @@ export function evaluateWith (env) {
                     : Promise.resolve(output)
                 })
                 .then(output => {
-                  logger('Applied message "%s" to process "%s"', message.Id || `Cron Message ${message.Timestamp},${ordinate},${cron}`, ctx.id)
+                  logger('Applied message "%s" to process "%s"', name, ctx.id)
                   return output
                 })
               /**
@@ -226,6 +226,7 @@ export function evaluateWith (env) {
                   if (noSave) return output
 
                   return saveEvaluation({
+                    name,
                     deepHash,
                     cron,
                     ordinate,
@@ -241,7 +242,7 @@ export function evaluateWith (env) {
                 })
                 .catch(logger.tap(
                   'Error occurred when applying message with id "%s" to process "%s" %o',
-                  message.Id || `Cron Message ${cron}`,
+                  name,
                   ctx.id
                 ))
             )

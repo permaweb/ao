@@ -212,6 +212,7 @@ export function cronMessagesBetweenWith ({
             yield {
               cron: `${i}-${cron.interval}`,
               ordinate: leftOrdinate,
+              name: `Cron Message ${curBlock.timestamp},${leftOrdinate},${i}-${cron.interval}`,
               message: {
                 Owner: processOwner,
                 Target: processId,
@@ -237,6 +238,7 @@ export function cronMessagesBetweenWith ({
           yield {
             cron: `${i}-${cron.interval}`,
             ordinate: leftOrdinate,
+            name: `Cron Message ${curTimestamp},${leftOrdinate},${i}-${cron.interval}`,
             message: {
               Owner: processOwner,
               Target: processId,
@@ -507,6 +509,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                */
               noSave: true,
               ordinate: '^',
+              name: `Process Message ${ctx.id}`,
               message: {
                 Id: ctx.id,
                 Signature: ctx.signature,
