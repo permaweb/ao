@@ -22,6 +22,7 @@ function aoComputeUnitMount ({ app, revProxy }) {
   app.get('/results/:processId', revProxy({ processIdFromRequest: (req) => req.params.processId }))
   app.get('/state/:processId', revProxy({ processIdFromRequest: (req) => req.params.processId }))
   app.get('/cron/:processId', revProxy({ processIdFromRequest: (req) => req.params.processId }))
+  app.post('/dry-run', revProxy({ processIdFromRequest: (req) => req.query['process-id'] }))
 }
 
 /**
