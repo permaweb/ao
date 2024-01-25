@@ -20,6 +20,7 @@ const toConnection = ({ cursorFn, nodeFn = identity }) => ({ nodes, pageSize }) 
   }
 }
 
+// eslint-disable-next-line
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
   from: z.coerce.string().optional(),
@@ -48,20 +49,25 @@ export const withResultsRoutes = app => {
     compose(
       withMiddleware,
       always(async (req, res) => {
-        const {
-          params: { processId },
-          query: { from, to, limit, sort },
-          domain: { apis: { readResults } }
-        } = req
+        // const {
+        //   params: { processId },
+        //   query: { from, to, limit, sort },
+        //   domain: { apis: { readResults } }
+        // } = req
 
-        const input = inputSchema.parse({ processId, from, to, limit, sort })
+        // const input = inputSchema.parse({ processId, from, to, limit, sort })
 
-        await readResults(input)
-          .map(({ evaluations }) => res.send(resultsConnection({
-            nodes: evaluations,
-            pageSize: input.limit
-          })))
-          .toPromise()
+        return res.send(resultsConnection({
+          nodes: [],
+          pageSize: 0
+        }))
+
+        // await readResults(input)
+        //   .map(({ evaluations }) => res.send(resultsConnection({
+        //     nodes: evaluations,
+        //     pageSize: input.limit
+        //   })))
+        //   .toPromise()
       })
     )()
   )
