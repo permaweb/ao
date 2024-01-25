@@ -18,25 +18,45 @@ export SU_WORKER_NUMBER=1
 cat <<EOF > /home/alpine/init-su.bash
 #!/usr/bin/env bash
 
-GATEWAY_URL=${gateway_url}
-UPLOAD_NODE_URL=${upload_node_url}
-MODE=su
-SU_WALLET_PATH=/home/alpine/.wallet
-SCHEDULER_LIST_PATH=''
-DATABASE_URL=${postgres_writer_instance}/su$SU_WORKER_NUMBER
-PUBLIC_IP="\$(curl http://checkip.amazonaws.com)"
+export GATEWAY_URL=${gateway_url}
+export UPLOAD_NODE_URL=${upload_node_url}
+export MODE=su
+export SU_WALLET_PATH=/home/alpine/.wallet
+export SCHEDULER_LIST_PATH=''
+
+PUBLIC_IP="\$(curl http://checkip.amazonaws.com | tr -d '\n')"
 
 cd /home/alpine
 
-aws lambda invoke \
-  --cli-binary-format raw-in-base64-out \
-  --function-name assignment-finder \
-  --region ${region} \
-  --payload="{\"public_ip\": \"$PUBLIC_IP\"}" current_assignment.txt
+CURRENT_ASSIGNMENT_PATH=/home/alpine/current_assignment.txt
 
-CURRENT_ASSIGNMENT=\$(cat current_assignment.txt)
+aws lambda invoke \\
+  --cli-binary-format raw-in-base64-out \\
+  --function-name assignment-finder \\
+  --region ${region} \\
+  --payload="{\"public_ip\": \"\$PUBLIC_IP\"}" \\
+  \$CURRENT_ASSIGNMENT_PATH
+
+CURRENT_ASSIGNMENT=\$(cat current_assignment.txt | tr -d '\n')
+
+# Check if the file exists
+if [ ! -f "\$CURRENT_ASSIGNMENT_PATH" ]; then
+    echo "Error: File does not exist."
+    exit 1
+fi
+
+# Check if the content is a number
+if [[ \$CURRENT_ASSIGNMENT =~ ^[0-9]+$ ]]; then
+    echo "The file contains a number."
+else
+    echo "The file does not contain a number."
+    exit 1
+fi
 
 echo "Current assignment: \$CURRENT_ASSIGNMENT"
+
+export DATABASE_URL=${postgres_writer_instance}/su\$CURRENT_ASSIGNMENT
+
 
 cat <<EOF2 > /home/alpine/route53_change.json
 {
@@ -45,12 +65,12 @@ cat <<EOF2 > /home/alpine/route53_change.json
     {
       "Action": "UPSERT",
       "ResourceRecordSet": {
-        "Name": "su$CURRENT_ASSIGNMENT.ao-testnet.xyz",
+        "Name": "su\$CURRENT_ASSIGNMENT.ao-testnet.xyz",
         "Type": "A",
         "TTL": 5,
         "ResourceRecords": [
           {
-            "Value": "$PUBLIC_IP"
+            "Value": "\$PUBLIC_IP"
           }
         ]
       }
