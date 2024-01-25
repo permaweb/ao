@@ -10,12 +10,16 @@ import PouchDbFind from 'pouchdb-find'
 import PouchDbHttp from 'pouchdb-adapter-http'
 import PouchDbLevel from 'pouchdb-adapter-leveldb'
 
-import { evaluationSchema, processSchema } from '../model.js'
+import { blockSchema, evaluationSchema, processSchema } from '../model.js'
 
 const deflateP = promisify(deflate)
 const inflateP = promisify(inflate)
 
-export const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX] = ['cron-evals-ascending', 'evals-ascending']
+export const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX, BLOCKS_ASC_IDX] = [
+  'cron-evals-ascending',
+  'evals-ascending',
+  'blocks-ascending'
+]
 
 /**
  * An implementation of the db client using pouchDB
@@ -50,20 +54,6 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
    */
   return Promise.all([
     /**
-     * delete a previously used index
-     */
-    internalPouchDb.getIndexes()
-      .then((res) => {
-        const old = res.indexes.find((i) => i.name === 'cron-evaluations')
-        return old
-          ? internalPouchDb.deleteIndex(old).then(res => {
-            console.log('deleted old index', res)
-          }).catch((err) => {
-            console.error('Error deleting old index', err)
-          })
-          : Promise.resolve()
-      }),
-    /**
      * We can this index to traverse ONLY cron evaluations
      * ascending or descending
      */
@@ -85,10 +75,23 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
      */
     internalPouchDb.createIndex({
       index: {
-        fields: [{ _id: 'asc' }]
+        fields: [{ _id: 'asc' }],
+        partial_filter_selector: {
+          type: evaluationDocSchema.shape.type.value
+        }
       },
       ddoc: EVALS_ASC_IDX,
       name: EVALS_ASC_IDX
+    }),
+    internalPouchDb.createIndex({
+      index: {
+        fields: [{ height: 'asc' }],
+        partial_filter_selector: {
+          type: blockDocSchema.shape.type.value
+        }
+      },
+      ddoc: BLOCKS_ASC_IDX,
+      name: BLOCKS_ASC_IDX
     })
   ]).then(() => internalPouchDb)
 }
@@ -118,6 +121,13 @@ const evaluationDocSchema = z.object({
   type: z.literal('evaluation')
 })
 
+const blockDocSchema = z.object({
+  _id: z.string().min(1),
+  height: blockSchema.shape.height,
+  timestamp: blockSchema.shape.timestamp,
+  type: z.literal('block')
+})
+
 const messageHashDocSchema = z.object({
   _id: z.string().min(1),
   /**
@@ -145,6 +155,10 @@ function createProcessId ({ processId }) {
   return `proc-${processId}`
 }
 
+function createBlockId ({ height, timestamp }) {
+  return `block-${height}-${timestamp}`
+}
+
 function createMessageHashId ({ messageHash }) {
   /**
    * transactions can sometimes start with an underscore,
@@ -163,6 +177,11 @@ const toEvaluation = applySpec({
   cron: prop('cron'),
   evaluatedAt: prop('evaluatedAt'),
   output: prop('output')
+})
+
+const toBlock = applySpec({
+  height: prop('height'),
+  timestamp: prop('timestamp')
 })
 
 /**
@@ -534,6 +553,55 @@ export function findEvaluationsWith ({ pouchDb = internalPouchDb }) {
         })
       }))
       .map(map(toEvaluation))
+      .toPromise()
+  }
+}
+
+export function saveBlocksWith ({ pouchDb = internalPouchDb }) {
+  return (blocks) => {
+    return of(blocks)
+      .map(
+        map(pipe(
+          applySpec({
+            _id: (block) => createBlockId(block),
+            height: prop('height'),
+            timestamp: prop('timestamp'),
+            type: always('block')
+          }),
+          /**
+           * Ensure the expected shape before writing to the db
+           */
+          blockDocSchema.parse
+        ))
+      )
+      .chain(fromPromise(docs => pouchDb.bulkDocs(docs)))
+      .toPromise()
+  }
+}
+
+export function findBlocksWith ({ pouchDb = internalPouchDb }) {
+  function createQuery ({ minHeight, maxTimestamp }) {
+    return {
+      selector: {
+        height: { $gte: minHeight },
+        timestamp: { $lte: maxTimestamp }
+      },
+      sort: [{ height: 'asc' }],
+      limit: Number.MAX_SAFE_INTEGER,
+      use_index: BLOCKS_ASC_IDX
+    }
+  }
+
+  return ({ minHeight, maxTimestamp }) => {
+    return of({ minHeight, maxTimestamp })
+      .map(createQuery)
+      .chain(fromPromise((query) => {
+        return pouchDb.find(query).then((res) => {
+          if (res.warning) console.warn(res.warning)
+          return res.docs
+        })
+      }))
+      .map(map(toBlock))
       .toPromise()
   }
 }

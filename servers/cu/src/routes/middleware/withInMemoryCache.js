@@ -3,15 +3,14 @@ import { LRUCache } from 'lru-cache'
 import { logger as _logger } from '../../logger.js'
 
 /**
- * A middleware that provides a response from the long-lived dataloader backed by an In-Memory LRUCache.
+ * A middleware that provides a response from an In-Memory LRUCache.
  *
  * This allows for efficient in-memory caching of responses, with a consistent memory footprint,
  * with the added benefit of potentially deduping loading of the same data.
  *
  * Overall, this should be a boon for performance as well as memory usage
  *
- * loader: the loading function passed to the dataloader. See dataloader
- * docs for how this function should work: https://www.npmjs.com/package/dataloader
+ * loader: the loading function invoked on MISS
  *
  * keyer: the function that determines the cache key. Accepts a req object and should return a string
  *

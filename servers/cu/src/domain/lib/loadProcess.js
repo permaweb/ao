@@ -3,7 +3,7 @@ import { always, isNotNil, mergeRight } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
-import { rawBlockSchema, rawTagSchema } from '../model.js'
+import { blockSchema, rawTagSchema } from '../model.js'
 import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
 
 function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, saveProcess, logger }) {
@@ -179,7 +179,7 @@ const ctxSchema = z.object({
    * The block height and timestamp, according to the SU,
    * that was most recent when this process was spawned
    */
-  block: rawBlockSchema,
+  block: blockSchema,
   /**
    * The most recent result. This could be the most recent
    * cached result, or potentially nothing

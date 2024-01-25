@@ -19,7 +19,7 @@ export const rawTagSchema = z.object({
   value: z.string()
 })
 
-export const rawBlockSchema = z.object({
+export const blockSchema = z.object({
   height: z.coerce.number(),
   timestamp: z.coerce.number()
 })
@@ -34,7 +34,7 @@ export const processSchema = z.object({
   anchor: z.string().nullish(),
   owner: z.string().min(1),
   tags: z.array(rawTagSchema),
-  block: rawBlockSchema
+  block: blockSchema
 })
 
 export const messageSchema = z.object({
