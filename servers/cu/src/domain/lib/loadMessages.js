@@ -403,10 +403,10 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
   return (ctx) => of(ctx)
     .chain(parseCrons)
     .bimap(
-      logger.tap('Failed to parse crons:'),
+      logger.tap('Failed to parse crons: %j'),
       ifElse(
         length,
-        logger.tap('Crons found. Generating cron messages according to Crons'),
+        logger.tap('Crons found. Generating cron messages according to Crons: %j'),
         logger.tap('No crons found. No cron messages to generate')
       )
     )

@@ -114,9 +114,5 @@ export function loadModuleWith (env) {
       .chain(getModule)
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
-      .map(ctx => {
-        logger('Loaded source and appended to ctx')
-        return ctx
-      })
   }
 }

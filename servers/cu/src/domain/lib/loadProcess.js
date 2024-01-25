@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, isNotNil, mergeRight } from 'ramda'
+import { always, isNotNil, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
 import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
@@ -97,7 +97,10 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
         logger('Could not find latest evaluation in db. Starting with initial state of null...')
         return _
       },
-      logger.tap('Found previous evaluation in db. Using as state and starting point to load messages')
+      (res) => {
+        logger('Found previous evaluation in db: %j', pick(['messageId', 'ordinate', 'cron', 'timestamp', 'ordinate', 'blockHeight']))
+        return res
+      }
     )
     .bichain(
       /**
@@ -250,6 +253,5 @@ export function loadProcessWith (env) {
           // { id, owner, tags, ..., result, from, evaluatedAt }
       )
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded process and appended to ctx'))
   }
 }

@@ -2,7 +2,7 @@ import { deflate, inflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, isEmpty, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
+import { always, applySpec, head, identity, isEmpty, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
 import { z } from 'zod'
 
 import PouchDb from 'pouchdb'
@@ -526,7 +526,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
           .chain(fromPromise(docs => pouchDb.bulkDocs(docs)))
           .bimap(
             logger.tap('Encountered an error when caching evaluation docs'),
-            logger.tap('Successfully cached evaluation docs')
+            identity
           )
 
       )
