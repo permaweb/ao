@@ -37,3 +37,8 @@ variable "su_unit_count" {
   type        = number
   description = "Number of su units"
 }
+
+variable "su_unit_count_max" {
+  type        = number
+  description = "Maximum number of su units"
+}

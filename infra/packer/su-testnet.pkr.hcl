@@ -49,21 +49,15 @@ build {
 
   provisioner "file" {
     destination = "/tmp/"
-    source      = "./su.rc.service"
-  }
-
-    provisioner "file" {
-    destination = "/tmp/"
     source      = "../../servers/su/su"
   }
 
   provisioner "shell" {
     inline = [
       "mv /tmp/su /home/alpine/su",
-      "doas mv /tmp/su.rc.service /etc/init.d/su",
       "chmod +x /home/alpine/su",
       "doas apk update",
-      "doas apk add bash aws-cli"
+      "doas apk add aws-cli bash curl"
     ]
   }
 }

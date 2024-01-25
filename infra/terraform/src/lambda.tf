@@ -50,13 +50,3 @@ resource "aws_lambda_function" "slack_lambda_handler" {
   }
 
 }
-
-# resource "aws_lambda_permission" "arweave_chain_nodes_autoscale_handling" {
-#   depends_on = [aws_lambda_function.arweave_chain_nodes_autoscale_handling]
-
-#   statement_id  = "AllowExecutionFromSNS"
-#   action        = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.arweave_chain_nodes_autoscale_handling.0.arn
-#   principal     = "sns.amazonaws.com"
-#   source_arn    = aws_sns_topic.arweave_chain_nodes_autoscale_handling.0.arn
-# }

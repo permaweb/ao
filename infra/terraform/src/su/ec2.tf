@@ -80,13 +80,14 @@ resource "aws_launch_template" "su_asg_cluster_launch_template" {
     upload_node_url          = "https://up.arweave.net"
     postgres_writer_instance = "postgresql://skeduser:${data.aws_secretsmanager_secret_version.database_user_skeduser.secret_string}@${var.psql_writer_instance_url}"
     application_port         = local.application_port
+    hosted_zone_id           = var.hosted_zone_id
   }))
 
   block_device_mappings {
-    device_name = "/dev/sda1"
+    device_name = "/dev/xvda"
     ebs {
-      volume_size           = 10
-      volume_type           = "gp3"
+      volume_size           = 5
+      volume_type           = "gp2"
       delete_on_termination = true
     }
   }
@@ -148,8 +149,8 @@ resource "aws_autoscaling_group" "su_asg_cluster" {
   # load_balancers = [aws_elb.cu_asg_cluster_elb.0.name]
 
   name                      = "su-asg-cluster"
-  desired_capacity          = 1
-  max_size                  = 1
+  desired_capacity          = var.su_unit_count
+  max_size                  = var.su_unit_count_max
   min_size                  = 0
   vpc_zone_identifier       = var.public_subnet_ids
   health_check_type         = "ELB"
