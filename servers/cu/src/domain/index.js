@@ -53,6 +53,8 @@ export const createApis = async (ctx) => {
     saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
     findBlocks: PouchDbClient.findBlocksWith({ pouchDb, logger }),
     saveBlocks: PouchDbClient.saveBlocksWith({ pouchDb, logger }),
+    findModule: PouchDbClient.findModuleWith({ pouchDb, logger }),
+    saveModule: PouchDbClient.saveModuleWith({ pouchDb, logger }),
     findMessageHash: PouchDbClient.findMessageHashWith({ pouchDb, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),

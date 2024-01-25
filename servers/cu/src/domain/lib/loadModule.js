@@ -1,8 +1,8 @@
 import { fromPromise, of, Resolved, Rejected } from 'hyper-async'
-import { mergeRight, prop } from 'ramda'
+import { always, mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
-import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
+import { findModuleSchema, loadTransactionDataSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
 
 /**
@@ -21,36 +21,69 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
-function getModuleWith ({ loadTransactionData, loadTransactionMeta }) {
-  loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
-  loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
+function getModuleWith ({ findModule, saveModule, loadTransactionData, loadTransactionMeta, logger }) {
+  loadTransactionData = fromPromise(loadTransactionDataSchema.implement(loadTransactionData))
+  loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
+  findModule = fromPromise(findModuleSchema.implement(findModule))
+  saveModule = fromPromise(saveModuleSchema.implement(saveModule))
 
   const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
     : Rejected(`Tag '${name}': ${err}`)
+
+  function loadFromGateway (moduleId) {
+    return of(moduleId)
+      .chain(fromPromise((moduleId) => Promise.all([
+        loadTransactionData(moduleId).toPromise(),
+        loadTransactionMeta(moduleId).toPromise()
+      ])))
+      /**
+       * This CU currently only implements evaluation for emscripten Module-Format,
+       * so we check that the Module is the correct Module-Format, and reject if not
+       */
+      .chain(([data, meta]) =>
+        of(meta.tags)
+          .map(parseTags)
+          .chain(checkTag('Module-Format', eqOrIncludes('wasm32-unknown-emscripten'), 'only \'wasm32-unknown-emscripten\' module format is supported by this CU'))
+          .chain(fromPromise(async () => data.arrayBuffer()))
+          .map((wasm) => ({ id: moduleId, tags: meta.tags, wasm }))
+      )
+      .chain((module) =>
+        saveModule(module)
+          .bimap(
+            logger.tap('Could not save module to db. Nooping'),
+            logger.tap('Saved module')
+          )
+          .bichain(
+            always(Resolved(module)),
+            always(Resolved(module))
+          )
+      )
+  }
 
   return (tags) => {
     return of(tags)
       .map(parseTags)
       .map(prop('Module'))
       .chain((moduleId) =>
-        of(moduleId)
-          .chain(fromPromise((moduleId) => Promise.all([
-            loadTransactionData(moduleId),
-            loadTransactionMeta(moduleId)
-          ])))
+        findModule({ moduleId })
           /**
-           * This CU currently only implements evaluation for emscripten Module-Format,
-           * so we check that the Module is the correct Module-Format, and reject if not
+           * The module could indeed not be found, or there was some other error
+           * fetching from persistence. Regardless, we will fallback to loading from
+           * the gateway
            */
-          .chain(([data, meta]) =>
-            of(meta.tags)
-              .map(parseTags)
-              .chain(checkTag('Module-Format', eqOrIncludes('wasm32-unknown-emscripten'), 'only \'wasm32-unknown-emscripten\' module format is supported by this CU'))
-              .map(() => data)
+          .bimap(
+            logger.tap('Could not find module in db. Loading from gateway...'),
+            (module) => {
+              logger('Found module "%s" in db', module.id)
+              return module
+            }
           )
-          .chain(fromPromise((res) => res.arrayBuffer()))
-          .map(module => ({ module, moduleId }))
+          .bichain(
+            () => loadFromGateway(moduleId),
+            Resolved
+          )
+          .map(module => ({ module: module.wasm, moduleId: module.id }))
       )
   }
 }
