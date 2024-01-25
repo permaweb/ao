@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { evaluationSchema, processSchema, rawBlockSchema, rawTagSchema, streamSchema } from './model.js'
+import { blockSchema, evaluationSchema, processSchema, rawTagSchema, streamSchema } from './model.js'
 
 // Gateway
 
@@ -32,9 +32,7 @@ export const loadBlocksMetaSchema = z.function()
     maxTimestamp: z.coerce.number()
   }))
   .returns(z.promise(
-    z.array(
-      rawBlockSchema.passthrough()
-    )
+    z.array(blockSchema.passthrough())
   ))
 
 // DB
@@ -80,6 +78,17 @@ export const findEvaluationsSchema = z.function()
     onlyCron: z.boolean().default(false)
   }))
   .returns(z.promise(z.array(evaluationSchema)))
+
+export const saveBlocksSchema = z.function()
+  .args(z.array(blockSchema))
+  .returns(z.promise(z.any()))
+
+export const findBlocksSchema = z.function()
+  .args(z.object({
+    minHeight: z.number(),
+    maxTimestamp: z.number()
+  }))
+  .returns(z.promise(z.array(blockSchema)))
 
 export const findMessageHashSchema = z.function()
   .args(z.object({
