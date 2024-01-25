@@ -5,7 +5,7 @@ import z from 'zod'
 const ctxSchema = z.object({
   msgs: z.any(),
   spawns: z.any(),
-  initialTxId: z.string()
+  initialTxId: z.string().nullable()
 }).passthrough()
 
 function findMsgsWith ({ findLatestMsgs }) {

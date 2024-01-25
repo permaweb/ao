@@ -43,7 +43,7 @@ const cachedMsgSchema = z.object({
    * The initial txid that this message was cranked for, or if it is the initial message,
    * this will match _id.
    */
-  initialTxId: z.string().min(1)
+  initialTxId: z.string().nullable()
 })
 
 function saveMsgWith ({ dbInstance, logger: _logger }) {
@@ -147,7 +147,7 @@ const cachedSpawnSchema = z.object({
    * The initial txid that this spawn was cranked for, or if it is the initial spawn,
    * this will match _id.
    */
-  initialTxId: z.string().min(1)
+  initialTxId: z.string().nullable()
 })
 
 function saveSpawnWith ({ dbInstance, logger: _logger }) {
