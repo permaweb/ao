@@ -47,6 +47,9 @@ module "su" {
 
   source = "./su"
 
+  su_unit_count     = var.su_unit_count
+  su_unit_count_max = var.su_unit_count_max
+
   enabled                  = true
   environment              = var.environment
   region                   = var.region
@@ -58,4 +61,6 @@ module "su" {
 
   public_subnet_ids   = aws_subnet.public[*].id
   public_subnet_cidrs = aws_subnet.public[*].cidr_block
+
+  hosted_zone_id = aws_route53_zone.ao_testnet.zone_id
 }

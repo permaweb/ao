@@ -3,7 +3,7 @@ resource "aws_route53_zone" "ao_testnet" {
 }
 
 resource "aws_route53_record" "su_records" {
-  count   = var.su_unit_count
+  count   = var.su_unit_count_max
   zone_id = aws_route53_zone.ao_testnet.zone_id
   name    = "su${count.index + 1}.ao-testnet.xyz"
   type    = "A"

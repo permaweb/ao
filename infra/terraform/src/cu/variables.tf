@@ -42,7 +42,7 @@ variable "public_subnet_ids" {
 variable "ec2_instance_type" {
   description = "ec2 instance type"
   type        = string
-  default     = "t4g.large"
+  default     = "t4g.small"
 }
 
 variable "ao_wallet_arn" {

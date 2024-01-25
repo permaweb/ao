@@ -15,14 +15,68 @@ aws secretsmanager get-secret-value --region us-west-1 --secret-id ao-wallet --q
 
 export SU_WORKER_NUMBER=1
 
+cat <<EOF > /home/alpine/init-su.bash
+#!/usr/bin/env bash
+
+GATEWAY_URL=${gateway_url}
+UPLOAD_NODE_URL=${upload_node_url}
+MODE=su
+SU_WALLET_PATH=/home/alpine/.wallet
+SCHEDULER_LIST_PATH=''
+DATABASE_URL=${postgres_writer_instance}/su$SU_WORKER_NUMBER
+PUBLIC_IP="\$(curl http://checkip.amazonaws.com)"
+
+cd /home/alpine
+
+aws lambda invoke \
+  --cli-binary-format raw-in-base64-out \
+  --function-name assignment-finder \
+  --region ${region} \
+  --payload="{\"public_ip\": \"$PUBLIC_IP\"}" current_assignment.txt
+
+CURRENT_ASSIGNMENT=\$(cat current_assignment.txt)
+
+echo "Current assignment: \$CURRENT_ASSIGNMENT"
+
+cat <<EOF2 > /home/alpine/route53_change.json
+{
+  "Comment": "Automatic DNS update",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "su$CURRENT_ASSIGNMENT.ao-testnet.xyz",
+        "Type": "A",
+        "TTL": 5,
+        "ResourceRecords": [
+          {
+            "Value": "$PUBLIC_IP"
+          }
+        ]
+      }
+    }
+  ]
+}
+EOF2
+
+aws route53 change-resource-record-sets \
+  --hosted-zone-id ${hosted_zone_id} \
+  --change-batch file:///home/alpine/route53_change.json
+
+
+/home/alpine/su su ${application_port}
+
+EOF
+
+chmod +x /home/alpine/init-su.bash
+
 cat <<EOF > /etc/init.d/su
 #!/sbin/openrc-run
 
 user="root"
 group="root"
-command="/usr/bin/env"
+command="/home/alpine/init-su.bash"
 directory="/home/alpine"
-command_args="GATEWAY_URL=${gateway_url} UPLOAD_NODE_URL=${upload_node_url} MODE=su SU_WALLET_PATH=/home/alpine/.wallet SCHEDULER_LIST_PATH='' DATABASE_URL=${postgres_writer_instance}/su$SU_WORKER_NUMBER /home/alpine/su su ${application_port}"
 command_user="\$${user}:\$${group}"
 command_background="yes"
 pidfile="/run/\$${RC_SVCNAME}.pid"

@@ -3,6 +3,16 @@ variable "enabled" {
   type        = bool
 }
 
+variable "su_unit_count" {
+  description = "number of su units"
+  type        = number
+}
+
+variable "su_unit_count_max" {
+  description = "maximum number of su units"
+  type        = number
+}
+
 variable "environment" {
   description = "environment name"
   type        = string
@@ -52,5 +62,10 @@ variable "ao_wallet_arn" {
 
 variable "psql_writer_instance_url" {
   description = "The URL of the PSQL writer instance"
+  type        = string
+}
+
+variable "hosted_zone_id" {
+  description = "The ID of the hosted zone"
   type        = string
 }

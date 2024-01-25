@@ -75,7 +75,7 @@ resource "aws_launch_template" "cu_asg_cluster_launch_template" {
   block_device_mappings {
     device_name = "/dev/sda1"
     ebs {
-      volume_size           = 50
+      volume_size           = 20
       volume_type           = "gp2"
       delete_on_termination = true
     }
