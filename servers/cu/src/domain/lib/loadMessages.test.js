@@ -5,7 +5,7 @@ import * as assert from 'node:assert'
 import ms from 'ms'
 import { countBy, uniqBy } from 'ramda'
 
-import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith } from './loadMessages.js'
+import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith, mergeBlocks } from './loadMessages.js'
 
 describe('loadMessages', () => {
   describe('parseCrons', () => {
@@ -424,6 +424,38 @@ describe('loadMessages', () => {
       assert.equal(
         cronMessages.length,
         uniqBy((node) => `${node.message.Timestamp},${node.ordinate},${node.cron}`, cronMessages).length
+      )
+    })
+  })
+
+  describe('mergeBlocks', () => {
+    test('should merge the blocks into a single sorted list', () => {
+      const fromDb = [
+        { height: 10, timestamp: 123 },
+        { height: 11, timestamp: 456 },
+        { height: 15, timestamp: 789 },
+        { height: 16, timestamp: 1234 }
+      ]
+
+      const fromGateway = [
+        { height: 11, timestamp: 456 },
+        { height: 12, timestamp: 457 },
+        { height: 13, timestamp: 458 },
+        { height: 14, timestamp: 459 },
+        { height: 15, timestamp: 460 }
+      ]
+
+      assert.deepStrictEqual(
+        mergeBlocks(fromDb, fromGateway),
+        [
+          { height: 10, timestamp: 123 },
+          { height: 11, timestamp: 456 },
+          { height: 12, timestamp: 457 },
+          { height: 13, timestamp: 458 },
+          { height: 14, timestamp: 459 },
+          { height: 15, timestamp: 460 },
+          { height: 16, timestamp: 1234 }
+        ]
       )
     })
   })

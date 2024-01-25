@@ -1,15 +1,89 @@
 import { PassThrough, Transform, pipeline } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, ifElse, last, length, mergeRight, pipe, prop, reduce } from 'ramda'
+import { T, always, ascend, cond, equals, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
 import { messageSchema, streamSchema } from '../model.js'
-import { loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, locateSchedulerSchema } from '../dal.js'
+import {
+  findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema,
+  loadTimestampSchema, locateSchedulerSchema, saveBlocksSchema
+} from '../dal.js'
 import { trimSlash } from '../utils.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
+
+export function findMissingBlocksIn (blocks, { min, maxTimestamp }) {
+  if (!blocks.length) return { min, maxTimestamp }
+
+  const missing = []
+  const maxBlock = last(blocks)
+
+  for (let height = min; height < maxBlock.height; height++) {
+    if (!blocks.find((block) => block.height === height)) missing.push(height)
+  }
+
+  if (!missing.length) {
+    /**
+     * New blocks are added every ~2 minutes. So we check if the difference
+     * between the maxBlock and maxTimestamp is more than 90 seconds (to afford some wiggle room).
+     *
+     * If not, we can be confident that there is no missing block metadata between our
+     * latest block found and the maxTimestamp
+     *
+     * TODO: probably a better way to do this.
+     */
+    if (toSeconds(maxTimestamp) - toSeconds(maxBlock.timestamp) <= 90) return undefined
+    /**
+     * The only blocks missing are between the latest block found,
+     * and the maxTimestamp
+     */
+    return { min: maxBlock.height, maxTimestamp }
+  }
+
+  /**
+   * TODO:
+   *
+   * The purpose of this function to find the holes in the incremental sequence of block meta.
+   * This impl returns one "large" hole to fetch from the gateway.
+   *
+   * An optimization would be to split the "large" hold into more reasonably sized "small" holes,
+   * and fetch those. aka. more resolution and less data unnecessarily loaded from the gateway
+   */
+  return { min: Math.min(missing), maxTimestamp }
+}
+
+export function mergeBlocks (fromDb, fromGateway) {
+  let dbIdx = 0
+  let gatewayIdx = 0
+  const merged = []
+
+  /**
+   * Incrementally traverse the lists of blocks, pushing the smallest
+   * on the merged list, as we go.
+   */
+  while (dbIdx < fromDb.length && gatewayIdx < fromGateway.length) {
+    if (fromDb[dbIdx].height < fromGateway[gatewayIdx].height) merged.push(fromDb[dbIdx++])
+    else merged.push(fromGateway[gatewayIdx++])
+  }
+
+  /**
+   * Whichever list has remaining elements, simply push them onto the list.
+   *
+   * This is safe to do because each list starts sorted, and so the difference here
+   * will be safe to append to the end of the merged array
+   */
+  if (dbIdx < fromDb.length) merged.push.apply(merged, fromDb)
+  if (gatewayIdx < fromGateway.length) merged.push.apply(merged, fromGateway)
+
+  /**
+   * Probably a more efficient way to do this.
+   *
+   * This works for now.
+   */
+  return uniqBy(prop('height'), merged)
+}
 
 /**
  * - { name: 'Cron-Interval', value: 'interval' }
@@ -258,6 +332,44 @@ export function cronMessagesBetweenWith ({
   }
 }
 
+function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
+  findBlocks = fromPromise(findBlocksSchema.implement(findBlocks))
+  saveBlocks = fromPromise(saveBlocksSchema.implement(saveBlocks))
+  loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
+
+  return ({ min, maxTimestamp }) => {
+    /**
+     * Find any blocks that are cached in the range
+     */
+    return findBlocks({ minHeight: min, maxTimestamp })
+      .chain((fromDb) => {
+        return of(fromDb)
+          /**
+           * find the all-encompassing range of all missing blocks
+           * between the minimum block, and the maxTimestamp
+           */
+          .map((fromDb) => findMissingBlocksIn(fromDb, { min, maxTimestamp }))
+          .chain((missingRange) => {
+            if (!missingRange) return Resolved(fromDb)
+
+            /**
+             * Load any missing blocks within the determined range,
+             * from the gateway
+             */
+            return loadBlocksMeta(missingRange)
+              /**
+               * Cache any fetched blocks for next time
+               *
+               * This will definitely result in individual 409s for existing blocks,
+               * but those shouldn't impact anything and are swallowed
+               */
+              .chain((fromGateway) => saveBlocks(fromGateway).map(() => fromGateway))
+              .map((fromGateway) => mergeBlocks(fromDb, fromGateway))
+          })
+      })
+  }
+}
+
 function loadScheduledMessagesWith ({ locateScheduler, loadMessages, loadBlocksMeta, logger }) {
   locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
@@ -282,10 +394,11 @@ function loadScheduledMessagesWith ({ locateScheduler, loadMessages, loadBlocksM
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta, logger }) {
+function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
   locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
-  loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
+
+  const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
 
   return (ctx) => of(ctx)
     .chain(parseCrons)
@@ -310,7 +423,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
        */
       return locateScheduler(ctx.id)
         .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: trimSlash(url) }))
-        .map(logger.tap('loaded current block and tiemstamp from SU'))
+        .map(logger.tap('loaded current timestamp from SU'))
         /**
          * In order to generate cron messages and merge them with the
          * scheduled messages, we must first determine our boundaries, which is to say,
@@ -329,7 +442,12 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
            * ordinate for generated Cron messages. This value is usually the nonce of the most recent
            * schedule message. So in sense, Cron message exists "between" scheduled message nonces
            */
-          leftMost: { ordinate: ctx.ordinate, block: ctx.from ? { height: ctx.fromBlockHeight, timestamp: ctx.from } : ctx.block },
+          leftMost: {
+            ordinate: ctx.ordinate,
+            block: ctx.from
+              ? { height: ctx.fromBlockHeight, timestamp: ctx.from }
+              : ctx.block
+          },
           /**
            * The right most boundary is derived from:
            * 1. when evaluating up to a specific scheduled message: the provided 'to' which is the messages timestamp
@@ -340,16 +458,13 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
            */
           rightMostTimestamp: ctx.to || currentBlock.timestamp
         }))
-        .map(logger.tap('loading blocks meta for scheduled messages in range of %o'))
+        .map(logger.tap('reconciling blocks meta for scheduled messages in range of %o'))
         .chain(({ leftMost, rightMostTimestamp }) =>
-          loadBlocksMeta({
-            min: leftMost.block.height,
-            maxTimestamp: rightMostTimestamp
-          })
+          reconcileBlocks({ min: leftMost.block.height, maxTimestamp: rightMostTimestamp })
             .map(blocksMeta => {
               return {
                 leftMost,
-                blocksMeta,
+                rightMostTimestamp,
                 $scheduled: ctx.$scheduled,
                 /**
                  * Our iterating function that accepts a left and right boundary
@@ -372,7 +487,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
           logger('Merging Streams of Scheduled and Cron Messages...')
           return ctx
         })
-        .map(({ leftMost, blocksMeta, $scheduled, genCronMessages }) => {
+        .map(({ leftMost, rightMostTimestamp, $scheduled, genCronMessages }) => {
           return pipeline(
             /**
              * Given a left-most and right-most boundary, return an async generator,
@@ -449,14 +564,17 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, loadBlocksMeta,
                * If a scheduled message result is being read (the vast majority of use-cases),
                * this last tuple won't be fired
                */
-              const rightMostBlock = last(blocksMeta)
-              if (toSeconds(prev.block.timestamp) < toSeconds(rightMostBlock.timestamp)) {
+              if (toSeconds(prev.block.timestamp) < toSeconds(rightMostTimestamp)) {
                 logger(
                   'rightMostBlock at timestamp "%s" is later than latest message at timestamp "%s". Emitting extra set of boundaries on end...',
-                  rightMostBlock.timestamp,
+                  rightMostTimestamp,
                   prev.block.timestamp
                 )
-                yield [false, prev, false, { block: rightMostBlock }]
+                /**
+                 * We only ever use the right block's timestamp, so having a right
+                 * without a height is fine.
+                 */
+                yield [false, prev, false, { block: { timestamp: rightMostTimestamp } }]
               }
             },
             Transform.from(async function * (boundaries) {
