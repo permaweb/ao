@@ -37,6 +37,12 @@ export const processSchema = z.object({
   block: blockSchema
 })
 
+export const moduleSchema = z.object({
+  id: z.string().min(1),
+  tags: z.array(rawTagSchema),
+  wasm: z.any()
+})
+
 export const messageSchema = z.object({
   /**
    * Whether or not this message's evaluation should be saved.
