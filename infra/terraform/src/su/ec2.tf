@@ -1,3 +1,11 @@
+locals {
+  application_port = 9000
+}
+
+data "aws_secretsmanager_secret_version" "database_user_skeduser" {
+  secret_id = "postgres-user-skeduser"
+}
+
 data "aws_ami" "latest_ami_id" {
   most_recent = true
 
@@ -25,8 +33,8 @@ resource "aws_security_group" "su_asg_cluster" {
 
   ingress {
     description = "Allow inbound HTTP traffic to su"
-    from_port   = 6363
-    to_port     = 6363
+    from_port   = local.application_port
+    to_port     = local.application_port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -50,6 +58,8 @@ resource "aws_launch_template" "su_asg_cluster_launch_template" {
   name          = "su-asg-cluster"
   image_id      = data.aws_ami.latest_ami_id.id
   instance_type = var.ec2_instance_type
+  key_name      = "hlolli"
+
 
   network_interfaces {
     security_groups = [aws_security_group.su_asg_cluster.0.id]
@@ -64,15 +74,19 @@ resource "aws_launch_template" "su_asg_cluster_launch_template" {
   }
 
   user_data = base64encode(templatefile("${path.module}/userdata.sh", {
-    region         = var.region
-    log_group_name = aws_cloudwatch_log_group.su_asg_cluster_log_group.0.name
+    region                   = var.region
+    log_group_name           = aws_cloudwatch_log_group.su_asg_cluster_log_group.0.name
+    gateway_url              = "https://arweave.net"
+    upload_node_url          = "https://up.arweave.net"
+    postgres_writer_instance = "postgresql://skeduser:${data.aws_secretsmanager_secret_version.database_user_skeduser.secret_string}@${var.psql_writer_instance_url}"
+    application_port         = local.application_port
   }))
 
   block_device_mappings {
     device_name = "/dev/sda1"
     ebs {
-      volume_size           = 50
-      volume_type           = "gp2"
+      volume_size           = 10
+      volume_type           = "gp3"
       delete_on_termination = true
     }
   }
@@ -121,7 +135,7 @@ resource "aws_launch_template" "su_asg_cluster_launch_template" {
 
 # }
 
-resource "aws_autoscaling_group" "cu_asg_cluster" {
+resource "aws_autoscaling_group" "su_asg_cluster" {
   count = var.enabled ? 1 : 0
   enabled_metrics = [
     "GroupDesiredCapacity",
@@ -133,7 +147,7 @@ resource "aws_autoscaling_group" "cu_asg_cluster" {
 
   # load_balancers = [aws_elb.cu_asg_cluster_elb.0.name]
 
-  name                      = "cu-asg-cluster"
+  name                      = "su-asg-cluster"
   desired_capacity          = 1
   max_size                  = 1
   min_size                  = 0

@@ -42,10 +42,15 @@ variable "public_subnet_ids" {
 variable "ec2_instance_type" {
   description = "ec2 instance type"
   type        = string
-  default     = "t4g.large"
+  default     = "t3.small"
 }
 
 variable "ao_wallet_arn" {
   description = "The ARN of the AWS Secrets Manager secret that contains the AO wallet json string"
+  type        = string
+}
+
+variable "psql_writer_instance_url" {
+  description = "The URL of the PSQL writer instance"
   type        = string
 }

@@ -24,3 +24,13 @@ resource "aws_security_group" "postgres_security_group" {
     ipv6_cidr_blocks = ["::/0"]
   }
 }
+
+# NOTES
+
+# Snippet for granting user access to all suX databases
+# CREATE USER skeduser WITH PASSWORD 'CHANGEME';
+# for i in {1..100}
+# do
+#   psql -U postgres -c "GRANT CONNECT ON DATABASE su$i TO skeduser;"
+#   psql -U postgres -d su$i -c "GRANT USAGE ON SCHEMA public TO skeduser; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO skeduser; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO skeduser;"
+# done

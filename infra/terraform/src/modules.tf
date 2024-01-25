@@ -42,3 +42,20 @@ module "cu" {
   public_subnet_ids   = aws_subnet.public[*].id
   public_subnet_cidrs = aws_subnet.public[*].cidr_block
 }
+
+module "su" {
+
+  source = "./su"
+
+  enabled                  = true
+  environment              = var.environment
+  region                   = var.region
+  azs                      = var.azs
+  vpc_id                   = aws_vpc.default.id
+  ao_wallet_arn            = data.aws_secretsmanager_secret.ao-wallet.arn
+  principal_account_id     = data.aws_caller_identity.current.account_id
+  psql_writer_instance_url = aws_route53_record.rds_writer_cname.fqdn
+
+  public_subnet_ids   = aws_subnet.public[*].id
+  public_subnet_cidrs = aws_subnet.public[*].cidr_block
+}
