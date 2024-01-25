@@ -85,16 +85,6 @@ cat <<EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
             "file_path": "/var/log/kernel.log",
             "log_group_name": "${log_group_name}",
             "log_stream_name": "{instance_id}/kernel.log"
-          },
-          {
-            "file_path": "/var/log/aws/code-deploy-agent/codedeploy-agent.log",
-            "log_group_name": "${log_group_name}",
-            "log_stream_name": "{instance_id}/codedeploy-agent.log"
-          },
-          {
-            "file_path": "/var/lib/arweave/logs/arweave@*",
-            "log_group_name": "${log_group_name}",
-            "log_stream_name": "{instance_id}/arweave-service.log"
           }
         ]
       }

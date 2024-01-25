@@ -61,7 +61,9 @@ build {
     inline = [
       "mv /tmp/su /home/alpine/su",
       "doas mv /tmp/su.rc.service /etc/init.d/su",
-      "chmod +x /home/alpine/su"
+      "chmod +x /home/alpine/su",
+      "doas apk update",
+      "doas apk add bash aws-cli"
     ]
   }
 }
