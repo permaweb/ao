@@ -98,7 +98,10 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
         return _
       },
       (res) => {
-        logger('Found previous evaluation in db: %j', pick(['messageId', 'ordinate', 'cron', 'timestamp', 'ordinate', 'blockHeight']))
+        logger(
+          'Found previous evaluation in db: %j',
+          pick(['messageId', 'ordinate', 'cron', 'timestamp', 'ordinate', 'blockHeight'], res)
+        )
         return res
       }
     )
