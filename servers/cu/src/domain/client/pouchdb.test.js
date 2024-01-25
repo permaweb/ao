@@ -4,15 +4,17 @@ import assert from 'node:assert'
 import { deflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
-import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, findProcessSchema, saveEvaluationSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, findModuleSchema, findProcessSchema, saveEvaluationSchema, saveModuleSchema, saveProcessSchema } from '../dal.js'
 import {
   CRON_EVALS_ASC_IDX,
   EVALS_ASC_IDX,
   findEvaluationsWith,
   findLatestEvaluationWith,
   findMessageHashWith,
+  findModuleWith,
   findProcessWith,
   saveEvaluationWith,
+  saveModuleWith,
   saveProcessWith
 } from './pouchdb.js'
 import { createLogger } from '../logger.js'
@@ -414,6 +416,136 @@ describe('pouchdb', () => {
       })
 
       assert.equal(res.length, 2)
+    })
+  })
+
+  describe('findModule', () => {
+    const moduleWasm = Buffer.from('Hello', 'utf-8')
+
+    test('find the module', async () => {
+      const findModule = findModuleSchema.implement(
+        findModuleWith({
+          pouchDb: {
+            get: async () => ({
+              _id: 'module-mod-123',
+              moduleId: 'mod-123',
+              tags: [{ name: 'foo', value: 'bar' }],
+              wasm: moduleWasm,
+              type: 'module'
+            }),
+            getAttachment: async (_id, name) => {
+              assert.equal(_id, 'module-mod-123')
+              assert.equal(name, 'wasm.txt')
+              // impl will inflate this buffer
+              return deflateP(moduleWasm)
+            }
+          },
+          logger
+        })
+      )
+
+      const res = await findModule({ moduleId: 'mod-123' })
+      assert.deepStrictEqual(res, {
+        id: 'mod-123',
+        tags: [{ name: 'foo', value: 'bar' }],
+        wasm: Buffer.from('Hello', 'utf-8')
+      })
+    })
+
+    test('return 404 status if not found', async () => {
+      const findModule = findModuleSchema.implement(
+        findModuleWith({
+          pouchDb: {
+            get: async () => { throw { status: 404 } },
+            getAttachment: async () => assert.fail('should not get attachment if document is not found')
+          },
+          logger
+        })
+      )
+
+      const res = await findModule({ moduleId: 'mod-123' })
+        .catch(err => {
+          assert.equal(err.status, 404)
+          return { ok: true }
+        })
+
+      assert(res.ok)
+    })
+
+    test('bubble error', async () => {
+      const findModule = findModuleSchema.implement(
+        findModuleWith({
+          pouchDb: {
+            get: async () => { throw { status: 500 } }
+          },
+          logger
+        })
+      )
+
+      await findModule({ moduleId: 'mod-123' })
+        .then(assert.fail)
+        .catch(assert.ok)
+    })
+  })
+
+  describe('saveModule', () => {
+    const moduleWasm = Buffer.from('Hello World', 'utf-8')
+
+    test('save the module', async () => {
+      const saveModule = saveModuleSchema.implement(
+        saveModuleWith({
+          pouchDb: {
+            put: async (doc) => {
+              const { _attachments, ...rest } = doc
+
+              assert.deepStrictEqual(rest, {
+                _id: 'module-mod-123',
+                moduleId: 'mod-123',
+                tags: [
+                  { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
+                ],
+                // buffer is omitted from output and moved to _attachments
+                type: 'module'
+              })
+              assert.deepStrictEqual(_attachments, {
+                'wasm.txt': {
+                  content_type: 'text/plain',
+                  data: await deflateP(moduleWasm)
+                }
+              })
+              return Promise.resolve(true)
+            }
+          },
+          logger
+        })
+      )
+
+      await saveModule({
+        id: 'mod-123',
+        tags: [
+          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
+        ],
+        wasm: moduleWasm
+      })
+    })
+
+    test('noop if the module already exists', async () => {
+      const saveModule = saveModuleSchema.implement(
+        saveModuleWith({
+          pouchDb: {
+            put: async () => { throw { status: 409 } }
+          },
+          logger
+        })
+      )
+
+      await saveModule({
+        id: 'mod-123',
+        tags: [
+          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
+        ],
+        wasm: moduleWasm
+      })
     })
   })
 
