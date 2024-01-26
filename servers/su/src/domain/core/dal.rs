@@ -1,10 +1,12 @@
 use async_trait::async_trait;
+use serde::Deserialize;
 
 /*
 Interfaces for core dependencies. Implement these traits 
 in clients etc... to inject side effects into the core
 */
 
+#[derive(Deserialize)]
 pub struct NetworkInfo {
     pub height: String,
     pub current: String

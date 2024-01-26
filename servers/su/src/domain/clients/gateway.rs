@@ -1,7 +1,7 @@
 
 use async_trait::async_trait;
 use reqwest::{Url, Client};
-
+use tokio::time::{sleep, Duration};
 use arweave_rs::network::NetworkInfoClient;
 
 use crate::domain::core::dal::{Gateway, NetworkInfo};
@@ -55,27 +55,34 @@ impl Gateway for ArweaveGateway {
     async fn network_info(&self) -> Result<NetworkInfo, String> {
         let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
         let gateway_url = config.gateway_url;
-        let url = match Url::parse(&gateway_url) {
-            Ok(u) => u,
-            Err(e) => {
-                return Err(format!("{:?}", e));
-            }
-        };
-
-        let network_client = NetworkInfoClient::new(url);
-
-        if let Ok(network_info) = network_client.network_info().await {
-            let height = network_info.height.clone();
-        
-            // current block id as base64 string
-            let current = network_info.current.to_string();
+        let url = Url::parse(&gateway_url).map_err(|e| format!("{:?}", e))?;
     
-            Ok(NetworkInfo {
-                height: format!("{:0>12}", height),
-                current
-            })
-        } else {
-            return Err("Failed to fetch network info".to_string());
+        let network_client = NetworkInfoClient::new(url);
+    
+        for attempt in 0..5 {
+            match network_client.network_info().await {
+                Ok(network_info) => {
+                    let height = network_info.height.clone();
+                    let current = network_info.current.to_string();
+    
+                    return Ok(NetworkInfo {
+                        height: format!("{:0>12}", height),
+                        current
+                    });
+                },
+                Err(_) if attempt < 4 => {
+                    // Log the failed attempt and wait before retrying
+                    println!("Attempt {}: Failed to fetch network info, retrying...", attempt + 1);
+                    sleep(Duration::from_secs(1)).await;
+                },
+                Err(e) => {
+                    // Final attempt failed, return an error
+                    return Err(format!("Failed to fetch network info after multiple attempts: {:?}", e));
+                }
+            }
         }
+    
+        // This line should not be reachable due to the return statements inside the loop
+        Err("Unexpected error in network_info function".to_string())
     }
 }

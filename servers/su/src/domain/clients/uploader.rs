@@ -7,6 +7,8 @@ use reqwest::{Url, Client};
 extern crate serde;
 use serde::{Serialize, Deserialize};
 
+use tokio::time::{sleep, Duration};
+
 use crate::domain::Log;
 
 #[derive(Debug)]
@@ -69,46 +71,63 @@ impl<'a> UploaderClient<'a> {
 
     pub async fn upload(&self, tx: Vec<u8>) -> Result<UploadResult, UploaderErrorType> {
         let node_url_clone = self.node_url.clone();
-        
         let client = Client::new();
 
-        let response = client
-            .post(
-                node_url_clone
-                    .join(&format!("tx/{}", "arweave".to_string()))
-                    .map_err(|e| UploaderErrorType::UploadError(e.to_string()))?,
-            )
-            .header("Content-Type", "application/octet-stream")
-            .body(tx)
-            .send()
-            .await?;
-            
-        // Capture status and headers before consuming the response
-        let response_status = response.status();
-        let response_headers = response.headers().clone();
+        for attempt in 0..5 {
+            let response = client
+                .post(
+                    node_url_clone
+                        .join(&format!("tx/{}", "arweave".to_string()))
+                        .map_err(|e| UploaderErrorType::UploadError(e.to_string()))?,
+                )
+                .header("Content-Type", "application/octet-stream")
+                .body(tx.clone())
+                .send()
+                .await;
 
-        let body_str = match response.text().await {
-            Ok(text) => text,
-            Err(_e) => {
-                // println!("Error reading the response body: {:?}", e);
-                "".to_string() // or you can handle this error differently
+            match response {
+                Ok(resp) if resp.status().is_success() => {
+                    // Capture status and headers before consuming the response
+                    let response_status = resp.status();
+                    let response_headers = resp.headers().clone();
+
+                    let body_str = match resp.text().await {
+                        Ok(text) => text,
+                        Err(_) => continue, // If there's an error reading the body, try the request again
+                    };
+
+                    let msg = format!(
+                        "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
+                        response_status,
+                        response_headers,
+                        body_str
+                    );
+
+                    self.logger.log(format!("irys success message - {}", &msg));
+                    let parsed: UploadResult = serde_json::from_str(&body_str)?;
+                    return Ok(parsed);
+                }
+                Ok(resp) => {
+                    // Log the error response and try again
+                    let status = resp.status();
+                    let error_msg = format!("Attempt {}: Upload failed with status {}", attempt + 1, status);
+                    self.logger.error(error_msg);
+
+                    // Wait for 1 second before retrying
+                    sleep(Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    // Log the request error and try again
+                    let error_msg = format!("Attempt {}: Request failed with error {:?}", attempt + 1, e);
+                    self.logger.error(error_msg);
+
+                    // Wait for 1 second before retrying
+                    sleep(Duration::from_secs(1)).await;
+                }
             }
-        };
-
-        let msg = format!(
-            "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
-            response_status,
-            response_headers,
-            body_str
-        );
-
-        if response_status.is_success() {
-            self.logger.log(format!("irys success message - {}", &msg));
-            let parsed: UploadResult = serde_json::from_str(&body_str)?;
-            Ok(parsed)
-        } else {
-            self.logger.error(format!("irys error message - {}", &msg));
-            Err(UploaderErrorType::UploadError("upload failed".to_string()))
         }
+
+        // If all attempts fail, return an error
+        Err(UploaderErrorType::UploadError("All attempts to upload failed".to_string()))
     }
 }
