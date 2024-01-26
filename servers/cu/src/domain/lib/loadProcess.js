@@ -122,12 +122,14 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
           Spawns: []
         },
         from: undefined,
+        fromBlockHeight: undefined,
+        fromCron: undefined,
         /**
          * No cached evaluation was found, but we still need an ordinate,
          * in case there are Cron messages to generate prior to any scheduled
          * messages existing in the sequence.
          *
-         * The important attribute we need is forthe ordinate to be lexicographically
+         * The important attribute we need is for the ordinate to be lexicographically
          * sortable.
          *
          * So we use a very small unicode character, as a pseudo-ordinate, which gets
@@ -144,6 +146,7 @@ function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
         from: evaluation.timestamp,
         ordinate: evaluation.ordinate,
         fromBlockHeight: evaluation.blockHeight,
+        fromCron: evaluation.cron,
         evaluatedAt: evaluation.evaluatedAt
       })
     )
@@ -213,6 +216,12 @@ const ctxSchema = z.object({
    * to fetch from the gateway
    */
   fromBlockHeight: z.coerce.number().nullish(),
+  /**
+   * The most recent message cron. This could be from the recent cached Cron Message
+   * evaluation, or undefined, if no evaluations were cached, or the latest evaluation
+   * was not the result of a Cron message
+   */
+  fromCron: z.string().nullish(),
   /**
    * When the evaluation record was created in the local db. If the initial state had to be retrieved
    * from Arweave, due to no state being cached in the local db, then this will be undefined.

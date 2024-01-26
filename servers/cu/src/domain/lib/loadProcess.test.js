@@ -9,7 +9,7 @@ const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadProcess', () => {
-  test('appends process owner, tags, block, buffer as process tags parsed as JSON, result, from, and evaluatedAt to ctx', async () => {
+  test('appends process owner, tags, block, buffer as process tags parsed as JSON, result, from, fromCron, fromBlockHeight and evaluatedAt to ctx', async () => {
     const tags = [
       { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -55,6 +55,7 @@ describe('loadProcess', () => {
       Spawns: []
     })
     assert.equal(res.from, undefined)
+    assert.equal(res.fromCron, undefined)
     assert.equal(res.ordinate, '^')
     assert.equal(res.fromBlockHeight, undefined)
     assert.equal(res.evaluatedAt, undefined)
@@ -99,6 +100,7 @@ describe('loadProcess', () => {
     const cachedEvaluation = {
       processId: PROCESS,
       messageId: 'message-123',
+      cron: '1-10-minutes',
       timestamp: 1697574792000,
       ordinate: '1',
       blockHeight: 1234,
@@ -145,6 +147,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.result, cachedEvaluation.output)
     assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
     assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
+    assert.deepStrictEqual(res.fromCron, cachedEvaluation.cron)
     assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
     assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)

@@ -20,6 +20,8 @@ const ctxSchema = z.object({
   output: z.record(z.any())
 }).passthrough()
 
+const toEvaledCron = ({ timestamp, cron }) => `${timestamp}-${cron}`
+
 /**
  * @typedef Env
  * @property {any} db
@@ -156,6 +158,26 @@ export function evaluateWith (env) {
     of(ctx)
       .chain(addHandler)
       .chain(fromPromise(async (ctx) => {
+        /**
+         * There seems to be duplicate Cron Message evaluations occurring and it's been difficult\
+         * to pin down why. My hunch is that the very first message can be a duplicate of the 'from', if 'from'
+         * is itself a Cron Message.
+         *
+         * So to get around this, we maintain a set of strings that unique identify
+         * Cron messages (timestamp+cron interval). We will add each cron message identifier to this Set.
+         * If an iteration comes across an identifier already present in this list, then we consider it
+         * a duplicate and remove it from the eval stream.
+         *
+         * This should prevent duplicate Cron Messages from being duplicate evaluated, thus not "tainting"
+         * Memory that is folded as part of the eval stream
+         */
+        const evaledCrons = new Set()
+        /**
+          * If the starting point ('from') is itself a Cron Message,
+          * then that will be our first identifier added to the set
+          */
+        if (ctx.fromCron) evaledCrons.add(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }))
+
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -167,12 +189,26 @@ export function evaluateWith (env) {
           Spawns: pathOr([], ['result', 'Spawns']),
           Output: pathOr('', ['result', 'Output'])
         })(ctx)
-
         /**
          * Iterate over the async iterable of messages,
          * and evaluate each one
          */
         for await (const { noSave, cron, ordinate, name, message, deepHash, AoGlobal } of ctx.messages) {
+          if (cron) {
+            const key = toEvaledCron({ timestamp: message.Timestamp, cron })
+            if (evaledCrons.has(key)) {
+              logger('"%s" has already been evaluated as part of this eval stream. Removing from eval stream', name)
+              continue
+            } else {
+              /**
+               * We add the crons identifier to the Set,
+               * thus preventing a duplicate evaluation if we come across it
+               * again in the eval stream
+               */
+              evaledCrons.add(key)
+            }
+          }
+
           /**
            * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
            * if their deepHash is found in the cache, this prevents duplicate evals
@@ -181,7 +217,7 @@ export function evaluateWith (env) {
             logger('Checking if "%s" has already been evaluated...', name)
             const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
-              logger('Message with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', deepHash)
+              logger('Message "%s" with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', name, deepHash)
               continue
             }
           }

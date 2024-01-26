@@ -209,7 +209,7 @@ describe('evaluate', () => {
     assert.equal(cacheCount, 2)
   })
 
-  test('skip over messages that are already evaluated', async () => {
+  test('skip over messages that are already evaluated (deepHash)', async () => {
     let cacheCount = 0
     let messageHash = 0
     const env = {
@@ -287,6 +287,108 @@ describe('evaluate', () => {
     await evaluate(ctx).toPromise()
     assert.equal(messageHash, 2)
     assert.equal(cacheCount, 2)
+  })
+
+  test('skip over Cron Messages that are already evaluated', async () => {
+    let cacheCount = 0
+    const env = {
+      saveEvaluation: async (evaluation) => {
+        cacheCount++
+        return undefined
+      },
+      findMessageHash: async () => { throw { status: 404 } },
+      logger
+    }
+
+    const evaluate = evaluateWith(env)
+
+    const ctx = {
+      id: 'ctr-1234',
+      from: 1702846520559,
+      fromCron: '1-10-minutes',
+      module: readFileSync('./test/processes/happy/process.wasm'),
+      result: {
+        Memory: null
+      },
+      messages: toAsyncIterable([
+        // duplicate of starting point
+        {
+          ordinate: 1,
+          cron: '1-10-minutes',
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
+              { name: 'function', value: 'hello' }
+            ],
+            'Block-Height': 1234
+          },
+          deepHash: 'deephash-123',
+          AoGlobal: {}
+        },
+        {
+          ordinate: 1,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
+              { name: 'function', value: 'world' }
+            ],
+            'Block-Height': 1235
+          },
+          deepHash: 'deephash-456',
+          AoGlobal: {}
+        },
+        {
+          ordinate: 2,
+          cron: '1-20-minutes',
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520600,
+            Owner: 'owner-456',
+            Tags: [
+              { name: 'function', value: 'world' }
+            ],
+            'Block-Height': 1236
+          },
+          AoGlobal: {}
+        },
+        // duplicate of previous
+        {
+          ordinate: 2,
+          cron: '1-20-minutes',
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520600,
+            Owner: 'owner-456',
+            Tags: [
+              { name: 'function', value: 'world' }
+            ],
+            'Block-Height': 1236
+          },
+          AoGlobal: {}
+        },
+        {
+          ordinate: 3,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520700,
+            Owner: 'owner-456',
+            Tags: [
+              { name: 'function', value: 'world' }
+            ],
+            'Block-Height': 1235
+          },
+          deepHash: 'deephash-456',
+          AoGlobal: {}
+        }
+      ])
+    }
+
+    await evaluate(ctx).toPromise()
+    assert.equal(cacheCount, 3)
   })
 
   test('noop the initial state', async () => {
