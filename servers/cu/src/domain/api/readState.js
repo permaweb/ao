@@ -1,11 +1,11 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 
-import { findEvaluationSchema } from './dal.js'
-import { loadProcessWith } from './lib/loadProcess.js'
-import { loadModuleWith } from './lib/loadModule.js'
-import { loadMessagesWith } from './lib/loadMessages.js'
-import { evaluateWith } from './lib/evaluate.js'
-import { hydrateMessagesWith } from './lib/hydrateMessages.js'
+import { findEvaluationSchema } from '../dal.js'
+import { loadProcessWith } from '../lib/loadProcess.js'
+import { loadModuleWith } from '../lib/loadModule.js'
+import { loadMessagesWith } from '../lib/loadMessages.js'
+import { evaluateWith } from '../lib/evaluate.js'
+import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
 
 /**
  * @typedef State

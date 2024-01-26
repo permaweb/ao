@@ -1,36 +1,36 @@
 import { pathOr } from 'ramda'
 
 import { readStateWith } from './readState.js'
-import { gatherResultsWith } from './lib/gatherResults.js'
-import { maybeParseCursor } from './utils.js'
+import { gatherResultsWith } from '../lib/gatherResults.js'
+import { maybeParseCursor } from '../utils.js'
 
 /**
  * @typedef Env
  *
  * @typedef Result
  *
- * @typedef ReadCronMessagesArgs
+ * @typedef ReadMessagesArgs
  * @property {string} processId
  * @property {string} from
  * @property {string} to
  *
- * @callback ReadCronMessages
- * @param {ReadCronMessagesArgs} args
+ * @callback ReadMessages
+ * @param {ReadMessagesArgs} args
  * @returns {Promise<Result>} result
  *
  * @param {Env} - the environment
- * @returns {ReadCronMessages}
+ * @returns {ReadMessages}
  */
-export function readCronResultsWith (env) {
+export function readResultsWith (env) {
   const gatherResults = gatherResultsWith(env)
   const readState = readStateWith(env)
 
-  return ({ processId, from, to, limit }) => {
+  return ({ processId, from, to, limit, sort }) => {
     /**
      * 'to' could be a cursor, so before passing to readState and 'catching up' evaluations,
      * we need to potentially parse it, then grab the timestamp and ordinate from the parsed data
      */
-    return maybeParseCursor('to')({ processId, from, to, limit })
+    return maybeParseCursor('to')({ processId, from, to, limit, sort })
       .chain((ctx) => readState({
         processId,
         to: pathOr(undefined, ['to', 'timestamp'], ctx),
@@ -45,29 +45,17 @@ export function readCronResultsWith (env) {
         processId,
         from,
         to,
-        /**
-         * Crons may only be traversed in ascending order
-         */
-        sort: 'ASC',
+        sort,
         /**
          * We fetch an additional evaluation to know whether or not
          * there are additional pages to fetch.
          */
         limit: limit + 1,
-        /**
-         * Only gather Cron Message evaluation results
-         */
-        onlyCron: true,
-        /**
-         * Set the flag to always use the provided sort here.
-         *
-         * This prevent someone from hand-rolling a cursor and traversing in descending mode
-         */
-        overrideCursorSort: true
+        onlyCron: false
       }))
       .map((res) => {
         env.logger(
-          'gathered Cron Evaluation results for process %s from "%s" to "%s"',
+          'gathered Evaluation results for process %s from "%s" to "%s"',
           processId,
           from || 'earliest',
           to || 'latest'

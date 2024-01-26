@@ -1,13 +1,13 @@
 import { Readable } from 'node:stream'
 import { omit } from 'ramda'
 import { Resolved, of } from 'hyper-async'
-
-import { loadMessageMetaWith } from './lib/loadMessageMeta.js'
-import { evaluateWith } from './lib/evaluate.js'
-import { readStateWith } from './readState.js'
-import { messageSchema } from './model.js'
-import { loadModuleWith } from './lib/loadModule.js'
 import { z } from 'zod'
+
+import { loadMessageMetaWith } from '../lib/loadMessageMeta.js'
+import { evaluateWith } from '../lib/evaluate.js'
+import { messageSchema } from '../model.js'
+import { loadModuleWith } from '../lib/loadModule.js'
+import { readStateWith } from './readState.js'
 
 const dryRunMessageSchema = messageSchema.extend({
   /**

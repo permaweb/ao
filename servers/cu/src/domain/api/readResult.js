@@ -2,7 +2,7 @@ import { omit } from 'ramda'
 import { of } from 'hyper-async'
 
 import { readStateWith } from './readState.js'
-import { loadMessageMetaWith } from './lib/loadMessageMeta.js'
+import { loadMessageMetaWith } from '../lib/loadMessageMeta.js'
 
 /**
  * @typedef Env
