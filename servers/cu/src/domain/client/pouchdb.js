@@ -123,6 +123,7 @@ const evaluationDocSchema = z.object({
   timestamp: evaluationSchema.shape.timestamp,
   ordinate: evaluationSchema.shape.ordinate,
   blockHeight: evaluationSchema.shape.blockHeight,
+  cron: evaluationSchema.shape.cron,
   parent: z.string().min(1),
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
   output: evaluationSchema.shape.output,
@@ -356,19 +357,6 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
     return query
   }
 
-  const foundEvaluationDocSchema = z.object({
-    _id: z.string().min(1),
-    processId: evaluationSchema.shape.processId,
-    messageId: evaluationSchema.shape.messageId,
-    timestamp: evaluationSchema.shape.timestamp,
-    ordinate: evaluationSchema.shape.ordinate,
-    blockHeight: evaluationSchema.shape.blockHeight,
-    parent: z.string().min(1),
-    evaluatedAt: evaluationSchema.shape.evaluatedAt,
-    output: evaluationSchema.shape.output,
-    type: z.literal('evaluation')
-  })
-
   const memoryLens = lensPath(['output', 'Memory'])
 
   return ({ processId, to, ordinate, cron }) => {
@@ -398,7 +386,7 @@ export function findLatestEvaluationWith ({ pouchDb = internalPouchDb }) {
        * Ensure the input matches the expected
        * shape
        */
-      .map(foundEvaluationDocSchema.parse)
+      .map(evaluationDocSchema.parse)
       .map(toEvaluation)
       .toPromise()
   }
