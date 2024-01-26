@@ -181,7 +181,8 @@ function ao.isTrusted(msg)
 end
 
 function ao.result(result)
-    ao._ref = 0
+    -- dont reset on every result -- should allow for same messages to flow
+    -- ao._ref = 0
     return {
         Output = result.Output or ao.outbox.Output,
         Messages = ao.outbox.Messages,
