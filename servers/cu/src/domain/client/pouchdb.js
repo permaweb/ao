@@ -222,7 +222,7 @@ export function findProcessWith ({ pouchDb }) {
     .chain(fromPromise(id => pouchDb.get(createProcessId({ processId: id }))))
     .bichain(
       (err) => {
-        if (err.status === 404) return Rejected({ status: 404 })
+        if (err.status === 404) return Rejected({ status: 404, message: 'Process not found' })
         return Rejected(err)
       },
       (found) => of(found)
@@ -285,7 +285,7 @@ export function findEvaluationWith ({ pouchDb = internalPouchDb }) {
       .chain(fromPromise(() => pouchDb.get(createEvaluationId({ processId, timestamp: to, ordinate, cron }))))
       .bichain(
         (err) => {
-          if (err.status === 404) return Rejected({ status: 404 })
+          if (err.status === 404) return Rejected({ status: 404, message: 'Evaluation result not found' })
           return Rejected(err)
         },
         (found) => of(found)
@@ -658,7 +658,7 @@ export function findModuleWith ({ pouchDb = internalPouchDb }) {
       .chain(fromPromise(() => pouchDb.get(createModuleId({ moduleId }))))
       .bichain(
         (err) => {
-          if (err.status === 404) return Rejected({ status: 404 })
+          if (err.status === 404) return Rejected({ status: 404, message: 'Module not found' })
           return Rejected(err)
         },
         (found) => of(found)
@@ -742,7 +742,7 @@ export function findMessageHashWith ({ pouchDb }) {
     .chain(fromPromise((hash) => pouchDb.get(createMessageHashId({ messageHash: hash }))))
     .bichain(
       (err) => {
-        if (err.status === 404) return Rejected({ status: 404 })
+        if (err.status === 404) return Rejected({ status: 404, message: 'Message hash not found' })
         return Rejected(err)
       },
       (found) => of(found)
