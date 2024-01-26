@@ -200,6 +200,9 @@ async function processMonitor (monitor) {
             )
         )
         .toPromise()
+        .catch((error) => {
+          console.log(error)
+        })
     }
 
     if (spawnSavePromises.length > 0) {
@@ -208,10 +211,15 @@ async function processMonitor (monitor) {
         await of({ cachedSpawn: dbSpawns[i], initialTxId: null })
           .chain(apis.processSpawn)
           .toPromise()
+          .catch((error) => {
+            console.log(error)
+          })
       }
     }
 
     const lastScheduled = scheduled.edges[scheduled.edges.length - 1]
+
+    console.log('scheduled run complete')
 
     return { lastFromCursor: lastScheduled.cursor }
   } catch (e) {
@@ -255,6 +263,7 @@ async function fetchScheduled (monitor) {
 function shouldRun (monitor) {
   const tags = monitor.processData.tags
   const lastRunTime = monitor.lastRunTime
+  if (!lastRunTime) return true
   const now = Date.now()
 
   const intervalTag = tags.find((tag) => tag.name === 'Cron-Interval')
