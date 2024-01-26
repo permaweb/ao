@@ -1,4 +1,6 @@
+import { join } from 'node:path'
 import { always, compose, pipe } from 'ramda'
+import heapdump from 'heapdump'
 import express from 'express'
 import cors from 'cors'
 import httpProxy from 'http-proxy'
@@ -136,6 +138,7 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
 
 export const router = (aoUnitConfig) => pipe(
   (app) => app.use(cors()),
+  (app) => app.use(express.static(config.DUMP_PATH)),
   withRevProxies({ ...config, aoUnitConfig }),
   (app) => {
     const server = app.listen(config.port, () => {
@@ -145,6 +148,12 @@ export const router = (aoUnitConfig) => pipe(
     process.on('SIGTERM', () => {
       logger('Recevied SIGTERM. Gracefully shutting down server...')
       server.close(() => logger('Server Shut Down'))
+    })
+
+    process.on('SIGUSR2', () => {
+      const name = `${Date.now()}.heapsnapshot`
+      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
+      console.log(name)
     })
 
     return server

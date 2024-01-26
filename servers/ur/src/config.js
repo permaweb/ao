@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os'
 import { z } from 'zod'
 
 /**
@@ -30,6 +31,7 @@ const serverConfigSchema = z.object({
     (arg) => (typeof arg === 'string' ? arg.split(',').map(str => str.trim()) : arg),
     z.array(z.string().url())
   ),
+  DUMP_PATH: z.string().min(1),
   aoUnit: z.enum(['cu', 'mu'])
 })
 
@@ -44,6 +46,7 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 3005,
     hosts: process.env.HOSTS || ['http://127.0.0.1:3005'],
+    DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
     /**
      * default to the CU for no hassle startup in development mode,
      *
@@ -55,6 +58,7 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 3005,
     hosts: process.env.HOSTS,
+    DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
     aoUnit: process.env.AO_UNIT
   }
 }
