@@ -74,6 +74,15 @@ resource "aws_iam_policy" "su_task_policy" {
           Effect   = "Allow",
           Action   = "route53:ChangeResourceRecordSets",
           Resource = "arn:aws:route53:::hostedzone/${var.hosted_zone_id}"
+        },
+        {
+          Action = [
+            "dynamodb:*"
+          ],
+          Effect = "Allow",
+          Resource = [
+            aws_dynamodb_table.su_assignments_lock.arn
+          ]
         }
       ]
       Version = "2012-10-17"
@@ -152,6 +161,25 @@ resource "aws_iam_role_policy" "assignment_finder_policy" {
         ],
         Effect   = "Allow"
         Resource = "*"
+      },
+      {
+        Action = [
+          "SecretsManager:GetSecretValue",
+        ],
+        Effect = "Allow",
+        Resource = [
+          var.slack_api_token_secret_ami,
+          "${var.slack_api_token_secret_ami}*"
+        ]
+      },
+      {
+        Action = [
+          "dynamodb:*"
+        ],
+        Effect = "Allow",
+        Resource = [
+          aws_dynamodb_table.su_assignments_lock.arn
+        ]
       }
     ]
   })

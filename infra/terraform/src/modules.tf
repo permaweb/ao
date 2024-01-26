@@ -63,4 +63,6 @@ module "su" {
   public_subnet_cidrs = aws_subnet.public[*].cidr_block
 
   hosted_zone_id = aws_route53_zone.ao_testnet.zone_id
+
+  slack_api_token_secret_ami = data.aws_secretsmanager_secret.slackbot-oauth-token.arn
 }

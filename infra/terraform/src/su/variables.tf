@@ -69,3 +69,8 @@ variable "hosted_zone_id" {
   description = "The ID of the hosted zone"
   type        = string
 }
+
+variable "slack_api_token_secret_ami" {
+  description = "The slack token"
+  type        = string
+}

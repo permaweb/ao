@@ -30,12 +30,26 @@ cd /home/alpine
 
 CURRENT_ASSIGNMENT_PATH=/home/alpine/current_assignment.txt
 
-aws lambda invoke \\
-  --cli-binary-format raw-in-base64-out \\
-  --function-name assignment-finder \\
-  --region ${region} \\
-  --payload="{\"public_ip\": \"\$PUBLIC_IP\"}" \\
-  \$CURRENT_ASSIGNMENT_PATH
+rm -f \$CURRENT_ASSIGNMENT_PATH || true
+
+while true; do
+    result=$(aws lambda invoke \\
+              --cli-binary-format raw-in-base64-out \\
+              --function-name assignment-finder \\
+              --region ${region} \\
+              --payload="{\"public_ip\": \"\$PUBLIC_IP\"}" \\
+              \$CURRENT_ASSIGNMENT_PATH )
+
+    if [[ $result == *"FunctionError"* ]]; then
+        echo "Function is busy, retrying..."
+        sleep 1  # Wait for 1 second before retrying
+    else
+        echo "Function invoked successfully."
+        break
+    fi
+done
+
+
 
 CURRENT_ASSIGNMENT=\$(cat current_assignment.txt | tr -d '\n')
 
@@ -88,7 +102,39 @@ aws route53 change-resource-record-sets \
 
 EOF
 
+cat <<EOF > /home/alpine/cleanup-su.bash
+#!/usr/bin/env bash
+
+cd /home/alpine
+
+CURRENT_ASSIGNMENT_PATH=/home/alpine/current_assignment.txt
+
+# Check if the file exists
+if [ ! -f "\$CURRENT_ASSIGNMENT_PATH" ]; then
+    echo "OK: No live assignment found"
+    exit 0
+fi
+CURRENT_ASSIGNMENT=\$(cat current_assignment.txt | tr -d '\n')
+
+# Check if the content is a number
+if [[ \$CURRENT_ASSIGNMENT =~ ^[0-9]+$ ]]; then
+    echo "The file contains an assignment."
+else
+    echo "assignment not live"
+    exit 0
+fi
+
+aws dynamodb update-item \\
+    --table-name su-assignments-lock \\
+    --key "{\\"AssignmentNumber\\": {\\"N\\": \\"\$CURRENT_ASSIGNMENT\\"}}" \\
+    --update-expression "SET public_ip = :val" \\
+    --expression-attribute-values '{":val": {"NULL": true}}' \\
+    --return-values ALL_NEW || true
+
+EOF
+
 chmod +x /home/alpine/init-su.bash
+chmod +x /home/alpine/cleanup-su.bash
 
 cat <<EOF > /etc/init.d/su
 #!/sbin/openrc-run
@@ -106,6 +152,14 @@ error_log="\$${output_log}"
 depend() {
 	use net
 }
+
+stop() {
+    ebegin "Stopping scheduler unit service"
+    /home/alpine/cleanup-su.bash || true
+    start-stop-daemon --stop --pidfile \$${pidfile}
+    eend $?
+}
+
 EOF
 
 chmod +x /etc/init.d/su
