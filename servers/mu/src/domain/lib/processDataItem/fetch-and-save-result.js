@@ -91,10 +91,6 @@ export function fetchAndSaveResultWith (env) {
       .bichain(Resolved, Resolved)
       .map(ctxSchema.parse)
       .map(logger.tap('Added "msgs and spawns" to ctx'))
-      .map(ctx => {
-        console.log('DATA-ITEM: ', JSON.stringify(ctx.dataItem))
-        return ctx
-      })
       .bimap(
         tap(() => ctx.tracer.trace('Failed to fetch and cache message result')),
         tap(() => ctx.tracer.trace('Fetched and cached message result'))
