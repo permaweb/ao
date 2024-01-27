@@ -24,7 +24,6 @@ export function writeMessageTxWith (env) {
   writeDataItemArweave = fromPromise(writeDataItemArweave)
 
   return (ctx) => {
-    console.log('PROCESSTX-ID: ', ctx.tx.processId)
     return of()
       .map(tap(() => ctx.tracer.trace('Sending message to SU or Arweave')))
       .chain(() =>
