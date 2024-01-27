@@ -1,4 +1,4 @@
-// import { messageTraceSchema } from '../model.js'
+import { messageTraceSchema } from '../model.js'
 
 /**
  * Given a message, it's parent, and the origin of the message (from - a wallet or process)
@@ -17,7 +17,7 @@ export function tracerFor ({ message, parent, from }) {
     child: (c) => children.push(c),
     spawn: (s) => spawns.push(s),
     trace: (t) => trace.push(t),
-    unwrap: () => ({
+    unwrap: () => messageTraceSchema.parse({
       id: message.id,
       parent,
       children,
@@ -28,16 +28,5 @@ export function tracerFor ({ message, parent, from }) {
       trace,
       tracedAt
     })
-    // unwrap: () => messageTraceSchema.parse({
-    //   id: message.id,
-    //   parent,
-    //   children,
-    //   spawns,
-    //   from,
-    //   to: message.Target || message.target,
-    //   message,
-    //   trace,
-    //   tracedAt
-    // })
   }
 }
