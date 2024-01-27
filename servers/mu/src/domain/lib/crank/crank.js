@@ -159,6 +159,8 @@ export function crankWith ({ processMsg, processSpawn, saveMessageTrace, logger 
   const crankList = crankListWith({ processMsg, processSpawn, saveMessageTrace, logger })
 
   return (ctx) => {
+    console.log('CRANK-LIST(ctx): ', JSON.stringify(ctx))
+    console.log('CRANK-LIST: ', JSON.stringify(crankList))
     return of(ctx)
       .chain(fromPromise(crankList))
       .map(logger.tap('Cranked msgs'))
