@@ -137,10 +137,13 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
     events.push(async () => {
       return of()
         .map(() => tracer.unwrap())
-        .map(logger.tap('MESSAGE:', JSON.stringify(message, null, 2)))
-        .map(logger.tap('Persisting trace for message %s', message.id))
+        .map(_ => {
+          console.log('MESSAGE: ', JSON.stringify(_))
+          return _
+        })
+        // .map(logger.tap('Persisting trace for message %s', message.id))
 
-        .chain(fromPromise(saveMessageTrace))
+      // .chain(fromPromise(saveMessageTrace))
         /**
          * No more events to push onto the event queue
          */
