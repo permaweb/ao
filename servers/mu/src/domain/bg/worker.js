@@ -45,15 +45,15 @@ const deleteMonitor = dataStoreClient.deleteMonitorWith({ dbInstance, logger })
  */
 parentPort.on('message', (message) => {
   if (message.label === 'start') {
-    setInterval(() => {
-      syncAndProcessMonitors()
-        .then(
-          _result => {},
-          error => {
-            console.log(`syncAndProcessMonitors error ${error}`)
-          }
-        )
-    }, config.SCHEDULED_INTERVAL)
+    // setInterval(() => {
+    syncAndProcessMonitors()
+      .then(
+        _result => {},
+        error => {
+          console.log(`syncAndProcessMonitors error ${error}`)
+        }
+      )
+    // }, config.SCHEDULED_INTERVAL)
     parentPort.postMessage('Monitor worker started')
   } else {
     parentPort.postMessage('Invalid message')
