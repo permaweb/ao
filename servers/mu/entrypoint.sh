@@ -7,4 +7,4 @@ aws secretsmanager get-secret-value --secret-id ao-wallet --query SecretString -
 echo "PATH_TO_WALLET=wallet.json" >> .env
 
 # start the server
-node src/app.js
+node -r dotenv/config src/app.js

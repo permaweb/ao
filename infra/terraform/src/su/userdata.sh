@@ -13,8 +13,6 @@ cd /home/alpine
 
 aws secretsmanager get-secret-value --region us-west-1 --secret-id ao-wallet --query SecretString --output text > .wallet
 
-export SU_WORKER_NUMBER=1
-
 cat <<EOF > /home/alpine/init-su.bash
 #!/usr/bin/env bash
 

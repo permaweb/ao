@@ -38,3 +38,16 @@ resource "aws_route53_record" "rds_reader_cname" {
 
   records = [data.aws_rds_cluster.rds_postgres_cluster.reader_endpoint]
 }
+
+resource "aws_route53_record" "su_router" {
+  zone_id = aws_route53_zone.ao_testnet.id
+  name    = "su-router.${aws_route53_zone.ao_testnet.name}"
+  type    = "A"
+
+  alias {
+    name                   = module.su-router.su_router_asg_cluster_elb_dns_name
+    zone_id                = module.su-router.su_router_asg_cluster_elb_zone_id
+    evaluate_target_health = true
+  }
+
+}
