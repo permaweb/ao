@@ -214,9 +214,9 @@ async fn main() -> io::Result<()> {
             .route("/", web::get().to(base))
             .route("/", web::post().to(main_post_route)) 
             .route("/timestamp", web::get().to(timestamp_route))
+            .route("/health", web::get().to(health_check))
             .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
-            .route("/health", web::get().to(health_check))
     })
     .bind(("0.0.0.0", port))?
     .run()
