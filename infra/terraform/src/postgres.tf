@@ -33,4 +33,5 @@ resource "aws_security_group" "postgres_security_group" {
 # do
 #   psql -U postgres -c "GRANT CONNECT ON DATABASE su$i TO skeduser;"
 #   psql -U postgres -d su$i -c "GRANT USAGE ON SCHEMA public TO skeduser; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO skeduser; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO skeduser;"
+#   psql -U postgres -c "ALTER DATABASE su$i OWNER TO skeduser;"
 # done

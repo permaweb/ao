@@ -33,14 +33,16 @@ CURRENT_ASSIGNMENT_PATH=/home/alpine/current_assignment.txt
 rm -f \$CURRENT_ASSIGNMENT_PATH || true
 
 while true; do
-    result=$(aws lambda invoke \\
+    result=\$(aws lambda invoke \\
               --cli-binary-format raw-in-base64-out \\
               --function-name assignment-finder \\
               --region ${region} \\
               --payload="{\"public_ip\": \"\$PUBLIC_IP\"}" \\
-              \$CURRENT_ASSIGNMENT_PATH )
+              \$CURRENT_ASSIGNMENT_PATH || echo "FunctionError" )
 
-    if [[ $result == *"FunctionError"* ]]; then
+    echo RESULT \$result
+
+    if [[ \$result == *"FunctionError"* ]] || [[ \$result == *"TooManyRequestsException"* ]]; then
         echo "Function is busy, retrying..."
         sleep 1  # Wait for 1 second before retrying
     else
