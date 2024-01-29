@@ -137,6 +137,10 @@ async fn read_process_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: 
     }
 }
 
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok()
+}
+
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -212,6 +216,7 @@ async fn main() -> io::Result<()> {
             .route("/timestamp", web::get().to(timestamp_route))
             .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
+            .route("/health", web::get().to(health_check))
     })
     .bind(("0.0.0.0", port))?
     .run()
