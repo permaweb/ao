@@ -6,21 +6,35 @@ import { verifyInputWith } from './verify-input.js'
 import { queryWith } from './query.js'
 
 /**
- * @typedef MessageResult
+ * @typedef PageInfo
+ * @property {boolean} hasNextPage
+ *
+ * @typedef Result
  * @property {any} Output
  * @property {any[]} Messages
  * @property {any[]} Spawns
  * @property {any} [Error]
  *
- * @typedef ReadResultArgs
- * @property {string} message - the transaction id of the message
- * @property {string} process - the transaction id of the process that received the message
+ * @typedef Edge
+ * @property {Result} node
+ * @property {string} cursor
  *
- * @callback ReadResult
- * @param {ReadResultArgs} args
+ * @typedef Response
+ * @property {PageInfo} pageInfo
+ * @property {Edge[]} edges
+ *
+ * @typedef ReadResultsArgs
+ * @property {string} process
+ * @property {string} [from]
+ * @property {string} [to]
+ * @property {number} [limit]
+ * @property {string} [sort]
+ *
+ * @callback ReadResults
+ * @param {ReadResultsArgs} args
  * @returns {Promise<MessageResult>} result
  *
- * @returns {ReadResult}
+ * @returns {ReadResults}
  */
 export function resultsWith (env) {
   const verifyInput = verifyInputWith(env)
