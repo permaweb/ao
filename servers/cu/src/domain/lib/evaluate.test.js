@@ -17,6 +17,7 @@ describe('evaluate', () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     })
 
@@ -148,6 +149,7 @@ describe('evaluate', () => {
         return undefined
       },
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -226,6 +228,7 @@ describe('evaluate', () => {
         messageHash++
         return { _id: 'messageHash-doc-123' }
       },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -297,6 +300,7 @@ describe('evaluate', () => {
         return undefined
       },
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -397,6 +401,8 @@ describe('evaluate', () => {
         assert.fail('cache should not be interacted with on a noop of state'),
       findMessageHash: async () =>
         assert.fail('cache should not be interacted with on a noop of state'),
+      doesExceedMaximumHeapSize: async () =>
+        assert.fail('heap should not be examined on a noop of state'),
       logger
     }
 
@@ -433,6 +439,7 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -490,6 +497,7 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -540,6 +548,7 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -589,6 +598,7 @@ describe('evaluate', () => {
         return undefined
       },
       findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => false,
       logger
     }
 
@@ -652,5 +662,82 @@ describe('evaluate', () => {
     assert.equal(JSON.parse(res.output.Output), 2)
     // Only cache the evals that did not produce errors
     assert.equal(cacheCount, 2)
+  })
+
+  test('should fatally error and short-circuit eval if wasm heap size is exceeded', async () => {
+    let heapCheckCount = 0
+    const env = {
+      saveEvaluation: async (evaluation) => evaluation,
+      findMessageHash: async () => { throw { status: 404 } },
+      doesExceedMaximumHeapSize: async () => {
+        if (heapCheckCount > 1) return true
+        heapCheckCount++
+        return false
+      },
+      logger
+    }
+
+    const evaluate = evaluateWith(env)
+
+    const ctx = {
+      id: 'ctr-1234',
+      from: 1702846520559,
+      module: readFileSync('./test/processes/happy/process.wasm'),
+      result: {
+        Memory: null
+      },
+      messages: toAsyncIterable([
+        // noSave should noop and not call saveInteraction
+        {
+          noSave: true,
+          ordinate: 0,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
+              { name: 'function', value: 'hello' }
+            ],
+            'Block-Height': 1234
+          },
+          AoGlobal: {}
+        },
+        {
+          ordinate: 1,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
+              { name: 'function', value: 'hello' }
+            ],
+            'Block-Height': 1234
+          },
+          AoGlobal: {}
+        },
+        {
+          ordinate: 1,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
+              { name: 'function', value: 'world' }
+            ],
+            'Block-Height': 1235
+          },
+          AoGlobal: {}
+        }
+      ])
+    }
+
+    await evaluate(ctx)
+      .toPromise()
+      .then(() => assert.fail('should throw when fatal error is encountered'))
+      .catch((err) => {
+        assert.equal(err.status, 413)
+        assert.equal(err.message, 'ao Process WASM exceeded maximum heap size')
+        assert.equal(heapCheckCount, 2)
+      })
   })
 })

@@ -1,13 +1,12 @@
 import {
   T, always, applySpec, assocPath, cond, defaultTo, identity,
-  ifElse,
-  is, mergeRight, pathOr, pipe, propOr, reduced
+  ifElse, is, mergeRight, pathOr, pipe, propOr
 } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
-import { findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { doesExceedMaximumHeapSizeSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -68,6 +67,12 @@ function doesMessageHashExistWith ({ findMessageHash }) {
   }
 }
 
+function doesHeapExceedMaxSizeWith ({ doesExceedMaximumHeapSize }) {
+  doesExceedMaximumHeapSize = fromPromise(doesExceedMaximumHeapSizeSchema.implement(doesExceedMaximumHeapSize))
+
+  return (heap) => doesExceedMaximumHeapSize({ heap })
+}
+
 /**
  * @typedef EvaluateArgs
  * @property {string} id - the contract id
@@ -89,27 +94,7 @@ export function evaluateWith (env) {
 
   const doesMessageHashExist = doesMessageHashExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
-
-  /**
-   * When an error occurs, we short circuit the reduce using
-   * ramda's 'reduced()' function, but since our accumulator is a Promise,
-   * ramda's 'reduce' cannot natively short circuit the reduction.
-   *
-   * So we do it ourselves by unwrapping the output, and if the value
-   * is the 'reduced()' shape, then we immediatley reject, short circuiting the reduction
-   *
-   * See https://ramdajs.com/docs/#reduced
-   * check copied from ramda's internal reduced check impl:
-   * https://github.com/ramda/ramda/blob/afe98b03c322fc4d22742869799c9f2796c79744/source/internal/_xReduce.js#L10C11-L10C11
-   */
-  const maybeReducedError = (With) => (output) => {
-    if (output && output['@@transducer/reduced']) {
-      return With(output['@@transducer/value'])
-    }
-    return Promise.resolve(output)
-  }
-  const maybeResolveError = maybeReducedError(Promise.resolve.bind(Promise))
-  const maybeRejectError = maybeReducedError(Promise.reject.bind(Promise))
+  const doesHeapExceedMaxSize = doesHeapExceedMaxSizeWith(env)
 
   /**
    * Given the previous interaction output,
@@ -159,7 +144,7 @@ export function evaluateWith (env) {
       .chain(addHandler)
       .chain(fromPromise(async (ctx) => {
         /**
-         * There seems to be duplicate Cron Message evaluations occurring and it's been difficult\
+         * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
          * to pin down why. My hunch is that the very first message can be a duplicate of the 'from', if 'from'
          * is itself a Cron Message.
          *
@@ -223,8 +208,7 @@ export function evaluateWith (env) {
           }
 
           prev = await Promise.resolve(prev)
-            .then(maybeRejectError)
-            .then(prev =>
+            .then((prev) =>
               Promise.resolve(prev.Memory)
                 .then(Memory => {
                   logger('Evaluating message "%s" to process "%s"', name, ctx.id)
@@ -243,61 +227,64 @@ export function evaluateWith (env) {
                  * with the output of the current interaction
                  */
                 .then(mergeOutput(prev))
-                .then((output) => {
-                  return output.Error
-                    ? Promise.reject(output)
-                    : Promise.resolve(output)
-                })
-                .then(output => {
-                  logger('Applied message "%s" to process "%s"', name, ctx.id)
-                  return output
-                })
-              /**
-               * Create a new evaluation to be cached in the local db
-               */
-                .then((output) => {
+                .then(async (output) => {
                   /**
-                   * Noop saving the evaluation is noSave flag is set
+                   * TODO: maybe a better spot to place this check, so it's not so disjointed.
+                   *
+                   * For now this get's us what we need. Rejecting here will cause the eval to not
+                   * be persisted, and then overall evaluation to stop
                    */
-                  if (noSave) return output
+                  if (await doesHeapExceedMaxSize(output.Memory).toPromise()) {
+                    logger('FATAL: message "%s" caused process "%s" evaluated heap to exceed maximum allowed size. Short-circuiting evaluation...', name, ctx.id)
+                    // eslint-disable-next-line
+                    return Promise.reject({ status: 413, message: 'ao Process WASM exceeded maximum heap size' })
+                  }
 
-                  return saveEvaluation({
-                    name,
-                    deepHash,
-                    cron,
-                    ordinate,
-                    processId: ctx.id,
-                    messageId: message.Id,
-                    timestamp: message.Timestamp,
-                    blockHeight: message['Block-Height'],
-                    evaluatedAt: new Date(),
-                    output
-                  })
-                    .map(() => output)
-                    .toPromise()
+                  return Promise.resolve(output)
+                    .then((output) => {
+                      return output.Error
+                        ? Promise.reject(output)
+                        : Promise.resolve(output)
+                    })
+                    .then(output => {
+                      logger('Applied message "%s" to process "%s"', name, ctx.id)
+                      return output
+                    })
+                    /**
+                     * Create a new evaluation to be cached in the local db
+                     */
+                    .then((output) => {
+                      /**
+                       * Noop saving the evaluation is noSave flag is set
+                       */
+                      if (noSave) return output
+
+                      return saveEvaluation({
+                        name,
+                        deepHash,
+                        cron,
+                        ordinate,
+                        processId: ctx.id,
+                        messageId: message.Id,
+                        timestamp: message.Timestamp,
+                        blockHeight: message['Block-Height'],
+                        evaluatedAt: new Date(),
+                        output
+                      })
+                        .map(() => output)
+                        .toPromise()
+                    })
+                    .catch(logger.tap(
+                      'Error occurred when applying message with id "%s" to process "%s" %j',
+                      name,
+                      ctx.id
+                    ))
                 })
-                .catch(logger.tap(
-                  'Error occurred when applying message with id "%s" to process "%s" %o',
-                  name,
-                  ctx.id
-                ))
             )
-            /**
-             * An error was encountered, so stop reduce and return the output
-             */
-            .catch(err => Promise.resolve(reduced(err)))
         }
 
         return prev
       }))
-      /**
-       * If an error occurred, then it will be wrapped in a reduced,
-       * so unwrap it and Resolve, so it can be assigned as output
-       * of the evaluation.
-       *
-       * In other words, this chain should always Resolve
-       */
-      .chain(fromPromise(maybeResolveError))
       .map(output => ({ output }))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
