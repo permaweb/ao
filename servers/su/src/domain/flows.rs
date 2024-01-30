@@ -44,7 +44,7 @@ pub fn init_builder(deps: &Arc<Deps>) -> Result<Builder, String> {
 async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, String> {
     let upload_node_url = &deps.config.upload_node_url;
     let uploader = UploaderClient::new(upload_node_url, &deps.logger)?;
-    let uploaded_tx = uploader.upload(build_result).await?;
+    let uploaded_tx = uploader.upload(build_result)?;
     let result = match serde_json::to_string(&uploaded_tx) {
         Ok(r) => r,
         Err(e) => return Err(format!("{:?}", e))
@@ -86,11 +86,17 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             let schedule_info = locked_schedule_info.lock().await;
 
             let build_result = builder.build_process(input, &*schedule_info).await?;
-            let r = upload(&deps, build_result.binary.to_vec()).await?;
+            upload(&deps, build_result.binary.to_vec()).await?;
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store.save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
-            return Ok(r);
+            match system_time() {
+                Ok(timestamp) => {
+                    let response_json = json!({ "timestamp": timestamp, "id": process.process_id.clone() });
+                    Ok(response_json.to_string())
+                }
+                Err(e) => Err(format!("{:?}", e))
+            }
         } else if type_tag.value == "Message" {
             /*
                 acquire the mutex locked scheduling info for the
@@ -101,11 +107,17 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             let schedule_info = locked_schedule_info.lock().await;
 
             let build_result = builder.build(input, &*schedule_info).await?;
-            let r = upload(&deps, build_result.binary.to_vec()).await?;
+            upload(&deps, build_result.binary.to_vec()).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store.save_message(&message, &build_result.binary)?;
             deps.logger.log(format!("saved message - {:?}", &message));
-            return Ok(r); // the lock is released here because it goes out of scope
+            match system_time() {
+                Ok(timestamp) => {
+                    let response_json = json!({ "timestamp": timestamp, "id": message.message.id.clone() });
+                    Ok(response_json.to_string())
+                }
+                Err(e) => Err(format!("{:?}", e))
+            }
         } else {
             return Err("Type tag not present".to_string());
         }
