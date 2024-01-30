@@ -28,6 +28,7 @@ export function readResultWith (env) {
       .chain(loadMessageMeta)
       .chain(res => readState({
         processId: res.processId,
+        messageId: messageTxId,
         to: res.timestamp,
         /**
          * The ordinate for a scheduled message is it's nonce

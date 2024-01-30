@@ -27,6 +27,13 @@ describe('evaluate', () => {
         id: 'ctr-1234',
         from: new Date().getTime(),
         module: readFileSync('./test/processes/happy/process.wasm'),
+        stats: {
+          messages: {
+            scheduled: 0,
+            cron: 0,
+            error: 0
+          }
+        },
         result: {
           Memory: null
         },
@@ -159,6 +166,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         Memory: null
       },
@@ -238,6 +252,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         Memory: null
       },
@@ -311,6 +332,13 @@ describe('evaluate', () => {
       from: 1702846520559,
       fromCron: '1-10-minutes',
       module: readFileSync('./test/processes/happy/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         Memory: null
       },
@@ -412,6 +440,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: new Date().getTime(),
       module: readFileSync('./test/processes/happy/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         /**
          * In reality this would be an illegible byte array, since it's format
@@ -449,6 +484,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         /**
          * In reality this would be an illegible byte array, since it's format
@@ -507,6 +549,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         /**
          * In reality this would be an illegible byte array, since it's format
@@ -558,6 +607,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         /**
          * In reality this would be an illegible byte array, since it's format
@@ -608,6 +664,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/sad/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         Memory: null
       },
@@ -683,6 +746,13 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       module: readFileSync('./test/processes/happy/process.wasm'),
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
       result: {
         Memory: null
       },

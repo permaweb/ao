@@ -6,6 +6,7 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
 import { evaluateWith } from '../lib/evaluate.js'
 import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
+import { isNotNil } from 'ramda'
 
 /**
  * @typedef State
@@ -31,10 +32,35 @@ export function readStateWith (env) {
 
   const findEvaluation = fromPromise(findEvaluationSchema.implement(env.findEvaluation))
 
-  return ({ processId, to, ordinate, cron, exact }) => {
-    return of({ id: processId, to, ordinate, cron })
+  return ({ processId, messageId, to, ordinate, cron, exact }) => {
+    messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':')
+
+    const stats = {
+      startTime: new Date(),
+      endTime: undefined,
+      messages: {
+        scheduled: 0,
+        cron: 0,
+        error: 0
+      }
+    }
+
+    const logStats = (res) => {
+      stats.endTime = new Date()
+      env.logger(
+        'readState for process "%s" up to message "%s" took %d milliseconds: %j',
+        processId,
+        messageId,
+        stats.endTime - stats.startTime,
+        stats
+      )
+
+      return res
+    }
+
+    return of({ id: processId, to, ordinate, cron, stats })
       .chain(loadProcess)
-      .chain(res => {
+      .chain((res) => {
         /**
          * The exact evaluation (identified by its input messages timestamp)
          * was found in the cache, so just return it.
@@ -50,9 +76,8 @@ export function readStateWith (env) {
             res.cron == cron
         ) {
           env.logger(
-            'Exact match to cached evaluation for message "%s:%s" to process "%s"',
-            to,
-            ordinate,
+            'Exact match to cached evaluation for message "%s" to process "%s"',
+            messageId,
             processId
           )
 
@@ -64,6 +89,7 @@ export function readStateWith (env) {
            * This exposes a single api for upstream to consume
            */
           return Resolved({ ...res, output: res.result })
+            .map(logStats)
         }
 
         return of(res)
@@ -103,6 +129,7 @@ export function readStateWith (env) {
 
             return Resolved(ctx)
           })
+          .bimap(logStats, logStats)
       })
   }
 }

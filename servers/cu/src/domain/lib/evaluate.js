@@ -228,6 +228,9 @@ export function evaluateWith (env) {
                  */
                 .then(mergeOutput(prev))
                 .then(async (output) => {
+                  if (cron) ctx.stats.messages.cron++
+                  else ctx.stats.messages.scheduled++
+
                   /**
                    * TODO: maybe a better spot to place this check, so it's not so disjointed.
                    *
@@ -281,6 +284,7 @@ export function evaluateWith (env) {
                         ctx.id,
                         err.Error
                       )
+                      ctx.stats.messages.error++
 
                       return err
                     })
