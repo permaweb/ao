@@ -274,11 +274,16 @@ export function evaluateWith (env) {
                         .map(() => output)
                         .toPromise()
                     })
-                    .catch(logger.tap(
-                      'Error occurred when applying message with id "%s" to process "%s" %j',
-                      name,
-                      ctx.id
-                    ))
+                    .catch((err) => {
+                      logger(
+                        'Error occurred when applying message "%s" to process "%s": "%s',
+                        name,
+                        ctx.id,
+                        err.Error
+                      )
+
+                      return err
+                    })
                 })
             )
         }
