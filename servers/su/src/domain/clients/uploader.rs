@@ -7,6 +7,7 @@ use reqwest::{Url, Client};
 extern crate serde;
 use serde::{Serialize, Deserialize};
 
+use tokio::spawn;
 use tokio::time::{sleep, Duration};
 
 use crate::domain::Log;
@@ -69,65 +70,46 @@ impl<'a> UploaderClient<'a> {
     }
 
 
-    pub async fn upload(&self, tx: Vec<u8>) -> Result<UploadResult, UploaderErrorType> {
+    pub fn upload(&self, tx: Vec<u8>) -> Result<(), UploaderErrorType> {
         let node_url_clone = self.node_url.clone();
-        let client = Client::new();
+        let tx_clone = tx.clone();
+        let logger_clone = Arc::clone(&self.logger);
 
-        for attempt in 0..5 {
-            let response = client
-                .post(
-                    node_url_clone
-                        .join(&format!("tx/{}", "arweave".to_string()))
-                        .map_err(|e| UploaderErrorType::UploadError(e.to_string()))?,
-                )
-                .header("Content-Type", "application/octet-stream")
-                .body(tx.clone())
-                .send()
-                .await;
+        spawn(async move {
+            let client = Client::new();
 
-            match response {
-                Ok(resp) if resp.status().is_success() => {
-                    // Capture status and headers before consuming the response
-                    let response_status = resp.status();
-                    let response_headers = resp.headers().clone();
+            for _attempt in 0..100 {
+                let response = client
+                    .post(
+                        node_url_clone
+                            .join(&format!("tx/{}", "arweave".to_string()))
+                            .expect("Failed to join URL"), // Handle URL joining error
+                    )
+                    .header("Content-Type", "application/octet-stream")
+                    .body(tx_clone.clone())
+                    .send()
+                    .await;
 
-                    let body_str = match resp.text().await {
-                        Ok(text) => text,
-                        Err(_) => continue, // If there's an error reading the body, try the request again
-                    };
-
-                    let msg = format!(
-                        "Response Status: {:?}\nResponse Headers: {:?}\nResponse Body: {}",
-                        response_status,
-                        response_headers,
-                        body_str
-                    );
-
-                    self.logger.log(format!("irys success message - {}", &msg));
-                    let parsed: UploadResult = serde_json::from_str(&body_str)?;
-                    return Ok(parsed);
-                }
-                Ok(resp) => {
-                    // Log the error response and try again
-                    let status = resp.status();
-                    let error_msg = format!("Attempt {}: Upload failed with status {}", attempt + 1, status);
-                    self.logger.error(error_msg);
-
-                    // Wait for 1 second before retrying
-                    sleep(Duration::from_secs(1)).await;
-                }
-                Err(e) => {
-                    // Log the request error and try again
-                    let error_msg = format!("Attempt {}: Request failed with error {:?}", attempt + 1, e);
-                    self.logger.error(error_msg);
-
-                    // Wait for 1 second before retrying
-                    sleep(Duration::from_secs(1)).await;
+                match response {
+                    Ok(resp) if resp.status().is_success() => {
+                        // Handle success
+                        logger_clone.log("Upload successful".to_string());
+                        break; // Exit the loop on success
+                    }
+                    Ok(resp) => {
+                        // Handle non-success HTTP status
+                        logger_clone.error(format!("Non-success status: {}", resp.status()));
+                        sleep(Duration::from_secs(1)).await;
+                    }
+                    Err(e) => {
+                        // Handle request error
+                        logger_clone.error(format!("Request error: {}", e));
+                        sleep(Duration::from_secs(1)).await;
+                    }
                 }
             }
-        }
+        });
 
-        // If all attempts fail, return an error
-        Err(UploaderErrorType::UploadError("All attempts to upload failed".to_string()))
+        Ok(())
     }
 }
