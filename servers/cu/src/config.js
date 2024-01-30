@@ -48,7 +48,7 @@ const CONFIG_ENVS = {
   production: {
     MODE,
     port: process.env.PORT || 3005,
-    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE,
+    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     GATEWAY_URL: process.env.GATEWAY_URL,
     DB_MODE: process.env.DB_MODE || 'remote',
     DB_URL: process.env.DB_URL,
