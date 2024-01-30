@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.39](https://github.com/permaweb/ao/compare/connect@v0.0.38...connect@v0.0.39) (2024-01-30)
+
+
+### Bug Fixes
+
+* jsdocs for typescript [#394](https://github.com/permaweb/ao/issues/394) ([cda5267](https://github.com/permaweb/ao/commit/cda52677b1b3e182b3efd5ccadee9b746ec23698))
+
 ## [0.0.38](https://github.com/permaweb/ao/compare/connect@v0.0.37...connect@v0.0.38) (2024-01-28)
 
 ## [0.0.37](https://github.com/permaweb/ao/compare/connect@v0.0.36...connect@v0.0.37) (2024-01-28)
