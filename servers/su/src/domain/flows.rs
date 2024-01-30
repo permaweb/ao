@@ -90,7 +90,7 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store.save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
-            match system_time() {
+            match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json = json!({ "timestamp": timestamp, "id": process.process_id.clone() });
                     Ok(response_json.to_string())
@@ -111,7 +111,7 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store.save_message(&message, &build_result.binary)?;
             deps.logger.log(format!("saved message - {:?}", &message));
-            match system_time() {
+            match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json = json!({ "timestamp": timestamp, "id": message.message.id.clone() });
                     Ok(response_json.to_string())
@@ -173,6 +173,13 @@ fn system_time() -> Result<String, SystemTimeError> {
     let millis = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
     let millis_string = millis.to_string();
     Ok(millis_string)
+}
+
+fn system_time_u64() -> Result<u64, SystemTimeError> {
+    let start_time = SystemTime::now();
+    let duration = start_time.duration_since(UNIX_EPOCH)?;
+    let millis = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
+    Ok(millis)
 }
 
 pub async fn timestamp(deps: Arc<Deps>) -> Result<String, String>{
