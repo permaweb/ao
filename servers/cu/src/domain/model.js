@@ -1,10 +1,40 @@
 import { z } from 'zod'
 
+export const positiveIntSchema = z.preprocess((val) => {
+  if (!val) return -1
+  if (typeof val === 'number') return val
+  return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
+}, z.number().positive())
+
 export const domainConfigSchema = z.object({
+  /**
+   * The maximum size, in bytes, that an ao processes' evaluated heap size
+   * can reach before the CU will stop evaluating.
+   *
+   * ie. '1000' or '1_000'
+   */
+  PROCESS_WASM_HEAP_MAX_SIZE: positiveIntSchema,
+  /**
+   * The gateway for the CU to use fetch block metadata, data on arweave,
+   * and Scheduler-Location data
+   */
   GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL'),
+  /**
+   * Whether the database being used by the CU is embedded within the CU (ie. PouchDB)
+   * or is on another remote process (ie. CouchDB)
+   */
   DB_MODE: z.enum(['remote', 'embedded']),
+  /**
+   * The connection string to the database
+   */
   DB_URL: z.string().min(1, 'DB_URL must be set to the database connection string'),
+  /**
+   * The maximum number of event listeners for the database
+   */
   DB_MAX_LISTENERS: z.number().int('DB_MAX_LISTENERS must be an integer'),
+  /**
+   * The wallet for the CU
+   */
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface')
 })
 

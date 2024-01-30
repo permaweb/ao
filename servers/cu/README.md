@@ -36,11 +36,13 @@ on port `3005` by default.
 
 There are a few environment variables that you can set:
 
-- `GATEWAY_URL`: Which Arweave Gateway to use (defaults to `arweave.net` in
+- `PROCESS_WASM_HEAP_MAX_SIZE`: The maximum size, in bytes, that an `ao` processes' _evaluated_ heap
+can reach, before the CU will halt evaluation. (defaults to 100MB `100_000_000` in development mode)
+- `GATEWAY_URL`: The Arweave gateway for the CU to use fetch block metadata, data on arweave, and Scheduler-Location data (defaults to `arweave.net` in
   development mode)
 - `WALLET`: the JWK Interface stringified JSON that will be used by the CU
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
-- `DB_MODE`: the database mode to run the service in. Can be either `embedded` or `remote` (defaults to `embedded` during development)
+- `DB_MODE`: Whether the database being used by the CU is embedded within the CU or is remote to the CU. Can be either `embedded` or `remote` (defaults to `embedded` during development)
 - `DB_URL`: The connection string to the database (when using `DB_MODE=embedded`, defaults to `ao-cache`)
 - `DB_MAX_LISTENERS`: the maximum number of event listeners for DB events.
   Defaults to `100`
@@ -77,7 +79,7 @@ docker run -it \
   cu-couch
 ```
 
-This will start a CouchDB database listening on port `5432` with credentials in
+This will start a CouchDB database listening on port `5984` with credentials in
 the `./couchdb/couchdb.conf` file
 
 ## Tests

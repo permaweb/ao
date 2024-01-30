@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { domainConfigSchema } from './domain/model.js'
+import { domainConfigSchema, positiveIntSchema } from './domain/index.js'
 
 /**
  * Some frameworks will implicitly override NODE_ENV
@@ -23,11 +23,7 @@ if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
  */
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
-  port: z.preprocess((val) => {
-    if (!val) return -1
-    if (typeof val === 'number') return val
-    return typeof val === 'string' ? parseInt(val) : -1
-  }, z.number().positive()),
+  port: positiveIntSchema,
   DUMP_PATH: z.string().min(1)
 })
 
@@ -41,6 +37,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
+    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     DB_MODE: process.env.DB_MODE || 'embedded',
     DB_URL: process.env.DB_URL || 'ao-cache',
@@ -51,6 +48,7 @@ const CONFIG_ENVS = {
   production: {
     MODE,
     port: process.env.PORT || 3005,
+    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE,
     GATEWAY_URL: process.env.GATEWAY_URL,
     DB_MODE: process.env.DB_MODE || 'remote',
     DB_URL: process.env.DB_URL,

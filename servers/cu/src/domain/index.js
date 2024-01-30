@@ -15,7 +15,7 @@ import { readResultsWith } from './api/readResults.js'
 import { dryRunWith } from './api/dryRun.js'
 
 export { createLogger } from './logger.js'
-export { domainConfigSchema } from './model.js'
+export { domainConfigSchema, positiveIntSchema } from './model.js'
 export { errFrom } from './utils.js'
 
 export const createApis = async (ctx) => {
