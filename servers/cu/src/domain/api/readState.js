@@ -33,7 +33,7 @@ export function readStateWith (env) {
   const findEvaluation = fromPromise(findEvaluationSchema.implement(env.findEvaluation))
 
   return ({ processId, messageId, to, ordinate, cron, exact }) => {
-    messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':')
+    messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'earliest'
 
     const stats = {
       startTime: new Date(),
