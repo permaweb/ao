@@ -5,6 +5,8 @@ import {
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
+export const isNamed = has('name')
+
 export function errFrom (err) {
   let e
   /**
@@ -22,6 +24,12 @@ export function errFrom (err) {
   } else {
     e = new Error('An error occurred')
   }
+
+  /**
+   * If this is a named error, we make sure to include its name
+   * in the error message
+   */
+  if (!is(ZodError, err) && isNamed(err)) e.message = `${err.name}: ${e.message}`
 
   return e
 }
