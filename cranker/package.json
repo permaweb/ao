@@ -1,0 +1,32 @@
+{
+  "name": "@permaweb/cranker",
+  "version": "1.0.0",
+  "description": "cron message processor for ao",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/permaweb/ao.git"
+  },
+  "author": "Vince Juliano",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/permaweb/ao/issues"
+  },
+  "homepage": "https://github.com/permaweb/ao#readme",
+  "dependencies": {
+    "@permaweb/ao-scheduler-utils": "^0.0.8",
+    "@permaweb/ao-sdk": "^0.0.23",
+    "dotenv": "^16.4.1",
+    "hyper-async": "^1.1.2",
+    "minimist": "^1.2.8",
+    "node-cron": "^3.0.3",
+    "pubsub-js": "^1.9.4",
+    "ramda": "^0.29.1",
+    "warp-arbundles": "^1.0.4",
+    "zod": "^3.22.4"
+  }
+}
