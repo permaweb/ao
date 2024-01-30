@@ -2,10 +2,9 @@ import path from 'node:path'
 import fs from 'node:fs'
 
 import dotenv from 'dotenv'
-dotenv.config()
-
 
 import { z } from 'zod'
+dotenv.config()
 
 export const configSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
@@ -25,7 +24,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     MU_WALLET: walletKey,
-    CU_URL: process.env.CU_URL || 'https://ao-cu-1.onrender.com',
+    CU_URL: process.env.CU_URL || 'https://cu.ao-testnet.xyz',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   },

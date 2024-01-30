@@ -1,3 +1,7 @@
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
 import minimist from 'minimist'
 import { z } from 'zod'
 import { of } from 'hyper-async'
@@ -7,6 +11,9 @@ import PubSub from 'pubsub-js'
 import { config } from './config.js'
 import { createLogger } from './logger.js'
 import { createApis } from './index.common.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export const configSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
@@ -23,17 +30,17 @@ const apis = createApis({
 })
 
 const argv = minimist(process.argv.slice(2))
+const processId = argv._[0]
 
-const processId = argv[0] || 'ZHcPSyTkspHQTLBnJJwyQsSdqz2TulWEGvO4IsW74Tg'
-
-let cursor = null // eslint-disable-line
+const cursorFilePath = path.join(__dirname, '../cursor.txt')
 
 let ct = null
-ct = cron.schedule('*/1 * * * * *', () => {
+ct = cron.schedule('*/10 * * * * *', () => {
   ct.stop() // pause cron while fetching messages
-  apis.fetchCron({ apis, processId })
+  const cursor = getCursor()
+  apis.fetchCron({ apis, processId, cursor })
     .map(setCursor) // set cursor for next batch
-    .map(publish)
+    .map(publishCron)
     .fork(
       e => console.log(e),
       success => console.log(success)
@@ -42,18 +49,28 @@ ct = cron.schedule('*/1 * * * * *', () => {
 })
 
 PubSub.subscribe('MESSAGE', (_topic, data) => {
-  return of({ resultMsg: data }).chain(apis.processMsg)
+  console.log(data)
+  return apis.processMsg({ resultMsg: data })
+    .chain((res) => apis.fetchResult({
+      processId: res.resultMsg.processId,
+      txId: res.tx.id
+    }))
+    .map(publishResult)
     .fork(
       e => console.error(e),
       r => console.log(r)
     )
 })
 
-PubSub.subscribe('SPAWN', (msg, data) => {
-  console.log(msg, data)
+PubSub.subscribe('SPAWN', (_topic, data) => {
+  return of({ resultMsg: data }).chain(apis.processSpawn)
+    .fork(
+      e => console.error(e),
+      r => console.log(r)
+    )
 })
 
-function publish (result) {
+function publishCron (result) {
   result.edges.forEach(function (edge) {
     edge.node?.Messages?.map(msg => PubSub.publish('MESSAGE', { ...msg, processId }))
     edge.node?.Spawns?.map(spawn => PubSub.publish('SPAWN', { ...spawn, processId }))
@@ -61,8 +78,28 @@ function publish (result) {
   return result
 }
 
+function publishResult (result) {
+  result.Messages?.forEach(function (message) {
+    PubSub.publish('MESSAGE', { ...message, processId })
+  })
+  result.Spawns?.forEach(function (spawn) {
+    PubSub.publish('SPAWN', { ...spawn, processId })
+  })
+  return result
+}
+
+function getCursor () {
+  if (fs.existsSync(cursorFilePath)) {
+    return fs.readFileSync(cursorFilePath, 'utf8')
+  } else {
+    return null
+  }
+}
+
 function setCursor (result) {
-  cursor = result.edges[result.edges.length - 1].cursor
-  // TODO: Save to File
+  const cursor = result.edges[result.edges.length - 1]?.cursor
+  if (cursor) {
+    fs.writeFileSync(cursorFilePath, cursor, 'utf8')
+  }
   return result
 }

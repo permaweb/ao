@@ -9,6 +9,7 @@ import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
 
 import { processMsgWith } from './lib/processMsg/index.js'
+import { processSpawnWith } from './lib/processSpawn/index.js'
 
 const { DataItem } = warpArBundles
 
@@ -29,18 +30,27 @@ export const createApis = (ctx) => {
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
-    selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     logger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
   })
 
   const fetchCron = fromPromise(cuClient.fetchCronWith({ CU_URL }))
+  const fetchResultLogger = logger.child('fetchResult')
+  const fetchResult = fromPromise(cuClient.resultWith({ fetch, CU_URL, logger: fetchResultLogger }))
 
-  return { processMsg, fetchCron }
+  const processSpawnLogger = logger.child('processSpawn')
+  const processSpawn = processSpawnWith({
+    logger: processSpawnLogger,
+    locateScheduler: raw,
+    locateProcess: locate,
+    buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processSpawnLogger })
+  })
+
+  return { processMsg, fetchCron, fetchResult, processSpawn }
 }
