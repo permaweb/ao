@@ -168,3 +168,7 @@ export const locateSchedulerSchema = z.function()
       url: z.string()
     })
   ))
+
+export const doesExceedMaximumHeapSizeSchema = z.function()
+  .args(z.any())
+  .returns(z.promise(z.boolean()))

@@ -6,6 +6,7 @@ import * as GatewayClient from './client/gateway.js'
 import * as PouchDbClient from './client/pouchdb.js'
 import * as AoSuClient from './client/ao-su.js'
 import * as WalletClient from './client/wallet.js'
+import * as WasmClient from './client/wasm.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith } from './api/readState.js'
@@ -60,6 +61,7 @@ export const createApis = async (ctx) => {
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 50, logger }),
     locateScheduler: locateDataloader.load.bind(locateDataloader),
+    doesExceedMaximumHeapSize: WasmClient.doesExceedMaximumHeapSizeWith({ PROCESS_WASM_HEAP_MAX_SIZE: ctx.PROCESS_WASM_HEAP_MAX_SIZE }),
     logger
   })
   /**
