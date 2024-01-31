@@ -1,5 +1,5 @@
 import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
-import { assoc, is, tap } from 'ramda'
+import { assoc, is } from 'ramda'
 // import z from 'zod'
 
 import { parseTags } from '../../utils.js'
@@ -36,7 +36,6 @@ export function spawnProcessWith (env) {
   }
 
   return (ctx) => {
-    ctx.tracer.trace('Constructing message from spawn')
     const { Tags, Data } = ctx.resultSpawn
 
     const tagsIn = Tags.filter(tag => ![
@@ -84,12 +83,7 @@ export function spawnProcessWith (env) {
         return writeDataItem({ suUrl: schedulerResult.url, data: signedData.data.toString('base64') })
           .map((result) => { return { id: signedData.id, block: result.block, timestamp: result.timestamp } })
           .map((r) => assoc('processTx', r.id, ctx))
-          .map(tap(ctx => ctx.tracer.spawn(ctx.processTx)))
-          .map(logger.tap('Added processTx to the ctx '))
+          .map(logger.info(`Added processTx to the ctx process id: ${signedData.id}`))
       })
-      .bimap(
-        tap(() => ctx.tracer.trace('Failed to write spawn to SU')),
-        tap(() => ctx.tracer.trace('Wrote spawn to SU'))
-      )
   }
 }

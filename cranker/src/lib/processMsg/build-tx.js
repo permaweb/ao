@@ -1,6 +1,6 @@
 import { of, fromPromise } from 'hyper-async'
 import z from 'zod'
-import { assoc, __, tap } from 'ramda'
+import { assoc, __ } from 'ramda'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -33,6 +33,6 @@ export function buildTxWith ({ buildAndSign, logger }) {
       }))
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Added tx to ctx'))
+      .map(logger.info('Added tx to ctx'))
   }
 }

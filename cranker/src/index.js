@@ -34,8 +34,28 @@ const processId = argv._[0]
 
 const cursorFilePath = path.join(__dirname, '../cursor.txt')
 
+let runTimeComplete = false
+
+const getCronString = (hoursToAdd = 0, minutesToAdd = 0) => {
+  const now = new Date()
+  now.setHours(now.getHours() + hoursToAdd)
+  now.setMinutes(now.getMinutes() + minutesToAdd)
+  const minutes = now.getMinutes()
+  const hours = now.getHours()
+  const dayOfMonth = now.getDate()
+  const month = now.getMonth() + 1
+  return `${minutes} ${hours} ${dayOfMonth} ${month} *`
+}
+
 let ct = null
 ct = cron.schedule('*/10 * * * * *', () => {
+  if (runTimeComplete) {
+    console.log('Runtime complete, exiting in 2 minutes')
+    cron.schedule(getCronString(0, 2), () => {
+      process.exit(1)
+    })
+    return
+  }
   ct.stop() // pause cron while fetching messages
   const cursor = getCursor()
   apis.fetchCron({ apis, processId, cursor })
@@ -43,13 +63,17 @@ ct = cron.schedule('*/10 * * * * *', () => {
     .map(publishCron)
     .fork(
       e => console.log(e),
-      success => console.log(success)
+      _success => {}
     )
   ct.start() // resume cron when done getting messages
 })
 
+cron.schedule(getCronString(12), () => {
+  console.log('12 hours reached, setting runtime to complete')
+  runTimeComplete = true
+})
+
 PubSub.subscribe('MESSAGE', (_topic, data) => {
-  console.log(data)
   return apis.processMsg({ resultMsg: data })
     .chain((res) => apis.fetchResult({
       processId: res.resultMsg.processId,
@@ -58,15 +82,15 @@ PubSub.subscribe('MESSAGE', (_topic, data) => {
     .map(publishResult)
     .fork(
       e => console.error(e),
-      r => console.log(r)
+      _r => {}
     )
 })
 
 PubSub.subscribe('SPAWN', (_topic, data) => {
-  return of({ resultMsg: data }).chain(apis.processSpawn)
+  return of({ resultSpawn: data }).chain(apis.processSpawn)
     .fork(
       e => console.error(e),
-      r => console.log(r)
+      _r => {}
     )
 })
 

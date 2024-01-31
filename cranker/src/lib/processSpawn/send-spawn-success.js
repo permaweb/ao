@@ -18,14 +18,14 @@ export function sendSpawnSuccessWith (env) {
       .chain(fromPromise(writeDataItem))
       .bichain(
         (error) => {
-          console.error('writeDataItem failed. Recovering and returning original ctx.', error)
+          console.error(`writeDataItem failed. Recovering and returning original ctx process id: ${ctx.processTx}`, error)
           return of(ctx)
         },
         (result) => {
           return of(result)
             .map(assoc('spawnSuccessSequencerTx', __, ctx))
             .map(ctxSchema.parse)
-            .map(logger.tap('Added "spawnSuccessSequencerTx" to ctx'))
+            .map(logger.info(`Added "spawnSuccessSequencerTx" to ctx  process id: ${ctx.processTx}`))
         }
       )
   }

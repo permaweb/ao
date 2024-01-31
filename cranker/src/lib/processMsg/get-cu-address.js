@@ -1,6 +1,6 @@
 import { of, fromPromise } from 'hyper-async'
 import z from 'zod'
-import { __, assoc, tap } from 'ramda'
+import { __, assoc } from 'ramda'
 
 const ctxSchema = z.object({
   cuAddress: z.string()
@@ -12,6 +12,6 @@ export function getCuAddressWith ({ selectNode, logger }) {
       .chain(fromPromise(selectNode))
       .map(assoc('cuAddress', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Added "cuAddress" to ctx'))
+      .map(logger.info(`Added "cuAddress" to ctx txid: ${ctx.tx.id}`))
   }
 }

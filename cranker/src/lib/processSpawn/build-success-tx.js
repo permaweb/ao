@@ -21,6 +21,6 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
       })))
       .map(assoc('spawnSuccessTx', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Added spawnSuccessTx to ctx'))
+      .map(logger.info(`Added spawnSuccessTx to ctx  process id: ${ctx.processTx}`))
   }
 }
