@@ -6,7 +6,7 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, midd
 use actix_cors::Cors;
 use serde::Deserialize;
 
-use su::domain::{flows, router, StoreClient, Deps, Log, scheduler};
+use su::domain::{flows, router, StoreClient, Deps, Log, scheduler, Gateway, ArweaveGateway};
 use su::logger::SuLog;
 use su::config::Config;
 
@@ -179,12 +179,17 @@ async fn main() -> io::Result<()> {
         logger: logger.clone()
     });
     let scheduler = Arc::new(scheduler::ProcessScheduler::new(scheduler_deps));
+
+    let gateway: Arc<dyn Gateway> = Arc::new(
+        ArweaveGateway::new().await.expect("Failed to initialize gateway")
+    );
     
     let deps: Deps = Deps {
         data_store,
         logger,
         config,
-        scheduler
+        scheduler,
+        gateway
     };
     
     let wrapped = web::Data::new(Arc::new(deps));
