@@ -13,7 +13,7 @@ pub struct NetworkInfo {
 }
 
 #[async_trait]
-pub trait Gateway {
+pub trait Gateway: Send + Sync  {
     async fn check_head(&self, tx_id: String) -> Result<bool, String>;
     async fn network_info(&self) -> Result<NetworkInfo, String>;
 }

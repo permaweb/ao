@@ -9,7 +9,6 @@ use reqwest::{Url};
 
 use crate::domain::clients::uploader::UploaderClient;
 use crate::domain::clients::store::{StoreClient};
-use crate::domain::clients::gateway::ArweaveGateway;
 use crate::domain::clients::wallet::FileWallet;
 use crate::domain::clients::signer::ArweaveSigner;
 use crate::domain::core::json::{Message, Process, SortedMessages};
@@ -22,7 +21,8 @@ pub struct Deps {
     pub data_store: Arc<StoreClient>,
     pub logger: Arc<dyn Log>,
     pub config: Arc<Config>,
-    pub scheduler: Arc<scheduler::ProcessScheduler>
+    pub scheduler: Arc<scheduler::ProcessScheduler>,
+    pub gateway: Arc<dyn Gateway>
 }
 
 /*
@@ -33,11 +33,10 @@ modules to produce the desired end result
 
 pub fn init_builder(deps: &Arc<Deps>) -> Result<Builder, String> {
     dotenv().ok();
-    let gateway: Arc<dyn Gateway> = Arc::new(ArweaveGateway);
     let wallet_path = &deps.config.su_wallet_path;
     let arweave_signer = ArweaveSigner::new(wallet_path)?;
     let signer: Arc<dyn Signer> = Arc::new(arweave_signer);
-    let builder = Builder::new(gateway, signer, &deps.logger)?;
+    let builder = Builder::new(deps.gateway.clone(), signer, &deps.logger)?;
     return Ok(builder);
 }
 
