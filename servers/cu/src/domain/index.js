@@ -99,7 +99,7 @@ export const createApis = async (ctx) => {
 
   const readResultsLogger = ctx.logger.child('readResults')
   const readResults = readResultsWith({
-    ...sharedDeps(readCronResultsLogger),
+    ...sharedDeps(readResultsLogger),
     findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
   })
 
