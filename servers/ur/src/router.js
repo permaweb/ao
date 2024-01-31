@@ -3,7 +3,12 @@ import { always, compose, pipe } from 'ramda'
 import heapdump from 'heapdump'
 import express from 'express'
 import cors from 'cors'
-import httpProxy from 'http-proxy'
+/**
+ * See https://github.com/http-party/node-http-proxy/pull/1559
+ * the PR that fixes the memory was not merged, so a fork
+ * was created with the fix
+ */
+import httpProxy from 'http-proxy-node16'
 import { LRUCache } from 'lru-cache'
 
 /**
