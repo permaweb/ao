@@ -12,10 +12,11 @@ import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 import { resultsWith } from './lib/results/index.js'
+import { dryrunWith } from './lib/dryrun/index.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
-const DEFAULT_MU_URL = 'https://ao-mu-router-1.onrender.com'
-const DEFAULT_CU_URL = 'https://ao-cu-router-1.onrender.com'
+const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
+const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
 
 /**
  * Build the sdk apis using the provided ao component urls. You can currently specify
@@ -123,5 +124,14 @@ export function connect ({
     logger: resultsLogger
   })
 
-  return { result, results, message, spawn, monitor, unmonitor }
+  /**
+   * dryrun - sends a message object to the cu and returns a result
+   */
+  const dryrunLogger = logger.child('dryrun')
+  const dryrun = dryrunWith({
+    dryrunFetch: CuClient.dryrunFetchWith({ fetch, CU_URL, logger: dryrunLogger }),
+    logger: dryrunLogger
+  })
+
+  return { result, results, message, spawn, monitor, unmonitor, dryrun }
 }

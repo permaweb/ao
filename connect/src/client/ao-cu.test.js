@@ -2,12 +2,65 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { loadResultSchema, queryResultsSchema } from '../dal.js'
-import { loadResultWith, queryResultsWith } from './ao-cu.js'
+import { loadResultSchema, queryResultsSchema, dryrunResultSchema } from '../dal.js'
+import { loadResultWith, queryResultsWith, dryrunFetchWith } from './ao-cu.js'
 
 const logger = createLogger('ao-cu')
 
 describe('ao-cu', () => {
+  describe('dryrun', () => {
+    test('posts to dry run endpoint', async () => {
+      const dryrunResult = dryrunResultSchema.implement(
+        dryrunFetchWith({
+          CU_URL: 'https://foo.bar',
+          fetch: async (url, options) => {
+            assert.equal(url, 'https://foo.bar/dry-run/?process-id=FOO_PROCESS')
+            assert.deepStrictEqual(options, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                Id: '1234',
+                Target: 'FOO_PROCESS',
+                Owner: 'FOO_OWNER',
+                Data: 'SOME DATA',
+                Tags: [
+                  { name: 'Action', value: 'Balance' },
+                  { name: 'Target', value: 'MY_WALLET' },
+                  { name: 'Data-Protocol', value: 'ao' },
+                  { name: 'Type', value: 'Message' },
+                  { name: 'Variant', value: 'ao.TN.1' }
+                ]
+              })
+            })
+
+            return new Response(JSON.stringify({
+              Output: 'Success',
+              Messages: [],
+              Spawns: []
+            }))
+          },
+          logger
+        }))
+
+      const res = await dryrunResult({
+        Id: '1234',
+        Target: 'FOO_PROCESS',
+        Owner: 'FOO_OWNER',
+        Data: 'SOME DATA',
+        Tags: [
+          { name: 'Action', value: 'Balance' },
+          { name: 'Target', value: 'MY_WALLET' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          { name: 'Variant', value: 'ao.TN.1' }
+        ]
+      })
+      assert.deepEqual(res, { Output: 'Success', Messages: [], Spawns: [] })
+    })
+  })
+
   describe('queryResultsWith', () => {
     test('queries the results for a process', async () => {
       const queryResult = queryResultsSchema.implement(

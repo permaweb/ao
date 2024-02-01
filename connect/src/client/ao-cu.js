@@ -1,9 +1,46 @@
 import { fromPromise, of } from 'hyper-async'
-
 /**
  * @typedef Env3
  * @property {fetch} fetch
  * @property {string} CU_URL
+ */
+
+/**
+ * @typedef Message
+ * @property {string} Id
+ * @property {string} Target
+ * @property {string} Owner
+ * @property {string} [Anchor]
+ * @property {any} Data
+ * @property {Record<name,value>[]} Tags
+ *
+ * @typedef Result
+ * @property {any} Output
+ * @property {Message[]} Messages
+ * @property {Message[]} Spawns
+ * @property {string} [Error]
+ *
+ * @callback DryrunFetch
+ * @param {Message} msg
+ * @returns {Result}
+ *
+ * @param {Env3} env
+ * @returns {DryrunFetch}
+ */
+export function dryrunFetchWith ({ fetch, CU_URL, logger }) {
+  return (msg) => of(msg)
+    .map(logger.tap('posting dryrun request to CU'))
+    .chain(fromPromise(msg => fetch(`${CU_URL}/dry-run/?process-id=${msg.Target}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(msg)
+    }).then(res => res.json())))
+    .toPromise()
+}
+
+/**
  *
  * @typedef LoadResultArgs
  * @property {string} id - the id of the process being read
