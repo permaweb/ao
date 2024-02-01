@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.40](https://github.com/permaweb/ao/compare/connect@v0.0.39...connect@v0.0.40) (2024-02-01)
+
+
+### Features
+
+* **connect:** dry run feature [#405](https://github.com/permaweb/ao/issues/405) ([e39a89f](https://github.com/permaweb/ao/commit/e39a89fd181394fae4f4bc71bb8c480adf6e9f85))
+* **connect:** dryrun [#405](https://github.com/permaweb/ao/issues/405) ([bc75bf4](https://github.com/permaweb/ao/commit/bc75bf4d2e32981d851696672316951a928fc5e2))
+* **connect:** dryrun added browser exports [#405](https://github.com/permaweb/ao/issues/405) ([6dbbdf9](https://github.com/permaweb/ao/commit/6dbbdf946c6eb37a4118f0f4273115b8ddfd28a6))
+* **connect:** dryrun connector for cu [#405](https://github.com/permaweb/ao/issues/405) ([02019f8](https://github.com/permaweb/ao/commit/02019f8237d704175bf8dfe1a0f8a37d55a49c15))
+
 ## [0.0.39](https://github.com/permaweb/ao/compare/connect@v0.0.38...connect@v0.0.39) (2024-01-30)
 
 
