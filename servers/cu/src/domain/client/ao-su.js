@@ -3,7 +3,7 @@ import { Transform, pipeline } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
-import { findRawTag } from '../utils.js'
+import { mapForwardedBy, mapFrom } from '../utils.js'
 
 export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
@@ -78,30 +78,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     }
   }
 
-  function mapFrom (node) {
-    const tag = findRawTag('From-Process', node.message.tags)
-    /**
-     * Not forwarded, so the signer is the who the message is from
-     */
-    if (!tag || !tag.value) return node.owner.address
-    /**
-     * Forwarded, so the owner is who the message was forwarded on behalf of
-     * (the From-Process) value
-     */
-    return tag.value
+  function mapNodeFrom (node) {
+    return mapFrom({ tags: node.message.tags, owner: node.owner.address })
   }
 
-  function mapForwardedBy (node) {
-    const tag = findRawTag('From-Process', node.message.tags)
-    /**
-     * Not forwarded by a MU, so simply not set
-     */
-    if (!tag) return undefined
-    /**
-     * Forwarded by a MU, so use the signer (the MU wallet)
-     * as the Forwarded-By value
-     */
-    return node.owner.address
+  function mapNodeForwardedBy (node) {
+    return mapForwardedBy({ tags: node.message.tags, owner: node.owner.address })
   }
 
   function mapName (node) {
@@ -132,8 +114,8 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
               Owner: path(['owner', 'address']),
               Target: path(['process_id']),
               Anchor: path(['message', 'anchor']),
-              From: mapFrom,
-              'Forwarded-By': mapForwardedBy,
+              From: mapNodeFrom,
+              'Forwarded-By': mapNodeForwardedBy,
               Tags: pathOr([], ['message', 'tags']),
               Epoch: path(['epoch']),
               Nonce: path(['nonce']),
