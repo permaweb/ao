@@ -7,6 +7,17 @@ const tagSchema = z.object({
 
 // CU
 
+export const dryrunResultSchema = z.function()
+  .args(z.object({
+    Id: z.string(),
+    Target: z.string(),
+    Owner: z.string(),
+    Anchor: z.string().optional(),
+    Data: z.any().default('1234'),
+    Tags: z.array(z.object({ name: z.string(), value: z.string() }))
+  }))
+  .returns(z.promise(z.any()))
+
 export const loadResultSchema = z.function()
   .args(z.object({
     id: z.string().min(1, { message: 'message id is required' }),
