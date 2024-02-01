@@ -21,6 +21,7 @@ This module will run in a browser or server environment.
     - [`spawn`](#spawn)
     - [`connect`](#connect)
     - [`monitor`](#monitor)
+    - [`dryrun`](#dryrun)
     - [Environment Variables](#environment-variables)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
@@ -171,6 +172,29 @@ const result = await monitor({
   process,
   signer: createDataItemSigner(wallet),
 });
+```
+
+#### `dryrun`
+
+DryRun is the process of sending a message object to a specific process and
+getting the `Result` object back, but the memory is not saved, it is perfect to
+create a read message to return the current value of memory. For example, a
+balance of a token, or a result of a transfer, etc.
+
+```js
+import { createDataItemSigner, dryrun } from "@permaweb/aoconnect";
+
+const result = await dryrun({
+  Owner: "WALLET OR PROCESS",
+  Target: "PROCESS",
+  Tags: [
+    { name: "Action", value: "Balance" },
+    { name: "Target", value: "WALLET_ADDRESS" },
+  ],
+  Data: "DATA",
+});
+
+console.log(result.Messages[0]);
 ```
 
 #### Environment Variables
