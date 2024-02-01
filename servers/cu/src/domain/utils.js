@@ -96,6 +96,32 @@ function mapZodErr (zodErr) {
   )(zodErr)
 }
 
+export function mapFrom ({ tags, owner }) {
+  const tag = findRawTag('From-Process', tags)
+  /**
+   * Not forwarded, so the signer is the who the message is from
+   */
+  if (!tag || !tag.value) return owner
+  /**
+   * Forwarded, so the owner is who the message was forwarded on behalf of
+   * (the From-Process) value
+   */
+  return tag.value
+}
+
+export function mapForwardedBy ({ tags, owner }) {
+  const tag = findRawTag('From-Process', tags)
+  /**
+   * Not forwarded by a MU, so simply not set
+   */
+  if (!tag) return undefined
+  /**
+   * Forwarded by a MU, so use the signer (the MU wallet)
+   * as the Forwarded-By value
+   */
+  return owner
+}
+
 /**
 * Parse tags into a object with key-value pairs of name -> values.
 *
