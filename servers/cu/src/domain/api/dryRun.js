@@ -1,29 +1,13 @@
 import { Readable } from 'node:stream'
 import { omit } from 'ramda'
 import { Resolved, of } from 'hyper-async'
-import { z } from 'zod'
 
 import { loadMessageMetaWith } from '../lib/loadMessageMeta.js'
 import { evaluateWith } from '../lib/evaluate.js'
 import { messageSchema } from '../model.js'
 import { loadModuleWith } from '../lib/loadModule.js'
+import { mapFrom } from '../utils.js'
 import { readStateWith } from './readState.js'
-
-const dryRunMessageSchema = messageSchema.extend({
-  /**
-   * Dry run messages are not signed, and therefore
-   * will not have an Id, Owner, or From.
-   *
-   * We need to verify this, to ensure a dry-run does not
-   * attempt to hoodwink a module by setting Owner and From
-   * or Id in an Unverifiable Context.
-   */
-  message: messageSchema.shape.message.extend({
-    Id: z.undefined(),
-    Owner: z.undefined(),
-    From: z.undefined()
-  })
-})
 
 /**
  * @typedef Env
@@ -116,7 +100,22 @@ export function dryRunWith (env) {
           })
           .chain((ctx) => {
             async function * dryRunMessage () {
-              yield dryRunMessageSchema.parse({
+              /**
+               * Dry run messages are not signed, and therefore
+               * will not have a verifiable Id, Signature, Owner, etc.
+               *
+               * NOTE:
+               * Dry Run messages are not signed, therefore not verifiable.
+               *
+               * This is generally okay, because dry-run message evaluations
+               * are Read-Only and not persisted -- the primary use-case for Dry Run is to enable
+               * retrieving a view of a processes state, without having to send a bonafide message.
+               *
+               * However, we should keep in mind the implications. One implication is that spoofing
+               * Owner or other fields on a Dry-Run message (unverifiable context) exposes a way to
+               * "poke and prod" a process modules for vulnerabilities.
+               */
+              yield messageSchema.parse({
                 /**
                  * Don't save the dryRun message
                  */
@@ -126,21 +125,18 @@ export function dryRunWith (env) {
                 ordinate: readStateRes.ordinate,
                 name: 'Dry Run Message',
                 message: {
-                  ...dryRun,
-                  Id: undefined,
-                  Owner: undefined,
-                  From: undefined,
                   /**
-                   * The target is the process
-                   */
-                  Target: processId,
-                  /**
-                   * We set timestamp and block-height using
-                   * the current evaluation
+                   * We default timestamp and block-height using
+                   * the current evaluation.
+                   *
+                   * The Dry-Run message can overwrite them
                    */
                   Timestamp: readStateRes.from,
                   'Block-Height': readStateRes.fromBlockHeight,
                   Cron: false,
+                  Target: processId,
+                  ...dryRun,
+                  From: mapFrom({ tags: dryRun.Tags, owner: dryRun.Owner }),
                   'Read-Only': true
                 },
                 AoGlobal: {
