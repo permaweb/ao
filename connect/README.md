@@ -185,14 +185,11 @@ balance of a token, or a result of a transfer, etc.
 import { createDataItemSigner, dryrun } from "@permaweb/aoconnect";
 
 const result = await dryrun({
-  Id: "1234",
-  Owner: "WALLET OR PROCESS",
-  Target: "PROCESS",
-  Tags: [
-    { name: "Action", value: "Balance" },
-    { name: "Target", value: "WALLET_ADDRESS" },
-  ],
-  Data: "DATA",
+  process: 'PROCESSID',
+  data: '',
+  tags: [{name: 'Action', value: 'Balance'},
+  anchor: '1234',
+  ...rest are optional (Id, Owner, etc)
 });
 
 console.log(result.Messages[0]);
