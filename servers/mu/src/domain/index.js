@@ -7,11 +7,10 @@ import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
+import osClient from './clients/os.js'
 
 import dataStoreClient from './lib/datastore.js'
-import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, sendDataItemWith, deleteProcessWith, traceMsgsWith } from './lib/main.js'
-
-import runScheduledWith from './bg/manager.js'
+import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, stopMonitorProcessWith, sendDataItemWith, traceMsgsWith } from './lib/main.js'
 
 import { createLogger } from './logger.js'
 
@@ -24,20 +23,6 @@ export { dbInstance }
 
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
-
-export const createScheduledApis = (ctx) => {
-  const MU_DATABASE_URL = ctx.MU_DATABASE_URL
-
-  /**
-   * hate side effects like this, see TODO in ./dbInstance.js
-   */
-  createDbClient({ MU_DATABASE_URL })
-
-  const batchLogger = createLogger('ao-mu-batch')
-  const runScheduledLogger = batchLogger.child('runScheduled')
-  const runScheduled = runScheduledWith({ dbClient: dataStoreClient, dbInstance, logger: runScheduledLogger })
-  return { runScheduled }
-}
 
 export const domainConfigSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
@@ -120,16 +105,14 @@ export const createApis = (ctx) => {
 
   const monitorProcessLogger = logger.child('monitorProcess')
   const monitorProcess = monitorProcessWith({
-    saveProcessToMonitor: dataStoreClient.saveMonitoredProcessWith({ dbInstance, logger: monitorProcessLogger }),
+    startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger }),
     createDataItem,
-    locateProcess: locate,
-    fetchSequencerProcess: schedulerClient.fetchSequencerProcessWith({ logger: monitorProcessLogger }),
     logger: monitorProcessLogger
   })
 
-  const deleteProcessLogger = logger.child('deleteProcess')
-  const deleteProcess = deleteProcessWith({
-    deleteProcess: dataStoreClient.deleteMonitorWith({ dbInstance, logger: deleteProcessLogger }),
+  const stopMonitorProcessLogger = logger.child('stopMonitorProcess')
+  const stopMonitorProcess = stopMonitorProcessWith({
+    stopProcessMonitor: osClient.killMonitoredProcessWith({ logger: stopMonitorProcessLogger }),
     createDataItem,
     logger: monitorProcessLogger
   })
@@ -140,5 +123,5 @@ export const createApis = (ctx) => {
     findMessageTraces: dataStoreClient.findMessageTracesWith({ dbInstance, logger: traceMessagesLogger })
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess, deleteProcess, traceMsgs }
+  return { sendDataItem, crankMsgs, monitorProcess, stopMonitorProcess, traceMsgs }
 }

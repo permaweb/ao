@@ -9,9 +9,8 @@ import { spawnProcessWith } from './processSpawn/spawn-process.js'
 import { sendSpawnSuccessWith } from './processSpawn/send-spawn-success.js'
 import { buildSuccessTxWith } from './processSpawn/build-success-tx.js'
 import { parseDataItemWith } from './processDataItem/parse-data-item.js'
-import { saveWith } from './monitor/save-process.js'
-import { deleteWith } from './monitor/delete-process.js'
-import { appendSequencerDataWith } from './monitor/append-sequencer-data.js'
+import { startWith } from './monitor/start-process.js'
+import { stopWith } from './monitor/stop-process.js'
 import { deleteMsgDataWith } from './processDataItem/delete-msg-data.js'
 import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 import { tracerFor } from './tracer.js'
@@ -238,34 +237,30 @@ export function crankMsgsWith ({
 export function monitorProcessWith ({
   logger,
   createDataItem,
-  saveProcessToMonitor,
-  locateProcess,
-  fetchSequencerProcess
+  startProcessMonitor,
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
-  const save = saveWith({ logger, saveProcessToMonitor })
-  const appendSequencerData = appendSequencerDataWith({ logger, locateProcess, fetchSequencerProcess })
+  const start = startWith({ logger, startProcessMonitor })
 
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
-      .chain(appendSequencerData)
-      .chain(save)
+      .chain(start)
   }
 }
 
-export function deleteProcessWith ({
+export function stopMonitorProcessWith ({
   logger,
   createDataItem,
-  deleteProcess
+  stopProcessMonitor,
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
-  const deleteProc = deleteWith({ logger, deleteProcess })
+  const stop = stopWith({ logger, stopProcessMonitor })
 
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
-      .chain(deleteProc)
+      .chain(stop)
   }
 }
 
