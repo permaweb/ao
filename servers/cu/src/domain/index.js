@@ -6,6 +6,7 @@ import * as ArweaveClient from './client/arweave.js'
 import * as PouchDbClient from './client/pouchdb.js'
 import * as AoSuClient from './client/ao-su.js'
 import * as WasmClient from './client/wasm.js'
+import * as AoProcessClient from './client/ao-process.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith } from './api/readState.js'
@@ -46,8 +47,8 @@ export const createApis = async (ctx) => {
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadBlocksMeta: ArweaveClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
-    findProcess: PouchDbClient.findProcessWith({ pouchDb, logger }),
-    saveProcess: PouchDbClient.saveProcessWith({ pouchDb, logger }),
+    findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
+    saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
     findEvaluation: PouchDbClient.findEvaluationWith({ pouchDb, logger }),
     findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb, logger }),
     saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),

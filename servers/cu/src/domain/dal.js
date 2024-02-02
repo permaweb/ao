@@ -35,7 +35,7 @@ export const loadBlocksMetaSchema = z.function()
     z.array(blockSchema.passthrough())
   ))
 
-// DB
+// Process
 
 export const findProcessSchema = z.function()
   .args(z.object({ processId: z.string() }))
@@ -44,6 +44,8 @@ export const findProcessSchema = z.function()
 export const saveProcessSchema = z.function()
   .args(processSchema)
   .returns(z.promise(z.any()))
+
+// DB
 
 export const findEvaluationSchema = z.function()
   .args(z.object({
