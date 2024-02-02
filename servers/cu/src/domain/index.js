@@ -2,10 +2,9 @@ import Dataloader from 'dataloader'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 
 // Precanned clients to use for OOTB apis
-import * as GatewayClient from './client/gateway.js'
+import * as ArweaveClient from './client/arweave.js'
 import * as PouchDbClient from './client/pouchdb.js'
 import * as AoSuClient from './client/ao-su.js'
-import * as WalletClient from './client/wallet.js'
 import * as WasmClient from './client/wasm.js'
 
 import { readResultWith } from './api/readResult.js'
@@ -44,9 +43,9 @@ export const createApis = async (ctx) => {
   })
 
   const sharedDeps = (logger) => ({
-    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-    loadTransactionData: GatewayClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-    loadBlocksMeta: GatewayClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
+    loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+    loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+    loadBlocksMeta: ArweaveClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
     findProcess: PouchDbClient.findProcessWith({ pouchDb, logger }),
     saveProcess: PouchDbClient.saveProcessWith({ pouchDb, logger }),
     findEvaluation: PouchDbClient.findEvaluationWith({ pouchDb, logger }),
@@ -103,9 +102,9 @@ export const createApis = async (ctx) => {
     findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
   })
 
-  const arweave = WalletClient.createWalletClient()
+  const arweave = ArweaveClient.createWalletClient()
   const healthcheck = healthcheckWith({
-    walletAddress: WalletClient.addressWith({ WALLET: ctx.WALLET, arweave })
+    walletAddress: ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
   })
 
   return { readState, dryRun, readResult, readResults, readCronResults, healthcheck }

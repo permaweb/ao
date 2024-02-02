@@ -1,6 +1,24 @@
 import { fromPromise, of } from 'hyper-async'
 import { last, map, path, pathSatisfies, pipe, pluck, prop } from 'ramda'
 import { z } from 'zod'
+import Arweave from 'arweave'
+
+/**
+ * @type {Arweave}
+ */
+let internalArweaveClient
+export function createWalletClient () {
+  if (internalArweaveClient) return internalArweaveClient
+  internalArweaveClient = Arweave.init()
+  return internalArweaveClient
+}
+
+export function addressWith ({ WALLET, arweave = internalArweaveClient }) {
+  const wallet = JSON.parse(WALLET)
+  const addressP = arweave.wallets.jwkToAddress(wallet)
+
+  return () => addressP
+}
 
 /**
  * @typedef Env1

@@ -3,14 +3,14 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadBlocksMetaSchema, loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
-import { loadBlocksMetaWith, loadTransactionDataWith, loadTransactionMetaWith } from './gateway.js'
+import { loadBlocksMetaWith, loadTransactionDataWith, loadTransactionMetaWith } from './arweave.js'
 import { prop, uniqBy } from 'ramda'
 
 const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 const logger = createLogger('ao-cu:readState')
 
-describe('gateway', () => {
+describe('arweave', () => {
   describe('loadTransactionMetaWith', () => {
     test('load transaction meta', async () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
