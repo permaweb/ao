@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "^0.0.8",
-    "@permaweb/aoconnect": "^0.0.40",
     "dotenv": "^16.4.1",
     "hyper-async": "^1.1.2",
     "minimist": "^1.2.8",

@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
+import os from 'os'
+// import { fileURLToPath } from 'url'
 
 import minimist from 'minimist'
 import { z } from 'zod'
@@ -12,8 +13,8 @@ import { config } from './config.js'
 import { createLogger } from './logger.js'
 import { createApis } from './index.common.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// const __filename = fileURLToPath(import.meta.url)
+// const __dirname = path.dirname(__filename)
 
 export const configSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
@@ -32,7 +33,7 @@ const apis = createApis({
 const argv = minimist(process.argv.slice(2))
 const processId = argv._[0]
 
-const cursorFilePath = path.join(__dirname, '../cursor.txt')
+const cursorFilePath = path.join(`${os.tmpdir()}/.${processId}.txt`)
 
 let runTimeComplete = false
 
