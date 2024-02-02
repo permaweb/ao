@@ -3,9 +3,9 @@ import { of, fromPromise, Rejected } from 'hyper-async'
 
 function writeDataItemWith ({ fetch, logger }) {
   return async ({ data, suUrl }) => {
-    logger.tap('SU URL: ', suUrl)
+    logger.info('SU URL: ', suUrl)
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap(`Forwarding message to SU ${suUrl}`))
+      .map(logger.info(`Forwarding message to SU ${suUrl}`))
       .chain(fromPromise((body) =>
         fetch(suUrl, {
           method: 'POST',
@@ -17,7 +17,7 @@ function writeDataItemWith ({ fetch, logger }) {
         })
       ))
       .bimap(
-        logger.tap('Error while communicating with SU:'),
+        logger.info('Error while communicating with SU:'),
         identity
       )
       .bichain(
@@ -30,7 +30,7 @@ function writeDataItemWith ({ fetch, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap('Successfully forwarded DataItem to SU'))
+      .map(logger.info('Successfully forwarded DataItem to SU'))
       .toPromise()
   }
 }

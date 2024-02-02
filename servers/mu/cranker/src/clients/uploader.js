@@ -4,7 +4,7 @@ import { of, fromPromise, Rejected } from 'hyper-async'
 function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
   return async (data) => {
     return of(data)
-      .map(logger.tap(`Forwarding message to uploader ${UPLOADER_URL}`))
+      .map(logger.info(`Forwarding message to uploader ${UPLOADER_URL}`))
       .chain(fromPromise((body) =>
         fetch(`${UPLOADER_URL}/tx/arweave`, {
           method: 'POST',
@@ -16,7 +16,7 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
         })
       ))
       .bimap(
-        logger.tap('Error while communicating with uploader:'),
+        logger.info('Error while communicating with uploader:'),
         identity
       )
       .bichain(
@@ -29,7 +29,7 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap('Successfully forwarded DataItem to uploader'))
+      .map(logger.info('Successfully forwarded DataItem to uploader'))
       .toPromise()
   }
 }
