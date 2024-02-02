@@ -12,6 +12,6 @@ export function getCuAddressWith ({ selectNode, logger }) {
       .chain(fromPromise(selectNode))
       .map(assoc('cuAddress', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.info(`Added "cuAddress" to ctx txid: ${ctx.tx.id}`))
+      .map(logger.tap(`Added "cuAddress" to ctx txid: ${ctx.tx.id}`))
   }
 }

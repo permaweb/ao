@@ -25,7 +25,7 @@ export function sendSpawnSuccessWith (env) {
           return of(result)
             .map(assoc('spawnSuccessSequencerTx', __, ctx))
             .map(ctxSchema.parse)
-            .map(logger.info(`Added "spawnSuccessSequencerTx" to ctx  process id: ${ctx.processTx}`))
+            .map(logger.tap(`Added "spawnSuccessSequencerTx" to ctx  process id: ${ctx.processTx}`))
         }
       )
   }

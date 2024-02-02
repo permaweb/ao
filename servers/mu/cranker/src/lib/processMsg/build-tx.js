@@ -33,6 +33,6 @@ export function buildTxWith ({ buildAndSign, logger }) {
       }))
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.info('Added tx to ctx'))
+      .map(logger.tap('Added tx to ctx'))
   }
 }

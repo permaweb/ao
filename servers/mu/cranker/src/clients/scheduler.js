@@ -3,6 +3,7 @@ import { of, fromPromise, Rejected } from 'hyper-async'
 
 function writeDataItemWith ({ fetch, logger }) {
   return async ({ data, suUrl }) => {
+    logger.tap('SU URL: ', suUrl)
     return of(Buffer.from(data, 'base64'))
       .map(logger.tap(`Forwarding message to SU ${suUrl}`))
       .chain(fromPromise((body) =>

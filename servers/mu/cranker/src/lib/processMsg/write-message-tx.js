@@ -37,7 +37,7 @@ export function writeMessageTxWith (env) {
                    * to the trace of the parent message
                    */
                   .map(ctxSchemaArweave.parse)
-                  .map(logger.info(`Added "arweaveTx" to ctx txid: ${ctx.tx.id}`))
+                  .map(logger.tap(`Added "arweaveTx" to ctx txid: ${ctx.tx.id}`))
               }
               return Rejected(error)
             },
@@ -49,7 +49,7 @@ export function writeMessageTxWith (env) {
                  * to the trace of the parent message
                  */
                 .map(ctxSchema.parse)
-                .map(logger.info(`Added "schedulerTx" to ctx txid: ${ctx.tx.id}`))
+                .map(logger.tap(`Added "schedulerTx" to ctx txid: ${ctx.tx.id}`))
             }
           )
       )

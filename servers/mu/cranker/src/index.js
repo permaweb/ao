@@ -22,7 +22,7 @@ export const configSchema = z.object({
   UPLOADER_URL: z.string()
 })
 
-const logger = createLogger('cranker logger')
+const logger = createLogger('cranker')
 const apis = createApis({
   ...config,
   fetch,
@@ -63,7 +63,7 @@ ct = cron.schedule('*/10 * * * * *', () => {
     .map(publishCron)
     .fork(
       e => console.log(e),
-      _success => {}
+      _success => { console.log('success', _success) }
     )
   ct.start() // resume cron when done getting messages
 })
