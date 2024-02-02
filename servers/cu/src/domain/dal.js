@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchema, streamSchema } from './model.js'
 
-// Gateway
+// Arweave
 
 export const loadTransactionMetaSchema = z.function()
   .args(z.string())
