@@ -45,14 +45,14 @@ export const withMonitorRoutes = (app) => {
       always(async (req, res) => {
         const {
           body,
-          domain: { apis: { deleteProcess } }
+          domain: { apis: { stopMonitorProcess } }
         } = req
 
         if (!body) return res.status(400).send('Signed data item is required')
         // const input = await inputSchema.parseAsync(body)
 
         await of({ raw: body })
-          .chain(deleteProcess)
+          .chain(stopMonitorProcess)
           .toPromise()
 
         return res.status(200).send('Process deleted')

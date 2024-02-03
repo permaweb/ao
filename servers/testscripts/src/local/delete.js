@@ -10,11 +10,11 @@ const { createData, ArweaveSigner } = WarpArBundles;
   const tags = []
 
   const signer = new ArweaveSigner(wallet)
-  const dataItem = createData(data, signer, { tags, target: '5krpSnFujUTbfOwR_NCOYLDBXDyWVn2MiwS-5w53_Ss' })
+  const dataItem = createData(data, signer, { tags, target: 'GlCetob4mw1pkD3428dG07D6634RD9PfD-EFB3hmV7I' })
   await dataItem.sign(signer)
 
   const response = await fetch(
-    'http://localhost:3004/monitor/5krpSnFujUTbfOwR_NCOYLDBXDyWVn2MiwS-5w53_Ss',
+    'http://localhost:3004/monitor/GlCetob4mw1pkD3428dG07D6634RD9PfD-EFB3hmV7I',
     {
       method: 'DELETE',
       headers: {

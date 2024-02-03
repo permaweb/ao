@@ -16,6 +16,7 @@
     "docker-build": "docker build -t cu-app .",
     "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
     "heapdump": "kill -USR2",
+    "postinstall": "cd cranker && npm install",
     "migrate": "node -r dotenv/config db/migrations.js",
     "rebuild-db": "node -r dotenv/config db/rollback.js && node -r dotenv/config db/migrations.js",
     "start": "node -r dotenv/config src/app.js",
@@ -23,7 +24,6 @@
   },
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "~0.0.8",
-    "@permaweb/ao-sdk": "^0.0.21",
     "arweave": "^1.14.4",
     "cors": "^2.8.5",
     "debug": "^4.3.4",

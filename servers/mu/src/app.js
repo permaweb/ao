@@ -8,8 +8,6 @@ import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 
-import { createScheduledApis } from './domain/index.js'
-
 export const server = pipe(
   (app) => app.use(cors()),
   (app) => app.use(express.json({ type: 'application/json' })),
@@ -24,9 +22,6 @@ export const server = pipe(
       logger('Recevied SIGTERM. Gracefully shutting down server...')
       server.close(() => logger('Server Shut Down'))
     })
-
-    const { runScheduled } = createScheduledApis(config)
-    runScheduled()
 
     process.on('SIGUSR2', () => {
       const name = `${Date.now()}.heapsnapshot`
