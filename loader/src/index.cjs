@@ -137,10 +137,16 @@ module.exports = async function (binary) {
       return null
     }
     /** end */
-
     if (buffer) instance.HEAPU8.set(buffer)
-
+    let running = true
+    setTimeout(() => {
+      if (running) {
+        instance.exports.cleanup()
+        throw Error('timeout')
+      }
+    }, 200)
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
+    running = false
 
     if (!ok) throw response
 
