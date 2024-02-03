@@ -88,6 +88,7 @@ var Module = (() => {
  */
 module.exports = async function (binary) {
   const instance = await Module(binary)
+  
   /**
    * Since the module can be invoked multiple times, there isn't really
    * a good place to cleanup these listeners (since emscripten doesn't do it),
@@ -105,12 +106,27 @@ module.exports = async function (binary) {
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
   return (buffer, msg, env) => {
+    /** mock Date */
+    const originalDate = Date
+    Date = function () {
+      if (arguments.length === 0) {
+        // Return a specific date and time (e.g., January 1, 2022)
+        return new originalDate('2022-01-01T00:00:00.000Z');
+      } else {
+        // If arguments are provided, use the original Date constructor
+        return new originalDate(...arguments);
+      }
+    }
+    /** end mock Date */
     if (buffer) instance.HEAPU8.set(buffer)
 
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
 
     if (!ok) throw response
 
+    /** unmock Date */
+    Date = originalDate
+    /** end unmock Date */
     return {
       Memory: instance.HEAPU8.slice(),
       Error: response.Error,
