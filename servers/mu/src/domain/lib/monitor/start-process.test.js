@@ -8,17 +8,17 @@ const logger = createLogger('ao-mu:saveMonitor')
 
 describe('startWith', () => {
   test('start a process monitor', async () => {
-    const save = saveWith({
-      saveProcessToMonitor: async (process) => {
+    const start = startWith({
+      startProcessMonitor: async (process) => {
         assert.equal(process.id, 'pid-1')
       },
       logger
     })
 
-    await save({
+    await start({
       tx: {
         processId: 'pid-1'
-      },
+      }
     }).toPromise()
   })
 })
