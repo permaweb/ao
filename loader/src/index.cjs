@@ -106,6 +106,7 @@ module.exports = async function (binary) {
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
   return (buffer, msg, env) => {
+    
     /** mock random function */
     const originalRandom = Math.random
     Math.random = function() {
@@ -138,16 +139,7 @@ module.exports = async function (binary) {
     }
     /** end */
     if (buffer) instance.HEAPU8.set(buffer)
-    let running = true
-    setTimeout(() => {
-      if (running) {
-        instance.exports.cleanup()
-        throw Error('timeout')
-      }
-    }, 200)
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
-    running = false
-
     if (!ok) throw response
 
     /** unmock functions */
@@ -156,7 +148,6 @@ module.exports = async function (binary) {
     performance.now = originalPerformance
     console.log = originalLog
     /** end unmock */
-    
     return {
       Memory: instance.HEAPU8.slice(),
       Error: response.Error,
