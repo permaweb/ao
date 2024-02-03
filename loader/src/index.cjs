@@ -106,6 +106,11 @@ module.exports = async function (binary) {
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
   return (buffer, msg, env) => {
+    /** mock random function */
+    const originalRandom = Math.random
+    Math.random = function() {
+      return 0.5; 
+    }
     /** mock Date */
     const originalDate = Date
     Date = function () {
@@ -127,6 +132,9 @@ module.exports = async function (binary) {
     /** unmock Date */
     Date = originalDate
     /** end unmock Date */
+    /** unmock Math.random */
+    Math.random = originalRandom
+    /** end unmock Math.random */
     return {
       Memory: instance.HEAPU8.slice(),
       Error: response.Error,
