@@ -111,6 +111,10 @@ module.exports = async function (binary) {
     Math.random = function() {
       return 0.5; 
     }
+    originalPerformance = performance.now
+    performance.now = function() {
+      return 0
+    }
     /** mock Date */
     const originalDate = Date
     Date = function () {
@@ -134,6 +138,7 @@ module.exports = async function (binary) {
     /** end unmock Date */
     /** unmock Math.random */
     Math.random = originalRandom
+    performance.now = originalPerformance
     /** end unmock Math.random */
     return {
       Memory: instance.HEAPU8.slice(),
