@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
-    "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
+    "build:types": "tsc src/main.js --declaration --allowJs --emitDeclarationOnly --outDir dist",
     "test": "node --test",
     "test:integration": "npm run build:src && MODULE_PATH='../dist/index.cjs' node --test"
   },
