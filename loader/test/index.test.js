@@ -8,28 +8,26 @@ import fs from 'fs'
  * dynamic import, so we can run unit tests against the source
  * and integration tests against the bundled distribution
  */
-const MODULE_PATH = process.env.MODULE_PATH || '../src/index.cjs'
+const MODULE_PATH = process.env.MODULE_PATH || '../dist/index.cjs'
 
 console.log(`${MODULE_PATH}`)
 
+const { default: AoLoader } = await import(MODULE_PATH)
+const wasmBinary = fs.readFileSync('./test/process/process.wasm')
+
 describe('loader', async () => {
   it('load and execute message passing contract', async () => {
-    const { default: AoLoader } = await import(MODULE_PATH)
-
-    const wasmBinary = fs.readFileSync('./test/contracts/process.wasm')
-    const mainHandler = await AoLoader(wasmBinary)
-    const mainResult = mainHandler(
-      null,
+    const mainResult = await AoLoader.handle(wasmBinary, null,
       {
         Owner: 'tom',
-        Target: '',
+        Target: 'FOO',
         Tags: [
-          { name: 'function', value: 'hello' },
-          { name: 'recipient', value: 'World' }
-        ]
+          { name: 'Action', value: 'echo' }
+        ],
+        Data: 'Hello World'
       },
       {
-        process: { id: 'ctr-id-456' }
+        Process: { Id: 'ctr-id-456', Tags: [] }
       }
     )
 
@@ -43,17 +41,17 @@ describe('loader', async () => {
   })
 
   it('should load previous memory', async () => {
-    const { default: AoLoader } = await import(MODULE_PATH)
+    const result = await AoLoader.handle(wasmBinary, null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result.Output, 1)
 
-    const wasmBinary = fs.readFileSync('./test/contracts/process.wasm')
-    const mainHandler = await AoLoader(wasmBinary)
-    // spawn
-    const result = mainHandler(null, { Owner: 'tom', Tags: [{ name: 'function', value: 'count' }] }, {})
-    assert.equal(result.Output, 'count: 1')
-
-    const nextHandler = await AoLoader(wasmBinary)
-    const result2 = nextHandler(result.Memory, { Owner: 'tom', Tags: [{ name: 'function', value: 'count' }] }, {})
-    assert.equal(result2.Output, 'count: 2')
+    const result2 = await AoLoader.handle(wasmBinary, result.Memory,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result2.Output, 2)
     assert.ok(true)
   })
 })
