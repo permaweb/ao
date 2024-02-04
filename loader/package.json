@@ -10,9 +10,10 @@
     "./dist"
   ],
   "scripts": {
-    "build": "npm run build:types && npm run build:src",
+    "build": "npm run build:types && npm run build:src && npm run copy:worker",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/main.js --declaration --allowJs --emitDeclarationOnly --outDir dist",
+    "copy:worker": "cp ./src/worker.js ./dist/ && cp ./src/wasm.cjs ./dist/",
     "test": "npm run build:src && node --test",
     "test:integration": "npm run build:src && MODULE_PATH='../dist/index.cjs' node --test"
   },
