@@ -10,16 +10,13 @@
     "./dist"
   ],
   "scripts": {
-    "build": "npm run build:types && npm run build:src && npm run copy:worker",
+    "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
-    "build:types": "tsc src/main.js --declaration --allowJs --emitDeclarationOnly --outDir dist",
-    "copy:worker": "cp ./src/worker.js ./dist/ && cp ./src/wasm.cjs ./dist/",
+    "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
     "test": "npm run build && node --test",
     "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --test"
   },
-  "dependencies": {
-    "wasm-metering": "^0.2.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "esbuild": "^0.19.5",
     "typescript": "^5.2.2"

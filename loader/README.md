@@ -8,6 +8,7 @@ that given an `ao-process` message, will produce a `result`.
 - [Usage](#usage)
   - [Using a File](#using-a-file)
   - [Using `fetch`](#using-fetch)
+  - [Result Object](#result-object)
 
 <!-- tocstop -->
 
@@ -22,20 +23,25 @@ import AoLoader from "@permaweb/ao-loader";
 /* ao READ-ONLY Env Variables */
 const env = {
   Process: {
-    id: "2",
+    Id: "2",
+    Tags: [
+      { name: "Authority", value: "XXXXXX" },
+    ],
   },
 };
 
 // Create the handle function that executes the Wasm
-const handle = await AoLoader(wasmBinary);
+const handle = await AoLoader(wasmBinary, [limit = 9000000000]);
 
 // To spawn a process, pass null as the buffer
 const result = await handle(null, {
   Owner: "OWNER_ADDRESS",
+  Target: "XXXXX",
+  From: "YYYYYY",
   Tags: [
-    { name: "function", value: "balance" },
-    { name: "target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
+    { name: "Action", value: "Ping" },
   ],
+  Data: "ping",
 }, env);
 ```
 
@@ -48,8 +54,8 @@ const buffer = await LoadFromCache();
 const result = await handle(buffer, {
   Owner: "OWNER_ADDRESS",
   Tags: [
-    { name: "function", value: "balance" },
-    { name: "target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
+    { name: "Action", value: "Balance" },
+    { name: "Target", value: "vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI" },
   ],
 }, env);
 
@@ -71,7 +77,7 @@ import AoLoader from "@permaweb/ao-loader";
 import fs from "fs";
 
 async function main() {
-  const wasmBinary = fs.readFileSync("contract.wasm");
+  const wasmBinary = fs.readFileSync("process.wasm");
   const handle = AoLoader(wasmBinary);
   const result = await handle(...);
 }
@@ -91,5 +97,26 @@ async function main() {
     .then(res => res.arrayBuffer())
   const handle = AoLoader(wasmBinary);
   const result = await handle(...)
+}
+```
+
+### Result Object
+
+The `Result` Object returns a Successful Result:
+
+```
+{
+  Output,
+  Messages,
+  Spawns,
+  GasUsed
+}
+```
+
+Or an unSuccessful Result:
+
+```
+{
+  Error
 }
 ```

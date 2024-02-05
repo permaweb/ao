@@ -1,15 +1,15 @@
-const metering = require('wasm-metering')
-var limit = 900000000000
+var limit = 9000000000
 var gasUsed = 0
 
 var Module = (() => {
   var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;
   if (typeof __filename !== 'undefined') _scriptDir = _scriptDir || __filename;
   return (
-function(binary) {
+function(binary, _limit) {
   var Module = Module || {};
   Module['wasmBinary'] = binary //metering.meterWASM(binary, { meterType: 'i32' }).module
-
+  gasUsed = 0
+  limit = _limit || 9000000000
   /**
        * See this issue with emscripten https://github.com/emscripten-core/emscripten/issues/12740
        *
@@ -89,8 +89,9 @@ var Module=typeof Module!="undefined"?Module:{};var readyPromiseResolve,readyPro
  * @param {ArrayBuffer} binary
  * @returns {Promise<handleFunction>}
  */
-module.exports = async function (binary) {
-  const instance = await Module(binary)
+module.exports = async function (binary, limit) {
+  
+  const instance = await Module(binary, limit)
   
   /**
    * Since the module can be invoked multiple times, there isn't really
@@ -142,9 +143,10 @@ module.exports = async function (binary) {
     }
     /** end */
     if (buffer) instance.HEAPU8.set(buffer)
+    try {
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
     if (!ok) throw response
-
+    
     /** unmock functions */
     Date = originalDate
     Math.random = originalRandom
@@ -157,7 +159,12 @@ module.exports = async function (binary) {
       Error: response.Error,
       Output: response.Output,
       Messages: response.Messages,
-      Spawns: response.Spawns
+      Spawns: response.Spawns,
+      GasUsed: gasUsed
     }
+  } catch(e) {
+    return {Error: e.message}
   }
+  }
+
 }

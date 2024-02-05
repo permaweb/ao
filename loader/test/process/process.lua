@@ -12,6 +12,7 @@ function process.handle(msg, ao)
         Count = Count + 1
         return {Output = Count}
     end
+    while true do Count = Count + 1 end
 end
 
 return process
