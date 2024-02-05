@@ -240,6 +240,10 @@ impl DataItem {
     }
 
     fn from_info_bytes(buffer: &[u8]) -> Result<(Self, usize), ByteErrorType> {
+        if buffer.len() < 2 {
+            return Err(ByteErrorType::ByteError("Buffer too short for signature type".to_string()));
+        }
+
         let sig_type_b = &buffer[0..2];
         let signature_type = u16::from_le_bytes(
             <[u8; 2]>::try_from(sig_type_b)
@@ -252,6 +256,10 @@ impl DataItem {
             sig_length,
             ..
         } = signer.get_config();
+
+        if buffer.len() < 2 + sig_length + pub_length {
+            return Err(ByteErrorType::ByteError("Buffer too short for signature and public key".to_string()));
+        }
     
         let signature = &buffer[2..2 + sig_length];
         let owner = &buffer[2 + sig_length..2 + sig_length + pub_length];
