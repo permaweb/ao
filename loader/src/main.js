@@ -16,7 +16,7 @@ function runService (workerData) {
     setTimeout(() => {
       worker.terminate()
       reject(new Error('Worker exceeded execution time limit'))
-    }, 1000)
+    }, 10000000)
   })
 }
 
