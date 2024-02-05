@@ -1,5 +1,6 @@
 local process = {_version = "0.0.1"}
 
+Log = {}
 Count = 0
 
 function process.handle(msg, ao)
@@ -12,6 +13,12 @@ function process.handle(msg, ao)
         Count = Count + 1
         return {Output = Count}
     end
+    if action == "Date" then return {Output = os.date("%Y-%m-%d")} end
+    if action == "Random" then return {Output = math.random(1, 10)} end
+    if action == "Memory" then
+        while true do table.insert(Log, 'Hello World') end
+    end
+
     while true do Count = Count + 1 end
 end
 
