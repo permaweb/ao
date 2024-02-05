@@ -3,7 +3,4 @@
 const fs = require('fs')
 const metering = require('wasm-metering')
 const wasm = fs.readFileSync('/src/process.wasm')
-
 fs.writeFileSync('/src/process.wasm', metering.meterWASM(wasm))
-
-console.log('created meter.wasm')
