@@ -112,6 +112,16 @@ describe('loader', async () => {
     // console.log(result.GasUsed)
     assert.ok(true)
   })
+
+  it('should not list files', async () => {
+    const handle = await AoLoader(wasmBinary)
+    const result = await handle(null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Directory' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result.Error, 'unknown error')
+    assert.ok(true)
+  })
   // TODO: need to figure out a way to test out of memory
   // it('should run out of memory', async () => {
 

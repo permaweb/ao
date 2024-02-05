@@ -163,7 +163,8 @@ module.exports = async function (binary, limit) {
       GasUsed: gasUsed
     }
   } catch(e) {
-    return {Error: e.message}
+    
+    return {Error: e.message || 'unknown error'}
   }
   }
 

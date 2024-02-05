@@ -18,7 +18,14 @@ function process.handle(msg, ao)
     if action == "Memory" then
         while true do table.insert(Log, 'Hello World') end
     end
-
+    if action == "Directory" then
+        Files = {}
+        local command = string.format('ls %s', '/')
+        local p = io.popen(command)
+        for file in p:lines() do table.insert(Files, file) end
+        p:close()
+        return {Output = Files}
+    end
     while true do Count = Count + 1 end
 end
 
