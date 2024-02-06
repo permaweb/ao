@@ -49,7 +49,7 @@ export const withInMemoryCache = ({
 
     if (cached) return res.send(cached)
 
-    return loader({ req, res })
+    await loader({ req, res })
       .then((result) => {
         cache.set(key, result)
         res.send(result)

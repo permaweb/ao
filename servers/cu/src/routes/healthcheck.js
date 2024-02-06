@@ -11,7 +11,7 @@ export const withHealthcheckRoutes = (app) => {
       always(async (req, res) => {
         const { domain: { apis: { healthcheck } } } = req
 
-        return healthcheck()
+        await healthcheck()
           .map((hc) => res.send(hc))
           .toPromise()
       })
