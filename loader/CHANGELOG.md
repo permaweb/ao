@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.15](https://github.com/permaweb/ao/compare/loader@v0.0.14...loader@v0.0.15) (2024-02-06)
+
+
+### Features
+
+* **loader:** scope gas to Module. Allow refilling gas. Re-hookup cleanupListeners to prevent memory leaks [#412](https://github.com/permaweb/ao/issues/412) ([be1c53b](https://github.com/permaweb/ao/commit/be1c53b39a967f552a1c5e7800a39df7ea5df8bf))
+
+
+### Bug Fixes
+
+* loader not reseting security globals ([7b290a5](https://github.com/permaweb/ao/commit/7b290a512597734fd575c5dcce88132b4935002e))
+
 ## [0.0.14](https://github.com/permaweb/ao/compare/loader@v0.0.13...loader@v0.0.14) (2024-02-05)
 
 ## [0.0.13](https://github.com/permaweb/ao/compare/loader@v0.0.12...loader@v0.0.13) (2024-01-08)
