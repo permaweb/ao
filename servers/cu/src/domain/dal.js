@@ -45,6 +45,21 @@ export const saveProcessSchema = z.function()
   .args(processSchema)
   .returns(z.promise(z.any()))
 
+// Module
+
+export const findModuleSchema = z.function()
+  .args(z.object({ moduleId: z.string() }))
+  .returns(z.promise(moduleSchema))
+
+export const saveModuleSchema = z.function()
+  .args(moduleSchema)
+  .returns(z.promise(z.any()))
+
+export const evaluateSchema = z.function()
+// TODO: beef up input and output shapes
+  .args(z.any())
+  .returns(z.promise(z.any()))
+
 // DB
 
 export const findEvaluationSchema = z.function()
@@ -91,14 +106,6 @@ export const findBlocksSchema = z.function()
     maxTimestamp: z.number()
   }))
   .returns(z.promise(z.array(blockSchema)))
-
-export const findModuleSchema = z.function()
-  .args(z.object({ moduleId: z.string() }))
-  .returns(z.promise(moduleSchema))
-
-export const saveModuleSchema = z.function()
-  .args(moduleSchema)
-  .returns(z.promise(z.any()))
 
 export const findMessageHashSchema = z.function()
   .args(z.object({

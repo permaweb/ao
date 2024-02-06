@@ -1,8 +1,8 @@
 import { fromPromise, of, Resolved, Rejected } from 'hyper-async'
-import { always, mergeRight, prop } from 'ramda'
+import { always, identity, mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
-import { findModuleSchema, loadTransactionDataSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
+import { findModuleSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
 
 /**
@@ -13,16 +13,12 @@ import { eqOrIncludes, parseTags } from '../utils.js'
  * is always added to context
  */
 const ctxSchema = z.object({
-  module: z.any().refine((val) => !!val, {
-    message: 'process module must be attached to context'
-  }),
   moduleId: z.string().refine((val) => !!val, {
     message: 'process moduleId must be attached to context'
   })
 }).passthrough()
 
-function getModuleWith ({ findModule, saveModule, loadTransactionData, loadTransactionMeta, logger }) {
-  loadTransactionData = fromPromise(loadTransactionDataSchema.implement(loadTransactionData))
+function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger }) {
   loadTransactionMeta = fromPromise(loadTransactionMetaSchema.implement(loadTransactionMeta))
   findModule = fromPromise(findModuleSchema.implement(findModule))
   saveModule = fromPromise(saveModuleSchema.implement(saveModule))
@@ -32,21 +28,19 @@ function getModuleWith ({ findModule, saveModule, loadTransactionData, loadTrans
     : Rejected(`Tag '${name}': ${err}`)
 
   function loadFromGateway (moduleId) {
+    logger.tap('Could not find module in db. Loading from gateway...')
+
     return of(moduleId)
-      .chain(fromPromise((moduleId) => Promise.all([
-        loadTransactionData(moduleId).toPromise(),
-        loadTransactionMeta(moduleId).toPromise()
-      ])))
+      .chain(loadTransactionMeta)
       /**
        * This CU currently only implements evaluation for emscripten Module-Format,
        * so we check that the Module is the correct Module-Format, and reject if not
        */
-      .chain(([data, meta]) =>
+      .chain((meta) =>
         of(meta.tags)
           .map(parseTags)
           .chain(checkTag('Module-Format', eqOrIncludes('wasm32-unknown-emscripten'), 'only \'wasm32-unknown-emscripten\' module format is supported by this CU'))
-          .chain(fromPromise(async () => data.arrayBuffer()))
-          .map((wasm) => ({ id: moduleId, tags: meta.tags, wasm }))
+          .map(() => ({ id: moduleId, tags: meta.tags }))
       )
       .chain((module) =>
         saveModule(module)
@@ -61,29 +55,25 @@ function getModuleWith ({ findModule, saveModule, loadTransactionData, loadTrans
       )
   }
 
+  function maybeFindModule (moduleId) {
+    return findModule({ moduleId })
+      /**
+       * The module could indeed not be found, or there was some other error
+       * fetching from persistence. Regardless, we will fallback to loading from
+       * the gateway
+       */
+      .bimap(() => moduleId, identity)
+  }
+
   return (tags) => {
     return of(tags)
       .map(parseTags)
       .map(prop('Module'))
       .chain((moduleId) =>
-        findModule({ moduleId })
-          /**
-           * The module could indeed not be found, or there was some other error
-           * fetching from persistence. Regardless, we will fallback to loading from
-           * the gateway
-           */
-          .bimap(
-            logger.tap('Could not find module in db. Loading from gateway...'),
-            (module) => {
-              logger('Found module "%s" in db', module.id)
-              return module
-            }
-          )
-          .bichain(
-            () => loadFromGateway(moduleId),
-            Resolved
-          )
-          .map(module => ({ module: module.wasm, moduleId: module.id }))
+        of(moduleId)
+          .chain(maybeFindModule)
+          .bichain(loadFromGateway, Resolved)
+          .map((module) => ({ moduleId: module.id }))
       )
   }
 }

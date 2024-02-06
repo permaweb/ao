@@ -3,6 +3,8 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 
+import AoLoader from '@permaweb/ao-loader'
+
 import { createLogger } from '../logger.js'
 import { evaluateWith } from './evaluate.js'
 
@@ -12,12 +14,25 @@ async function * toAsyncIterable (iterable) {
   while (iterable.length) yield iterable.shift()
 }
 
+const happyWasm = await AoLoader(readFileSync('./test/processes/happy/process.wasm'))
+const sadWasm = await AoLoader(readFileSync('./test/processes/sad/process.wasm'))
+async function evaluateHappyMessage ({ moduleId, Memory, message, AoGlobal }) {
+  assert.equal(moduleId, 'foo-module')
+  return happyWasm(Memory, message, AoGlobal)
+}
+
+async function evaluateSadMessage ({ moduleId, Memory, message, AoGlobal }) {
+  assert.equal(moduleId, 'foo-module')
+  return sadWasm(Memory, message, AoGlobal)
+}
+
 describe('evaluate', () => {
   describe('output', () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateHappyMessage,
       logger
     })
 
@@ -26,7 +41,7 @@ describe('evaluate', () => {
       ctx = {
         id: 'ctr-1234',
         from: new Date().getTime(),
-        module: readFileSync('./test/processes/happy/process.wasm'),
+        moduleId: 'foo-module',
         stats: {
           messages: {
             scheduled: 0,
@@ -169,6 +184,7 @@ describe('evaluate', () => {
       },
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateHappyMessage,
       logger
     }
 
@@ -177,7 +193,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/happy/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -270,6 +286,7 @@ describe('evaluate', () => {
         return { _id: 'messageHash-doc-123' }
       },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateHappyMessage,
       logger
     }
 
@@ -278,7 +295,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/happy/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -364,6 +381,7 @@ describe('evaluate', () => {
       },
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateHappyMessage,
       logger
     }
 
@@ -373,7 +391,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       fromCron: '1-10-minutes',
-      module: readFileSync('./test/processes/happy/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -498,6 +516,8 @@ describe('evaluate', () => {
         assert.fail('cache should not be interacted with on a noop of state'),
       doesExceedMaximumHeapSize: async () =>
         assert.fail('heap should not be examined on a noop of state'),
+      evaluateMessage: async () =>
+        assert.fail('evaluate should not be called on a noop of state'),
       logger
     }
 
@@ -506,7 +526,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: new Date().getTime(),
-      module: readFileSync('./test/processes/happy/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -542,6 +562,7 @@ describe('evaluate', () => {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateSadMessage,
       logger
     }
 
@@ -550,7 +571,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/sad/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -612,6 +633,7 @@ describe('evaluate', () => {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateSadMessage,
       logger
     }
 
@@ -620,7 +642,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/sad/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -675,6 +697,7 @@ describe('evaluate', () => {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateSadMessage,
       logger
     }
 
@@ -683,7 +706,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/sad/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -738,6 +761,7 @@ describe('evaluate', () => {
       },
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
+      evaluateMessage: evaluateSadMessage,
       logger
     }
 
@@ -746,7 +770,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/sad/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,
@@ -836,6 +860,7 @@ describe('evaluate', () => {
         heapCheckCount++
         return false
       },
+      evaluateMessage: evaluateHappyMessage,
       logger
     }
 
@@ -844,7 +869,7 @@ describe('evaluate', () => {
     const ctx = {
       id: 'ctr-1234',
       from: 1702846520559,
-      module: readFileSync('./test/processes/happy/process.wasm'),
+      moduleId: 'foo-module',
       stats: {
         messages: {
           scheduled: 0,

@@ -1,5 +1,6 @@
 import Dataloader from 'dataloader'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+import AoLoader from '@permaweb/ao-loader'
 
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
@@ -7,6 +8,7 @@ import * as PouchDbClient from './client/pouchdb.js'
 import * as AoSuClient from './client/ao-su.js'
 import * as WasmClient from './client/wasm.js'
 import * as AoProcessClient from './client/ao-process.js'
+import * as AoModuleClient from './client/ao-module.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith } from './api/readState.js'
@@ -43,6 +45,10 @@ export const createApis = async (ctx) => {
     url: ctx.DB_URL
   })
 
+  const wasmModuleCache = await AoModuleClient.createWasmModuleCache({
+    MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE
+  })
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
@@ -54,8 +60,16 @@ export const createApis = async (ctx) => {
     saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
     findBlocks: PouchDbClient.findBlocksWith({ pouchDb, logger }),
     saveBlocks: PouchDbClient.saveBlocksWith({ pouchDb, logger }),
-    findModule: PouchDbClient.findModuleWith({ pouchDb, logger }),
-    saveModule: PouchDbClient.saveModuleWith({ pouchDb, logger }),
+    findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
+    saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
+    evaluateMessage: AoModuleClient.evaluateWith({
+      cache: wasmModuleCache,
+      loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      readWasmFile: WasmClient.readWasmFile,
+      writeWasmFile: WasmClient.writeWasmFile,
+      bootstrapWasmModule: AoLoader,
+      logger
+    }),
     findMessageHash: PouchDbClient.findMessageHashWith({ pouchDb, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),

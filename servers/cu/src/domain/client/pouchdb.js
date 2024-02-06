@@ -10,7 +10,7 @@ import PouchDbFind from 'pouchdb-find'
 import PouchDbHttp from 'pouchdb-adapter-http'
 import PouchDbLevel from 'pouchdb-adapter-leveldb'
 
-import { blockSchema, evaluationSchema, moduleSchema } from '../model.js'
+import { blockSchema, evaluationSchema } from '../model.js'
 
 const deflateP = promisify(deflate)
 const inflateP = promisify(inflate)
@@ -96,14 +96,6 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
   ]).then(() => internalPouchDb)
 }
 
-const moduleDocSchema = z.object({
-  _id: z.string().min(1),
-  moduleId: moduleSchema.shape.id,
-  tags: moduleSchema.shape.tags,
-  wasm: moduleSchema.shape.wasm,
-  type: z.literal('module')
-})
-
 const evaluationDocSchema = z.object({
   _id: z.string().min(1),
   processId: evaluationSchema.shape.processId,
@@ -154,15 +146,6 @@ function createProcessId ({ processId }) {
 
 function createBlockId ({ height, timestamp }) {
   return `block-${height}-${timestamp}`
-}
-
-function createModuleId ({ moduleId }) {
-  /**
-   * transactions can sometimes start with an underscore,
-   * which is not allowed in PouchDB, so prepend to create
-   * an _id
-   */
-  return `module-${moduleId}`
 }
 
 function createMessageHashId ({ messageHash }) {
@@ -486,120 +469,6 @@ export function findEvaluationsWith ({ pouchDb = internalPouchDb }) {
         })
       }))
       .map(map(toEvaluation))
-      .toPromise()
-  }
-}
-
-export function saveModuleWith ({ pouchDb = internalPouchDb, logger }) {
-  const saveModuleInputSchema = z.object({
-    _id: z.string().min(1),
-    moduleId: moduleDocSchema.shape.moduleId,
-    tags: moduleDocSchema.shape.tags,
-    type: z.literal('module'),
-    /**
-     * We attach the module wasm as an attachment
-     * to the module document
-     *
-     * See https://pouchdb.com/api.html#save_attachment
-     */
-    _attachments: z.object({
-      'wasm.txt': z.object({
-        content_type: z.literal('text/plain'),
-        data: z.any()
-      })
-    })
-  })
-
-  return (module) => {
-    return of(module)
-      .chain(fromPromise(async (module) =>
-        applySpec({
-          _id: (module) => createModuleId({ moduleId: module.id }),
-          moduleId: prop('id'),
-          tags: prop('tags'),
-          type: always('module'),
-          /**
-           * Store the module wasm
-           * as an attachment. This allows for efficient storage
-           * and retrieval of the Buffer
-           *
-           * See https://pouchdb.com/api.html#save_attachment
-           */
-          _attachments: always({
-            'wasm.txt': {
-              content_type: 'text/plain',
-              /**
-               * zlib compress the buffer before persisting
-               *
-               * In testing, this results in orders of magnitude
-               * smaller buffer and smaller persistence times
-               */
-              data: await deflateP(module.wasm)
-            }
-          })
-        })(module)
-      ))
-      /**
-       * Ensure the expected shape before writing to the db
-       */
-      .map(saveModuleInputSchema.parse)
-      .map((moduleDoc) => {
-        logger('Creating module doc for module "%s"', module.id)
-        return moduleDoc
-      })
-      .chain((doc) =>
-        of(doc)
-          .chain(fromPromise((doc) => pouchDb.put(doc)))
-          .bichain(
-            (err) => {
-              /**
-               * Already exists, so just return the doc
-               */
-              if (err.status === 409) return Resolved(doc)
-              return Rejected(err)
-            },
-            Resolved
-          )
-          .map(always(doc._id))
-      )
-      .toPromise()
-  }
-}
-
-export function findModuleWith ({ pouchDb = internalPouchDb }) {
-  const wasmLens = lensPath(['wasm'])
-
-  return ({ moduleId }) => {
-    return of({ moduleId })
-      .chain(fromPromise(() => pouchDb.get(createModuleId({ moduleId }))))
-      .bichain(
-        (err) => {
-          if (err.status === 404) return Rejected({ status: 404, message: 'Module not found' })
-          return Rejected(err)
-        },
-        (found) => of(found)
-          /**
-           * Also retrieve the module wasm buffer, persisted as an attachment
-           * and set it on the output.Memory field to match the expected output shape
-           */
-          .chain(fromPromise(async (doc) => {
-            const buffer = await pouchDb.getAttachment(doc._id, 'wasm.txt')
-            /**
-             * Make sure to decompress the wasm buffer
-             */
-            return set(wasmLens, await inflateP(buffer), doc)
-          }))
-          /**
-           * Ensure the input matches the expected
-           * shape
-           */
-          .map(moduleDocSchema.parse)
-          .map(applySpec({
-            id: prop('moduleId'),
-            tags: prop('tags'),
-            wasm: prop('wasm')
-          }))
-      )
       .toPromise()
   }
 }
