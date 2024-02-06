@@ -1,6 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./logos/ao_pictograph_darkmode.svg">
   <source media="(prefers-color-scheme: light)" srcset="./logos/ao_pictograph_lightmode.svg">
+  <img alt="logo">
 </picture>
 
 # ao - The decentralized computer with infinite threads.
