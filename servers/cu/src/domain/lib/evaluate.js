@@ -181,17 +181,13 @@ export function evaluateWith (env) {
         for await (const { noSave, cron, ordinate, name, message, deepHash, AoGlobal } of ctx.messages) {
           if (cron) {
             const key = toEvaledCron({ timestamp: message.Timestamp, cron })
-            if (evaledCrons.has(key)) {
-              logger('"%s" has already been evaluated as part of this eval stream. Removing from eval stream', name)
-              continue
-            } else {
-              /**
-               * We add the crons identifier to the Set,
-               * thus preventing a duplicate evaluation if we come across it
-               * again in the eval stream
-               */
-              evaledCrons.add(key)
-            }
+            if (evaledCrons.has(key)) continue
+            /**
+             * We add the crons identifier to the Set,
+             * thus preventing a duplicate evaluation if we come across it
+             * again in the eval stream
+             */
+            else evaledCrons.add(key)
           }
 
           /**
