@@ -11,7 +11,7 @@
     "test": "node --test ./src"
   },
   "dependencies": {
-    "@permaweb/ao-loader": "^0.0.16",
+    "@permaweb/ao-loader": "^0.0.17",
     "@permaweb/ao-scheduler-utils": "^0.0.7",
     "arweave": "^1.14.4",
     "cors": "^2.8.5",
