@@ -143,7 +143,6 @@ module.exports = async function (binary, limit) {
     }
     /** end */
     if (buffer) instance.HEAPU8.set(buffer)
-    try {
     const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
     if (!ok) throw response
     
@@ -162,10 +161,7 @@ module.exports = async function (binary, limit) {
       Spawns: response.Spawns,
       GasUsed: gasUsed
     }
-  } catch(e) {
-    
-    return {Error: e.message || 'unknown error'}
-  }
+  
   }
 
 }

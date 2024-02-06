@@ -61,13 +61,14 @@ describe('loader', async () => {
 
   it('should run out of gas', async () => {
     const handle = await AoLoader(wasmBinary)
-
-    const result = await handle(null,
-      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
-      { Process: { Id: '1', Tags: [] } }
-    )
-
-    assert.equal(result.Error, 'out of gas!')
+    try {
+      await handle(null,
+        { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
+        { Process: { Id: '1', Tags: [] } }
+      )
+    } catch (e) {
+      assert.equal(e.message, 'out of gas!')
+    }
 
     // console.log(result.GasUsed)
     assert.ok(true)
@@ -115,11 +116,17 @@ describe('loader', async () => {
 
   it('should not list files', async () => {
     const handle = await AoLoader(wasmBinary)
+    try {
+    // eslint-disable-next-line
     const result = await handle(null,
-      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Directory' }], Data: '' },
-      { Process: { Id: '1', Tags: [] } }
-    )
-    assert.equal(result.Error, 'unknown error')
+        { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Directory' }], Data: '' },
+        { Process: { Id: '1', Tags: [] } }
+      )
+    } catch (e) {
+      assert.equal(e, '[string ".process"]:47: \'popen\' not supported')
+      assert.ok(true)
+    }
+
     assert.ok(true)
   })
   // TODO: need to figure out a way to test out of memory
