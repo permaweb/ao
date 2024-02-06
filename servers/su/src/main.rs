@@ -4,6 +4,8 @@ use std::io::{self, Error, ErrorKind};
 
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, HttpRequest, middleware::Logger, http::header::LOCATION};
 use actix_cors::Cors;
+
+use serde_json::json;
 use serde::Deserialize;
 
 use su::domain::{flows, router, StoreClient, Deps, Log, scheduler, Gateway, ArweaveGateway};
@@ -34,6 +36,13 @@ struct ProcessIdRequired {
     process_id: String,
 }
 
+fn err_response(err: String) -> HttpResponse {
+    let error_json = json!({ "error": err });
+    HttpResponse::BadRequest()
+        .content_type("application/json") 
+        .body(error_json.to_string())
+}
+
 async fn base(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, req: HttpRequest) -> impl Responder {
     let process_id = query_params.process_id.clone();
 
@@ -43,14 +52,14 @@ async fn base(deps: web::Data<Arc<Deps>>, query_params: web::Query<ProcessId>, r
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
-        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+        Err(err) => return err_response(err.to_string())
     }
 
     match flows::health(deps.get_ref().clone()).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
+        Err(err) => err_response(err.to_string()),
     }
 }
 
@@ -63,14 +72,14 @@ async fn timestamp_route(deps: web::Data<Arc<Deps>>, query_params: web::Query<Pr
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
-        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+        Err(err) => return err_response(err.to_string())
     }
 
     match flows::timestamp(deps.get_ref().clone()).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
+        Err(err) => err_response(err.to_string()),
     }
 }
 
@@ -81,14 +90,14 @@ async fn main_post_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes, req: 
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
-        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+        Err(err) => return err_response(err.to_string())
     }
 
     match flows::write_item(deps.get_ref().clone(), req_body.to_vec()).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
+        Err(err) => err_response(err.to_string()),
     }
 }
 
@@ -104,7 +113,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
-        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+        Err(err) => return err_response(err.to_string())
     }
 
     let result = flows::read_message_data(deps.get_ref().clone(), tx_id, from_sort_key, to_sort_key).await;
@@ -113,7 +122,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
+        Err(err) => err_response(err.to_string()),
     }
 }
 
@@ -126,14 +135,14 @@ async fn read_process_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: 
             return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
         },
         Ok(None) => (),
-        Err(err) => { return HttpResponse::BadRequest().body(err.to_string()); }
+        Err(err) => return err_response(err.to_string())
     }
         
     match flows::read_process(deps.get_ref().clone(), process_id).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
-        Err(err) => HttpResponse::BadRequest().body(err),
+        Err(err) => err_response(err.to_string()),
     }
 }
 
