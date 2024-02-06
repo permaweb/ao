@@ -28,7 +28,10 @@ export const server = pipeP(
   (app) => app.use(cors()),
   withRoutes,
   (app) => {
-    const server = app.listen({ port: config.port }, () => {
+    /**
+     * See https://github.com/fastify/fastify?tab=readme-ov-file#note
+     */
+    const server = app.listen({ port: config.port, host: '0.0.0.0' }, () => {
       logger(`Server is running on http://localhost:${config.port}`)
     })
 
