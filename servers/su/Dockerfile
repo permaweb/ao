@@ -1,5 +1,5 @@
 # Stage 1: Build the static binary
-FROM clux/muslrust:latest as builder
+FROM clux/muslrust:1.75.0 as builder
 
 # Set the working directory in the container
 WORKDIR /usr/src/su
