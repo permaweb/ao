@@ -59,6 +59,27 @@ describe('loader', async () => {
     assert.ok(true)
   })
 
+  it('should refill the gas on every invocation', async () => {
+    const handle = await AoLoader(wasmBinary)
+
+    const result = await handle(null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+
+    const result2 = await handle(null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+
+    /**
+     * Some setup done by WASM consumes some ops, so the amounts won't quite match,
+     * but they should be within ~75k of each other, effectively meaning the gas is not
+     * "stacking" and being refilled every time
+     */
+    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 75000)
+  })
+
   it('should run out of gas', async () => {
     const handle = await AoLoader(wasmBinary)
     try {
@@ -73,6 +94,7 @@ describe('loader', async () => {
     // console.log(result.GasUsed)
     assert.ok(true)
   })
+
   it('should get deterministic date', async () => {
     const handle = await AoLoader(wasmBinary)
 
@@ -93,6 +115,7 @@ describe('loader', async () => {
     // console.log(result.GasUsed)
     assert.ok(true)
   })
+
   it('should get deterministic random numbers', async () => {
     const handle = await AoLoader(wasmBinary)
 
