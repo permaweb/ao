@@ -68,9 +68,12 @@ export function dryRunWith (env) {
            */
           cron: undefined,
           /**
-           * We want an exact match to this messages evaluation
+           * If we are evaluating up to a specific message, as indicated by
+           * the presence of messageTxId, then we make sure we get an exact match.
+           *
+           * Otherwise, we are evaluating up to the latest
            */
-          exact: true
+          exact: !!messageTxId
         })
       )
       /**
