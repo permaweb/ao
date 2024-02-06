@@ -43,7 +43,8 @@ const CONFIG_ENVS = {
     DB_URL: process.env.DB_URL || 'ao-cache',
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
     DUMP_PATH: process.env.DUMP_PATH || './static',
-    WALLET: process.env.WALLET
+    WALLET: process.env.WALLET,
+    WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5
   },
   production: {
     MODE,
@@ -54,7 +55,8 @@ const CONFIG_ENVS = {
     DB_URL: process.env.DB_URL,
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
     DUMP_PATH: process.env.DUMP_PATH,
-    WALLET: process.env.WALLET
+    WALLET: process.env.WALLET,
+    WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5
   }
 }
 

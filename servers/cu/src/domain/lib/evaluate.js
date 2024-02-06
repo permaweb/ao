@@ -3,10 +3,9 @@ import {
   ifElse, is, mergeRight, pathOr, pipe, propOr
 } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import AoLoader from '@permaweb/ao-loader'
 import { z } from 'zod'
 
-import { doesExceedMaximumHeapSizeSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { doesExceedMaximumHeapSizeSchema, evaluateSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -26,10 +25,11 @@ const toEvaledCron = ({ timestamp, cron }) => `${timestamp}-${cron}`
  * @property {any} db
  */
 
-function addHandler (ctx) {
-  return of(ctx.module)
-    .chain(fromPromise(AoLoader))
-    .map((handle) => ({ handle, ...ctx }))
+function evaluateMessageWith ({ evaluateMessage }) {
+  evaluateMessage = evaluateSchema.implement(evaluateMessage)
+
+  return ({ moduleId, limit, Memory, message, AoGlobal }) =>
+    evaluateMessage({ moduleId, limit, Memory, message, AoGlobal }) // Promise
 }
 
 function saveEvaluationWith ({ saveEvaluation, logger }) {
@@ -95,6 +95,7 @@ export function evaluateWith (env) {
   const doesMessageHashExist = doesMessageHashExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
   const doesHeapExceedMaxSize = doesHeapExceedMaxSizeWith(env)
+  const evaluateMessage = evaluateMessageWith(env)
 
   /**
    * Given the previous interaction output,
@@ -141,7 +142,6 @@ export function evaluateWith (env) {
 
   return (ctx) =>
     of(ctx)
-      .chain(addHandler)
       .chain(fromPromise(async (ctx) => {
         /**
          * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
@@ -213,7 +213,18 @@ export function evaluateWith (env) {
                 /**
                  * Where the actual evaluation is performed
                  */
-                .then((Memory) => ctx.handle(Memory, message, AoGlobal))
+                .then((Memory) =>
+                  evaluateMessage({
+                    moduleId: ctx.moduleId,
+                    /**
+                     * TODO: eventually pass gas limit
+                     */
+                    limit: undefined,
+                    Memory,
+                    message,
+                    AoGlobal
+                  })
+                )
                 /**
                  * Map thrown error to a result.error
                  */

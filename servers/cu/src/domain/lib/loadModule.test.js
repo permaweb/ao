@@ -9,10 +9,8 @@ const PROCESS = 'contract-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadModule', () => {
-  test('append module and module id', async () => {
+  test('append module id', async () => {
     const loadModule = loadModuleWith({
-      loadTransactionData: async (_id) =>
-        new Response(JSON.stringify({ hello: 'world' })),
       loadTransactionMeta: async () => ({
         owner: {
           address: 'owner-123'
@@ -29,34 +27,28 @@ describe('loadModule', () => {
     })
 
     const result = await loadModule({ id: PROCESS, tags: [{ name: 'Module', value: 'foobar' }] }).toPromise()
-    assert.equal(result.module.byteLength, 17)
     assert.equal(result.moduleId, 'foobar')
     assert.equal(result.id, PROCESS)
   })
 
-  test('use module from db to set module and moduleId', async () => {
+  test('use module from db to set moduleId', async () => {
     const loadModule = loadModuleWith({
-      loadTransactionData: async (_id) => assert.fail('should not load transaction data if found in db'),
       loadTransactionMeta: async () => assert.fail('should not load transaction meta if found in db'),
       findModule: async () => ({
         id: 'foobar',
-        tags: [],
-        wasm: Buffer.from('Hello', 'utf-8')
+        tags: []
       }),
       saveModule: async () => assert.fail('should not save if foudn in db'),
       logger
     })
 
     const result = await loadModule({ id: PROCESS, tags: [{ name: 'Module', value: 'foobar' }] }).toPromise()
-    assert.equal(result.module.byteLength, 5)
     assert.equal(result.moduleId, 'foobar')
     assert.equal(result.id, PROCESS)
   })
 
   test('throw if "Module-Format" is not emscripten', async () => {
     const loadModule = loadModuleWith({
-      loadTransactionData: async (_id) =>
-        new Response(JSON.stringify({ hello: 'world' })),
       loadTransactionMeta: async () => ({
         owner: {
           address: 'owner-123'

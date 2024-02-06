@@ -35,7 +35,8 @@ export const domainConfigSchema = z.object({
   /**
    * The wallet for the CU
    */
-  WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface')
+  WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface'),
+  WASM_MODULE_CACHE_MAX_SIZE: positiveIntSchema
 })
 
 export const streamSchema = z.any().refine(stream => {
@@ -69,8 +70,7 @@ export const processSchema = z.object({
 
 export const moduleSchema = z.object({
   id: z.string().min(1),
-  tags: z.array(rawTagSchema),
-  wasm: z.any()
+  tags: z.array(rawTagSchema)
 })
 
 export const messageSchema = z.object({
