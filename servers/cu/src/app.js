@@ -1,7 +1,11 @@
 import { join } from 'node:path'
+
 import heapdump from 'heapdump'
-import { pipe } from 'ramda'
-import express from 'express'
+import { unapply, pipeWith } from 'ramda'
+
+import Fastify from 'fastify'
+import FastifyMiddie from '@fastify/middie'
+import serveStatic from 'serve-static'
 import cors from 'cors'
 import helmet from 'helmet'
 
@@ -9,17 +13,22 @@ import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 
-export const server = pipe(
+const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)))
+
+export const server = pipeP(
+  /**
+   * Allow us to use some simple express middleware
+   */
+  (app) => app.register(FastifyMiddie).then(() => app),
   /**
    * Allows us to download heapdumps, if created
    */
   (app) => app.use(helmet()),
-  (app) => app.use(express.static(config.DUMP_PATH)),
+  (app) => app.use(serveStatic(config.DUMP_PATH)),
   (app) => app.use(cors()),
-  (app) => app.use(express.json({ type: 'application/json' })),
   withRoutes,
-  app => {
-    const server = app.listen(config.port, () => {
+  (app) => {
+    const server = app.listen({ port: config.port }, () => {
       logger(`Server is running on http://localhost:${config.port}`)
     })
 
@@ -36,4 +45,4 @@ export const server = pipe(
 
     return server
   }
-)(express())
+)(Fastify())
