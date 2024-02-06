@@ -23,7 +23,7 @@ export const withStateRoutes = (app) => {
 
         const input = inputSchema.parse({ processId, to })
 
-        return readState(input)
+        await readState(input)
           .map(({ output }) => {
             /**
              * The cu sends the array buffer as binary data,

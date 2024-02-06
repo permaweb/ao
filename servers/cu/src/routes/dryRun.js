@@ -36,7 +36,7 @@ export const withDryRunRoutes = app => {
 
         const input = inputSchema.parse({ processId, messageTxId, dryRun: body })
 
-        return dryRun(input)
+        await dryRun(input)
           .map((output) => res.send(output))
           .toPromise()
       })
