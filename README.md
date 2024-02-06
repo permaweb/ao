@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./logos/ao_pictograph_darkmode.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./logos/ao_pictograph_lightmode.svg">
+</picture>
+
 # ao - The decentralized computer with infinite threads.
 
 `ao` takes a messaging based approach to interoperability with smartweave
@@ -54,15 +59,18 @@ First, run `npm i` at the root to install those dependencies.
   -> WASM Contracts
 - [`ao` JS Loader](./loader): The `ao` JavaScript Loader that enabled invoking
   an `ao` Contract, built into WASM, from a JavaScript context.
-- [`ao` Connect](./connect): The `ao` JavaScript library that provides an abstraction for spawning, evaluating, and interacting
-with `ao` Processes on node or in the browser.
+- [`ao` Connect](./connect): The `ao` JavaScript library that provides an
+  abstraction for spawning, evaluating, and interacting with `ao` Processes on
+  node or in the browser.
 - [`ao` Compute Unit (`cu`)](./servers/cu): An implementation of the `ao`
   Compute Unit, aka a `cu` (pronounced "koo" 🦘)
 - [`ao` Messenger Unit (`mu`)](./servers/mu): An implementation of the `ao`
   Messaenger Unit, aka a `mu` (pronounced "moo" 🐄)
 - [`ao` Scheduler Unit (`su`)](./servers/su): An implementation of the `ao`
   Scheduler Unit, aka a `su` (pronounced "soo" 👧)
-- [`ao` Unit Router (`ur`)](./servers/ur): A Simple Reverse Proxy whose API can mirror an underlying set of `ao` Unit Hosts (`mu`s or `cu`s) (pronounced "youwer" 🔀)
+- [`ao` Unit Router (`ur`)](./servers/ur): A Simple Reverse Proxy whose API can
+  mirror an underlying set of `ao` Unit Hosts (`mu`s or `cu`s) (pronounced
+  "youwer" 🔀)
 - [`ao` Lua Examples](./lua-examples): Various examples of projects leveraging
   `ao` Contracts and components.
 
