@@ -9,6 +9,7 @@ import * as AoSuClient from './client/ao-su.js'
 import * as WasmClient from './client/wasm.js'
 import * as AoProcessClient from './client/ao-process.js'
 import * as AoModuleClient from './client/ao-module.js'
+import * as AoEvaluationClient from './client/ao-evaluation.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith } from './api/readState.js'
@@ -55,9 +56,9 @@ export const createApis = async (ctx) => {
     loadBlocksMeta: ArweaveClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
     findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
     saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
-    findEvaluation: PouchDbClient.findEvaluationWith({ pouchDb, logger }),
-    findLatestEvaluation: PouchDbClient.findLatestEvaluationWith({ pouchDb, logger }),
-    saveEvaluation: PouchDbClient.saveEvaluationWith({ pouchDb, logger }),
+    findEvaluation: AoEvaluationClient.findEvaluationWith({ pouchDb, logger }),
+    findLatestEvaluation: AoEvaluationClient.findLatestEvaluationWith({ pouchDb, logger }),
+    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),
     findBlocks: PouchDbClient.findBlocksWith({ pouchDb, logger }),
     saveBlocks: PouchDbClient.saveBlocksWith({ pouchDb, logger }),
     findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
@@ -70,7 +71,7 @@ export const createApis = async (ctx) => {
       bootstrapWasmModule: AoLoader,
       logger
     }),
-    findMessageHash: PouchDbClient.findMessageHashWith({ pouchDb, logger }),
+    findMessageHash: AoEvaluationClient.findMessageHashWith({ pouchDb, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 50, logger }),
@@ -108,13 +109,13 @@ export const createApis = async (ctx) => {
   const readCronResultsLogger = ctx.logger.child('readCronResults')
   const readCronResults = readCronResultsWith({
     ...sharedDeps(readCronResultsLogger),
-    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readCronResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ pouchDb, logger: readCronResultsLogger })
   })
 
   const readResultsLogger = ctx.logger.child('readResults')
   const readResults = readResultsWith({
     ...sharedDeps(readResultsLogger),
-    findEvaluations: PouchDbClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
   })
 
   const arweave = ArweaveClient.createWalletClient()
