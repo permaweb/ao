@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { connect, createDataItemSigner } from '@permaweb/ao-sdk'
 
-const { spawn } = connect({ MU_URL: 'https://ao-mu-1.onrender.com' })
+const { spawn } = connect({ MU_URL: 'http://localhost:3004' })
 
 const wallet = JSON.parse(readFileSync(process.env.PATH_TO_WALLET).toString());
 
