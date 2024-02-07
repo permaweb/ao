@@ -50,14 +50,28 @@ export const createApis = async (ctx) => {
     MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE
   })
 
+  const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
+    MAX_SIZE: 50_000_000, // 50MB
+    TTL: 1000 * 60 * 60 * 2, // 2 hours,
+    onEviction: ({ key, value }) => {
+      ctx.logger('"%s" is being evicted from the cache', key)
+    }
+  })
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadBlocksMeta: ArweaveClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
     findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
+    findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
+      cache: wasmMemoryCache,
+      loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      logger
+    }),
+    saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({ cache: wasmMemoryCache, logger }),
     saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ pouchDb, logger }),
-    findLatestEvaluation: AoEvaluationClient.findLatestEvaluationWith({ pouchDb, logger }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),
     findBlocks: PouchDbClient.findBlocksWith({ pouchDb, logger }),
     saveBlocks: PouchDbClient.saveBlocksWith({ pouchDb, logger }),

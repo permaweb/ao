@@ -1,10 +1,86 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, isNotNil, mergeRight, pick } from 'ramda'
+import { always, identity, isNotNil, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
-import { findLatestEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
 import { blockSchema, rawTagSchema } from '../model.js'
 import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
+
+/**
+ * The result that is produced from this step
+ * and added to ctx.
+ *
+ * This is used to parse the output to ensure the correct shape
+ * is always added to context
+ */
+const ctxSchema = z.object({
+  /**
+   * the signature of the process
+   *
+   * only nullish for backwards compatibility
+   */
+  signature: z.string().nullish(),
+  /**
+     * the data of the process
+     *
+     * only nullish for backwards compatibility
+     */
+  data: z.any().nullish(),
+  /**
+     * The anchor for the process
+     */
+  anchor: z.string().nullish(),
+  /**
+   * The wallet address of of the process owner
+   */
+  owner: z.string().min(1),
+  /**
+   * The tags on the process
+   */
+  tags: z.array(rawTagSchema),
+  /**
+   * The block height and timestamp, according to the SU,
+   * that was most recent when this process was spawned
+   */
+  block: blockSchema,
+  /**
+   * The most recent result. This could be the most recent
+   * cached result, or potentially initial cold start state
+   * if no evaluations are cached
+   */
+  result: z.record(z.any()),
+  /**
+   * The timestamp for the most recent message evaluated,
+   * or undefined, no cached evaluation exists
+   *
+   * This will be used to subsequently determine which messaged
+   * need to be fetched from the SU in order to perform the evaluation
+   */
+  from: z.coerce.number().nullish(),
+  /**
+   * The ordinate from the most recent evaluation
+   * or undefined, no cached evaluation exists
+   */
+  ordinate: z.coerce.string().nullish(),
+  /**
+   * The most recent message block height. This could be from the most recent
+   * cached evaluation, or undefined, if no evaluations were cached
+   *
+   * This will be used to subsequently determine the range of block metadata
+   * to fetch from the gateway
+   */
+  fromBlockHeight: z.coerce.number().nullish(),
+  /**
+   * The most recent message cron. This could be from the recent cached Cron Message
+   * evaluation, or undefined, if no evaluations were cached, or the latest evaluation
+   * was not the result of a Cron message
+   */
+  fromCron: z.string().nullish(),
+  /**
+   * Whether the evaluation found is the exact evaluation being requested
+   */
+  exact: z.boolean().default(false)
+}).passthrough()
 
 function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, saveProcess, logger }) {
   locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
@@ -26,7 +102,7 @@ function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, savePr
       /**
        * Verify the process by examining the tags
        */
-      .chain(ctx =>
+      .chain((ctx) =>
         of(ctx.tags)
           .map(parseTags)
           .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on process'))
@@ -79,155 +155,74 @@ function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, savePr
       }))
 }
 
-function loadLatestEvaluationWith ({ findLatestEvaluation, logger }) {
-  findLatestEvaluation = fromPromise(findLatestEvaluationSchema.implement(findLatestEvaluation))
+function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, loadLatestSnapshot, logger }) {
+  findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
+  // TODO: wrap in zod schemas to enforce contract
+  findProcessMemoryBefore = fromPromise(findProcessMemoryBefore)
+  loadLatestSnapshot = fromPromise(loadLatestSnapshot)
 
-  return (ctx) => of(ctx)
-    .chain((args) => findLatestEvaluation({
-      processId: args.id,
-      /**
-       * 'to', 'ordinate', or "cron" could each be undefined
-       */
-      to: args.to,
-      ordinate: args.ordinate,
-      cron: args.cron
-    }))
-    .bimap(
-      (_) => {
-        logger('Could not find latest evaluation in db. Starting with initial state of null...')
-        return _
-      },
-      (res) => {
+  function maybeExactEvaluation (ctx) {
+    /**
+     * We also need the Memory for the evaluation,
+     * we need to either fetch from cache or perform an evaluation
+     */
+    if (ctx.needsMemory) return Rejected(ctx)
+
+    return findEvaluation({
+      processId: ctx.id,
+      to: ctx.to,
+      ordinate: ctx.ordinate,
+      cron: ctx.cron
+    })
+      .map((evaluation) => {
         logger(
-          'Found previous evaluation in db: %j',
-          pick(['messageId', 'ordinate', 'cron', 'timestamp', 'ordinate', 'blockHeight'], res)
+          'Exact match to cached evaluation for message to process "%s": %j',
+          ctx.id,
+          pick(['messageId', 'ordinate', 'cron', 'timestamp', 'blockHeight'], evaluation)
         )
-        return res
-      }
-    )
-    .bichain(
-      /**
-       * Initial Process State
-       */
-      () => Resolved({
-        result: {
-          /**
-           * With BiBo, the initial state is simply nothing.
-           * It is up to the process to set up it's own initial state
-           */
-          Memory: null,
-          Error: undefined,
-          Messages: [],
-          Output: '',
-          Spawns: []
-        },
-        from: undefined,
-        fromBlockHeight: undefined,
-        fromCron: undefined,
-        /**
-         * No cached evaluation was found, but we still need an ordinate,
-         * in case there are Cron messages to generate prior to any scheduled
-         * messages existing in the sequence.
-         *
-         * The important attribute we need is for the ordinate to be lexicographically
-         * sortable.
-         *
-         * So we use a very small unicode character, as a pseudo-ordinate, which gets
-         * us exactly what we need
-         */
-        ordinate: '^',
-        evaluatedAt: undefined
-      }),
-      /**
-       * State from evaluation we found in cache
-       */
-      (evaluation) => Resolved({
-        result: evaluation.output,
-        from: evaluation.timestamp,
-        ordinate: evaluation.ordinate,
-        fromBlockHeight: evaluation.blockHeight,
-        fromCron: evaluation.cron,
-        evaluatedAt: evaluation.evaluatedAt
-      })
-    )
-}
 
-/**
- * The result that is produced from this step
- * and added to ctx.
- *
- * This is used to parse the output to ensure the correct shape
- * is always added to context
- */
-const ctxSchema = z.object({
-  /**
-   * the signature of the process
-   *
-   * only nullish for backwards compatibility
-   */
-  signature: z.string().nullish(),
-  /**
-     * the data of the process
-     *
-     * only nullish for backwards compatibility
-     */
-  data: z.any().nullish(),
-  /**
-     * The anchor for the process
-     */
-  anchor: z.string().nullish(),
-  /**
-   * The wallet address of of the process owner
-   */
-  owner: z.string().min(1),
-  /**
-   * The tags on the process
-   */
-  tags: z.array(rawTagSchema),
-  /**
-   * The block height and timestamp, according to the SU,
-   * that was most recent when this process was spawned
-   */
-  block: blockSchema,
-  /**
-   * The most recent result. This could be the most recent
-   * cached result, or potentially nothing
-   * if no evaluations are cached
-   */
-  result: z.record(z.any()),
-  /**
-   * The timestamp for the most recent message evaluated,
-   * or undefined, no cached evaluation exists
-   *
-   * This will be used to subsequently determine which messaged
-   * need to be fetched from the SU in order to perform the evaluation
-   */
-  from: z.coerce.number().nullish(),
-  /**
-   * The ordinate from the most recent evaluation
-   * or undefined, no cached evaluation exists
-   */
-  ordinate: z.coerce.string().nullish(),
-  /**
-   * The most recent message block height. This could be from the most recent
-   * cached evaluation, or undefined, if no evaluations were cached
-   *
-   * This will be used to subsequently determine the range of block metadata
-   * to fetch from the gateway
-   */
-  fromBlockHeight: z.coerce.number().nullish(),
-  /**
-   * The most recent message cron. This could be from the recent cached Cron Message
-   * evaluation, or undefined, if no evaluations were cached, or the latest evaluation
-   * was not the result of a Cron message
-   */
-  fromCron: z.string().nullish(),
-  /**
-   * When the evaluation record was created in the local db. If the initial state had to be retrieved
-   * from Arweave, due to no state being cached in the local db, then this will be undefined.
-   */
-  evaluatedAt: z.date().nullish()
-}).passthrough()
+        return {
+          result: evaluation.output,
+          from: evaluation.timestamp,
+          ordinate: evaluation.ordinate,
+          fromBlockHeight: evaluation.blockHeight,
+          fromCron: evaluation.cron,
+          exact: true
+        }
+      })
+      .bimap(() => ctx, identity)
+  }
+
+  function maybeCachedMemory (ctx) {
+    logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
+
+    return findProcessMemoryBefore({
+      processId: ctx.id,
+      timestamp: ctx.to,
+      ordinate: ctx.ordinate,
+      cron: ctx.cron
+    })
+      .map((found) => {
+        const exact = found.timestamp === ctx.to &&
+          found.ordinate === ctx.ordinate &&
+          found.cron === ctx.cron
+
+        return {
+          result: {
+            Memory: found.Memory
+          },
+          from: found.timestamp,
+          ordinate: found.ordinate,
+          fromBlockHeight: found.blockHeight,
+          fromCron: found.cron,
+          exact
+        }
+      })
+  }
+
+  return (ctx) => maybeExactEvaluation(ctx)
+    .bichain(maybeCachedMemory, Resolved)
+}
 
 /**
  * @typedef Args
@@ -258,11 +253,11 @@ export function loadProcessWith (env) {
       .chain(getProcessMeta)
       // { id, owner, block }
       .map(mergeRight(ctx))
-      // { Memory, result, from, evaluatedAt }
-      .chain(ctx =>
+      .chain((ctx) =>
         loadLatestEvaluation(ctx)
+        // { Memory, result, from }
           .map(mergeRight(ctx))
-          // { id, owner, tags, ..., result, from, evaluatedAt }
+          // { id, owner, tags, ..., result, from }
       )
       .map(ctxSchema.parse)
   }

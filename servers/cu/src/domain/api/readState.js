@@ -32,7 +32,7 @@ export function readStateWith (env) {
 
   const findEvaluation = fromPromise(findEvaluationSchema.implement(env.findEvaluation))
 
-  return ({ processId, messageId, to, ordinate, cron, exact }) => {
+  return ({ processId, messageId, to, ordinate, cron, exact, needsMemory }) => {
     messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'earliest'
 
     const stats = {
@@ -57,39 +57,20 @@ export function readStateWith (env) {
       return res
     }
 
-    return of({ id: processId, to, ordinate, cron, stats })
+    return of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
       .chain(loadProcess)
       .chain((res) => {
         /**
          * The exact evaluation (identified by its input messages timestamp)
          * was found in the cache, so just return it.
          *
-         * We perform a similar check below, but checking additionally here
-         * prevents unecessarily loading the process wasm module and heap,
-         * a non-trivial boon for system resources
+         * evaluate sets output below, so since we've found the output
+         * without evaluating, we simply set output to the result of the cached
+         * evaluation.
+         *
+         * This exposes a single api for upstream to consume
          */
-        if (res.from &&
-            res.from === to &&
-            res.ordinate === ordinate &&
-            // eslint-disable-next-line eqeqeq
-            res.cron == cron
-        ) {
-          env.logger(
-            'Exact match to cached evaluation for message "%s" to process "%s"',
-            messageId,
-            processId
-          )
-
-          /**
-           * evaluate sets output below, so since we've found the output
-           * without evaluating, we simply set output to the result of the cached
-           * evaluation.
-           *
-           * This exposes a single api for upstream to consume
-           */
-          return Resolved({ ...res, output: res.result })
-            .map(logStats)
-        }
+        if (res.exact) return Resolved({ ...res, output: res.result }).map(logStats)
 
         return of(res)
           .chain(loadMessages)

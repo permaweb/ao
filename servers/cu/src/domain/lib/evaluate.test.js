@@ -33,6 +33,7 @@ describe('evaluate', () => {
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     })
 
@@ -185,6 +186,7 @@ describe('evaluate', () => {
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -287,6 +289,7 @@ describe('evaluate', () => {
       },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -382,6 +385,7 @@ describe('evaluate', () => {
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -508,61 +512,13 @@ describe('evaluate', () => {
     assert.equal(cacheCount, 3)
   })
 
-  test('noop the initial state', async () => {
-    const env = {
-      saveEvaluation: async (interaction) =>
-        assert.fail('cache should not be interacted with on a noop of state'),
-      findMessageHash: async () =>
-        assert.fail('cache should not be interacted with on a noop of state'),
-      doesExceedMaximumHeapSize: async () =>
-        assert.fail('heap should not be examined on a noop of state'),
-      loadEvaluator: async () =>
-        () => assert.fail('evaluate should not be called on a noop of state'),
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: new Date().getTime(),
-      moduleId: 'foo-module',
-      stats: {
-        messages: {
-          scheduled: 0,
-          cron: 0,
-          error: 0
-        }
-      },
-      result: {
-        /**
-         * In reality this would be an illegible byte array, since it's format
-         * will be determined by whatever the underlying runtime is, in this case,
-         * Lua
-         */
-        Memory: Buffer.from('Hello', 'utf-8'),
-        Messages: [],
-        Output: '',
-        Spawns: []
-      },
-      messages: toAsyncIterable([])
-    }
-
-    const { output } = await evaluate(ctx).toPromise()
-    assert.deepStrictEqual(output, {
-      Memory: Buffer.from('Hello', 'utf-8'),
-      Messages: [],
-      Spawns: [],
-      Output: ''
-    })
-  })
-
   test('error returned in process result', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -612,20 +568,15 @@ describe('evaluate', () => {
 
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
-    assert.deepStrictEqual(res.output, {
-      /**
-       * When an error occurs in eval, its output Memory is ignored
-       * and the output Memory from the previous eval is used.
-       *
-       * So we assert that the original Memory that was passed in is returned
-       * from eval
-       */
-      Memory: Buffer.from('Hello', 'utf-8'),
-      Error: { code: 123, message: 'a handled error within the process' },
-      Messages: [],
-      Spawns: [],
-      Output: '0'
-    })
+    /**
+     * When an error occurs in eval, its output Memory is ignored
+     * and the output Memory from the previous eval is used.
+     *
+     * So we assert that the original Memory that was passed in is returned
+     * from eval
+     */
+    assert.deepStrictEqual(res.output.Memory, Buffer.from('Hello', 'utf-8'))
+    assert.deepStrictEqual(res.output.Error, { code: 123, message: 'a handled error within the process' })
   })
 
   test('error thrown by process', async () => {
@@ -634,6 +585,7 @@ describe('evaluate', () => {
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -683,13 +635,8 @@ describe('evaluate', () => {
 
     const res = await evaluate(ctx).toPromise()
     assert.ok(res.output)
-    assert.deepStrictEqual(res.output, {
-      Memory: Buffer.from('Hello', 'utf-8'),
-      Error: { code: 123, message: 'a thrown error within the process' },
-      Messages: [],
-      Spawns: [],
-      Output: ''
-    })
+    assert.deepStrictEqual(res.output.Memory, Buffer.from('Hello', 'utf-8'))
+    assert.deepStrictEqual(res.output.Error, { code: 123, message: 'a thrown error within the process' })
   })
 
   test('error unhandled by process', async () => {
@@ -698,6 +645,7 @@ describe('evaluate', () => {
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -762,6 +710,7 @@ describe('evaluate', () => {
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 
@@ -861,6 +810,7 @@ describe('evaluate', () => {
         return false
       },
       loadEvaluator: evaluateHappyMessage,
+      saveLatestProcessMemory: async () => {},
       logger
     }
 

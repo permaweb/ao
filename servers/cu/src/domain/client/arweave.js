@@ -269,3 +269,18 @@ export function loadTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
       ))
       .toPromise()
 }
+
+export function queryGatewayWith ({ fetch, GATEWAY_URL, logger }) {
+  return async ({ query, variables }) => {
+    return fetch(`${GATEWAY_URL}/graphql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    })
+      .then(async (res) => {
+        if (res.ok) return res.json()
+        logger('Error Encountered when querying gateway')
+        throw new Error(`${res.status}: ${await res.text()}`)
+      })
+  }
+}

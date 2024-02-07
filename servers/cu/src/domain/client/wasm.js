@@ -3,15 +3,15 @@ import { createWriteStream, readFile } from 'node:fs'
 import { promisify } from 'node:util'
 import { pipeline } from 'node:stream'
 import { join } from 'node:path'
-import { createGzip, unzip } from 'node:zlib'
+import { createGzip, gunzip } from 'node:zlib'
 
 const readFileP = promisify(readFile)
-const unzipP = promisify(unzip)
+const gunzipP = promisify(gunzip)
 const pipelineP = promisify(pipeline)
 
 export async function readWasmFile (moduleId) {
   return readFileP(join(tmpdir(), `${moduleId}.wasm.gz`))
-    .then(unzipP)
+    .then(gunzipP)
 }
 
 export async function writeWasmFile (moduleId, wasmStream) {
