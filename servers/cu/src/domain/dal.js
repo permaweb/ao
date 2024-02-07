@@ -71,7 +71,15 @@ export const findEvaluationSchema = z.function()
   }))
   .returns(z.promise(evaluationSchema))
 
-export const findLatestEvaluationSchema = findEvaluationSchema
+export const findLatestEvaluationsSchema = z.function()
+  .args(z.object({
+    processId: z.string(),
+    to: z.coerce.number().nullish(),
+    ordinate: z.coerce.string().nullish(),
+    cron: z.string().nullish(),
+    limit: z.number().default(1)
+  }))
+  .returns(z.promise(z.array(evaluationSchema)))
 
 export const saveEvaluationSchema = z.function()
   .args(evaluationSchema.extend({ deepHash: z.string().nullish() }))

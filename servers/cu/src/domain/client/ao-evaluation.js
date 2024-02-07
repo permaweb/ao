@@ -1,15 +1,10 @@
-import { deflate, inflate } from 'node:zlib'
-import { promisify } from 'node:util'
-
-import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, head, identity, isEmpty, isNotNil, lensPath, map, omit, pipe, prop, set } from 'ramda'
+import { fromPromise, of, Rejected } from 'hyper-async'
+import { always, applySpec, identity, isEmpty, isNotNil, map, omit, pipe, prop } from 'ramda'
 import { z } from 'zod'
 
 import { evaluationSchema } from '../model.js'
 import { COLLATION_SEQUENCE_MAX_CHAR, CRON_EVALS_ASC_IDX, EVALS_ASC_IDX } from './pouchdb.js'
-
-const deflateP = promisify(deflate)
-const inflateP = promisify(inflate)
+import { createProcessId } from './ao-process.js'
 
 const evaluationDocSchema = z.object({
   _id: z.string().min(1),
@@ -43,15 +38,6 @@ function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
   return `eval-${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
 }
 
-function createProcessId ({ processId }) {
-  /**
-   * transactions can sometimes start with an underscore,
-   * which is not allowed in PouchDB, so prepend to create
-   * an _id
-   */
-  return `proc-${processId}`
-}
-
 function createMessageHashId ({ messageHash }) {
   /**
    * transactions can sometimes start with an underscore,
@@ -73,8 +59,6 @@ const toEvaluation = applySpec({
 })
 
 export function findEvaluationWith ({ pouchDb }) {
-  const memoryLens = lensPath(['output', 'Memory'])
-
   return ({ processId, to, ordinate, cron }) => {
     return of({ processId, to, ordinate, cron })
       .chain(fromPromise(() => pouchDb.get(createEvaluationId({ processId, timestamp: to, ordinate, cron }))))
@@ -84,17 +68,6 @@ export function findEvaluationWith ({ pouchDb }) {
           return Rejected(err)
         },
         (found) => of(found)
-          /**
-           * Also retrieve the state buffer, persisted as an attachment
-           * and set it on the output.Memory field to match the expected output shape
-           */
-          .chain(fromPromise(async (doc) => {
-            const buffer = await pouchDb.getAttachment(doc._id, 'memory.txt')
-            /**
-             * Make sure to decompress the state buffer
-             */
-            return set(memoryLens, await inflateP(buffer), doc)
-          }))
           /**
            * Ensure the input matches the expected
            * shape
@@ -106,8 +79,8 @@ export function findEvaluationWith ({ pouchDb }) {
   }
 }
 
-export function findLatestEvaluationWith ({ pouchDb }) {
-  function createQuery ({ processId, to, ordinate, cron }) {
+export function findLatestEvaluationsWith ({ pouchDb }) {
+  function createQuery ({ processId, to, ordinate, cron, limit }) {
     const query = {
       selector: {
         _id: {
@@ -136,7 +109,7 @@ export function findLatestEvaluationWith ({ pouchDb }) {
        * Only get the latest document within the range,
        * aka the latest evaluation
        */
-      limit: 1,
+      limit,
       use_index: EVALS_ASC_IDX
     }
 
@@ -151,8 +124,6 @@ export function findLatestEvaluationWith ({ pouchDb }) {
     return query
   }
 
-  const memoryLens = lensPath(['output', 'Memory'])
-
   return ({ processId, to, ordinate, cron }) => {
     return of({ processId, to, ordinate, cron })
       .map(createQuery)
@@ -163,31 +134,13 @@ export function findLatestEvaluationWith ({ pouchDb }) {
             return res.docs
           })
       }))
-      .map(head)
-      .chain((doc) => doc ? Resolved(doc) : Rejected(undefined))
-      /**
-       * Also retrieve the state buffer, persisted as an attachment
-       * and set it on the output.Memory field to match the expected output shape
-       */
-      .chain(fromPromise(async (doc) => {
-        const buffer = await pouchDb.getAttachment(doc._id, 'memory.txt')
-        /**
-         * Make sure to decompress the state buffer
-         */
-        return set(memoryLens, await inflateP(buffer), doc)
-      }))
-      /**
-       * Ensure the input matches the expected
-       * shape
-       */
-      .map(evaluationDocSchema.parse)
-      .map(toEvaluation)
+      .map(map(toEvaluation))
       .toPromise()
   }
 }
 
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
-  const logger = _logger.child('pouchDb:saveEvaluation')
+  const logger = _logger.child('ao-evaluation:saveEvaluation')
 
   const saveEvaluationInputSchema = z.object({
     _id: z.string().min(1),
@@ -204,20 +157,7 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
      * Omit buffer from the document schema (see _attachments below)
      */
     output: evaluationSchema.shape.output.omit({ Memory: true }),
-    type: z.literal('evaluation'),
-    /**
-     * Since Bibo, the state of a process is a buffer, so we will store it as
-     * a document attachment in PouchDb, then reassemable the evaluation shape
-     * when it is used as a start point for eval (see findEvaluation)
-     *
-     * See https://pouchdb.com/api.html#save_attachment
-     */
-    _attachments: z.object({
-      'memory.txt': z.object({
-        content_type: z.literal('text/plain'),
-        data: z.any()
-      })
-    })
+    type: z.literal('evaluation')
   })
 
   return (evaluation) => {
@@ -254,32 +194,12 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
             prop('output'),
             /**
              * Make sure to omit the buffer from the output field
-             * on the document. We will instead persist the state buffer
-             * as an attachment (see below)
+             * on the document.
              */
             omit(['Memory'])
           ),
           evaluatedAt: prop('evaluatedAt'),
-          type: always('evaluation'),
-          /**
-           * Store the state produced from the evaluation
-           * as an attachment. This allows for efficient storage
-           * and retrieval of the Buffer
-           *
-           * See https://pouchdb.com/api.html#save_attachment
-           */
-          _attachments: always({
-            'memory.txt': {
-              content_type: 'text/plain',
-              /**
-               * zlib compress the buffer before persisting
-               *
-               * In testing, this results in orders of magnitude
-               * smaller buffer and smaller persistence times
-               */
-              data: await deflateP(evaluation.output.Memory)
-            }
-          })
+          type: always('evaluation')
         })(evaluation)
       ))
       /**

@@ -1,25 +1,21 @@
 /* eslint-disable no-throw-literal */
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { deflate } from 'node:zlib'
-import { promisify } from 'node:util'
 
-import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
-import { findEvaluationsWith, findLatestEvaluationWith, findMessageHashWith, saveEvaluationWith } from './ao-evaluation.js'
+import { findEvaluationsSchema, findLatestEvaluationsSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { findEvaluationsWith, findLatestEvaluationsWith, findMessageHashWith, saveEvaluationWith } from './ao-evaluation.js'
 import { createLogger } from '../logger.js'
 import { CRON_EVALS_ASC_IDX, EVALS_ASC_IDX } from './pouchdb.js'
 
 const logger = createLogger('ao-cu:readState')
-const deflateP = promisify(deflate)
 
 describe('ao-evaluation', () => {
   describe('findLatestEvaluation', () => {
     test('return the lastest evaluation for the process', async () => {
       const evaluatedAt = new Date().toISOString()
-      const Memory = Buffer.from('Hello World', 'utf-8')
 
-      const findLatestEvaluation = findLatestEvaluationSchema.implement(
-        findLatestEvaluationWith({
+      const findLatestEvaluations = findLatestEvaluationsSchema.implement(
+        findLatestEvaluationsWith({
           pouchDb: {
             find: async (op) => {
               return {
@@ -38,18 +34,12 @@ describe('ao-evaluation', () => {
                   }
                 ]
               }
-            },
-            getAttachment: async (_id, name) => {
-              assert.equal(_id, 'eval-process-123,1702677252111')
-              assert.equal(name, 'memory.txt')
-              // impl will inflate this buffer
-              return deflateP(Memory)
             }
           },
           logger
         }))
 
-      const res = await findLatestEvaluation({
+      const [res] = await findLatestEvaluations({
         processId: 'process-123',
         to: 1702677252111,
         ordinate: '1',
@@ -60,32 +50,32 @@ describe('ao-evaluation', () => {
       assert.equal(res.ordinate, '1')
       assert.equal(res.blockHeight, 1234)
       assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { Memory, Messages: [{ foo: 'bar' }] })
+      assert.deepStrictEqual(res.output, { Messages: [{ foo: 'bar' }] })
       assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
     })
 
-    test('rejects if no interaction is found', async () => {
-      const findLatestEvaluation = findLatestEvaluationSchema.implement(
-        findLatestEvaluationWith({
+    test('returns empty list if no evaluations are found', async () => {
+      const findLatestEvaluations = findLatestEvaluationsSchema.implement(
+        findLatestEvaluationsWith({
           pouchDb: {
             find: async () => ({ docs: [] })
           },
           logger
         })
       )
-      await findLatestEvaluation({
+
+      const res = await findLatestEvaluations({
         processId: 'process-123',
         to: '1702677252111'
       })
-        .then(assert.fail)
-        .catch(() => assert.ok(true))
+
+      assert.equal(res.length, 0)
     })
   })
 
   describe('saveEvaluation', () => {
-    test('save the evaluation to pouchdb with the Memory as an attachment, and the messageHash', async () => {
+    test('save the evaluation and the messageHash', async () => {
       const evaluatedAt = new Date().toISOString()
-      const Memory = Buffer.from('Hello World', 'utf-8')
 
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
@@ -105,18 +95,6 @@ describe('ao-evaluation', () => {
                 // buffer is omitted from output and moved to _attachments
                 output: { Messages: [{ foo: 'bar' }] },
                 type: 'evaluation'
-              })
-              assert.deepStrictEqual(evaluationDoc._attachments, {
-                'memory.txt': {
-                  content_type: 'text/plain',
-                  /**
-                   * zlib compress the buffer before persisting
-                   *
-                   * In testing, this results in orders of magnitude
-                   * smaller buffer and smaller persistence times
-                   */
-                  data: await deflateP(Memory)
-                }
               })
               assert.equal(evaluatedAt.toISOString(), evaluatedAt.toISOString())
 
@@ -139,14 +117,13 @@ describe('ao-evaluation', () => {
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
-        output: { Memory, Messages: [{ foo: 'bar' }] },
+        output: { Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
 
     test('save only the evaluation as a doc, if not deepHash', async () => {
       const evaluatedAt = new Date().toISOString()
-      const Memmory = Buffer.from('Hello World', 'utf-8')
 
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
@@ -167,7 +144,7 @@ describe('ao-evaluation', () => {
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
-        output: { Memmory, Messages: [{ foo: 'bar' }] },
+        output: { Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
