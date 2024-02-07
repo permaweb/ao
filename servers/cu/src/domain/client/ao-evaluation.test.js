@@ -5,20 +5,14 @@ import { deflate } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { findEvaluationsSchema, findLatestEvaluationSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
-import {
-  CRON_EVALS_ASC_IDX,
-  EVALS_ASC_IDX,
-  findEvaluationsWith,
-  findLatestEvaluationWith,
-  findMessageHashWith,
-  saveEvaluationWith
-} from './pouchdb.js'
+import { findEvaluationsWith, findLatestEvaluationWith, findMessageHashWith, saveEvaluationWith } from './ao-evaluation.js'
 import { createLogger } from '../logger.js'
+import { CRON_EVALS_ASC_IDX, EVALS_ASC_IDX } from './pouchdb.js'
 
 const logger = createLogger('ao-cu:readState')
 const deflateP = promisify(deflate)
 
-describe('pouchdb', () => {
+describe('ao-evaluation', () => {
   describe('findLatestEvaluation', () => {
     test('return the lastest evaluation for the process', async () => {
       const evaluatedAt = new Date().toISOString()
