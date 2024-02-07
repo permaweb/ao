@@ -19,6 +19,6 @@ export const withErrorHandler = (handler) => (req, res) => {
       const formatted = errFrom(err)
       if (res.writableEnded) return
 
-      res.status(err.status || 500).json({ error: formatted.message || 'Internal Server Error' })
+      res.status(err.status || 500).send({ error: formatted.message || 'Internal Server Error' })
     })
 }
