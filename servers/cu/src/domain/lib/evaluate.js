@@ -6,6 +6,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
 import { doesExceedMaximumHeapSizeSchema, evaluatorSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { evaluationSchema } from '../model.js'
 
 /**
  * The result that is produced from this step
@@ -15,7 +16,7 @@ import { doesExceedMaximumHeapSizeSchema, evaluatorSchema, findMessageHashSchema
  * is always added to context
  */
 const ctxSchema = z.object({
-  output: z.record(z.any())
+  output: evaluationSchema.shape.output
 }).passthrough()
 
 const toEvaledCron = ({ timestamp, cron }) => `${timestamp}-${cron}`
@@ -103,12 +104,14 @@ export function evaluateWith (env) {
   const doesHeapExceedMaxSize = doesHeapExceedMaxSizeWith(env)
   const loadEvaluator = evaluatorWith(env)
 
+  const saveLatestProcessMemory = env.saveLatestProcessMemory
+
   /**
    * Given the previous interaction output,
    * return a function that will merge the next interaction output
    * with the previous.
    */
-  const mergeOutput = (prev) => pipe(
+  const mergeOutput = (prev, { noSave, message, cron, ordinate }) => pipe(
     defaultTo({}),
     applySpec({
       /**
@@ -142,7 +145,17 @@ export function evaluateWith (env) {
           [is(Number), String],
           [T, identity]
         ])
-      )
+      ),
+      GasUsed: pathOr(undefined, ['GasUsed']),
+      /**
+       * These values are folded,
+       * so that we can potentially update the process memory cache
+       * at the end of evaluation
+       */
+      noSave: always(noSave),
+      message: always(message),
+      cron: always(cron),
+      ordinate: always(ordinate)
     })
   )
 
@@ -179,8 +192,11 @@ export function evaluateWith (env) {
           Error: pathOr(undefined, ['result', 'Error']),
           Messages: pathOr([], ['result', 'Messages']),
           Spawns: pathOr([], ['result', 'Spawns']),
-          Output: pathOr('', ['result', 'Output'])
+          Output: pathOr('', ['result', 'Output']),
+          GasUsed: pathOr(undefined, ['result', 'GasUsed']),
+          noSave: always(true)
         })(ctx)
+
         /**
          * Iterate over the async iterable of messages,
          * and evaluate each one
@@ -229,7 +245,7 @@ export function evaluateWith (env) {
                  * The the previous interaction output, and merge it
                  * with the output of the current interaction
                  */
-                .then(mergeOutput(prev))
+                .then(mergeOutput(prev, { noSave, message, cron, ordinate }))
                 .then(async (output) => {
                   if (cron) ctx.stats.messages.cron++
                   else ctx.stats.messages.scheduled++
@@ -294,6 +310,25 @@ export function evaluateWith (env) {
                     })
                 })
             )
+        }
+
+        /**
+         * Make sure to attempt to cache the last result
+         * in the process memory cache
+         *
+         * TODO: could probably make this cleaner
+         */
+        const { noSave, cron, ordinate, message } = prev
+        if (!noSave) {
+          await saveLatestProcessMemory({
+            processId: ctx.id,
+            messageId: message.Id,
+            timestamp: message.Timestamp,
+            blockHeight: message['Block-Height'],
+            ordinate,
+            cron,
+            Memory: prev.Memory
+          })
         }
 
         return prev

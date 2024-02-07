@@ -4,6 +4,7 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
+import { COLLATION_SEQUENCE_MIN_CHAR } from '../client/pouchdb.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
@@ -20,7 +21,14 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (id) => {
         assert.equal(id, PROCESS)
         return { url: 'https://foo.bar' }
@@ -48,15 +56,10 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.anchor, null)
     assert.deepStrictEqual(res.data, 'data-123')
     assert.deepStrictEqual(res.block, { height: 123, timestamp: 1697574792000 })
-    assert.deepStrictEqual(res.result, {
-      Memory: null,
-      Messages: [],
-      Output: '',
-      Spawns: []
-    })
+    assert.deepStrictEqual(res.result, { Memory: null })
     assert.equal(res.from, undefined)
     assert.equal(res.fromCron, undefined)
-    assert.equal(res.ordinate, '^')
+    assert.equal(res.ordinate, COLLATION_SEQUENCE_MIN_CHAR)
     assert.equal(res.fromBlockHeight, undefined)
     assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
@@ -80,7 +83,14 @@ describe('loadProcess', () => {
         block: { height: 123, timestamp: 1697574792 }
       }),
       saveProcess: async () => assert.fail('should not save if found in db'),
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (_id) => assert.fail('should not locate su if found in db'),
       loadProcess: async (_id) => assert.fail('should not load process block if found in db'),
       logger
@@ -106,7 +116,6 @@ describe('loadProcess', () => {
       blockHeight: 1234,
       evaluatedAt: new Date(),
       output: {
-        Memory: Buffer.from('Hello', 'utf-8'),
         Messages: [
           {
             target: 'foobar',
@@ -129,10 +138,9 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
-      findLatestEvaluation: async ({ processId, to }) => {
-        assert.equal(processId, PROCESS)
-        assert.equal(to, '1697574792000')
-        return cachedEvaluation
+      findEvaluation: async () => cachedEvaluation,
+      findLatestEvaluation: async ({ processId, timestamp }) => {
+        assert.fail('should not be called when exact match is found')
       },
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
@@ -149,7 +157,6 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
     assert.deepStrictEqual(res.fromCron, cachedEvaluation.cron)
     assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
-    assert.deepStrictEqual(res.evaluatedAt, cachedEvaluation.evaluatedAt)
     assert.equal(res.id, PROCESS)
   })
 
@@ -171,7 +178,14 @@ describe('loadProcess', () => {
         })
         return PROCESS
       },
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -194,7 +208,14 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -215,7 +236,14 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -238,7 +266,14 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -261,7 +296,14 @@ describe('loadProcess', () => {
     const loadProcess = loadProcessWith({
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
-      findLatestEvaluation: async () => { throw { status: 404 } },
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async () => ({
+        Memory: null,
+        timestamp: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+      }),
       locateScheduler: async (id) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',

@@ -1,8 +1,75 @@
+import { promisify } from 'node:util'
+import { gunzip, gzip } from 'node:zlib'
+
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, prop } from 'ramda'
+import { always, applySpec, complement, compose, map, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
+import { LRUCache } from 'lru-cache'
 
 import { processSchema } from '../model.js'
+import { COLLATION_SEQUENCE_MIN_CHAR } from './pouchdb.js'
+
+const gunzipP = promisify(gunzip)
+const gzipP = promisify(gzip)
+
+/**
+ * @type {LRUCache<string, { evaluation: Evaluation, Memory: ArrayBuffer }>}
+ *
+ * @typedef Evaluation
+ * @prop {string} [messageId]
+ * @prop {string} timestamp
+ * @prop {string} ordinate
+ * @prop {number} blockHeight
+ * @prop {string} [cron]
+ */
+let processMemoryCache
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
+  if (processMemoryCache) return processMemoryCache
+
+  processMemoryCache = new LRUCache({
+    /**
+     * #######################
+     * Time-To-Live configuration
+     * #######################
+     */
+    ttl: TTL,
+    /**
+     * https://www.npmjs.com/package/lru-cache#allowstale
+     *
+     * This should help with keeping evaluations fast, despite TTL
+     * having passed.
+     */
+    allowStale: true,
+    /**
+     * https://www.npmjs.com/package/lru-cache#updateageonget
+     */
+    updateAgeOnGet: true,
+    /**
+     * #######################
+     * Capacity Configuration
+     * #######################
+     */
+    maxSize: MAX_SIZE,
+    /**
+     * Size is calculated using the Memory Array Buffer
+     */
+    sizeCalculation: ({ Memory }) => Memory.byteLength,
+    /**
+     * #######################
+     * Disposal configuration
+     * #######################
+     */
+    /**
+     * https://www.npmjs.com/package/lru-cache#nodisposeonset
+     *
+     * Will prevent calling our dispose function
+     */
+    noDisposeOnSet: true,
+    disposeAfter: (value, key) => onEviction({ key, value })
+  })
+
+  return processMemoryCache
+}
 
 const processDocSchema = z.object({
   _id: z.string().min(1),
@@ -15,6 +82,18 @@ const processDocSchema = z.object({
   block: processSchema.shape.block,
   type: z.literal('process')
 })
+
+function isLaterThan (eval1, eval2) {
+  /**
+   * timestamps are equal some might be two crons on overlapping interval,
+   * so compare the crons
+   */
+  if (eval2.timestamp === eval1.timestamp) return (eval2.cron || '') > (eval1.cron || '')
+
+  return eval2.timestamp > eval1.timestamp
+}
+
+const isEarlierThan = complement(isLaterThan)
 
 export function createProcessId ({ processId }) {
   /**
@@ -82,5 +161,241 @@ export function saveProcessWith ({ pouchDb }) {
           .map(always(doc._id))
       )
       .toPromise()
+  }
+}
+
+export function findProcessMemoryBeforeWith ({
+  cache = processMemoryCache,
+  queryGateway,
+  loadTransactionData,
+  logger
+}) {
+  queryGateway = fromPromise(queryGateway)
+  loadTransactionData = fromPromise(loadTransactionData)
+
+  const GET_AO_PROCESS_CHECKPOINTS = `
+    query GetAoProcessCheckpoints(
+      $processId: String!
+      $limit: Int!
+    ) {
+      transactions(
+        tags: [
+          { name: "Data-Protocol", values: ["ao"] }
+          { name: "Type", values: ["Checkpoint"] }
+          { name: "Process", values: [$processId] }
+        ],
+        first: $limit,
+        sort: HEIGHT_DESC
+      ) {
+        edges {
+          node {
+            id
+            owner {
+              address
+            }
+            tags {
+              name
+              value
+            }
+          }
+        }
+      }
+    }
+  `
+
+  function pluckTagValue (name, tags) {
+    const tag = tags.find((t) => t.name === name)
+    return tag ? tag.value : undefined
+  }
+
+  /**
+   * TODO: lots of room for optimization here
+   */
+  function determineLatestCheckpointBefore ({ timestamp, ordinate, cron, edges }) {
+    return transduce(
+      compose(
+        map(prop('node')),
+        map((node) => {
+          return {
+            id: node.id,
+            timestamp: pluckTagValue('Timestamp', node.tags),
+            ordinate: pluckTagValue('Nonce', node.tags),
+            blockHeight: pluckTagValue('Block-Height', node.tags),
+            cron: pluckTagValue('Cron-Interval', node.tags),
+            encoding: pluckTagValue('Content-Encoding', node.tags)
+          }
+        })
+      ),
+      (latest, checkpoint) => {
+        if (!latest) return checkpoint
+        /**
+         * checkpoint is later than the timestamp we're interested in,
+         * so we cannot use it
+         */
+        if (isLaterThan({ timestamp, ordinate, cron }, checkpoint)) return latest
+        /**
+         * The checkpoint is earlier than the latest checkpoint we've found,
+         * so just ignore it
+         */
+        if (isEarlierThan(latest, checkpoint)) return latest
+        /**
+         * this checkpoint is the new latest we've come across
+         */
+        return checkpoint
+      },
+      undefined,
+      edges
+    )
+  }
+
+  async function decodeData (encoding) {
+    /**
+     * TODO: add more encoding options
+     */
+    if (encoding && encoding !== 'gzip') {
+      throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
+    }
+
+    return async (data) => {
+      if (!encoding) return data
+      return gunzipP(data)
+    }
+  }
+
+  function maybeCached ({ processId, timestamp, ordinate, cron }) {
+    return of(processId)
+      .chain((processId) => {
+        const cached = cache.get(processId)
+
+        /**
+         * There is no cached memory, or the cached memory is later
+         * than the timestamp we're interested in
+         */
+        if (
+          !cached ||
+          (timestamp && isLaterThan({ timestamp, ordinate, cron }, cached.evaluation))
+        ) return Rejected({ processId, timestamp, ordinate, cron })
+
+        logger(
+          'Found Checkpoint in in-memory cache for process "%s" before message with parameters "%j": "%j"',
+          processId,
+          { timestamp, ordinate, cron },
+          cached.evaluation
+        )
+
+        return of(cached)
+          .chain(fromPromise((cached) => gunzipP(cached.Memory)))
+          .map((Memory) => ({
+            Memory,
+            timestamp: cached.evaluation.timestamp,
+            blockHeight: cached.evaluation.blockHeight,
+            cron: cached.evaluation.cron,
+            ordinate: cached.evaluation.ordinate
+          }))
+      })
+  }
+
+  /**
+   * TODO: enable when snapshots are being written to Arweave
+   */
+  // eslint-disable-next-line no-unused-vars
+  function maybeCheckpointFromArweave ({ processId, timestamp, ordinate, cron }) {
+    return of({ processId, limit: 50 })
+      .chain((variables) => queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables }))
+      .map(path(['data', 'transactions', 'edges']))
+      .map(determineLatestCheckpointBefore)
+      .chain((latestCheckpoint) => {
+        if (!latestCheckpoint) return Rejected({ processId, timestamp, ordinate, cron })
+
+        /**
+         * We have found a Checkpoint that we can use, so
+         * now let's load the snapshotted Memory from arweave
+         */
+        return loadTransactionData(latestCheckpoint.id)
+          .chain(fromPromise((res) => res.body.arrayBuffer()))
+          /**
+           * If the buffer is encoded, we need to decode it before continuing
+           */
+          .chain(fromPromise(decodeData(latestCheckpoint.encoding)))
+          /**
+           * Finally map the Checkpoint to the expected shape
+           */
+          .map((Memory) => ({
+            Memory,
+            timestamp: latestCheckpoint.timestamp,
+            blockHeight: latestCheckpoint.blockHeight,
+            cron: latestCheckpoint.cron,
+            ordinate: latestCheckpoint.ordinate
+          }))
+      })
+  }
+
+  function coldStart ({ processId, timestamp, ordinate, cron }) {
+    logger(
+      'Could not find a Checkpoint for process "%s" before message with parameters "%j". Initializing Cold Start...',
+      processId,
+      { timestamp, ordinate, cron }
+    )
+
+    return Resolved({
+      Memory: null,
+      timestamp: undefined,
+      blockHeight: undefined,
+      cron: undefined,
+      /**
+       * No cached evaluation was found, but we still need an ordinate,
+       * in case there are Cron messages to generate prior to any scheduled
+       * messages existing in the sequence.
+       *
+       * The important attribute we need is for the ordinate to be lexicographically
+       * sortable.
+       *
+       * So we use a very small unicode character, as a pseudo-ordinate, which gets
+       * us exactly what we need
+       */
+      ordinate: COLLATION_SEQUENCE_MIN_CHAR
+    })
+  }
+
+  return ({ processId, timestamp, ordinate, cron }) =>
+    of({ processId, timestamp, ordinate, cron })
+      .chain(maybeCached)
+      // .bichain(maybeCheckpointFromArweave, Resolved)
+      .bichain(coldStart, Resolved)
+      .toPromise()
+}
+
+export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logger }) {
+  return async ({ processId, messageId, timestamp, ordinate, cron, blockHeight, Memory }) => {
+    const cached = cache.get(processId)
+
+    /**
+     * The provided value is not later than the currently cached value,
+     * so simply ignore it and return, keeping the current value in cache
+     *
+     * Having updateAgeOnGet to true also renews the cache value's TTL,
+     * which is what we want
+     */
+    if (cached && isLaterThan(cached, { timestamp, ordinate, cron })) return
+
+    logger(
+      'Saving latest memory for process "%s" with parameters "%j"',
+      processId,
+      { messageId, timestamp, ordinate, cron, blockHeight }
+    )
+    /**
+     * Either no value was cached or the provided evaluation is later than
+     * the value currently cached, so overwrite it
+     */
+    cache.set(processId, {
+      Memory: await gzipP(Memory),
+      evaluation: {
+        messageId,
+        timestamp,
+        ordinate,
+        blockHeight,
+        cron
+      }
+    })
   }
 }

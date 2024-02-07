@@ -73,7 +73,8 @@ export function dryRunWith (env) {
            *
            * Otherwise, we are evaluating up to the latest
            */
-          exact: !!messageTxId
+          exact: !!messageTxId,
+          needsMemory: true
         })
       )
       /**
