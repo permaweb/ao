@@ -1,5 +1,6 @@
 import * as GatewayClient from './client/gateway.js'
 import * as InMemoryClient from './client/in-memory.js'
+import * as SchedulerClient from './client/scheduler.js'
 
 import { locateWith } from './locate.js'
 import { rawWith } from './raw.js'
@@ -28,7 +29,7 @@ const DEFAULT_GATEWAY_URL = globalThis.GATEWAY_URL || 'https://arweave.net'
  *
  * @param {ConnectParams} [params]
  */
-export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL } = {}) {
+export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL, followRedirects = false } = {}) {
   const cache = InMemoryClient.createLruCache({ size: cacheSize })
 
   const getByOwner = InMemoryClient.getByOwnerWith({ cache })
@@ -41,7 +42,9 @@ export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL } 
    */
   const locate = locateWith({
     loadProcessScheduler: GatewayClient.loadProcessSchedulerWith({ fetch, GATEWAY_URL }),
-    cache: { getByProcess, getByOwner, setByProcess, setByOwner }
+    cache: { getByProcess, getByOwner, setByProcess, setByOwner },
+    followRedirects,
+    checkForRedirect: SchedulerClient.checkForRedirectWith({ fetch })
   })
 
   /**

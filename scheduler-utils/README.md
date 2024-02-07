@@ -85,6 +85,7 @@ specify those coonfigurations by providing their values `connect`. You can curre
 
 - The `GATEWAY_URL`
 - The In-Memory `cacheSize`
+- Following Redirects `followRedirects`, a boolean that optimizes scheduler routing if `true`
 
 > If you'd like to use no In-Memory Cache, and load the record from chain every time, then set the `cacheSize` to `0`
 
@@ -93,7 +94,8 @@ import { connect } from "@permaweb/ao-scheduler-utils";
 
 const { validate, locate, raw } = connect({
   GATEWAY_URL: "...",
-  cacheSize: 1000
+  cacheSize: 1000,
+  followRedirects: true
 });
 ```
 
