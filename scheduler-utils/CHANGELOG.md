@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.9](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.8...scheduler-utils@v0.0.9) (2024-02-07)
+
+
+### Features
+
+* **scheduler-utils:** cache redirected url ([fbf81a1](https://github.com/permaweb/ao/commit/fbf81a104e1af1b7c57496b3cd83ce8ae40c460d))
+
 ## [0.0.8](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.7...scheduler-utils@v0.0.8) (2024-01-10)
 
 
