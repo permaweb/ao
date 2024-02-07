@@ -16,7 +16,7 @@ const processDocSchema = z.object({
   type: z.literal('process')
 })
 
-function createProcessId ({ processId }) {
+export function createProcessId ({ processId }) {
   /**
    * transactions can sometimes start with an underscore,
    * which is not allowed in PouchDB, so prepend to create

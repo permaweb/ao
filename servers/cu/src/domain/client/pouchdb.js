@@ -1,7 +1,13 @@
+import { fromPromise, of } from 'hyper-async'
+import { always, applySpec, map, pipe, prop } from 'ramda'
+import { z } from 'zod'
+
 import PouchDb from 'pouchdb'
 import PouchDbFind from 'pouchdb-find'
 import PouchDbHttp from 'pouchdb-adapter-http'
 import PouchDbLevel from 'pouchdb-adapter-leveldb'
+
+import { blockSchema } from '../model.js'
 
 export const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX, BLOCKS_ASC_IDX] = [
   'cron-evals-ascending',
@@ -84,6 +90,22 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
   ]).then(() => internalPouchDb)
 }
 
+const blockDocSchema = z.object({
+  _id: z.string().min(1),
+  height: blockSchema.shape.height,
+  timestamp: blockSchema.shape.timestamp,
+  type: z.literal('block')
+})
+
+function createBlockId ({ height, timestamp }) {
+  return `block-${height}-${timestamp}`
+}
+
+const toBlock = applySpec({
+  height: prop('height'),
+  timestamp: prop('timestamp')
+})
+
 /**
  * PouchDB does Comparison of string using ICU which implements the Unicode Collation Algorithm,
  * giving a dictionary sorting of keys.
@@ -98,4 +120,53 @@ export const COLLATION_SEQUENCE_MAX_CHAR = '\ufff0'
 /**
  * This technically isn't the smallest char, but it's small enough for our needs
  */
-export const COLLATION_SEQUENCE_MIN_CHAR = '^'
+export const COLLATION_SEQUENCE_MIN_CHAR = '0'
+
+export function saveBlocksWith ({ pouchDb = internalPouchDb }) {
+  return (blocks) => {
+    return of(blocks)
+      .map(
+        map(pipe(
+          applySpec({
+            _id: (block) => createBlockId(block),
+            height: prop('height'),
+            timestamp: prop('timestamp'),
+            type: always('block')
+          }),
+          /**
+           * Ensure the expected shape before writing to the db
+           */
+          blockDocSchema.parse
+        ))
+      )
+      .chain(fromPromise(docs => pouchDb.bulkDocs(docs)))
+      .toPromise()
+  }
+}
+
+export function findBlocksWith ({ pouchDb = internalPouchDb }) {
+  function createQuery ({ minHeight, maxTimestamp }) {
+    return {
+      selector: {
+        height: { $gte: minHeight },
+        timestamp: { $lte: maxTimestamp }
+      },
+      sort: [{ height: 'asc' }],
+      limit: Number.MAX_SAFE_INTEGER,
+      use_index: BLOCKS_ASC_IDX
+    }
+  }
+
+  return ({ minHeight, maxTimestamp }) => {
+    return of({ minHeight, maxTimestamp })
+      .map(createQuery)
+      .chain(fromPromise((query) => {
+        return pouchDb.find(query).then((res) => {
+          if (res.warning) console.warn(res.warning)
+          return res.docs
+        })
+      }))
+      .map(map(toBlock))
+      .toPromise()
+  }
+}
