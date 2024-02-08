@@ -16,14 +16,14 @@ async function * toAsyncIterable (iterable) {
 
 const happyWasm = await AoLoader(readFileSync('./test/processes/happy/process.wasm'))
 const sadWasm = await AoLoader(readFileSync('./test/processes/sad/process.wasm'))
-async function evaluateHappyMessage ({ moduleId, Memory, message, AoGlobal }) {
+async function evaluateHappyMessage ({ moduleId }) {
   assert.equal(moduleId, 'foo-module')
-  return happyWasm(Memory, message, AoGlobal)
+  return ({ Memory, message, AoGlobal }) => happyWasm(Memory, message, AoGlobal)
 }
 
-async function evaluateSadMessage ({ moduleId, Memory, message, AoGlobal }) {
+async function evaluateSadMessage ({ moduleId }) {
   assert.equal(moduleId, 'foo-module')
-  return sadWasm(Memory, message, AoGlobal)
+  return ({ Memory, message, AoGlobal }) => sadWasm(Memory, message, AoGlobal)
 }
 
 describe('evaluate', () => {
@@ -32,7 +32,7 @@ describe('evaluate', () => {
       saveEvaluation: async (evaluation) => evaluation,
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateHappyMessage,
+      loadEvaluator: evaluateHappyMessage,
       logger
     })
 
@@ -184,7 +184,7 @@ describe('evaluate', () => {
       },
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateHappyMessage,
+      loadEvaluator: evaluateHappyMessage,
       logger
     }
 
@@ -286,7 +286,7 @@ describe('evaluate', () => {
         return { _id: 'messageHash-doc-123' }
       },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateHappyMessage,
+      loadEvaluator: evaluateHappyMessage,
       logger
     }
 
@@ -381,7 +381,7 @@ describe('evaluate', () => {
       },
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateHappyMessage,
+      loadEvaluator: evaluateHappyMessage,
       logger
     }
 
@@ -516,8 +516,8 @@ describe('evaluate', () => {
         assert.fail('cache should not be interacted with on a noop of state'),
       doesExceedMaximumHeapSize: async () =>
         assert.fail('heap should not be examined on a noop of state'),
-      evaluateMessage: async () =>
-        assert.fail('evaluate should not be called on a noop of state'),
+      loadEvaluator: async () =>
+        () => assert.fail('evaluate should not be called on a noop of state'),
       logger
     }
 
@@ -562,7 +562,7 @@ describe('evaluate', () => {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateSadMessage,
+      loadEvaluator: evaluateSadMessage,
       logger
     }
 
@@ -633,7 +633,7 @@ describe('evaluate', () => {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateSadMessage,
+      loadEvaluator: evaluateSadMessage,
       logger
     }
 
@@ -697,7 +697,7 @@ describe('evaluate', () => {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateSadMessage,
+      loadEvaluator: evaluateSadMessage,
       logger
     }
 
@@ -761,7 +761,7 @@ describe('evaluate', () => {
       },
       findMessageHash: async () => { throw { status: 404 } },
       doesExceedMaximumHeapSize: async () => false,
-      evaluateMessage: evaluateSadMessage,
+      loadEvaluator: evaluateSadMessage,
       logger
     }
 
@@ -860,7 +860,7 @@ describe('evaluate', () => {
         heapCheckCount++
         return false
       },
-      evaluateMessage: evaluateHappyMessage,
+      loadEvaluator: evaluateHappyMessage,
       logger
     }
 

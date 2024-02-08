@@ -133,29 +133,39 @@ export function findModuleWith ({ pouchDb }) {
  * TODO: this is encapsulated, such that we can later make this utilize
  * worker threads. We will make that change later
  */
-export function evaluateWith ({
-  cache = wasmModuleCache,
+export function evaluatorWith ({
+  // cache = wasmModuleCache,
   loadTransactionData,
   bootstrapWasmModule,
   readWasmFile,
   writeWasmFile,
   logger: _logger
 }) {
-  const logger = _logger.child('ao-module:evaluate')
+  const logger = _logger.child('ao-module:evaluator')
   loadTransactionData = fromPromise(loadTransactionData)
   readWasmFile = fromPromise(readWasmFile)
 
+  /**
+   * There is an issue with AoLoader preventing the CU from
+   * sharing the loaded WASM Module across processes, or even across
+   * separate evaluation streams of the same process.
+   *
+   * So for now, we are just disabling the in-memory cache
+   *
+   * See https://github.com/permaweb/ao/issues/439 for more info
+   */
   function maybeCached ({ moduleId, limit }) {
-    return of(moduleId)
-      .map((moduleId) => cache.get(moduleId))
-      .chain((wasmModule) => wasmModule
-        ? Resolved(wasmModule)
-        : Rejected({ moduleId, limit })
-      )
+    return Rejected({ moduleId, limit })
+    // return of(moduleId)
+    //   .map((moduleId) => cache.get(moduleId))
+    //   .chain((wasmModule) => wasmModule
+    //     ? Resolved(wasmModule)
+    //     : Rejected({ moduleId, limit })
+    //   )
   }
 
   function maybeStored ({ moduleId, limit }) {
-    logger('Wasm module "%s" not cached in memory. Checking for wasm file to load...', moduleId)
+    logger('Checking for wasm file to load...', moduleId)
 
     return of(moduleId)
       .chain(readWasmFile)
@@ -164,14 +174,14 @@ export function evaluateWith ({
         identity
       )
       .chain(fromPromise((wasm) => bootstrapWasmModule(wasm, limit)))
-      /**
-       * Cache the bootstrapped wasm module in memory for quick access
-       */
-      .map((wasmModule) => {
-        logger('Wasm file for module "%s" was found. Caching in memory for next time...', moduleId)
-        cache.set(moduleId, wasmModule)
-        return wasmModule
-      })
+      // /**
+      //  * Cache the bootstrapped wasm module in memory for quick access
+      //  */
+      // .map((wasmModule) => {
+      //   logger('Wasm file for module "%s" was found. Caching in memory for next time...', moduleId)
+      //   cache.set(moduleId, wasmModule)
+      //   return wasmModule
+      // })
   }
 
   function loadFromArweave ({ moduleId, limit }) {
@@ -200,23 +210,25 @@ export function evaluateWith ({
             .then(wasm => bootstrapWasmModule(wasm, limit))
         ]).then(([, wasmModule]) => wasmModule)
       ))
-      /**
-       * Cache the bootstrapped wasm module in memory for quick access
-       */
-      .map((wasmModule) => {
-        logger('Raw Wasm file for module "%s" was loaded from Arweave. Caching in file and in memory for next time...', moduleId)
-        cache.set(moduleId, wasmModule)
-        return wasmModule
-      })
+      // /**
+      //  * Cache the bootstrapped wasm module in memory for quick access
+      //  */
+      // .map((wasmModule) => {
+      //   logger('Raw Wasm file for module "%s" was loaded from Arweave. Caching in file and in memory for next time...', moduleId)
+      //   cache.set(moduleId, wasmModule)
+      //   return wasmModule
+      // })
   }
 
-  return ({ moduleId, limit, Memory, message, AoGlobal }) => of({ moduleId, limit })
+  return ({ moduleId, limit }) => of({ moduleId, limit })
     .chain(maybeCached)
     .bichain(maybeStored, Resolved)
     .bichain(loadFromArweave, Resolved)
     /**
-     * Evaluate the message
+     * Create an evaluator function using the wasm module loaded
      */
-    .chain(fromPromise(async (wasmModule) => wasmModule(Memory, message, AoGlobal)))
+    .map((wasmModule) =>
+      ({ Memory, message, AoGlobal }) => wasmModule(Memory, message, AoGlobal)
+    )
     .toPromise()
 }
