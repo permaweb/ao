@@ -21,18 +21,26 @@ async function buildAndSign ({ processId, tags, anchor }) {
 
   return {
     id: 'id-1',
-    // the real function doesnt return tags as data
-    // doing this here for testing
     data: Buffer.alloc(0),
     processId
   }
+}
+
+async function locateProcess () {
+  return { url: 'sched-url' }
+}
+
+async function fetchSchedulerProcess () {
+  return { tags: [{ name: 'Module', value: 'mod-1' }] }
 }
 
 describe('buildTx', () => {
   test('build and sign a tx from a cached msg', async () => {
     const buildTx = buildTxWith({
       buildAndSign,
-      logger
+      logger,
+      locateProcess,
+      fetchSchedulerProcess
     })
 
     const result = await buildTx({

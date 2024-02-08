@@ -160,9 +160,10 @@ export function processMsgWith ({
   findLatestSpawns,
   deleteMsg,
   logger,
-  writeDataItemArweave
+  writeDataItemArweave,
+  fetchSchedulerProcess
 }) {
-  const buildTx = buildTxWith({ buildAndSign, logger })
+  const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ writeDataItem, locateProcess, logger, writeDataItemArweave })
   const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
@@ -237,7 +238,7 @@ export function crankMsgsWith ({
 export function monitorProcessWith ({
   logger,
   createDataItem,
-  startProcessMonitor,
+  startProcessMonitor
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const start = startWith({ logger, startProcessMonitor })
@@ -252,7 +253,7 @@ export function monitorProcessWith ({
 export function stopMonitorProcessWith ({
   logger,
   createDataItem,
-  stopProcessMonitor,
+  stopProcessMonitor
 }) {
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const stop = stopWith({ logger, stopProcessMonitor })
