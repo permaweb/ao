@@ -46,6 +46,15 @@ export const server = pipeP(
       console.log(name)
     })
 
+    process.on('uncaughtException', (err) => {
+      console.trace('Uncaught Exception:', err)
+      process.exit(1)
+    })
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.trace('Unhandled Rejection at:', promise, 'reason:', reason)
+    })
+
     return server
   }
 )(Fastify())
