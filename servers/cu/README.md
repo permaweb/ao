@@ -1,7 +1,6 @@
 # `ao` Compute Unit
 
-This is an spec compliant `ao` Compute Unit, implemented as a Node Express
-Server.
+This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 
 <!-- toc -->
 
@@ -177,22 +176,20 @@ Anything outside of domain should only ever import from `domain/index.js`.
 
 All public routes exposed by the `ao` Compute Unit can be found in `/routes`.
 Each route is composed in `/route/index.js`, which is then composed further in
-`app.js`, the Express server. This is the Driving Adapter.
+`app.js`, the Fastify server. This is the Driving Adapter.
 
 #### Middleware
 
-In lieu of using `express` middleware api, which is specific to `express` and
-not so ergonomic for JS developers, this `ao` Compute Unit uses simple function
+In lieu of using `fastify` middleware api, which is not so ergonomic for JS developers, this `ao` Compute Unit uses simple function
 composition to achieve middleware behavior on routes. This allows for a more
 idiomatic developer experience -- if an error occurs, it can simply be thrown,
 which bubbles and is caught by a middleware that is composed at the top (see
-`withErrorHandler.js`). This is in contrast to using `express` `next` middleware
-paradigm which is clunky and not very ergonomic, and does catch bubbled errors.
+`withErrorHandler.js`).
 
-In fact, our routes don't event import `express`, and instead are injected an
-instance of `express` to mount routes onto.
+In fact, our routes don't event import `fastify`, and instead are injected an
+instance of `fastify` to mount routes onto.
 
-> `express` middleware is still leveraged, it is abstracted away from the
+> `fastify` middleware is still leveraged, it is abstracted away from the
 > majority of the developer experience, only existing in `app.js`
 
 Business logic is injected into routes via a composed middleware `withDomain.js`
