@@ -16,7 +16,9 @@ export function buildTxWith ({ buildAndSign, logger }) {
       .map(tap(() => ctx.tracer.trace('Building and signing message from outbox')))
       .chain(fromPromise(() => {
         const tagsIn = [
-          ...ctx.cachedMsg.msg.Tags,
+          ...ctx.cachedMsg.msg.Tags.filter((tag) => {
+            return !['Data-Protocol', 'Type', 'Variant', 'From-Process'].includes(tag.name)
+          }),
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
           { name: 'Variant', value: 'ao.TN.1' },
