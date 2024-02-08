@@ -1,7 +1,7 @@
 import { PassThrough, Transform, pipeline } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
+import { T, always, ascend, cond, equals, identity, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -407,7 +407,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
       ifElse(
         length,
         logger.tap('Crons found. Generating cron messages according to Crons: %j'),
-        logger.tap('No crons found. No cron messages to generate')
+        identity
       )
     )
     .chain((crons) => {
