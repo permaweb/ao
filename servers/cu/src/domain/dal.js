@@ -55,7 +55,7 @@ export const saveModuleSchema = z.function()
   .args(moduleSchema)
   .returns(z.promise(z.any()))
 
-export const evaluateSchema = z.function()
+export const evaluatorSchema = z.function()
 // TODO: beef up input and output shapes
   .args(z.any())
   .returns(z.promise(z.any()))

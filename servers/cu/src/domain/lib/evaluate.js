@@ -5,7 +5,7 @@ import {
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { doesExceedMaximumHeapSizeSchema, evaluateSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { doesExceedMaximumHeapSizeSchema, evaluatorSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -25,11 +25,16 @@ const toEvaledCron = ({ timestamp, cron }) => `${timestamp}-${cron}`
  * @property {any} db
  */
 
-function evaluateMessageWith ({ evaluateMessage }) {
-  evaluateMessage = evaluateSchema.implement(evaluateMessage)
+function evaluatorWith ({ loadEvaluator }) {
+  loadEvaluator = fromPromise(evaluatorSchema.implement(loadEvaluator))
 
-  return ({ moduleId, limit, Memory, message, AoGlobal }) =>
-    evaluateMessage({ moduleId, limit, Memory, message, AoGlobal }) // Promise
+  return (ctx) => loadEvaluator({
+    moduleId: ctx.moduleId,
+    /**
+     * TODO: eventually pass limit
+     */
+    limit: undefined
+  }).map((evaluator) => ({ evaluator, ...ctx }))
 }
 
 function saveEvaluationWith ({ saveEvaluation, logger }) {
@@ -95,7 +100,7 @@ export function evaluateWith (env) {
   const doesMessageHashExist = doesMessageHashExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
   const doesHeapExceedMaxSize = doesHeapExceedMaxSizeWith(env)
-  const evaluateMessage = evaluateMessageWith(env)
+  const loadEvaluator = evaluatorWith(env)
 
   /**
    * Given the previous interaction output,
@@ -142,6 +147,7 @@ export function evaluateWith (env) {
 
   return (ctx) =>
     of(ctx)
+      .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
         /**
          * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
@@ -213,18 +219,7 @@ export function evaluateWith (env) {
                 /**
                  * Where the actual evaluation is performed
                  */
-                .then((Memory) =>
-                  evaluateMessage({
-                    moduleId: ctx.moduleId,
-                    /**
-                     * TODO: eventually pass gas limit
-                     */
-                    limit: undefined,
-                    Memory,
-                    message,
-                    AoGlobal
-                  })
-                )
+                .then((Memory) => ctx.evaluator({ Memory, message, AoGlobal }))
                 /**
                  * Map thrown error to a result.error
                  */

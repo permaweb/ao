@@ -62,7 +62,7 @@ export const createApis = async (ctx) => {
     saveBlocks: PouchDbClient.saveBlocksWith({ pouchDb, logger }),
     findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
     saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
-    evaluateMessage: AoModuleClient.evaluateWith({
+    loadEvaluator: AoModuleClient.evaluatorWith({
       cache: wasmModuleCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
       readWasmFile: WasmClient.readWasmFile,
