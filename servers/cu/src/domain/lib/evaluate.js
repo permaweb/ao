@@ -47,10 +47,7 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
       .chain(saveEvaluation)
       .bimap(
         logger.tap('Failed to save evaluation'),
-        (res) => {
-          logger('Saved Evaluation "%s"', name)
-          return res
-        }
+        identity
       )
       /**
        * Always ensure this Async resolves
@@ -267,10 +264,6 @@ export function evaluateWith (env) {
                       return output.Error
                         ? Promise.reject(output)
                         : Promise.resolve(output)
-                    })
-                    .then(output => {
-                      logger('Applied message "%s" to process "%s"', name, ctx.id)
-                      return output
                     })
                     /**
                      * Create a new evaluation to be cached in the local db
