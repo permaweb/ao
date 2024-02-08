@@ -3,7 +3,13 @@ import { verifyInputWith } from './verify-input.js'
 import { runWith } from './run.js'
 
 /**
- * @typedev Env
+ * @typedef Env
+ *
+ * @typedef DryRunResult
+ * @property {any} Output
+ * @property {any[]} Messages
+ * @property {any[]} Spawns
+ * @property {any} [Error]
  *
  * @typedef MessageInput
  * @property {string} process
@@ -12,7 +18,8 @@ import { runWith } from './run.js'
  * @property {string} [anchor]
  *
  * @callback DryRun
- * @property {MessageInput} msg
+ * @param {MessageInput} msg
+ * @return {Promise<DryRunResult>}
  *
  * @param {Env} env
  * @returns {DryRun}
