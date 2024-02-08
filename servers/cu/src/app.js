@@ -37,7 +37,7 @@ export const server = pipeP(
 
     process.on('SIGTERM', () => {
       logger('Recevied SIGTERM. Gracefully shutting down server...')
-      server.close(() => logger('Server Shut Down'))
+      app.close(() => logger('Server Shut Down'))
     })
 
     process.on('SIGUSR2', () => {
