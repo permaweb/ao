@@ -7,6 +7,7 @@ const Module = (() => {
   return (
     function (binary, _limit) {
       var Module = Module || {}
+      Module.wasmBinary = null
       Module.wasmBinary = binary // metering.meterWASM(binary, { meterType: 'i32' }).module
 
       /**
@@ -153,8 +154,8 @@ module.exports = async function (binary, limit) {
       /** start mock console.log */
       console.log = function () { return null }
       /** end mock console.log */
-
-      if (buffer) instance.HEAPU8.set(buffer)
+      
+      if (buffer) { instance.HEAPU8.set(buffer) } 
       /**
        * Make sure to refill the gas tank for each invocation
        */

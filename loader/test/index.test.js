@@ -16,6 +16,53 @@ const { default: AoLoader } = await import(MODULE_PATH)
 const wasmBinary = fs.readFileSync('./test/process/process.wasm')
 
 describe('loader', async () => {
+  it('should clear wasm binary after evals', async () => {
+    const handle = await AoLoader(wasmBinary)
+    const result = await handle(null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result.Output, 1)
+
+    const handle2 = await AoLoader(wasmBinary)
+    const result2 = await handle2(null,
+      { Owner: 'bill', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result2.Output, 1)
+
+    const handle3 = await AoLoader(wasmBinary)
+    const result3 = await handle3(result.Memory,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result3.Output, 2)
+
+    const handle4 = await AoLoader(wasmBinary)
+    const result4 = await handle4(result2.Memory,
+      { Owner: 'bill', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    const handle5 = await AoLoader(wasmBinary)
+    const result5 = await handle5(result4.Memory,
+      { Owner: 'bill', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    const handle6 = await AoLoader(wasmBinary)
+    const result6 = await handle6(result5.Memory,
+      { Owner: 'bill', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+
+    assert.equal(result6.Output, 4)
+
+    const handle7 = await AoLoader(wasmBinary)
+    const result7 = await handle7(result3.Memory,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result7.Output, 3)
+  })
   it('load and execute message passing contract', async () => {
     const handle = await AoLoader(wasmBinary)
     const mainResult = await handle(null,
