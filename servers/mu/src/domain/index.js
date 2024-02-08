@@ -57,6 +57,7 @@ export const createApis = (ctx) => {
     locateScheduler: raw,
     locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processMsgLogger }),
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ fetch, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),

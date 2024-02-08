@@ -10,30 +10,42 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
-export function buildTxWith ({ buildAndSign, logger }) {
+export function buildTxWith (env) {
+  let { buildAndSign, logger, locateProcess, fetchSchedulerProcess } = env
+
+  locateProcess = fromPromise(locateProcess)
+  fetchSchedulerProcess = fromPromise(fetchSchedulerProcess)
+  buildAndSign = fromPromise(buildAndSign)
+
   return (ctx) => {
     return of(ctx)
       .map(tap(() => ctx.tracer.trace('Building and signing message from outbox')))
-      .chain(fromPromise(() => {
+      .chain(() => locateProcess(ctx.cachedMsg.processId))
+      .chain((res) => fetchSchedulerProcess(ctx.cachedMsg.processId, res.url))
+      .map((res) => {
         const tagsIn = [
           ...ctx.cachedMsg.msg.Tags?.filter((tag) => {
-            return !['Data-Protocol', 'Type', 'Variant', 'From-Process'].includes(tag.name)
+            return !['Data-Protocol', 'Type', 'Variant', 'From-Process', 'From-Module'].includes(tag.name)
           }) ?? [],
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
           { name: 'Variant', value: 'ao.TN.1' },
-          { name: 'From-Process', value: ctx.cachedMsg.processId }
+          { name: 'From-Process', value: ctx.cachedMsg.processId },
+          { name: 'From-Module', value: res.tags.find((t) => t.name === 'Module')?.value ?? '' }
         ]
         if (ctx.cachedMsg.initialTxId) {
           tagsIn.push({ name: 'Pushed-For', value: ctx.cachedMsg.initialTxId })
         }
-        return buildAndSign({
+        return tagsIn
+      })
+      .chain(
+        (tags) => buildAndSign({
           processId: ctx.cachedMsg.msg.Target,
-          tags: tagsIn,
+          tags,
           anchor: ctx.cachedMsg.msg.Anchor,
           data: ctx.cachedMsg.msg.Data
         })
-      }))
+      )
       .map(assoc('tx', __, ctx))
       .map(ctxSchema.parse)
       .map(logger.tap('Added tx to ctx'))

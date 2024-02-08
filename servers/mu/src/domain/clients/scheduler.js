@@ -34,7 +34,7 @@ function writeDataItemWith ({ fetch, logger }) {
   }
 }
 
-function fetchSequencerProcessWith ({ logger }) {
+function fetchSchedulerProcessWith ({ fetch, logger }) {
   return async (processId, suUrl) => {
     logger(`${suUrl}/processes/${processId}`)
 
@@ -46,5 +46,5 @@ function fetchSequencerProcessWith ({ logger }) {
 
 export default {
   writeDataItemWith,
-  fetchSequencerProcessWith
+  fetchSchedulerProcessWith
 }
