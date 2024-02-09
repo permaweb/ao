@@ -14,7 +14,7 @@ describe('ao-cu', () => {
         dryrunFetchWith({
           CU_URL: 'https://foo.bar',
           fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/dry-run/?process-id=FOO_PROCESS')
+            assert.equal(url, 'https://foo.bar/dry-run?process-id=FOO_PROCESS')
             assert.deepStrictEqual(options, {
               method: 'POST',
               headers: {
