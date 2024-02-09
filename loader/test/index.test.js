@@ -95,6 +95,58 @@ describe('loader', async () => {
   //   assert.ok(true)
   // })
 
+  it('should resize the initial heap to accomodate the larger incoming buffer', async () => {
+    const wasmBinary = fs.readFileSync('./test/aos/process.wasm')
+
+    const handle = await AoLoader(wasmBinary, 9_000_000_000_000)
+    const mainResult = handle(null,
+      {
+        Owner: 'tom',
+        Target: 'FOO',
+        Tags: [
+          { name: 'Action', value: 'Eval' }
+        ],
+        Module: '1234',
+        'Block-Height': '1234',
+        Id: '1234',
+        Data: `
+          Data = {}
+          for i = 1, 100000 do
+            table.insert(Data, "Hello")
+          end
+        `
+      },
+      {
+        Process: { Owner: 'tom', Id: 'ctr-id-456', Tags: [{ name: 'Module', value: '1234' }], Module: '1234', 'Block-Height': '1234' }
+      }
+    )
+
+    assert.ok(mainResult.Memory)
+    assert.ok(mainResult.hasOwnProperty('Messages'))
+    assert.ok(mainResult.hasOwnProperty('Spawns'))
+    assert.ok(mainResult.hasOwnProperty('Error'))
+    // assert.equal(mainResult.Output, 'Hello World')
+    // assert.equal(mainResult.GasUsed, 463918939)
+    assert.ok(true)
+
+    const nextHandle = await AoLoader(wasmBinary, 9_000_000_000_000)
+    const nextResult = nextHandle(mainResult.Memory,
+      {
+        Owner: 'tom',
+        Target: 'FOO',
+        Tags: [
+          { name: 'Action', value: 'Eval' }
+        ],
+        Data: '#Data'
+      },
+      {
+        Process: { Id: 'ctr-id-456', Tags: [] }
+      }
+    )
+    assert.ok(nextResult.hasOwnProperty('Output'))
+    assert.equal(nextResult.Output.data.output, 100000)
+  })
+
   it('should get deterministic date', async () => {
     const handle = await AoLoader(wasmBinary)
 
