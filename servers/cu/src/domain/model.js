@@ -20,6 +20,10 @@ export const domainConfigSchema = z.object({
    */
   GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL'),
   /**
+   * The url of the uploader to use to upload Process Checkpoints to Arweave
+   */
+  UPLOADER_URL: z.string().url('UPLOADER_URL must be a a valid URL'),
+  /**
    * Whether the database being used by the CU is embedded within the CU (ie. PouchDB)
    * or is on another remote process (ie. CouchDB)
    */
@@ -36,7 +40,20 @@ export const domainConfigSchema = z.object({
    * The wallet for the CU
    */
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface'),
-  WASM_MODULE_CACHE_MAX_SIZE: positiveIntSchema
+  /**
+   * The maximum size of the in-memory cache used for Wasm binaries
+   */
+  WASM_MODULE_CACHE_MAX_SIZE: positiveIntSchema,
+  /**
+   * The maximum size, in bytes, of the cache used to cache the latest memory
+   * evaluated for an ao process
+   */
+  PROCESS_MEMORY_CACHE_MAX_SIZE: positiveIntSchema,
+  /**
+   * The time to live for a cache entry in the process latest memory cache.
+   * An entries ttl is rest each time it is accessed
+   */
+  PROCESS_MEMORY_CACHE_TTL: positiveIntSchema
 })
 
 export const streamSchema = z.any().refine(stream => {

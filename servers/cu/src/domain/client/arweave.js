@@ -24,7 +24,7 @@ export function addressWith ({ WALLET, arweave = internalArweaveClient }) {
 }
 
 export function buildAndSignDataItemWith ({ WALLET, createDataItem = createData }) {
-  const signer = new ArweaveSigner(WALLET)
+  const signer = new ArweaveSigner(JSON.parse(WALLET))
 
   return async ({ data, tags, anchor }) => {
     const dataItem = createDataItem(data, signer, { anchor, tags })

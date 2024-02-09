@@ -1,8 +1,9 @@
 import { promisify } from 'node:util'
 import { gunzip, gzip } from 'node:zlib'
+import { Readable } from 'node:stream'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, complement, compose, map, path, prop, transduce } from 'ramda'
+import { always, applySpec, complement, compose, identity, map, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
@@ -68,7 +69,10 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
      * Will prevent calling our dispose function
      */
     noDisposeOnSet: true,
-    disposeAfter: (value, key) => onEviction({ key, value })
+    disposeAfter: (value, key, reason) => {
+      if (reason !== 'evict') return
+      onEviction({ key, value })
+    }
   })
 
   return processMemoryCache
@@ -171,8 +175,9 @@ export function findProcessMemoryBeforeWith ({
   cache = processMemoryCache,
   queryGateway,
   loadTransactionData,
-  logger
+  logger: _logger
 }) {
+  const logger = _logger.child('ao-process:findProcessMemoryBefore')
   queryGateway = fromPromise(queryGateway)
   loadTransactionData = fromPromise(loadTransactionData)
 
@@ -251,7 +256,7 @@ export function findProcessMemoryBeforeWith ({
     )
   }
 
-  async function decodeData (encoding) {
+  function decodeData (encoding) {
     /**
      * TODO: add more encoding options
      */
@@ -261,6 +266,7 @@ export function findProcessMemoryBeforeWith ({
 
     return async (data) => {
       if (!encoding) return data
+
       return gunzipP(data)
     }
   }
@@ -298,10 +304,6 @@ export function findProcessMemoryBeforeWith ({
       })
   }
 
-  /**
-   * TODO: enable when snapshots are being written to Arweave
-   */
-  // eslint-disable-next-line no-unused-vars
   function maybeCheckpointFromArweave ({ processId, timestamp, ordinate, cron }) {
     return of({ processId, limit: 50 })
       .chain((variables) => queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables }))
@@ -310,12 +312,17 @@ export function findProcessMemoryBeforeWith ({
       .chain((latestCheckpoint) => {
         if (!latestCheckpoint) return Rejected({ processId, timestamp, ordinate, cron })
 
+        logger(
+          'Found checkpoint on Arweave with parameters "%j"',
+          { checkpointTxId: latestCheckpoint.id, processId, timestamp, ordinate, cron }
+        )
+
         /**
          * We have found a Checkpoint that we can use, so
          * now let's load the snapshotted Memory from arweave
          */
         return loadTransactionData(latestCheckpoint.id)
-          .chain(fromPromise((res) => res.body.arrayBuffer()))
+          .chain(fromPromise((res) => res.arrayBuffer()))
           /**
            * If the buffer is encoded, we need to decode it before continuing
            */
@@ -334,6 +341,17 @@ export function findProcessMemoryBeforeWith ({
              */
             ordinate: latestCheckpoint.ordinate
           }))
+          .bimap(
+            (err) => {
+              logger(
+                'Failed to download latest checkpoint with parameters "%j"',
+                { checkpointTxId: latestCheckpoint.id, processId, timestamp, ordinate, cron },
+                err
+              )
+              return { processId, timestamp, ordinate, cron }
+            },
+            identity
+          )
       })
   }
 
@@ -404,8 +422,127 @@ export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logge
         nonce,
         blockHeight,
         ordinate,
+        encoding: 'gzip',
         cron
       }
     })
+  }
+}
+
+export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSignDataItem, uploadDataItem, address, logger: _logger }) {
+  queryGateway = fromPromise(queryGateway)
+  address = fromPromise(address)
+  hashWasmMemory = fromPromise(hashWasmMemory)
+  buildAndSignDataItem = fromPromise(buildAndSignDataItem)
+  uploadDataItem = fromPromise(uploadDataItem)
+
+  const logger = _logger.child('ao-process:saveCheckpoint')
+
+  /**
+   * We will first query the gateway to determine if this CU
+   * has already created a Checkpoint for this particular evaluation.
+   *
+   * Because cron is only specified for Cron Messages, we conditionally
+   * include those bits in the operation based on withCron
+   */
+  const GET_AO_PROCESS_CHECKPOINTS = (withCron) => `
+    query GetAoProcessCheckpoint(
+      $owner: String!
+      $processId: String!
+      $timestamp: String!
+      $nonce: String!
+      ${withCron ? '$cron: String!' : ''}
+    ) {
+      transactions(
+        tags: [
+          { name: "Data-Protocol", values: ["ao"] }
+          { name: "Type", values: ["Checkpoint"] }
+          { name: "Process", values: [$processId] }
+          { name: "Nonce", values: [$nonce] }
+          { name: "Timestamp", values: [$timestamp] }
+          ${withCron ? '{ name: "Cron-Interval", values: [$cron] }' : ''}
+        ],
+        owners: [$owner]
+        first: 1
+      ) {
+        edges {
+          node {
+            id
+            owner {
+              address
+            }
+            tags {
+              name
+              value
+            }
+          }
+        }
+      }
+    }
+  `
+
+  function createCheckpointDataItem ({ moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory }) {
+    return of({ Memory, encoding })
+      .chain(() => hashWasmMemory(Readable.from(Memory), encoding))
+      .map((sha) => {
+        /**
+         * TODO: what should we set anchor to?
+         */
+        const dataItem = {
+          data: Memory,
+          tags: [
+            { name: 'Data-Protocol', value: 'ao' },
+            { name: 'Variant', value: 'ao.TN.1' },
+            { name: 'Type', value: 'Checkpoint' },
+            { name: 'Module', value: moduleId.trim() },
+            { name: 'Process', value: processId.trim() },
+            { name: 'Epoch', value: `${epoch}`.trim() },
+            { name: 'Nonce', value: `${nonce}`.trim() },
+            { name: 'Timestamp', value: `${timestamp}`.trim() },
+            { name: 'Block-Height', value: `${blockHeight}`.trim() },
+            { name: 'Content-Type', value: 'application/octet-stream' },
+            { name: 'SHA-256', value: sha }
+          ]
+        }
+
+        if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
+        if (encoding) dataItem.tags.push({ name: 'Content-Encoding', value: encoding })
+
+        return dataItem
+      })
+      .chain(buildAndSignDataItem)
+  }
+
+  return async ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) => {
+    return address()
+      .map((owner) => ({ owner, processId, nonce: `${nonce}`, timestamp: `${timestamp}`, cron }))
+      .chain((variables) => queryGateway({ variables, query: GET_AO_PROCESS_CHECKPOINTS(!!cron) }))
+      .map(path(['data', 'transactions', 'edges', '0']))
+      .chain((checkpoint) => {
+        /**
+         * This CU has already created a Checkpoint
+         * for this evaluation so simply noop
+         */
+        if (checkpoint) return Resolved()
+
+        /**
+         * Construct and sign an ao Checkpoint data item
+         * and upload it to Arweave.
+         */
+        return of({ moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding })
+          .map(logger.tap('Creating Checkpoint for evaluation: %j'))
+          .chain((args) => createCheckpointDataItem({ ...args, Memory }))
+          .chain((dataItem) => uploadDataItem(dataItem.data))
+          .bimap(
+            logger.tap('Failed to upload Checkpoint DataItem'),
+            (res) => {
+              logger(
+                'Successfully uploaded Checkpoint DataItem for evaluation %j',
+                { checkpointTxId: res.id, processId, nonce, timestamp, cron }
+              )
+            }
+          )
+      })
+      .toPromise()
   }
 }
