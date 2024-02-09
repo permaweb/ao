@@ -40,8 +40,7 @@ export function readStateWith (env) {
       endTime: undefined,
       messages: {
         scheduled: 0,
-        cron: 0,
-        error: 0
+        cron: 0
       }
     }
 

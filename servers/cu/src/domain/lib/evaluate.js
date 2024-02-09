@@ -286,6 +286,7 @@ export function evaluateWith (env) {
                         ctx.id,
                         err.Error
                       )
+                      ctx.stats.messages.error = ctx.stats.messages.error || 0
                       ctx.stats.messages.error++
 
                       return err
