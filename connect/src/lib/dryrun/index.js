@@ -16,9 +16,11 @@ import { runWith } from './run.js'
  * @property {any} [data]
  * @property {{ name: string, value: string }[]} [tags]
  * @property {string} [anchor]
+ * @property {string} [Id]
+ * @property {string} [Owner]
  *
  * @callback DryRun
- * @param {MessageInput} msg
+ * @param {MessageInput & Object.<string, *>} msg
  * @return {Promise<DryRunResult>}
  *
  * @param {Env} env
@@ -38,6 +40,8 @@ export function dryrunWith (env) {
 
 function convert ({ process, data, tags, anchor, ...rest }) {
   return {
+    Id: '1234',
+    Owner: '1234',
     ...rest,
     Target: process,
     Data: data || '1234',
