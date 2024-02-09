@@ -15,8 +15,8 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@irys/sdk": "^0.0.4",
-    "@permaweb/ao-sdk": "0.0.21",
+    "@irys/sdk": "^0.1.6",
+    "@permaweb/aoconnect": "0.0.42",
     "arweave": "^1.14.4",
     "mime-types": "^2.1.35",
     "url-join": "^5.0.0",

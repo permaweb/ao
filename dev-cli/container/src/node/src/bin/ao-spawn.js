@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 import fs from 'node:fs'
-import { spawnProcess, createDataItemSigner } from '@permaweb/ao-sdk'
+import { spawn, createDataItemSigner } from '@permaweb/aoconnect'
 
 import { parseTags, spawnProcessWith } from '../main.js'
 
@@ -15,7 +15,7 @@ const uploadAoProcess = spawnProcessWith({
    * implement to create a contract using the ao SDK
    */
   create: async ({ module, tags, wallet }) => {
-    return spawnProcess({
+    return spawn({
       moduleId: module,
       tags,
       signer: createDataItemSigner(wallet)
