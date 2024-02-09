@@ -29,15 +29,29 @@ export function createLruCache ({ size }) {
 }
 
 export function getByProcessWith ({ cache = internalCache }) {
-  return async (processId) => {
+  return async (process) => {
     if (!internalSize) return
-    return cache.get(processId)
+    return cache.get(process)
   }
 }
 
 export function setByProcessWith ({ cache = internalCache }) {
-  return async (processId, processData) => {
+  return async (process, { url, address }, ttl) => {
     if (!internalSize) return
-    return cache.set(processId, processData)
+    return cache.set(process, { url, address }, { ttl })
+  }
+}
+
+export function getByOwnerWith ({ cache = internalCache }) {
+  return async (owner) => {
+    if (!internalSize) return
+    return cache.get(owner)
+  }
+}
+
+export function setByOwnerWith ({ cache = internalCache }) {
+  return async (owner, url, ttl) => {
+    if (!internalSize) return
+    return cache.set(owner, { url, address: owner }, { ttl })
   }
 }
