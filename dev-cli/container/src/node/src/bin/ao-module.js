@@ -2,7 +2,7 @@
 
 import fs from 'node:fs'
 
-import { ArtifactNotFoundError, BundlerHostNotSupportedError, WalletNotFoundError, parseTags, uploadModuleWith } from '../main.js'
+import { ArtifactNotFoundError, BundlerHostNotSupportedError, SUPPORTED_BUNDLERS, WalletNotFoundError, parseTags, uploadModuleWith } from '../main.js'
 import { AoModuleTags } from '../defaults.js'
 import { UPLOADERS } from '../clients.js'
 
@@ -59,7 +59,10 @@ Promise.resolve()
         return process.exit(1)
       }
       case BundlerHostNotSupportedError.code: {
-        console.error('The bundler host is not supported. The only currently supported bundler is Irys')
+        console.error(
+          'The bundler host is not supported. Host must be from supported bundlers: ',
+          Object.keys(SUPPORTED_BUNDLERS).join(', ')
+        )
         return process.exit(1)
       }
       default: {
