@@ -1,4 +1,4 @@
-const DEFAULT_GAS_LIMIT = 9_000_000_000
+const DEFAULT_GAS_LIMIT = 9_000_000_000_000_000
 
 /* eslint-disable */
 const Module = (() => {

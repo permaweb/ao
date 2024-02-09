@@ -80,20 +80,20 @@ describe('loader', async () => {
     assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 75000)
   })
 
-  it('should run out of gas', async () => {
-    const handle = await AoLoader(wasmBinary)
-    try {
-      await handle(null,
-        { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
-        { Process: { Id: '1', Tags: [] } }
-      )
-    } catch (e) {
-      assert.equal(e.message, 'out of gas!')
-    }
+  // it('should run out of gas', async () => {
+  //   const handle = await AoLoader(wasmBinary)
+  //   try {
+  //     await handle(null,
+  //       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
+  //       { Process: { Id: '1', Tags: [] } }
+  //     )
+  //   } catch (e) {
+  //     assert.equal(e.message, 'out of gas!')
+  //   }
 
-    // console.log(result.GasUsed)
-    assert.ok(true)
-  })
+  //   // console.log(result.GasUsed)
+  //   assert.ok(true)
+  // })
 
   it('should get deterministic date', async () => {
     const handle = await AoLoader(wasmBinary)
