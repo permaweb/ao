@@ -87,6 +87,8 @@ describe('ao-evaluation', () => {
                 _id: 'eval-process-123,1702677252111,1',
                 cron: undefined,
                 timestamp: 1702677252111,
+                nonce: 1,
+                epoch: 0,
                 ordinate: '1',
                 blockHeight: 1234,
                 processId: 'process-123',
@@ -113,11 +115,13 @@ describe('ao-evaluation', () => {
       await saveEvaluation({
         deepHash: 'deepHash-123',
         timestamp: 1702677252111,
+        nonce: '1',
+        epoch: 0,
         ordinate: 1,
         blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
-        output: { Messages: [{ foo: 'bar' }] },
+        output: { Messages: [{ foo: 'bar' }], Memory: 'foo' },
         evaluatedAt
       })
     })

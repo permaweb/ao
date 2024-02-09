@@ -1,5 +1,5 @@
 import { fromPromise, of, Rejected } from 'hyper-async'
-import { always, applySpec, identity, isEmpty, isNotNil, map, omit, pipe, prop } from 'ramda'
+import { always, applySpec, identity, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop } from 'ramda'
 import { z } from 'zod'
 
 import { evaluationSchema } from '../model.js'
@@ -11,12 +11,14 @@ const evaluationDocSchema = z.object({
   processId: evaluationSchema.shape.processId,
   messageId: evaluationSchema.shape.messageId,
   timestamp: evaluationSchema.shape.timestamp,
+  nonce: evaluationSchema.shape.nonce,
+  epoch: evaluationSchema.shape.epoch,
   ordinate: evaluationSchema.shape.ordinate,
   blockHeight: evaluationSchema.shape.blockHeight,
   cron: evaluationSchema.shape.cron,
   parent: z.string().min(1),
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output,
+  output: evaluationSchema.shape.output.omit({ Memory: true }),
   type: z.literal('evaluation')
 })
 
@@ -51,6 +53,8 @@ const toEvaluation = applySpec({
   processId: prop('processId'),
   messageId: prop('messageId'),
   timestamp: prop('timestamp'),
+  nonce: prop('nonce'),
+  epoch: prop('epoch'),
   ordinate: prop('ordinate'),
   blockHeight: prop('blockHeight'),
   cron: prop('cron'),
@@ -142,70 +146,43 @@ export function findLatestEvaluationsWith ({ pouchDb }) {
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   const logger = _logger.child('ao-evaluation:saveEvaluation')
 
-  const saveEvaluationInputSchema = z.object({
-    _id: z.string().min(1),
-    deepHash: z.string().nullish(),
-    processId: evaluationSchema.shape.processId,
-    messageId: evaluationSchema.shape.messageId,
-    timestamp: evaluationSchema.shape.timestamp,
-    ordinate: evaluationSchema.shape.ordinate,
-    blockHeight: evaluationSchema.shape.blockHeight,
-    cron: evaluationSchema.shape.cron,
-    parent: z.string().min(1),
-    evaluatedAt: evaluationSchema.shape.evaluatedAt,
-    /**
-     * Omit buffer from the document schema (see _attachments below)
-     */
-    output: evaluationSchema.shape.output.omit({ Memory: true }),
-    type: z.literal('evaluation')
-  })
-
   return (evaluation) => {
     return of(evaluation)
-      .chain(fromPromise(async (evaluation) =>
-        applySpec({
-        /**
-         * The processId concatenated with the timestamp, and possible the cron (if defined)
-         * is used as the _id for an evaluation
-         *
-         * This makes it easier to query using a range query against the
-         * primary index
-         */
-          _id: (evaluation) =>
-            createEvaluationId({
-              processId: evaluation.processId,
-              timestamp: evaluation.timestamp,
-              ordinate: evaluation.ordinate,
+      .map(
+        converge(
+          unapply(mergeAll),
+          [
+            toEvaluation,
+            applySpec({
               /**
-               * By appending the cron identifier to the evaluation doc _id,
+               * The processId concatenated with the timestamp, and possible the cron (if defined)
+               * is used as the _id for an evaluation
                *
-               * this guarantees the document will have a unique, but sortable, _id
+               * This makes it easier to query using a range query against the
+               * primary index
                */
-              cron: evaluation.cron
-            }),
-          processId: prop('processId'),
-          messageId: prop('messageId'),
-          timestamp: prop('timestamp'),
-          ordinate: prop('ordinate'),
-          blockHeight: prop('blockHeight'),
-          cron: prop('cron'),
-          parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
-          output: pipe(
-            prop('output'),
-            /**
-             * Make sure to omit the buffer from the output field
-             * on the document.
-             */
-            omit(['Memory'])
-          ),
-          evaluatedAt: prop('evaluatedAt'),
-          type: always('evaluation')
-        })(evaluation)
-      ))
+              _id: (evaluation) =>
+                createEvaluationId({
+                  processId: evaluation.processId,
+                  timestamp: evaluation.timestamp,
+                  ordinate: evaluation.ordinate,
+                  /**
+                   * By appending the cron identifier to the evaluation doc _id,
+                   *
+                   * this guarantees the document will have a unique, but sortable, _id
+                   */
+                  cron: evaluation.cron
+                }),
+              parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
+              type: always('evaluation')
+            })
+          ]
+        )
+      )
       /**
        * Ensure the expected shape before writing to the db
        */
-      .map(saveEvaluationInputSchema.parse)
+      .map(evaluationDocSchema.parse)
       .map((evaluationDoc) => {
         if (!evaluation.deepHash) return [evaluationDoc]
 

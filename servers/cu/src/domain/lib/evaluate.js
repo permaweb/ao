@@ -282,6 +282,8 @@ export function evaluateWith (env) {
                         processId: ctx.id,
                         messageId: message.Id,
                         timestamp: message.Timestamp,
+                        nonce: message.Nonce,
+                        epoch: message.Epoch,
                         blockHeight: message['Block-Height'],
                         evaluatedAt: new Date(),
                         output
@@ -315,8 +317,10 @@ export function evaluateWith (env) {
         if (!noSave) {
           await saveLatestProcessMemory({
             processId: ctx.id,
-            messageId: message.Id,
+            moduleId: ctx.moduleId,
             timestamp: message.Timestamp,
+            nonce: message.Nonce,
+            epoch: message.Epoch,
             blockHeight: message['Block-Height'],
             ordinate,
             cron,

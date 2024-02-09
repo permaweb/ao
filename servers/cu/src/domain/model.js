@@ -176,6 +176,20 @@ export const evaluationSchema = z.object({
    */
   messageId: z.string().min(1).nullish(),
   timestamp: z.coerce.number(),
+  /**
+   * Cron messages do not have an epoch
+   */
+  epoch: z.coerce.number().nullish(),
+  /**
+   * Cron messages do not have a nonce
+   */
+  nonce: z.coerce.number().nullish(),
+  /**
+   * Used for ordering the evaluation stream and results in the CU
+   *
+   * For a Scheduled Message, this will always simply be it's nonce.
+   * For a Cron Message, this will be the nonce of the most recent Scheduled Message.
+   */
   ordinate: z.coerce.string(),
   blockHeight: z.coerce.number(),
   /**

@@ -16,10 +16,13 @@ const gzipP = promisify(gzip)
  * @type {LRUCache<string, { evaluation: Evaluation, Memory: ArrayBuffer }>}
  *
  * @typedef Evaluation
- * @prop {string} [messageId]
+ * @prop {string} processId
+ * @prop {string} moduleId
+ * @prop {string} epoch
+ * @prop {string} nonce
  * @prop {string} timestamp
- * @prop {string} ordinate
  * @prop {number} blockHeight
+ * @prop {string} ordinate
  * @prop {string} [cron]
  */
 let processMemoryCache
@@ -211,8 +214,8 @@ export function findProcessMemoryBeforeWith ({
   /**
    * TODO: lots of room for optimization here
    */
-  function determineLatestCheckpointBefore ({ timestamp, ordinate, cron, edges }) {
-    return transduce(
+  function determineLatestCheckpointBefore ({ timestamp, ordinate, cron }) {
+    return (edges) => transduce(
       compose(
         map(prop('node')),
         map((node) => {
@@ -303,7 +306,7 @@ export function findProcessMemoryBeforeWith ({
     return of({ processId, limit: 50 })
       .chain((variables) => queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables }))
       .map(path(['data', 'transactions', 'edges']))
-      .map(determineLatestCheckpointBefore)
+      .map(determineLatestCheckpointBefore({ timestamp, ordinate, cron }))
       .chain((latestCheckpoint) => {
         if (!latestCheckpoint) return Rejected({ processId, timestamp, ordinate, cron })
 
@@ -325,6 +328,10 @@ export function findProcessMemoryBeforeWith ({
             timestamp: latestCheckpoint.timestamp,
             blockHeight: latestCheckpoint.blockHeight,
             cron: latestCheckpoint.cron,
+            /**
+             * Derived from Nonce on Checkpoint
+             * (see determineLatestCheckpointBefore)
+             */
             ordinate: latestCheckpoint.ordinate
           }))
       })
@@ -360,13 +367,13 @@ export function findProcessMemoryBeforeWith ({
   return ({ processId, timestamp, ordinate, cron }) =>
     of({ processId, timestamp, ordinate, cron })
       .chain(maybeCached)
-      // .bichain(maybeCheckpointFromArweave, Resolved)
+      .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
       .toPromise()
 }
 
 export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logger }) {
-  return async ({ processId, messageId, timestamp, ordinate, cron, blockHeight, Memory }) => {
+  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory }) => {
     const cached = cache.get(processId)
 
     /**
@@ -390,10 +397,13 @@ export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logge
     cache.set(processId, {
       Memory: await gzipP(Memory),
       evaluation: {
-        messageId,
+        processId,
+        moduleId,
         timestamp,
-        ordinate,
+        epoch,
+        nonce,
         blockHeight,
+        ordinate,
         cron
       }
     })
