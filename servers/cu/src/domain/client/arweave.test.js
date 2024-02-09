@@ -124,4 +124,8 @@ describe('arweave', () => {
       assert.ok(result.ok)
     })
   })
+
+  describe.todo('buildAndSignDataItemWith')
+  describe.todo('queryGatewayWith')
+  describe.todo('uploadDataItemWith')
 })

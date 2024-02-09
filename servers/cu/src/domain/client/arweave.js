@@ -1,7 +1,10 @@
-import { fromPromise, of } from 'hyper-async'
-import { last, map, path, pathSatisfies, pipe, pluck, prop } from 'ramda'
+import { Rejected, fromPromise, of } from 'hyper-async'
+import { identity, last, map, path, pathSatisfies, pipe, pluck, prop } from 'ramda'
 import { z } from 'zod'
 import Arweave from 'arweave'
+import WarpArBundles from 'warp-arbundles'
+
+const { createData, ArweaveSigner } = WarpArBundles
 
 /**
  * @type {Arweave}
@@ -18,6 +21,19 @@ export function addressWith ({ WALLET, arweave = internalArweaveClient }) {
   const addressP = arweave.wallets.jwkToAddress(wallet)
 
   return () => addressP
+}
+
+export function buildAndSignDataItemWith ({ WALLET, createDataItem = createData }) {
+  const signer = new ArweaveSigner(WALLET)
+
+  return async ({ data, tags, anchor }) => {
+    const dataItem = createDataItem(data, signer, { anchor, tags })
+    await dataItem.sign(signer)
+    return {
+      id: await dataItem.id,
+      data: dataItem.getRaw()
+    }
+  }
 }
 
 /**
@@ -282,5 +298,36 @@ export function queryGatewayWith ({ fetch, GATEWAY_URL, logger }) {
         logger('Error Encountered when querying gateway')
         throw new Error(`${res.status}: ${await res.text()}`)
       })
+  }
+}
+
+export function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
+  return async (dataItem) => {
+    return of(dataItem)
+      .chain(fromPromise((body) =>
+        fetch(`${UPLOADER_URL}/tx/arweave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Accept: 'application/json'
+          },
+          body
+        })
+      ))
+      .bimap(
+        logger.tap('Error while communicating with uploader:'),
+        identity
+      )
+      .bichain(
+        (err) => Rejected(JSON.stringify(err)),
+        fromPromise(async (res) => {
+          if (!res?.ok) {
+            const text = await res.text()
+            throw new Error(`${res.status}: ${text}`)
+          }
+          return res.json()
+        })
+      )
+      .toPromise()
   }
 }
