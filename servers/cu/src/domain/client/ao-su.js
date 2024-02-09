@@ -169,10 +169,14 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       .toPromise()
 }
 
-export const loadProcessWith = ({ fetch }) => {
+export const loadProcessWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId }) => {
     return fetch(`${suUrl}/processes/${processId}`, { method: 'GET' })
-      .then(res => res.json())
+      .then(async (res) => {
+        if (res.ok) return res.json()
+        logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
+        throw new Error(`${res.status}: ${await res.text()}`)
+      })
       .then(applySpec({
         owner: path(['owner', 'address']),
         tags: path(['tags']),
@@ -190,9 +194,13 @@ export const loadProcessWith = ({ fetch }) => {
   }
 }
 
-export const loadTimestampWith = ({ fetch }) => {
+export const loadTimestampWith = ({ fetch, logger }) => {
   return ({ suUrl, processId }) => fetch(`${suUrl}/timestamp?process-id=${processId}`)
-    .then(res => res.json())
+    .then(async (res) => {
+      if (res.ok) return res.json()
+      logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
+      throw new Error(`${res.status}: ${await res.text()}`)
+    })
     .then(res => ({
       /**
        * TODO: SU currently sends these back as strings
@@ -203,11 +211,18 @@ export const loadTimestampWith = ({ fetch }) => {
     }))
 }
 
-export const loadMessageMetaWith = ({ fetch }) => {
+export const loadMessageMetaWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId, messageTxId }) => {
     return fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' })
-      .then(res => res.json())
-      .then(res => ({
+      .then(async (res) => {
+        if (res.ok) return res.json()
+        logger(
+          'Error Encountered when loading message meta for message "%s" to process "%s" from SU "%s"',
+          messageTxId, processId, suUrl
+        )
+        throw new Error(`${res.status}: ${await res.text()}`)
+      })
+      .then((res) => ({
         processId: res.process_id,
         timestamp: res.timestamp,
         nonce: res.nonce

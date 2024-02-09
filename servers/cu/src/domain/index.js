@@ -25,7 +25,11 @@ export { errFrom } from './utils.js'
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
 
-  const { locate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL: ctx.GATEWAY_URL })
+  const { locate } = schedulerUtilsConnect({
+    cacheSize: 100,
+    GATEWAY_URL: ctx.GATEWAY_URL,
+    followRedirects: true
+  })
   const locateDataloader = new Dataloader(async (processIds) => {
     /**
      * locate already maintains a cache, so we'll just clear
@@ -39,6 +43,7 @@ export const createApis = async (ctx) => {
       (processId) => locate(processId).catch(err => err)
     ))
   })
+
   const pouchDb = await PouchDbClient.createPouchDbClient({
     logger: ctx.logger,
     mode: ctx.DB_MODE,
@@ -50,12 +55,33 @@ export const createApis = async (ctx) => {
     MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE
   })
 
+  const arweave = ArweaveClient.createWalletClient()
+  const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
+
+  const saveCheckpoint = AoProcessClient.saveCheckpointWith({
+    address,
+    queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger: ctx.logger }),
+    hashWasmMemory: WasmClient.hashWasmMemory,
+    buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
+    uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
+    logger: ctx.logger
+  })
+
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
-    MAX_SIZE: 50_000_000, // 50MB
-    TTL: 1000 * 60 * 60 * 2, // 2 hours,
-    onEviction: ({ key, value }) => {
-      ctx.logger('"%s" is being evicted from the cache', key)
-    }
+    MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
+    TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
+    /**
+     * Save the evicted process memory as a Checkpoint on Arweave
+     */
+    onEviction: ({ value }) =>
+      saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+        .catch((err) => {
+          ctx.logger(
+            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
+            value.evaluation,
+            err
+          )
+        })
   })
 
   const sharedDeps = (logger) => ({
@@ -132,10 +158,7 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
   })
 
-  const arweave = ArweaveClient.createWalletClient()
-  const healthcheck = healthcheckWith({
-    walletAddress: ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
-  })
+  const healthcheck = healthcheckWith({ walletAddress: address })
 
   return { readState, dryRun, readResult, readResults, readCronResults, healthcheck }
 }

@@ -37,26 +37,32 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
-    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_MODE: process.env.DB_MODE || 'embedded',
     DB_URL: process.env.DB_URL || 'ao-cache',
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
     DUMP_PATH: process.env.DUMP_PATH || './static',
     WALLET: process.env.WALLET,
-    WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5
+    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
+    WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
+    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 50_000_000, // 50MB
+    PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || 1000 * 60 * 60 * 2 // 2 hours
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
-    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
-    GATEWAY_URL: process.env.GATEWAY_URL,
+    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_MODE: process.env.DB_MODE || 'remote',
     DB_URL: process.env.DB_URL,
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
     DUMP_PATH: process.env.DUMP_PATH,
     WALLET: process.env.WALLET,
-    WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5
+    PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
+    WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
+    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 50_000_000, // 50MB
+    PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || 1000 * 60 * 60 * 2 // 2 hours
   }
 }
 
