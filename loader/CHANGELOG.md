@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.19](https://github.com/permaweb/ao/compare/loader@v0.0.18...loader@v0.0.19) (2024-02-09)
+
+
+### Bug Fixes
+
+* **loader:** dynamically resize the heap if incoming buffer is larger than initial size [#448](https://github.com/permaweb/ao/issues/448) ([6d07dab](https://github.com/permaweb/ao/commit/6d07dab79127bb16f7be13104e93cc2e1e38563e))
+
 ## [0.0.18](https://github.com/permaweb/ao/compare/loader@v0.0.17...loader@v0.0.18) (2024-02-09)
 
 ## [0.0.17](https://github.com/permaweb/ao/compare/loader@v0.0.15...loader@v0.0.17) (2024-02-06)
