@@ -36,8 +36,8 @@ export function getByProcessWith ({ cache = internalCache }) {
 }
 
 export function setByProcessWith ({ cache = internalCache }) {
-  return async (processId, processData, ttl) => {
+  return async (processId, processData) => {
     if (!internalSize) return
-    return cache.set(processId, processData, { ttl })
+    return cache.set(processId, processData)
   }
 }
