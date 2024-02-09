@@ -34,13 +34,28 @@ function writeDataItemWith ({ fetch, logger }) {
   }
 }
 
-function fetchSchedulerProcessWith ({ fetch, logger }) {
-  return async (processId, suUrl) => {
-    logger(`${suUrl}/processes/${processId}`)
+function fetchSchedulerProcessWith ({ fetch, logger, setByProcess, getByProcess }) {
+  return (processId, suUrl) => {
+    return getByProcess(processId)
+      .then(cached => {
+        if (cached) {
+          logger(`cached process found ${processId}`)
+          return cached
+        }
 
-    return fetch(`${suUrl}/processes/${processId}`)
-      .then(res => res.json())
-      .then(res => res || {})
+        logger(`${suUrl}/processes/${processId}`)
+
+        return fetch(`${suUrl}/processes/${processId}`)
+          .then(res => res.json())
+          .then(res => {
+            if (res) {
+              return setByProcess(processId, res).then(() => res)
+            }
+          })
+      })
+      .catch((e) => {
+        logger(`error fetching process ${e}`)
+      })
   }
 }
 

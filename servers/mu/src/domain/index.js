@@ -8,6 +8,7 @@ import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
 import osClient from './clients/os.js'
+import * as InMemoryClient from './clients/in-memory.js'
 
 import dataStoreClient from './lib/datastore.js'
 import { processMsgWith, crankMsgsWith, processSpawnWith, monitorProcessWith, stopMonitorProcessWith, sendDataItemWith, traceMsgsWith } from './lib/main.js'
@@ -43,12 +44,16 @@ export const createApis = (ctx) => {
   const logger = ctx.logger
   const fetch = ctx.fetch
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL: ctx.GATEWAY_URL, followRedirects: true })
+  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GATEWAY_URL: ctx.GATEWAY_URL, followRedirects: true })
 
   /**
    * hate side effects like this, see TODO in ./dbInstance.js
    */
   createDbClient({ MU_DATABASE_URL })
+
+  const cache = InMemoryClient.createLruCache({ size: 500 })
+  const getByProcess = InMemoryClient.getByProcessWith({ cache })
+  const setByProcess = InMemoryClient.setByProcessWith({ cache })
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
@@ -57,7 +62,7 @@ export const createApis = (ctx) => {
     locateScheduler: raw,
     locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processMsgLogger }),
-    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ fetch, logger: processMsgLogger }),
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     saveMsg: dataStoreClient.saveMsgWith({ dbInstance, logger: processMsgLogger }),
