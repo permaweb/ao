@@ -30,7 +30,7 @@ import { fromPromise, of } from 'hyper-async'
 export function dryrunFetchWith ({ fetch, CU_URL, logger }) {
   return (msg) => of(msg)
     .map(logger.tap('posting dryrun request to CU'))
-    .chain(fromPromise(msg => fetch(`${CU_URL}/dry-run/?process-id=${msg.Target}`, {
+    .chain(fromPromise(msg => fetch(`${CU_URL}/dry-run?process-id=${msg.Target}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
