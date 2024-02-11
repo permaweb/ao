@@ -32,8 +32,9 @@ function evaluatorWith ({ loadEvaluator }) {
     moduleId: ctx.moduleId,
     /**
      * TODO: eventually pass limit
+     * changed to 12 to try to reduce cpu thrashing
      */
-    limit: undefined
+    limit: 9_000_000_000_000
   }).map((evaluator) => ({ evaluator, ...ctx }))
 }
 
