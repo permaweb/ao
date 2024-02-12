@@ -8,7 +8,7 @@ const mockFetch = (url, options) => {
       status: 302,
       headers: {
         get: (header) => {
-          if (header === 'Location') return 'http://newlocation.com'
+          if (header === 'Location') return 'http://newlocation.com?process-id=123'
         }
       }
     })
