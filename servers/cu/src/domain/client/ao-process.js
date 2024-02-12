@@ -24,30 +24,29 @@ const gzipP = promisify(gzip)
  * @prop {string} timestamp
  * @prop {number} blockHeight
  * @prop {string} ordinate
+ * @prop {string} encoding
  * @prop {string} [cron]
  */
 let processMemoryCache
 export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
   if (processMemoryCache) return processMemoryCache
 
-  processMemoryCache = new LRUCache({
-    /**
-     * #######################
-     * Time-To-Live configuration
-     * #######################
-     */
-    ttl: TTL,
-    /**
-     * https://www.npmjs.com/package/lru-cache#allowstale
-     *
-     * This should help with keeping evaluations fast, despite TTL
-     * having passed.
-     */
-    allowStale: true,
-    /**
-     * https://www.npmjs.com/package/lru-cache#updateageonget
-     */
-    updateAgeOnGet: true,
+  /**
+   * Could not get TTL in this cache to work nicely with the
+   * AoLoader overwriting apis like performance.now() and Date.now().
+   *
+   * So for now, we're handrolling ttl tracking by using setTimeout
+   * and a vanilla Map
+   */
+  const timers = new Map()
+  const clearTimer = (key) => {
+    if (timers.has(key)) {
+      clearTimeout(timers.get(key))
+      timers.delete(key)
+    }
+  }
+
+  const data = new LRUCache({
     /**
      * #######################
      * Capacity Configuration
@@ -58,24 +57,49 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
      * Size is calculated using the Memory Array Buffer
      */
     sizeCalculation: ({ Memory }) => Memory.byteLength,
-    /**
-     * #######################
-     * Disposal configuration
-     * #######################
-     */
-    /**
-     * https://www.npmjs.com/package/lru-cache#nodisposeonset
-     *
-     * Will prevent calling our dispose function
-     */
     noDisposeOnSet: true,
     disposeAfter: (value, key, reason) => {
-      if (reason !== 'evict') return
+      if (reason === 'set') return
+
+      clearTimer(key)
       onEviction({ key, value })
     }
   })
+  const cache = {
+    get: (key) => {
+      if (!data.has(key)) return undefined
 
-  return processMemoryCache
+      /**
+       * Will subsequently renew the age
+       * and recency of the cached value
+       */
+      const value = data.get(key)
+      cache.set(key, value)
+
+      return value
+    },
+    set: (key, value) => {
+      clearTimer(key)
+      /**
+       * TODO: revisit, as I don't know how this will impact performance,
+       * having lots of setTimeouts
+       *
+       * Calling delete will trigger the disposeAfter callback on the cache
+       * to be called
+       */
+      const t = setTimeout(() => data.delete(key), TTL)
+      /**
+       * Unref the timer, so node can close without waiting on the timer
+       * to invoke its callback
+       */
+      t.unref()
+      timers.set(key, t)
+
+      return data.set(key, value)
+    }
+  }
+
+  return cache
 }
 
 const processDocSchema = z.object({
