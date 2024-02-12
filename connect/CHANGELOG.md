@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.43](https://github.com/permaweb/ao/compare/connect@v0.0.42...connect@v0.0.43) (2024-02-12)
+
+
+### Bug Fixes
+
+* **connect:** make Id and Owner optional, while providing defaults, on drynrun [#451](https://github.com/permaweb/ao/issues/451) ([7bb32b9](https://github.com/permaweb/ao/commit/7bb32b960859aae51f243df4983ff1d04475d6f2))
+
 ## [0.0.42](https://github.com/permaweb/ao/compare/connect@v0.0.41...connect@v0.0.42) (2024-02-09)
 
 
