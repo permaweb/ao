@@ -138,7 +138,7 @@ module.exports = async function (binary, limit) {
 
   return (buffer, msg, env) => {
     const originalRandom = Math.random
-    const OriginalDate = Date
+    //const OriginalDate = Date
     const originalLog = console.log
     try {
       /** start mock Math.random */
@@ -147,15 +147,15 @@ module.exports = async function (binary, limit) {
 
       /** start mock Date */
       // eslint-disable-next-line no-global-assign
-      Date = function () {
-        if (arguments.length === 0) {
-          // Return a specific date and time (e.g., January 1, 2022)
-          return new OriginalDate('2022-01-01T00:00:00.000Z')
-        } else {
-          // If arguments are provided, use the original Date constructor
-          return new OriginalDate(...arguments)
-        }
-      }
+      // Date = function () {
+      //   if (arguments.length === 0) {
+      //     // Return a specific date and time (e.g., January 1, 2022)
+      //     return new OriginalDate('2022-01-01T00:00:00.000Z')
+      //   } else {
+      //     // If arguments are provided, use the original Date constructor
+      //     return new OriginalDate(...arguments)
+      //   }
+      // }
       /** end mock Date */
 
       /** start mock console.log */
@@ -175,7 +175,7 @@ module.exports = async function (binary, limit) {
 
       /** unmock functions */
       // eslint-disable-next-line no-global-assign
-      Date = OriginalDate
+      //Date = OriginalDate
       Math.random = originalRandom
       console.log = originalLog
       /** end unmock */
@@ -190,7 +190,7 @@ module.exports = async function (binary, limit) {
       }
     } finally {
       // eslint-disable-next-line no-global-assign
-      Date = OriginalDate
+      //Date = OriginalDate
       Math.random = originalRandom
       console.log = originalLog
     }
