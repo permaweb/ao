@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import ms from 'ms'
 
 import { domainConfigSchema, positiveIntSchema } from './domain/index.js'
 
@@ -46,8 +47,8 @@ const CONFIG_ENVS = {
     WALLET: process.env.WALLET,
     PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
-    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 50_000_000, // 50MB
-    PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || 1000 * 60 * 60 * 2 // 2 hours
+    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
+    PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h') // 24 hours
   },
   production: {
     MODE,
@@ -61,8 +62,8 @@ const CONFIG_ENVS = {
     WALLET: process.env.WALLET,
     PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
-    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 50_000_000, // 50MB
-    PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || 1000 * 60 * 60 * 2 // 2 hours
+    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
+    PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h') // 24 hours
   }
 }
 
