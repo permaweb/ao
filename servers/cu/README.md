@@ -39,6 +39,7 @@ There are a few environment variables that you can set:
 can reach, before the CU will halt evaluation. (defaults to 100MB `100_000_000` in development mode)
 - `GATEWAY_URL`: The Arweave gateway for the CU to use fetch block metadata, data on arweave, and Scheduler-Location data (defaults to `arweave.net` in
   development mode)
+- `UPLOADER_URL`: The url of the uploader to use to upload Process `Checkpoints` to Arweave. Defaults to `https://up.arweave.net`
 - `WALLET`: the JWK Interface stringified JSON that will be used by the CU
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU or is remote to the CU. Can be either `embedded` or `remote` (defaults to `embedded` during development)
@@ -47,6 +48,9 @@ can reach, before the CU will halt evaluation. (defaults to 100MB `100_000_000` 
   Defaults to `100`
 - `DUMP_PATH`: the path to send `heap` snapshots to. (See
   [Heap Snapshots](#heap-snapshot))
+- `WASM_MODULE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for Wasm binaries (Defaults to `5` wasm binaries)
+- `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU In-Memory cache used to cache the latest memory evaluated for ao processes. (Defaults to `50MB`)
+- `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process latest memory LRU In-Memory cache. An entries age is reset each time it is accessed (Defaults to 2 hours)
 
 ### Running With CouchDB
 
