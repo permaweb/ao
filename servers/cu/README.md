@@ -51,6 +51,7 @@ can reach, before the CU will halt evaluation. (defaults to 100MB `100_000_000` 
 - `WASM_MODULE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for Wasm binaries (Defaults to `5` wasm binaries)
 - `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU In-Memory cache used to cache the latest memory evaluated for ao processes.
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process latest memory LRU In-Memory cache. An entries age is reset each time it is accessed
+- `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint` creation uploads to Arweave. Set to any value to disable `Checkpoint` creation. (In development, you must explicitly enable `Checkpoint` creation by setting `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`. Enabled by default in production mode)
 
 ### Running With CouchDB
 

@@ -453,7 +453,7 @@ export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logge
   }
 }
 
-export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSignDataItem, uploadDataItem, address, logger: _logger }) {
+export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSignDataItem, uploadDataItem, address, logger: _logger, DISABLE_PROCESS_CHECKPOINT_CREATION }) {
   queryGateway = fromPromise(queryGateway)
   address = fromPromise(address)
   hashWasmMemory = fromPromise(hashWasmMemory)
@@ -538,6 +538,8 @@ export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSign
   }
 
   return async ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) => {
+    if (DISABLE_PROCESS_CHECKPOINT_CREATION) return
+
     return address()
       .map((owner) => ({ owner, processId, nonce: `${nonce}`, timestamp: `${timestamp}`, cron }))
       .chain((variables) => queryGateway({ variables, query: GET_AO_PROCESS_CHECKPOINTS(!!cron) }))

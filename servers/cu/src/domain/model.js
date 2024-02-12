@@ -40,6 +40,7 @@ export const domainConfigSchema = z.object({
    * The wallet for the CU
    */
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface'),
+  DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
    * The maximum size of the in-memory cache used for Wasm binaries
    */

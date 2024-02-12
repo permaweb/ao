@@ -64,7 +64,8 @@ export const createApis = async (ctx) => {
     hashWasmMemory: WasmClient.hashWasmMemory,
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
-    logger: ctx.logger
+    logger: ctx.logger,
+    DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION
   })
 
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
