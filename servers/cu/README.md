@@ -49,8 +49,8 @@ can reach, before the CU will halt evaluation. (defaults to 100MB `100_000_000` 
 - `DUMP_PATH`: the path to send `heap` snapshots to. (See
   [Heap Snapshots](#heap-snapshot))
 - `WASM_MODULE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for Wasm binaries (Defaults to `5` wasm binaries)
-- `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU In-Memory cache used to cache the latest memory evaluated for ao processes. (Defaults to `50MB`)
-- `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process latest memory LRU In-Memory cache. An entries age is reset each time it is accessed (Defaults to 2 hours)
+- `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU In-Memory cache used to cache the latest memory evaluated for ao processes.
+- `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process latest memory LRU In-Memory cache. An entries age is reset each time it is accessed
 
 ### Running With CouchDB
 
