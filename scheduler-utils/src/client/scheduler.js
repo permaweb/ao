@@ -3,7 +3,7 @@ export function checkForRedirectWith ({ fetch }) {
     const response = await fetch(`${url}?process-id=${process}`, { method: 'GET', redirect: 'manual' })
     // In an HTTP redirect the Location header is the new url
     if ([301, 302, 307, 308].includes(response.status)) {
-      return response.headers.get('Location')
+      return new URL(response.headers.get('Location')).origin
     }
     return url
   }
