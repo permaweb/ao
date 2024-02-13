@@ -132,9 +132,23 @@ export function readStateWith (env) {
            * Always remove the pending work, when it's complete
            */
           .bimap(removePending(key), removePending(key))
+          /**
+           * TODO: Need to figure out how to push this to the edge.
+           *
+           * Unwrapping here to prevent duplicate work,
+           * as a result of the same Async being forked twice.
+           * It is still wrapped in an Async below, but it's the same
+           * underlying Promise, so no duplicate work
+           *
+           * Need to figure out how to push this to the edge.
+           *
+           * The only other place toPromise is used is on clients, routes (edges),
+           * and evaluate (to prevent callstack overflow)
+           */
+          .toPromise()
       )
     }
 
-    return pendingReadState.get(key)
+    return of(key).chain(fromPromise((key) => pendingReadState.get(key)))
   }
 }
