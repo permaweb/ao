@@ -193,6 +193,7 @@ module.exports = async function (binary, limit) {
       //Date = OriginalDate
       Math.random = originalRandom
       console.log = originalLog
+      buffer = null
     }
   }
 }
