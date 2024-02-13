@@ -6,7 +6,20 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
 import { evaluateWith } from '../lib/evaluate.js'
 import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
-import { isNotNil } from 'ramda'
+import { isNotNil, join } from 'ramda'
+
+/**
+ * We will maintain a Map of currently executing readState calls.
+ *
+ * If another request comes in to invoke a readState that is already
+ * pending, then we will just return that Async instead of spinning up a new readState.
+ */
+const pendingReadState = new Map()
+const pendingKey = join(',')
+const removePending = (key) => (res) => {
+  pendingReadState.delete(key)
+  return res
+}
 
 /**
  * @typedef State
@@ -57,59 +70,71 @@ export function readStateWith (env) {
       return res
     }
 
-    return of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
-      .chain(loadProcess)
-      .chain((res) => {
-        /**
-         * The exact evaluation (identified by its input messages timestamp)
-         * was found in the cache, so just return it.
-         *
-         * evaluate sets output below, so since we've found the output
-         * without evaluating, we simply set output to the result of the cached
-         * evaluation.
-         *
-         * This exposes a single api for upstream to consume
-         */
-        if (res.exact) return Resolved({ ...res, output: res.result }).map(logStats)
-
-        return of(res)
-          .chain(loadMessages)
-          .chain(hydrateMessages)
-          .chain(loadModule)
-          // { output }
-          .chain(evaluate)
-          .chain((ctx) => {
+    const key = pendingKey([processId, messageId, to, ordinate, cron, exact, needsMemory])
+    if (!pendingReadState.has(key)) {
+      pendingReadState.set(
+        key,
+        of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
+          .chain(loadProcess)
+          .chain((res) => {
             /**
-             * Some upstream apis like readResult need an exact match on the message evaluation,
-             * and pass the 'exact' flag
+             * The exact evaluation (identified by its input messages timestamp)
+             * was found in the cache, so just return it.
              *
-             * If this flag is set, we ensure that by fetching the exact match from the db.
-             * This hedges against race conditions where multiple requests are resulting in the evaluation
-             * of the same messages in a process.
+             * evaluate sets output below, so since we've found the output
+             * without evaluating, we simply set output to the result of the cached
+             * evaluation.
              *
-             * Having this should allow readState to always start on the latestEvalutaion, relative to 'to',
-             * and reduce the chances of unnecessary 409s, due to concurrent evalutions of the same messages,
-             * across multiple requests.
+             * This exposes a single api for upstream to consume
              */
-            if (exact) {
-              return findEvaluation({ processId, to, ordinate, cron })
-                /**
-                 * Mirror output shape from loadProcess, using the exact evaluation
-                 * as the "starting point"
-                 */
-                .map((evaluation) => ({
-                  ...ctx,
-                  output: evaluation.output,
-                  from: evaluation.timestamp,
-                  ordinate: evaluation.ordinate,
-                  fromBlockHeight: evaluation.blockHeight,
-                  evaluatedAt: evaluation.evaluatedAt
-                }))
-            }
+            if (res.exact) return Resolved({ ...res, output: res.result })
 
-            return Resolved(ctx)
+            return of(res)
+              .chain(loadMessages)
+              .chain(hydrateMessages)
+              .chain(loadModule)
+              // { output }
+              .chain(evaluate)
+              .chain((ctx) => {
+                /**
+                 * Some upstream apis like readResult need an exact match on the message evaluation,
+                 * and pass the 'exact' flag
+                 *
+                 * If this flag is set, we ensure that by fetching the exact match from the db.
+                 * This hedges against race conditions where multiple requests are resulting in the evaluation
+                 * of the same messages in a process.
+                 *
+                 * Having this should allow readState to always start on the latestEvalutaion, relative to 'to',
+                 * and reduce the chances of unnecessary 409s, due to concurrent evalutions of the same messages,
+                 * across multiple requests.
+                 */
+                if (exact) {
+                  return findEvaluation({ processId, to, ordinate, cron })
+                    /**
+                     * Mirror output shape from loadProcess, using the exact evaluation
+                     * as the "starting point"
+                     */
+                    .map((evaluation) => ({
+                      ...ctx,
+                      output: evaluation.output,
+                      from: evaluation.timestamp,
+                      ordinate: evaluation.ordinate,
+                      fromBlockHeight: evaluation.blockHeight,
+                      evaluatedAt: evaluation.evaluatedAt
+                    }))
+                }
+
+                return Resolved(ctx)
+              })
           })
           .bimap(logStats, logStats)
-      })
+          /**
+           * Always remove the pending work, when it's complete
+           */
+          .bimap(removePending(key), removePending(key))
+      )
+    }
+
+    return pendingReadState.get(key)
   }
 }
