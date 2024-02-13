@@ -112,6 +112,7 @@ export const createApis = async (ctx) => {
       readWasmFile: WasmClient.readWasmFile,
       writeWasmFile: WasmClient.writeWasmFile,
       bootstrapWasmModule: AoLoader,
+      EVAL_DEFER_BACKPRESSURE: ctx.EVAL_DEFER_BACKPRESSURE,
       logger
     }),
     findMessageHash: AoEvaluationClient.findMessageHashWith({ pouchDb, logger }),

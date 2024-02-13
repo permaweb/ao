@@ -165,10 +165,11 @@ describe('ao-module', () => {
         bootstrapWasmModule: (wasm) => AoLoader(wasm),
         readWasmFile: () => assert.fail('should not readWasmFile if cached'),
         writeWasmFile: () => assert.fail('should not writeWasmFile if cached'),
+        EVAL_DEFER_BACKPRESSURE: 10,
         logger
       })
 
-      const res = (await evaluator({ moduleId }))(args)
+      const res = await (await evaluator({ moduleId }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)
@@ -193,10 +194,11 @@ describe('ao-module', () => {
         bootstrapWasmModule: (wasm) => AoLoader(wasm),
         readWasmFile: async () => readFileSync('./test/processes/happy/process.wasm'),
         writeWasmFile: () => assert.fail('should not writeWasmFile if cached on filesystem'),
+        EVAL_DEFER_BACKPRESSURE: 10,
         logger
       })
 
-      const res = (await evaluator({ moduleId }))(args)
+      const res = await (await evaluator({ moduleId }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)
@@ -224,10 +226,11 @@ describe('ao-module', () => {
           assert.equal(moduleId, 'foo-module')
           assert.ok(typeof wasm.pipe === 'function')
         },
+        EVAL_DEFER_BACKPRESSURE: 10,
         logger
       })
 
-      const res = (await evaluator({ moduleId }))(args)
+      const res = await (await evaluator({ moduleId }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)

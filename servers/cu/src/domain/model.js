@@ -40,6 +40,13 @@ export const domainConfigSchema = z.object({
    * The wallet for the CU
    */
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface'),
+  /**
+   * The number of evaluations the CU should perform before placing the next evaluation at the end
+   * of the event queue.
+   *
+   * This helps hedge against CPU/Main thread starvation due to lengthy evaluations
+   */
+  EVAL_DEFER_BACKPRESSURE: positiveIntSchema,
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
    * The maximum size of the in-memory cache used for Wasm binaries
