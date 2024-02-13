@@ -45,6 +45,7 @@ const CONFIG_ENVS = {
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
     DUMP_PATH: process.env.DUMP_PATH || './static',
     WALLET: process.env.WALLET,
+    EVAL_DEFER_BACKPRESSURE: process.env.EVAL_DEFER_BACKPRESSURE || 10,
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
@@ -61,6 +62,7 @@ const CONFIG_ENVS = {
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
     DUMP_PATH: process.env.DUMP_PATH,
     WALLET: process.env.WALLET,
+    EVAL_DEFER_BACKPRESSURE: process.env.EVAL_DEFER_BACKPRESSURE || 10,
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false', // TODO: disabled by default for now. Enable by default later
     PROCESS_WASM_HEAP_MAX_SIZE: process.env.PROCESS_WASM_HEAP_MAX_SIZE || 100_000_000, // 100MB
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries

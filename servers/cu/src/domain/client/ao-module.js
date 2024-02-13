@@ -139,11 +139,13 @@ export function evaluatorWith ({
   bootstrapWasmModule,
   readWasmFile,
   writeWasmFile,
+  EVAL_DEFER_BACKPRESSURE,
   logger: _logger
 }) {
   const logger = _logger.child('ao-module:evaluator')
   loadTransactionData = fromPromise(loadTransactionData)
   readWasmFile = fromPromise(readWasmFile)
+  let backpressure = 0
 
   function maybeCached ({ moduleId, limit }) {
     return of(moduleId)
@@ -217,7 +219,22 @@ export function evaluatorWith ({
      * Create an evaluator function using the wasm module loaded
      */
     .map((wasmModule) =>
-      ({ Memory, message, AoGlobal }) => wasmModule(Memory, message, AoGlobal)
+      ({ Memory, message, AoGlobal }) =>
+        Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
+          .then(async (defer) => {
+            /**
+             * defer the next wasm module invocation to the
+             * end of the current event queue.
+             *
+             * Since WASM module invocation is blocking and potentially CPU intensive,
+             * we may want to defer to prevent starvation of other tasks on the main thread
+             *
+             * TODO: maybe we use workers here later
+             */
+            if (defer) await new Promise(resolve => setImmediate(resolve))
+
+            return wasmModule(Memory, message, AoGlobal)
+          })
     )
     .toPromise()
 }
