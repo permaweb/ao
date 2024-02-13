@@ -35,6 +35,11 @@ export const server = pipeP(
       logger(`Server is running on http://localhost:${config.port}`)
     })
 
+    const memMonitor = setInterval(() => {
+      logger('Memory Used: %j', process.memoryUsage())
+    }, config.MEM_MONITOR_INTERVAL)
+    memMonitor.unref()
+
     process.on('SIGTERM', () => {
       logger('Recevied SIGTERM. Gracefully shutting down server...')
       app.close(() => logger('Server Shut Down'))

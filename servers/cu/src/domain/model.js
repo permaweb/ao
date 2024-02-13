@@ -40,6 +40,7 @@ export const domainConfigSchema = z.object({
    * The wallet for the CU
    */
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface'),
+  MEM_MONITOR_INTERVAL: positiveIntSchema,
   /**
    * The number of evaluations the CU should perform before placing the next evaluation at the end
    * of the event queue.
