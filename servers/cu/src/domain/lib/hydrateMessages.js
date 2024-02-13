@@ -68,7 +68,7 @@ export function maybeMessageIdWith ({ logger }) {
         continue
       }
 
-      logger('Message "%s" is forwarded. Calculating messageId...', cur.message.Id)
+      // logger('Message "%s" is forwarded. Calculating messageId...', cur.message.Id)
       try {
         cur.deepHash = await calcDataItemDeepHash({
           data: cur.message.Data,
@@ -127,7 +127,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         continue
       }
 
-      logger('Hydrating Load message for "%s" from transaction "%s"', cur.message.Id, tag.value)
+      // logger('Hydrating Load message for "%s" from transaction "%s"', cur.message.Id, tag.value)
       /**
        * - Fetch raw data and meta from gateway
        * - contruct the data item JSON, encoding the raw data as base64
@@ -138,7 +138,7 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
         loadTransactionMeta(tag.value)
       ]).then(([data, meta]) => messageFromParts({ data, meta }))
 
-      logger('Hydrated Load message for "%s" from transaction "%s" and attached as data', cur.message.Id, tag.value)
+      // logger('Hydrated Load message for "%s" from transaction "%s" and attached as data', cur.message.Id, tag.value)
 
       yield cur
     }

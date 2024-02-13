@@ -215,7 +215,7 @@ export function evaluateWith (env) {
            * if their deepHash is found in the cache, this prevents duplicate evals
            */
           if (deepHash) {
-            logger('Checking if "%s" has already been evaluated...', name)
+            // logger('Checking if "%s" has already been evaluated...', name)
             const found = await doesMessageHashExist(deepHash).toPromise()
             if (found) {
               logger('Message "%s" with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', name, deepHash)
