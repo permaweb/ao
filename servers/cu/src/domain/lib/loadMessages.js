@@ -51,7 +51,7 @@ export function findMissingBlocksIn (blocks, { min, maxTimestamp }) {
    * An optimization would be to split the "large" hold into more reasonably sized "small" holes,
    * and fetch those. aka. more resolution and less data unnecessarily loaded from the gateway
    */
-  return { min: Math.min(missing), maxTimestamp }
+  return { min: Math.min(...missing), maxTimestamp }
 }
 
 export function mergeBlocks (fromDb, fromGateway) {
@@ -370,10 +370,9 @@ function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   }
 }
 
-function loadScheduledMessagesWith ({ locateScheduler, loadMessages, loadBlocksMeta, logger }) {
+function loadScheduledMessagesWith ({ locateScheduler, loadMessages, logger }) {
   locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
-  loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
 
   return (ctx) =>
     of(ctx)
