@@ -282,7 +282,6 @@ export function cronMessagesBetweenWith ({
           const cron = blockBased[i]
 
           if (isBlockOnCron({ height: curBlock.height, originHeight: originBlock.height, cron })) {
-            logger('Generating Block based Cron Message for cron "%s" at block "%s"', `${i}-${cron.interval}`, curBlock.height)
             yield {
               cron: `${i}-${cron.interval}`,
               ordinate: leftOrdinate,
@@ -308,7 +307,6 @@ export function cronMessagesBetweenWith ({
         const cron = timeBased[i]
 
         if (isTimestampOnCron({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, cron })) {
-          logger('Generating Time based Cron Message for cron "%s" at timestamp "%s"', `${i}-${cron.interval}`, curTimestamp)
           yield {
             cron: `${i}-${cron.interval}`,
             ordinate: leftOrdinate,
