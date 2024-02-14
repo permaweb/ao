@@ -1,6 +1,10 @@
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { randomBytes } from 'node:crypto'
+
 import Dataloader from 'dataloader'
+import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
-import AoLoader from '@permaweb/ao-loader'
 
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
@@ -21,6 +25,8 @@ import { dryRunWith } from './api/dryRun.js'
 export { createLogger } from './logger.js'
 export { domainConfigSchema, positiveIntSchema } from './model.js'
 export { errFrom } from './utils.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
@@ -51,8 +57,23 @@ export const createApis = async (ctx) => {
     url: ctx.DB_URL
   })
 
-  const wasmModuleCache = await AoModuleClient.createWasmModuleCache({
-    MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE
+  const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
+    onCreateWorker: () => {
+      const workerId = randomBytes(8).toString('hex')
+      ctx.logger('Spinning up worker with id "%s"...', workerId)
+
+      return {
+        workerThreadOpts: {
+          workerData: {
+            WASM_BINARY_CACHE_MAX_SIZE: ctx.WASM_BINARY_CACHE_MAX_SIZE,
+            WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
+            WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
+            id: workerId
+          }
+        }
+      }
+    }
   })
 
   const arweave = ArweaveClient.createWalletClient()
@@ -108,12 +129,13 @@ export const createApis = async (ctx) => {
     findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
     saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
-      cache: wasmModuleCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
       readWasmFile: WasmClient.readWasmFile,
-      writeWasmFile: WasmClient.writeWasmFile,
-      bootstrapWasmModule: AoLoader,
-      EVAL_DEFER_BACKPRESSURE: ctx.EVAL_DEFER_BACKPRESSURE,
+      wasmFileExists: WasmClient.wasmFileExists,
+      /**
+       * Evaluation will invoke a worker available in the worker pool
+       */
+      evaluate: (...args) => workerPool.exec('evaluate', args),
       logger
     }),
     findMessageHash: AoEvaluationClient.findMessageHashWith({ pouchDb, logger }),

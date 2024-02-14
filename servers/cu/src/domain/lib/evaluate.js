@@ -226,14 +226,10 @@ export function evaluateWith (env) {
           prev = await Promise.resolve(prev)
             .then((prev) =>
               Promise.resolve(prev.Memory)
-                .then(Memory => {
-                  logger('Evaluating message "%s" to process "%s"', name, ctx.id)
-                  return Memory
-                })
                 /**
                  * Where the actual evaluation is performed
                  */
-                .then((Memory) => ctx.evaluator({ Memory, message, AoGlobal }))
+                .then((Memory) => ctx.evaluator({ name, processId: ctx.id, Memory, message, AoGlobal }))
                 /**
                  * Map thrown error to a result.error
                  */

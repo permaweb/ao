@@ -1,10 +1,9 @@
 /* eslint-disable no-throw-literal */
-import { describe, test, afterEach } from 'node:test'
+import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { createReadStream, readFileSync } from 'node:fs'
 import { Readable } from 'node:stream'
 
-import { LRUCache } from 'lru-cache'
 import AoLoader from '@permaweb/ao-loader'
 
 import { findModuleSchema, saveModuleSchema } from '../dal.js'
@@ -127,9 +126,10 @@ describe('ao-module', () => {
   })
 
   describe('evaluateWith', () => {
-    const cache = new LRUCache({ max: 1 })
     const moduleId = 'foo-module'
     const args = {
+      name: 'foobar Message',
+      processId: 'foobar-process',
       Memory: null,
       message: {
         Id: 'message-123',
@@ -148,57 +148,25 @@ describe('ao-module', () => {
       }
     }
 
-    afterEach(() => cache.clear())
-
-    test('should eval the message using the cached wasm', async () => {
-      cache.set('foo-module', readFileSync('./test/processes/happy/process.wasm'))
-
-      const evaluator = evaluatorWith({
-        cache: {
-          get: (moduleId) => {
-            assert.equal(moduleId, 'foo-module')
-            return cache.get(moduleId)
-          },
-          set: () => assert.fail('Should not set in cache if found in cache')
-        },
-        loadTransactionData: () => assert.fail('should not loadTransactionData if cached'),
-        bootstrapWasmModule: (wasm) => AoLoader(wasm),
-        readWasmFile: () => assert.fail('should not readWasmFile if cached'),
-        writeWasmFile: () => assert.fail('should not writeWasmFile if cached'),
-        EVAL_DEFER_BACKPRESSURE: 10,
-        logger
-      })
-
-      const res = await (await evaluator({ moduleId }))(args)
-
-      assert.ok(res.Memory)
-      assert.ok(res.Output)
-      assert.ok(res.Messages)
-      assert.ok(res.Spawns)
-      assert.ok(res.GasUsed)
-    })
-
     test('should eval the message using the cached raw wasm from a file', async () => {
       const evaluator = evaluatorWith({
-        cache: {
-          get: (moduleId) => {
-            assert.equal(moduleId, 'foo-module')
-            return cache.get(moduleId)
-          },
-          set: (moduleId, wasmModule) => {
-            assert.equal(moduleId, 'foo-module')
-            assert.ok(wasmModule.byteLength)
-          }
+        evaluate: ({ streamId, moduleId: mId, limit, name, processId, Memory, message, AoGlobal }) => {
+          assert.ok(streamId)
+          assert.equal(mId, moduleId)
+          assert.equal(limit, 9_000_000_000_000)
+          assert.equal(name, args.name)
+          assert.equal(processId, args.processId)
+
+          return AoLoader(readFileSync('./test/processes/happy/process.wasm'))
+            .then((wasmModule) => wasmModule(Memory, message, AoGlobal))
         },
         loadTransactionData: () => assert.fail('should not loadTransactionData if cached on filesystem'),
-        bootstrapWasmModule: (wasm) => AoLoader(wasm),
-        readWasmFile: async () => readFileSync('./test/processes/happy/process.wasm'),
+        wasmFileExists: async () => true,
         writeWasmFile: () => assert.fail('should not writeWasmFile if cached on filesystem'),
-        EVAL_DEFER_BACKPRESSURE: 10,
         logger
       })
 
-      const res = await (await evaluator({ moduleId }))(args)
+      const res = await (await evaluator({ moduleId, limit: 9_000_000_000_000 }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)
@@ -209,28 +177,29 @@ describe('ao-module', () => {
 
     test('should eval the message using the raw wasm fetched from arweave', async () => {
       const evaluator = evaluatorWith({
-        cache: {
-          get: () => undefined,
-          set: (moduleId, wasmModule) => {
-            assert.equal(moduleId, 'foo-module')
-            assert.ok(wasmModule.byteLength)
-          }
+        evaluate: ({ streamId, moduleId: mId, limit, name, processId, Memory, message, AoGlobal }) => {
+          assert.ok(streamId)
+          assert.equal(mId, moduleId)
+          assert.equal(limit, 9_000_000_000_000)
+          assert.equal(name, args.name)
+          assert.equal(processId, args.processId)
+
+          return AoLoader(readFileSync('./test/processes/happy/process.wasm'))
+            .then((wasmModule) => wasmModule(Memory, message, AoGlobal))
         },
         loadTransactionData: async (moduleId) => {
           assert.equal(moduleId, 'foo-module')
           return new Response(Readable.toWeb(createReadStream('./test/processes/happy/process.wasm')))
         },
-        bootstrapWasmModule: async (wasm) => AoLoader(wasm),
-        readWasmFile: async () => { throw new Error('not on filesystem') },
+        wasmFileExists: async () => { throw new Error('not on filesystem') },
         writeWasmFile: async (moduleId, wasm) => {
           assert.equal(moduleId, 'foo-module')
           assert.ok(typeof wasm.pipe === 'function')
         },
-        EVAL_DEFER_BACKPRESSURE: 10,
         logger
       })
 
-      const res = await (await evaluator({ moduleId }))(args)
+      const res = await (await evaluator({ moduleId, limit: 9_000_000_000_000 }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)
