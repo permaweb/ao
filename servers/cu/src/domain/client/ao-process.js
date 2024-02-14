@@ -3,7 +3,7 @@ import { gunzip, gzip } from 'node:zlib'
 import { Readable } from 'node:stream'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, complement, compose, identity, map, path, prop, transduce } from 'ramda'
+import { always, applySpec, compose, identity, map, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
@@ -115,16 +115,36 @@ const processDocSchema = z.object({
 })
 
 function isLaterThan (eval1, eval2) {
+  const t1 = `${eval1.timestamp}`
+  const t2 = `${eval2.timestamp}`
   /**
    * timestamps are equal some might be two crons on overlapping interval,
    * so compare the crons
    */
-  if (eval2.timestamp === eval1.timestamp) return (eval2.cron || '') > (eval1.cron || '')
+  if (t2 === t1) return (eval2.cron || '') > (eval1.cron || '')
 
-  return eval2.timestamp > eval1.timestamp
+  return t2 > t1
 }
 
-const isEarlierThan = complement(isLaterThan)
+function isEarlierThan (eval1, eval2) {
+  const t1 = `${eval1.timestamp}`
+  const t2 = `${eval2.timestamp}`
+  /**
+   * timestamps are equal some might be two crons on overlapping interval,
+   * so compare the crons
+   */
+  if (t2 === t1) return (eval2.cron || '') < (eval1.cron || '')
+
+  return t2 < t1
+}
+
+function isEqualTo (eval1, eval2) {
+  const t1 = `${eval1.timestamp}`
+  const t2 = `${eval2.timestamp}`
+
+  return t2 === t1 &&
+    (eval2.cron || '') === (eval1.cron || '')
+}
 
 export function createProcessId ({ processId }) {
   /**
@@ -259,17 +279,24 @@ export function findProcessMemoryBeforeWith ({
         })
       ),
       (latest, checkpoint) => {
-        if (!latest) return checkpoint
-        /**
-         * checkpoint is later than the timestamp we're interested in,
-         * so we cannot use it
-         */
-        if (isLaterThan({ timestamp, ordinate, cron }, checkpoint)) return latest
-        /**
-         * The checkpoint is earlier than the latest checkpoint we've found,
-         * so just ignore it
-         */
-        if (isEarlierThan(latest, checkpoint)) return latest
+        if (
+          /**
+           * checkpoint is later than the timestamp we're interested in,
+           * so we cannot use it
+           */
+          isLaterThan({ timestamp, ordinate, cron }, checkpoint) ||
+          /**
+           * checkpoint is equal to evaluation what we're interested in,
+           * so we can't use it, since we may need the evaluation's result
+           */
+          isEqualTo({ timestamp, ordinate, cron }, checkpoint) ||
+          /**
+           * The checkpoint is earlier than the latest checkpoint we've found so far,
+           * and we're looking for the latest, so just ignore this checkpoint
+           */
+          (latest && isEarlierThan(latest, checkpoint))
+        ) return latest
+
         /**
          * this checkpoint is the new latest we've come across
          */
@@ -381,7 +408,7 @@ export function findProcessMemoryBeforeWith ({
 
   function coldStart ({ processId, timestamp, ordinate, cron }) {
     logger(
-      'Could not find a Checkpoint for process "%s" before message with parameters "%j". Initializing Cold Start...',
+      '**COLD START** Could not find a Checkpoint for process "%s" before message with parameters "%j". Initializing Cold Start...',
       processId,
       { timestamp, ordinate, cron }
     )
