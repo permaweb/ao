@@ -480,7 +480,16 @@ export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logge
   }
 }
 
-export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSignDataItem, uploadDataItem, address, logger: _logger, DISABLE_PROCESS_CHECKPOINT_CREATION }) {
+export function saveCheckpointWith ({
+  queryGateway,
+  hashWasmMemory,
+  buildAndSignDataItem,
+  uploadDataItem,
+  address,
+  logger: _logger,
+  PROCESS_CHECKPOINT_CREATION_THROTTLE,
+  DISABLE_PROCESS_CHECKPOINT_CREATION
+}) {
   queryGateway = fromPromise(queryGateway)
   address = fromPromise(address)
   hashWasmMemory = fromPromise(hashWasmMemory)
@@ -564,9 +573,47 @@ export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSign
       .chain(buildAndSignDataItem)
   }
 
-  return async ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) => {
-    if (DISABLE_PROCESS_CHECKPOINT_CREATION) return
+  const recentCheckpoints = new Map()
+  const addRecentCheckpoint = (processId) => {
+    /**
+     * Shouldn't happen, since the entries clear themselves when their ttl
+     * is reached, but just in case.
+     */
+    if (recentCheckpoints.has(processId)) clearTimeout(recentCheckpoints.get(processId))
 
+    /**
+     * Add a callback that will clear the recentCheckpoint
+     * in the configured throttle ie. 24 hours
+     *
+     * We deref the timer, so the NodeJS process can successfully shutdown,
+     * without waiting on the callback to be drained from the event queue.
+     */
+    const t = setTimeout(() => recentCheckpoints.delete(processId), PROCESS_CHECKPOINT_CREATION_THROTTLE)
+    t.unref()
+    recentCheckpoints.set(processId, t)
+  }
+
+  function maybeCheckpointDisabled ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) {
+    /**
+     * Creating Checkpoints is enabled, so continue
+     */
+    if (!DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
+
+    logger('Checkpoint creation is disabled on this CU, so no work to be done.')
+    return Resolved()
+  }
+
+  function maybeRecentlyCheckpointed ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) {
+    /**
+     * A Checkpoint has not been recently created for this process, so continue
+     */
+    if (!recentCheckpoints.has(processId)) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
+
+    logger('Checkpoint was recently created for process "%s", and so not creating another one.', processId)
+    return Resolved()
+  }
+
+  function createCheckpoint ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) {
     return address()
       .map((owner) => ({ owner, processId, nonce: `${nonce}`, timestamp: `${timestamp}`, cron }))
       .chain((variables) => queryGateway({ variables, query: GET_AO_PROCESS_CHECKPOINTS(!!cron) }))
@@ -590,12 +637,26 @@ export function saveCheckpointWith ({ queryGateway, hashWasmMemory, buildAndSign
             logger.tap('Failed to upload Checkpoint DataItem'),
             (res) => {
               logger(
-                'Successfully uploaded Checkpoint DataItem for evaluation %j',
+                'Successfully uploaded Checkpoint DataItem for process "%s" on evaluation "%j"',
+                processId,
                 { checkpointTxId: res.id, processId, nonce, timestamp, cron }
               )
+              /**
+               * Track that we've recently created a checkpoint for this
+               * process, in case the CU attempts to create another one
+               *
+               * within the PROCESS_CHECKPOINT_CREATION_THROTTLE
+               */
+              addRecentCheckpoint(processId)
             }
           )
       })
+  }
+
+  return async ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) => {
+    return maybeCheckpointDisabled({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
+      .bichain(maybeRecentlyCheckpointed, Resolved)
+      .bichain(createCheckpoint, Resolved)
       .toPromise()
   }
 }
