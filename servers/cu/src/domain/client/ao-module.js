@@ -3,35 +3,9 @@ import { Readable } from 'node:stream'
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, identity, prop } from 'ramda'
 import { z } from 'zod'
-import { LRUCache } from 'lru-cache'
 
 import { moduleSchema } from '../model.js'
-
-/**
- * @type {LRUCache<string, Function>}
- *
- * @typedef Evaluation
- * @prop {string} [messageId]
- * @prop {string} timestamp
- * @prop {string} ordinate
- * @prop {number} blockHeight
- * @prop {string} [cron]
- */
-let wasmModuleCache
-export async function createWasmModuleCache ({ MAX_SIZE }) {
-  if (wasmModuleCache) return wasmModuleCache
-
-  wasmModuleCache = new LRUCache({
-    /**
-     * #######################
-     * Capacity Configuration
-     * #######################
-     */
-    max: MAX_SIZE
-  })
-
-  return wasmModuleCache
-}
+import { randomBytes } from 'node:crypto'
 
 const moduleDocSchema = z.object({
   _id: z.string().min(1),
@@ -134,107 +108,56 @@ export function findModuleWith ({ pouchDb }) {
  * worker threads. We will make that change later
  */
 export function evaluatorWith ({
-  cache = wasmModuleCache,
+  evaluate,
   loadTransactionData,
-  bootstrapWasmModule,
-  readWasmFile,
+  wasmFileExists,
   writeWasmFile,
-  EVAL_DEFER_BACKPRESSURE,
   logger: _logger
 }) {
   const logger = _logger.child('ao-module:evaluator')
   loadTransactionData = fromPromise(loadTransactionData)
-  readWasmFile = fromPromise(readWasmFile)
-  let backpressure = 0
-
-  function maybeCached ({ moduleId, limit }) {
-    return of(moduleId)
-      .map((moduleId) => cache.get(moduleId))
-      .chain((wasm) => wasm
-        ? Resolved(wasm)
-        : Rejected({ moduleId, limit })
-      )
-      .chain(fromPromise((wasm) => bootstrapWasmModule(wasm, limit)))
-  }
+  wasmFileExists = fromPromise(wasmFileExists)
 
   function maybeStored ({ moduleId, limit }) {
     logger('Checking for wasm file to load...', moduleId)
 
     return of(moduleId)
-      .chain(readWasmFile)
+      .chain(wasmFileExists)
       .bimap(
         () => ({ moduleId, limit }),
         identity
       )
-      /**
-       * Cache the wasm in memory for quick access
-       */
-      .map((wasm) => {
-        logger('Wasm file for module "%s" was found. Caching in memory for next time...', moduleId)
-        cache.set(moduleId, wasm)
-        return wasm
-      })
-      .chain(fromPromise((wasm) => bootstrapWasmModule(wasm, limit)))
   }
 
-  function loadFromArweave ({ moduleId, limit }) {
+  /**
+   * TODO: should we move this into the evaluator (worker)
+   * that is passed in? For now, we will keep it on this side
+   * of the worker interaction
+   */
+  function loadFromArweave ({ moduleId }) {
     return of(moduleId)
       .chain(loadTransactionData)
+      .map((res) => res.body)
       /**
-       * https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/tee
-       *
-       * Tee the ReadableStream so that we can write it to a file and bootstrap
-       * the wasm module in parallel
+       * Write the module wasm to a file for so that there's less chance it needs
+       * to be loaded from Arweave
        */
-      .map((res) => res.body.tee())
-      .chain(fromPromise(([wasmStreamA, wasmStreamB]) =>
-        Promise.all([
-          /**
-           * Write the module wasm to a file for so that there's less chance it needs
-           * to be loaded from Arweave, if it the wasm module doesn't already exist in
-           * Memory
-           */
-          writeWasmFile(moduleId, Readable.fromWeb(wasmStreamA)),
-          /**
-           * Simoultaneously cache the wasm in memory
-           * and bootstrap the wasm module
-           */
-          new Response(wasmStreamB)
-            .arrayBuffer()
-            .then((wasm) => {
-              logger('Raw Wasm file for module "%s" was loaded from Arweave. Caching in file and in memory for next time...', moduleId)
-              cache.set(moduleId, wasm)
-              return wasm
-            })
-            .then(wasm => bootstrapWasmModule(wasm, limit))
-        ]).then(([, wasmModule]) => wasmModule)
-      ))
+      .chain(fromPromise((wasmStream) =>
+        writeWasmFile(moduleId, Readable.fromWeb(wasmStream)))
+      )
   }
 
   return ({ moduleId, limit }) => of({ moduleId, limit })
-    .chain(maybeCached)
-    .bichain(maybeStored, Resolved)
+    .chain(maybeStored)
     .bichain(loadFromArweave, Resolved)
     /**
-     * Create an evaluator function using the wasm module loaded
+     * Create an evaluator function scoped to this particular
+     * stream of messages
      */
-    .map((wasmModule) =>
-      ({ Memory, message, AoGlobal }) =>
-        Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
-          .then(async (defer) => {
-            /**
-             * defer the next wasm module invocation to the
-             * end of the current event queue.
-             *
-             * Since WASM module invocation is blocking and potentially CPU intensive,
-             * we may want to defer to prevent starvation of other tasks on the main thread
-             *
-             * TODO: maybe we use workers here later
-             */
-            if (defer) await new Promise(resolve => setImmediate(resolve))
-
-            return wasmModule(Memory, message, AoGlobal)
-          })
-    )
+    .map(() => {
+      const streamId = randomBytes(8).toString('hex')
+      return ({ name, processId, Memory, message, AoGlobal }) =>
+        evaluate({ streamId, moduleId, limit, name, processId, Memory, message, AoGlobal })
+    })
     .toPromise()
 }

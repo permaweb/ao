@@ -64,9 +64,21 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
-   * The maximum size of the in-memory cache used for Wasm binaries
+   * The number of workers to use for evaluating messages
+   */
+  WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
+  /**
+   * The maximum size of the in-memory cache used for loaded Wasm modules
    */
   WASM_MODULE_CACHE_MAX_SIZE: positiveIntSchema,
+  /**
+   * The maximum size of the in-memory cache used for Wasm binaries
+   */
+  WASM_BINARY_CACHE_MAX_SIZE: positiveIntSchema,
+  /**
+   * The directory to place wasm binaries downloaded from arweave.
+   */
+  WASM_BINARY_FILE_DIRECTORY: z.string().min(1),
   /**
    * The maximum size, in bytes, of the cache used to cache the latest memory
    * evaluated for an ao process

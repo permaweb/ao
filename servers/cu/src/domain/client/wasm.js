@@ -1,18 +1,16 @@
 import { tmpdir } from 'node:os'
-import { createWriteStream, readFile } from 'node:fs'
+import { createWriteStream, stat } from 'node:fs'
 import { promisify } from 'node:util'
 import { PassThrough, pipeline } from 'node:stream'
 import { join } from 'node:path'
-import { createGzip, createGunzip, gunzip } from 'node:zlib'
+import { createGzip, createGunzip } from 'node:zlib'
 import { createHash } from 'node:crypto'
 
-const readFileP = promisify(readFile)
-const gunzipP = promisify(gunzip)
+const statP = promisify(stat)
 const pipelineP = promisify(pipeline)
 
-export async function readWasmFile (moduleId) {
-  return readFileP(join(tmpdir(), `${moduleId}.wasm.gz`))
-    .then(gunzipP)
+export async function wasmFileExists (moduleId) {
+  return statP(join(tmpdir(), `${moduleId}.wasm.gz`))
 }
 
 export async function writeWasmFile (moduleId, wasmStream) {
