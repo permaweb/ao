@@ -130,8 +130,8 @@ export const createApis = async (ctx) => {
     saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-      readWasmFile: WasmClient.readWasmFile,
       wasmFileExists: WasmClient.wasmFileExists,
+      writeWasmFile: WasmClient.writeWasmFile,
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
