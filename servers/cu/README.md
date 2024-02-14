@@ -48,7 +48,10 @@ can reach, before the CU will halt evaluation. (defaults to 100MB `100_000_000` 
   Defaults to `100`
 - `DUMP_PATH`: the path to send `heap` snapshots to. (See
   [Heap Snapshots](#heap-snapshot))
+- `WASM_EVALUATION_MAX_WORKERS`: The number of workers to use for evaluating messages (Defaults to `3`)
+- `WASM_BINARY_FILE_DIRECTORY`: The directory to cache wasm binaries downloaded from arweave. (Defaults to the os temp directory)
 - `WASM_BINARY_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for Wasm binaries (Defaults to `5` wasm binaries)
+- `WASM_MODULE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for loaded Wasm modules (defaults to `5` loaded wasm modules)
 - `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU In-Memory cache used to cache the latest memory evaluated for ao processes.
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process latest memory LRU In-Memory cache. An entries age is reset each time it is accessed
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds, that the CU should wait before creating a process `Checkpoint` IF it has already created a Checkpoint for that process. This is effectively a throttle on `Checkpoint` creation, for a given process
