@@ -40,6 +40,9 @@ export const domainConfigSchema = z.object({
    * The wallet for the CU
    */
   WALLET: z.string().min(1, 'WALLET must be a Wallet JWK Inteface'),
+  /**
+   * The interval, in milliseconds, at which to log memory usage on this CU.
+   */
   MEM_MONITOR_INTERVAL: positiveIntSchema,
   /**
    * The number of evaluations the CU should perform before placing the next evaluation at the end
@@ -48,6 +51,17 @@ export const domainConfigSchema = z.object({
    * This helps hedge against CPU/Main thread starvation due to lengthy evaluations
    */
   EVAL_DEFER_BACKPRESSURE: positiveIntSchema,
+  /**
+   * The amount of time, in milliseconds, that the CU should wait before creating a process Checkpoint,
+   * if it has already created a Checkpoint for that process.
+   *
+   * This is effectively a throttle on Checkpoint creation, for a given process
+   */
+  PROCESS_CHECKPOINT_CREATION_THROTTLE: positiveIntSchema,
+  /**
+   * Whether to disable Process Checkpoint creation entirely. Great for when developing locally,
+   * of for an ephemeral CU
+   */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
    * The maximum size of the in-memory cache used for Wasm binaries
