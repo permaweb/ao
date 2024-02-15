@@ -90,9 +90,9 @@ export function readStateWith (env) {
             if (res.exact) return Resolved({ ...res, output: res.result })
 
             return of(res)
+              .chain(loadModule)
               .chain(loadMessages)
               .chain(hydrateMessages)
-              .chain(loadModule)
               // { output }
               .chain(evaluate)
               .chain((ctx) => {

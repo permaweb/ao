@@ -137,6 +137,9 @@ export const loadMessagesSchema = z.function()
       processId: z.string(),
       owner: z.string(),
       tags: z.array(rawTagSchema),
+      moduleId: z.string(),
+      moduleTags: z.array(rawTagSchema),
+      moduleOwner: z.string(),
       from: z.coerce.number().nullish(),
       to: z.coerce.number().nullish()
     })

@@ -28,6 +28,12 @@ describe('loadModule', () => {
 
     const result = await loadModule({ id: PROCESS, tags: [{ name: 'Module', value: 'foobar' }] }).toPromise()
     assert.equal(result.moduleId, 'foobar')
+    assert.deepStrictEqual(result.moduleTags, [
+      { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Type', value: 'Module' }
+    ])
+    assert.equal(result.moduleOwner, 'owner-123')
     assert.equal(result.id, PROCESS)
   })
 
@@ -45,6 +51,8 @@ describe('loadModule', () => {
 
     const result = await loadModule({ id: PROCESS, tags: [{ name: 'Module', value: 'foobar' }] }).toPromise()
     assert.equal(result.moduleId, 'foobar')
+    assert.deepStrictEqual(result.moduleTags, [])
+    assert.equal(result.moduleOwner, 'owner-123')
     assert.equal(result.id, PROCESS)
   })
 
