@@ -70,7 +70,7 @@ export function readStateWith (env) {
       return res
     }
 
-    const key = pendingKey([processId, messageId, to, ordinate, cron, exact, needsMemory])
+    const key = pendingKey([processId, to, ordinate, cron, exact, needsMemory])
     if (!pendingReadState.has(key)) {
       pendingReadState.set(
         key,
