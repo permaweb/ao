@@ -36,7 +36,8 @@ describe('loadModule', () => {
       loadTransactionMeta: async () => assert.fail('should not load transaction meta if found in db'),
       findModule: async () => ({
         id: 'foobar',
-        tags: []
+        tags: [],
+        owner: 'owner-123'
       }),
       saveModule: async () => assert.fail('should not save if foudn in db'),
       logger

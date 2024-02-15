@@ -11,6 +11,7 @@ const moduleDocSchema = z.object({
   _id: z.string().min(1),
   moduleId: moduleSchema.shape.id,
   tags: moduleSchema.shape.tags,
+  owner: moduleSchema.shape.owner,
   type: z.literal('module')
 })
 
@@ -25,12 +26,6 @@ function createModuleId ({ moduleId }) {
 
 export function saveModuleWith ({ pouchDb, logger: _logger }) {
   const logger = _logger.child('ao-module:saveModule')
-  const saveModuleInputSchema = z.object({
-    _id: z.string().min(1),
-    moduleId: moduleDocSchema.shape.moduleId,
-    tags: moduleDocSchema.shape.tags,
-    type: z.literal('module')
-  })
 
   return (module) => {
     return of(module)
@@ -39,13 +34,14 @@ export function saveModuleWith ({ pouchDb, logger: _logger }) {
           _id: (module) => createModuleId({ moduleId: module.id }),
           moduleId: prop('id'),
           tags: prop('tags'),
+          owner: prop('owner'),
           type: always('module')
         })(module)
       ))
       /**
        * Ensure the expected shape before writing to the db
        */
-      .map(saveModuleInputSchema.parse)
+      .map(moduleDocSchema.parse)
       .map((moduleDoc) => {
         logger('Creating module doc for module "%s"', module.id)
         return moduleDoc
@@ -86,7 +82,8 @@ export function findModuleWith ({ pouchDb }) {
           .map(moduleDocSchema.parse)
           .map(applySpec({
             id: prop('moduleId'),
-            tags: prop('tags')
+            tags: prop('tags'),
+            owner: prop('owner')
           }))
       )
       .toPromise()

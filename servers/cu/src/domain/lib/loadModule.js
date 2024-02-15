@@ -40,7 +40,11 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
         of(meta.tags)
           .map(parseTags)
           .chain(checkTag('Module-Format', eqOrIncludes('wasm32-unknown-emscripten'), 'only \'wasm32-unknown-emscripten\' module format is supported by this CU'))
-          .map(() => ({ id: moduleId, tags: meta.tags }))
+          .map(() => ({
+            id: moduleId,
+            tags: meta.tags,
+            owner: meta.owner.address
+          }))
       )
       .chain((module) =>
         saveModule(module)
