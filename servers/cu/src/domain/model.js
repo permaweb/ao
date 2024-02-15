@@ -8,12 +8,17 @@ export const positiveIntSchema = z.preprocess((val) => {
 
 export const domainConfigSchema = z.object({
   /**
-   * The maximum size, in bytes, that an ao processes' evaluated heap size
-   * can reach before the CU will stop evaluating.
+   * The maximum Memory-Limit, in bytes, supported for ao processes
    *
    * ie. '1000' or '1_000'
    */
-  PROCESS_WASM_HEAP_MAX_SIZE: positiveIntSchema,
+  PROCESS_WASM_MEMORY_MAX_LIMIT: positiveIntSchema,
+  /**
+   * The maximum Compute-Limit, in bytes, supported for ao processes
+   *
+   * ie. '1000' or '1_000'
+   */
+  PROCESS_WASM_COMPUTE_MAX_LIMIT: positiveIntSchema,
   /**
    * The gateway for the CU to use fetch block metadata, data on arweave,
    * and Scheduler-Location data
