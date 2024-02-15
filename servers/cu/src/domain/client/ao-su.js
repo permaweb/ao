@@ -62,7 +62,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             hasNextPage = page_info.has_next_page
             curFrom = page_info.has_next_page && pipe(
               last,
-              path(['node', 'cursor'])
+              path(['cursor'])
             )(edges)
           })
 

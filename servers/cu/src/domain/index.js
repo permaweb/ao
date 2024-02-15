@@ -141,7 +141,7 @@ export const createApis = async (ctx) => {
     findMessageHash: AoEvaluationClient.findMessageHashWith({ pouchDb, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
-    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 50, logger }),
+    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),
     locateScheduler: locateDataloader.load.bind(locateDataloader),
     doesExceedMaximumHeapSize: WasmClient.doesExceedMaximumHeapSizeWith({ PROCESS_WASM_HEAP_MAX_SIZE: ctx.PROCESS_WASM_HEAP_MAX_SIZE }),
     logger
