@@ -76,7 +76,7 @@ pub struct Message {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SortedMessages {
+pub struct PaginatedMessages {
     pub page_info: PageInfo,
     pub edges: Vec<Edge>,
 }
@@ -219,38 +219,17 @@ impl Message {
 }
 
 
-impl SortedMessages {
+impl PaginatedMessages {
 
-    pub fn from_messages(messages: Vec<Message>, from: Option<String>, to: Option<String>) -> Result<Self, JsonErrorType> {
-        let mut sorted_messages = messages.clone();
-        
-        sorted_messages.sort_by(|a, b| {
-            a.timestamp.cmp(&b.timestamp)
-        });
+    pub fn from_messages(messages: Vec<Message>, has_next_page: bool) -> Result<Self, JsonErrorType> {
+        let page_info = PageInfo { has_next_page };
 
-        let from_timestamp = match from.as_ref() {
-            Some(t) => t.parse::<i64>().unwrap() ,
-            None => 0
-        };
-
-        let to_timestamp = match to.as_ref() {
-            Some(t) => t.parse::<i64>().unwrap(),
-            None => std::i64::MAX
-        };
-
-        let filtered_messages: Vec<Message> = sorted_messages.into_iter().filter(|message| {
-            let message_timestamp = message.timestamp;
-            message_timestamp > from_timestamp && message_timestamp <= to_timestamp
-        }).collect();
-
-        let page_info = PageInfo { has_next_page: false };
-
-        let edges = filtered_messages.into_iter().map(|message| Edge {
+        let edges = messages.into_iter().map(|message| Edge {
             node: message.clone(),
             cursor: message.timestamp.clone().to_string(),
         }).collect();
 
-        Ok(SortedMessages { page_info, edges })
+        Ok(PaginatedMessages { page_info, edges })
     }
 }
 

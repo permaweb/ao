@@ -16,6 +16,7 @@ use su::config::Config;
 struct FromTo {
     from: Option<String>,
     to: Option<String>,
+    limit: Option<i32>,
     #[serde(rename = "process-id")]
     process_id: Option<String>,
 }
@@ -105,6 +106,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
     let tx_id = path.tx_id.clone();
     let from_sort_key = query_params.from.clone();
     let to_sort_key = query_params.to.clone();
+    let limit = query_params.limit.clone();
     let process_id = query_params.process_id.clone();
 
     match router::redirect_tx_id(deps.get_ref().clone(), tx_id.clone(), process_id.clone()).await {
@@ -116,7 +118,7 @@ async fn main_get_route(deps: web::Data<Arc<Deps>>, req: HttpRequest, path: web:
         Err(err) => return err_response(err.to_string())
     }
 
-    let result = flows::read_message_data(deps.get_ref().clone(), tx_id, from_sort_key, to_sort_key).await;
+    let result = flows::read_message_data(deps.get_ref().clone(), tx_id, from_sort_key, to_sort_key, limit).await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()

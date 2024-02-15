@@ -6,7 +6,7 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-use super::super::core::json::{Message, Process};
+use super::super::core::json::{Message, Process, PaginatedMessages, JsonErrorType};
 use super::super::router::{Scheduler, ProcessScheduler};
 use crate::config::Config;
 
@@ -17,7 +17,8 @@ pub enum StoreErrorType {
     DatabaseError(String),
     NotFound(String),
     JsonError(String),
-    EnvVarError(String)
+    EnvVarError(String),
+    IntError(String)
 }
 
 use diesel::result::Error as DieselError; // Import Diesel's Error
@@ -34,6 +35,12 @@ impl From<serde_json::Error> for StoreErrorType {
     }
 }
 
+impl From<JsonErrorType> for StoreErrorType {
+    fn from(error: JsonErrorType) -> Self {
+        StoreErrorType::JsonError(format!("data store json error: {:?}", error))
+    }
+}
+
 impl From<StoreErrorType> for String {
     fn from(error: StoreErrorType) -> Self {
         format!("{:?}", error)
@@ -47,8 +54,14 @@ impl From<VarError> for StoreErrorType {
 }
 
 impl From<diesel::prelude::ConnectionError> for StoreErrorType {
-    fn from(error: diesel::prelude::ConnectionError) -> Self{
+    fn from(error: diesel::prelude::ConnectionError) -> Self {
         StoreErrorType::DatabaseError(format!("data store connection error: {}", error))
+    }
+}
+
+impl From<std::num::ParseIntError> for StoreErrorType {
+    fn from(error: std::num::ParseIntError) -> Self{
+        StoreErrorType::IntError(format!("data store int error: {}", error))
     }
 }
 
@@ -165,26 +178,57 @@ impl StoreClient {
     }    
 
 
-    pub fn get_messages(&self, process_id_in: &str) -> Result<Vec<Message>, StoreErrorType> {
+    pub fn get_messages(
+        &self,
+        process_id_in: &str,
+        from: &Option<String>,
+        to: &Option<String>,
+        limit: &Option<i32>,
+    ) -> Result<PaginatedMessages, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
-
-        let db_messages_result: Result<Vec<DbMessage>, DieselError> = messages
+        let mut query = messages
             .filter(process_id.eq(process_id_in))
+            .into_boxed();
+    
+        // Apply 'from' timestamp filtering if 'from' is provided
+        if let Some(from_timestamp_str) = from {
+            let from_timestamp = from_timestamp_str.parse::<i64>().map_err(StoreErrorType::from)?;
+            query = query.filter(timestamp.gt(from_timestamp));
+        }
+    
+        // Apply 'to' timestamp filtering if 'to' is provided
+        if let Some(to_timestamp_str) = to {
+            let to_timestamp = to_timestamp_str.parse::<i64>().map_err(StoreErrorType::from)?;
+            query = query.filter(timestamp.le(to_timestamp));
+        }
+    
+        // Apply limit, converting Option<i32> to i64 and adding 1 to check for the next page
+        let limit_val = limit.unwrap_or(5000) as i64; // Default limit if none is provided
+        let db_messages_result: Result<Vec<DbMessage>, DieselError> = query
+            .order(timestamp.asc())
+            .limit(limit_val + 1) // Fetch one extra record to determine if a next page exists
             .load(conn);
-
+    
         match db_messages_result {
             Ok(db_messages) => {
-                let n_messages: Result<Vec<Message>, StoreErrorType> = db_messages
+                let has_next_page = db_messages.len() as i64 > limit_val;
+                // Take only up to the limit if there's an extra indicating a next page
+                let messages_o = if has_next_page { &db_messages[..(limit_val as usize)] } else { &db_messages[..] };
+    
+                let n_messages: Result<Vec<Message>, StoreErrorType> = messages_o
                     .iter()
-                    .map(|db_message| {
-                        serde_json::from_value(db_message.message_data.clone())
-                            .map_err(|e| StoreErrorType::from(e))
-                    })
+                    .map(|db_message| serde_json::from_value(db_message.message_data.clone()).map_err(StoreErrorType::from))
                     .collect();
-        
-                n_messages
-            }
+    
+                match n_messages {
+                    Ok(messages_out) => {
+                        let paginated = PaginatedMessages::from_messages(messages_out, has_next_page)?;
+                        Ok(paginated)
+                    },
+                    Err(e) => return Err(e),
+                }
+            },
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
