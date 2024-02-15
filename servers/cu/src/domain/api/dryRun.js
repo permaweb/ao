@@ -94,7 +94,7 @@ export function dryRunWith (env) {
              * This check will prevent us from unnecessarily loading the module
              * from Arweave, twice.
              */
-            if (!ctx.module) return loadModule(ctx)
+            if (!ctx.moduleId) return loadModule(ctx)
 
             /**
              * The module was loaded by readState, as part of evaluation,
@@ -144,7 +144,8 @@ export function dryRunWith (env) {
                   'Read-Only': true
                 },
                 AoGlobal: {
-                  Process: { Id: processId, Owner: readStateRes.owner, Tags: readStateRes.tags }
+                  Process: { Id: processId, Owner: readStateRes.owner, Tags: readStateRes.tags },
+                  Module: { Id: readStateRes.moduleId, Owner: readStateRes.moduleOwner, Tags: readStateRes.moduleTags }
                 }
               })
             }

@@ -90,7 +90,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     return `Scheduled Message ${node.message.id} ${node.timestamp}:${node.nonce}`
   }
 
-  function mapAoMessage ({ processId, processOwner, processTags }) {
+  function mapAoMessage ({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }) {
     return async function * (edges) {
       for await (const edge of edges) {
         yield pipe(
@@ -147,7 +147,8 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
               timestamp: path(['timestamp'])
             }),
             AoGlobal: applySpec({
-              Process: always({ Id: processId, Owner: processOwner, Tags: processTags })
+              Process: always({ Id: processId, Owner: processOwner, Tags: processTags }),
+              Module: always({ Id: moduleId, Owner: moduleOwner, Tags: moduleTags })
             })
           })
         )(edge)
@@ -157,10 +158,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
 
   return (args) =>
     of(args)
-      .map(({ suUrl, processId, owner: processOwner, tags: processTags, from, to }) => {
+      .map(({ suUrl, processId, owner: processOwner, tags: processTags, moduleId, moduleOwner, moduleTags, from, to }) => {
         return pipeline(
           fetchAllPages({ suUrl, processId, from, to }),
-          Transform.from(mapAoMessage({ processId, processOwner, processTags })),
+          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags })),
           (err) => {
             if (err) logger('Encountered err when mapping Scheduled Messages', err)
           }

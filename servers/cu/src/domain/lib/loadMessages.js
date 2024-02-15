@@ -215,10 +215,12 @@ export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
 }
 
 export function cronMessagesBetweenWith ({
-  logger,
   processId,
   owner: processOwner,
   tags: processTags,
+  moduleId,
+  moduleOwner,
+  moduleTags,
   originBlock,
   crons,
   blocksMeta
@@ -296,7 +298,8 @@ export function cronMessagesBetweenWith ({
                 Cron: true
               },
               AoGlobal: {
-                Process: { Id: processId, Owner: processOwner, Tags: processTags }
+                Process: { Id: processId, Owner: processOwner, Tags: processTags },
+                Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
               }
             }
           }
@@ -321,7 +324,8 @@ export function cronMessagesBetweenWith ({
               Cron: true
             },
             AoGlobal: {
-              Process: { Id: processId, Owner: processOwner, Tags: processTags }
+              Process: { Id: processId, Owner: processOwner, Tags: processTags },
+              Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
             }
           }
         }
@@ -385,6 +389,9 @@ function loadScheduledMessagesWith ({ locateScheduler, loadMessages, logger }) {
             processId: ctx.id,
             owner: ctx.owner,
             tags: ctx.tags,
+            moduleId: ctx.moduleId,
+            moduleOwner: ctx.moduleOwner,
+            moduleTags: ctx.moduleTags,
             from: ctx.from, // could be undefined
             to: ctx.to // could be undefined
           }))
@@ -473,6 +480,9 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
                   processId: ctx.id,
                   owner: ctx.owner,
                   tags: ctx.tags,
+                  moduleId: ctx.moduleId,
+                  moduleOwner: ctx.moduleOwner,
+                  moduleTags: ctx.moduleTags,
                   originBlock: ctx.block,
                   blocksMeta,
                   crons
@@ -647,7 +657,8 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
                 Cron: false
               },
               AoGlobal: {
-                Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags }
+                Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags },
+                Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
               }
             })
             logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id, processMessage)

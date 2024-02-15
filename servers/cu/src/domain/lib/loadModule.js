@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { findModuleSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
 import { eqOrIncludes, parseTags } from '../utils.js'
+import { rawTagSchema } from '../model.js'
 
 /**
  * The result that is produced from this step
@@ -15,7 +16,9 @@ import { eqOrIncludes, parseTags } from '../utils.js'
 const ctxSchema = z.object({
   moduleId: z.string().refine((val) => !!val, {
     message: 'process moduleId must be attached to context'
-  })
+  }),
+  moduleTags: z.array(rawTagSchema),
+  moduleOwner: z.string().min(1)
 }).passthrough()
 
 function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger }) {
@@ -77,7 +80,7 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
         of(moduleId)
           .chain(maybeFindModule)
           .bichain(loadFromGateway, Resolved)
-          .map((module) => ({ moduleId: module.id }))
+          .map((module) => ({ moduleId: module.id, moduleTags: module.tags, moduleOwner: module.owner }))
       )
   }
 }
