@@ -122,7 +122,8 @@ export const processSchema = z.object({
 
 export const moduleSchema = z.object({
   id: z.string().min(1),
-  tags: z.array(rawTagSchema)
+  tags: z.array(rawTagSchema),
+  owner: z.string().min(1)
 })
 
 export const messageSchema = z.object({

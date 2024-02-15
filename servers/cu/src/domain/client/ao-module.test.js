@@ -26,6 +26,7 @@ describe('ao-module', () => {
               _id: 'module-mod-123',
               moduleId: 'mod-123',
               tags: [{ name: 'foo', value: 'bar' }],
+              owner: 'owner-123',
               type: 'module'
             })
           },
@@ -36,7 +37,8 @@ describe('ao-module', () => {
       const res = await findModule({ moduleId: 'mod-123' })
       assert.deepStrictEqual(res, {
         id: 'mod-123',
-        tags: [{ name: 'foo', value: 'bar' }]
+        tags: [{ name: 'foo', value: 'bar' }],
+        owner: 'owner-123'
       })
     })
 
@@ -89,6 +91,7 @@ describe('ao-module', () => {
                 tags: [
                   { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
                 ],
+                owner: 'owner-123',
                 type: 'module'
               })
               return Promise.resolve(true)
@@ -102,7 +105,8 @@ describe('ao-module', () => {
         id: 'mod-123',
         tags: [
           { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
-        ]
+        ],
+        owner: 'owner-123'
       })
     })
 
@@ -120,7 +124,8 @@ describe('ao-module', () => {
         id: 'mod-123',
         tags: [
           { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
-        ]
+        ],
+        owner: 'owner-123'
       })
     })
   })
