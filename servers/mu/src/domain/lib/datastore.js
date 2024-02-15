@@ -223,112 +223,6 @@ function deleteSpawnWith ({ dbInstance, logger: _logger }) {
   }
 }
 
-const monitoredProcessSchema = z.object({
-  _id: z.string().min(1),
-  // is this monitored process authorized to run by the server (is it funded)
-  authorized: z.boolean(),
-  lastFromCursor: z.string().nullable(),
-  processData: z.any(),
-  _rev: z.string().optional(),
-  createdAt: z.number(),
-  lastRunTime: z.number().nullable()
-})
-
-function saveMonitoredProcessWith ({ dbInstance, logger: _logger }) {
-  const logger = _logger.child('saveMonitoredProcess')
-  return (process) => {
-    return of(process)
-      .map(applySpec({
-        _id: prop('id'),
-        authorized: prop('authorized'),
-        lastFromCursor: prop('lastFromCursor'),
-        processData: prop('processData'),
-        createdAt: prop('createdAt'),
-        lastRunTime: prop('lastRunTime')
-      }))
-      .map(monitoredProcessSchema.parse)
-      .chain((doc) =>
-        of(doc)
-          .chain(fromPromise((doc) => dbInstance.putMonitor(doc)))
-          .bimap(
-            logger.tap('Encountered an error when caching monitored process'),
-            logger.tap('Cached monitor')
-          )
-          .bichain(Resolved, Resolved)
-          .map(always(doc._id))
-      )
-      .toPromise()
-  }
-}
-
-function findLatestMonitorsWith ({ dbInstance }) {
-  return () => {
-    return of({})
-      .chain(fromPromise(() => {
-        return dbInstance.findMonitors().then((res) => {
-          if (res.warning) console.warn(res.warning)
-          return res
-        })
-      }))
-      .chain((docs) => {
-        if (docs.length === 0) {
-          return Resolved([])
-        }
-
-        const parsedDocs = docs.map(doc => monitoredProcessSchema.parse(doc))
-
-        return Resolved(parsedDocs.map(doc => ({
-          id: prop('_id', doc),
-          authorized: prop('authorized', doc),
-          lastFromCursor: prop('lastFromCursor', doc),
-          processData: prop('processData', doc),
-          createdAt: prop('createdAt', doc),
-          lastRunTime: prop('lastRunTime', doc)
-        })))
-      })
-      .toPromise()
-  }
-}
-
-function updateMonitorWith ({ dbInstance, logger: _logger }) {
-  const logger = _logger.child('updateMonitor')
-
-  return ({ id, lastFromCursor, lastRunTime }) => {
-    return of({ id })
-      .chain(fromPromise(() => dbInstance.getMonitor(id)))
-      // createdAt comes out of the db as a string so we put it back to int
-      .map(doc => ({ ...doc, lastFromCursor, createdAt: parseInt(doc.createdAt), lastRunTime }))
-      .map(monitoredProcessSchema.parse)
-      .chain(updatedDoc =>
-        of(updatedDoc)
-          .chain(fromPromise(() => dbInstance.putMonitor(updatedDoc)))
-          .bimap(
-            logger.tap('Encountered an error when updating monitor'),
-            logger.tap('Updated monitor')
-          )
-          .bichain(Resolved, Resolved)
-          .map(always(updatedDoc._id))
-      )
-      .toPromise()
-  }
-}
-
-function deleteMonitorWith ({ dbInstance, logger: _logger }) {
-  const logger = _logger.child('deleteMonitor')
-
-  return ({ id }) => {
-    return of({ id })
-      .chain(fromPromise(() => dbInstance.deleteMonitor(id)))
-      .map(doc => ({ ...doc }))
-      .chain(deletedDoc =>
-        of(deletedDoc)
-          .map(always(deletedDoc._id))
-          .map(logger.tap('Deleted monitor'))
-      )
-      .toPromise()
-  }
-}
-
 function saveMessageTraceWith ({ dbInstance, logger: _logger }) {
   const logger = _logger.child('saveMessageTrace')
 
@@ -400,12 +294,8 @@ export default {
   cachedMsgSchema,
   saveMsgWith,
   saveSpawnWith,
-  updateMonitorWith,
-  deleteMonitorWith,
   findLatestMsgsWith,
   findLatestSpawnsWith,
-  findLatestMonitorsWith,
-  saveMonitoredProcessWith,
   deleteMsgWith,
   deleteSpawnWith,
   messageTraceSchema,
