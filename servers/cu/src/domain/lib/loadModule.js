@@ -1,10 +1,10 @@
 import { fromPromise, of, Resolved, Rejected } from 'hyper-async'
-import { always, identity, mergeRight, prop } from 'ramda'
+import { __, always, assoc, identity, mergeRight, prop } from 'ramda'
 import { z } from 'zod'
 
 import { findModuleSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
-import { eqOrIncludes, parseTags } from '../utils.js'
-import { rawTagSchema } from '../model.js'
+import { eqOrIncludes, findRawTag, parseTags } from '../utils.js'
+import { positiveIntSchema, rawTagSchema } from '../model.js'
 
 /**
  * The result that is produced from this step
@@ -18,7 +18,9 @@ const ctxSchema = z.object({
     message: 'process moduleId must be attached to context'
   }),
   moduleTags: z.array(rawTagSchema),
-  moduleOwner: z.string().min(1)
+  moduleOwner: z.string().min(1),
+  moduleComputeLimit: positiveIntSchema,
+  moduleMemoryLimit: positiveIntSchema
 }).passthrough()
 
 function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger }) {
@@ -85,6 +87,47 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
   }
 }
 
+function setModuleLimitsWith ({ doesExceedModuleMaxMemory, doesExceedModuleMaxCompute }) {
+  function maybeTagLimit ({ name, tags }) {
+    return of(tags)
+      .map((tags) => findRawTag(name, tags))
+      .chain((tag) => tag ? Resolved(positiveIntSchema.parse(tag.value)) : Rejected({ name, tags }))
+  }
+
+  function checkAndSetLimit (name, field, pred, msg) {
+    return (ctx) => of({ name, tags: ctx.tags })
+      .chain(maybeTagLimit)
+      .bichain(
+        () => maybeTagLimit({ name, tags: ctx.moduleTags }),
+        Resolved
+      )
+      .chain((limit) =>
+        of({ amount: limit })
+          .chain(fromPromise(pred))
+          .chain((fail) => {
+            if (fail) return Rejected()
+            return Resolved(limit)
+          })
+      )
+      .bimap(always(msg), assoc(field, __, ctx))
+  }
+
+  return (ctx) => of(ctx)
+    .chain(checkAndSetLimit(
+      'Compute-Limit',
+      'moduleComputeLimit',
+      doesExceedModuleMaxCompute,
+      { status: 413, message: `Compute-Limit for process "${ctx.id}" exceeds supported limit` }
+    ))
+    .chain(checkAndSetLimit(
+      'Memory-Limit',
+      'moduleMemoryLimit',
+      doesExceedModuleMaxMemory,
+      { status: 413, message: `Memory-Limit for process "${ctx.id}" exceeds supported limit` }
+    ))
+    .map(mergeRight(ctx))
+}
+
 /**
  * @typedef Args
  * @property {string} id - the id of the process
@@ -105,11 +148,13 @@ export function loadModuleWith (env) {
   env = { ...env, logger }
 
   const getModule = getModuleWith(env)
+  const setModuleLimits = setModuleLimitsWith(env)
 
   return (ctx) => {
     return of(ctx.tags)
       .chain(getModule)
       .map(mergeRight(ctx))
+      .chain(setModuleLimits)
       .map(ctxSchema.parse)
   }
 }
