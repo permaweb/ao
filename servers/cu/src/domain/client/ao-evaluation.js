@@ -185,8 +185,6 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
       .map(evaluationDocSchema.parse)
       .map((evaluationDoc) => {
         if (!evaluation.deepHash) return [evaluationDoc]
-
-        logger('Creating messageHash doc for deepHash "%s"', evaluation.deepHash)
         /**
          * Create an messageHash doc that we can later query
          * to prevent duplicate evals from duplicate cranks
