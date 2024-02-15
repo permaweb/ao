@@ -49,6 +49,10 @@ export async function hashWasmMemory (memoryStream, encoding) {
     })
 }
 
+/**
+ * Currently unused, but keeping around the api to be reimplemented in
+ * https://github.com/permaweb/ao/issues/436
+ */
 export function doesExceedMaximumHeapSizeWith ({ PROCESS_WASM_HEAP_MAX_SIZE }) {
   /**
    * This is simple right now, but could be more complex later, so wrapping

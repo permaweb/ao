@@ -5,7 +5,7 @@ import {
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { doesExceedMaximumHeapSizeSchema, evaluatorSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { evaluatorSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
 
 /**
@@ -71,12 +71,6 @@ function doesMessageHashExistWith ({ findMessageHash }) {
   }
 }
 
-function doesHeapExceedMaxSizeWith ({ doesExceedMaximumHeapSize }) {
-  doesExceedMaximumHeapSize = fromPromise(doesExceedMaximumHeapSizeSchema.implement(doesExceedMaximumHeapSize))
-
-  return (heap) => doesExceedMaximumHeapSize({ heap })
-}
-
 /**
  * @typedef EvaluateArgs
  * @property {string} id - the contract id
@@ -98,7 +92,6 @@ export function evaluateWith (env) {
 
   const doesMessageHashExist = doesMessageHashExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
-  const doesHeapExceedMaxSize = doesHeapExceedMaxSizeWith(env)
   const loadEvaluator = evaluatorWith(env)
 
   const saveLatestProcessMemory = env.saveLatestProcessMemory
@@ -242,18 +235,6 @@ export function evaluateWith (env) {
                 .then(async (output) => {
                   if (cron) ctx.stats.messages.cron++
                   else ctx.stats.messages.scheduled++
-
-                  /**
-                   * TODO: maybe a better spot to place this check, so it's not so disjointed.
-                   *
-                   * For now this get's us what we need. Rejecting here will cause the eval to not
-                   * be persisted, and then overall evaluation to stop
-                   */
-                  if (await doesHeapExceedMaxSize(output.Memory).toPromise()) {
-                    logger('FATAL: message "%s" caused process "%s" evaluated heap to exceed maximum allowed size. Short-circuiting evaluation...', name, ctx.id)
-                    // eslint-disable-next-line
-                    return Promise.reject({ status: 413, message: 'ao Process WASM exceeded maximum heap size' })
-                  }
 
                   return Promise.resolve(output)
                     .then((output) => {

@@ -31,7 +31,6 @@ describe('evaluate', () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -184,7 +183,6 @@ describe('evaluate', () => {
         return undefined
       },
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -287,7 +285,6 @@ describe('evaluate', () => {
         messageHash++
         return { _id: 'messageHash-doc-123' }
       },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -383,7 +380,6 @@ describe('evaluate', () => {
         return undefined
       },
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -516,7 +512,6 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -583,7 +578,6 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -643,7 +637,6 @@ describe('evaluate', () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -708,7 +701,6 @@ describe('evaluate', () => {
         return undefined
       },
       findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => false,
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -797,106 +789,5 @@ describe('evaluate', () => {
     // Only cache the evals that did not produce errors
     // TODO: check out why cache is not working
     // assert.equal(cacheCount, 2)
-  })
-
-  test('should fatally error and short-circuit eval if wasm heap size is exceeded', async () => {
-    let heapCheckCount = 0
-    const env = {
-      saveEvaluation: async (evaluation) => evaluation,
-      findMessageHash: async () => { throw { status: 404 } },
-      doesExceedMaximumHeapSize: async () => {
-        if (heapCheckCount > 1) return true
-        heapCheckCount++
-        return false
-      },
-      loadEvaluator: evaluateHappyMessage,
-      saveLatestProcessMemory: async () => {},
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: 1702846520559,
-      moduleId: 'foo-module',
-      stats: {
-        messages: {
-          scheduled: 0,
-          cron: 0,
-          error: 0
-        }
-      },
-      result: {
-        Memory: null
-      },
-      messages: toAsyncIterable([
-        // noSave should noop and not call saveInteraction
-        {
-          noSave: true,
-          ordinate: 0,
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-123',
-            Tags: [
-              { name: 'function', value: 'hello' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        },
-        {
-          ordinate: 1,
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-123',
-            Tags: [
-              { name: 'function', value: 'hello' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        },
-        {
-          ordinate: 1,
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-456',
-            Tags: [
-              { name: 'function', value: 'world' }
-            ],
-            'Block-Height': 1235
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        }
-      ])
-    }
-
-    await evaluate(ctx)
-      .toPromise()
-      .then(() => assert.fail('should throw when fatal error is encountered'))
-      .catch((err) => {
-        assert.equal(err.status, 413)
-        assert.equal(err.message, 'ao Process WASM exceeded maximum heap size')
-        assert.equal(heapCheckCount, 2)
-      })
   })
 })
