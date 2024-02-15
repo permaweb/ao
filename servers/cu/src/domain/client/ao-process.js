@@ -14,7 +14,11 @@ const gunzipP = promisify(gunzip)
 const gzipP = promisify(gzip)
 
 /**
- * @type {LRUCache<string, { evaluation: Evaluation, Memory: ArrayBuffer }>}
+ * @type {{
+ *  get: LRUCache<string, { evaluation: Evaluation, Memory: ArrayBuffer }>['get']
+ *  set: LRUCache<string, { evaluation: Evaluation, Memory: ArrayBuffer }>['set']
+ *  lru: LRUCache<string, { evaluation: Evaluation, Memory: ArrayBuffer }>
+ * }}
  *
  * @typedef Evaluation
  * @prop {string} processId
@@ -65,7 +69,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
       onEviction({ key, value })
     }
   })
-  const cache = {
+  processMemoryCache = {
     get: (key) => {
       if (!data.has(key)) return undefined
 
@@ -74,7 +78,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
        * and recency of the cached value
        */
       const value = data.get(key)
-      cache.set(key, value)
+      processMemoryCache.set(key, value)
 
       return value
     },
@@ -96,10 +100,11 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
       timers.set(key, t)
 
       return data.set(key, value)
-    }
+    },
+    lru: data
   }
 
-  return cache
+  return processMemoryCache
 }
 
 const processDocSchema = z.object({
@@ -216,7 +221,7 @@ export function saveProcessWith ({ pouchDb }) {
 }
 
 export function findProcessMemoryBeforeWith ({
-  cache = processMemoryCache,
+  cache,
   queryGateway,
   loadTransactionData,
   logger: _logger
@@ -441,7 +446,7 @@ export function findProcessMemoryBeforeWith ({
       .toPromise()
 }
 
-export function saveLatestProcessMemoryWith ({ cache = processMemoryCache, logger }) {
+export function saveLatestProcessMemoryWith ({ cache, logger }) {
   return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory }) => {
     const cached = cache.get(processId)
 
@@ -599,7 +604,7 @@ export function saveCheckpointWith ({
      */
     if (!DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
 
-    logger('Checkpoint creation is disabled on this CU, so no work to be done.')
+    logger('Checkpoint creation is disabled on this CU, so no work needs to be done for process "%s"', processId)
     return Resolved()
   }
 

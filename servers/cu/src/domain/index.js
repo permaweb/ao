@@ -109,6 +109,26 @@ export const createApis = async (ctx) => {
         })
   })
 
+  /**
+   * TODO: determine a way to hoist this event listener to a dirtier level,
+   * then simply call something like a "drainWasmMemoryCache()" api
+   *
+   * For now, just adding another listener
+   */
+  process.on('SIGTERM', () => {
+    ctx.logger('Recevied SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+    wasmMemoryCache.lru.forEach((value) => {
+      saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+        .catch((err) => {
+          ctx.logger(
+            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
+            value.evaluation,
+            err
+          )
+        })
+    })
+  })
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
