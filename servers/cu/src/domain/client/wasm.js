@@ -49,16 +49,10 @@ export async function hashWasmMemory (memoryStream, encoding) {
     })
 }
 
-/**
- * Currently unused, but keeping around the api to be reimplemented in
- * https://github.com/permaweb/ao/issues/436
- */
-export function doesExceedMaximumHeapSizeWith ({ PROCESS_WASM_HEAP_MAX_SIZE }) {
-  /**
-   * This is simple right now, but could be more complex later, so wrapping
-   * as a side-effect will be better for long term
-   *
-   * For now, heap is simple array buffer
-   */
-  return async ({ heap }) => heap.byteLength > PROCESS_WASM_HEAP_MAX_SIZE
+export function doesExceedModuleMaxMemoryWith ({ PROCESS_WASM_MEMORY_MAX_LIMIT }) {
+  return async ({ limit }) => limit > PROCESS_WASM_MEMORY_MAX_LIMIT
+}
+
+export function doesExceedModuleMaxComputeWith ({ PROCESS_WASM_COMPUTE_MAX_LIMIT }) {
+  return async ({ limit }) => limit > PROCESS_WASM_COMPUTE_MAX_LIMIT
 }
