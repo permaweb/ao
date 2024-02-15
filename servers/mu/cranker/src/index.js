@@ -49,24 +49,38 @@ const getCronString = (hoursToAdd = 0, minutesToAdd = 0) => {
 }
 
 let ct = null
+let isJobRunning = false
 ct = cron.schedule('*/10 * * * * *', () => {
-  if (runTimeComplete) {
-    console.log('Runtime complete, exiting in 2 minutes')
-    cron.schedule(getCronString(0, 2), () => {
-      process.exit(1)
-    })
-    return
+  if (!isJobRunning) {
+    isJobRunning = true
+    if (runTimeComplete) {
+      console.log('Runtime complete, exiting in 2 minutes')
+      cron.schedule(getCronString(0, 2), () => {
+        process.exit(1)
+      })
+      return
+    }
+    ct.stop() // pause cron while fetching messages
+    const cursor = getCursor()
+    apis.fetchCron({ apis, processId, cursor })
+      .map(setCursor) // set cursor for next batch
+      .map(publishCron)
+      .bimap(
+        (res) => {
+          isJobRunning = false
+          return res
+        },
+        (res) => {
+          isJobRunning = false
+          return res
+        }
+      )
+      .fork(
+        e => console.log(e),
+        _success => { console.log('success', _success) }
+      )
+    ct.start() // resume cron when done getting messages
   }
-  ct.stop() // pause cron while fetching messages
-  const cursor = getCursor()
-  apis.fetchCron({ apis, processId, cursor })
-    .map(setCursor) // set cursor for next batch
-    .map(publishCron)
-    .fork(
-      e => console.log(e),
-      _success => { console.log('success', _success) }
-    )
-  ct.start() // resume cron when done getting messages
 })
 
 cron.schedule(getCronString(12), () => {
