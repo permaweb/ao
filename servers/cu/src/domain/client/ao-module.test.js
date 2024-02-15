@@ -155,10 +155,11 @@ describe('ao-module', () => {
 
     test('should eval the message using the cached raw wasm from a file', async () => {
       const evaluator = evaluatorWith({
-        evaluate: ({ streamId, moduleId: mId, limit, name, processId, Memory, message, AoGlobal }) => {
+        evaluate: ({ streamId, moduleId: mId, gas, memLimit, name, processId, Memory, message, AoGlobal }) => {
           assert.ok(streamId)
           assert.equal(mId, moduleId)
-          assert.equal(limit, 9_000_000_000_000)
+          assert.equal(gas, 9_000_000_000_000)
+          assert.equal(memLimit, 8_000_000_000_000)
           assert.equal(name, args.name)
           assert.equal(processId, args.processId)
 
@@ -171,7 +172,7 @@ describe('ao-module', () => {
         logger
       })
 
-      const res = await (await evaluator({ moduleId, limit: 9_000_000_000_000 }))(args)
+      const res = await (await evaluator({ moduleId, gas: 9_000_000_000_000, memLimit: 8_000_000_000_000 }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)
@@ -182,10 +183,11 @@ describe('ao-module', () => {
 
     test('should eval the message using the raw wasm fetched from arweave', async () => {
       const evaluator = evaluatorWith({
-        evaluate: ({ streamId, moduleId: mId, limit, name, processId, Memory, message, AoGlobal }) => {
+        evaluate: ({ streamId, moduleId: mId, gas, memLimit, name, processId, Memory, message, AoGlobal }) => {
           assert.ok(streamId)
           assert.equal(mId, moduleId)
-          assert.equal(limit, 9_000_000_000_000)
+          assert.equal(gas, 9_000_000_000_000)
+          assert.equal(memLimit, 8_000_000_000_000)
           assert.equal(name, args.name)
           assert.equal(processId, args.processId)
 
@@ -204,7 +206,7 @@ describe('ao-module', () => {
         logger
       })
 
-      const res = await (await evaluator({ moduleId, limit: 9_000_000_000_000 }))(args)
+      const res = await (await evaluator({ moduleId, gas: 9_000_000_000_000, memLimit: 8_000_000_000_000 }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)
