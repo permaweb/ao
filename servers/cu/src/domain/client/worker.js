@@ -74,23 +74,23 @@ function evaluateWith ({
   bootstrapWasmModule,
   logger
 }) {
-  function maybeCachedWasm ({ streamId, moduleId, limit, Memory, message, AoGlobal }) {
+  function maybeCachedWasm ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
     return of(moduleId)
       .map((moduleId) => wasmBinaryCache.get(moduleId))
       .chain((wasm) => wasm
         ? Resolved(wasm)
-        : Rejected({ streamId, moduleId, limit, Memory, message, AoGlobal })
+        : Rejected({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
       )
-      .chain(fromPromise((wasm) => bootstrapWasmModule(wasm, limit)))
+      .chain(fromPromise((wasm) => bootstrapWasmModule(wasm, gas, memLimit)))
   }
 
-  function storedWasm ({ streamId, moduleId, limit, Memory, message, AoGlobal }) {
+  function storedWasm ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
     logger('Checking for wasm file to load module "%s"...', moduleId)
 
     return of(moduleId)
       .chain(fromPromise(readWasmFile))
       .bimap(
-        () => ({ streamId, moduleId, limit, Memory, message, AoGlobal }),
+        () => ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }),
         identity
       )
       /**
@@ -101,11 +101,11 @@ function evaluateWith ({
         wasmBinaryCache.set(moduleId, wasm)
         return wasm
       })
-      .chain(fromPromise(async (wasm) => bootstrapWasmModule(wasm, limit)))
+      .chain(fromPromise(async (wasm) => bootstrapWasmModule(wasm, gas, memLimit)))
   }
 
-  function loadModule ({ streamId, moduleId, limit, Memory, message, AoGlobal }) {
-    return maybeCachedWasm({ streamId, moduleId, limit, Memory, message, AoGlobal })
+  function loadModule ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+    return maybeCachedWasm({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
       .bichain(storedWasm, Resolved)
       /**
        * Cache the wasm module for this particular stream,
@@ -117,21 +117,21 @@ function evaluateWith ({
       })
   }
 
-  function maybeCachedModule ({ streamId, moduleId, limit, Memory, message, AoGlobal }) {
+  function maybeCachedModule ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
     return of(streamId)
       .map((streamId) => wasmModuleCache.get(streamId))
       .chain((wasmModule) => wasmModule
         ? Resolved(wasmModule)
-        : Rejected({ streamId, moduleId, limit, Memory, message, AoGlobal })
+        : Rejected({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
       )
   }
 
-  return ({ streamId, moduleId, limit, name, processId, Memory, message, AoGlobal }) =>
+  return ({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal }) =>
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
-    maybeCachedModule({ streamId, moduleId, limit, name, processId, Memory, message, AoGlobal })
+    maybeCachedModule({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
       .bichain(loadModule, Resolved)
       /**
        * Perform the evaluation

@@ -42,6 +42,8 @@ describe('evaluate', () => {
         id: 'ctr-1234',
         from: new Date().getTime(),
         moduleId: 'foo-module',
+        moduleComputeLimit: 9_000_000_000_000,
+        moduleMemoryLimit: 9_000_000_000_000,
         stats: {
           messages: {
             scheduled: 0,
@@ -194,6 +196,8 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,
@@ -296,6 +300,8 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,
@@ -392,6 +398,8 @@ describe('evaluate', () => {
       from: 1702846520559,
       fromCron: '1-10-minutes',
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,
@@ -523,6 +531,8 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,
@@ -589,6 +599,8 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,
@@ -648,6 +660,8 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,
@@ -712,6 +726,8 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
       stats: {
         messages: {
           scheduled: 0,

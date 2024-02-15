@@ -115,13 +115,13 @@ export function evaluatorWith ({
   loadTransactionData = fromPromise(loadTransactionData)
   wasmFileExists = fromPromise(wasmFileExists)
 
-  function maybeStored ({ moduleId, limit }) {
+  function maybeStored ({ moduleId, gas, memLimit }) {
     logger('Checking for wasm file to load...', moduleId)
 
     return of(moduleId)
       .chain(wasmFileExists)
       .bimap(
-        () => ({ moduleId, limit }),
+        () => ({ moduleId, gas, memLimit }),
         identity
       )
   }
@@ -144,7 +144,7 @@ export function evaluatorWith ({
       )
   }
 
-  return ({ moduleId, limit }) => of({ moduleId, limit })
+  return ({ moduleId, gas, memLimit }) => of({ moduleId, gas, memLimit })
     .chain(maybeStored)
     .bichain(loadFromArweave, Resolved)
     /**
@@ -154,7 +154,7 @@ export function evaluatorWith ({
     .map(() => {
       const streamId = randomBytes(8).toString('hex')
       return ({ name, processId, Memory, message, AoGlobal }) =>
-        evaluate({ streamId, moduleId, limit, name, processId, Memory, message, AoGlobal })
+        evaluate({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
     })
     .toPromise()
 }
