@@ -11,7 +11,7 @@ use crate::domain::clients::uploader::UploaderClient;
 use crate::domain::clients::store::{StoreClient};
 use crate::domain::clients::wallet::FileWallet;
 use crate::domain::clients::signer::ArweaveSigner;
-use crate::domain::core::json::{Message, Process, SortedMessages};
+use crate::domain::core::json::{Message, Process};
 use crate::domain::core::builder::{Builder};
 use crate::domain::core::dal::{Gateway, Signer, Log, Wallet};
 use crate::domain::scheduler;
@@ -130,7 +130,8 @@ pub async fn read_message_data(
     deps: Arc<Deps>,
     tx_id: String, 
     from: Option<String>, 
-    to: Option<String>
+    to: Option<String>,
+    limit: Option<i32>
 ) -> Result<String, String> {
     if let Ok(message) = deps.data_store.get_message(&tx_id) {
         let result = match serde_json::to_string(&message) {
@@ -141,9 +142,8 @@ pub async fn read_message_data(
     }
 
     if let Ok(_) = deps.data_store.get_process(&tx_id) {
-        let messages = deps.data_store.get_messages(&tx_id)?;
-        let sorted_messages = SortedMessages::from_messages(messages, from, to)?;
-        let result = match serde_json::to_string(&sorted_messages) {
+        let messages = deps.data_store.get_messages(&tx_id, &from, &to, &limit)?;
+        let result = match serde_json::to_string(&messages) {
             Ok(r) => r,
             Err(e) => return Err(format!("{:?}", e))
         };
