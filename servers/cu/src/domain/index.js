@@ -14,6 +14,7 @@ import * as WasmClient from './client/wasm.js'
 import * as AoProcessClient from './client/ao-process.js'
 import * as AoModuleClient from './client/ao-module.js'
 import * as AoEvaluationClient from './client/ao-evaluation.js'
+import * as AoBlockClient from './client/ao-block.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith } from './api/readState.js'
@@ -132,7 +133,6 @@ export const createApis = async (ctx) => {
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-    loadBlocksMeta: ArweaveClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
     findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
     findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
       cache: wasmMemoryCache,
@@ -144,8 +144,9 @@ export const createApis = async (ctx) => {
     saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ pouchDb, logger }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),
-    findBlocks: PouchDbClient.findBlocksWith({ pouchDb, logger }),
-    saveBlocks: PouchDbClient.saveBlocksWith({ pouchDb, logger }),
+    findBlocks: AoBlockClient.findBlocksWith({ pouchDb, logger }),
+    saveBlocks: AoBlockClient.saveBlocksWith({ pouchDb, logger }),
+    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
     findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
     saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
