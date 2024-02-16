@@ -13,7 +13,7 @@ async function eventQueue (init) {
   }
 }
 
-function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) {
+function crankListWith ({ processMsg, processSpawn, logger }) {
   async function processOutboxFor ({ message, tracer, msgs = [], spawns = [], initialTxId = null }) {
     /**
      * Nothing was produced in the outbox, so simply return no events
@@ -24,8 +24,6 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
 
     /**
      * Immediately push thunks to spawn processes from this outbox
-     *
-     * TODO TRACER: catch err and add to trace via tracer.trace
      */
     events.push(...spawns.map((cachedSpawn) =>
       async () => of({ cachedSpawn, tracer, initialTxId })
@@ -57,7 +55,6 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
      * This will result in this invocation being immediately popped off the callstack, before another invocation
      * is pushed onto the stack. Hence, there are no nested calls, and the stack does not grow unboundly.
      *
-     * TODO TRACER: catch err, add to trace via tracer.trace, and return empty array [] to short-circuit crank
      */
     events.push(...msgs.map((cachedMsg) =>
       async () => {
@@ -132,19 +129,20 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
      * The last event pushed onto the queue is to persist
      * the message trace record
      *
-     * TODO TRACER: uncomment and persist this trace record
+     * TODO TRACER: uncomment and persist this trace record.
+     * we have removed trace to get rid of the database for now.
      */
-    events.push(async () => {
-      return of()
-        .map(() => tracer.unwrap())
-        .map(logger.tap('Persisting trace for message %s', message.id))
-        .chain(fromPromise(saveMessageTrace))
-        /**
-         * No more events to push onto the event queue
-         */
-        .map(() => [])
-        .toPromise()
-    })
+    // events.push(async () => {
+    //   return of()
+    //     .map(() => tracer.unwrap())
+    //     .map(logger.tap('Persisting trace for message %s', message.id))
+    //     .chain(fromPromise(saveMessageTrace))
+    //     /**
+    //      * No more events to push onto the event queue
+    //      */
+    //     .map(() => [])
+    //     .toPromise()
+    // })
 
     return events
   }
@@ -155,8 +153,8 @@ function crankListWith ({ processMsg, processSpawn, saveMessageTrace, logger }) 
   return ({ message, tracer, msgs, spawns, initialTxId }) => eventQueue(() => processOutboxFor({ message, tracer, msgs, spawns, initialTxId }))
 }
 
-export function crankWith ({ processMsg, processSpawn, saveMessageTrace, logger }) {
-  const crankList = crankListWith({ processMsg, processSpawn, saveMessageTrace, logger })
+export function crankWith ({ processMsg, processSpawn, logger }) {
+  const crankList = crankListWith({ processMsg, processSpawn, logger })
 
   return (ctx) => {
     return of(ctx)

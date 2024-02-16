@@ -4,7 +4,7 @@ import * as assert from 'node:assert'
 import { createLogger } from '../../logger.js'
 import { startWith } from './start-process.js'
 
-const logger = createLogger('ao-mu:saveMonitor')
+const logger = createLogger('ao-mu:startWith')
 
 describe('startWith', () => {
   test('start a process monitor', async () => {

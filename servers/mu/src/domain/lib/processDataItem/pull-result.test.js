@@ -2,31 +2,27 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../../logger.js'
-import { fetchAndSaveResultWith } from './fetch-and-save-result.js'
+import { pullResultWith } from './pull-result.js'
 
 const logger = createLogger('ao-mu:processMsg')
 
-describe('fetchAndSaveResult', () => {
+describe('pullResultWith', () => {
   test('fetch result by transaction id', async () => {
     const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
     const spawn1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
     const cachedMsg1 = {
-      id: Math.floor(Math.random() * 1e18).toString(),
       fromTxId: 'id-1',
       msg: msg1,
-      cachedAt: new Date(),
       processId: 'pid-1',
       initialTxId: 'i-1'
     }
     const cachedSpawn1 = {
-      id: Math.floor(Math.random() * 1e18).toString(),
       fromTxId: 'id-1',
       spawn: spawn1,
-      cachedAt: new Date(),
       processId: 'pid-1',
       initialTxId: 'i-1'
     }
-    const fetchAndSaveResult = fetchAndSaveResultWith({
+    const pullResult = pullResultWith({
       fetchResult: async (id) => {
         assert.equal(id, 'id-1')
         return {
@@ -34,28 +30,10 @@ describe('fetchAndSaveResult', () => {
           Spawns: [spawn1]
         }
       },
-      saveMsg: async (msg) => {
-        assert.equal(msg.processId, 'pid-1')
-        assert.equal(msg.fromTxId, 'id-1')
-        assert.deepStrictEqual(msg.msg, msg1)
-      },
-      saveSpawn: async (spawn) => {
-        assert.equal(spawn.processId, 'pid-1')
-        assert.equal(spawn.fromTxId, 'id-1')
-        assert.deepStrictEqual(spawn.spawn, spawn1)
-      },
-      findLatestMsgs: async ({ fromTxId }) => {
-        assert.equal(fromTxId, 'id-1')
-        return [cachedMsg1]
-      },
-      findLatestSpawns: async ({ fromTxId }) => {
-        assert.equal(fromTxId, 'id-1')
-        return [cachedSpawn1]
-      },
       logger
     })
 
-    const result = await fetchAndSaveResult({
+    const result = await pullResult({
       tx: {
         id: 'id-1',
         processId: 'pid-1'

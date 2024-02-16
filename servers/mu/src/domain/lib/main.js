@@ -2,7 +2,7 @@ import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
 
 import { getCuAddressWith } from './processDataItem/get-cu-address.js'
 import { writeMessageTxWith } from './processDataItem/write-message-tx.js'
-import { fetchAndSaveResultWith } from './processDataItem/fetch-and-save-result.js'
+import { pullResultWith } from './processDataItem/pull-result.js'
 import { buildTxWith } from './processDataItem/build-tx.js'
 import { crankWith } from './crank/crank.js'
 import { spawnProcessWith } from './processSpawn/spawn-process.js'
@@ -11,8 +11,6 @@ import { buildSuccessTxWith } from './processSpawn/build-success-tx.js'
 import { parseDataItemWith } from './processDataItem/parse-data-item.js'
 import { startWith } from './monitor/start-process.js'
 import { stopWith } from './monitor/stop-process.js'
-import { deleteMsgDataWith } from './processDataItem/delete-msg-data.js'
-import { deleteSpawnDataWith } from './processSpawn/delete-spawn-data.js'
 import { tracerFor } from './tracer.js'
 import { verifyParsedDataItemWith } from './processDataItem/verify-parsed-data-item.js'
 import { writeProcessTxWith } from './processDataItem/write-process-tx.js'
@@ -32,10 +30,6 @@ export function sendDataItemWith ({
   locateScheduler,
   locateProcess,
   fetchResult,
-  saveMsg,
-  saveSpawn,
-  findLatestMsgs,
-  findLatestSpawns,
   crank,
   logger,
   saveMessageTrace
@@ -44,7 +38,7 @@ export function sendDataItemWith ({
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger })
-  const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
+  const pullResult = pullResultWith({ fetchResult, logger })
 
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
 
@@ -98,7 +92,7 @@ export function sendDataItemWith ({
            */
           crank: () => of({ ...res, initialTxId: res.tx.id })
             .chain(getCuAddress)
-            .chain(fetchAndSaveResult)
+            .chain(pullResult)
             .chain(({ msgs, spawns, initialTxId }) => crank({
               message,
               tracer,
@@ -153,12 +147,7 @@ export function processMsgWith ({
   selectNode,
   writeDataItem,
   fetchResult,
-  saveMsg,
-  saveSpawn,
   buildAndSign,
-  findLatestMsgs,
-  findLatestSpawns,
-  deleteMsg,
   logger,
   writeDataItemArweave,
   fetchSchedulerProcess
@@ -166,8 +155,7 @@ export function processMsgWith ({
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ writeDataItem, locateProcess, logger, writeDataItemArweave })
-  const fetchAndSaveResult = fetchAndSaveResultWith({ fetchResult, saveMsg, saveSpawn, findLatestMsgs, findLatestSpawns, logger })
-  const deleteMsgData = deleteMsgDataWith({ deleteMsg, logger })
+  const pullResult = pullResultWith({ fetchResult, logger })
 
   return (ctx) => {
     return of(ctx)
@@ -185,8 +173,7 @@ export function processMsgWith ({
               ? of(ctx)
               : of(ctx)
                 .chain(getCuAddress)
-                .chain(fetchAndSaveResult)
-                .chain(deleteMsgData)
+                .chain(pullResult)
           })
       })
   }
@@ -200,20 +187,17 @@ export function processSpawnWith ({
   locateScheduler,
   locateProcess,
   writeDataItem,
-  buildAndSign,
-  deleteSpawn
+  buildAndSign
 }) {
   const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler, locateProcess, buildAndSign })
   const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
   const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeDataItem, locateProcess })
-  const deleteSpawnData = deleteSpawnDataWith({ logger, deleteSpawn })
 
   return (ctx) => {
     return of(ctx)
       .chain(spawnProcess)
       .chain(buildSuccessTx)
       .chain(sendSpawnSuccess)
-      .chain(deleteSpawnData)
   }
 }
 
