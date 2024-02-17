@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.22](https://github.com/permaweb/ao/compare/loader@v0.0.21...loader@v0.0.22) (2024-02-17)
+
+
+### Features
+
+* **loader:** allow passing instantiateWasm to loader to use previously compiled WebAssembly.Module ([bc136e2](https://github.com/permaweb/ao/commit/bc136e2168443b99b369d85e45594542605bfc60))
+
 ## [0.0.21](https://github.com/permaweb/ao/compare/loader@v0.0.20...loader@v0.0.21) (2024-02-13)
 
 
