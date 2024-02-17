@@ -2120,7 +2120,27 @@ const Module = (() => {
 
     // === Body ===
 
-    var ASM_CONSTS = {};
+    var ASM_CONSTS = {
+      51072: ($0, $1) => {
+        var func = window.Extensions[UTF8ToString($0)];
+        if (typeof func === "function") {
+          var args = JSON.parse(UTF8ToString($1));
+          if (!Array.isArray(args)) {
+            args = [args];
+          }
+          var result = func.apply(null, ...args);
+          var resultJson = JSON.stringify(result);
+          var lengthBytes = lengthBytesUTF8(resultJson) + 1;
+          var stringOnWasmHeap = _malloc(lengthBytes);
+          stringToUTF8(resultJson, stringOnWasmHeap, lengthBytes);
+          return stringOnWasmHeap;
+        } else {
+          throw (
+            "Function " + UTF8ToString($0) + " is not defined in Extensions."
+          );
+        }
+      },
+    };
 
     function callRuntimeCallbacks(callbacks) {
       while (callbacks.length > 0) {
@@ -2516,6 +2536,47 @@ const Module = (() => {
 
     function _abort() {
       abort("native code called abort()");
+    }
+
+    var readAsmConstArgsArray = [];
+    function readAsmConstArgs(sigPtr, buf) {
+      // Nobody should have mutated _readAsmConstArgsArray underneath us to be something else than an array.
+      assert(Array.isArray(readAsmConstArgsArray));
+      // The input buffer is allocated on the stack, so it must be stack-aligned.
+      assert(buf % 16 == 0);
+      readAsmConstArgsArray.length = 0;
+      var ch;
+      // Most arguments are i32s, so shift the buffer pointer so it is a plain
+      // index into HEAP32.
+      buf >>= 2;
+      while ((ch = HEAPU8[sigPtr++])) {
+        var chr = String.fromCharCode(ch);
+        var validChars = ["d", "f", "i"];
+        assert(
+          validChars.includes(chr),
+          "Invalid character " +
+            ch +
+            '("' +
+            chr +
+            '") in readAsmConstArgs! Use only [' +
+            validChars +
+            '], and do not specify "v" for void return argument.'
+        );
+        // Floats are always passed as doubles, and doubles and int64s take up 8
+        // bytes (two 32-bit slots) in memory, align reads to these:
+        buf += (ch != 105) /*i*/ & buf;
+        readAsmConstArgsArray.push(
+          ch == 105 /*i*/ ? HEAP32[buf] : HEAPF64[buf++ >> 1]
+        );
+        ++buf;
+      }
+      return readAsmConstArgsArray;
+    }
+    function _emscripten_asm_const_int(code, sigPtr, argbuf) {
+      var args = readAsmConstArgs(sigPtr, argbuf);
+      if (!ASM_CONSTS.hasOwnProperty(code))
+        abort("No EM_ASM constant found at address " + code);
+      return ASM_CONSTS[code].apply(null, args);
     }
 
     var _emscripten_get_now;
@@ -3234,6 +3295,7 @@ const Module = (() => {
       _mktime_js: __mktime_js,
       _tzset_js: __tzset_js,
       abort: _abort,
+      emscripten_asm_const_int: _emscripten_asm_const_int,
       emscripten_get_now: _emscripten_get_now,
       emscripten_memcpy_big: _emscripten_memcpy_big,
       emscripten_resize_heap: _emscripten_resize_heap,
@@ -3259,6 +3321,9 @@ const Module = (() => {
     var _handle = (Module["_handle"] = createExportWrapper("handle"));
 
     /** @type {function(...*):?} */
+    var _free = (Module["_free"] = createExportWrapper("free"));
+
+    /** @type {function(...*):?} */
     var _main = (Module["_main"] = createExportWrapper("main"));
 
     /** @type {function(...*):?} */
@@ -3267,9 +3332,6 @@ const Module = (() => {
     /** @type {function(...*):?} */
     var _saveSetjmp = (Module["_saveSetjmp"] =
       createExportWrapper("saveSetjmp"));
-
-    /** @type {function(...*):?} */
-    var _free = (Module["_free"] = createExportWrapper("free"));
 
     /** @type {function(...*):?} */
     var ___errno_location = (Module["___errno_location"] =

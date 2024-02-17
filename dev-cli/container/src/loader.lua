@@ -2,6 +2,24 @@ local json = require "json"
 local process = require ".process"
 ao = require "ao"
 
+local extensionsMeta = {
+    __index = function(t, key)
+        return function(...)
+            local args = {...}
+            local argsJson = json.encode({args})
+            local resultJson = callExtension(key, argsJson)
+            return json.decode(resultJson)
+        end
+    end
+}
+
+Extensions = {}
+setmetatable(Extensions, extensionsMeta)
+
+function callExtension(funcName, argsJson)
+    return _G['call_extension'](funcName, argsJson)
+end
+
 function handle(msgJSON, aoJSON)
     -- decode inputs
     local msg = json.decode(msgJSON)

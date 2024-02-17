@@ -8,7 +8,11 @@ function process.handle(msg, ao)
     for _, o in ipairs(msg.Tags) do
         if o.name == "Action" then action = o.value end
     end
-    if action == "echo" then return {Output = msg.Data} end
+    if action == "echo" then
+        -- Extensions.Log("Log Hello World")
+        -- print(_G['call_extension']('Log', '["Hello"]'))
+        return {Output = msg.Data}
+    end
     if action == "inc" then
         Count = Count + 1
         return {Output = Count}
