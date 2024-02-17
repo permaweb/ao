@@ -1,8 +1,9 @@
 import { workerData } from 'node:worker_threads'
-import { readFile } from 'node:fs'
-import { promisify } from 'node:util'
+import { Readable, pipeline } from 'node:stream'
+import { createReadStream, createWriteStream } from 'node:fs'
 import { join } from 'node:path'
-import { gunzip } from 'node:zlib'
+import { createGunzip, createGzip } from 'node:zlib'
+import { promisify } from 'node:util'
 
 import { worker } from 'workerpool'
 import { identity } from 'ramda'
@@ -12,8 +13,13 @@ import AoLoader from '@permaweb/ao-loader'
 
 import { createLogger } from '../logger.js'
 
-const readFileP = promisify(readFile)
-const gunzipP = promisify(gunzip)
+const pipelineP = promisify(pipeline)
+
+const logger = createLogger(`ao-cu:worker-${workerData.id}`)
+
+function wasmResponse (stream) {
+  return new Response(stream, { headers: { 'Content-Type': 'application/wasm' } })
+}
 
 /**
  * ###################
@@ -23,9 +29,54 @@ const gunzipP = promisify(gunzip)
 
 function readWasmFileWith ({ DIR }) {
   return async (moduleId) => {
-    return readFileP(join(DIR, `${moduleId}.wasm.gz`))
-      .then(gunzipP)
+    const file = join(DIR, `${moduleId}.wasm.gz`)
+
+    return new Promise((resolve, reject) =>
+      resolve(pipeline(
+        createReadStream(file),
+        createGunzip(),
+        reject
+      ))
+    )
   }
+}
+
+function writeWasmFileWith ({ DIR, logger }) {
+  return async (moduleId, wasmStream) => {
+    const file = join(DIR, `${moduleId}.wasm.gz`)
+
+    return pipelineP(
+      wasmStream,
+      createGzip(),
+      createWriteStream(file)
+    ).catch((err) => {
+      logger('Failed to cache binary for module "%s" in a file. Skipping...', moduleId, err)
+    })
+  }
+}
+
+/**
+ * #######################
+ * Network Utils
+ * #######################
+ */
+
+function streamTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
+  return (id) =>
+    of(id)
+      .chain(fromPromise((id) =>
+        fetch(`${GATEWAY_URL}/raw/${id}`)
+          .then(async (res) => {
+            if (res.ok) return res
+            logger(
+              'Error Encountered when fetching raw data for transaction \'%s\' from gateway \'%s\'',
+              id,
+              GATEWAY_URL
+            )
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
+      ))
+      .toPromise()
 }
 
 /**
@@ -35,11 +86,11 @@ function readWasmFileWith ({ DIR }) {
  */
 
 /**
- * A cache for wasm binaries
+ * A cache for compiled Wasm Modules
  *
- * @returns {LRUCache<string, ArrayBuffer>}
+ * @returns {LRUCache<string, WebAssembly.Module>}
  */
-function createWasmBinaryCache ({ MAX_SIZE }) {
+function createWasmModuleCache ({ MAX_SIZE }) {
   return new LRUCache({
     /**
      * #######################
@@ -56,7 +107,7 @@ function createWasmBinaryCache ({ MAX_SIZE }) {
  *
  * @returns {LRUCache<string, Function>}
  */
-function createWasmModuleCache ({ MAX_SIZE }) {
+function createWasmInstanceCache ({ MAX_SIZE }) {
   return new LRUCache({
     /**
      * #######################
@@ -68,81 +119,135 @@ function createWasmModuleCache ({ MAX_SIZE }) {
 }
 
 function evaluateWith ({
+  wasmInstanceCache,
   wasmModuleCache,
-  wasmBinaryCache,
   readWasmFile,
-  bootstrapWasmModule,
+  writeWasmFile,
+  streamTransactionData,
+  bootstrapWasmInstance,
   logger
 }) {
-  function maybeCachedWasm ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+  function maybeCachedModule ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
     return of(moduleId)
-      .map((moduleId) => wasmBinaryCache.get(moduleId))
+      .map((moduleId) => wasmModuleCache.get(moduleId))
       .chain((wasm) => wasm
         ? Resolved(wasm)
         : Rejected({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
       )
-      .chain(fromPromise((wasm) => bootstrapWasmModule(wasm, gas, memLimit)))
   }
 
-  function storedWasm ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+  function maybeStoredBinary ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
     logger('Checking for wasm file to load module "%s"...', moduleId)
 
     return of(moduleId)
       .chain(fromPromise(readWasmFile))
+      .chain(fromPromise((stream) =>
+        WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream)))
+      ))
       .bimap(
         () => ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }),
         identity
       )
-      /**
-       * Cache the wasm in memory for quick access
-       */
-      .map((wasm) => {
-        logger('Wasm file for module "%s" was found. Caching in memory for next time...', moduleId)
-        wasmBinaryCache.set(moduleId, wasm)
-        return wasm
-      })
-      .chain(fromPromise(async (wasm) => bootstrapWasmModule(wasm, gas, memLimit)))
   }
 
-  function loadModule ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
-    return maybeCachedWasm({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
-      .bichain(storedWasm, Resolved)
+  function loadTransaction ({ moduleId }) {
+    logger('Loading wasm transaction "%s"...', moduleId)
+
+    return of(moduleId)
+      .chain(fromPromise(streamTransactionData))
+      .map((res) => res.body.tee())
+      /**
+       * Simoultaneously cache the binary in a file
+       * and compile to a WebAssembly.Module
+       */
+      .chain(fromPromise(([s1, s2]) =>
+        Promise.all([
+          writeWasmFile(moduleId, Readable.fromWeb(s1)),
+          WebAssembly.compileStreaming(wasmResponse(s2))
+        ])
+      ))
+      .map(([, res]) => res)
+  }
+
+  function loadInstance ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+    return maybeCachedModule({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
+      .bichain(
+        /**
+         * Potentially Compile the Wasm Module, cache it for next time,
+         *
+         * then create the Wasm instance
+         */
+        () => of({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
+          .chain(maybeStoredBinary)
+          .bichain(loadTransaction, Resolved)
+          /**
+           * Cache the wasm Module in memory for quick access next time
+           */
+          .map((wasmModule) => {
+            logger('Caching compiled WebAssembly.Module for module "%s" in memory, for next time...', moduleId)
+            wasmModuleCache.set(moduleId, wasmModule)
+            return wasmModule
+          }),
+        /**
+         * Cached instance, so just reuse
+         */
+        Resolved
+      )
+      .chain(fromPromise((wasmModule) => bootstrapWasmInstance(wasmModule)))
       /**
        * Cache the wasm module for this particular stream,
        * in memory, for quick retrieval next time
        */
-      .map((wasmModule) => {
-        wasmModuleCache.set(streamId, wasmModule)
-        return wasmModule
+      .map((wasmInstance) => {
+        console.log(wasmInstance, streamId)
+        wasmInstanceCache.set(streamId, wasmInstance)
+        return wasmInstance
       })
   }
 
-  function maybeCachedModule ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+  function maybeCachedInstance ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
     return of(streamId)
-      .map((streamId) => wasmModuleCache.get(streamId))
-      .chain((wasmModule) => wasmModule
-        ? Resolved(wasmModule)
+      .map((streamId) => wasmInstanceCache.get(streamId))
+      .chain((wasmInstance) => wasmInstance
+        ? Resolved(wasmInstance)
         : Rejected({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
       )
   }
 
+  /**
+   * Evaluate a message using the handler that wraps the WebAssembly.Instance,
+   * identified by the streamId.
+   *
+   * If not already instantiated and cached in memory, attempt to use a cached WebAssembly.Module
+   * and instantiate the Instance and handler, caching it by streamId
+   *
+   * If the WebAssembly.Module is not cached, then we check if the binary is cached in a file,
+   * then compile it in a WebAssembly.Module, cached in memory, then used to instantiate a
+   * new WebAssembly.Instance
+   *
+   * If not in a file, then the module transaction is downloaded from the Gateway url,
+   * cached in a file, compiled, further cached in memory, then used to instantiate a
+   * new WebAssembly.Instance and handler
+   *
+   * Finally, evaluates the message and returns the result of the evaluation.
+   */
   return ({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal }) =>
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
-    maybeCachedModule({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
-      .bichain(loadModule, Resolved)
+    maybeCachedInstance({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
+      .bichain(loadInstance, Resolved)
       /**
        * Perform the evaluation
        */
-      .chain((wasmModule) =>
-        of(wasmModule)
-          .map((wasmModule) => {
+      .chain((wasmInstance) =>
+        of(wasmInstance)
+          .map((wasmInstance) => {
             logger('Evaluating message "%s" to process "%s"', name, processId)
-            return wasmModule
+            return wasmInstance
           })
-          .chain(fromPromise(async (wasmModule) => wasmModule(Memory, message, AoGlobal)))
+          .chain(fromPromise(async (wasmInstance) => wasmInstance(Memory, message, AoGlobal)))
           .bimap(identity, identity)
       )
       .toPromise()
@@ -153,10 +258,14 @@ function evaluateWith ({
  */
 worker({
   evaluate: evaluateWith({
-    wasmBinaryCache: createWasmBinaryCache({ MAX_SIZE: workerData.WASM_BINARY_CACHE_MAX_SIZE }),
     wasmModuleCache: createWasmModuleCache({ MAX_SIZE: workerData.WASM_MODULE_CACHE_MAX_SIZE }),
+    wasmInstanceCache: createWasmInstanceCache({ MAX_SIZE: workerData.WASM_INSTANCE_CACHE_MAX_SIZE }),
     readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
-    bootstrapWasmModule: AoLoader,
-    logger: createLogger(`ao-cu:worker-${workerData.id}`)
+    writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
+    streamTransactionData: streamTransactionDataWith({ fetch, GATEWAY_URL: workerData.GATEWAY_URL, logger }),
+    bootstrapWasmInstance: (wasmModule) => AoLoader((info, receiveInstance) =>
+      WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
+    ),
+    logger
   })
 })
