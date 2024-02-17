@@ -1,8 +1,7 @@
 /* eslint-disable no-throw-literal */
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { createReadStream, readFileSync } from 'node:fs'
-import { Readable } from 'node:stream'
+import { readFileSync } from 'node:fs'
 
 import AoLoader from '@permaweb/ao-loader'
 
@@ -153,7 +152,7 @@ describe('ao-module', () => {
       }
     }
 
-    test('should eval the message using the cached raw wasm from a file', async () => {
+    test('should eval the message', async () => {
       const evaluator = evaluatorWith({
         evaluate: ({ streamId, moduleId: mId, gas, memLimit, name, processId, Memory, message, AoGlobal }) => {
           assert.ok(streamId)
@@ -165,43 +164,6 @@ describe('ao-module', () => {
 
           return AoLoader(readFileSync('./test/processes/happy/process.wasm'))
             .then((wasmModule) => wasmModule(Memory, message, AoGlobal))
-        },
-        loadTransactionData: () => assert.fail('should not loadTransactionData if cached on filesystem'),
-        wasmFileExists: async () => true,
-        writeWasmFile: () => assert.fail('should not writeWasmFile if cached on filesystem'),
-        logger
-      })
-
-      const res = await (await evaluator({ moduleId, gas: 9_000_000_000_000, memLimit: 8_000_000_000_000 }))(args)
-
-      assert.ok(res.Memory)
-      assert.ok(res.Output)
-      assert.ok(res.Messages)
-      assert.ok(res.Spawns)
-      assert.ok(res.GasUsed)
-    })
-
-    test('should eval the message using the raw wasm fetched from arweave', async () => {
-      const evaluator = evaluatorWith({
-        evaluate: ({ streamId, moduleId: mId, gas, memLimit, name, processId, Memory, message, AoGlobal }) => {
-          assert.ok(streamId)
-          assert.equal(mId, moduleId)
-          assert.equal(gas, 9_000_000_000_000)
-          assert.equal(memLimit, 8_000_000_000_000)
-          assert.equal(name, args.name)
-          assert.equal(processId, args.processId)
-
-          return AoLoader(readFileSync('./test/processes/happy/process.wasm'))
-            .then((wasmModule) => wasmModule(Memory, message, AoGlobal))
-        },
-        loadTransactionData: async (moduleId) => {
-          assert.equal(moduleId, 'foo-module')
-          return new Response(Readable.toWeb(createReadStream('./test/processes/happy/process.wasm')))
-        },
-        wasmFileExists: async () => { throw new Error('not on filesystem') },
-        writeWasmFile: async (moduleId, wasm) => {
-          assert.equal(moduleId, 'foo-module')
-          assert.ok(typeof wasm.pipe === 'function')
         },
         logger
       })

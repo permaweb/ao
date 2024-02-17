@@ -67,9 +67,10 @@ export const createApis = async (ctx) => {
       return {
         workerThreadOpts: {
           workerData: {
-            WASM_BINARY_CACHE_MAX_SIZE: ctx.WASM_BINARY_CACHE_MAX_SIZE,
             WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
+            WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
             WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
+            GATEWAY_URL: ctx.GATEWAY_URL,
             id: workerId
           }
         }
@@ -150,9 +151,6 @@ export const createApis = async (ctx) => {
     findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
     saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
-      loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-      wasmFileExists: WasmClient.wasmFileExists,
-      writeWasmFile: WasmClient.writeWasmFile,
       /**
        * Evaluation will invoke a worker available in the worker pool
        */

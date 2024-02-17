@@ -1,7 +1,5 @@
-import { Readable } from 'node:stream'
-
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, identity, prop } from 'ramda'
+import { always, applySpec, prop } from 'ramda'
 import { z } from 'zod'
 
 import { moduleSchema } from '../model.js'
@@ -90,63 +88,8 @@ export function findModuleWith ({ pouchDb }) {
   }
 }
 
-/**
- * Evaluate a message using the Module with the provided transaciton id.
- *
- * If not already bootstrapped and cached in memory, attempt to load the raw wasm from a file
- * and bootstrap, setting it in the in-memory cache.
- *
- * If not raw wasm isn't cached in a file, then fetch from arweave, cache in a file, bootstrap,
- * and set in the in-memory cache
- *
- * Finally, it evaluates the message and returns the result of the evaluation.
- *
- * TODO: this is encapsulated, such that we can later make this utilize
- * worker threads. We will make that change later
- */
-export function evaluatorWith ({
-  evaluate,
-  loadTransactionData,
-  wasmFileExists,
-  writeWasmFile,
-  logger: _logger
-}) {
-  const logger = _logger.child('ao-module:evaluator')
-  loadTransactionData = fromPromise(loadTransactionData)
-  wasmFileExists = fromPromise(wasmFileExists)
-
-  function maybeStored ({ moduleId, gas, memLimit }) {
-    logger('Checking for wasm file to load...', moduleId)
-
-    return of(moduleId)
-      .chain(wasmFileExists)
-      .bimap(
-        () => ({ moduleId, gas, memLimit }),
-        identity
-      )
-  }
-
-  /**
-   * TODO: should we move this into the evaluator (worker)
-   * that is passed in? For now, we will keep it on this side
-   * of the worker interaction
-   */
-  function loadFromArweave ({ moduleId }) {
-    return of(moduleId)
-      .chain(loadTransactionData)
-      .map((res) => res.body)
-      /**
-       * Write the module wasm to a file for so that there's less chance it needs
-       * to be loaded from Arweave
-       */
-      .chain(fromPromise((wasmStream) =>
-        writeWasmFile(moduleId, Readable.fromWeb(wasmStream)))
-      )
-  }
-
+export function evaluatorWith ({ evaluate }) {
   return ({ moduleId, gas, memLimit }) => of({ moduleId, gas, memLimit })
-    .chain(maybeStored)
-    .bichain(loadFromArweave, Resolved)
     /**
      * Create an evaluator function scoped to this particular
      * stream of messages
