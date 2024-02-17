@@ -5,9 +5,10 @@ const Module = (() => {
   let _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined
   if (typeof __filename !== 'undefined') _scriptDir = _scriptDir || __filename
   return (
-    function (binary, _limit) {
+    function (binaryOrInstantiate, _limit) {
       var Module = Module || {}
-      Module.wasmBinary = binary // metering.meterWASM(binary, { meterType: 'i32' }).module
+      if (typeof binaryOrInstantiate === 'function') Module.instantiateWasm = binaryOrInstantiate
+      else Module.wasmBinary = binaryOrInstantiate
 
       /**
        * Expose gas on the module
@@ -138,7 +139,7 @@ module.exports = async function (binary, limit) {
 
   return (buffer, msg, env) => {
     const originalRandom = Math.random
-    //const OriginalDate = Date
+    // const OriginalDate = Date
     const originalLog = console.log
     try {
       /** start mock Math.random */
@@ -175,7 +176,7 @@ module.exports = async function (binary, limit) {
 
       /** unmock functions */
       // eslint-disable-next-line no-global-assign
-      //Date = OriginalDate
+      // Date = OriginalDate
       Math.random = originalRandom
       console.log = originalLog
       /** end unmock */
@@ -190,7 +191,7 @@ module.exports = async function (binary, limit) {
       }
     } finally {
       // eslint-disable-next-line no-global-assign
-      //Date = OriginalDate
+      // Date = OriginalDate
       Math.random = originalRandom
       console.log = originalLog
       buffer = null

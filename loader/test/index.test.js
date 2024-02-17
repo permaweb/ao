@@ -3,6 +3,8 @@
 import { describe, it } from 'node:test'
 import * as assert from 'node:assert'
 import fs from 'fs'
+import { Readable } from 'node:stream'
+import { createReadStream } from 'node:fs'
 
 /**
  * dynamic import, so we can run unit tests against the source
@@ -16,7 +18,7 @@ const { default: AoLoader } = await import(MODULE_PATH)
 const wasmBinary = fs.readFileSync('./test/process/process.wasm')
 
 describe('loader', async () => {
-  it('load and execute message passing contract', async () => {
+  it('load wasm and evaluate message', async () => {
     const handle = await AoLoader(wasmBinary)
     const mainResult = await handle(null,
       {
@@ -39,6 +41,45 @@ describe('loader', async () => {
     assert.equal(mainResult.Output, 'Hello World')
     // assert.equal(mainResult.GasUsed, 463918939)
     assert.ok(true)
+  })
+
+  it('should use separately instantiated WebAssembly.Instance', async () => {
+    /**
+     * Non-blocking!
+     */
+    const wasmModuleP = WebAssembly.compileStreaming(
+      /**
+       * Could just be a fetch call result, but demonstrating
+       * that any Response will do
+       */
+      new Response(
+        Readable.toWeb(createReadStream('./test/process/process.wasm')),
+        { headers: { 'Content-Type': 'application/wasm' } }
+      )
+    )
+
+    const handle = await AoLoader((info, receiveInstance) => {
+      assert.ok(info)
+      assert.ok(receiveInstance)
+      wasmModuleP
+        /**
+         * Non-Blocking
+         */
+        .then((mod) => WebAssembly.instantiate(mod, info))
+        .then((instance) => receiveInstance(instance))
+    })
+    const result = await handle(null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+
+    assert.equal(result.Output, 1)
+
+    const result2 = await handle(result.Memory,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+    assert.equal(result2.Output, 2)
   })
 
   it('should load previous memory', async () => {
