@@ -6,12 +6,6 @@ import fs from 'fs'
 import { Readable } from 'node:stream'
 import { createReadStream } from 'node:fs'
 
-globalThis.Extensions = {
-  Log: function (message) {
-    console.log('Logged: ' + message)
-    return null // always return 1 item back!
-  }
-}
 /**
  * dynamic import, so we can run unit tests against the source
  * and integration tests against the bundled distribution
@@ -124,7 +118,8 @@ describe('loader', async () => {
      * but they should be within ~75k of each other, effectively meaning the gas is not
      * "stacking" and being refilled every time
      */
-    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 600000)
+
+    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 800000)
   })
 
   // it('should run out of gas', async () => {

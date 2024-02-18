@@ -1,4 +1,4 @@
-const Module = require('./process.js')
+const Module = require('./process2.js')
 
 globalThis.Extensions = {
   Log: (s) => {
