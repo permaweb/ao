@@ -10,6 +10,7 @@ function process.handle(msg, ao)
     end
     if action == "echo" then return {Output = msg.Data} end
     if action == "hash" then return {Output = Extensions.SHA256(msg.Data)} end
+    if action == "verify" then return {Output = "TODO"} end
     if action == "inc" then
         Count = Count + 1
         return {Output = Count}
