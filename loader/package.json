@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
-    "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
+    "build:types": "tsc src/index.cjs --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
     "test": "npm run build && node --test",
     "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --test"
   },
@@ -20,6 +20,7 @@
     "arweave": "^1.14.4"
   },
   "devDependencies": {
+    "@types/node": "^20.11.19",
     "esbuild": "^0.19.5",
     "typescript": "^5.2.2"
   },
