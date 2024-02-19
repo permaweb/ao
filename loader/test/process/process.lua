@@ -10,7 +10,18 @@ function process.handle(msg, ao)
     end
     if action == "echo" then return {Output = msg.Data} end
     if action == "hash" then return {Output = Extensions.SHA256(msg.Data)} end
-    if action == "verify" then return {Output = "TODO"} end
+    if action == "verify" then
+        local publicKey = ""
+        for _, o in ipairs(msg.Tags) do
+            if o.name == "PublicKey" then publicKey = o.value end
+        end
+        local sig = ""
+        for _, o in ipairs(msg.Tags) do
+            if o.name == "Sig" then sig = o.value end
+        end
+        local result = Extensions.SigVerify(publicKey, msg.Data, sig)
+        return {Output = result}
+    end
     if action == "inc" then
         Count = Count + 1
         return {Output = Count}
