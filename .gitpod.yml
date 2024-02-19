@@ -5,26 +5,6 @@ tasks:
   - name: Init Repo Tooling
     init: npm i
 
-  - name: Start CU Database
-    init: docker build -t cu-couch servers/cu/.couchdb
-    command: |
-      mkdir -p /workspace/cu-data
-      docker run -it \
-        -p 5984:5984 \
-        -v /workspace/cu-data:/opt/couchdb/data \
-        --env-file servers/cu/.couchdb/couchdb.conf \
-        cu-couch
-
-  - name: Start MU Database
-    init: docker build -t mu-postgres servers/mu/.postgres
-    command: |
-      mkdir -p /workspace/mu-data
-      docker run -it \
-       -p 5432:5432 \
-       -v /workspace/mu-data:/var/lib/postgresql/data \
-       --env-file servers/mu/.postgres/postgres.conf \
-       mu-postgres
-
 vscode:
   extensions:
     - "standard.vscode-standard"
