@@ -30,6 +30,7 @@ function fetchCronWith ({ CU_URL }) {
     if (cursor) {
       requestUrl = `${CU_URL}/cron/${processId}?from=${cursor}`
     }
+    console.log(requestUrl)
     return fetch(requestUrl).then(r => r.json())
   }
 }
