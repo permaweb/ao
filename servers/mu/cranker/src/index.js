@@ -1,20 +1,15 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-// import { fileURLToPath } from 'url'
 
 import minimist from 'minimist'
 import { z } from 'zod'
-import { of } from 'hyper-async'
 import cron from 'node-cron'
 import PubSub from 'pubsub-js'
 
 import { config } from './config.js'
 import { createLogger } from './logger.js'
 import { createApis } from './index.common.js'
-
-// const __filename = fileURLToPath(import.meta.url)
-// const __dirname = path.dirname(__filename)
 
 export const configSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
@@ -88,25 +83,55 @@ cron.schedule(getCronString(12), () => {
   runTimeComplete = true
 })
 
+let isProcessingMessages = false
+let isProcessingSpawns = false
+const messageQueue = []
+const spawnQueue = []
+
+const processMessageQueue = async () => {
+    if (!isProcessingMessages) {
+        isProcessingMessages = true
+        while (messageQueue.length > 0) {
+            await apis.processMsg({ resultMsg: messageQueue.shift() })
+                .chain((res) => apis.fetchResult({
+                    processId: res.resultMsg.processId,
+                    txId: res.tx.id
+                }))
+                .map(publishResult)
+                .bimap(
+                    e => console.error(e),
+                    r => {console.log(r)}
+                )
+                .toPromise()
+        }
+        isProcessingMessages = false
+    }
+}
+
+const processSpawnQueue = async () => {
+  if(!isProcessingSpawns) {
+    isProcessingSpawns = true 
+    while (spawnQueue.length > 0) {
+        await apis.processSpawn({ resultSpawn: spawnQueue.shift() })
+            .bimap(
+                e => console.error(e),
+                r => {console.log(r)}
+            )
+            .toPromise()
+    }
+    isProcessingSpawns = false
+  }
+  
+}
+
 PubSub.subscribe('MESSAGE', (_topic, data) => {
-  return apis.processMsg({ resultMsg: data })
-    .chain((res) => apis.fetchResult({
-      processId: res.resultMsg.processId,
-      txId: res.tx.id
-    }))
-    .map(publishResult)
-    .fork(
-      e => console.error(e),
-      _r => {}
-    )
+  messageQueue.push(data)
+  processMessageQueue()
 })
 
 PubSub.subscribe('SPAWN', (_topic, data) => {
-  return of({ resultSpawn: data }).chain(apis.processSpawn)
-    .fork(
-      e => console.error(e),
-      _r => {}
-    )
+  spawnQueue.push(data)
+  processSpawnQueue()
 })
 
 function publishCron (result) {
