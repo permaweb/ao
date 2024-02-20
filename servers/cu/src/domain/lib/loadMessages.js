@@ -1,4 +1,4 @@
-import { PassThrough, Transform, pipeline } from 'node:stream'
+import { Transform, compose as composeStreams } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
 import { T, always, ascend, cond, equals, identity, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
@@ -495,7 +495,8 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
           return ctx
         })
         .map(({ leftMost, rightMostTimestamp, $scheduled, genCronMessages }) => {
-          return pipeline(
+          return composeStreams(
+            $scheduled,
             /**
              * Given a left-most and right-most boundary, return an async generator,
              * that given a list of values, emits sequential binary tuples dervied from those values.
@@ -509,7 +510,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
              *
              * [b1, b2, b3] -> [ [b1, b2], [b2, b3] ]
              */
-            async function * genBoundariesAsTuples () {
+            Transform.from(async function * genBoundariesAsTuples ($scheduled) {
               /**
                * the initial prev is the left-most boundary
                */
@@ -583,8 +584,8 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
                  */
                 yield [false, prev, false, { block: { timestamp: rightMostTimestamp } }]
               }
-            },
-            Transform.from(async function * (boundaries) {
+            }),
+            Transform.from(async function * mergedMessages (boundaries) {
               for await (const [doEmitLeft, left, doEmitRight, right] of boundaries) {
                 logger('Calculating all cron messages between %o and %o', left.block, right.block)
 
@@ -601,10 +602,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
 
                 if (doEmitRight) yield right
               }
-            }),
-            (err) => {
-              if (err) logger('Encountered err when merging scheduled and cron messages', err)
-            }
+            })
           )
         })
     })
@@ -617,8 +615,9 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
      * construct and emit a 'message' for the process
      */
     .map($messages => {
-      return pipeline(
-        async function * () {
+      return composeStreams(
+        $messages,
+        Transform.from(async function * maybeEmitColdStart ($messages) {
           const isColdStart = !ctx.from
 
           /**
@@ -669,11 +668,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
            * Emit the merged stream of Cron and Scheduled Messages
            */
           for await (const message of $messages) yield messageSchema.parse(message)
-        },
-        new PassThrough({ objectMode: true }),
-        (err) => {
-          if (err) logger('Encountered err when emitting messages to eval', err)
-        }
+        })
       )
     })
     .map(messages => ({ messages }))
