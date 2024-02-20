@@ -547,34 +547,49 @@ export function saveCheckpointWith ({
   `
 
   function createCheckpointDataItem ({ moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory }) {
-    return of({ Memory, encoding })
-      .chain(() => hashWasmMemory(Readable.from(Memory), encoding))
-      .map((sha) => {
-        /**
-         * TODO: what should we set anchor to?
-         */
-        const dataItem = {
-          data: Memory,
-          tags: [
-            { name: 'Data-Protocol', value: 'ao' },
-            { name: 'Variant', value: 'ao.TN.1' },
-            { name: 'Type', value: 'Checkpoint' },
-            { name: 'Module', value: moduleId.trim() },
-            { name: 'Process', value: processId.trim() },
-            { name: 'Epoch', value: `${epoch}`.trim() },
-            { name: 'Nonce', value: `${nonce}`.trim() },
-            { name: 'Timestamp', value: `${timestamp}`.trim() },
-            { name: 'Block-Height', value: `${blockHeight}`.trim() },
-            { name: 'Content-Type', value: 'application/octet-stream' },
-            { name: 'SHA-256', value: sha }
-          ]
-        }
+    return of(Memory)
+      .map((Memory) =>
+        ArrayBuffer.isView(Memory)
+          /**
+           * Ensure that we are always passing a Buffer to Readable.from
+           * which will throw an error if given a TypedArray
+           *
+           * To avoid a copy, use the typed array's underlying ArrayBuffer to back
+           * new Buffer, respecting the "view", i.e. byteOffset and byteLength
+           */
+          ? Buffer.from(Memory.buffer, Memory.byteOffset, Memory.byteLength)
+          : Buffer.from(Memory)
+      )
+      .chain((buffer) =>
+        of(buffer)
+          .chain((buffer) => hashWasmMemory(Readable.from(buffer), encoding))
+          .map((sha) => {
+            /**
+             * TODO: what should we set anchor to?
+             */
+            const dataItem = {
+              data: buffer,
+              tags: [
+                { name: 'Data-Protocol', value: 'ao' },
+                { name: 'Variant', value: 'ao.TN.1' },
+                { name: 'Type', value: 'Checkpoint' },
+                { name: 'Module', value: moduleId.trim() },
+                { name: 'Process', value: processId.trim() },
+                { name: 'Epoch', value: `${epoch}`.trim() },
+                { name: 'Nonce', value: `${nonce}`.trim() },
+                { name: 'Timestamp', value: `${timestamp}`.trim() },
+                { name: 'Block-Height', value: `${blockHeight}`.trim() },
+                { name: 'Content-Type', value: 'application/octet-stream' },
+                { name: 'SHA-256', value: sha }
+              ]
+            }
 
-        if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
-        if (encoding) dataItem.tags.push({ name: 'Content-Encoding', value: encoding })
+            if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
+            if (encoding) dataItem.tags.push({ name: 'Content-Encoding', value: encoding })
 
-        return dataItem
-      })
+            return dataItem
+          })
+      )
       .chain(buildAndSignDataItem)
   }
 

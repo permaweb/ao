@@ -1,10 +1,11 @@
 /* eslint-disable no-throw-literal */
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { createReadStream } from 'node:fs'
+import { createReadStream, readFileSync } from 'node:fs'
+import { createGzip } from 'node:zlib'
+import { Readable } from 'node:stream'
 
 import { hashWasmMemory } from './wasm.js'
-import { createGzip } from 'node:zlib'
 
 describe('wasm', () => {
   describe('hashWasmMemory', () => {
@@ -15,6 +16,17 @@ describe('wasm', () => {
 
       assert.ok(typeof sha === 'string')
       assert.equal(sha.length, 64)
+    })
+
+    test('should hash the array buffer derived from a typed array', async () => {
+      const s = createReadStream('./test/processes/happy/process.wasm')
+      const sha = await hashWasmMemory(s)
+
+      const tArray = new Uint8Array(readFileSync('./test/processes/happy/process.wasm'))
+      const fromTArray = Buffer.from(tArray.buffer, tArray.byteOffset, tArray.byteLength)
+      const fromBuffer = await hashWasmMemory(Readable.from(fromTArray))
+
+      assert.equal(fromBuffer, sha)
     })
 
     test('should decode the array buffer before hashing', async () => {
