@@ -1,6 +1,6 @@
-import { pathOr } from 'ramda'
+// import { pathOr } from 'ramda'
 
-import { readStateWith } from './readState.js'
+// import { readStateWith } from './readState.js'
 import { gatherResultsWith } from '../lib/gatherResults.js'
 import { maybeParseCursor } from '../utils.js'
 
@@ -23,7 +23,7 @@ import { maybeParseCursor } from '../utils.js'
  */
 export function readResultsWith (env) {
   const gatherResults = gatherResultsWith(env)
-  const readState = readStateWith(env)
+  // const readState = readStateWith(env)
 
   return ({ processId, from, to, limit, sort }) => {
     /**
@@ -31,12 +31,12 @@ export function readResultsWith (env) {
      * we need to potentially parse it, then grab the timestamp and ordinate from the parsed data
      */
     return maybeParseCursor('to')({ processId, from, to, limit, sort })
-      .chain((ctx) => readState({
-        processId,
-        to: pathOr(undefined, ['to', 'timestamp'], ctx),
-        ordinate: pathOr(undefined, ['to', 'ordinate'], ctx),
-        cron: pathOr(undefined, ['to', 'cron'], ctx)
-      }))
+    // .chain((ctx) => readState({
+    //   processId,
+    //   to: pathOr(undefined, ['to', 'timestamp'], ctx),
+    //   ordinate: pathOr(undefined, ['to', 'ordinate'], ctx),
+    //   cron: pathOr(undefined, ['to', 'cron'], ctx)
+    // }))
       /**
        * Now 'caught up' on evaluations, so now we can gather the results, using the filtering
        * criteria
