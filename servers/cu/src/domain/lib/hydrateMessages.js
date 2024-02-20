@@ -1,4 +1,4 @@
-import { pipeline, Readable, Transform } from 'node:stream'
+import { compose as composeStreams, Transform } from 'node:stream'
 
 import { of } from 'hyper-async'
 import { mergeRight } from 'ramda'
@@ -169,28 +169,10 @@ export function hydrateMessagesWith (env) {
   return (ctx) => {
     return of(ctx)
       .map(({ messages: $messages }) => {
-        const maybeMessageIdStream = Readable.from(maybeMessageId($messages), { objectMode: true })
-
-        /**
-         * There is some sort of bug in pipeline which will consistently cause this stream
-         * to not end IFF it emits an error.
-         *
-         * When errors are thrown in other places, pipeline seems to work and close the stream just fine.
-         * So not sure what's going on here.
-         *
-         * This seemed to be the only way to successfully
-         * end the stream, thus closing the pipeline.
-         *
-         * See https://github.com/nodejs/node/issues/40279#issuecomment-1061124430
-         */
-        maybeMessageIdStream.on('error', () => maybeMessageIdStream.emit('end'))
-
-        return pipeline(
-          maybeMessageIdStream,
-          Transform.from(maybeAoLoad),
-          (err) => {
-            if (err) logger('Encountered err when hydrating Load and forwarded-for messages', err)
-          }
+        return composeStreams(
+          $messages,
+          Transform.from(maybeMessageId),
+          Transform.from(maybeAoLoad)
         )
       })
       .map(messages => ({ messages }))

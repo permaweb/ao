@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { Transform, pipeline } from 'node:stream'
+import { Transform, compose as composeStreams } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
 
@@ -95,7 +95,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       for await (const edge of edges) {
         yield pipe(
           prop('node'),
-          logger.tap('transforming message retrieved from the SU %o'),
+          (node) => {
+            logger('Transforming Scheduled Message "%s" to process "%s"', node.message.id, processId)
+            return node
+          },
           applySpec({
             cron: always(undefined),
             /**
@@ -159,12 +162,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   return (args) =>
     of(args)
       .map(({ suUrl, processId, owner: processOwner, tags: processTags, moduleId, moduleOwner, moduleTags, from, to }) => {
-        return pipeline(
-          fetchAllPages({ suUrl, processId, from, to }),
-          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags })),
-          (err) => {
-            if (err) logger('Encountered err when mapping Scheduled Messages', err)
-          }
+        return composeStreams(
+          /**
+           * compose will convert the AsyncIterable into a readable Duplex
+           */
+          fetchAllPages({ suUrl, processId, from, to })(),
+          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }))
         )
       })
       .toPromise()
