@@ -199,7 +199,6 @@ function evaluateWith ({
        * in memory, for quick retrieval next time
        */
       .map((wasmInstance) => {
-        console.log(wasmInstance, streamId)
         wasmInstanceCache.set(streamId, wasmInstance)
         return wasmInstance
       })
