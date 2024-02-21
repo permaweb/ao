@@ -8,7 +8,7 @@ import {
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { evaluatorSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
+import { evaluatorSchema, findMessageHashBeforeSchema, saveEvaluationSchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
 
 /**
@@ -64,13 +64,13 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
       .map(() => evaluation)
 }
 
-function doesMessageHashExistWith ({ findMessageHash }) {
-  findMessageHash = fromPromise(findMessageHashSchema.implement(findMessageHash))
+function doesMessageHashExistWith ({ findMessageHashBefore }) {
+  findMessageHashBefore = fromPromise(findMessageHashBeforeSchema.implement(findMessageHashBefore))
 
-  return (deepHash) => {
-    return findMessageHash({ messageHash: deepHash })
+  return ({ deepHash, processId, timestamp, ordinate }) => {
+    return findMessageHashBefore({ messageHash: deepHash, processId, timestamp, ordinate })
       .bichain(
-        err => {
+        (err) => {
           if (err.status === 404) return Resolved(false)
           return Rejected(err)
         },
@@ -181,6 +181,12 @@ export function evaluateWith (env) {
           */
         if (ctx.fromCron) evaledCrons.add(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }))
 
+        /**
+         * Keep track of any deepHashes in the eval stream
+         * as a quick way to eliminate dupes in the same eval stream
+         */
+        const deepHashes = new Set()
+
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -216,15 +222,22 @@ export function evaluateWith (env) {
 
               /**
                * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
-               * if their deepHash is found in the cache, this prevents duplicate evals
+               * if their deepHash is found in the cache.
+               *
+               * This prevents duplicate evals from double cranks
                */
               if (deepHash) {
-                // logger('Checking if "%s" has already been evaluated...', name)
-                const found = await doesMessageHashExist(deepHash).toPromise()
-                if (found) {
-                  logger('Message "%s" with deepHash "%s" was found in cache and therefore has already been evaluated. Removing from eval stream', name, deepHash)
+                if (deepHashes.has(deepHash) ||
+                    await doesMessageHashExist({
+                      deepHash,
+                      processId: ctx.id,
+                      timestamp: message.Timestamp,
+                      ordinate
+                    }).toPromise()
+                ) {
+                  logger('Prior Message with deepHash "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream', deepHash, name)
                   continue
-                }
+                } else deepHashes.add(deepHash)
               }
 
               prev = await Promise.resolve(prev)

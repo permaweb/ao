@@ -1,15 +1,16 @@
-import { fromPromise, of, Rejected } from 'hyper-async'
-import { always, applySpec, identity, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop } from 'ramda'
+import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
+import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head } from 'ramda'
 import { z } from 'zod'
 
 import { evaluationSchema } from '../model.js'
-import { COLLATION_SEQUENCE_MAX_CHAR, CRON_EVALS_ASC_IDX, EVALS_ASC_IDX } from './pouchdb.js'
+import { COLLATION_SEQUENCE_MAX_CHAR, CRON_EVALS_ASC_IDX, EVALS_ASC_IDX, EVALS_DEEPHASH_ASCENDING } from './pouchdb.js'
 import { createProcessId } from './ao-process.js'
 
 const evaluationDocSchema = z.object({
   _id: z.string().min(1),
   processId: evaluationSchema.shape.processId,
   messageId: evaluationSchema.shape.messageId,
+  deepHash: evaluationSchema.shape.deepHash,
   timestamp: evaluationSchema.shape.timestamp,
   nonce: evaluationSchema.shape.nonce,
   epoch: evaluationSchema.shape.epoch,
@@ -22,15 +23,6 @@ const evaluationDocSchema = z.object({
   type: z.literal('evaluation')
 })
 
-const messageHashDocSchema = z.object({
-  _id: z.string().min(1),
-  /**
-   * The _id of the corresponding cached evaluation
-   */
-  parent: z.string().min(1),
-  type: z.literal('messageHash')
-})
-
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
   /**
    * transactions can sometimes start with an underscore,
@@ -40,18 +32,10 @@ function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
   return `eval-${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
 }
 
-function createMessageHashId ({ messageHash }) {
-  /**
-   * transactions can sometimes start with an underscore,
-   * which is not allowed in PouchDB, so prepend to create
-   * an _id
-   */
-  return `messageHash-${messageHash}`
-}
-
 const toEvaluation = applySpec({
   processId: prop('processId'),
   messageId: prop('messageId'),
+  deepHash: prop('deepHash'),
   timestamp: prop('timestamp'),
   nonce: prop('nonce'),
   epoch: prop('epoch'),
@@ -144,8 +128,6 @@ export function findLatestEvaluationsWith ({ pouchDb }) {
 }
 
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
-  const logger = _logger.child('ao-evaluation:saveEvaluation')
-
   return (evaluation) => {
     return of(evaluation)
       .map(
@@ -183,29 +165,20 @@ export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
        * Ensure the expected shape before writing to the db
        */
       .map(evaluationDocSchema.parse)
-      .map((evaluationDoc) => {
-        if (!evaluation.deepHash) return [evaluationDoc]
-        /**
-         * Create an messageHash doc that we can later query
-         * to prevent duplicate evals from duplicate cranks
-         */
-        return [
-          evaluationDoc,
-          messageHashDocSchema.parse({
-            _id: createMessageHashId({ messageHash: evaluation.deepHash }),
-            parent: evaluationDoc._id,
-            type: 'messageHash'
-          })
-        ]
-      })
-      .chain(docs =>
-        of(docs)
-          .chain(fromPromise(docs => pouchDb.bulkDocs(docs)))
-          .bimap(
-            logger.tap('Encountered an error when caching evaluation docs'),
-            identity
+      .chain((doc) =>
+        of(doc)
+          .chain(fromPromise((doc) => pouchDb.put(doc)))
+          .bichain(
+            (err) => {
+              /**
+               * Already exists, so just return the doc
+               */
+              if (err.status === 409) return Resolved(doc)
+              return Rejected(err)
+            },
+            Resolved
           )
-
+          .map(always(doc._id))
       )
       .toPromise()
   }
@@ -251,16 +224,45 @@ export function findEvaluationsWith ({ pouchDb }) {
   }
 }
 
-export function findMessageHashWith ({ pouchDb }) {
-  return ({ messageHash }) => of(messageHash)
-    .chain(fromPromise((hash) => pouchDb.get(createMessageHashId({ messageHash: hash }))))
-    .bichain(
-      (err) => {
-        if (err.status === 404) return Rejected({ status: 404, message: 'Message hash not found' })
-        return Rejected(err)
+export function findMessageHashBeforeWith ({ pouchDb }) {
+  function createQuery ({ deepHash, processId, timestamp, ordinate }) {
+    const query = {
+      selector: {
+        /**
+         * Since eval doc _id are each lexicographically sortable, we can find an
+         * prior evaluation, with matching deepHash, by comparing the _ids
+         */
+        _id: {
+          $gt: createEvaluationId({ processId, timestamp: '' }),
+          /**
+           * $lt because we are looking for any evaluation on this process,
+           * PRIOR to this one with a matching deepHash
+           */
+          $lt: createEvaluationId({ processId, timestamp, ordinate })
+        },
+        deepHash
       },
-      (found) => of(found)
-        .map(messageHashDocSchema.parse)
-    )
-    .toPromise()
+      limit: 1,
+      use_index: EVALS_DEEPHASH_ASCENDING
+    }
+
+    return query
+  }
+
+  return ({ messageHash, processId, timestamp, ordinate }) =>
+    of({ deepHash: messageHash, processId, timestamp, ordinate })
+      .map(createQuery)
+      .chain(fromPromise((query) => {
+        return pouchDb.find(query).then((res) => {
+          if (res.warning) console.warn(res.warning)
+          return res.docs
+        })
+      }))
+      .map(map(toEvaluation))
+      .map(head)
+      .chain((evaluation) => evaluation
+        ? Resolved(evaluation)
+        : Rejected({ status: 404, message: 'Evaluation result not found' })
+      )
+      .toPromise()
 }

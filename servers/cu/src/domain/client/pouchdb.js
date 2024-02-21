@@ -3,10 +3,11 @@ import PouchDbFind from 'pouchdb-find'
 import PouchDbHttp from 'pouchdb-adapter-http'
 import PouchDbLevel from 'pouchdb-adapter-leveldb'
 
-export const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX, BLOCKS_ASC_IDX] = [
+export const [CRON_EVALS_ASC_IDX, EVALS_ASC_IDX, BLOCKS_ASC_IDX, EVALS_DEEPHASH_ASCENDING] = [
   'cron-evals-ascending',
   'evals-ascending',
-  'blocks-ascending'
+  'blocks-ascending',
+  'evals-deepHash-ascending'
 ]
 
 /**
@@ -70,6 +71,19 @@ export async function createPouchDbClient ({ logger, maxListeners, mode, url }) 
       },
       ddoc: EVALS_ASC_IDX,
       name: EVALS_ASC_IDX
+    }),
+    internalPouchDb.createIndex({
+      index: {
+        fields: [{ deepHash: 'asc' }],
+        partial_filter_selector: {
+          deepHash: {
+            $exists: true
+          },
+          type: 'evaluation'
+        }
+      },
+      ddoc: EVALS_DEEPHASH_ASCENDING,
+      name: EVALS_DEEPHASH_ASCENDING
     }),
     internalPouchDb.createIndex({
       index: {

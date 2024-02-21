@@ -238,6 +238,10 @@ export const evaluationSchema = z.object({
    * and so can be undefined
    */
   messageId: z.string().min(1).nullish(),
+  /**
+   * Only forwarded messages have a deepHash
+   */
+  deepHash: z.string().min(1).nullish(),
   timestamp: z.coerce.number(),
   /**
    * Cron messages do not have an epoch

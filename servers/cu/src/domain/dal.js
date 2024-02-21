@@ -115,9 +115,12 @@ export const findBlocksSchema = z.function()
   }))
   .returns(z.promise(z.array(blockSchema)))
 
-export const findMessageHashSchema = z.function()
+export const findMessageHashBeforeSchema = z.function()
   .args(z.object({
-    messageHash: z.string().nullish()
+    messageHash: z.string().nullish(),
+    processId: z.string(),
+    timestamp: z.coerce.number(),
+    ordinate: z.coerce.string()
   }))
   /**
    * Our business logic doesn't use the output of findMessageHash,
@@ -126,7 +129,7 @@ export const findMessageHashSchema = z.function()
    * So we don't need to enforce a shape to return here,
    * as long as it's a document (an object)
    */
-  .returns(z.promise(z.record(z.any())))
+  .returns(z.promise(z.any()))
 
 // SU
 

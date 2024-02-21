@@ -2,8 +2,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { findEvaluationsSchema, findLatestEvaluationsSchema, findMessageHashSchema, saveEvaluationSchema } from '../dal.js'
-import { findEvaluationsWith, findLatestEvaluationsWith, findMessageHashWith, saveEvaluationWith } from './ao-evaluation.js'
+import { findEvaluationsSchema, findLatestEvaluationsSchema, saveEvaluationSchema } from '../dal.js'
+import { findEvaluationsWith, findLatestEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
 import { createLogger } from '../logger.js'
 import { CRON_EVALS_ASC_IDX, EVALS_ASC_IDX } from './pouchdb.js'
 
@@ -80,12 +80,13 @@ describe('ao-evaluation', () => {
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
           pouchDb: {
-            bulkDocs: async ([evaluationDoc, messageIdDoc]) => {
-              const { _attachments, evaluatedAt, ...rest } = evaluationDoc
+            put: async (evaluationDoc) => {
+              const { evaluatedAt, ...rest } = evaluationDoc
 
               assert.deepStrictEqual(rest, {
                 _id: 'eval-process-123,1702677252111,1',
                 cron: undefined,
+                deepHash: 'deepHash-123',
                 timestamp: 1702677252111,
                 nonce: 1,
                 epoch: 0,
@@ -94,18 +95,12 @@ describe('ao-evaluation', () => {
                 processId: 'process-123',
                 messageId: 'message-123',
                 parent: 'proc-process-123',
-                // buffer is omitted from output and moved to _attachments
                 output: { Messages: [{ foo: 'bar' }] },
                 type: 'evaluation'
               })
               assert.equal(evaluatedAt.toISOString(), evaluatedAt.toISOString())
 
-              assert.deepStrictEqual(messageIdDoc, {
-                _id: 'messageHash-deepHash-123',
-                parent: 'eval-process-123,1702677252111,1',
-                type: 'messageHash'
-              })
-              return Promise.resolve(true)
+              return Promise.resolve('eval-process-123,1702677252111,1')
             }
           },
           logger
@@ -122,33 +117,6 @@ describe('ao-evaluation', () => {
         processId: 'process-123',
         messageId: 'message-123',
         output: { Messages: [{ foo: 'bar' }], Memory: 'foo' },
-        evaluatedAt
-      })
-    })
-
-    test('save only the evaluation as a doc, if not deepHash', async () => {
-      const evaluatedAt = new Date().toISOString()
-
-      const saveEvaluation = saveEvaluationSchema.implement(
-        saveEvaluationWith({
-          pouchDb: {
-            bulkDocs: async (docs) => {
-              assert.equal(docs.length, 1)
-              return Promise.resolve(true)
-            }
-          },
-          logger
-        })
-      )
-
-      await saveEvaluation({
-        // no deep hash
-        timestamp: 1702677252111,
-        ordinate: 1,
-        blockHeight: 1234,
-        processId: 'process-123',
-        messageId: 'message-123',
-        output: { Messages: [{ foo: 'bar' }] },
         evaluatedAt
       })
     })
@@ -248,60 +216,62 @@ describe('ao-evaluation', () => {
     })
   })
 
-  describe('findMessageHashWith', () => {
-    test('find the messageHash', async () => {
-      const findMessageHash = findMessageHashSchema.implement(
-        findMessageHashWith({
-          pouchDb: {
-            get: async () => ({
-              _id: 'proc-process-123',
-              parent: 'eval-123',
-              type: 'messageHash'
-            })
-          },
-          logger
-        })
-      )
+  describe.todo('findMessageHashBefore')
 
-      const res = await findMessageHash({ messageHash: 'deepHash-123' })
-      assert.deepStrictEqual(res, {
-        _id: 'proc-process-123',
-        parent: 'eval-123',
-        type: 'messageHash'
-      })
-    })
+  // describe('findMessageHashWith', () => {
+  //   test('find the messageHash', async () => {
+  //     const findMessageHash = findMessageHashBeforeSchema.implement(
+  //       findMessageHashWith({
+  //         pouchDb: {
+  //           get: async () => ({
+  //             _id: 'proc-process-123',
+  //             parent: 'eval-123',
+  //             type: 'messageHash'
+  //           })
+  //         },
+  //         logger
+  //       })
+  //     )
 
-    test('return 404 status if not found', async () => {
-      const findMessageHash = findMessageHashSchema.implement(
-        findMessageHashWith({
-          pouchDb: {
-            get: async () => { throw { status: 404 } }
-          },
-          logger
-        })
-      )
+  //     const res = await findMessageHash({ messageHash: 'deepHash-123' })
+  //     assert.deepStrictEqual(res, {
+  //       _id: 'proc-process-123',
+  //       parent: 'eval-123',
+  //       type: 'messageHash'
+  //     })
+  //   })
 
-      const res = await findMessageHash({ messageHash: 'process-123' })
-        .catch(err => {
-          assert.equal(err.status, 404)
-          return { ok: true }
-        })
+  //   test('return 404 status if not found', async () => {
+  //     const findMessageHash = findMessageHashBeforeSchema.implement(
+  //       findMessageHashWith({
+  //         pouchDb: {
+  //           get: async () => { throw { status: 404 } }
+  //         },
+  //         logger
+  //       })
+  //     )
 
-      assert(res.ok)
-    })
+  //     const res = await findMessageHash({ messageHash: 'process-123' })
+  //       .catch(err => {
+  //         assert.equal(err.status, 404)
+  //         return { ok: true }
+  //       })
 
-    test('bubble error', async () => {
-      const findMessageId = findMessageHashSchema.implement(
-        findMessageHashWith({
-          pouchDb: {
-            get: async () => { throw { status: 500 } }
-          },
-          logger
-        })
-      )
+  //     assert(res.ok)
+  //   })
 
-      await findMessageId({ messageHash: 'process-123' })
-        .catch(assert.ok)
-    })
-  })
+  //   test('bubble error', async () => {
+  //     const findMessageId = findMessageHashBeforeSchema.implement(
+  //       findMessageHashWith({
+  //         pouchDb: {
+  //           get: async () => { throw { status: 500 } }
+  //         },
+  //         logger
+  //       })
+  //     )
+
+  //     await findMessageId({ messageHash: 'process-123' })
+  //       .catch(assert.ok)
+  //   })
+  // })
 })

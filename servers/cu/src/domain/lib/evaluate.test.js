@@ -30,7 +30,7 @@ describe('evaluate', () => {
   describe('output', () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -184,7 +184,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -280,14 +280,14 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHash: async () => {
+      findMessageHashBefore: async () => {
         if (!messageHash) {
           messageHash++
           throw { status: 404 }
         }
 
         messageHash++
-        return { _id: 'messageHash-doc-123' }
+        return { _id: 'evaluation-doc-123' }
       },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
@@ -385,7 +385,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -501,7 +501,7 @@ describe('evaluate', () => {
             ],
             'Block-Height': 1235
           },
-          deepHash: 'deephash-456',
+          deepHash: 'deephash-789',
           AoGlobal: {
             Process: {
               Id: '1234',
@@ -519,7 +519,7 @@ describe('evaluate', () => {
   test('error returned in process result', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -587,7 +587,7 @@ describe('evaluate', () => {
   test('error thrown by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -648,7 +648,7 @@ describe('evaluate', () => {
   test('error unhandled by process', async () => {
     const env = {
       saveEvaluation: async () => assert.fail(),
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -714,7 +714,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHash: async () => { throw { status: 404 } },
+      findMessageHashBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
