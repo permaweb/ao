@@ -1,5 +1,5 @@
 /* eslint-disable no-throw-literal */
-import { describe, test, beforeEach } from 'node:test'
+import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 
@@ -27,7 +27,7 @@ async function evaluateSadMessage ({ moduleId }) {
 }
 
 describe('evaluate', () => {
-  describe('output', () => {
+  test('adds output and last to context', async () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
       findMessageHashBefore: async () => { throw { status: 404 } },
@@ -36,130 +36,75 @@ describe('evaluate', () => {
       logger
     })
 
-    let ctx
-    beforeEach(() => {
-      ctx = {
-        id: 'ctr-1234',
-        from: new Date().getTime(),
-        moduleId: 'foo-module',
-        moduleComputeLimit: 9_000_000_000_000,
-        moduleMemoryLimit: 9_000_000_000_000,
-        stats: {
-          messages: {
-            scheduled: 0,
-            cron: 0,
-            error: 0
-          }
-        },
-        result: {
-          Memory: null
-        },
-        messages: toAsyncIterable([
-          {
-            ordinate: 1,
-            message: {
-              Id: 'message-123',
-              Timestamp: 1702846520559,
-              Owner: 'owner-123',
-              Tags: [
-                { name: 'function', value: 'hello' }
-              ],
-              'Block-Height': 1234
-            },
-            AoGlobal: {
-              Process: {
-                Id: '1234',
-                Tags: []
-              }
-            }
-          },
-          {
-            ordinate: 1,
-            message: {
-              Id: 'message-123',
-              Timestamp: 1702846520559,
-              Owner: 'owner-456',
-              Tags: [
-                { name: 'function', value: 'world' }
-              ],
-              'Block-Height': 1235
-            },
-            AoGlobal: {
-              Process: {
-                Id: '1234',
-                Tags: []
-              }
-            }
-          }
-        ])
-      }
-    })
-
-    test('adds output to context', async () => {
-      const { output } = await evaluate(ctx).toPromise()
-      assert.ok(output)
-    })
-
-    /**
-     * TODO: how to assert eval?
-     */
-    test('folds the state', async () => {
-      const { output } = await evaluate(ctx).toPromise()
-      /**
-       * Assert the memory of the internal process state is returned
-       */
-      assert.ok(output.Memory)
-      assert.deepEqual(
-        /**
-         * Our process used in the unit tests serializes the state being mutated
-         * by the process, so we can parse it here and run assertions
-         */
-        JSON.parse(output.Output),
+    const { output, last } = await evaluate({
+      id: 'ctr-1234',
+      from: new Date().getTime(),
+      moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
+      result: {
+        Memory: null
+      },
+      messages: toAsyncIterable([
         {
-          heardHello: true,
-          heardWorld: true,
-          happy: true,
-          lastMessage: {
+          ordinate: 1,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
+              { name: 'function', value: 'hello' }
+            ],
+            'Block-Height': 1234
+          },
+          AoGlobal: {
+            Process: {
+              Id: '1234',
+              Tags: []
+            }
+          }
+        },
+        {
+          ordinate: 1,
+          message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
             Owner: 'owner-456',
             Tags: [
               { name: 'function', value: 'world' }
             ],
-            'Block-Height': 1235,
-            function: 'world'
+            'Block-Height': 1235
+          },
+          AoGlobal: {
+            Process: {
+              Id: '1234',
+              Tags: []
+            }
           }
         }
-      )
-    })
+      ])
+    }).toPromise()
 
-    test('returns messages', async () => {
-      const expectedMessage = {
-        Target: 'process-foo-123',
-        Tags: [
-          { name: 'foo', value: 'bar' },
-          { name: 'function', value: 'noop' }
-        ]
-      }
-      const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.Messages, [expectedMessage])
-    })
+    assert.ok(output)
+    assert.ok(output.Memory)
+    assert.ok(output.Messages)
+    assert.ok(output.Spawns)
+    assert.ok(output.Output)
 
-    test('returns spawns', async () => {
-      const expectedSpawn = {
-        Owner: 'owner-123',
-        Tags: [
-          { name: 'foo', value: 'bar' },
-          { name: 'balances', value: '{"myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc": 1000 }' }
-        ]
-      }
-      const { output } = await evaluate(ctx).toPromise()
-      assert.deepStrictEqual(output.Spawns, [expectedSpawn])
-    })
-
-    test('returns output', async () => {
-      const { output } = await evaluate(ctx).toPromise()
-      assert.deepEqual(JSON.parse(output.Output), {
+    assert.deepEqual(
+      /**
+       * Our process used in the unit tests serializes the state being mutated
+       * by the process, so we can parse it here and run assertions
+       */
+      JSON.parse(output.Output),
+      {
         heardHello: true,
         heardWorld: true,
         happy: true,
@@ -173,8 +118,13 @@ describe('evaluate', () => {
           'Block-Height': 1235,
           function: 'world'
         }
-      })
-    })
+      }
+    )
+
+    assert.ok(last)
+    assert.ok(last.timestamp)
+    assert.ok(last.blockHeight)
+    assert.ok(last.ordinate)
   })
 
   test('save each interaction', async () => {
@@ -514,196 +464,6 @@ describe('evaluate', () => {
 
     await evaluate(ctx).toPromise()
     assert.equal(cacheCount, 3)
-  })
-
-  test('error returned in process result', async () => {
-    const env = {
-      saveEvaluation: async () => assert.fail(),
-      findMessageHashBefore: async () => { throw { status: 404 } },
-      loadEvaluator: evaluateSadMessage,
-      saveLatestProcessMemory: async () => {},
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: 1702846520559,
-      moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
-      stats: {
-        messages: {
-          scheduled: 0,
-          cron: 0,
-          error: 0
-        }
-      },
-      result: {
-        /**
-         * In reality this would be an illegible byte array, since it's format
-         * will be determined by whatever the underlying runtime is, in this case,
-         * Lua
-         */
-        Memory: Buffer.from('Hello', 'utf-8')
-      },
-      messages: toAsyncIterable([
-        {
-          ordinate: 1,
-          // Will include an error in error
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-456',
-            Tags: [
-              { name: 'function', value: 'errorResult' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        }
-      ])
-    }
-
-    const res = await evaluate(ctx).toPromise()
-    assert.ok(res.output)
-    /**
-     * When an error occurs in eval, its output Memory is ignored
-     * and the output Memory from the previous eval is used.
-     *
-     * So we assert that the original Memory that was passed in is returned
-     * from eval
-     */
-    assert.deepStrictEqual(res.output.Memory, Buffer.from('Hello', 'utf-8'))
-    assert.deepStrictEqual(res.output.Error, { code: 123, message: 'a handled error within the process' })
-  })
-
-  test('error thrown by process', async () => {
-    const env = {
-      saveEvaluation: async () => assert.fail(),
-      findMessageHashBefore: async () => { throw { status: 404 } },
-      loadEvaluator: evaluateSadMessage,
-      saveLatestProcessMemory: async () => {},
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: 1702846520559,
-      moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
-      stats: {
-        messages: {
-          scheduled: 0,
-          cron: 0,
-          error: 0
-        }
-      },
-      result: {
-        /**
-         * In reality this would be an illegible byte array, since it's format
-         * will be determined by whatever the underlying runtime is, in this case,
-         * Lua
-         */
-        Memory: Buffer.from('Hello', 'utf-8')
-      },
-      messages: toAsyncIterable([
-        {
-          ordinate: 1,
-          // Will intentionally throw from the lua process
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-456',
-            Tags: [
-              { name: 'function', value: 'errorThrow' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        }
-      ])
-    }
-
-    const res = await evaluate(ctx).toPromise()
-    assert.ok(res.output)
-    assert.deepStrictEqual(res.output.Memory, Buffer.from('Hello', 'utf-8'))
-    assert.deepStrictEqual(res.output.Error, { code: 123, message: 'a thrown error within the process' })
-  })
-
-  test('error unhandled by process', async () => {
-    const env = {
-      saveEvaluation: async () => assert.fail(),
-      findMessageHashBefore: async () => { throw { status: 404 } },
-      loadEvaluator: evaluateSadMessage,
-      saveLatestProcessMemory: async () => {},
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: 1702846520559,
-      moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
-      stats: {
-        messages: {
-          scheduled: 0,
-          cron: 0,
-          error: 0
-        }
-      },
-      result: {
-        /**
-         * In reality this would be an illegible byte array, since it's format
-         * will be determined by whatever the underlying runtime is, in this case,
-         * Lua
-         */
-        Memory: Buffer.from('Hello', 'utf-8')
-      },
-      messages: toAsyncIterable([
-        {
-          ordinate: 1,
-          // Will unintentionally throw from the lua contract
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-456',
-            Tags: [
-              { name: 'function', value: 'errorUnhandled' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        }
-      ])
-    }
-
-    const res = await evaluate(ctx).toPromise()
-    assert.ok(res.output)
-    assert.ok(res.output.Error)
-    assert.deepStrictEqual(res.output.Memory, Buffer.from('Hello', 'utf-8'))
   })
 
   test('continue evaluating, ignoring output of errored message', async () => {

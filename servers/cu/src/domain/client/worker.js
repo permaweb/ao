@@ -4,9 +4,10 @@ import { createReadStream, createWriteStream } from 'node:fs'
 import { join } from 'node:path'
 import { createGunzip, createGzip } from 'node:zlib'
 import { promisify } from 'node:util'
+import { hostname } from 'node:os'
 
 import { worker } from 'workerpool'
-import { identity } from 'ramda'
+import { T, always, applySpec, assocPath, cond, defaultTo, identity, ifElse, is, pathOr, pipe, propOr } from 'ramda'
 import { LRUCache } from 'lru-cache'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
@@ -14,8 +15,6 @@ import AoLoader from '@permaweb/ao-loader'
 import { createLogger } from '../logger.js'
 
 const pipelineP = promisify(pipeline)
-
-const logger = createLogger(`ao-cu:worker-${workerData.id}`)
 
 function wasmResponse (stream) {
   return new Response(stream, { headers: { 'Content-Type': 'application/wasm' } })
@@ -118,7 +117,7 @@ function createWasmInstanceCache ({ MAX_SIZE }) {
   })
 }
 
-function evaluateWith ({
+export function evaluateWith ({
   wasmInstanceCache,
   wasmModuleCache,
   readWasmFile,
@@ -214,6 +213,43 @@ function evaluateWith ({
   }
 
   /**
+   * Given the previous interaction output,
+   * return a function that will merge the next interaction output
+   * with the previous.
+   */
+  const mergeOutput = (prevMemory) => pipe(
+    defaultTo({}),
+    applySpec({
+      /**
+       * If the output contains an error, ignore its state,
+       * and use the previous evaluation's state
+       */
+      Memory: ifElse(
+        pathOr(undefined, ['Error']),
+        always(prevMemory),
+        propOr(prevMemory, 'Memory')
+      ),
+      Error: pathOr(undefined, ['Error']),
+      Messages: pathOr([], ['Messages']),
+      Spawns: pathOr([], ['Spawns']),
+      Output: pipe(
+        pathOr('', ['Output']),
+        /**
+         * Always make sure Output
+         * is a string or object
+         */
+        cond([
+          [is(String), identity],
+          [is(Object), identity],
+          [is(Number), String],
+          [T, identity]
+        ])
+      ),
+      GasUsed: pathOr(undefined, ['GasUsed'])
+    })
+  )
+
+  /**
    * Evaluate a message using the handler that wraps the WebAssembly.Instance,
    * identified by the streamId.
    *
@@ -247,24 +283,38 @@ function evaluateWith ({
             return wasmInstance
           })
           .chain(fromPromise(async (wasmInstance) => wasmInstance(Memory, message, AoGlobal)))
-          .bimap(identity, identity)
+          .bichain(
+            /**
+             * Map thrown error to a result.error. In this way, the Worker should _never_
+             * throw due to evaluation
+             *
+             * TODO: should we also evict the wasmInstance from cache, so it's reinstantaited
+             * with the new memory for next time?
+             */
+            (err) => Resolved(assocPath(['Error'], err, {})),
+            Resolved
+          )
+          .map(mergeOutput(Memory))
       )
       .toPromise()
 }
 
-/**
- * Expose our worker api
- */
-worker({
-  evaluate: evaluateWith({
-    wasmModuleCache: createWasmModuleCache({ MAX_SIZE: workerData.WASM_MODULE_CACHE_MAX_SIZE }),
-    wasmInstanceCache: createWasmInstanceCache({ MAX_SIZE: workerData.WASM_INSTANCE_CACHE_MAX_SIZE }),
-    readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
-    writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
-    streamTransactionData: streamTransactionDataWith({ fetch, GATEWAY_URL: workerData.GATEWAY_URL, logger }),
-    bootstrapWasmInstance: (wasmModule) => AoLoader((info, receiveInstance) =>
-      WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
-    ),
-    logger
+if (!process.env.NO_WORKER) {
+  const logger = createLogger(`ao-cu:${hostname()}:worker-${workerData.id}`)
+  /**
+   * Expose our worker api
+   */
+  worker({
+    evaluate: evaluateWith({
+      wasmModuleCache: createWasmModuleCache({ MAX_SIZE: workerData.WASM_MODULE_CACHE_MAX_SIZE }),
+      wasmInstanceCache: createWasmInstanceCache({ MAX_SIZE: workerData.WASM_INSTANCE_CACHE_MAX_SIZE }),
+      readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
+      writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
+      streamTransactionData: streamTransactionDataWith({ fetch, GATEWAY_URL: workerData.GATEWAY_URL, logger }),
+      bootstrapWasmInstance: (wasmModule) => AoLoader((info, receiveInstance) =>
+        WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
+      ),
+      logger
+    })
   })
-})
+}
