@@ -59,7 +59,7 @@ export function dryRunWith (env) {
           /**
            * The ordinate for a scheduled message is it's nonce
            */
-          ordinate: `${res.nonce}`,
+          ordinate: res.nonce && `${res.nonce}`,
           /**
            * We know this is a scheduled message, and so has no
            * associated cron.
@@ -126,7 +126,7 @@ export function dryRunWith (env) {
                 noSave: true,
                 deepHash: undefined,
                 cron: undefined,
-                ordinate: readStateRes.ordinate,
+                ordinate: ctx.ordinate,
                 name: 'Dry Run Message',
                 message: {
                   /**
@@ -135,8 +135,8 @@ export function dryRunWith (env) {
                    *
                    * The Dry-Run message can overwrite them
                    */
-                  Timestamp: readStateRes.from,
-                  'Block-Height': readStateRes.fromBlockHeight,
+                  Timestamp: ctx.from,
+                  'Block-Height': ctx.fromBlockHeight,
                   Cron: false,
                   Target: processId,
                   ...dryRun,
@@ -144,8 +144,8 @@ export function dryRunWith (env) {
                   'Read-Only': true
                 },
                 AoGlobal: {
-                  Process: { Id: processId, Owner: readStateRes.owner, Tags: readStateRes.tags },
-                  Module: { Id: readStateRes.moduleId, Owner: readStateRes.moduleOwner, Tags: readStateRes.moduleTags }
+                  Process: { Id: processId, Owner: ctx.owner, Tags: ctx.tags },
+                  Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
                 }
               })
             }
