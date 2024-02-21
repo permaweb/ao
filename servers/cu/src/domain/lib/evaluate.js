@@ -19,7 +19,15 @@ import { evaluationSchema } from '../model.js'
  * is always added to context
  */
 const ctxSchema = z.object({
-  output: evaluationSchema.shape.output
+  output: evaluationSchema.shape.output,
+  /**
+   * The last message evaluated, or null if a message was not evaluated
+   */
+  last: z.object({
+    timestamp: z.coerce.number(),
+    blockHeight: z.coerce.number(),
+    ordinate: z.coerce.string()
+  })
 }).passthrough()
 
 const toEvaledCron = ({ timestamp, cron }) => `${timestamp}-${cron}`
@@ -310,9 +318,15 @@ export function evaluateWith (env) {
           })
         }
 
-        return prev
+        return {
+          output: prev,
+          last: {
+            timestamp: pathOr(ctx.from, ['message', 'Timestamp'], prev),
+            blockHeight: pathOr(ctx.fromBlockHeight, ['message', 'Block-Height'], prev),
+            ordinate: pathOr(ctx.ordinate, ['ordinate'], prev)
+          }
+        }
       }))
-      .map(output => ({ output }))
       .map(mergeRight(ctx))
       .map(ctxSchema.parse)
 }
