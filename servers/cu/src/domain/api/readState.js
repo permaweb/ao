@@ -1,3 +1,4 @@
+import { isNotNil, join } from 'ramda'
 import { Resolved, fromPromise, of } from 'hyper-async'
 
 import { findEvaluationSchema } from '../dal.js'
@@ -6,7 +7,6 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
 import { evaluateWith } from '../lib/evaluate.js'
 import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
-import { isNotNil, join } from 'ramda'
 
 /**
  * We will maintain a Map of currently executing readState calls.
@@ -113,18 +113,36 @@ export function readStateWith (env) {
                     /**
                      * Mirror output shape from loadProcess, using the exact evaluation
                      * as the "starting point"
+                     *
+                     * Also set result.Memory to the output Memory, since we will have evaluated
+                     * up to that exact message, so the output Memory is what we need
                      */
                     .map((evaluation) => ({
                       ...ctx,
+                      result: {
+                        ...evaluation.output,
+                        Memory: ctx.output.Memory
+                      },
                       output: evaluation.output,
                       from: evaluation.timestamp,
-                      ordinate: evaluation.ordinate,
                       fromBlockHeight: evaluation.blockHeight,
-                      evaluatedAt: evaluation.evaluatedAt
+                      ordinate: evaluation.ordinate
                     }))
                 }
 
-                return Resolved(ctx)
+                /**
+                 * Mirror the output shape from loadProcess, using the last message
+                 * evaled, and fallback to ctx (in the case that no new messages were found to evaluate)
+                 *
+                 * Also set result.Memory to the last memory evaluated
+                 */
+                return Resolved(({
+                  ...ctx,
+                  result: ctx.output,
+                  from: ctx.last.timestamp,
+                  fromBlockHeight: ctx.last.blockHeight,
+                  ordinate: ctx.last.ordinate
+                }))
               })
           })
           .bimap(logStats, logStats)
