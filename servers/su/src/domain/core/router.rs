@@ -1,7 +1,8 @@
 use std::{sync::Arc, fmt::Debug};
 use serde::Deserialize;
 use tokio::{fs::File, io::AsyncReadExt};
-use crate::domain::{clients::store::StoreErrorType, flows::{Deps, init_builder}};
+use crate::domain::{ flows::{Deps, init_builder} };
+use crate::domain::core::dal::StoreErrorType;
 
 /*
     The code in this file only runs on a su that is
@@ -34,7 +35,7 @@ struct SchedulerEntry {
     initialize the schedulers if they dont exist
 */
 pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
-    let mut file = File::open(&deps.config.scheduler_list_path).await
+    let mut file = File::open(&deps.config.scheduler_list_path()).await
         .map_err(|e| format!("Failed to open file: {}", e))?;
 
     let mut contents = String::new();
@@ -65,7 +66,7 @@ pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
 
 // if this returns Ok(Some(String)) then the server should return a redirect to the String
 pub async fn redirect_process_id(deps: Arc<Deps>, process_id: Option<String>) -> Result<Option<String>, String> {
-    if deps.config.mode != "router" {
+    if deps.config.mode() != "router" {
         return Ok(None);
     }
 
@@ -79,7 +80,7 @@ pub async fn redirect_process_id(deps: Arc<Deps>, process_id: Option<String>) ->
 
 // if this returns Ok(Some(String)) then the server should return a redirect to the String
 pub async fn redirect_tx_id(deps: Arc<Deps>, tx_id: String, process_id: Option<String>) -> Result<Option<String>, String> {
-    if deps.config.mode != "router" {
+    if deps.config.mode() != "router" {
         return Ok(None);
     }
 
@@ -100,7 +101,7 @@ pub async fn redirect_tx_id(deps: Arc<Deps>, tx_id: String, process_id: Option<S
 
 // if this returns Ok(Some(String)) then the server should return a redirect to the String
 pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<Option<String>, String> {
-    if deps.config.mode != "router" {
+    if deps.config.mode() != "router" {
         return Ok(None);
     }
     let builder = init_builder(&deps)?;

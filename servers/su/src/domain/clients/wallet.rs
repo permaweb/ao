@@ -8,13 +8,13 @@ use base64_url;
 use sha2::Digest;
 
 use crate::domain::core::dal::Wallet;
-use crate::config::Config;
+use crate::domain::config::AoConfig;
 
 pub struct FileWallet;
 
 impl Wallet for FileWallet {
     fn wallet_json(&self) -> Result<String, String> {
-        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let file_path = config.su_wallet_path;
         let mut file = match File::open(&file_path) {
             Ok(f) => f,
@@ -29,7 +29,7 @@ impl Wallet for FileWallet {
     }
 
     fn wallet_address(&self) -> Result<String, String> {
-        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let file_path = config.su_wallet_path;
         let mut file = match File::open(&file_path) {
             Ok(f) => f,

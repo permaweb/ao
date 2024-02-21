@@ -7,14 +7,11 @@ use dashmap::DashMap;
 use tokio::sync::Mutex;
 use base64_url;
 
-use crate::domain::clients::store::{StoreClient};
-use crate::domain::core::dal::{ScheduleProvider, Log};
-use crate::config::Config;
+use crate::domain::core::dal::{ScheduleProvider, Log, DataStore};
 
 pub struct SchedulerDeps {
-    pub data_store: Arc<StoreClient>,
-    pub logger: Arc<dyn Log>,
-    pub config: Arc<Config>
+    pub data_store: Arc<dyn DataStore>,
+    pub logger: Arc<dyn Log>
 }
 
 /*

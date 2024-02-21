@@ -8,9 +8,7 @@ use actix_cors::Cors;
 use serde_json::json;
 use serde::Deserialize;
 
-use su::domain::{flows, router, StoreClient, Deps, Log, scheduler, Gateway, ArweaveGateway};
-use su::logger::SuLog;
-use su::config::Config;
+use su::domain::{Deps, init_deps, flows, router};
 
 #[derive(Deserialize)]
 struct FromTo {
@@ -174,46 +172,14 @@ async fn main() -> io::Result<()> {
         }
     };
 
-    let logger: Arc<dyn Log> = SuLog::init();
+    let wrapped = web::Data::new(init_deps(mode).await);
 
-    let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
-    match data_store.run_migrations() {
-        Ok(m) => logger.log(m),
-        Err(e) => logger.log(format!("{:?}", e))
-    }
+    let run_deps = wrapped.get_ref().clone();
 
-    let config = Arc::new(Config::new(mode).expect("Failed to read configuration"));
-
-    let scheduler_deps = Arc::new(scheduler::SchedulerDeps {
-        data_store: data_store.clone(),
-        config: config.clone(),
-        logger: logger.clone()
-    });
-    let scheduler = Arc::new(scheduler::ProcessScheduler::new(scheduler_deps));
-
-    let gateway: Arc<dyn Gateway> = Arc::new(
-        ArweaveGateway::new().await.expect("Failed to initialize gateway")
-    );
-    
-    let deps: Deps = Deps {
-        data_store,
-        logger,
-        config,
-        scheduler,
-        gateway
-    };
-    
-    let wrapped = web::Data::new(Arc::new(deps));
-
-    /*
-        initialize schedulers from json file in router mode
-        this is for when running as a top level router
-    */
-    let init_deps = wrapped.get_ref().clone();
-    if init_deps.config.mode == "router" {
-        match router::init_schedulers(init_deps.clone()).await {
-            Err(e) => init_deps.logger.log(format!("{}", e)),
-            Ok(m) => init_deps.logger.log(format!("{}", m)),
+    if run_deps.config.mode() == "router" {
+        match router::init_schedulers(run_deps.clone()).await {
+            Err(e) => run_deps.logger.log(format!("{}", e)),
+            Ok(m) => run_deps.logger.log(format!("{}", m)),
         };
     }
 

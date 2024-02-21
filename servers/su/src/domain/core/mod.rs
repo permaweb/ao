@@ -1,17 +1,18 @@
-
-/*
-core is mostly pure, any side effects
-should be injected via dal.rs traits
-*/
-
 mod bytes;
 mod verifier;
+// main tx building logic
+mod builder;
+// build json from raw data
+mod json;
 
 // traits for injecting dependencies
 pub mod dal;
 
-// build json from raw data
-pub mod json;
+// mutex locked scheduling data
+pub mod scheduler;
 
-// main tx building logic
-pub mod builder;
+// main business logic
+pub mod flows;
+
+// router logic
+pub mod router;
