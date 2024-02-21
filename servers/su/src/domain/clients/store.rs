@@ -6,20 +6,19 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-use super::super::core::json::{Message, Process, PaginatedMessages, JsonErrorType};
-use super::super::router::{Scheduler, ProcessScheduler};
-use crate::config::Config;
+use crate::domain::config::AoConfig;
+use super::super::core::dal::{
+    DataStore, 
+    StoreErrorType, 
+    Message, 
+    Process, 
+    PaginatedMessages, 
+    JsonErrorType, 
+    Scheduler, 
+    ProcessScheduler
+};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
-
-#[derive(Debug)]
-pub enum StoreErrorType {
-    DatabaseError(String),
-    NotFound(String),
-    JsonError(String),
-    EnvVarError(String),
-    IntError(String)
-}
 
 use diesel::result::Error as DieselError; // Import Diesel's Error
 
@@ -72,7 +71,7 @@ pub struct StoreClient{
 
 impl StoreClient {
     pub fn new() -> Result<Self, StoreErrorType> {
-        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let database_url = config.database_url;
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
@@ -102,8 +101,10 @@ impl StoreClient {
             ))
         }
     }
+}
 
-    pub fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
+impl DataStore for StoreClient {
+    fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -126,7 +127,7 @@ impl StoreClient {
         }
     }
 
-    pub fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType> {
+    fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType> {
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -145,7 +146,7 @@ impl StoreClient {
         }
     }
     
-    pub fn save_message(&self, message: &Message, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
+    fn save_message(&self, message: &Message, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -178,7 +179,7 @@ impl StoreClient {
     }    
 
 
-    pub fn get_messages(
+    fn get_messages(
         &self,
         process_id_in: &str,
         from: &Option<String>,
@@ -233,7 +234,7 @@ impl StoreClient {
         }
     }
 
-    pub fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType> {
+    fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -252,7 +253,7 @@ impl StoreClient {
         }
     }
 
-    pub fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
+    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -277,7 +278,7 @@ impl StoreClient {
     
 
 
-    pub fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType> {
+    fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType> {
         use super::schema::process_schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -299,7 +300,7 @@ impl StoreClient {
         }
     }
 
-    pub fn get_process_scheduler(&self, process_id_in: &str) -> Result<ProcessScheduler, StoreErrorType> {
+    fn get_process_scheduler(&self, process_id_in: &str) -> Result<ProcessScheduler, StoreErrorType> {
         use super::schema::process_schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -322,7 +323,7 @@ impl StoreClient {
         }
     }
 
-    pub fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
+    fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -344,7 +345,7 @@ impl StoreClient {
         }
     }
 
-    pub fn update_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
+    fn update_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -360,7 +361,7 @@ impl StoreClient {
     
     
 
-    pub fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
+    fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -383,7 +384,7 @@ impl StoreClient {
         }
     }
 
-    pub fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType> {
+    fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -406,7 +407,7 @@ impl StoreClient {
         }
     }
 
-    pub fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType> {
+    fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -424,8 +425,6 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
-    
-    
 }
 
 

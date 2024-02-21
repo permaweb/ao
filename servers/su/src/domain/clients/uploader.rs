@@ -11,27 +11,11 @@ use tokio::spawn;
 use tokio::time::{sleep, Duration};
 
 use crate::domain::Log;
+use crate::domain::core::dal::{Uploader, UploaderErrorType};
 
-#[derive(Debug)]
-pub enum UploaderErrorType {
-    UploadError(String)
-}
-
-impl From<UploaderErrorType> for String {
-    fn from(error: UploaderErrorType) -> Self {
-        format!("{:?}", error)
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct UploadResult{
-    pub id: String,
-    pub timestamp: u64,
-}
-
-pub struct UploaderClient<'a> {
+pub struct UploaderClient {
     node_url: Url,
-    logger: &'a Arc<dyn Log>,
+    logger: Arc<dyn Log>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -56,8 +40,8 @@ impl From<serde_json::Error> for UploaderErrorType {
     }
 }
 
-impl<'a> UploaderClient<'a> {
-    pub fn new(node_url: &str, logger: &'a Arc<dyn Log>) -> Result<Self, UploaderErrorType> {
+impl UploaderClient {
+    pub fn new(node_url: &str, logger: Arc<dyn Log>) -> Result<Self, UploaderErrorType> {
         let url = match Url::parse(node_url) {
             Ok(u) => u,
             Err(e) => return Err(UploaderErrorType::UploadError(format!("{}", e)))
@@ -68,9 +52,10 @@ impl<'a> UploaderClient<'a> {
             logger
         })
     }
+}
 
-
-    pub fn upload(&self, tx: Vec<u8>) -> Result<(), UploaderErrorType> {
+impl Uploader for UploaderClient {
+    fn upload(&self, tx: Vec<u8>) -> Result<(), UploaderErrorType> {
         let node_url_clone = self.node_url.clone();
         let tx_clone = tx.clone();
         let logger_clone = Arc::clone(&self.logger);

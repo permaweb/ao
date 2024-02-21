@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use std::sync::Arc;
 use arweave_rs::network::NetworkInfoClient;
 use crate::domain::core::dal::{Gateway, NetworkInfo};
-use crate::config::Config;
+use crate::domain::config::AoConfig;
 
 pub struct ArweaveGateway {
     // Use Mutex to safely share and update state across tasks
@@ -51,7 +51,7 @@ impl ArweaveGateway {
     }
 
     async fn network_info_fetch() -> Result<NetworkInfo, String> {
-        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let gateway_url = config.gateway_url;
         let url = Url::parse(&gateway_url).map_err(|e| format!("{:?}", e))?;
     
@@ -88,7 +88,7 @@ impl ArweaveGateway {
 #[async_trait]
 impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
-        let config = Config::new(Some("su".to_string())).expect("Failed to read configuration");
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let gateway_url = config.gateway_url;
 
         let url = match Url::parse(&gateway_url) {

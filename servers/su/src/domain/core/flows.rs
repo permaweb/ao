@@ -1,49 +1,55 @@
 
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH, SystemTimeError};
 
 use dotenv::dotenv;
-use std::time::{SystemTime, UNIX_EPOCH, SystemTimeError};
 use serde_json::json;
-use arweave_rs::network::NetworkInfoClient;
-use reqwest::{Url};
 
-use crate::domain::clients::uploader::UploaderClient;
-use crate::domain::clients::store::{StoreClient};
-use crate::domain::clients::wallet::FileWallet;
-use crate::domain::clients::signer::ArweaveSigner;
-use crate::domain::core::json::{Message, Process};
-use crate::domain::core::builder::{Builder};
-use crate::domain::core::dal::{Gateway, Signer, Log, Wallet};
-use crate::domain::scheduler;
-use crate::config::Config;
+use super::json::{Message, Process};
+use super::builder::{Builder};
+use super::scheduler;
+
+use super::dal::{
+    Gateway, 
+    Signer, 
+    Log, 
+    Wallet, 
+    Config, 
+    Uploader, 
+    DataStore
+};
 
 pub struct Deps {
-    pub data_store: Arc<StoreClient>,
+    pub data_store: Arc<dyn DataStore>,
     pub logger: Arc<dyn Log>,
-    pub config: Arc<Config>,
+    pub config: Arc<dyn Config>,
+    pub gateway: Arc<dyn Gateway>,
+    pub signer: Arc<dyn Signer>,
+    pub wallet: Arc<dyn Wallet>,
+    pub uploader: Arc<dyn Uploader>,
+
+    /*
+        scheduler is part of the core but we initialize
+        it as a dependency so it can be initialized once
+        when the server starts up. It also needs its own
+        dependencies injected.
+    */
     pub scheduler: Arc<scheduler::ProcessScheduler>,
-    pub gateway: Arc<dyn Gateway>
 }
 
 /*
-flows.rs ties together core modules and client 
-modules to produce the desired end result
+    flows.rs is the main business logic of the su
 */
 
 
 pub fn init_builder(deps: &Arc<Deps>) -> Result<Builder, String> {
     dotenv().ok();
-    let wallet_path = &deps.config.su_wallet_path;
-    let arweave_signer = ArweaveSigner::new(wallet_path)?;
-    let signer: Arc<dyn Signer> = Arc::new(arweave_signer);
-    let builder = Builder::new(deps.gateway.clone(), signer, &deps.logger)?;
+    let builder = Builder::new(deps.gateway.clone(), deps.signer.clone(), &deps.logger)?;
     return Ok(builder);
 }
 
 async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, String> {
-    let upload_node_url = &deps.config.upload_node_url;
-    let uploader = UploaderClient::new(upload_node_url, &deps.logger)?;
-    let uploaded_tx = uploader.upload(build_result)?;
+    let uploaded_tx = &deps.uploader.upload(build_result)?;
     let result = match serde_json::to_string(&uploaded_tx) {
         Ok(r) => r,
         Err(e) => return Err(format!("{:?}", e))
@@ -184,14 +190,7 @@ fn system_time_u64() -> Result<u64, SystemTimeError> {
 pub async fn timestamp(deps: Arc<Deps>) -> Result<String, String>{
     match system_time() {
         Ok(timestamp) => {
-            let gateway_url = &deps.config.gateway_url;
-            let url = match Url::parse(gateway_url) {
-                Ok(u) => u,
-                Err(e) => return Err(format!("url error {:?}", e))
-            };
-
-            let network_client = NetworkInfoClient::new(url);
-            let network_info = network_client.network_info().await;
+            let network_info = deps.gateway.network_info().await;
             match network_info {
                 Ok(info) => {
                     let height = info.height.clone();
@@ -209,11 +208,10 @@ pub async fn timestamp(deps: Arc<Deps>) -> Result<String, String>{
     }
 }
 
-pub async fn health(_deps: Arc<Deps>) -> Result<String, String>{
+pub async fn health(deps: Arc<Deps>) -> Result<String, String>{
     match system_time() {
         Ok(timestamp) => {
-            let wallet: Arc<dyn Wallet> = Arc::new(FileWallet);
-            let wallet_address = match wallet.wallet_address() {
+            let wallet_address = match deps.wallet.wallet_address() {
                 Ok(w) => w,
                 Err(e) => return Err(e)
             };
