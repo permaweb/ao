@@ -29,6 +29,8 @@ export { errFrom } from './utils.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+export { pendingReadState } from './api/readState.js'
+
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
 
