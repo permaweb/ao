@@ -5,7 +5,6 @@ import { unapply, pipeWith } from 'ramda'
 
 import Fastify from 'fastify'
 import FastifyMiddie from '@fastify/middie'
-import serveStatic from 'serve-static'
 import cors from 'cors'
 import helmet from 'helmet'
 
@@ -28,7 +27,6 @@ export const server = pipeP(
    * Allows us to download heapdumps, if created
    */
   (app) => app.use(helmet()),
-  (app) => app.use(serveStatic(config.DUMP_PATH)),
   (app) => app.use(cors()),
   withRoutes,
   (app) => {

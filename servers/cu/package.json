@@ -1,7 +1,7 @@
 {
   "name": "@permaweb/ao-cu",
   "version": "1.0.0",
-  "description": "A Node Express server that implements the ao Compute Unit specification",
+  "description": "A NodeJS server that implements the ao Compute Unit specification",
   "type": "module",
   "main": "src/app.js",
   "scripts": {
@@ -18,8 +18,8 @@
     "cors": "^2.8.5",
     "dataloader": "^2.2.2",
     "debug": "^4.3.4",
-    "dotenv": "^16.4.1",
-    "fastify": "^4.26.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.26.1",
     "heapdump": "^0.3.15",
     "helmet": "^7.1.0",
     "hyper-async": "^1.1.2",
@@ -30,13 +30,12 @@
     "pouchdb-adapter-leveldb": "^8.0.1",
     "pouchdb-find": "^8.0.1",
     "ramda": "^0.29.1",
-    "serve-static": "^1.15.0",
     "warp-arbundles": "^1.0.4",
     "workerpool": "^9.1.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.1.0"
   },
   "engines": {
     "node": "18"

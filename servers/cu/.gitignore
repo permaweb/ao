@@ -10,3 +10,4 @@
 ao-cache*
 static/*
 !static/.gitkeep
+*.heapsnapshot
