@@ -12,6 +12,10 @@ import helmet from 'helmet'
 import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
+/**
+ * TODO: expose this better
+ */
+import { pendingReadState } from './domain/api/readState.js'
 
 const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)))
 
@@ -37,6 +41,7 @@ export const server = pipeP(
 
     const memMonitor = setInterval(() => {
       logger('Memory Used: %j', process.memoryUsage())
+      logger('Currently Pending readState operations: %j', Object.fromEntries(pendingReadState.entries()))
     }, config.MEM_MONITOR_INTERVAL)
     memMonitor.unref()
 
