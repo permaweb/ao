@@ -39,7 +39,7 @@ const serverConfigSchema = domainConfigSchema.extend({
 const CONFIG_ENVS = {
   development: {
     MODE,
-    port: process.env.PORT || 3005,
+    port: process.env.PORT || 6363,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_MODE: process.env.DB_MODE || 'embedded',
@@ -48,7 +48,6 @@ const CONFIG_ENVS = {
     DUMP_PATH: process.env.DUMP_PATH || './static',
     WALLET: process.env.WALLET,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('10s'),
-    EVAL_DEFER_BACKPRESSURE: process.env.EVAL_DEFER_BACKPRESSURE || 10,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
@@ -62,16 +61,15 @@ const CONFIG_ENVS = {
   },
   production: {
     MODE,
-    port: process.env.PORT || 3005,
+    port: process.env.PORT || 6363,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
-    DB_MODE: process.env.DB_MODE || 'remote',
-    DB_URL: process.env.DB_URL,
-    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || 'throw'),
-    DUMP_PATH: process.env.DUMP_PATH,
+    DB_MODE: process.env.DB_MODE || 'embedded',
+    DB_URL: process.env.DB_URL || 'ao-cache',
+    DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
+    DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
     WALLET: process.env.WALLET,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('30s'),
-    EVAL_DEFER_BACKPRESSURE: process.env.EVAL_DEFER_BACKPRESSURE || 10,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false', // TODO: disabled by default for now. Enable by default later
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB

@@ -50,13 +50,6 @@ export const domainConfigSchema = z.object({
    */
   MEM_MONITOR_INTERVAL: positiveIntSchema,
   /**
-   * The number of evaluations the CU should perform before placing the next evaluation at the end
-   * of the event queue.
-   *
-   * This helps hedge against CPU/Main thread starvation due to lengthy evaluations
-   */
-  EVAL_DEFER_BACKPRESSURE: positiveIntSchema,
-  /**
    * The amount of time, in milliseconds, that the CU should wait before creating a process Checkpoint,
    * if it has already created a Checkpoint for that process.
    *
