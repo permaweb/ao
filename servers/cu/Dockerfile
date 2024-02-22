@@ -1,6 +1,4 @@
-FROM node:21
-
-RUN apt update && apt install -y bash git awscli
+FROM node:18
 
 WORKDIR /usr/app
 
@@ -8,7 +6,7 @@ COPY ./package.json .
 COPY ./package-lock.json .
 COPY ./src ./src
 
-RUN npm install --ignore-engines
+RUN npm install --omit=dev
 
 ENV NODE_ENV=production
 
