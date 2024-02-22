@@ -222,16 +222,19 @@ export function saveProcessWith ({ pouchDb }) {
 
 export function findProcessMemoryBeforeWith ({
   cache,
+  address,
   queryGateway,
   loadTransactionData,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findProcessMemoryBefore')
+  address = fromPromise(address)
   queryGateway = fromPromise(queryGateway)
   loadTransactionData = fromPromise(loadTransactionData)
 
   const GET_AO_PROCESS_CHECKPOINTS = `
     query GetAoProcessCheckpoints(
+      $owner: String!
       $processId: String!
       $limit: Int!
     ) {
@@ -241,6 +244,7 @@ export function findProcessMemoryBeforeWith ({
           { name: "Type", values: ["Checkpoint"] }
           { name: "Process", values: [$processId] }
         ],
+        owners: [$owner]
         first: $limit,
         sort: HEIGHT_DESC
       ) {
@@ -361,7 +365,8 @@ export function findProcessMemoryBeforeWith ({
   }
 
   function maybeCheckpointFromArweave ({ processId, timestamp, ordinate, cron }) {
-    return of({ processId, limit: 50 })
+    return address()
+      .map((owner) => ({ owner, processId, limit: 50 }))
       .chain((variables) => queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables }))
       .map(path(['data', 'transactions', 'edges']))
       .map(determineLatestCheckpointBefore({ timestamp, ordinate, cron }))
