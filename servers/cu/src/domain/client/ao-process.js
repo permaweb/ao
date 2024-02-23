@@ -374,8 +374,10 @@ export function findProcessMemoryBeforeWith ({
         if (!latestCheckpoint) return Rejected({ processId, timestamp, ordinate, cron })
 
         logger(
-          'Found checkpoint on Arweave with parameters "%j"',
-          { checkpointTxId: latestCheckpoint.id, processId, timestamp, ordinate, cron }
+          'Found Checkpoint for process "%s", before "%j", on Arweave, with parameters "%j"',
+          processId,
+          { timestamp, ordinate, cron },
+          { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint }
         )
 
         /**
@@ -405,8 +407,10 @@ export function findProcessMemoryBeforeWith ({
           .bimap(
             (err) => {
               logger(
-                'Failed to download latest checkpoint with parameters "%j"',
-                { checkpointTxId: latestCheckpoint.id, processId, timestamp, ordinate, cron },
+                'Error encountered when downloading Checkpoint found for process "%s", before "%j", from Arweave, with parameters "%j"',
+                processId,
+                { timestamp, ordinate, cron },
+                { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint },
                 err
               )
               return { processId, timestamp, ordinate, cron }
