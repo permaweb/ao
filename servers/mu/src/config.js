@@ -47,11 +47,10 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
-    CU_URL: process.env.CU_URL || 'https://ao-cu-1.onrender.com',
-    MU_DATABASE_URL: process.env.MU_DATABASE_URL || 'postgres://admin:admin@localhost:5432/mu',
+    CU_URL: process.env.CU_URL || 'http://localhost:6363',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
-    DUMP_PATH: process.env.DUMP_PATH || './static',
+    DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   },
   production: {
@@ -59,10 +58,9 @@ const CONFIG_ENVS = {
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
-    MU_DATABASE_URL: process.env.MU_DATABASE_URL,
     GATEWAY_URL: process.env.GATEWAY_URL,
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
-    DUMP_PATH: process.env.DUMP_PATH || './static',
+    DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   }
 }
