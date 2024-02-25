@@ -169,6 +169,21 @@ export function hydrateMessagesWith (env) {
   return (ctx) => {
     return of(ctx)
       .map(({ messages: $messages }) => {
+        /**
+         * There is some sort of bug in pipeline which will consistently cause this stream
+         * to not end IFF it emits an error.
+         *
+         * When errors are thrown in other places, pipeline seems to work and close the stream just fine.
+         * So not sure what's going on here.
+         *
+         * This seemed to be the only way to successfully
+         * end the stream, thus closing the pipeline, and resolving
+         * the promise wrapping the stream (see finished in evaluate.js)
+         *
+         * See https://github.com/nodejs/node/issues/40279#issuecomment-1061124430
+         */
+        $messages.on('error', () => $messages.emit('end'))
+
         return composeStreams(
           $messages,
           Transform.from(maybeMessageId),

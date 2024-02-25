@@ -1,5 +1,4 @@
-import { compose as composeStreams } from 'node:stream'
-import { finished } from 'node:stream/promises'
+import { compose as composeStreams, finished } from 'node:stream'
 
 import { always, applySpec, identity, mergeLeft, mergeRight, pathOr } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
@@ -119,133 +118,156 @@ export function evaluateWith (env) {
           noSave: always(true)
         })(ctx)
 
-        await finished(composeStreams(
-          ctx.messages,
-          async function (messages) {
+        await new Promise((resolve, reject) => {
+          const cleanup = finished(
             /**
-             * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
-             * to pin down why. My hunch is that the very first message can be a duplicate of the 'from', if 'from'
-             * is itself a Cron Message.
+             * Where the entire eval stream is composed and concludes.
              *
-             * So to get around this, we maintain a set of strings that unique identify
-             * Cron messages (timestamp+cron interval). We will add each cron message identifier to this Set.
-             * If an iteration comes across an identifier already present in this list, then we consider it
-             * a duplicate and remove it from the eval stream.
-             *
-             * This should prevent duplicate Cron Messages from being duplicate evaluated, thus not "tainting"
-             * Memory that is folded as part of the eval stream
+             * messages will flow into evaluation, respecting backpressure, bubbling errors,
+             * and cleaning up resources when finished.
              */
-            const evaledCrons = new Set()
-            /**
-             * If the starting point ('from') is itself a Cron Message,
-             * then that will be our first identifier added to the set
-             */
-            if (ctx.fromCron) evaledCrons.add(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }))
-
-            /**
-             * Keep track of any deepHashes in the eval stream
-             * as a quick way to eliminate dupes in the same eval stream
-             */
-            const deepHashes = new Set()
-
-            /**
-             * Iterate over the async iterable of messages,
-             * and evaluate each one
-             */
-            for await (const { noSave, cron, ordinate, name, message, deepHash, AoGlobal } of messages) {
-              if (cron) {
-                const key = toEvaledCron({ timestamp: message.Timestamp, cron })
-                if (evaledCrons.has(key)) continue
+            composeStreams(
+              ctx.messages,
+              async function (messages) {
                 /**
-                 * We add the crons identifier to the Set,
-                 * thus preventing a duplicate evaluation if we come across it
-                 * again in the eval stream
+                 * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
+                 * to pin down why. My hunch is that the very first message can be a duplicate of the 'from', if 'from'
+                 * is itself a Cron Message.
+                 *
+                 * So to get around this, we maintain a set of strings that unique identify
+                 * Cron messages (timestamp+cron interval). We will add each cron message identifier to this Set.
+                 * If an iteration comes across an identifier already present in this list, then we consider it
+                 * a duplicate and remove it from the eval stream.
+                 *
+                 * This should prevent duplicate Cron Messages from being duplicate evaluated, thus not "tainting"
+                 * Memory that is folded as part of the eval stream
                  */
-                else evaledCrons.add(key)
-              }
+                const evaledCrons = new Set()
+                /**
+                 * If the starting point ('from') is itself a Cron Message,
+                 * then that will be our first identifier added to the set
+                 */
+                if (ctx.fromCron) evaledCrons.add(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }))
 
+                /**
+                 * Keep track of any deepHashes in the eval stream
+                 * as a quick way to eliminate dupes in the same eval stream
+                 */
+                const deepHashes = new Set()
+
+                /**
+                 * Iterate over the async iterable of messages,
+                 * and evaluate each one
+                 */
+                for await (const { noSave, cron, ordinate, name, message, deepHash, AoGlobal } of messages) {
+                  if (cron) {
+                    const key = toEvaledCron({ timestamp: message.Timestamp, cron })
+                    if (evaledCrons.has(key)) continue
+                    /**
+                     * We add the crons identifier to the Set,
+                     * thus preventing a duplicate evaluation if we come across it
+                     * again in the eval stream
+                     */
+                    else evaledCrons.add(key)
+                  }
+
+                  /**
+                   * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
+                   * if their deepHash is found in the cache.
+                   *
+                   * This prevents duplicate evals from double cranks
+                   */
+                  if (deepHash) {
+                    if (deepHashes.has(deepHash) ||
+                        await doesMessageHashExist({
+                          deepHash,
+                          processId: ctx.id,
+                          timestamp: message.Timestamp,
+                          ordinate
+                        }).toPromise()
+                    ) {
+                      logger('Prior Message with deepHash "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream', deepHash, name)
+                      continue
+                    } else deepHashes.add(deepHash)
+                  }
+
+                  prev = await Promise.resolve(prev)
+                    .then((prev) =>
+                      Promise.resolve(prev.Memory)
+                        /**
+                         * Where the actual evaluation is performed
+                         */
+                        .then((Memory) => ctx.evaluator({ name, processId: ctx.id, Memory, message, AoGlobal }))
+                        /**
+                         * These values are folded,
+                         * so that we can potentially update the process memory cache
+                         * at the end of evaluation
+                         */
+                        .then(mergeLeft({ noSave, message, cron, ordinate }))
+                        .then(async (output) => {
+                          if (cron) ctx.stats.messages.cron++
+                          else ctx.stats.messages.scheduled++
+
+                          return Promise.resolve(output)
+                            .then((output) => {
+                              if (output.Error) return Promise.reject(output)
+                              /**
+                               * Noop saving the evaluation is noSave flag is set
+                               */
+                              if (noSave) return
+
+                              /**
+                               * Create a new evaluation to be cached in the local db
+                               */
+                              return saveEvaluation({
+                                name,
+                                deepHash,
+                                cron,
+                                ordinate,
+                                processId: ctx.id,
+                                messageId: message.Id,
+                                timestamp: message.Timestamp,
+                                nonce: message.Nonce,
+                                epoch: message.Epoch,
+                                blockHeight: message['Block-Height'],
+                                evaluatedAt: new Date(),
+                                output
+                              })
+                                .toPromise()
+                            })
+                            .then(() => output)
+                            .catch((err) => {
+                              logger(
+                                'Error occurred when applying message "%s" to process "%s": "%s',
+                                name,
+                                ctx.id,
+                                err.Error
+                              )
+                              ctx.stats.messages.error = ctx.stats.messages.error || 0
+                              ctx.stats.messages.error++
+
+                              return err
+                            })
+                        })
+                    )
+                }
+              }
+            ),
+            (err) => {
               /**
-               * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
-               * if their deepHash is found in the cache.
+               * finshed() will leave dangling event listeners even after this callback
+               * has been invoked, so that unexpected errors do not cause full-on crashes.
                *
-               * This prevents duplicate evals from double cranks
+               * finished() returns a callback fn to cleanup these dangling listeners, so we make sure
+               * to always call it here to prevent memory leaks.
+               *
+               * See https://nodejs.org/api/stream.html#streamfinishedstream-options-callback
                */
-              if (deepHash) {
-                if (deepHashes.has(deepHash) ||
-                    await doesMessageHashExist({
-                      deepHash,
-                      processId: ctx.id,
-                      timestamp: message.Timestamp,
-                      ordinate
-                    }).toPromise()
-                ) {
-                  logger('Prior Message with deepHash "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream', deepHash, name)
-                  continue
-                } else deepHashes.add(deepHash)
-              }
-
-              prev = await Promise.resolve(prev)
-                .then((prev) =>
-                  Promise.resolve(prev.Memory)
-                    /**
-                     * Where the actual evaluation is performed
-                     */
-                    .then((Memory) => ctx.evaluator({ name, processId: ctx.id, Memory, message, AoGlobal }))
-                    /**
-                     * These values are folded,
-                     * so that we can potentially update the process memory cache
-                     * at the end of evaluation
-                     */
-                    .then(mergeLeft({ noSave, message, cron, ordinate }))
-                    .then(async (output) => {
-                      if (cron) ctx.stats.messages.cron++
-                      else ctx.stats.messages.scheduled++
-
-                      return Promise.resolve(output)
-                        .then((output) => {
-                          if (output.Error) return Promise.reject(output)
-                          /**
-                           * Noop saving the evaluation is noSave flag is set
-                           */
-                          if (noSave) return
-
-                          /**
-                           * Create a new evaluation to be cached in the local db
-                           */
-                          return saveEvaluation({
-                            name,
-                            deepHash,
-                            cron,
-                            ordinate,
-                            processId: ctx.id,
-                            messageId: message.Id,
-                            timestamp: message.Timestamp,
-                            nonce: message.Nonce,
-                            epoch: message.Epoch,
-                            blockHeight: message['Block-Height'],
-                            evaluatedAt: new Date(),
-                            output
-                          })
-                            .toPromise()
-                        })
-                        .then(() => output)
-                        .catch((err) => {
-                          logger(
-                            'Error occurred when applying message "%s" to process "%s": "%s',
-                            name,
-                            ctx.id,
-                            err.Error
-                          )
-                          ctx.stats.messages.error = ctx.stats.messages.error || 0
-                          ctx.stats.messages.error++
-
-                          return err
-                        })
-                    })
-                )
+              cleanup()
+              err ? reject(err) : resolve()
             }
-          }
-        ))
+          )
+        })
 
         /**
          * Make sure to attempt to cache the last result
