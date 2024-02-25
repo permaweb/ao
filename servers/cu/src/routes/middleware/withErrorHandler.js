@@ -17,7 +17,7 @@ export const withErrorHandler = (handler) => (req, res) => {
 
       logger('An error bubbled to the top handler. Formatting and relaying to client:', err)
       const formatted = errFrom(err)
-      if (res.writableEnded) return
+      if (res.raw.writableEnded) return
 
       res.status(err.status || 500).send({ error: formatted.message || 'Internal Server Error' })
     })

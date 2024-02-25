@@ -1,6 +1,7 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
+import { busyIn } from '../domain/utils.js'
 import { withMiddleware } from './middleware/index.js'
 
 const inputSchema = z.object({
@@ -31,14 +32,19 @@ export const withDryRunRoutes = app => {
         const {
           query: { 'process-id': processId, to: messageTxId },
           body,
-          domain: { apis: { dryRun } }
+          domain: { BUSY_THRESHOLD, apis: { dryRun } }
         } = req
 
         const input = inputSchema.parse({ processId, messageTxId, dryRun: body })
 
-        await dryRun(input)
-          .map((output) => res.send(output))
-          .toPromise()
+        await busyIn(
+          BUSY_THRESHOLD,
+          dryRun(input).toPromise(),
+          () => {
+            res.status(202)
+            return { message: `Evaluation of process "${input.processId}" to "${input.messageTxId || 'latest'}" is in progress.` }
+          }
+        ).then((output) => res.send(output))
       })
     )()
   )
