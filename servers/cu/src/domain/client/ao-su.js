@@ -33,7 +33,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             from,
             to
           )
-          throw new Error(`${res.status}: ${await res.text()}`)
+          throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${res.status}: ${await res.text()}`)
         })
     }
 
