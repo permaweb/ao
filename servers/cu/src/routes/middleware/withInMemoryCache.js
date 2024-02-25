@@ -50,8 +50,12 @@ export const withInMemoryCache = ({
     if (cached) return res.send(cached)
 
     await loader({ req, res })
-      .then((result) => {
-        cache.set(key, result)
+      .then(([result, noCache]) => {
+        if (!noCache) cache.set(key, result)
+        /**
+         * TODO: maybe add Cache-Control headers as well,
+         * so that clients can also cache the request
+         */
         res.send(result)
       })
       .catch((err) => {
