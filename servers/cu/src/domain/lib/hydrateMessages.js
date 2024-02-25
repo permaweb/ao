@@ -30,7 +30,7 @@ export function bytesToBase64 (bytes) {
   return Buffer.from(bytes).toString('base64')
 }
 
-export function maybeMessageIdWith () {
+export function maybeMessageIdWith ({ logger }) {
   /**
    * To calculate the messageId, we set the owner to 0 bytes,
    * and so the owner length will also be 0 bytes.
@@ -68,20 +68,28 @@ export function maybeMessageIdWith () {
         continue
       }
 
-      /**
-       * TODO: if the message is ill-formatted in anyway, ie. incorrect length anchor
-       * or target, it will cause eval to fail entirely.
-       *
-       * But skipping the message doesn't seem kosher. What should we do?
-       */
-      cur.deepHash = await calcDataItemDeepHash({
-        data: cur.message.Data,
-        tags: cur.message.Tags,
-        target: cur.message.Target,
-        anchor: cur.message.Anchor
-      })
-
-      yield cur
+      try {
+        /**
+         * TODO: if the message is ill-formatted in anyway, ie. incorrect length anchor
+         * or target, it will cause eval to fail entirely.
+         *
+         * But skipping the message doesn't seem kosher. What should we do?
+         */
+        cur.deepHash = await calcDataItemDeepHash({
+          data: cur.message.Data,
+          tags: cur.message.Tags,
+          target: cur.message.Target,
+          anchor: cur.message.Anchor
+        })
+        yield cur
+      } catch (err) {
+        logger(
+          'Encountered Error when calculating deep hash of message "%s"',
+          cur.message.Id,
+          err
+        )
+        throw err
+      }
     }
   }
 }
