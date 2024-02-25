@@ -86,7 +86,12 @@ export const domainConfigSchema = z.object({
    * The time to live for a cache entry in the process latest memory cache.
    * An entries ttl is rest each time it is accessed
    */
-  PROCESS_MEMORY_CACHE_TTL: positiveIntSchema
+  PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
+  /**
+   * The amount of time in milliseconds, the CU should wait for evaluation to complete
+   * before responding with a "busy" message to the client
+   */
+  BUSY_THRESHOLD: positiveIntSchema
 })
 
 export const streamSchema = z.any().refine(stream => {

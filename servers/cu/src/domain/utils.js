@@ -214,3 +214,12 @@ export function maybeParseCursor (name) {
      */
     : Resolved(assoc(name, undefined, ctx))
 }
+
+export async function busyIn (millis, p, busyFn) {
+  if (!millis) return p
+
+  return Promise.race([
+    p,
+    new Promise((resolve) => setTimeout(resolve, millis)).then(busyFn)
+  ])
+}
