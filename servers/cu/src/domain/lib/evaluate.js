@@ -186,7 +186,12 @@ export function evaluateWith (env) {
                           ordinate
                         }).toPromise()
                     ) {
-                      logger('Prior Message with deepHash "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream', deepHash, name)
+                      logger(
+                        'Prior Message to process "%s" with deepHash "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream',
+                        ctx.id,
+                        deepHash,
+                        name
+                      )
                       continue
                     } else deepHashes.add(deepHash)
                   }
@@ -208,13 +213,23 @@ export function evaluateWith (env) {
                           if (cron) ctx.stats.messages.cron++
                           else ctx.stats.messages.scheduled++
 
+                          if (output.Error) {
+                            logger(
+                              'Error occurred when applying message "%s" to process "%s": "%s',
+                              name,
+                              ctx.id,
+                              output.Error
+                            )
+                            ctx.stats.messages.error = ctx.stats.messages.error || 0
+                            ctx.stats.messages.error++
+                          }
+
                           return Promise.resolve(output)
                             .then((output) => {
-                              if (output.Error) return Promise.reject(output)
                               /**
                                * Noop saving the evaluation is noSave flag is set
                                */
-                              if (noSave) return
+                              if (noSave) return output
 
                               /**
                                * Create a new evaluation to be cached in the local db
@@ -234,19 +249,15 @@ export function evaluateWith (env) {
                                 output
                               })
                                 .toPromise()
-                            })
-                            .then(() => output)
-                            .catch((err) => {
-                              logger(
-                                'Error occurred when applying message "%s" to process "%s": "%s',
-                                name,
-                                ctx.id,
-                                err.Error
-                              )
-                              ctx.stats.messages.error = ctx.stats.messages.error || 0
-                              ctx.stats.messages.error++
-
-                              return err
+                                .catch((err) => {
+                                  logger(
+                                    'Unexpected Error occurred when saving evaluation of "%s" to process "%s"',
+                                    name,
+                                    ctx.id,
+                                    err
+                                  )
+                                })
+                                .then(() => output)
                             })
                         })
                     )

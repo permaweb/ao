@@ -80,6 +80,16 @@ export function gatherResultsWith (env) {
                  * of the transduce
                  */
                 filter((evaluation) => ctx.onlyCron ? !!evaluation.cron : true),
+                /**
+                 * Do not include evaluations that resulted in an error.
+                 *
+                 * TODO: not clear in spec whether a message, whose eval resulted in an error,
+                 * may also place messages in the outbox to be pushed.
+                 * In practice, this has not been the case, but we may want to clarify in the spec
+                 *
+                 * So for now, just filtering them out from gathered results.
+                 */
+                filter((evaluation) => !evaluation.output || !evaluation.output.Error),
                 map(applySpec({
                   /**
                    * Create the cursor that represents this evaluation,

@@ -36,6 +36,11 @@ describe('gatherResultsWith', () => {
       cron: '1-10-minutes',
       ...mockEval,
       output: { Messages: [{ foo: '5' }] }
+    },
+    {
+      cron: undefined,
+      ...mockEval,
+      output: { Error: 'foobar', Messages: [{ foo: '6' }] }
     }
   ]
 
