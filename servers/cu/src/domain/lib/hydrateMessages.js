@@ -7,7 +7,7 @@ import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { streamSchema } from '../model.js'
-import { errFrom, findRawTag } from '../utils.js'
+import { findRawTag } from '../utils.js'
 
 const { createData } = WarpArBundles
 
@@ -30,7 +30,7 @@ export function bytesToBase64 (bytes) {
   return Buffer.from(bytes).toString('base64')
 }
 
-export function maybeMessageIdWith ({ logger }) {
+export function maybeMessageIdWith () {
   /**
    * To calculate the messageId, we set the owner to 0 bytes,
    * and so the owner length will also be 0 bytes.
@@ -68,25 +68,18 @@ export function maybeMessageIdWith ({ logger }) {
         continue
       }
 
-      // logger('Message "%s" is forwarded. Calculating messageId...', cur.message.Id)
-      try {
-        cur.deepHash = await calcDataItemDeepHash({
-          data: cur.message.Data,
-          tags: cur.message.Tags,
-          target: cur.message.Target,
-          anchor: cur.message.Anchor
-        })
-      } catch (err) {
-        // TODO: is skipping over the message the proper thing to do here?
-        const newErr = errFrom(err)
-        logger(
-          'Encountered err when calculating deephash of forwarded message %s to %s. Skipping its evaluation...',
-          cur.message.Id,
-          cur.message.Target,
-          newErr
-        )
-        continue
-      }
+      /**
+       * TODO: if the message is ill-formatted in anyway, ie. incorrect length anchor
+       * or target, it will cause eval to fail entirely.
+       *
+       * But skipping the message doesn't seem kosher. What should we do?
+       */
+      cur.deepHash = await calcDataItemDeepHash({
+        data: cur.message.Data,
+        tags: cur.message.Tags,
+        target: cur.message.Target,
+        anchor: cur.message.Anchor
+      })
 
       yield cur
     }
