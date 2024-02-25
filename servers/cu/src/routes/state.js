@@ -1,6 +1,7 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
+import { busyIn } from '../domain/utils.js'
 import { withMiddleware } from './middleware/index.js'
 
 const inputSchema = z.object({
@@ -18,24 +19,31 @@ export const withStateRoutes = (app) => {
         const {
           params: { processId },
           query: { to },
-          domain: { apis: { readState } }
+          domain: { BUSY_THRESHOLD, apis: { readState } }
         } = req
 
         const input = inputSchema.parse({ processId, to })
 
-        await readState(input)
-          .map(({ output }) => {
-            /**
-             * The cu sends the array buffer as binary data,
-             * so make sure to set the header to indicate such
-             *
-             * and then return only the buffer received from BL
-             */
-            res.header('Content-Type', 'application/octet-stream')
-            return output.Memory
-          })
-          .map((memory) => res.send(memory))
-          .toPromise()
+        await busyIn(
+          BUSY_THRESHOLD,
+          readState(input)
+            .map(({ output }) => {
+              if (res.raw.writableEnded) return output.Memory
+              /**
+               * The cu sends the array buffer as binary data,
+               * so make sure to set the header to indicate such
+               *
+               * and then return only the buffer received from BL
+               */
+              res.header('Content-Type', 'application/octet-stream')
+              return output.Memory
+            })
+            .toPromise(),
+          () => {
+            res.status(202)
+            return { message: `Evaluation of process "${input.processId}" to "${input.to || 'latest'}" is in progress.` }
+          }
+        ).then((output) => res.send(output))
       })
     )()
   )
