@@ -33,8 +33,6 @@ export const withResultRoutes = app => {
             domain: { BUSY_THRESHOLD, apis: { readResult } }
           } = req
 
-          console.log(noBusy)
-
           const input = inputSchema.parse({ messageTxId, processId })
 
           return busyIn(
