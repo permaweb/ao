@@ -38,10 +38,32 @@ function nameExists(msg)
     end
 end
 
-local function printlist(list)
+listForUser = listForUser or {}
+
+--[[
+  Generate List
+]]
+function generateList()
+    listForUser = {}
+    for index, quest in ipairs(quests) do
+        table.insert(listForUser, {
+            From = quest.From,
+            Url = quest.Tags.Url,
+            Name = quest.Tags.Name,
+            Description = quest.Tags.Description,
+            Points = quest.Tags.Points,
+            Concluded = quest.Concluded
+        })
+    end
+end
+
+--[[
+  Creates formatted list for quests
+]]
+function printlist(list)
     local output = ""
     -- Find all the keys from the first item for column headers
-    local headers = {"Index", "Name", "Points"}
+    local headers = {"QuestId", "Name", "Points"}
 
     -- Calculate the width for each column
     local colWidths = {}
@@ -71,7 +93,7 @@ local function printlist(list)
     -- Print each row
     for i, item in ipairs(list) do
         for _, header in ipairs(headers) do
-            if header == "Index" then
+            if header == "QuestId" then
                 output = output ..
                              string.format("%-" .. colWidths[header] .. "s ",
                                            tostring(i))
@@ -131,24 +153,12 @@ Handlers.add("Details", Handlers.utils.hasMatchingTag("Action", "Detail"),
                        "From: " .. item.From .. "\n" .. "Url" .. item.Url ..
                        "\n"
     ao.send({Target = msg.From, Data = output})
-
     print(output)
 end)
 
--- Send({ Target = "obV9iL-w_K7DOMAV-Ze7dpgdJS3usxXdqz3mZ4Mn_zk", Tags = { Action = "List" }})
 Handlers.add("List", Handlers.utils.hasMatchingTag("Action", "List"),
              function(msg)
-    listForUser = {}
-    for index, quest in ipairs(quests) do
-        table.insert(listForUser, {
-            From = quest.From,
-            Url = quest.Tags.Url,
-            Name = quest.Tags.Name,
-            Description = quest.Tags.Description,
-            Points = quest.Tags.Points,
-            Concluded = quest.Concluded
-        })
-    end
+    generateList()
     if Handlers.utils.hasMatchingTag("Format", "json")(msg) == -1 then
         Handlers.utils.reply(json.encode(listForUser))(msg)
     else
@@ -182,4 +192,5 @@ Handlers.add("Conclude", Handlers.utils.hasMatchingTag("Action", "Conclude"),
                                  missingFieldsStr)(msg)
     end
 end)
+
 
