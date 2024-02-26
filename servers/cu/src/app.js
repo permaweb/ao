@@ -21,9 +21,6 @@ export const server = pipeP(
    * Allow us to use some simple express middleware
    */
   (app) => app.register(FastifyMiddie).then(() => app),
-  /**
-   * Allows us to download heapdumps, if created
-   */
   (app) => app.use(helmet()),
   (app) => app.use(cors()),
   withRoutes,
