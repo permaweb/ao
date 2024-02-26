@@ -131,6 +131,7 @@ Handlers.add("Details", Handlers.utils.hasMatchingTag("Action", "Detail"),
                        "From: " .. item.From .. "\n" .. "Url" .. item.Url ..
                        "\n"
     ao.send({Target = msg.From, Data = output})
+
     print(output)
 end)
 
