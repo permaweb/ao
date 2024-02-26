@@ -3,7 +3,7 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 
-import { errFrom, evaluationToCursor, maybeParseCursor } from './utils.js'
+import { busyIn, errFrom, evaluationToCursor, maybeParseCursor } from './utils.js'
 
 describe('utils', () => {
   describe('errFrom', () => {
@@ -102,6 +102,23 @@ describe('utils', () => {
         foo: 'bar',
         from: undefined
       })
+    })
+  })
+
+  describe('busyIn', () => {
+    test('return the promise', async () => {
+      const res = await busyIn(500, Promise.resolve(true), () => Promise.resolve(false))
+      assert.ok(res)
+    })
+
+    test('return the busyFn result', async () => {
+      const res = await busyIn(250, new Promise(resolve => setTimeout(() => resolve(true), 500)), () => Promise.resolve(false))
+      assert.equal(res, false)
+    })
+
+    test('return the promise if time is set to 0', async () => {
+      const res = await busyIn(0, new Promise(resolve => setTimeout(() => resolve(true), 100)), () => Promise.resolve(false))
+      assert.ok(res)
     })
   })
 })

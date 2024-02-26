@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 export const positiveIntSchema = z.preprocess((val) => {
-  if (!val) return -1
+  if (val == null) return -1
   if (typeof val === 'number') return val
   return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
-}, z.number().positive())
+}, z.number().nonnegative())
 
 export const domainConfigSchema = z.object({
   /**

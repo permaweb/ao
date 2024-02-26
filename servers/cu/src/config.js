@@ -58,7 +58,7 @@ const CONFIG_ENVS = {
     WASM_BINARY_FILE_DIRECTORY: process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
     PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
     PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
-    BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || ms('15s')
+    BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0 // disabled
   },
   production: {
     MODE,
@@ -81,7 +81,7 @@ const CONFIG_ENVS = {
     WASM_BINARY_FILE_DIRECTORY: process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
     PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
     PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
-    BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || ms('15s')
+    BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0 // disabled
   }
 }
 
