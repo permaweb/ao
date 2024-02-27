@@ -192,7 +192,7 @@ export function evaluateWith ({
          */
         Resolved
       )
-      .chain(fromPromise((wasmModule) => bootstrapWasmInstance(wasmModule)))
+      .chain(fromPromise((wasmModule) => bootstrapWasmInstance(wasmModule, gas, memLimit)))
       /**
        * Cache the wasm module for this particular stream,
        * in memory, for quick retrieval next time
@@ -311,8 +311,10 @@ if (!process.env.NO_WORKER) {
       readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
       writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
       streamTransactionData: streamTransactionDataWith({ fetch, GATEWAY_URL: workerData.GATEWAY_URL, logger }),
-      bootstrapWasmInstance: (wasmModule) => AoLoader((info, receiveInstance) =>
-        WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
+      bootstrapWasmInstance: (wasmModule, gasLimit, memoryLimit) => AoLoader(
+        (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
+        gasLimit,
+        memoryLimit
       ),
       logger
     })
