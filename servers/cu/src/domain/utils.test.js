@@ -3,7 +3,8 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 
-import { busyIn, errFrom, evaluationToCursor, maybeParseCursor } from './utils.js'
+import { busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor } from './utils.js'
+import ms from 'ms'
 
 describe('utils', () => {
   describe('errFrom', () => {
@@ -119,6 +120,40 @@ describe('utils', () => {
     test('return the promise if time is set to 0', async () => {
       const res = await busyIn(0, new Promise(resolve => setTimeout(() => resolve(true), 100)), () => Promise.resolve(false))
       assert.ok(res)
+    })
+  })
+
+  describe('findPendingForProcessBefore', () => {
+    const pendingMap = new Map()
+    const processId = 'process-123'
+    const now = new Date()
+    const thirtyMinAgo = ms('30m')
+    const fifteenMinAgo = ms('15m')
+    pendingMap.set(`${processId},${now.getTime() - thirtyMinAgo},,,true`, { pending: Promise.resolve(thirtyMinAgo) })
+    // latest
+    pendingMap.set(`${processId},${now.getTime() - fifteenMinAgo},,,true`, { pending: Promise.resolve(fifteenMinAgo) })
+    // Diff process
+    pendingMap.set(`process-456,${now.getTime() - fifteenMinAgo},,,true`, { pending: Promise.resolve(10) })
+
+    const findPendingForProcessBefore = findPendingForProcessBeforeWith(pendingMap)
+
+    test('should return undefined if no timestamp', () => {
+      assert.equal(findPendingForProcessBefore({ processId }), undefined)
+      assert.equal(findPendingForProcessBefore({ processId, timestamp: '' }), undefined)
+    })
+
+    test('should return undefined if no entry found before timestamp', () => {
+      assert.equal(findPendingForProcessBefore({ processId, timestamp: now - ms('40m') }), undefined)
+    })
+
+    test('should return the latest entry before the timestamp for the process', async () => {
+      const [key, value] = findPendingForProcessBefore({ processId, timestamp: now.getTime() })
+      assert.equal(key, `${processId},${now.getTime() - fifteenMinAgo},,,true`)
+      assert.equal(await value.pending, fifteenMinAgo)
+
+      const [key2, value2] = findPendingForProcessBefore({ processId, timestamp: now.getTime() - fifteenMinAgo })
+      assert.equal(key2, `${processId},${now.getTime() - thirtyMinAgo},,,true`)
+      assert.equal(await value2.pending, thirtyMinAgo)
     })
   })
 })

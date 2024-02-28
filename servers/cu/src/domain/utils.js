@@ -223,3 +223,41 @@ export async function busyIn (millis, p, busyFn) {
     new Promise((resolve) => setTimeout(resolve, millis)).then(busyFn)
   ])
 }
+
+export const findPendingForProcessBeforeWith = (map) => ({ processId, timestamp }) => {
+  if (!timestamp) return // latest
+
+  timestamp = parseInt(timestamp)
+  let latestBefore // string | undefined
+  /**
+   * Try to find a pending eval stream to chain off of
+   */
+  for (const [key] of map.entries()) {
+    if (!key.startsWith(processId)) continue
+
+    /**
+     * TODO: pending is evaling to latest at the time of request.
+     * Maybe a way to chain off "earlier latest"
+     *
+     * For now, disregarding
+     */
+    let [, cur] = key.split(',')
+    if (!cur) continue
+
+    cur = parseInt(cur)
+    if (cur >= timestamp) continue
+
+    /**
+     * Current pending is before the timestamp we're interested in,
+     * so we might could daisychain off of it, evaling
+     * where it left off
+     */
+    if (!latestBefore) latestBefore = key
+    else {
+      const [, latest] = latestBefore.split(',')
+      if (cur > parseInt(latest)) latestBefore = key
+    }
+  }
+
+  if (latestBefore) return [latestBefore, map.get(latestBefore)]
+}
