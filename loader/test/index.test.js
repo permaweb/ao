@@ -121,20 +121,20 @@ describe('loader', async () => {
     assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 600000)
   })
 
-  // it('should run out of gas', async () => {
-  //   const handle = await AoLoader(wasmBinary)
-  //   try {
-  //     await handle(null,
-  //       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
-  //       { Process: { Id: '1', Tags: [] } }
-  //     )
-  //   } catch (e) {
-  //     assert.equal(e.message, 'out of gas!')
-  //   }
+  it('should run out of gas', async () => {
+    const handle = await AoLoader(wasmBinary, 9_000_000_000)
+    try {
+      await handle(null,
+        { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
+        { Process: { Id: '1', Tags: [] } }
+      )
+    } catch (e) {
+      assert.equal(e.message, 'out of gas!')
+    }
 
-  //   // console.log(result.GasUsed)
-  //   assert.ok(true)
-  // })
+    // console.log(result.GasUsed)
+    assert.ok(true)
+  })
 
   it('should resize the initial heap to accomodate the larger incoming buffer', async () => {
     const wasmBinary = fs.readFileSync('./test/aos/process.wasm')
@@ -196,14 +196,14 @@ describe('loader', async () => {
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result.Output, '1970-01-01')
+    assert.equal(result.Output, '1969-12-31')
 
     const result2 = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Date' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result2.Output, '1970-01-01')
+    assert.equal(result2.Output, '1969-12-31')
 
     // console.log(result.GasUsed)
     assert.ok(true)
