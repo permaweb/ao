@@ -88,13 +88,15 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
                 while the process is still being created it will wait
             */
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id()).await?;
-            let schedule_info = locked_schedule_info.lock().await;
+            let mut schedule_info = locked_schedule_info.lock().await;
+            let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.id()).await?;
 
-            let build_result = builder.build_process(input, &*schedule_info).await?;
+            let build_result = builder.build_process(input, &*updated_info).await?;
             upload(&deps, build_result.binary.to_vec()).await?;
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store.save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
+            drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json = json!({ "timestamp": timestamp, "id": process.process_id.clone() });
@@ -109,13 +111,15 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
                 no conflicts in the schedule
             */
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
-            let schedule_info = locked_schedule_info.lock().await;
+            let mut schedule_info = locked_schedule_info.lock().await;
+            let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.target()).await?;
 
-            let build_result = builder.build(input, &*schedule_info).await?;
+            let build_result = builder.build(input, &*updated_info).await?;
             upload(&deps, build_result.binary.to_vec()).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store.save_message(&message, &build_result.binary)?;
             deps.logger.log(format!("saved message - {:?}", &message));
+            drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json = json!({ "timestamp": timestamp, "id": message.message.id.clone() });
