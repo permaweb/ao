@@ -65,22 +65,24 @@ impl ProcessScheduler {
             }).value().clone() // Clone the Arc here
         };
 
-        // Update the ScheduleInfo in a separate scope to ensure the lock is released
-        {
-            let mut schedule_info = locked_schedule_info.lock().await;
-            let (current_epoch, current_nonce, current_hash_chain, current_timestamp) = match fetch_values(self.deps.clone(), &id).await {
-                Ok(vals) => vals,
-                Err(e) => return Err(format!("error acquiring scheduler lock {}", e)),
-            };
-            schedule_info.epoch = current_epoch;
-            schedule_info.nonce = current_nonce;
-            schedule_info.hash_chain = current_hash_chain;
-            schedule_info.timestamp = current_timestamp; 
-        } // The lock is released here
-
         Ok(locked_schedule_info)
     }
+
+    pub async fn update_schedule_info<'a>(&'a self, schedule_info: &'a mut ScheduleInfo, id: String) -> Result<&mut ScheduleInfo, String> {
+        let (current_epoch, current_nonce, current_hash_chain, current_timestamp) = match fetch_values(self.deps.clone(), &id).await {
+            Ok(vals) => vals,
+            Err(e) => return Err(format!("error acquiring scheduler lock {}", e)),
+        };
+        schedule_info.epoch = current_epoch;
+        schedule_info.nonce = current_nonce;
+        schedule_info.hash_chain = current_hash_chain;
+        schedule_info.timestamp = current_timestamp;
+        Ok(schedule_info)
+    }
+
+    
 }
+
 
 pub trait DecodeHash: Sized {
     fn from(base64_url_string: &str) -> Result<Self, String>;

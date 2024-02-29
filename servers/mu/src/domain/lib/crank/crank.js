@@ -1,16 +1,23 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
 import { isNil, isEmpty, anyPass } from 'ramda'
+import pMap from 'p-map'
 
 import { tracerFor } from '../tracer.js'
 import { errFrom } from '../../utils.js'
 
 const isNilOrEmpty = anyPass([isNil, isEmpty])
 
-async function eventQueue (init) {
-  const iters = [init]
-  for (const iter of iters) {
-    await iter().then((events) => iters.push(...events))
-  }
+async function processEvents (init) {
+  const events = await init()
+  return pMap(
+    events,
+    async (event) => {
+      const nextEvents = await event()
+      if (!isNilOrEmpty(nextEvents)) {
+        return processEvents(() => nextEvents)
+      }
+    }
+  )
 }
 
 function crankListWith ({ processMsg, processSpawn, logger }) {
@@ -125,32 +132,13 @@ function crankListWith ({ processMsg, processSpawn, logger }) {
       }
     ))
 
-    /**
-     * The last event pushed onto the queue is to persist
-     * the message trace record
-     *
-     * TODO TRACER: uncomment and persist this trace record.
-     * we have removed trace to get rid of the database for now.
-     */
-    // events.push(async () => {
-    //   return of()
-    //     .map(() => tracer.unwrap())
-    //     .map(logger.tap('Persisting trace for message %s', message.id))
-    //     .chain(fromPromise(saveMessageTrace))
-    //     /**
-    //      * No more events to push onto the event queue
-    //      */
-    //     .map(() => [])
-    //     .toPromise()
-    // })
-
     return events
   }
 
   /**
    * Begin the event queue with the initial outbox processing
    */
-  return ({ message, tracer, msgs, spawns, initialTxId }) => eventQueue(() => processOutboxFor({ message, tracer, msgs, spawns, initialTxId }))
+  return ({ message, tracer, msgs, spawns, initialTxId }) => processEvents(() => processOutboxFor({ message, tracer, msgs, spawns, initialTxId }))
 }
 
 export function crankWith ({ processMsg, processSpawn, logger }) {

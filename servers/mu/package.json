@@ -30,6 +30,7 @@
     "heapdump": "^0.3.15",
     "hyper-async": "^1.1.2",
     "lru-cache": "^10.2.0",
+    "p-map": "^7.0.1",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
     "zod": "^3.22.4"
