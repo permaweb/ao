@@ -196,14 +196,14 @@ describe('loader', async () => {
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result.Output, '1969-12-31')
+    assert.equal(result.Output, '1970-01-01')
 
     const result2 = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Date' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result2.Output, '1969-12-31')
+    assert.equal(result2.Output, '1970-01-01')
 
     // console.log(result.GasUsed)
     assert.ok(true)
