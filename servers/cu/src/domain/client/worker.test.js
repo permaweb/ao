@@ -24,9 +24,11 @@ describe('worker', async () => {
           readWasmFile: async () => createReadStream('./test/processes/happy/process.wasm'),
           writeWasmFile: async () => true,
           streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
-          bootstrapWasmInstance: (wasmModule) => AoLoader((info, receiveInstance) =>
-            WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
-          ),
+          bootstrapWasmInstance: (wasmModule, gas, memLimit) => AoLoader((info, receiveInstance) => {
+            assert.equal(gas, args.gas)
+            assert.equal(memLimit, args.memLimit)
+            return WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
+          }),
           logger
         })
       })

@@ -39,7 +39,7 @@ function evaluatorWith ({ loadEvaluator }) {
   return (ctx) => loadEvaluator({
     moduleId: ctx.moduleId,
     gas: ctx.moduleComputeLimit,
-    memory: ctx.moduleMemoryLimit
+    memLimit: ctx.moduleMemoryLimit
   }).map((evaluator) => ({ evaluator, ...ctx }))
 }
 

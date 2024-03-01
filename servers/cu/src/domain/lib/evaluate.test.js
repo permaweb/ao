@@ -16,8 +16,10 @@ async function * toAsyncIterable (iterable) {
 
 const happyWasm = await AoLoader(readFileSync('./test/processes/happy/process.wasm'))
 const sadWasm = await AoLoader(readFileSync('./test/processes/sad/process.wasm'))
-async function evaluateHappyMessage ({ moduleId }) {
+async function evaluateHappyMessage ({ moduleId, gas, memLimit }) {
   assert.equal(moduleId, 'foo-module')
+  assert.equal(gas, 9_000_000_000_000)
+  assert.equal(memLimit, 9_000_000_000_000)
   return ({ Memory, message, AoGlobal }) => happyWasm(Memory, message, AoGlobal)
 }
 
