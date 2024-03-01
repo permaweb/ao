@@ -3,20 +3,12 @@ import path from 'path'
 import os from 'os'
 
 import minimist from 'minimist'
-import { z } from 'zod'
 import cron from 'node-cron'
 import PubSub from 'pubsub-js'
 
 import { config } from './config.js'
 import { createLogger } from './logger.js'
 import { createApis } from './index.common.js'
-
-export const configSchema = z.object({
-  CU_URL: z.string().url('CU_URL must be a a valid URL'),
-  MU_WALLET: z.record(z.any()),
-  GATEWAY_URL: z.string(),
-  UPLOADER_URL: z.string()
-})
 
 const logger = createLogger('cranker')
 const apis = createApis({
@@ -43,9 +35,11 @@ const getCronString = (hoursToAdd = 0, minutesToAdd = 0) => {
   return `${minutes} ${hours} ${dayOfMonth} ${month} *`
 }
 
+
+
 let ct = null
 let isJobRunning = false
-ct = cron.schedule('*/10 * * * * *', () => {
+ct = cron.schedule('*/10 * * * * *', async () => {
   if (!isJobRunning) {
     isJobRunning = true
     if (runTimeComplete) {
@@ -56,7 +50,7 @@ ct = cron.schedule('*/10 * * * * *', () => {
       return
     }
     ct.stop() // pause cron while fetching messages
-    const cursor = getCursor()
+    const cursor = await getCursor()
     apis.fetchCron({ apis, processId, cursor })
       .map(setCursor) // set cursor for next batch
       .map(publishCron)
@@ -152,10 +146,15 @@ function publishResult (result) {
   return result
 }
 
-function getCursor () {
+async function getCursor () {
   if (fs.existsSync(cursorFilePath)) {
     return fs.readFileSync(cursorFilePath, 'utf8')
   } else {
+    let latestResults = await fetch(`${config.CU_URL}/results/${processId}?sort=DESC&limit=1&processId=${processId}`)
+    let latestJson = await latestResults.json()
+    if(latestJson?.edges?.length > 0) {
+      return latestJson.edges[0].cursor
+    }
     return null
   }
 }
