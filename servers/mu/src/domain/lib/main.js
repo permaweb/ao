@@ -32,12 +32,13 @@ export function sendDataItemWith ({
   fetchResult,
   crank,
   logger,
-  saveMessageTrace
+  saveMessageTrace,
+  fetchSchedulerProcess
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger })
+  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess })
   const pullResult = pullResultWith({ fetchResult, logger })
 
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })

@@ -82,6 +82,7 @@ export const createApis = (ctx) => {
     locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: sendDataItemLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: sendDataItemLogger }),
     crank: crankMsgs,
     logger: sendDataItemLogger,
     saveMessageTrace: async () => {}
