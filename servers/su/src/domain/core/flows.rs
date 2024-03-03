@@ -92,7 +92,8 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.id()).await?;
 
             let build_result = builder.build_process(input, &*updated_info).await?;
-            upload(&deps, build_result.binary.to_vec()).await?;
+            // upload(&deps, build_result.binary.to_vec()).await?;
+            upload(&deps, build_result.binary.to_vec());
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store.save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
