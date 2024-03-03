@@ -58,6 +58,8 @@ export function connect ({
 
   const { locate, validate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
 
+  const processMetaCache = SuClient.createProcessMetaCache({ MAX_SIZE: 25 })
+
   const resultLogger = logger.child('result')
   const result = resultWith({
     loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: resultLogger }),
@@ -70,7 +72,11 @@ export function connect ({
    */
   const messageLogger = logger.child('message')
   const message = messageWith({
-    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch }),
+    loadProcessMeta: SuClient.loadProcessMetaWith({
+      fetch,
+      cache: processMetaCache,
+      logger: messageLogger
+    }),
     locateScheduler: locate,
     deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
     logger: messageLogger
@@ -96,7 +102,11 @@ export function connect ({
    */
   const monitorLogger = logger.child('monitor')
   const monitor = monitorWith({
-    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch }),
+    loadProcessMeta: SuClient.loadProcessMetaWith({
+      fetch,
+      cache: processMetaCache,
+      logger: monitorLogger
+    }),
     locateScheduler: locate,
     deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
     logger: monitorLogger
@@ -109,7 +119,11 @@ export function connect ({
    */
   const unmonitorLogger = logger.child('unmonitor')
   const unmonitor = unmonitorWith({
-    loadProcessMeta: SuClient.loadProcessMetaWith({ fetch }),
+    loadProcessMeta: SuClient.loadProcessMetaWith({
+      fetch,
+      cache: processMetaCache,
+      logger: unmonitorLogger
+    }),
     locateScheduler: locate,
     deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
     logger: monitorLogger
