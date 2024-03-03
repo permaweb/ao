@@ -41,7 +41,7 @@ sharing the same format -- onto Arweave's decentralized data layer. This
 modularity creates a unified computing environment suiting an extremely wide set
 of workloads, in which every process can easily transfer messages and cooperate.
 
-`ao`'s core ojective is to enable trustless and cooperating compute services
+`ao`'s core objective is to enable trustless and cooperating compute services
 without any practical bounds on scale. This allows for a radically new design
 space of applications that were not previously possible: Blending the benefits
 of smart contract applications (services without requiring trust in anything but
