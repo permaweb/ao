@@ -54,7 +54,7 @@ export function connect ({
   MU_URL = DEFAULT_MU_URL,
   CU_URL = DEFAULT_CU_URL
 } = {}) {
-  const logger = createLogger('@permaweb/ao-sdk')
+  const logger = createLogger()
 
   const { locate, validate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
 
