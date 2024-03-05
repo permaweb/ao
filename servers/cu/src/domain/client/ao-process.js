@@ -365,9 +365,36 @@ export function findProcessMemoryBeforeWith ({
   }
 
   function maybeCheckpointFromArweave ({ processId, timestamp, ordinate, cron }) {
+    const queryCheckpoint = (attempt) => (variables) =>
+      queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables })
+        .bimap(
+          (err) => {
+            logger(
+              'Error encountered querying gateway for Checkpoint for process "%s", before "%j". Attempt %d...',
+              processId,
+              { timestamp, ordinate, cron },
+              attempt,
+              err
+            )
+            return variables
+          },
+          identity
+        )
+
     return address()
       .map((owner) => ({ owner, processId, limit: 50 }))
-      .chain((variables) => queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables }))
+      /**
+       * The gateway tends to timeout when making this query,
+       * but then will start working on retries.
+       *
+       * (I suspect the gateway is performing work, and times out on the first request,
+       * but then work is cached, which HITs on subsequent requests)
+       */
+      .chain(queryCheckpoint(1))
+      // Retry
+      .bichain(queryCheckpoint(2), Resolved)
+      // Retry
+      .bichain(queryCheckpoint(3), Resolved)
       .map(path(['data', 'transactions', 'edges']))
       .map(determineLatestCheckpointBefore({ timestamp, ordinate, cron }))
       .chain((latestCheckpoint) => {
