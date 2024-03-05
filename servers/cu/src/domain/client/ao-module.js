@@ -89,6 +89,7 @@ export function findModuleWith ({ pouchDb }) {
 }
 
 export function evaluatorWith ({ evaluate }) {
+  const EVAL_DEFER_BACKPRESSURE = 10
   return ({ moduleId, gas, memLimit }) => of({ moduleId, gas, memLimit })
     /**
      * Create an evaluator function scoped to this particular
@@ -96,8 +97,21 @@ export function evaluatorWith ({ evaluate }) {
      */
     .map(() => {
       const streamId = randomBytes(8).toString('hex')
+      let backpressure = 0
+
       return ({ name, processId, Memory, message, AoGlobal }) =>
-        evaluate({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
+        Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
+          .then(async (defer) => {
+            /**
+             * defer the next wasm module invocation to the
+             * end of the current event queue.
+             *
+             * We may want to defer to prevent starvation of other tasks on the main thread
+             */
+            if (defer) await new Promise(resolve => setImmediate(resolve))
+
+            return evaluate({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
+          })
     })
     .toPromise()
 }
