@@ -2,7 +2,6 @@ import { isNotNil, join } from 'ramda'
 import { Resolved, fromPromise, of } from 'hyper-async'
 
 import { findPendingForProcessBeforeWith } from '../utils.js'
-import { findEvaluationSchema } from '../dal.js'
 import { loadProcessWith } from '../lib/loadProcess.js'
 import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
@@ -46,8 +45,6 @@ export function readStateWith (env) {
   const hydrateMessages = hydrateMessagesWith(env)
   const loadModule = loadModuleWith(env)
   const evaluate = evaluateWith(env)
-
-  const findEvaluation = fromPromise(findEvaluationSchema.implement(env.findEvaluation))
 
   return ({ processId, messageId, to, ordinate, cron, exact, needsMemory }) => {
     messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'earliest'
@@ -141,54 +138,13 @@ export function readStateWith (env) {
                   .chain(hydrateMessages)
                   // { output }
                   .chain(evaluate)
-                  .chain((ctx) => {
-                    /**
-                     * Some upstream apis like readResult need an exact match on the message evaluation,
-                     * and pass the 'exact' flag
-                     *
-                     * If this flag is set, we ensure that by fetching the exact match from the db.
-                     * This hedges against race conditions where multiple requests are resulting in the evaluation
-                     * of the same messages in a process.
-                     *
-                     * Having this should allow readState to always start on the latestEvalutaion, relative to 'to',
-                     * and reduce the chances of unnecessary 409s, due to concurrent evalutions of the same messages,
-                     * across multiple requests.
-                     */
-                    if (exact) {
-                      return findEvaluation({ processId, to, ordinate, cron })
-                        /**
-                         * Mirror output shape from loadProcess, using the exact evaluation
-                         * as the "starting point"
-                         *
-                         * Also set result.Memory to the output Memory, since we will have evaluated
-                         * up to that exact message, so the output Memory is what we need
-                         */
-                        .map((evaluation) => ({
-                          ...ctx,
-                          result: {
-                            ...evaluation.output,
-                            Memory: ctx.output.Memory
-                          },
-                          output: evaluation.output,
-                          from: evaluation.timestamp,
-                          fromBlockHeight: evaluation.blockHeight,
-                          ordinate: evaluation.ordinate
-                        }))
-                    }
-                    /**
-                     * Mirror the output shape from loadProcess, using the last message
-                     * evaled, and fallback to ctx (in the case that no new messages were found to evaluate)
-                     *
-                     * Also set result.Memory to the last memory evaluated
-                     */
-                    return Resolved(({
-                      ...ctx,
-                      result: ctx.output,
-                      from: ctx.last.timestamp,
-                      fromBlockHeight: ctx.last.blockHeight,
-                      ordinate: ctx.last.ordinate
-                    }))
-                  })
+                  .chain((ctx) => Resolved({
+                    ...ctx,
+                    result: ctx.output,
+                    from: ctx.last.timestamp,
+                    fromBlockHeight: ctx.last.blockHeight,
+                    ordinate: ctx.last.ordinate
+                  }))
               })
               .bimap(logStats, logStats)
               /**
