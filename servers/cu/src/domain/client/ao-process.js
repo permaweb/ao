@@ -811,7 +811,18 @@ export function saveCheckpointWith ({
         )
 
     return address()
-      .map((owner) => ({ owner, processId, nonce: `${nonce}`, timestamp: `${timestamp}`, cron }))
+      .map((owner) => ({
+        owner,
+        processId,
+        /**
+         * Some messages do not have a nonce (Cron Messages),
+         * but every message will have an ordinate set to the most recent nonce
+         * (Scheduled Message ordinate is equal to its nonce)
+         */
+        nonce: `${nonce || ordinate}`,
+        timestamp: `${timestamp}`,
+        cron
+      }))
       /**
        * The gateway tends to timeout when making this query,
        * but then will start working on retries.
