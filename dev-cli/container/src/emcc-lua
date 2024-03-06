@@ -164,7 +164,7 @@ def main():
 
     # Finally, compile to wasm
     debug_print('Start to compile as WASM')
-    cmd = ['emcc', '-O0', '-s', 'ALLOW_MEMORY_GROWTH=1', '-s', 'INITIAL_MEMORY=6291456', '-s', 'MAXIMUM_MEMORY=524288000', '-s', 'WASM=1', '-s', 'MODULARIZE', '-s', 'FILESYSTEM=0', '-s', 'DETERMINISTIC=1', '-s', 'NODERAWFS=0', '--pre-js', '/opt/pre.js']
+    cmd = ['emcc', '-Os', '-s', 'ALLOW_MEMORY_GROWTH=1', '-s', 'INITIAL_MEMORY=6291456', '-s', 'MAXIMUM_MEMORY=524288000', '-s', 'WASM=1', '-s', 'MODULARIZE', '-s', 'FILESYSTEM=0', '-s', 'DETERMINISTIC=1', '-s', 'NODERAWFS=0', '--pre-js', '/opt/pre.js']
     cmd.extend(definition.get_extra_args())
     cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
     cmd.extend(['/tmp/compile.c', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
