@@ -161,6 +161,7 @@ export const createApis = async (ctx) => {
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       EAGER_CHECKPOINT_THRESHOLD: ctx.EAGER_CHECKPOINT_THRESHOLD,
+      saveCheckpoint,
       logger
     }),
     saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
