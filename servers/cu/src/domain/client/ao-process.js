@@ -1,6 +1,7 @@
 import { promisify } from 'node:util'
 import { gunzip, gzip } from 'node:zlib'
 import { Readable } from 'node:stream'
+import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, compose, identity, map, path, prop, transduce } from 'ramda'
@@ -12,6 +13,11 @@ import { COLLATION_SEQUENCE_MIN_CHAR } from './pouchdb.js'
 
 const gunzipP = promisify(gunzip)
 const gzipP = promisify(gzip)
+
+function pluckTagValue (name, tags) {
+  const tag = tags.find((t) => t.name === name)
+  return tag ? tag.value : undefined
+}
 
 /**
  * @type {{
@@ -151,6 +157,33 @@ function isEqualTo (eval1, eval2) {
     (eval2.cron || '') === (eval1.cron || '')
 }
 
+function latestCheckpointBefore ({ timestamp, ordinate, cron }) {
+  return (latest, checkpoint) => {
+    if (
+      /**
+       * checkpoint is later than the timestamp we're interested in,
+       * so we cannot use it
+       */
+      isLaterThan({ timestamp, ordinate, cron }, checkpoint) ||
+      /**
+       * checkpoint is equal to evaluation what we're interested in,
+       * so we can't use it, since we may need the evaluation's result
+       */
+      isEqualTo({ timestamp, ordinate, cron }, checkpoint) ||
+      /**
+       * The checkpoint is earlier than the latest checkpoint we've found so far,
+       * and we're looking for the latest, so just ignore this checkpoint
+       */
+      (latest && isEarlierThan(latest, checkpoint))
+    ) return latest
+
+    /**
+     * this checkpoint is the new latest we've come across
+     */
+    return checkpoint
+  }
+}
+
 export function createProcessId ({ processId }) {
   /**
    * transactions can sometimes start with an underscore,
@@ -220,14 +253,68 @@ export function saveProcessWith ({ pouchDb }) {
   }
 }
 
+/**
+ * ################################
+ * ##### Checkpoint file utils ####
+ * ################################
+ */
+
+export function findCheckpointFileBeforeWith ({ DIR, glob }) {
+  return ({ processId, timestamp, ordinate, cron }) => {
+    /**
+     * Find all the Checkpoint files for this process
+     *
+     * names like: eval-{processId},{timestamp},{ordinate},{cron}.json
+     */
+    return glob(join(DIR, `checkpoint-${processId}*.json`))
+      .then((paths) =>
+        paths.map(path => {
+          const file = basename(path)
+          const [processId, timestamp, ordinate, cron] = file
+            .slice(11, -5) // remove prefix checkpoint- and suffix .json
+            .split(',') // [processId, timestamp, ordinate, cron]
+
+          return { file, processId, timestamp, ordinate, cron }
+        })
+      )
+      /**
+       * Find the latest Checkpoint before the params we are interested in
+       */
+      .then((parsed) => parsed.reduce(
+        latestCheckpointBefore({ timestamp, ordinate, cron }),
+        undefined
+      ))
+  }
+}
+
+export function readCheckpointFileWith ({ DIR, readFile }) {
+  return (name) => readFile(join(DIR, name))
+    .then((raw) => JSON.parse(raw))
+}
+
+export function writeCheckpointFileWith ({ DIR, writeFile }) {
+  return ({ Memory, evaluation }) => {
+    const path = join(
+      DIR,
+      `checkpoint-${[evaluation.processId, evaluation.timestamp, evaluation.ordinate, evaluation.cron].join(',')}.json`
+    )
+
+    return writeFile(path, JSON.stringify({ Memory, evaluation }))
+  }
+}
+
 export function findProcessMemoryBeforeWith ({
   cache,
+  findCheckpointFileBefore,
+  readCheckpointFile,
   address,
   queryGateway,
   loadTransactionData,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findProcessMemoryBefore')
+  findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
+  readCheckpointFile = fromPromise(readCheckpointFile)
   address = fromPromise(address)
   queryGateway = fromPromise(queryGateway)
   loadTransactionData = fromPromise(loadTransactionData)
@@ -264,11 +351,6 @@ export function findProcessMemoryBeforeWith ({
     }
   `
 
-  function pluckTagValue (name, tags) {
-    const tag = tags.find((t) => t.name === name)
-    return tag ? tag.value : undefined
-  }
-
   /**
    * TODO: lots of room for optimization here
    */
@@ -287,30 +369,7 @@ export function findProcessMemoryBeforeWith ({
           }
         })
       ),
-      (latest, checkpoint) => {
-        if (
-          /**
-           * checkpoint is later than the timestamp we're interested in,
-           * so we cannot use it
-           */
-          isLaterThan({ timestamp, ordinate, cron }, checkpoint) ||
-          /**
-           * checkpoint is equal to evaluation what we're interested in,
-           * so we can't use it, since we may need the evaluation's result
-           */
-          isEqualTo({ timestamp, ordinate, cron }, checkpoint) ||
-          /**
-           * The checkpoint is earlier than the latest checkpoint we've found so far,
-           * and we're looking for the latest, so just ignore this checkpoint
-           */
-          (latest && isEarlierThan(latest, checkpoint))
-        ) return latest
-
-        /**
-         * this checkpoint is the new latest we've come across
-         */
-        return checkpoint
-      },
+      latestCheckpointBefore({ timestamp, ordinate, cron }),
       undefined,
       edges
     )
@@ -329,6 +388,18 @@ export function findProcessMemoryBeforeWith ({
 
       return gunzipP(data)
     }
+  }
+
+  /**
+   * @param {{ id, encoding }} checkpoint
+   */
+  function downloadCheckpointFromArweave (checkpoint) {
+    return loadTransactionData(checkpoint.id)
+      .chain(fromPromise((res) => res.arrayBuffer()))
+      /**
+       * If the buffer is encoded, we need to decode it before continuing
+       */
+      .chain(fromPromise(decodeData(checkpoint.encoding)))
   }
 
   function maybeCached ({ processId, timestamp, ordinate, cron }) {
@@ -354,6 +425,9 @@ export function findProcessMemoryBeforeWith ({
 
         return of(cached)
           .chain(fromPromise((cached) => gunzipP(cached.Memory)))
+          /**
+           * Finally map the Checkpoint to the expected shape
+           */
           .map((Memory) => ({
             Memory,
             timestamp: cached.evaluation.timestamp,
@@ -361,6 +435,58 @@ export function findProcessMemoryBeforeWith ({
             cron: cached.evaluation.cron,
             ordinate: cached.evaluation.ordinate
           }))
+      })
+  }
+
+  function maybeFile ({ processId, timestamp, ordinate, cron }) {
+    /**
+     * Attempt to find the lastest checkpoint in a file before the parameters
+     */
+    return findCheckpointFileBefore({ processId, timestamp, ordinate, cron })
+      .chain((latest) => {
+        if (!latest) return Rejected({ processId, timestamp, ordinate, cron })
+
+        logger(
+          'FILE CHECKPOINT: Found Checkpoint for process "%s", before "%j", on Filesystem, with parameters "%j"',
+          processId,
+          { timestamp, ordinate, cron },
+          latest
+        )
+
+        /**
+         * We have found a Checkpoint that we can use, so
+         * now let's load the snapshotted Memory from arweave
+         */
+        return of(latest.file)
+          // { Memory: { id, encoding }, evaluation }
+          .chain(readCheckpointFile)
+          .chain((checkpoint) =>
+            of(checkpoint.Memory)
+              .chain(downloadCheckpointFromArweave)
+              /**
+               * Finally map the Checkpoint to the expected shape
+               */
+              .map((Memory) => ({
+                Memory,
+                timestamp: checkpoint.evaluation.timestamp,
+                blockHeight: checkpoint.evaluation.blockHeight,
+                cron: checkpoint.evaluation.cron,
+                ordinate: checkpoint.evaluation.ordinate
+              }))
+              .bimap(
+                (err) => {
+                  logger(
+                    'Error encountered when downloading Checkpoint using cached file for process "%s", before "%j", from Arweave, with parameters "%j"',
+                    processId,
+                    { timestamp, ordinate, cron },
+                    { checkpointTxId: checkpoint.id, ...checkpoint },
+                    err
+                  )
+                  return { processId, timestamp, ordinate, cron }
+                },
+                identity
+              )
+          )
       })
   }
 
@@ -401,7 +527,7 @@ export function findProcessMemoryBeforeWith ({
         if (!latestCheckpoint) return Rejected({ processId, timestamp, ordinate, cron })
 
         logger(
-          'Found Checkpoint for process "%s", before "%j", on Arweave, with parameters "%j"',
+          'ARWEAVE CHECKPOINT: Found Checkpoint for process "%s", before "%j", on Arweave, with parameters "%j"',
           processId,
           { timestamp, ordinate, cron },
           { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint }
@@ -411,12 +537,7 @@ export function findProcessMemoryBeforeWith ({
          * We have found a Checkpoint that we can use, so
          * now let's load the snapshotted Memory from arweave
          */
-        return loadTransactionData(latestCheckpoint.id)
-          .chain(fromPromise((res) => res.arrayBuffer()))
-          /**
-           * If the buffer is encoded, we need to decode it before continuing
-           */
-          .chain(fromPromise(decodeData(latestCheckpoint.encoding)))
+        return downloadCheckpointFromArweave(latestCheckpoint)
           /**
            * Finally map the Checkpoint to the expected shape
            */
@@ -477,6 +598,7 @@ export function findProcessMemoryBeforeWith ({
   return ({ processId, timestamp, ordinate, cron }) =>
     of({ processId, timestamp, ordinate, cron })
       .chain(maybeCached)
+      .bichain(maybeFile, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
       .toPromise()
@@ -527,6 +649,7 @@ export function saveCheckpointWith ({
   buildAndSignDataItem,
   uploadDataItem,
   address,
+  writeCheckpointFile,
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
   DISABLE_PROCESS_CHECKPOINT_CREATION
@@ -536,6 +659,7 @@ export function saveCheckpointWith ({
   hashWasmMemory = fromPromise(hashWasmMemory)
   buildAndSignDataItem = fromPromise(buildAndSignDataItem)
   uploadDataItem = fromPromise(uploadDataItem)
+  writeCheckpointFile = fromPromise(writeCheckpointFile)
 
   const logger = _logger.child('ao-process:saveCheckpoint')
 
@@ -649,37 +773,66 @@ export function saveCheckpointWith ({
     recentCheckpoints.set(processId, t)
   }
 
-  function maybeCheckpointDisabled ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) {
+  function maybeCheckpointDisabled ({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) {
     /**
      * Creating Checkpoints is enabled, so continue
      */
-    if (!DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
+    if (!DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron })
 
     logger('Checkpoint creation is disabled on this CU, so no work needs to be done for process "%s"', processId)
     return Resolved()
   }
 
-  function maybeRecentlyCheckpointed ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) {
+  function maybeRecentlyCheckpointed ({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) {
     /**
      * A Checkpoint has not been recently created for this process, so continue
      */
-    if (!recentCheckpoints.has(processId)) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
+    if (!recentCheckpoints.has(processId)) return Rejected({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron })
 
     logger('Checkpoint was recently created for process "%s", and so not creating another one.', processId)
     return Resolved()
   }
 
-  function createCheckpoint ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) {
+  function createCheckpoint ({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) {
+    const queryCheckpoint = (attempt) => (variables) =>
+      queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS(!!cron), variables })
+        .bimap(
+          (err) => {
+            logger(
+              'Error encountered querying gateway for Checkpoint for process "%s", before "%j". Attempt %d...',
+              processId,
+              { timestamp, ordinate, cron },
+              attempt,
+              err
+            )
+            return variables
+          },
+          identity
+        )
+
     return address()
       .map((owner) => ({ owner, processId, nonce: `${nonce}`, timestamp: `${timestamp}`, cron }))
-      .chain((variables) => queryGateway({ variables, query: GET_AO_PROCESS_CHECKPOINTS(!!cron) }))
+      /**
+       * The gateway tends to timeout when making this query,
+       * but then will start working on retries.
+       *
+       * (I suspect the gateway is performing work, and times out on the first request,
+       * but then work is cached, which HITs on subsequent requests)
+       */
+      .chain(queryCheckpoint(1))
+      // Retry
+      .bichain(queryCheckpoint(2), Resolved)
+      // Retry
+      .bichain(queryCheckpoint(3), Resolved)
       .map(path(['data', 'transactions', 'edges', '0']))
       .chain((checkpoint) => {
         /**
          * This CU has already created a Checkpoint
          * for this evaluation so simply noop
          */
-        if (checkpoint) return Resolved()
+        if (checkpoint) {
+          return Resolved({ id: checkpoint.node.id, encoding: pluckTagValue('Content-Encoding', checkpoint.node.tags) })
+        }
 
         /**
          * Construct and sign an ao Checkpoint data item
@@ -704,13 +857,45 @@ export function saveCheckpointWith ({
                * within the PROCESS_CHECKPOINT_CREATION_THROTTLE
                */
               addRecentCheckpoint(processId)
+
+              return { id: res.id, encoding }
             }
           )
       })
+      .chain((onArweave) => {
+        return writeCheckpointFile({
+          Memory: onArweave,
+          evaluation: {
+            processId,
+            moduleId,
+            timestamp,
+            epoch,
+            nonce,
+            blockHeight,
+            ordinate,
+            encoding,
+            cron
+          }
+        })
+          .bichain(
+            (err) => {
+              logger(
+                'Encountered error when caching Checkpoint to file for process "%s" on evaluation "%j". Skipping...',
+                processId,
+                { checkpointTxId: Memory.id, processId, nonce, timestamp, cron },
+                err
+              )
+
+              return Resolved()
+            },
+            Resolved
+          )
+          .map(() => onArweave)
+      })
   }
 
-  return async ({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron }) => {
-    return maybeCheckpointDisabled({ Memory, encoding, processId, moduleId, timestamp, epoch, nonce, blockHeight, cron })
+  return async ({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) => {
+    return maybeCheckpointDisabled({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron })
       .bichain(maybeRecentlyCheckpointed, Resolved)
       .bichain(createCheckpoint, Resolved)
       .toPromise()

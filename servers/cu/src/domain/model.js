@@ -78,6 +78,10 @@ export const domainConfigSchema = z.object({
    */
   WASM_BINARY_FILE_DIRECTORY: z.string().min(1),
   /**
+   * The directory to cache Checkpoints created on Arweave
+   */
+  PROCESS_CHECKPOINT_FILE_DIRECTORY: z.string().min(1),
+  /**
    * The maximum size, in bytes, of the cache used to cache the latest memory
    * evaluated for an ao process
    */
