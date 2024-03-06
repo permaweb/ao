@@ -158,7 +158,11 @@ export const createApis = async (ctx) => {
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
       logger
     }),
-    saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({ cache: wasmMemoryCache, logger }),
+    saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
+      cache: wasmMemoryCache,
+      EAGER_CHECKPOINT_THRESHOLD: ctx.EAGER_CHECKPOINT_THRESHOLD,
+      logger
+    }),
     saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ pouchDb, logger }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),

@@ -604,8 +604,8 @@ export function findProcessMemoryBeforeWith ({
       .toPromise()
 }
 
-export function saveLatestProcessMemoryWith ({ cache, logger }) {
-  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory }) => {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_THRESHOLD }) {
+  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount }) => {
     const cached = cache.get(processId)
 
     /**
@@ -626,19 +626,42 @@ export function saveLatestProcessMemoryWith ({ cache, logger }) {
      * Either no value was cached or the provided evaluation is later than
      * the value currently cached, so overwrite it
      */
-    cache.set(processId, {
-      Memory: await gzipP(Memory),
-      evaluation: {
+    const zipped = await gzipP(Memory)
+    const evaluation = {
+      processId,
+      moduleId,
+      timestamp,
+      epoch,
+      nonce,
+      blockHeight,
+      ordinate,
+      encoding: 'gzip',
+      cron
+    }
+    cache.set(processId, { Memory: zipped, evaluation })
+
+    if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
+
+    /**
+     * Eagerly create the Checkpoint on the next event queue drain
+     */
+    setImmediate(() => {
+      logger(
+        'Eager Checkpoint Threshold of "%d" messages met when evaluating process "%s" up to "%j" -- "%d" evaluations peformed. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_THRESHOLD,
         processId,
-        moduleId,
-        timestamp,
-        epoch,
-        nonce,
-        blockHeight,
-        ordinate,
-        encoding: 'gzip',
-        cron
-      }
+        { messageId, timestamp, ordinate, cron, blockHeight },
+        evalCount
+      )
+
+      return saveCheckpoint({ Memory: zipped, ...evaluation })
+        .catch((err) => {
+          logger(
+            'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
+            evaluation,
+            err
+          )
+        })
     })
   }
 }

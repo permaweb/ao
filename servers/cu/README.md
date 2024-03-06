@@ -82,6 +82,7 @@ for quick retrieval later (Defaults to the os temp directory)
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
+- `EAGER_CHECKPOINT_THRESHOLD`: If an evaluation stream evaluates this amount of messages, then it will immediately create a Checkpoint at the end of the evaluation stream.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
 - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for a process evaluation stream to complete before sending a "busy" respond to the client (defaults to `0s` ie. disabled). If disabled, this could cause the CU to maintain long-open connections with clients until it completes long process evaluation streams.

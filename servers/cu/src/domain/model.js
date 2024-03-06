@@ -62,6 +62,12 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
+   * If an evaluation stream evaluates this amount of messages,
+   * then it will immediately create a Checkpoint at the end of the
+   * evaluation stream
+   */
+  EAGER_CHECKPOINT_THRESHOLD: positiveIntSchema,
+  /**
    * The number of workers to use for evaluating messages
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
