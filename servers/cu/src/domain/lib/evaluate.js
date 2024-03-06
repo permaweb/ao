@@ -291,13 +291,15 @@ export function evaluateWith (env) {
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,
+            messageId: message.Id,
             timestamp: message.Timestamp,
             nonce: message.Nonce,
             epoch: message.Epoch,
             blockHeight: message['Block-Height'],
             ordinate,
             cron,
-            Memory: prev.Memory
+            Memory: prev.Memory,
+            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron
           })
         }
 
