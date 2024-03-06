@@ -1,7 +1,11 @@
 {
   "name": "@permaweb/ao-scheduler-utils",
   "version": "0.0.11",
-  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/permaweb/ao.git",
+    "directory": "scheduler-utils"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
