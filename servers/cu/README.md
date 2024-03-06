@@ -67,6 +67,8 @@ each have a default:
   Wasm modules (Defaults to `5` wasm modules)
 - `WASM_INSTANCE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used
   for loaded Wasm instances (defaults to `5` loaded wasm instance)
+- `PROCESS_CHECKPOINT_FILE_DIRECTORY`: the directory to cache created/found Checkpoints, from arweave,
+for quick retrieval later (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU
   In-Memory cache used to cache the latest memory evaluated for ao processes.
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process
@@ -82,7 +84,7 @@ each have a default:
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
-  - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for a process evaluation stream to complete before sending a "busy" respond to the client (defaults to `0s` ie. disabled). If disabled, this could cause the CU to maintain long-open connections with clients until it completes long process evaluation streams.
+- `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for a process evaluation stream to complete before sending a "busy" respond to the client (defaults to `0s` ie. disabled). If disabled, this could cause the CU to maintain long-open connections with clients until it completes long process evaluation streams.
 
 ### Running With CouchDB
 

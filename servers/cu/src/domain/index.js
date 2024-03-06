@@ -1,8 +1,10 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
+import { readFile, writeFile } from 'node:fs/promises'
 
 import Dataloader from 'dataloader'
+import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 
@@ -91,6 +93,10 @@ export const createApis = async (ctx) => {
     hashWasmMemory: WasmClient.hashWasmMemory,
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
+    writeCheckpointFile: AoProcessClient.writeCheckpointFileWith({
+      DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
+      writeFile
+    }),
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
@@ -140,6 +146,14 @@ export const createApis = async (ctx) => {
     findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
+        DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
+        glob: fastGlob
+      }),
+      readCheckpointFile: AoProcessClient.readCheckpointFileWith({
+        DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
+        readFile
+      }),
       address,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
       logger
