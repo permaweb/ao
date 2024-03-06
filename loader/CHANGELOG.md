@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.23](https://github.com/permaweb/ao/compare/loader@v0.0.22...loader@v0.0.23) (2024-03-06)
+
+
+### Features
+
+* added _maxMemory argument to AoLoader ([99bbac3](https://github.com/permaweb/ao/commit/99bbac3a4b1cf695737edb210df7aa0378d86646))
+
 ## [0.0.22](https://github.com/permaweb/ao/compare/loader@v0.0.21...loader@v0.0.22) (2024-02-17)
 
 
