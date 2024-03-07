@@ -47,7 +47,7 @@ export function readStateWith (env) {
   const evaluate = evaluateWith(env)
 
   return ({ processId, messageId, to, ordinate, cron, exact, needsMemory }) => {
-    messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'earliest'
+    messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'latest'
 
     const stats = {
       startTime: new Date(),
