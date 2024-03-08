@@ -1,5 +1,5 @@
 local ao = {
-    _version = "0.0.3",
+    _version = "0.0.4",
     id = "",
     _module = "",
     authorities = {},
@@ -42,7 +42,7 @@ function ao.normalize(msg)
     for _, o in ipairs(msg.Tags) do
         if not _includes({
             'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
-            'Ref_'
+            'Ref_', 'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
         })(o.name) then msg[o.name] = o.value end
     end
     return msg
@@ -100,7 +100,7 @@ function ao.send(msg)
 
     -- if custom tags in root move them to tags
     for k, v in pairs(msg) do
-        if not _includes({"Target", "Data", "Anchor", "Tags"})(k) then
+        if not _includes({"Target", "Data", "Anchor", "Tags", "From"})(k) then
             table.insert(message.Tags, {name = k, value = v})
         end
     end
@@ -147,7 +147,7 @@ function ao.spawn(module, msg)
 
     -- if custom tags in root move them to tags
     for k, v in pairs(msg) do
-        if not _includes({"Target", "Data", "Anchor", "Tags"})(k) then
+        if not _includes({"Target", "Data", "Anchor", "Tags", "From"})(k) then
             table.insert(spawn.Tags, {name = k, value = v})
         end
     end
