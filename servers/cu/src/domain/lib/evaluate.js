@@ -1,11 +1,12 @@
-import { compose as composeStreams, finished } from 'node:stream'
+import { Transform, compose as composeStreams, finished } from 'node:stream'
 
-import { always, applySpec, identity, mergeLeft, mergeRight, pathOr } from 'ramda'
+import { always, applySpec, evolve, identity, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
 import { evaluatorSchema, findMessageHashBeforeSchema, saveEvaluationSchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
+import { removeTagsByNameMaybeValue } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -128,6 +129,21 @@ export function evaluateWith (env) {
              */
             composeStreams(
               ctx.messages,
+              Transform.from(async function * removeInvalidTags ($messages) {
+                for await (const message of $messages) {
+                  yield evolve(
+                    {
+                      message: {
+                        Tags: pipe(
+                          removeTagsByNameMaybeValue('From'),
+                          removeTagsByNameMaybeValue('Owner')
+                        )
+                      }
+                    },
+                    message
+                  )
+                }
+              }),
               async function (messages) {
                 /**
                  * There seems to be duplicate Cron Message evaluations occurring and it's been difficult

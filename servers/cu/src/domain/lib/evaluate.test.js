@@ -568,4 +568,61 @@ describe('evaluate', () => {
     // TODO: check out why cache is not working
     // assert.equal(cacheCount, 2)
   })
+
+  test('removes invalid tags', async () => {
+    const evaluate = evaluateWith({
+      saveEvaluation: async (evaluation) => evaluation,
+      findMessageHashBefore: async () => { throw { status: 404 } },
+      loadEvaluator: () => ({ message }) => {
+        assert.deepStrictEqual(
+          message.Tags,
+          [
+            { name: 'function', value: 'hello' }
+          ]
+        )
+      },
+      saveLatestProcessMemory: async () => {},
+      logger
+    })
+
+    await evaluate({
+      id: 'ctr-1234',
+      from: new Date().getTime(),
+      moduleId: 'foo-module',
+      moduleComputeLimit: 9_000_000_000_000,
+      moduleMemoryLimit: 9_000_000_000_000,
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
+      result: {
+        Memory: null
+      },
+      messages: toAsyncIterable([
+        {
+          ordinate: 1,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-123',
+            Tags: [
+              { name: 'From', value: 'hello' },
+              { name: 'function', value: 'hello' },
+              { name: 'Owner', value: 'hello' }
+            ],
+            'Block-Height': 1234
+          },
+          AoGlobal: {
+            Process: {
+              Id: '1234',
+              Tags: []
+            }
+          }
+        }
+      ])
+    }).toPromise()
+  })
 })
