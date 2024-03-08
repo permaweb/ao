@@ -1,6 +1,6 @@
 import {
-  F, T, __, append, assoc, chain, concat, cond, defaultTo, equals,
-  has, includes, is, join, map, pipe, propOr, reduce
+  F, T, __, allPass, always, append, assoc, chain, concat, cond, defaultTo, equals,
+  has, ifElse, includes, is, join, map, pipe, propEq, propOr, reduce, reject
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
@@ -114,6 +114,27 @@ export function parseTags (rawTags) {
     */
     map((values) => values.length > 1 ? values : values[0])
   )(rawTags)
+}
+
+/**
+ * Remove tags from the array by name. If value is provided,
+ * then only remove tags whose both name and value matches.
+ *
+ * @param {string} name - the name of the tags to be removed
+ * @param {string} [value] - the value of the tags to be removed
+ */
+export function removeTagsByNameMaybeValue (name, value) {
+  return (tags) => reject(
+    allPass([
+      propEq(name, 'name'),
+      ifElse(
+        always(value),
+        propEq(value, 'value'),
+        T
+      )
+    ]),
+    tags
+  )
 }
 
 export function eqOrIncludes (val) {
