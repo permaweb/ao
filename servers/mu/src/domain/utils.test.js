@@ -3,7 +3,7 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 
-import { errFrom } from './utils.js'
+import { errFrom, removeTagsByNameMaybeValue } from './utils.js'
 
 describe('utils', () => {
   describe('errFrom', () => {
@@ -49,6 +49,39 @@ describe('utils', () => {
       // eslint-disable-next-line
       const err = await Promise.reject([]).catch(errFrom)
       assert.equal(err.message, 'An error occurred')
+    })
+  })
+
+  describe('removeTagsByNameMaybeValue', () => {
+    const tags = [
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Variant', value: 'ao.TN.1' },
+      { name: 'Type', value: 'Message' },
+      { name: 'Type', value: 'Foo' },
+      { name: 'SDK', value: 'aoconnect' }
+    ]
+
+    test('should remove the tags by name', () => {
+      assert.deepStrictEqual(
+        removeTagsByNameMaybeValue('Type')(tags),
+        [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'SDK', value: 'aoconnect' }
+        ]
+      )
+    })
+
+    test('should remove the tags by name and value', () => {
+      assert.deepStrictEqual(
+        removeTagsByNameMaybeValue('Type', 'Foo')(tags),
+        [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Message' },
+          { name: 'SDK', value: 'aoconnect' }
+        ]
+      )
     })
   })
 })
