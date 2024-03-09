@@ -1,4 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { z } from 'zod'
 import ms from 'ms'
@@ -27,8 +29,23 @@ if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
-  DUMP_PATH: z.string().min(1)
-})
+  DUMP_PATH: z.string().min(1),
+  WALLET_FILE: z.string(),
+}).partial({
+  WALLET: true,
+  WALLET_FILE: true,
+}).refine(
+  ({ WALLET, WALLET_FILE }) => !!WALLET || !!WALLET_FILE,
+  'One of WALLET or WALLET_FILE is required',
+).refine(
+  ({ WALLET, WALLET_FILE }) => !WALLET || !WALLET_FILE,
+  'Do not define both WALLET and WALLET_FILE',
+).refine(
+  ({ WALLET_FILE }) => !WALLET_FILE || existsSync(join(process.cwd(), WALLET_FILE)),
+  ({ WALLET_FILE }) => ({
+    message: `WALLET_FILE does not exist: ${WALLET_FILE}`,
+  }),
+)
 
 /**
  * @type {z.infer<typeof serverConfigSchema>}
@@ -47,6 +64,7 @@ const CONFIG_ENVS = {
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
     DUMP_PATH: process.env.DUMP_PATH || './static',
     WALLET: process.env.WALLET,
+    WALLET_FILE: process.env.WALLET_FILE,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('10s'),
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
@@ -72,6 +90,7 @@ const CONFIG_ENVS = {
     DB_MAX_LISTENERS: parseInt(process.env.DB_MAX_LISTENERS || '100'),
     DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
     WALLET: process.env.WALLET,
+    WALLET_FILE: process.env.WALLET_FILE,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('30s'),
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false', // TODO: disabled by default for now. Enable by default later
@@ -90,3 +109,7 @@ const CONFIG_ENVS = {
 }
 
 export const config = serverConfigSchema.parse(CONFIG_ENVS[MODE])
+
+if (config.WALLET_FILE) {
+  config.WALLET = readFileSync(join(process.cwd(), config.WALLET_FILE), 'utf8')
+}
