@@ -37,14 +37,14 @@ Either command will start a server listening on `PORT` (`6363` by default).
 
 ## Environment Variables
 
-There are a few environment variables that you can set. Besides `WALLET`, they
+There are a few environment variables that you can set. Besides `WALLET`/`WALLET_FILE`, they
 each have a default:
 
 - `GATEWAY_URL`: The Arweave gateway for the CU to use fetch block metadata,
   data on arweave, and Scheduler-Location data (defaults to `arweave.net`)
 - `UPLOADER_URL`: The url of the uploader to use to upload Process `Checkpoints`
   to Arweave. (Defaults to `up.arweave.net`)
-- `WALLET`: the JWK Interface stringified JSON that will be used by the CU
+- `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used by the CU, or a file to load it from
 - `PORT`: Which port the web server should listen on (defaults to port `6363`)
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
