@@ -58,7 +58,7 @@ const preprocessedServerConfigSchema = z.preprocess(
       return 
     }
 
-    const walletPath = path.join(process.cwd(), WALLET_FILE)
+    const walletPath = path.resolve(WALLET_FILE)
     if (!existsSync(walletPath)) {
       error(`WALLET_FILE does not exist: ${walletPath}`)
       return
