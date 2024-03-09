@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import * as path from 'node:path'
 
-import { z } from 'zod'
+import { z, ZodIssueCode } from 'zod'
 import ms from 'ms'
 
 import { domainConfigSchema, positiveIntSchema } from './domain/index.js'
@@ -30,21 +30,51 @@ const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
   DUMP_PATH: z.string().min(1),
-  WALLET_FILE: z.string(),
-}).partial({
-  WALLET: true,
-  WALLET_FILE: true,
-}).refine(
-  ({ WALLET, WALLET_FILE }) => !!WALLET || !!WALLET_FILE,
-  'One of WALLET or WALLET_FILE is required',
-).refine(
-  ({ WALLET, WALLET_FILE }) => !WALLET || !WALLET_FILE,
-  'Do not define both WALLET and WALLET_FILE',
-).refine(
-  ({ WALLET_FILE }) => !WALLET_FILE || existsSync(join(process.cwd(), WALLET_FILE)),
-  ({ WALLET_FILE }) => ({
-    message: `WALLET_FILE does not exist: ${WALLET_FILE}`,
-  }),
+})
+
+/**
+ * If the WALLET_FILE env var is defined, load the contents from the file.
+ * Refuse to boot the app if both or none of WALLET and WALLET_FILE are defined.
+ */
+const preprocessedServerConfigSchema = z.preprocess(
+  (envConfig, zodRefinementContext) => {
+    const { WALLET, WALLET_FILE, ...theRestOfTheConfig } = envConfig
+
+    const error = message => zodRefinementContext.addIssue({
+      code: ZodIssueCode.custom,
+      message,
+    })
+
+    if (!!WALLET && !WALLET_FILE) {
+      // nothing to do here
+      return envConfig
+    }
+    if (!WALLET && !WALLET_FILE) {
+      error('One of WALLET or WALLET_FILE is required')
+      return 
+    }
+    if (!!WALLET && !!WALLET_FILE) {
+      error('Do not define both WALLET and WALLET_FILE')
+      return 
+    }
+
+    const walletPath = path.join(process.cwd(), WALLET_FILE)
+    if (!existsSync(walletPath)) {
+      error(`WALLET_FILE does not exist: ${walletPath}`)
+      return
+    }
+
+    try {
+      const walletFromFile = readFileSync(walletPath, 'utf8')
+      return {
+        WALLET: walletFromFile,
+        ...theRestOfTheConfig,
+      }
+    } catch (e) {
+      error(`An error occurred while reading WALLET_FILE from ${walletPath}\n${e}`)
+    }
+  },
+  serverConfigSchema,
 )
 
 /**
@@ -108,8 +138,4 @@ const CONFIG_ENVS = {
   }
 }
 
-export const config = serverConfigSchema.parse(CONFIG_ENVS[MODE])
-
-if (config.WALLET_FILE) {
-  config.WALLET = readFileSync(join(process.cwd(), config.WALLET_FILE), 'utf8')
-}
+export const config = preprocessedServerConfigSchema.parse(CONFIG_ENVS[MODE])
