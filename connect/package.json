@@ -14,12 +14,23 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "default": "./dist/index.js"
-    }
+    },
+    "./browser": "./dist/browser.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "browser": "./dist/browser.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "browser": [
+        "./dist/index.d.ts"
+      ],
+      ".": [
+        "./dist/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "./dist"
   ],
