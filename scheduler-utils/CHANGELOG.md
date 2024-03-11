@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.13](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.12...scheduler-utils@v0.0.13) (2024-03-11)
+
+
+### Bug Fixes
+
+* cannot assign to read only property 'name' on scheduler errors ([27f7486](https://github.com/permaweb/ao/commit/27f7486e119cec80b0ee0a6655d8533fbc4302aa))
+* **scheduler-utils:** do not set name in error constructor to prevent breaking change ([3b0c9d7](https://github.com/permaweb/ao/commit/3b0c9d7dbdcf42e1db27c57694e1af561a03be50))
+
 ## [0.0.12](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.11...scheduler-utils@v0.0.12) (2024-03-06)
 
 ## [0.0.11](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.10...scheduler-utils@v0.0.11) (2024-03-04)
