@@ -1,5 +1,5 @@
 export class InvalidSchedulerLocationError extends Error {
-  static name = 'InvalidSchedulerLocation'
+  name = 'InvalidSchedulerLocation'
 
   constructor (...args) {
     super(...args)
@@ -8,7 +8,7 @@ export class InvalidSchedulerLocationError extends Error {
 }
 
 export class SchedulerTagNotFoundError extends Error {
-  static name = 'SchedulerTagNotFound'
+  name = 'SchedulerTagNotFound'
 
   constructor (...args) {
     super(...args)
@@ -17,7 +17,7 @@ export class SchedulerTagNotFoundError extends Error {
 }
 
 export class TransactionNotFoundError extends Error {
-  static name = 'TransactionNotFound'
+  name = 'TransactionNotFound'
 
   constructor (...args) {
     super(...args)
