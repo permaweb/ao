@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer/index.js'
-import WarpArBundles from 'warp-arbundles'
+import * as WarpArBundles from 'warp-arbundles'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
