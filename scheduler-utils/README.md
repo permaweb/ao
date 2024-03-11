@@ -133,7 +133,6 @@ import { locate, TransactionNotFoundError } from "@permaweb/ao-scheduler-utils";
 await locate('<process-id>')
   .catch((err) => {
     if (err instanceof TransactionNotFoundError) // using instanceof
-    if (err.name === TransactionNotFoundError.name) // use static name on constructor
     if (err.name === 'TransactionNotFound') // use a static string
 
     throw err // bubble unknown error
