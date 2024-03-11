@@ -9,7 +9,7 @@ import Arweave from 'arweave'
 
 import { createDataItemSigner } from './wallet.js'
 
-describe('browser - wallet', () => {
+describe('node - wallet', () => {
   /**
    * Generate a wallet in a temporary directory prior to running the tests
    */

@@ -1,9 +1,13 @@
-import WarpArBundles from 'warp-arbundles'
+import * as WarpArBundles from 'warp-arbundles'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
 
-const { createData, ArweaveSigner } = WarpArBundles
+/**
+ * hack to get module resolution working on node jfc
+ */
+const pkg = WarpArBundles.default ? WarpArBundles.default : WarpArBundles
+const { createData, ArweaveSigner } = pkg
 
 /**
  * A function that builds a signer using a wallet jwk interface
