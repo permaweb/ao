@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.46](https://github.com/permaweb/ao/compare/connect@v0.0.45...connect@v0.0.46) (2024-03-11)
+
+
+### Features
+
+* allow ssr frameworks to load the browser version of aoconnect ([d25a35e](https://github.com/permaweb/ao/commit/d25a35e415b144b8a8d5dd0d6da782543af65bdc))
+
+
+### Bug Fixes
+
+* 'warp-arbundles' does not contain a default export ([4c728f5](https://github.com/permaweb/ao/commit/4c728f5c7964f0c569af157b7af7d6843d8f63bb))
+* referenceError: _class_private_method_init is not defined ([08be769](https://github.com/permaweb/ao/commit/08be769a590be924138731d3f0c13d1cf83314d6))
+
 ## [0.0.45](https://github.com/permaweb/ao/compare/connect@v0.0.44...connect@v0.0.45) (2024-03-06)
 
 ## [0.0.44](https://github.com/permaweb/ao/compare/connect@v0.0.43...connect@v0.0.44) (2024-03-03)
