@@ -45,6 +45,6 @@ await esbuild.build({
   platform: 'browser',
   format: 'esm',
   bundle: true,
-  minify: true,
+  minify: false,
   outfile: manifest.exports['.'].browser
 })
