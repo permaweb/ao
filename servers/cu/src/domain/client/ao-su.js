@@ -48,9 +48,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         await Promise.resolve()
           .then(() => {
             logger(
-              'Loading next page of maximum %s messages for process %s from %s to %s',
+              'Loading next page of max %s messages for process "%s" from SU "%s" between "%s" and "%s"',
               pageSize,
               processId,
+              suUrl,
               from || 'initial',
               to || 'latest'
             )
@@ -70,9 +71,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       }
 
       logger(
-        'Successfully loaded %s scheduled messages for process "%s" from "%s" to "%s"...',
+        'Successfully loaded %s scheduled messages for process "%s" from SU "%s" between "%s" and "%s"...',
         total,
         processId,
+        suUrl,
         from || 'initial',
         to || 'latest')
     }
