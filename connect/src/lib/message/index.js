@@ -4,7 +4,6 @@ import { of } from 'hyper-async'
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
 import { errFrom } from '../utils.js'
-import { verifyProcessWith } from '../verify-process.js'
 import { uploadMessageWith } from './upload-message.js'
 
 /**
@@ -25,12 +24,10 @@ import { uploadMessageWith } from './upload-message.js'
  * @returns {SendMessage}
  */
 export function messageWith (env) {
-  const verifyProcess = verifyProcessWith(env)
   const uploadMessage = uploadMessageWith(env)
 
   return ({ process, data, tags, anchor, signer }) => {
     return of({ id: process, data, tags, anchor, signer })
-      .chain(verifyProcess)
       .chain(uploadMessage)
       .map((ctx) => ctx.messageId) // the id of the data item
       .bimap(errFrom, identity)
