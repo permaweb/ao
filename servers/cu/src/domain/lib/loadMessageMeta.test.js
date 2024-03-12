@@ -10,7 +10,7 @@ const logger = createLogger('ao-cu:readState')
 describe('loadMessageMeta', () => {
   test('should append processId and timestamp to ctx', async () => {
     const loadMessageMeta = loadMessageMetaWith({
-      locateScheduler: async (id) => {
+      locateProcess: async (id) => {
         assert.equal(id, 'process-123')
         return { url: 'https://foo.bar' }
       },

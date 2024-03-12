@@ -8,7 +8,7 @@ import ms from 'ms'
 import { messageSchema, streamSchema } from '../model.js'
 import {
   findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema,
-  loadTimestampSchema, locateSchedulerSchema, saveBlocksSchema
+  loadTimestampSchema, locateProcessSchema, saveBlocksSchema
 } from '../dal.js'
 import { trimSlash } from '../utils.js'
 
@@ -372,8 +372,8 @@ function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   }
 }
 
-function loadScheduledMessagesWith ({ locateScheduler, loadMessages, logger }) {
-  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
+function loadScheduledMessagesWith ({ locateProcess, loadMessages, logger }) {
+  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
 
   return (ctx) =>
@@ -383,7 +383,7 @@ function loadScheduledMessagesWith ({ locateScheduler, loadMessages, logger }) {
         return ctx
       })
       .chain((ctx) =>
-        locateScheduler(ctx.id)
+        locateProcess(ctx.id)
           .chain(({ url }) => loadMessages({
             suUrl: trimSlash(url),
             processId: ctx.id,
@@ -398,8 +398,8 @@ function loadScheduledMessagesWith ({ locateScheduler, loadMessages, logger }) {
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
-  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
+function loadCronMessagesWith ({ loadTimestamp, locateProcess, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
+  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
 
   const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
@@ -425,7 +425,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateScheduler, findBlocks, loa
        * Merge the scheduled messages stream with cron messages,
        * producing a single merged stream
        */
-      return locateScheduler(ctx.id)
+      return locateProcess(ctx.id)
         .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: trimSlash(url) }))
         .map(logger.tap('loaded current timestamp from SU'))
         /**

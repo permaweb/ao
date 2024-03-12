@@ -2,7 +2,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { always, identity, isNotNil, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
-import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateProcessSchema, saveProcessSchema } from '../dal.js'
 import { blockSchema, rawTagSchema } from '../model.js'
 import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
 
@@ -82,8 +82,8 @@ const ctxSchema = z.object({
   exact: z.boolean().default(false)
 }).passthrough()
 
-function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, saveProcess, logger }) {
-  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
+function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProcess, logger }) {
+  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
   loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
@@ -97,7 +97,7 @@ function getProcessMetaWith ({ loadProcess, locateScheduler, findProcess, savePr
    * and then saving to the db
    */
   function loadFromSu (processId) {
-    return locateScheduler(processId)
+    return locateProcess(processId)
       .chain(({ url }) => loadProcess({ suUrl: trimSlash(url), processId }))
       /**
        * Verify the process by examining the tags
