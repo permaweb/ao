@@ -184,7 +184,7 @@ export const loadMessageMetaSchema = z.function()
     })
   ))
 
-export const locateSchedulerSchema = z.function()
+export const locateProcessSchema = z.function()
   .args(z.string())
   .returns(z.promise(
     z.object({
