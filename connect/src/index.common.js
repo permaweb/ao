@@ -56,6 +56,14 @@ export function connect ({
 } = {}) {
   const logger = createLogger()
 
+  /**
+   * See https://github.com/permaweb/ao/issues/534
+   * locating the scheduler is not done in aoconnect,
+   *
+   * but keeping here for posterity in case gateway stability
+   * improves and we can add it back
+   */
+  // eslint-disable-next-line no-unused-vars
   const { locate, validate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
 
   const processMetaCache = SuClient.createProcessMetaCache({ MAX_SIZE: 25 })
@@ -77,7 +85,7 @@ export function connect ({
       cache: processMetaCache,
       logger: messageLogger
     }),
-    locateScheduler: locate,
+    // locateScheduler: locate,
     deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
     logger: messageLogger
   })
@@ -107,7 +115,7 @@ export function connect ({
       cache: processMetaCache,
       logger: monitorLogger
     }),
-    locateScheduler: locate,
+    // locateScheduler: locate,
     deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
     logger: monitorLogger
   })
@@ -124,7 +132,7 @@ export function connect ({
       cache: processMetaCache,
       logger: unmonitorLogger
     }),
-    locateScheduler: locate,
+    // locateScheduler: locate,
     deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
     logger: monitorLogger
   })

@@ -4,7 +4,6 @@ import { of } from 'hyper-async'
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
 import { errFrom } from '../utils.js'
-import { verifyProcessWith } from '../verify-process.js'
 import { uploadUnmonitorWith } from './upload-unmonitor.js'
 
 /**
@@ -24,11 +23,9 @@ import { uploadUnmonitorWith } from './upload-unmonitor.js'
  * @returns {SendMonitor}
  */
 export function unmonitorWith (env) {
-  const verifyProcess = verifyProcessWith(env)
   const uploadUnmonitor = uploadUnmonitorWith(env)
 
   return ({ process, signer }) => of({ id: process, signer })
-    .chain(verifyProcess)
     .chain(uploadUnmonitor)
     .map((ctx) => ctx.monitorId)
     .bimap(errFrom, identity)
