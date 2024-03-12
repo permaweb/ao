@@ -6,11 +6,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { messageSchema, streamSchema } from '../model.js'
-import {
-  findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema,
-  loadTimestampSchema, locateProcessSchema, saveBlocksSchema
-} from '../dal.js'
-import { trimSlash } from '../utils.js'
+import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
 
@@ -372,8 +368,7 @@ function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   }
 }
 
-function loadScheduledMessagesWith ({ locateProcess, loadMessages, logger }) {
-  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
+function loadScheduledMessagesWith ({ loadMessages, logger }) {
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
 
   return (ctx) =>
@@ -383,23 +378,21 @@ function loadScheduledMessagesWith ({ locateProcess, loadMessages, logger }) {
         return ctx
       })
       .chain((ctx) =>
-        locateProcess(ctx.id)
-          .chain(({ url }) => loadMessages({
-            suUrl: trimSlash(url),
-            processId: ctx.id,
-            owner: ctx.owner,
-            tags: ctx.tags,
-            moduleId: ctx.moduleId,
-            moduleOwner: ctx.moduleOwner,
-            moduleTags: ctx.moduleTags,
-            from: ctx.from, // could be undefined
-            to: ctx.to // could be undefined
-          }))
+        loadMessages({
+          suUrl: ctx.suUrl,
+          processId: ctx.id,
+          owner: ctx.owner,
+          tags: ctx.tags,
+          moduleId: ctx.moduleId,
+          moduleOwner: ctx.moduleOwner,
+          moduleTags: ctx.moduleTags,
+          from: ctx.from, // could be undefined
+          to: ctx.to // could be undefined
+        })
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, locateProcess, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
-  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
+function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
 
   const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
@@ -425,8 +418,7 @@ function loadCronMessagesWith ({ loadTimestamp, locateProcess, findBlocks, loadB
        * Merge the scheduled messages stream with cron messages,
        * producing a single merged stream
        */
-      return locateProcess(ctx.id)
-        .chain(({ url }) => loadTimestamp({ processId: ctx.id, suUrl: trimSlash(url) }))
+      return loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl })
         .map(logger.tap('loaded current timestamp from SU'))
         /**
          * In order to generate cron messages and merge them with the

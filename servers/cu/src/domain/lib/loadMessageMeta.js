@@ -1,8 +1,8 @@
-import { fromPromise } from 'hyper-async'
+import { Rejected, Resolved, fromPromise } from 'hyper-async'
 import { z } from 'zod'
 
-import { loadMessageMetaSchema, locateProcessSchema } from '../dal.js'
-import { trimSlash } from '../utils.js'
+import { findProcessSchema, loadMessageMetaSchema, locateProcessSchema, locateSchedulerSchema } from '../dal.js'
+import { findRawTag, trimSlash } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -28,6 +28,31 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
+function maybeCachedWith ({ locateScheduler, findProcess, logger }) {
+  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
+  findProcess = fromPromise(findProcessSchema.implement(findProcess))
+
+  /**
+   * Attempt to use the cached process to locate the scheduler
+   * via it's Scheduler-Location record, which prevents potentially
+   * calling a gateway to load a process
+   */
+  return (processId) => findProcess({ processId })
+    .map((process) => findRawTag('Scheduler', process.tags))
+    .chain((tag) => tag ? Resolved(tag.value) : Rejected('No Cached Process'))
+    .chain(locateScheduler)
+    .bichain(
+      (err) => {
+        logger(
+          'Could not locateScheduler for process "%s" using cache. Falling back to using scheduler-utils locate',
+          processId, err
+        )
+        return Rejected(processId)
+      },
+      Resolved
+    )
+}
+
 /**
  * @typedef Args
  * @property {string} messageTxId - the transaction id of the message
@@ -50,8 +75,11 @@ export function loadMessageMetaWith (env) {
   const loadMessageMeta = fromPromise(loadMessageMetaSchema.implement(env.loadMessageMeta))
   const locateProcess = fromPromise(locateProcessSchema.implement(env.locateProcess))
 
+  const maybeCached = maybeCachedWith(env)
+
   return (ctx) => {
-    return locateProcess(ctx.processId)
+    return maybeCached(ctx.processId)
+      .bichain(locateProcess, Resolved)
       .chain(({ url }) => loadMessageMeta({
         suUrl: trimSlash(url),
         processId: ctx.processId,

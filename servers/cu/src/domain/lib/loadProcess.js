@@ -2,9 +2,9 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { always, identity, isNotNil, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
-import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateProcessSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateProcessSchema, locateSchedulerSchema, saveProcessSchema } from '../dal.js'
 import { blockSchema, rawTagSchema } from '../model.js'
-import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
+import { eqOrIncludes, findRawTag, parseTags, trimSlash } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -14,6 +14,10 @@ import { eqOrIncludes, parseTags, trimSlash } from '../utils.js'
  * is always added to context
  */
 const ctxSchema = z.object({
+  /**
+   * The url of the SU where the process is located
+   */
+  suUrl: z.string().min(1),
   /**
    * the signature of the process
    *
@@ -82,8 +86,9 @@ const ctxSchema = z.object({
   exact: z.boolean().default(false)
 }).passthrough()
 
-function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProcess, logger }) {
+function getProcessMetaWith ({ loadProcess, locateProcess, locateScheduler, findProcess, saveProcess, logger }) {
   locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
+  locateScheduler = fromPromise(locateSchedulerSchema.implement(locateScheduler))
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
   loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
@@ -92,46 +97,8 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
     ? Resolved(tags)
     : Rejected(`Tag '${name}': ${err}`)
 
-  /**
-   * Load the process from the SU, extracting the metadata,
-   * and then saving to the db
-   */
-  function loadFromSu (processId) {
-    return locateProcess(processId)
-      .chain(({ url }) => loadProcess({ suUrl: trimSlash(url), processId }))
-      /**
-       * Verify the process by examining the tags
-       */
-      .chain((ctx) =>
-        of(ctx.tags)
-          .map(parseTags)
-          .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on process'))
-          .chain(checkTag('Type', eqOrIncludes('Process'), 'value \'Process\' was not found on process'))
-          .chain(checkTag('Module', isNotNil, 'was not found on process'))
-          .map(always({ id: processId, ...ctx }))
-          .bimap(
-            logger.tap('Verifying process failed: %s'),
-            logger.tap('Verified process. Saving to db...')
-          )
-      )
-      /**
-       * Attempt to save to the db
-       */
-      .chain((process) =>
-        saveProcess(process)
-          .bimap(
-            logger.tap('Could not save process to db. Nooping'),
-            logger.tap('Saved process')
-          )
-          .bichain(
-            always(Resolved(process)),
-            always(Resolved(process))
-          )
-      )
-  }
-
-  return (processId) =>
-    findProcess({ processId })
+  function maybeCached (processId) {
+    return findProcess({ processId })
       /**
        * The process could indeed not be found, or there was some other error
        * fetching from persistence. Regardless, we will fallback to loading from
@@ -141,11 +108,67 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
         logger.tap('Could not find process in db. Loading from chain...'),
         logger.tap('found process in db %j')
       )
+      /**
+       * Locate the scheduler for the process and attach to context
+       */
+      .chain((process) =>
+        of(process.tags)
+          .map((tags) => findRawTag('Scheduler', tags))
+          .chain((tag) => tag ? Resolved(tag.value) : Rejected('No Cached Process'))
+          .chain(locateScheduler)
+          .map(({ url: suUrl }) => [process, trimSlash(suUrl)])
+      )
+  }
+
+  /**
+   * Load the process from the SU, extracting the metadata,
+   * and then saving to the db
+   */
+  function loadFromSu (processId) {
+    return locateProcess(processId)
+      .chain(({ url }) =>
+        loadProcess({ suUrl: trimSlash(url), processId })
+          /**
+           * Verify the process by examining the tags
+           */
+          .chain((ctx) =>
+            of(ctx.tags)
+              .map(parseTags)
+              .chain(checkTag('Data-Protocol', eqOrIncludes('ao'), 'value \'ao\' was not found on process'))
+              .chain(checkTag('Type', eqOrIncludes('Process'), 'value \'Process\' was not found on process'))
+              .chain(checkTag('Module', isNotNil, 'was not found on process'))
+              .map(always({ id: processId, ...ctx }))
+              .bimap(
+                logger.tap('Verifying process failed: %s'),
+                logger.tap('Verified process. Saving to db...')
+              )
+          )
+          /**
+           * Attempt to save to the db
+           */
+          .chain((process) =>
+            saveProcess(process)
+              .bimap(
+                logger.tap('Could not save process to db. Nooping'),
+                logger.tap('Saved process')
+              )
+              .bichain(
+                always(Resolved(process)),
+                always(Resolved(process))
+              )
+          )
+          .map((process) => [process, trimSlash(url)])
+      )
+  }
+
+  return (processId) =>
+    maybeCached(processId)
       .bichain(
         () => loadFromSu(processId),
         Resolved
       )
-      .map(process => ({
+      .map(([process, suUrl]) => ({
+        suUrl,
         signature: process.signature,
         data: process.data,
         anchor: process.anchor,
