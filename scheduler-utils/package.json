@@ -14,7 +14,8 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "default": "./dist/index.js"
-    }
+    },
+    "./browser": "./dist/browser.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -30,12 +31,12 @@
     "test": "node --test ./src"
   },
   "dependencies": {
-    "lru-cache": "^10.1.0",
+    "lru-cache": "^10.2.0",
     "ramda": "^0.29.1"
   },
   "devDependencies": {
-    "esbuild": "^0.19.9",
-    "typescript": "^5.3.3"
+    "esbuild": "^0.20.1",
+    "typescript": "^5.4.2"
   },
   "engines": {
     "node": ">=18"
