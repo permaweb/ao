@@ -32,14 +32,8 @@ export function writeProcessTxWith (env) {
       .map(defaultTo([]))
       .chain(findSchedulerTag)
       .chain((schedulerAddress) => {
-        if (schedulerAddress === '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA') {
-          const url = 'https://su-router.ao-testnet.xyz'
-          return of({ url }) // Return the URL without calling locateScheduler
-            .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64') }))
-        } else {
-          return locateScheduler(schedulerAddress)
-            .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64') }))
-        }
+        return locateScheduler(schedulerAddress)
+          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64') }))
       })
       .map(assoc('schedulerTx', __, ctx))
       .map(ctxSchema.parse)
