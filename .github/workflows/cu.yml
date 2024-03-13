@@ -29,6 +29,10 @@ jobs:
         with:
           node-version: 20
 
+      - name: 📥 Download repo deps
+        run: |
+          npm i
+
       - name: 📥 Download deps
         working-directory: servers/cu
         run: |
@@ -37,6 +41,7 @@ jobs:
       - name: ⚡ Run Tests
         working-directory: servers/cu
         run: |
+          npm run lint
           npm test
         env:
           CI: true

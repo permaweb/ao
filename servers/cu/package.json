@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nodemon",
     "heapdump": "kill -USR2",
+    "lint": "standard .",
     "start": "node -r dotenv/config src/app.js",
     "test": "node --test ./src"
   },
