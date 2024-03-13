@@ -29,7 +29,7 @@ if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
-  DUMP_PATH: z.string().min(1),
+  DUMP_PATH: z.string().min(1)
 })
 
 /**
@@ -42,7 +42,7 @@ const preprocessedServerConfigSchema = z.preprocess(
 
     const error = message => zodRefinementContext.addIssue({
       code: ZodIssueCode.custom,
-      message,
+      message
     })
 
     if (!!WALLET && !WALLET_FILE) {
@@ -51,11 +51,11 @@ const preprocessedServerConfigSchema = z.preprocess(
     }
     if (!WALLET && !WALLET_FILE) {
       error('One of WALLET or WALLET_FILE is required')
-      return 
+      return
     }
     if (!!WALLET && !!WALLET_FILE) {
       error('Do not define both WALLET and WALLET_FILE')
-      return 
+      return
     }
 
     const walletPath = path.resolve(WALLET_FILE)
@@ -68,13 +68,13 @@ const preprocessedServerConfigSchema = z.preprocess(
       const walletFromFile = readFileSync(walletPath, 'utf8')
       return {
         WALLET: walletFromFile,
-        ...theRestOfTheConfig,
+        ...theRestOfTheConfig
       }
     } catch (e) {
       error(`An error occurred while reading WALLET_FILE from ${walletPath}\n${e}`)
     }
   },
-  serverConfigSchema,
+  serverConfigSchema
 )
 
 /**
