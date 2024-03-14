@@ -790,7 +790,7 @@ export function saveCheckpointWith ({
       }))
       .chain((buffer) =>
         of(buffer)
-          .chain((buffer) => hashWasmMemory(Readable.from(buffer), encoding))
+          .chain((buffer) => hashWasmMemory(Readable.from(buffer), 'gzip'))
           .map((sha) => {
             /**
              * TODO: what should we set anchor to?
