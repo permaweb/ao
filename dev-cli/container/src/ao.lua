@@ -181,8 +181,10 @@ function ao.isTrusted(msg)
 end
 
 function ao.result(result)
-    -- dont reset on every result -- should allow for same messages to flow
-    -- ao._ref = 0
+    -- if error then only send the Error to CU
+    if ao.outbox.Error or result.Error then
+        return {Error = result.Error or ao.outbox.Error}
+    end
     return {
         Output = result.Output or ao.outbox.Output,
         Messages = ao.outbox.Messages,
