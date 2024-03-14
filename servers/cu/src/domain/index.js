@@ -98,7 +98,8 @@ export const createApis = async (ctx) => {
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
 
-  ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+  ctx.logger('Process Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+  ctx.logger('Process In-Memory compression is set to "%s"', ctx.PROCESS_MEMORY_COMPRESS)
 
   const stats = statsWith({
     loadWorkerStats: () => workerPool.stats(),
@@ -164,6 +165,7 @@ export const createApis = async (ctx) => {
     findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
     findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
       cache: wasmMemoryCache,
+      unpackageMemory: AoProcessClient.unpackageMemoryWith({ PROCESS_MEMORY_COMPRESS: ctx.PROCESS_MEMORY_COMPRESS }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
       findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
@@ -179,8 +181,9 @@ export const createApis = async (ctx) => {
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
-      EAGER_CHECKPOINT_THRESHOLD: ctx.EAGER_CHECKPOINT_THRESHOLD,
+      packageMemory: AoProcessClient.packageMemoryWith({ PROCESS_MEMORY_COMPRESS: ctx.PROCESS_MEMORY_COMPRESS }),
       saveCheckpoint,
+      EAGER_CHECKPOINT_THRESHOLD: ctx.EAGER_CHECKPOINT_THRESHOLD,
       logger
     }),
     saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),

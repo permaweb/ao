@@ -98,6 +98,10 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
   /**
+   * Whether or not to compress process memory saved in the cache
+   */
+  PROCESS_MEMORY_COMPRESS: z.preprocess((val) => !!val, z.boolean()),
+  /**
    * The amount of time in milliseconds, the CU should wait for evaluation to complete
    * before responding with a "busy" message to the client
    */
