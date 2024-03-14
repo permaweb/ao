@@ -35,7 +35,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
 
-  const { locate, raw } = schedulerUtilsConnect({
+  const { locate } = schedulerUtilsConnect({
     cacheSize: 100,
     GATEWAY_URL: ctx.GATEWAY_URL,
     followRedirects: true
@@ -51,20 +51,6 @@ export const createApis = async (ctx) => {
     locateDataloader.clearAll()
     return Promise.all(processIds.map(
       (processId) => locate(processId).catch(err => err)
-    ))
-  })
-
-  const rawDataloader = new Dataloader(async (ownerIds) => {
-    /**
-     * raw already maintains a cache, so we'll just clear
-     * the dataloader cache every time
-     *
-     * This way we get the benefits of batching and deduping built
-     * into the dataloader api
-     */
-    rawDataloader.clearAll()
-    return Promise.all(ownerIds.map(
-      (ownerId) => raw(ownerId).catch(err => err)
     ))
   })
 
@@ -206,7 +192,6 @@ export const createApis = async (ctx) => {
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),
     locateProcess: locateDataloader.load.bind(locateDataloader),
-    locateScheduler: rawDataloader.load.bind(rawDataloader),
     doesExceedModuleMaxMemory: WasmClient.doesExceedModuleMaxMemoryWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
     doesExceedModuleMaxCompute: WasmClient.doesExceedModuleMaxComputeWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
     logger

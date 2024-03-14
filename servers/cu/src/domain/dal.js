@@ -191,11 +191,3 @@ export const locateProcessSchema = z.function()
       url: z.string()
     })
   ))
-
-export const locateSchedulerSchema = z.function()
-  .args(z.string())
-  .returns(z.promise(
-    z.object({
-      url: z.string()
-    })
-  ))
