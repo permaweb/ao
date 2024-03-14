@@ -1,3 +1,5 @@
+import { LRUCache } from 'lru-cache'
+
 /**
  * The pure business logic.
  *
@@ -7,23 +9,34 @@
  * If the failoverAttempt exceeds the length of valid hosts list, then every host has
  * been attempted, and so return undefined, to be handled upstream
  */
-export function determineHostWith ({ hosts = [], cache }) {
-  function stringToUniqueId (str) {
-    return str.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  }
+export function determineHostWith ({ hosts = [] }) {
+  const cache = new LRUCache({
+    /**
+       * 10MB
+       */
+    maxSize: 10_000_000,
+    /**
+       * A number is 8 bytes
+       */
+    sizeCalculation: () => 8
+  })
 
-  return ({ processId, failoverAttempt }) => {
+  return ({ processId, failoverAttempt = 0 }) => {
     if (failoverAttempt >= hosts.length) return
 
     /**
        * Check cache, and hydrate if necessary
        */
-    let uniqueId = cache.get(processId)
-    if (!uniqueId) {
-      uniqueId = stringToUniqueId(processId)
-      cache.set(processId, uniqueId)
+    let hashSum = cache.get(processId)
+    if (!hashSum) {
+      hashSum = computeHashSumFromProcessId(processId)
+      cache.set(processId, hashSum)
     }
 
-    return hosts[(uniqueId + failoverAttempt) % hosts.length]
+    return hosts[(hashSum + failoverAttempt) % hosts.length]
   }
+}
+
+function computeHashSumFromProcessId (processId) {
+  return processId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
 }

@@ -11,8 +11,6 @@ This service will deterministically route `ao` Process operations to an underlyi
 - [Tests](#tests)
 - [Debug Logging](#debug-logging)
 - [Project Structure](#project-structure)
-  - [Entrypoint](#entrypoint)
-  - [Routing](#routing)
 - [System Requirements](#system-requirements)
 
 <!-- tocstop -->
@@ -32,6 +30,7 @@ There are a few environment variables that you MUST set:
 - `NODE_CONFIG_ENV`: whether the service should be ran in `development` or `production` mode. Basically, this loads a separate set of default configuration.
 - `AO_UNIT`: which `ao` Unit, either `cu` or `mu`, this Reverse Proxy Service is meant to mirror.
 - `HOSTS`: a comma-delimited string containing all of the underlying hosts that can Reverse Proxied to. If `AO_UNIT` is `cu`, then `HOSTS` should be a series of `ao` Compute Unit Hosts. Similarly if `AO_UNIT` is `mu` then `HOSTS` should be a series of `ao` Messenger Unit Hosts
+- `STRATEGY`: either `redirect` or `proxy` (default). If `STRATEGY` is `redirect`, the service will reply with an [HTTP 307 Temporary Redirect](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307) to the underlying `ao` unit. If `STRATEGY` is `proxy`, the service will act as a reverse proxy to the underlying `ao` unit and forward the HTTP request itself.
 
 > In order for the Router's Reverse Proxying to be consistent, the ordering of the `HOST` list MUST be consistent.
 
@@ -49,18 +48,6 @@ All logging is scoped under the name `ao-router*`.
 ## Project Structure
 
 This `ao` Unit Router project is simple service, with minimal business logic.
-
-The total service boilerplate is less than ~200 lines while the business logic is less than ~10 lines.
-
-The ONLY custom code that's specific to the `ao` Units exists in the [entrypoint](./src/app.js), where the specific endpoints to Reverse Proxy are specified.
-
-### Entrypoint
-
-The entrypoint is `src/app.js` where the ONLY custom configuration is specified. Here, we mirror the `ao` Unit API for both the CU and MU, and set up the Reverse Proxying handlers.
-
-### Routing
-
-All routing logic can be found in `src/router.js`
 
 ## System Requirements
 
