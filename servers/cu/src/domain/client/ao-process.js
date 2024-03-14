@@ -356,9 +356,9 @@ export function findProcessMemoryBeforeWith ({
     ) {
       transactions(
         tags: [
-          { name: "Data-Protocol", values: ["ao"] }
-          { name: "Type", values: ["Checkpoint"] }
           { name: "Process", values: [$processId] }
+          { name: "Type", values: ["Checkpoint"] }
+          { name: "Data-Protocol", values: ["ao"] }
         ],
         owners: [$owner]
         first: $limit,
@@ -734,12 +734,12 @@ export function saveCheckpointWith ({
     ) {
       transactions(
         tags: [
-          { name: "Data-Protocol", values: ["ao"] }
-          { name: "Type", values: ["Checkpoint"] }
           { name: "Process", values: [$processId] }
           { name: "Nonce", values: [$nonce] }
           { name: "Timestamp", values: [$timestamp] }
           ${withCron ? '{ name: "Cron-Interval", values: [$cron] }' : ''}
+          { name: "Type", values: ["Checkpoint"] }
+          { name: "Data-Protocol", values: ["ao"] }
         ],
         owners: [$owner]
         first: 1
