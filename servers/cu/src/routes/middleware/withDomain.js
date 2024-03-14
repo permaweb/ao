@@ -2,7 +2,11 @@ import { config } from '../../config.js'
 import { logger } from '../../logger.js'
 import { createApis, domainConfigSchema } from '../../domain/index.js'
 
-const domain = {
+/**
+ * TODO: probably a better place to expose this,
+ * but this works for now
+ */
+export const domain = {
   /**
    * Ensure server lvl config is never exposed to domain,
    * by simply parsing it out

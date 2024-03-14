@@ -19,19 +19,18 @@ import * as AoEvaluationClient from './client/ao-evaluation.js'
 import * as AoBlockClient from './client/ao-block.js'
 
 import { readResultWith } from './api/readResult.js'
-import { readStateWith } from './api/readState.js'
+import { readStateWith, pendingReadStates } from './api/readState.js'
 import { readCronResultsWith } from './api/readCronResults.js'
 import { healthcheckWith } from './api/healthcheck.js'
 import { readResultsWith } from './api/readResults.js'
 import { dryRunWith } from './api/dryRun.js'
+import { statsWith } from './api/perf.js'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema, positiveIntSchema } from './model.js'
 export { errFrom } from './utils.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-
-export { pendingReadState } from './api/readState.js'
 
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
@@ -100,6 +99,12 @@ export const createApis = async (ctx) => {
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
 
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+
+  const stats = statsWith({
+    loadWorkerStats: () => workerPool.stats(),
+    loadMemoryUsage: () => process.memoryUsage(),
+    loadProcessCacheUsage: () => AoProcessClient.loadProcessCacheUsage()
+  })
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
@@ -244,5 +249,5 @@ export const createApis = async (ctx) => {
 
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { readState, dryRun, readResult, readResults, readCronResults, healthcheck }
+  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, healthcheck }
 }

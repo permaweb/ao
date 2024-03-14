@@ -16,12 +16,17 @@ import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
  *
  * @type {Map<string, { startTime: Date, pending: Promise<any> }}
  */
-export const pendingReadState = new Map()
+const pendingReadState = new Map()
 const pendingKey = join(',')
 const removePending = (key) => (res) => {
   pendingReadState.delete(key)
   return res
 }
+
+export function pendingReadStates () {
+  return Object.fromEntries(pendingReadState.entries())
+}
+
 const findPendingForProcessBefore = findPendingForProcessBeforeWith(pendingReadState)
 
 /**

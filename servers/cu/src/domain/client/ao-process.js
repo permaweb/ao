@@ -113,6 +113,17 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, onEviction }) {
   return processMemoryCache
 }
 
+export function loadProcessCacheUsage () {
+  if (!processMemoryCache) return
+
+  return {
+    size: processMemoryCache.lru.size,
+    calculatedSize: processMemoryCache.lru.calculatedSize,
+    processes: processMemoryCache.lru.dump()
+      .map(([key, entry]) => ({ process: key, size: entry.size }))
+  }
+}
+
 const processDocSchema = z.object({
   _id: z.string().min(1),
   processId: processSchema.shape.id,
@@ -417,7 +428,7 @@ export function findProcessMemoryBeforeWith ({
         ) return Rejected({ processId, timestamp, ordinate, cron })
 
         logger(
-          'Found Checkpoint in in-memory cache for process "%s" before message with parameters "%j": "%j"',
+          'MEMORY CHECKPOINT: Found Checkpoint in in-memory cache for process "%s" before message with parameters "%j": "%j"',
           processId,
           { timestamp, ordinate, cron },
           cached.evaluation
@@ -569,11 +580,13 @@ export function findProcessMemoryBeforeWith ({
   }
 
   function coldStart ({ processId, timestamp, ordinate, cron }) {
-    logger(
-      '**COLD START** Could not find a Checkpoint for process "%s" before message with parameters "%j". Initializing Cold Start...',
-      processId,
-      { timestamp, ordinate, cron }
-    )
+    if (ordinate > 0) {
+      logger(
+        '**COLD START**: Could not find a Checkpoint for process "%s" before message with parameters "%j". Initializing Cold Start...',
+        processId,
+        { timestamp, ordinate, cron }
+      )
+    }
 
     return Resolved({
       Memory: null,

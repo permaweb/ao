@@ -12,7 +12,7 @@ import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 
-import { pendingReadState } from './domain/index.js'
+import { domain } from './routes/middleware/withDomain.js'
 
 const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)))
 
@@ -32,9 +32,9 @@ export const server = pipeP(
       logger(`Server is running on http://localhost:${config.port}`)
     })
 
-    const memMonitor = setInterval(() => {
-      logger('Memory Used: %j', process.memoryUsage())
-      logger('Currently Pending readState operations: %j', Object.fromEntries(pendingReadState.entries()))
+    const memMonitor = setInterval(async () => {
+      logger('Stats Usage: %j', await domain.apis.stats())
+      logger('Currently Pending readState operations: %j', domain.apis.pendingReadStates())
     }, config.MEM_MONITOR_INTERVAL)
     memMonitor.unref()
 
