@@ -1,40 +1,26 @@
-import { join } from 'node:path'
-import { always, compose, pipe } from 'ramda'
-import heapdump from 'heapdump'
-import express from 'express'
-import cors from 'cors'
+import { always, compose } from 'ramda'
 /**
  * See https://github.com/http-party/node-http-proxy/pull/1559
  * the PR that fixes the memory was not merged, so a fork
  * was created with the fix
  */
 import httpProxy from 'http-proxy-node16'
-import { LRUCache } from 'lru-cache'
 
 /**
  * TODO: we could inject these, but just keeping simple for now
  */
-import { logger } from './logger.js'
-import { config } from './config.js'
 import { determineHostWith } from './domain.js'
+import { logger } from './logger.js'
 
-function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
+import { mountRoutesWithByAoUnit } from './routes/byAoUnit.js'
+
+export function proxyWith ({ aoUnit, hosts }) {
+  const _logger = logger.child('proxy')
+  _logger('Configuring to reverse proxy ao %s units...', aoUnit)
+
   const proxy = httpProxy.createProxyServer({})
-  const cache = new LRUCache({
-    /**
-       * Defaulted to 10MB above
-       */
-    maxSize,
-    /**
-       * A number is 8 bytes
-       */
-    sizeCalculation: () => 8
-  })
 
-  logger('Configuring to reverse proxy ao %s units...', config.aoUnit)
-
-  const determineHost = determineHostWith({ hosts, cache })
-  const mount = aoUnitConfig[config.aoUnit]
+  const determineHost = determineHostWith({ hosts })
 
   async function trampoline (init) {
     let result = init
@@ -60,7 +46,7 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
     return Promise.resolve()
       .then(() => handler(req, res))
       .catch((err) => {
-        logger(err)
+        _logger(err)
         if (res.writableEnded) return
         return res.status(err.status || 500).send(err || 'Internal Server Error')
       })
@@ -99,11 +85,11 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
              * There are no more hosts to failover to -- we've tried them all
              */
             if (!host) {
-              logger('Exhausted all failover attempts for process %s. Bubbling final error', processId, err)
+              _logger('Exhausted all failover attempts for process %s. Bubbling final error', processId, err)
               return reject(err)
             }
 
-            logger('Reverse Proxying process %s to host %s', processId, host)
+            _logger('Reverse Proxying process %s to host %s', processId, host)
             /**
              * Reverse proxy the request to the underlying selected host.
              * If an error occurs, return the next iteration for our trampoline to invoke.
@@ -118,7 +104,7 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
                * Return the thunk for our next iteration, incrementing our failoverAttempt,
                * so the next host in the list will be used
                */
-              logger('Error occurred for host %s and process %s', host, processId, err)
+              _logger('Error occurred for host %s and process %s', host, processId, err)
               return resolve(() => revProxy({ failoverAttempt: failoverAttempt + 1, err }))
             })
           })
@@ -135,32 +121,10 @@ function withRevProxies ({ aoUnitConfig, hosts, maxSize = 1_000_000 * 10 }) {
     )()
   }
 
+  const mountRoutesWith = mountRoutesWithByAoUnit[aoUnit]
+
   return (app) => {
-    mount({ app, revProxy: withRevProxyHandler })
+    mountRoutesWith({ app, middleware: withRevProxyHandler })
     return app
   }
 }
-
-export const router = (aoUnitConfig) => pipe(
-  (app) => app.use(cors()),
-  (app) => app.use(express.static(config.DUMP_PATH)),
-  withRevProxies({ ...config, aoUnitConfig }),
-  (app) => {
-    const server = app.listen(config.port, () => {
-      logger(`Server is running on http://localhost:${config.port}`)
-    })
-
-    process.on('SIGTERM', () => {
-      logger('Recevied SIGTERM. Gracefully shutting down server...')
-      server.close(() => logger('Server Shut Down'))
-    })
-
-    process.on('SIGUSR2', () => {
-      const name = `${Date.now()}.heapsnapshot`
-      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
-      console.log(name)
-    })
-
-    return server
-  }
-)(express())

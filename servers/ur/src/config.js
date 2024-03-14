@@ -32,7 +32,8 @@ const serverConfigSchema = z.object({
     z.array(z.string().url())
   ),
   DUMP_PATH: z.string().min(1),
-  aoUnit: z.enum(['cu', 'mu'])
+  aoUnit: z.enum(['cu', 'mu']),
+  strategy: z.enum(['proxy', 'redirect'])
 })
 
 /**
@@ -52,14 +53,16 @@ const CONFIG_ENVS = {
      *
      * but should consider setting explicitly in your .env
      */
-    aoUnit: process.env.AO_UNIT || 'cu'
+    aoUnit: process.env.AO_UNIT || 'cu',
+    strategy: process.env.STRATEGY || 'proxy'
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
     hosts: process.env.HOSTS,
     DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
-    aoUnit: process.env.AO_UNIT
+    aoUnit: process.env.AO_UNIT,
+    strategy: process.env.STRATEGY || 'proxy'
   }
 }
 
