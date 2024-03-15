@@ -85,6 +85,7 @@ export const createApis = async (ctx) => {
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
 
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+  ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
 
   const stats = statsWith({
     loadWorkerStats: () => workerPool.stats(),
@@ -161,6 +162,7 @@ export const createApis = async (ctx) => {
       }),
       address,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
       logger
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
