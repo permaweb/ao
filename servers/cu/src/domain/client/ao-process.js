@@ -321,6 +321,7 @@ export function findProcessMemoryBeforeWith ({
   address,
   queryGateway,
   loadTransactionData,
+  PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findProcessMemoryBefore')
@@ -502,6 +503,12 @@ export function findProcessMemoryBeforeWith ({
   }
 
   function maybeCheckpointFromArweave ({ processId, timestamp, ordinate, cron }) {
+    if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
+      logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query gateway...', processId)
+      return of({ processId, timestamp, ordinate, cron })
+        .chain(Rejected)
+    }
+
     const queryCheckpoint = (attempt) => (variables) =>
       queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables })
         .bimap(

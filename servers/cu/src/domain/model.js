@@ -84,6 +84,16 @@ export const domainConfigSchema = z.object({
    */
   WASM_BINARY_FILE_DIRECTORY: z.string().min(1),
   /**
+   * An array of process ids that should not use Checkpoints
+   * on Arweave.
+   */
+  PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: z.preprocess((val) => {
+    if (Array.isArray(val)) return val
+    // ',' delimited string
+    if (typeof val === 'string') return val.split(',').map((s) => s.trim())
+    return val
+  }, z.array(z.string())),
+  /**
    * The directory to cache Checkpoints created on Arweave
    */
   PROCESS_CHECKPOINT_FILE_DIRECTORY: z.string().min(1),
