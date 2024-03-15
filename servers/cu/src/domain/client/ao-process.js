@@ -314,25 +314,8 @@ export function writeCheckpointFileWith ({ DIR, writeFile }) {
   }
 }
 
-export function packageMemoryWith ({ PROCESS_MEMORY_COMPRESS }) {
-  return async (Memory) => {
-    if (!PROCESS_MEMORY_COMPRESS) return { Memory }
-    return { Memory: await gzipP(Memory), encoding: 'gzip' }
-  }
-}
-
-export function unpackageMemoryWith ({ PROCESS_MEMORY_COMPRESS }) {
-  return async ({ Memory, encoding }) => {
-    if (!PROCESS_MEMORY_COMPRESS) return Memory
-    if (encoding !== 'gzip') throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
-
-    return gunzipP(Memory)
-  }
-}
-
 export function findProcessMemoryBeforeWith ({
   cache,
-  unpackageMemory,
   findCheckpointFileBefore,
   readCheckpointFile,
   address,
@@ -341,7 +324,6 @@ export function findProcessMemoryBeforeWith ({
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findProcessMemoryBefore')
-  unpackageMemory = fromPromise(unpackageMemory)
   findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
   readCheckpointFile = fromPromise(readCheckpointFile)
   address = fromPromise(address)
@@ -453,7 +435,7 @@ export function findProcessMemoryBeforeWith ({
         )
 
         return of(cached)
-          .chain((cached) => unpackageMemory({ Memory: cached.Memory, encoding: cached.evaluation.encoding }))
+          .chain(fromPromise((cached) => gunzipP(cached.Memory)))
           /**
            * Finally map the Checkpoint to the expected shape
            */
@@ -635,7 +617,7 @@ export function findProcessMemoryBeforeWith ({
       .toPromise()
 }
 
-export function saveLatestProcessMemoryWith ({ cache, logger, packageMemory, saveCheckpoint, EAGER_CHECKPOINT_THRESHOLD }) {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_THRESHOLD }) {
   return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount }) => {
     const cached = cache.get(processId)
 
@@ -657,7 +639,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, packageMemory, sav
      * Either no value was cached or the provided evaluation is later than
      * the value currently cached, so overwrite it
      */
-    const { Memory: packaged, encoding } = await packageMemory(Memory)
+    const zipped = await gzipP(Memory)
     const evaluation = {
       processId,
       moduleId,
@@ -666,10 +648,10 @@ export function saveLatestProcessMemoryWith ({ cache, logger, packageMemory, sav
       nonce,
       blockHeight,
       ordinate,
-      encoding,
+      encoding: 'gzip',
       cron
     }
-    cache.set(processId, { Memory: packaged, evaluation })
+    cache.set(processId, { Memory: zipped, evaluation })
 
     if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
 
@@ -685,7 +667,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, packageMemory, sav
         evalCount
       )
 
-      return saveCheckpoint({ Memory: packaged, ...evaluation })
+      return saveCheckpoint({ Memory: zipped, ...evaluation })
         .catch((err) => {
           logger(
             'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
@@ -774,23 +756,9 @@ export function saveCheckpointWith ({
           ? Buffer.from(Memory.buffer, Memory.byteOffset, Memory.byteLength)
           : Buffer.from(Memory)
       )
-      /**
-       * Encode to gzip, if not already encoded
-       */
-      .chain(fromPromise(async (buffer) => {
-        if (encoding) {
-          if (encoding !== 'gzip') throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
-          /**
-           * already gzipped encoded, so just return it
-           */
-          return buffer
-        }
-
-        return gzipP(buffer)
-      }))
       .chain((buffer) =>
         of(buffer)
-          .chain((buffer) => hashWasmMemory(Readable.from(buffer), 'gzip'))
+          .chain((buffer) => hashWasmMemory(Readable.from(buffer), encoding))
           .map((sha) => {
             /**
              * TODO: what should we set anchor to?
@@ -808,12 +776,12 @@ export function saveCheckpointWith ({
                 { name: 'Timestamp', value: `${timestamp}`.trim() },
                 { name: 'Block-Height', value: `${blockHeight}`.trim() },
                 { name: 'Content-Type', value: 'application/octet-stream' },
-                { name: 'SHA-256', value: sha },
-                { name: 'Content-Encoding', value: 'gzip' }
+                { name: 'SHA-256', value: sha }
               ]
             }
 
             if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
+            if (encoding) dataItem.tags.push({ name: 'Content-Encoding', value: encoding })
 
             return dataItem
           })

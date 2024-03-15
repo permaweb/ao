@@ -82,9 +82,6 @@ for quick retrieval later (Defaults to the os temp directory)
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
-- `PROCESS_MEMORY_COMPRESS`: Whether or not to compress the process memory, when it's stored in the
-in-memory cache. (defaults to `false`. You must explictly enable cache compression by setting `PROCESS_MEMORY_COMPRESS` to `true`). Setting this to `true` may cause Node memory usage to drastically spike
-due to unpredictable decompression of memory.
 - `EAGER_CHECKPOINT_THRESHOLD`: If an evaluation stream evaluates this amount of messages, then it will immediately create a Checkpoint at the end of the evaluation stream.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
