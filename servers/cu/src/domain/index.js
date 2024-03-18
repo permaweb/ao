@@ -89,6 +89,12 @@ export const createApis = async (ctx) => {
 
   const stats = statsWith({
     loadWorkerStats: () => workerPool.stats(),
+    /**
+     * https://nodejs.org/api/process.html#processmemoryusage
+     *
+     * Note: worker thread resources will be included in rss,
+     * as that is the Resident Set Size for the entire node process
+     */
     loadMemoryUsage: () => process.memoryUsage(),
     loadProcessCacheUsage: () => AoProcessClient.loadProcessCacheUsage()
   })
