@@ -185,7 +185,10 @@ export const loadMessageMetaSchema = z.function()
   ))
 
 export const locateProcessSchema = z.function()
-  .args(z.string())
+  .args(z.object({
+    processId: z.string(),
+    schedulerHint: z.string().nullish()
+  }))
   .returns(z.promise(
     z.object({
       url: z.string()

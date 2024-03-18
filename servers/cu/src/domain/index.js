@@ -40,7 +40,7 @@ export const createApis = async (ctx) => {
     GATEWAY_URL: ctx.GATEWAY_URL,
     followRedirects: true
   })
-  const locateDataloader = new Dataloader(async (processIds) => {
+  const locateDataloader = new Dataloader(async (params) => {
     /**
      * locate already maintains a cache, so we'll just clear
      * the dataloader cache every time
@@ -49,9 +49,11 @@ export const createApis = async (ctx) => {
      * into the dataloader api
      */
     locateDataloader.clearAll()
-    return Promise.all(processIds.map(
-      (processId) => locate(processId).catch(err => err)
+    return Promise.all(params.map(
+      ({ processId, schedulerHint }) => locate(processId, schedulerHint).catch(err => err)
     ))
+  }, {
+    cacheKeyFn: ({ processId }) => processId
   })
 
   const pouchDb = await PouchDbClient.createPouchDbClient({

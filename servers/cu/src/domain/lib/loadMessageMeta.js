@@ -1,8 +1,8 @@
-import { fromPromise } from 'hyper-async'
+import { Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { loadMessageMetaSchema, locateProcessSchema } from '../dal.js'
-import { trimSlash } from '../utils.js'
+import { findProcessSchema, loadMessageMetaSchema, locateProcessSchema } from '../dal.js'
+import { findRawTag, trimSlash } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -28,6 +28,25 @@ const ctxSchema = z.object({
   })
 }).passthrough()
 
+function maybeCachedWith ({ locateProcess, findProcess }) {
+  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
+  findProcess = fromPromise(findProcessSchema.implement(findProcess))
+
+  /**
+   * Attempt to use the cached process to locate the scheduler
+   * via it's Scheduler-Location record, which prevents potentially
+   * calling a gateway to load a process
+   */
+  return (processId) => findProcess({ processId })
+    .bichain(
+      () => Resolved(undefined),
+      (process) => of(process)
+        .map((process) => findRawTag('Scheduler', process.tags))
+        .map((tag) => tag ? tag.value : undefined)
+    )
+    .chain((maybeSchedulerHint) => locateProcess({ processId, schedulerHint: maybeSchedulerHint }))
+}
+
 /**
  * @typedef Args
  * @property {string} messageTxId - the transaction id of the message
@@ -48,10 +67,11 @@ export function loadMessageMetaWith (env) {
   env = { ...env, logger }
 
   const loadMessageMeta = fromPromise(loadMessageMetaSchema.implement(env.loadMessageMeta))
-  const locateProcess = fromPromise(locateProcessSchema.implement(env.locateProcess))
+
+  const maybeCached = maybeCachedWith(env)
 
   return (ctx) => {
-    return locateProcess(ctx.processId)
+    return maybeCached(ctx.processId)
       .chain(({ url }) => loadMessageMeta({
         suUrl: trimSlash(url),
         processId: ctx.processId,
