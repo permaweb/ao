@@ -1,9 +1,10 @@
+import { randomBytes } from 'node:crypto'
+
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, prop } from 'ramda'
 import { z } from 'zod'
 
 import { moduleSchema } from '../model.js'
-import { randomBytes } from 'node:crypto'
 
 const moduleDocSchema = z.object({
   _id: z.string().min(1),
@@ -95,8 +96,11 @@ export function evaluatorWith ({ evaluate }) {
      * Create an evaluator function scoped to this particular
      * stream of messages
      */
-    .map(() => {
-      const streamId = randomBytes(8).toString('hex')
+    .chain(fromPromise(async () => {
+      const streamId = await new Promise((resolve, reject) =>
+        randomBytes(8, (err, buffer) => err ? reject(err) : resolve(buffer.toString('hex')))
+      )
+
       let backpressure = 0
 
       return ({ name, processId, Memory, message, AoGlobal }) =>
@@ -112,6 +116,6 @@ export function evaluatorWith ({ evaluate }) {
 
             return evaluate({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
           })
-    })
+    }))
     .toPromise()
 }
