@@ -10,7 +10,7 @@ const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadProcess', () => {
-  test('appends process owner, tags, block, buffer as process tags parsed as JSON, result, from, fromCron, fromBlockHeight and evaluatedAt to ctx', async () => {
+  test('appends suUrl, process owner, tags, block, buffer as process tags parsed as JSON, result, from, fromCron, fromBlockHeight and evaluatedAt to ctx', async () => {
     const tags = [
       { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -29,7 +29,7 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (id) => {
+      locateProcess: async ({ processId: id }) => {
         assert.equal(id, PROCESS)
         return { url: 'https://foo.bar' }
       },
@@ -50,6 +50,7 @@ describe('loadProcess', () => {
 
     const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
 
+    assert.deepStrictEqual(res.suUrl, 'https://foo.bar')
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.signature, 'sig-123')
@@ -65,12 +66,13 @@ describe('loadProcess', () => {
     assert.equal(res.id, PROCESS)
   })
 
-  test('use process from db to set owner, tags, and block', async () => {
+  test('use process from db to set suUrl, owner, tags, and block', async () => {
     const tags = [
       { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
       { name: 'Type', value: 'Process' },
-      { name: 'Foo', value: 'Bar' }
+      { name: 'Foo', value: 'Bar' },
+      { name: 'Scheduler', value: 'scheduler-123' }
     ]
     const loadProcess = loadProcessWith({
       findProcess: async () => ({
@@ -91,12 +93,17 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (_id) => assert.fail('should not locate su if found in db'),
+      locateProcess: async ({ processId, schedulerHint }) => {
+        assert.equal(processId, PROCESS)
+        assert.equal(schedulerHint, 'scheduler-123')
+        return { url: 'https://from.cache' }
+      },
       loadProcess: async (_id) => assert.fail('should not load process block if found in db'),
       logger
     })
 
     const res = await loadProcess({ id: PROCESS }).toPromise()
+    assert.deepStrictEqual(res.suUrl, 'https://from.cache')
     assert.deepStrictEqual(res.tags, tags)
     assert.deepStrictEqual(res.owner, 'woohoo')
     assert.deepStrictEqual(res.signature, 'sig-123')
@@ -142,7 +149,7 @@ describe('loadProcess', () => {
       findLatestEvaluation: async ({ processId, timestamp }) => {
         assert.fail('should not be called when exact match is found')
       },
-      locateProcess: async (id) => ({ url: 'https://foo.bar' }),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags,
@@ -186,7 +193,7 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (id) => ({ url: 'https://foo.bar' }),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags,
@@ -216,7 +223,7 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (id) => ({ url: 'https://foo.bar' }),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags,
@@ -244,7 +251,7 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (id) => ({ url: 'https://foo.bar' }),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
@@ -274,7 +281,7 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (id) => ({ url: 'https://foo.bar' }),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
@@ -304,7 +311,7 @@ describe('loadProcess', () => {
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
-      locateProcess: async (id) => ({ url: 'https://foo.bar' }),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
         tags: [
