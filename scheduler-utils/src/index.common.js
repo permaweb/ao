@@ -29,19 +29,22 @@ const DEFAULT_GATEWAY_URL = 'https://arweave.net'
  * @param {ConnectParams} [params]
  */
 export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL, followRedirects = false } = {}) {
-  const cache = InMemoryClient.createLruCache({ size: cacheSize })
+  const _cache = InMemoryClient.createLruCache({ size: cacheSize })
 
-  const getByOwner = InMemoryClient.getByOwnerWith({ cache })
-  const getByProcess = InMemoryClient.getByProcessWith({ cache })
-  const setByOwner = InMemoryClient.setByOwnerWith({ cache })
-  const setByProcess = InMemoryClient.setByProcessWith({ cache })
-
+  const loadScheduler = GatewayClient.loadSchedulerWith({ fetch, GATEWAY_URL })
+  const cache = {
+    getByProcess: InMemoryClient.getByProcessWith({ cache: _cache }),
+    getByOwner: InMemoryClient.getByOwnerWith({ cache: _cache }),
+    setByProcess: InMemoryClient.setByProcessWith({ cache: _cache }),
+    setByOwner: InMemoryClient.setByOwnerWith({ cache: _cache })
+  }
   /**
    * Locate the scheduler for the given process.
    */
   const locate = locateWith({
     loadProcessScheduler: GatewayClient.loadProcessSchedulerWith({ fetch, GATEWAY_URL }),
-    cache: { getByProcess, getByOwner, setByProcess, setByOwner },
+    loadScheduler,
+    cache,
     followRedirects,
     checkForRedirect: SchedulerClient.checkForRedirectWith({ fetch })
   })
@@ -49,19 +52,13 @@ export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL, f
   /**
    * Validate whether the given wallet address is an ao Scheduler
    */
-  const validate = validateWith({
-    loadScheduler: GatewayClient.loadSchedulerWith({ fetch, GATEWAY_URL }),
-    cache: { getByProcess, getByOwner, setByProcess, setByOwner }
-  })
+  const validate = validateWith({ loadScheduler, cache })
 
   /**
    * Return the `Scheduler-Location` record for the address
    * or undefined, if it cannot be found
    */
-  const raw = rawWith({
-    loadScheduler: GatewayClient.loadSchedulerWith({ fetch, GATEWAY_URL }),
-    cache: { getByProcess, getByOwner, setByProcess, setByOwner }
-  })
+  const raw = rawWith({ loadScheduler, cache })
 
   return { locate, validate, raw }
 }
