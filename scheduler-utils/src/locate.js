@@ -1,11 +1,16 @@
 export function locateWith ({ loadProcessScheduler, cache, followRedirects, checkForRedirect }) {
-  const cacheResults = async (process, scheduler, url) => {
-    const res = { url, address: scheduler.owner }
+  const cacheResults = async (process, scheduler, url, finalUrl) => {
+    const byProcess = { url: finalUrl, address: scheduler.owner }
     await Promise.all([
-      cache.setByProcess(process, res, scheduler.ttl),
+      cache.setByProcess(process, byProcess, scheduler.ttl),
+      /**
+       * The redirect may be process specific, so we do not want to cache that url
+       * for the owner, and instead cache the url obtained from the
+       * Scheduler-Location record
+       */
       cache.setByOwner(scheduler.owner, url, scheduler.ttl)
     ])
-    return res
+    return byProcess
   }
 
   /**
@@ -27,10 +32,8 @@ export function locateWith ({ loadProcessScheduler, cache, followRedirects, chec
          * to a router. So we go hit the router and cache the
          * redirected url for performance.
          */
-        if (followRedirects) {
-          finalUrl = await checkForRedirect(scheduler.url, process)
-        }
-        return cacheResults(process, scheduler, finalUrl)
+        if (followRedirects) finalUrl = await checkForRedirect(scheduler.url, process)
+        return cacheResults(process, scheduler, scheduler.url, finalUrl)
       })
     })
 }
