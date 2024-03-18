@@ -76,7 +76,10 @@ describe('locateWith', () => {
         },
         setByOwner: async (owner, url, ttl) => {
           assert.equal(owner, SCHEDULER)
-          assert.equal(url, DOMAIN_REDIRECT)
+          /**
+           * Original DOMAIN not the redirect
+           */
+          assert.equal(url, DOMAIN)
           assert.equal(ttl, TEN_MS)
         }
       },
