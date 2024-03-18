@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.15](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.14...scheduler-utils@v0.0.15) (2024-03-18)
+
+
+### Features
+
+* **scheduler-utils:** allow passing schedulerHint to locate [#543](https://github.com/permaweb/ao/issues/543) ([5b26a4d](https://github.com/permaweb/ao/commit/5b26a4d5b0cc98c7f758b619f017f5c0397cfd9e))
+
+
+### Bug Fixes
+
+* **scheduler-utils:** do not cache the redirected url in the byOwner cache ([5efd63c](https://github.com/permaweb/ao/commit/5efd63cfda5cc4c187206250b46abda96a7af331))
+
 ## [0.0.14](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.13...scheduler-utils@v0.0.14) (2024-03-12)
 
 ## [0.0.13](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.12...scheduler-utils@v0.0.13) (2024-03-11)
