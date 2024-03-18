@@ -50,6 +50,19 @@ import { locate } from "@permaweb/ao-scheduler-utils";
 let { url, address } = await locate('<process-id>');
 ```
 
+If you already know the `Scheduler` used by the process, you can provide it as a second parameter to `locate` as `schedulerHint`:
+
+```js
+import { locate } from "@permaweb/ao-scheduler-utils";
+
+let { url, address } = await locate('<process-id>', 'scheduler-owner-id');
+```
+
+This will skip querying the gateway for the process, in order to obtain it's `Scheduler` tag, and instead will directly query for the `Scheduler-Location` record.
+
+> This is useful when a process has just been spawned, so might not be indexed by the gateway yet.
+
+
 #### `validate`
 
 Check whether the wallet address is a valid `ao` Scheduler

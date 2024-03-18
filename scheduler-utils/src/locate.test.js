@@ -16,6 +16,7 @@ describe('locateWith', () => {
         assert.equal(process, PROCESS)
         return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
       },
+      loadScheduler: async () => assert.fail('should not load the scheduler if no hint'),
       cache: {
         getByProcess: async (process) => {
           assert.equal(process, PROCESS)
@@ -45,11 +46,15 @@ describe('locateWith', () => {
       loadProcessScheduler: async () => {
         assert.fail('should never call on chain if in cache')
       },
+      loadScheduler: async () => assert.fail('should not load the scheduler if no hint'),
       cache: {
         getByProcess: async (process) => {
           assert.equal(process, PROCESS)
           return { url: DOMAIN, address: SCHEDULER }
-        }
+        },
+        getByOwner: async () => assert.fail('should not check cache by owner if cached by process'),
+        setByProcess: async () => assert.fail('should not set cache by process if cached by process'),
+        setByOwner: async () => assert.fail('should not set cache by owner if cached by process')
       }
     })
 
@@ -63,6 +68,7 @@ describe('locateWith', () => {
         assert.equal(process, PROCESS)
         return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
       },
+      loadScheduler: async () => assert.fail('should not load the scheduler if no hint'),
       cache: {
         getByProcess: async (process) => {
           assert.equal(process, PROCESS)
@@ -92,6 +98,82 @@ describe('locateWith', () => {
     })
 
     await locate(PROCESS)
+      .then((res) => assert.deepStrictEqual(res, { url: DOMAIN_REDIRECT, address: SCHEDULER }))
+  })
+
+  test('should use the scheduler hint and skip querying for the process', async () => {
+    const locate = locateWith({
+      loadProcessScheduler: async () => assert.fail('should not load process if given a scheduler hint'),
+      loadScheduler: async (owner) => {
+        assert.equal(owner, SCHEDULER)
+        return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+      },
+      cache: {
+        getByProcess: async (process) => {
+          assert.equal(process, PROCESS)
+          return undefined
+        },
+        getByOwner: async (owner) => {
+          assert.equal(owner, SCHEDULER)
+          return undefined
+        },
+        setByProcess: async (process, { url, address }, ttl) => {
+          assert.equal(process, PROCESS)
+          assert.equal(url, DOMAIN_REDIRECT)
+          assert.equal(address, SCHEDULER)
+          assert.equal(ttl, TEN_MS)
+        },
+        setByOwner: async (owner, url, ttl) => {
+          assert.equal(owner, SCHEDULER)
+          /**
+           * Original DOMAIN not the redirect
+           */
+          assert.equal(url, DOMAIN)
+          assert.equal(ttl, TEN_MS)
+        }
+      },
+      followRedirects: true,
+      checkForRedirect: async (url, process) => {
+        assert.equal(process, PROCESS)
+        assert.equal(url, DOMAIN)
+        return DOMAIN_REDIRECT
+      }
+    })
+
+    await locate(PROCESS, SCHEDULER)
+      .then((res) => assert.deepStrictEqual(res, { url: DOMAIN_REDIRECT, address: SCHEDULER }))
+  })
+
+  test('should use the scheduler hint and use the cached owner', async () => {
+    const locate = locateWith({
+      loadProcessScheduler: async () => assert.fail('should not load process if given a scheduler hint'),
+      loadScheduler: async () => assert.fail('should not load the scheduler if cached'),
+      cache: {
+        getByProcess: async (process) => {
+          assert.equal(process, PROCESS)
+          return undefined
+        },
+        getByOwner: async (owner) => {
+          assert.equal(owner, SCHEDULER)
+          return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+        },
+        setByProcess: async (process, { url, address }, ttl) => {
+          assert.equal(process, PROCESS)
+          assert.equal(url, DOMAIN_REDIRECT)
+          assert.equal(address, SCHEDULER)
+          assert.equal(ttl, TEN_MS)
+        },
+        setByOwner: async () => assert.fail('should not cache by owner if cached')
+      },
+      followRedirects: true,
+      checkForRedirect: async (url, process) => {
+        assert.equal(process, PROCESS)
+        assert.equal(url, DOMAIN)
+        return DOMAIN_REDIRECT
+      }
+    })
+
+    await locate(PROCESS, SCHEDULER)
       .then((res) => assert.deepStrictEqual(res, { url: DOMAIN_REDIRECT, address: SCHEDULER }))
   })
 })

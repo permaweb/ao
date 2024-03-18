@@ -1,18 +1,4 @@
-export function locateWith ({ loadProcessScheduler, cache, followRedirects, checkForRedirect }) {
-  const cacheResults = async (process, scheduler, url, finalUrl) => {
-    const byProcess = { url: finalUrl, address: scheduler.owner }
-    await Promise.all([
-      cache.setByProcess(process, byProcess, scheduler.ttl),
-      /**
-       * The redirect may be process specific, so we do not want to cache that url
-       * for the owner, and instead cache the url obtained from the
-       * Scheduler-Location record
-       */
-      cache.setByOwner(scheduler.owner, url, scheduler.ttl)
-    ])
-    return byProcess
-  }
-
+export function locateWith ({ loadProcessScheduler, loadScheduler, cache, followRedirects, checkForRedirect }) {
   /**
    * Locate the scheduler for the given process.
    *
@@ -20,20 +6,46 @@ export function locateWith ({ loadProcessScheduler, cache, followRedirects, chec
    * of decentralized sequencers
    *
    * @param {string} process - the id of the process
+   * @param {string} [schedulerHint] - the id of owner of the scheduler, which prevents having to query the process
+   * from a gateway, and instead skips to querying Scheduler-Location
    * @returns {Promise<{ url: string, address: string }>} - an object whose url field is the Scheduler Location
    */
-  return (process) =>
-    cache.getByProcess(process).then(cached => {
-      if (cached) return cached
-      return loadProcessScheduler(process).then(async scheduler => {
-        let finalUrl = scheduler.url
-        /**
-         * If following redirects, then the initial request will be
-         * to a router. So we go hit the router and cache the
-         * redirected url for performance.
-         */
-        if (followRedirects) finalUrl = await checkForRedirect(scheduler.url, process)
-        return cacheResults(process, scheduler, scheduler.url, finalUrl)
+  return (process, schedulerHint) =>
+    cache.getByProcess(process)
+      .then(async (cached) => {
+        if (cached) return cached
+
+        return Promise.resolve()
+          .then(async () => {
+            /**
+             * The the scheduler hint was provided,
+             * so skip querying the process and instead
+             * query the Scheduler-Location record directly
+             */
+            if (schedulerHint) {
+              const byOwner = await cache.getByOwner(schedulerHint)
+              if (byOwner) return (byOwner)
+
+              return loadScheduler(schedulerHint).then((scheduler) => {
+                cache.setByOwner(scheduler.owner, scheduler.url, scheduler.ttl)
+                return scheduler
+              })
+            }
+
+            return loadProcessScheduler(process)
+          })
+          .then(async (scheduler) => {
+            let finalUrl = scheduler.url
+            /**
+             * If following redirects, then the initial request will be
+             * to a router. So we go hit the router and cache the
+             * redirected url for performance.
+             */
+            if (followRedirects) finalUrl = await checkForRedirect(scheduler.url, process)
+
+            const byProcess = { url: finalUrl, address: scheduler.owner }
+            await cache.setByProcess(process, byProcess, scheduler.ttl)
+            return byProcess
+          })
       })
-    })
 }
