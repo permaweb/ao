@@ -217,7 +217,7 @@ export function evaluateWith ({
    * return a function that will merge the next interaction output
    * with the previous.
    */
-  const mergeOutput = (prevMemory) => pipe(
+  const mergeOutput = (prevMemory, name, processId) => pipe(
     defaultTo({}),
     applySpec({
       /**
@@ -227,7 +227,33 @@ export function evaluateWith ({
       Memory: ifElse(
         pathOr(undefined, ['Error']),
         always(prevMemory),
-        propOr(prevMemory, 'Memory')
+        (res) => {
+          const output = cond([
+            [is(String), identity],
+            /**
+             * aos output is an object, whose data field contains output
+             */
+            [is(Object), pathOr('', ['data', 'output'])],
+            [T, always('')]
+          ])(res.Output || '')
+
+          /**
+           * detect module buffer allocation error present
+           * in older modules.
+           *
+           * If detected, log, and use the previous memory
+           */
+          if (output.endsWith('not enough memory for buffer allocation')) {
+            logger(
+              'WASM MEMORY ERROR: Detected buffer allocation error in Output for message "%s" sent to process "%s". Mapping to an error.',
+              name,
+              processId
+            )
+            return prevMemory
+          }
+
+          return propOr(prevMemory, 'Memory', res)
+        }
       ),
       Error: pathOr(undefined, ['Error']),
       Messages: pathOr([], ['Messages']),
@@ -294,7 +320,7 @@ export function evaluateWith ({
             (err) => Resolved(assocPath(['Error'], err, {})),
             Resolved
           )
-          .map(mergeOutput(Memory))
+          .map(mergeOutput(Memory, name, processId))
       )
       .toPromise()
 }
