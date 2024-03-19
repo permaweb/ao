@@ -4,7 +4,7 @@ import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { findProcessSchema, saveProcessSchema } from '../dal.js'
-import { findProcessWith, saveProcessWith } from './ao-process.js'
+import { findCheckpointFileBeforeWith, findProcessWith, saveProcessWith } from './ao-process.js'
 
 const logger = createLogger('ao-cu:ao-process')
 
@@ -148,6 +148,120 @@ describe('ao-process', () => {
           timestamp: now
         }
       })
+    })
+  })
+
+  describe('findCheckpointFileBeforeWith', () => {
+    test('should match all checkpoints for the process', async () => {
+      const now = new Date()
+      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+        DIR: '/foobar',
+        glob: async (str) => {
+          assert.equal(str, '/foobar/checkpoint-process-123*.json')
+          return [
+            `/foobar/checkpoint-process-123,${now},10.json`,
+            `/foobar/checkpoint-process-123,${now},11.json`
+          ]
+        }
+      })
+
+      await findCheckpointFileBefore({
+        processId: 'process-123',
+        timestamp: now,
+        ordinate: '12',
+        cron: undefined
+      })
+    })
+
+    test('should return the single checkpoint from a file', async () => {
+      const now = new Date()
+      const tenSecondsAgo = `${now.getTime() - 10000}`
+      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+        DIR: '/foobar',
+        glob: async () => [
+          `/foobar/checkpoint-process-123,${tenSecondsAgo},10.json`
+        ]
+      })
+
+      const res = await findCheckpointFileBefore({
+        processId: 'process-123',
+        timestamp: now,
+        ordinate: '12',
+        cron: undefined
+      })
+
+      assert.deepStrictEqual(res, {
+        file: `checkpoint-process-123,${tenSecondsAgo},10.json`,
+        processId: 'process-123',
+        timestamp: tenSecondsAgo,
+        ordinate: '10',
+        cron: undefined
+      })
+    })
+
+    test('should return the latest checkpoint from a file', async () => {
+      const now = new Date()
+      const tenSecondsAgo = `${now.getTime() - 10000}`
+      const nineSecondsAgo = tenSecondsAgo + 1000
+      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+        DIR: '/foobar',
+        glob: async (str) => [
+          `/foobar/checkpoint-process-123,${tenSecondsAgo},10.json`,
+          `/foobar/checkpoint-process-123,${nineSecondsAgo},11.json`
+        ]
+      })
+
+      const res = await findCheckpointFileBefore({
+        processId: 'process-123',
+        timestamp: now,
+        ordinate: '12',
+        cron: undefined
+      })
+
+      assert.deepStrictEqual(res, {
+        file: `checkpoint-process-123,${nineSecondsAgo},11.json`,
+        processId: 'process-123',
+        timestamp: nineSecondsAgo,
+        ordinate: '11',
+        cron: undefined
+      })
+    })
+
+    test('should return undefined if no checkpoint is earlier than target', async () => {
+      const now = new Date()
+      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+        DIR: '/foobar',
+        glob: async (str) => [
+          `/foobar/checkpoint-process-123,${now},10.json`,
+          `/foobar/checkpoint-process-123,${now},11.json`
+        ]
+      })
+
+      const res = await findCheckpointFileBefore({
+        processId: 'process-123',
+        timestamp: now,
+        ordinate: '12',
+        cron: undefined
+      })
+
+      assert.equal(res, undefined)
+    })
+
+    test('should return undefined if no checkpoints are present', async () => {
+      const now = new Date()
+      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+        DIR: '/foobar',
+        glob: async (str) => []
+      })
+
+      const res = await findCheckpointFileBefore({
+        processId: 'process-123',
+        timestamp: now,
+        ordinate: '12',
+        cron: undefined
+      })
+
+      assert.equal(res, undefined)
     })
   })
 
