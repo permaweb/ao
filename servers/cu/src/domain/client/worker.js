@@ -234,6 +234,7 @@ export function evaluateWith ({
              * aos output is an object, whose data field contains output
              */
             [is(Object), pathOr('', ['data', 'output'])],
+            [is(Number), String],
             [T, always('')]
           ])(res.Output || '')
 
@@ -243,7 +244,7 @@ export function evaluateWith ({
            *
            * If detected, log, and use the previous memory
            */
-          if (output.endsWith('not enough memory for buffer allocation')) {
+          if (typeof output === 'string' && output.endsWith('not enough memory for buffer allocation')) {
             logger(
               'WASM MEMORY ERROR: Detected buffer allocation error in Output for message "%s" sent to process "%s". Mapping to an error.',
               name,
