@@ -408,6 +408,7 @@ export function findProcessMemoryBeforeWith ({
   function downloadCheckpointFromArweave (checkpoint) {
     return loadTransactionData(checkpoint.id)
       .chain(fromPromise((res) => res.arrayBuffer()))
+      .map((arrayBuffer) => Buffer.from(arrayBuffer))
       /**
        * If the buffer is encoded, we need to decode it before continuing
        */
