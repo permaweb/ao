@@ -135,6 +135,11 @@ export function mapForwardedBy ({ tags, owner }) {
   return owner
 }
 
+export function isAssignment ({ tags }) {
+  const tag = findRawTag('Type', tags)
+  return tag && tag.value === 'Assignment'
+}
+
 /**
 * Parse tags into a object with key-value pairs of name -> values.
 *

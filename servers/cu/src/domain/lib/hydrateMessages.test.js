@@ -1,9 +1,9 @@
 /* eslint-disable no-throw-literal */
-import { describe, test } from 'node:test'
+import { describe, test, before } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { bytesToBase64, maybeAoLoadWith, maybeMessageIdWith } from './hydrateMessages.js'
+import { bytesToBase64, maybeAoAssignmentWith, maybeAoLoadWith, maybeMessageIdWith } from './hydrateMessages.js'
 
 const logger = createLogger('ao-cu:readState')
 
@@ -92,87 +92,113 @@ describe('hydrateMessages', () => {
   })
 
   describe('maybeAoLoadWith', () => {
-    test('should build the ao-load message', async () => {
-      const notAoLoad = {
-        message: {
-          Id: 'message-tx-345',
-          Signature: 'sig-345',
-          Owner: 'owner-345',
-          Tags: [
-            { name: 'Data-Protocol', value: 'ao' },
-            { name: 'Type', value: 'Message' },
-            { name: 'function', value: 'notify' }
-          ],
-          Data: 'foobar'
+    const notAoLoad = {
+      message: {
+        Id: 'message-tx-345',
+        Signature: 'sig-345',
+        Owner: 'owner-345',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          { name: 'function', value: 'notify' }
+        ],
+        Data: 'foobar'
+      }
+    }
+    const cronMessage = {
+      message: {
+        Id: 'message-tx-345',
+        Signature: 'sig-345',
+        Owner: 'owner-345',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          { name: 'function', value: 'notify' }
+        ],
+        Data: 'foobar',
+        Cron: true
+      }
+    }
+    const aoLoad = {
+      message: {
+        Id: 'message-tx-456',
+        Signature: 'sig-456',
+        Owner: 'owner-456',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          { name: 'function', value: 'notify' },
+          { name: 'Load', value: 'message-tx-123' }
+        ],
+        Data: 'overwritten'
+      },
+      block: { height: 99 }
+    }
+    const aoLoadAfterMaxBlock = {
+      message: {
+        Id: 'message-tx-999',
+        Signature: 'sig-999',
+        Owner: 'owner-999',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          { name: 'function', value: 'notify' },
+          { name: 'Load', value: 'message-tx-123' }
+        ],
+        Data: 'overwritten'
+      },
+      block: { height: 100 }
+    }
+
+    async function * messageStream () {
+      yield notAoLoad
+      yield aoLoad
+      yield aoLoadAfterMaxBlock
+      yield cronMessage
+    }
+
+    const maybeAoLoad = maybeAoLoadWith({
+      loadTransactionData: async (id) => {
+        assert.equal(id, 'message-tx-123')
+        return new Response('Hello World 🤖❌⚡️')
+      },
+      loadTransactionMeta: async (id) => {
+        assert.equal(id, 'message-tx-123')
+        return {
+          id: 'message-tx-123',
+          signature: 'sig-123',
+          anchor: 'anchor-123',
+          owner: {
+            address: 'owner-123'
+          },
+          tags: [
+            { name: 'foo', value: 'bar' }
+          ]
         }
-      }
-      const cronMessage = {
-        message: {
-          Id: 'message-tx-345',
-          Signature: 'sig-345',
-          Owner: 'owner-345',
-          Tags: [
-            { name: 'Data-Protocol', value: 'ao' },
-            { name: 'Type', value: 'Message' },
-            { name: 'function', value: 'notify' }
-          ],
-          Data: 'foobar',
-          Cron: true
-        }
-      }
-      const aoLoad = {
-        message: {
-          Id: 'message-tx-456',
-          Signature: 'sig-456',
-          Owner: 'owner-456',
-          Tags: [
-            { name: 'Data-Protocol', value: 'ao' },
-            { name: 'Type', value: 'Message' },
-            { name: 'function', value: 'notify' },
-            { name: 'Load', value: 'message-tx-123' }
-          ],
-          Data: 'overwritten'
-        }
-      }
+      },
+      AO_LOAD_MAX_BLOCK: 100,
+      logger
+    })
 
-      async function * messageStream () {
-        yield notAoLoad
-        yield aoLoad
-        yield cronMessage
-      }
-
-      const maybeAoLoad = maybeAoLoadWith({
-        loadTransactionData: async (id) => {
-          assert.equal(id, 'message-tx-123')
-          return new Response('Hello World 🤖❌⚡️')
-        },
-        loadTransactionMeta: async (id) => {
-          assert.equal(id, 'message-tx-123')
-          return {
-            id: 'message-tx-123',
-            signature: 'sig-123',
-            anchor: 'anchor-123',
-            owner: {
-              address: 'owner-123'
-            },
-            tags: [
-              { name: 'foo', value: 'bar' }
-            ]
-          }
-        },
-        logger
-      })
-
-      const hydrated = maybeAoLoad(messageStream())
-
-      const messages = []
+    const hydrated = maybeAoLoad(messageStream())
+    const messages = []
+    before(async () => {
       for await (const message of hydrated) messages.push(message)
+    })
 
+    test('should filter out load messages after AO_LOAD_MAX_BLOCK', () => {
       assert.equal(messages.length, 3)
+    })
+
+    test('should emit the messages in same order', () => {
       const [one, two, three] = messages
       assert.deepStrictEqual(one, notAoLoad)
+      assert.equal(two.message.Id, aoLoad.message.Id)
       assert.deepStrictEqual(three, cronMessage)
+    })
 
+    test('should overwrite the data', async () => {
+      const [, two] = messages
       assert.deepStrictEqual(two, {
         ...aoLoad,
         message: {
@@ -188,6 +214,136 @@ describe('hydrateMessages', () => {
             Anchor: 'anchor-123',
             Data: bytesToBase64(await new Response('Hello World 🤖❌⚡️').arrayBuffer())
           }
+        }
+      })
+    })
+  })
+
+  describe('maybeAoAssignmentWith', () => {
+    const notAssignment = {
+      message: {
+        Id: 'message-tx-345',
+        Signature: 'sig-345',
+        Owner: 'owner-345',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          { name: 'function', value: 'notify' }
+        ],
+        Data: 'foobar'
+      }
+    }
+    const aoAssignment = {
+      Nonce: 13,
+      message: {
+        Id: 'message-tx-456',
+        Signature: 'sig-456',
+        Owner: 'owner-456',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Assignment' },
+          { name: 'Message', value: 'message-tx-123' }
+        ],
+        Data: 'overwritten'
+      },
+      block: { height: 99 }
+    }
+
+    const aoAssignmentNoMessage = {
+      Nonce: 13,
+      message: {
+        Id: 'message-tx-456',
+        Signature: 'sig-456',
+        Owner: 'owner-456',
+        Tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Assignment' }
+        ],
+        Data: 'overwritten'
+      },
+      block: { height: 99 }
+    }
+
+    async function * messageStream () {
+      yield notAssignment
+      yield aoAssignment
+      yield aoAssignmentNoMessage
+      yield notAssignment
+    }
+
+    const maybeAoAssignment = maybeAoAssignmentWith({
+      loadTransactionData: async (id) => {
+        assert.equal(id, 'message-tx-123')
+        return new Response('Hello World 🤖❌⚡️')
+      },
+      loadTransactionMeta: async (id) => {
+        assert.equal(id, 'message-tx-123')
+        return {
+          id: 'message-tx-123',
+          signature: 'sig-123',
+          anchor: 'anchor-123',
+          owner: {
+            address: 'owner-123'
+          },
+          tags: [
+            { name: 'foo', value: 'bar' }
+          ]
+        }
+      }
+    })
+
+    const hydrated = maybeAoAssignment(messageStream())
+    const messages = []
+    before(async () => {
+      for await (const message of hydrated) messages.push(message)
+    })
+
+    test('should emit the messages in same order', () => {
+      const [one, two, three, four] = messages
+      assert.deepStrictEqual(one, notAssignment)
+      assert.equal(two.Nonce, aoAssignment.Nonce)
+      assert.deepStrictEqual(three, aoAssignmentNoMessage)
+      assert.deepStrictEqual(four, notAssignment)
+    })
+
+    test('should hydrate the message referenced by the Message tag', async () => {
+      const [, two] = messages
+      assert.deepStrictEqual(two, {
+        ...aoAssignment,
+        message: {
+          ...aoAssignment.message,
+          // original fields overwritten with constructed data item
+          Id: 'message-tx-123',
+          Signature: 'sig-123',
+          Owner: 'owner-123',
+          Tags: [
+            { name: 'foo', value: 'bar' }
+          ],
+          Anchor: 'anchor-123',
+          Data: await new Response('Hello World 🤖❌⚡️')
+            .arrayBuffer()
+            .then((ab) => Buffer.from(ab))
+        }
+      })
+    })
+
+    test('should passthrough the Assignment if no Message tag reference', async () => {
+      const [, two] = messages
+      assert.deepStrictEqual(two, {
+        ...aoAssignment,
+        message: {
+          ...aoAssignment.message,
+          // original fields overwritten with constructed data item
+          Id: 'message-tx-123',
+          Signature: 'sig-123',
+          Owner: 'owner-123',
+          Tags: [
+            { name: 'foo', value: 'bar' }
+          ],
+          Anchor: 'anchor-123',
+          Data: await new Response('Hello World 🤖❌⚡️')
+            .arrayBuffer()
+            .then((ab) => Buffer.from(ab))
         }
       })
     })

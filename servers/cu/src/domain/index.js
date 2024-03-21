@@ -201,6 +201,14 @@ export const createApis = async (ctx) => {
     locateProcess: locateDataloader.load.bind(locateDataloader),
     doesExceedModuleMaxMemory: WasmClient.doesExceedModuleMaxMemoryWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
     doesExceedModuleMaxCompute: WasmClient.doesExceedModuleMaxComputeWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
+    /**
+     * This is not configurable, as Load message support will be dictated by the protocol,
+     * which proposes Assignments as a more flexible and extensible solution that also includes
+     * Load Message use-cases
+     *
+     * But for now, supporting Load messages in perpetuity.
+     */
+    AO_LOAD_MAX_BLOCK: Number.MAX_SAFE_INTEGER,
     logger
   })
   /**
