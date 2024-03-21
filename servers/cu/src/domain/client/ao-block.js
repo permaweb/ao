@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { blockSchema } from '../model.js'
 import { BLOCKS_ASC_IDX } from './pouchdb.js'
+import { joinUrl } from '../utils.js'
 
 const blockDocSchema = z.object({
   _id: z.string().min(1),
@@ -86,6 +87,8 @@ export function findBlocksWith ({ pouchDb }) {
 export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
+  const GRAPHQL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+
   const GET_BLOCKS_QUERY = `
       query GetBlocks($min: Int!, $limit: Int!) {
         blocks(
@@ -126,7 +129,7 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
           return variables
         })
         .then((variables) =>
-          fetch(`${GATEWAY_URL}/graphql`, {
+          fetch(GRAPHQL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

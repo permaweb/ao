@@ -4,6 +4,8 @@ import { z } from 'zod'
 import Arweave from 'arweave'
 import WarpArBundles from 'warp-arbundles'
 
+import { joinUrl } from '../utils.js'
+
 const { createData, ArweaveSigner } = WarpArBundles
 
 /**
@@ -81,10 +83,12 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
     })
   })
 
+  const GRAPHQL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(`${GATEWAY_URL}/graphql`, {
+        fetch(GRAPHQL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -121,11 +125,10 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
    */
 export function loadTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
   // TODO: create a dataloader and use that to batch load processes
-
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(`${GATEWAY_URL}/raw/${id}`)
+        fetch(joinUrl({ url: GATEWAY_URL, path: `/raw/${id}` }))
           .then(async (res) => {
             if (res.ok) return res
             logger(
@@ -140,8 +143,10 @@ export function loadTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
 }
 
 export function queryGatewayWith ({ fetch, GATEWAY_URL, logger }) {
+  const GRAPHQL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+
   return async ({ query, variables }) => {
-    return fetch(`${GATEWAY_URL}/graphql`, {
+    return fetch(GRAPHQL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables })
