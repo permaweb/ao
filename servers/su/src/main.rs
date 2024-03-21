@@ -193,6 +193,7 @@ async fn main() -> io::Result<()> {
             )
             .wrap(Logger::default())
             .app_data(wrapped.clone())
+            .app_data(web::PayloadConfig::new(10485760))
             .route("/", web::get().to(base))
             .route("/", web::post().to(main_post_route)) 
             .route("/timestamp", web::get().to(timestamp_route))
