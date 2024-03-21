@@ -13,6 +13,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 
 import { createLogger } from '../logger.js'
+import { joinUrl } from '../utils.js'
 
 const pipelineP = promisify(pipeline)
 
@@ -64,7 +65,7 @@ function streamTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(`${GATEWAY_URL}/raw/${id}`)
+        fetch(joinUrl({ url: GATEWAY_URL, path: `/raw/${id}` }))
           .then(async (res) => {
             if (res.ok) return res
             logger(

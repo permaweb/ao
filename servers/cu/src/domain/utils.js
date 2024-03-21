@@ -1,9 +1,22 @@
+import { join as joinPath } from 'node:path/posix'
+
 import { Rejected, Resolved } from 'hyper-async'
 import {
   F, T, __, allPass, always, append, assoc, chain, concat, cond, defaultTo, equals,
   filter, has, head, ifElse, includes, is, join, map, pipe, propEq, propOr, reduce, reject
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
+
+export const joinUrl = ({ url, path }) => {
+  if (!path) return url
+  url = new URL(url)
+  /**
+   * posix will correctly join the paths
+   * in a url compatible way
+   */
+  url.pathname = joinPath(url.pathname, path)
+  return url.toString()
+}
 
 export const isNamed = has('name')
 
