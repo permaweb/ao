@@ -5,7 +5,7 @@ import { T, always, ascend, cond, equals, identity, ifElse, last, length, mergeR
 import { z } from 'zod'
 import ms from 'ms'
 
-import { messageSchema, streamSchema } from '../model.js'
+import { streamSchema } from '../model.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
@@ -618,7 +618,8 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
            * It will be the first message evaluated by the module
            */
           if (isColdStart) {
-            const processMessage = messageSchema.parse({
+            logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id)
+            yield {
               /**
                * Ensure the noSave flag is set, so evaluation does not persist
                * this process message
@@ -651,15 +652,13 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
                 Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags },
                 Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
               }
-            })
-            logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id, processMessage)
-            yield processMessage
+            }
           }
 
           /**
            * Emit the merged stream of Cron and Scheduled Messages
            */
-          for await (const message of $messages) yield messageSchema.parse(message)
+          for await (const message of $messages) yield message
         })
       )
     })

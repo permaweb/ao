@@ -6,7 +6,7 @@ import { z } from 'zod'
 import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
-import { streamSchema } from '../model.js'
+import { messageSchema, streamSchema } from '../model.js'
 import { findRawTag } from '../utils.js'
 
 const { createData } = WarpArBundles
@@ -21,6 +21,38 @@ const { createData } = WarpArBundles
 const ctxSchema = z.object({
   messages: streamSchema
 }).passthrough()
+
+function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
+  loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
+  loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
+
+  return async (id, encodeData) => Promise.all([
+    loadTransactionData(id)
+      .then(res => res.arrayBuffer())
+      .then((ab) => Buffer.from(ab)),
+    loadTransactionMeta(id)
+  ])
+  /**
+   * Construct the JSON representation of a DataItem using
+   * raw transaction data, and metadata about the
+   * transactions (in the shape of a GQL Gateway Transaction)
+   */
+    .then(async ([data, meta]) => ({
+      Id: meta.id,
+      Signature: meta.signature,
+      Owner: meta.owner.address,
+      From: meta.owner.address,
+      Tags: meta.tags,
+      Anchor: meta.anchor,
+      /**
+       * Encode the array buffer of the raw data as base64, if desired.
+       *
+       * TODO: should data always be a buffer, or should cu use Content-Type
+       * tag to parse data? ie. json, text, etc.
+       */
+      Data: encodeData ? bytesToBase64(data) : data
+    }))
+}
 
 /**
  * Converts an arraybuffer into base64, also handling
@@ -94,28 +126,12 @@ export function maybeMessageIdWith ({ logger }) {
   }
 }
 
-export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, logger }) {
-  loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
-  loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
-
-  /**
-   * Construct the JSON representation of a DataItem using
-   * raw transaction data, and metadata about the
-   * transactions (in the shape of a GQL Gateway Transaction)
-   */
-  function messageFromParts ({ data, meta }) {
-    return {
-      Id: meta.id,
-      Signature: meta.signature,
-      Owner: meta.owner.address,
-      Tags: meta.tags,
-      Anchor: meta.anchor,
-      /**
-       * Encode the array buffer of the raw data as base64
-       */
-      Data: bytesToBase64(data)
-    }
-  }
+/**
+ * @deprecated Load messages will be replaced by Assignments of on-chain messages.
+ * Keeping code here, to be deactivated at block AO_LOAD_MAX_BLOCK
+ */
+export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, AO_LOAD_MAX_BLOCK, logger }) {
+  const loadFromChain = loadFromChainWith({ loadTransactionData, loadTransactionMeta })
 
   return async function * maybeAoLoad (messages) {
     for await (const cur of messages) {
@@ -123,23 +139,48 @@ export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, log
       /**
        * Either a cron message or not an ao-load message, so no work is needed
        */
-      if (!tag || cur.message.Cron) {
-        yield cur
+      if (!tag || cur.message.Cron) { yield cur; continue }
+
+      /**
+       * TODO: should this use the actual current block height,
+       * or the block height at the time of scheduling (which is what is currently being checked)
+       */
+      if (cur.block.height >= AO_LOAD_MAX_BLOCK) {
+        logger(
+          'Load message "%s" scheduled after block %d. Removing message from eval stream and skipping...',
+          cur.message.name,
+          AO_LOAD_MAX_BLOCK
+        )
         continue
       }
-
-      // logger('Hydrating Load message for "%s" from transaction "%s"', cur.message.Id, tag.value)
       /**
-       * - Fetch raw data and meta from gateway
-       * - contruct the data item JSON, encoding the raw data as base64
-       * - set as 'data' on the ao-load message
+       * set as 'data' on the ao-load message
        */
-      cur.message.Data = await Promise.all([
-        loadTransactionData(tag.value).then(res => res.arrayBuffer()),
-        loadTransactionMeta(tag.value)
-      ]).then(([data, meta]) => messageFromParts({ data, meta }))
+      cur.message.Data = await loadFromChain(tag.value, true)
 
-      // logger('Hydrated Load message for "%s" from transaction "%s" and attached as data', cur.message.Id, tag.value)
+      yield cur
+    }
+  }
+}
+
+export function maybeAoAssignmentWith ({ loadTransactionData, loadTransactionMeta }) {
+  const loadFromChain = loadFromChainWith({ loadTransactionData, loadTransactionMeta })
+
+  return async function * maybeAoAssignment (messages) {
+    for await (const cur of messages) {
+      /**
+       * Not an Assignment so nothing to do
+       */
+      if (!cur.isAssignment) { yield cur; continue }
+
+      /**
+       * The values are loaded from chain and used to overwrite
+       * the specific fields on the message
+       *
+       * TODO: should Owner be overwritten? If so, what about From?
+       * currently, this will overwrite both, set to the owner of the message on-chain
+       */
+      cur.message = mergeRight(cur.message, await loadFromChain(cur.message.Id))
 
       yield cur
     }
@@ -166,6 +207,7 @@ export function hydrateMessagesWith (env) {
 
   const maybeMessageId = maybeMessageIdWith(env)
   const maybeAoLoad = maybeAoLoadWith(env)
+  const maybeAoAssignment = maybeAoAssignmentWith(env)
 
   return (ctx) => {
     return of(ctx)
@@ -188,7 +230,12 @@ export function hydrateMessagesWith (env) {
         return composeStreams(
           $messages,
           Transform.from(maybeMessageId),
-          Transform.from(maybeAoLoad)
+          Transform.from(maybeAoLoad),
+          Transform.from(maybeAoAssignment),
+          // Ensure every message emitted satisfies the schema
+          Transform.from(async function * (messages) {
+            for await (const cur of messages) yield messageSchema.parse(cur)
+          })
         )
       })
       .map(messages => ({ messages }))
