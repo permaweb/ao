@@ -21,6 +21,7 @@ const middlewareWith = middlewareWithByStrategy[config.strategy]
 pipe(
   (app) => app.use(cors()),
   (app) => app.use(express.static(config.DUMP_PATH)),
+  (app) => app.get('/healthcheck', (req, res) => res.status(200).send('OK')),
   middlewareWith({ ...config }),
   (app) => {
     const server = app.listen(config.port, () => {
