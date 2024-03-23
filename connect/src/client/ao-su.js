@@ -15,7 +15,7 @@ export const loadProcessMetaWith = ({ logger, fetch, cache = processMetaCache })
   return async ({ suUrl, processId }) => {
     if (cache.has(processId)) return cache.get(processId)
 
-    return fetch(`${suUrl}/processes/${processId}`, { method: 'GET' })
+    return fetch(`${suUrl}/processes/${processId}`, { method: 'GET', redirect: 'follow' })
       .then(async (res) => {
         if (res.ok) return res.json()
         logger('Error Encountered when fetching process meta from SU \'%s\' for process \'%s\'', suUrl, processId)

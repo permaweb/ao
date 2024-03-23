@@ -46,6 +46,7 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
                   'Content-Type': 'application/octet-stream',
                   Accept: 'application/json'
                 },
+                redirect: 'follow',
                 body: signedDataItem.raw
               }
             )
@@ -102,6 +103,7 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
                   'Content-Type': 'application/octet-stream',
                   Accept: 'application/json'
                 },
+                redirect: 'follow',
                 body: signedDataItem.raw
               }
             )
@@ -160,6 +162,7 @@ export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
                 'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
+              redirect: 'follow',
               body: signedDataItem.raw
             }
           )
@@ -220,6 +223,7 @@ export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
                 'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
+              redirect: 'follow',
               body: signedDataItem.raw
             }
           )

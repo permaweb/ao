@@ -26,8 +26,9 @@ describe('ao-su', () => {
     test('return the process meta from the su', async () => {
       const loadProcessMeta = loadProcessMetaSchema.implement(
         loadProcessMetaWith({
-          fetch: async (url) => {
+          fetch: async (url, options) => {
             assert.equal(url, `${SU_URL}/processes/${PROCESS_ID}`)
+            assert.deepStrictEqual(options, { method: 'GET', redirect: 'follow' })
             return new Response(JSON.stringify({ tags }))
           },
           cache: {
