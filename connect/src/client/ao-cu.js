@@ -35,6 +35,7 @@ export function dryrunFetchWith ({ fetch, CU_URL, logger }) {
       headers: {
         'Content-Type': 'application/json'
       },
+      redirect: 'follow',
       body: JSON.stringify(msg)
     }).then(res => res.json())))
     .toPromise()
@@ -61,7 +62,8 @@ export function loadResultWith ({ fetch, CU_URL, logger }) {
           method: 'GET',
           headers: {
             Accept: 'application/json'
-          }
+          },
+          redirect: 'follow'
         })
           .then(res => res.json())
       )).toPromise()
@@ -103,7 +105,8 @@ export function queryResultsWith ({ fetch, CU_URL, logger }) {
           method: 'GET',
           headers: {
             Accept: 'application/json'
-          }
+          },
+          redirect: 'follow'
         })
           .then(res => res.json())
       )).toPromise()

@@ -23,6 +23,7 @@ describe('ao-mu', () => {
                 'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
+              redirect: 'follow',
               body: 'raw-buffer'
             })
 
@@ -72,6 +73,7 @@ describe('ao-mu', () => {
                 'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
+              redirect: 'follow',
               body: 'raw-buffer'
             })
 
@@ -121,6 +123,7 @@ describe('ao-mu', () => {
                 'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
+              redirect: 'follow',
               body: 'raw-buffer'
             })
 
@@ -173,6 +176,7 @@ describe('ao-mu', () => {
                 'Content-Type': 'application/octet-stream',
                 Accept: 'application/json'
               },
+              redirect: 'follow',
               body: 'raw-buffer'
             })
 

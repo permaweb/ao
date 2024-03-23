@@ -20,6 +20,7 @@ describe('ao-cu', () => {
               headers: {
                 'Content-Type': 'application/json'
               },
+              redirect: 'follow',
               body: JSON.stringify({
                 Id: '1234',
                 Target: 'FOO_PROCESS',
@@ -72,7 +73,8 @@ describe('ao-cu', () => {
               method: 'GET',
               headers: {
                 Accept: 'application/json'
-              }
+              },
+              redirect: 'follow'
             })
 
             return new Response(JSON.stringify({
@@ -118,7 +120,8 @@ describe('ao-cu', () => {
               method: 'GET',
               headers: {
                 Accept: 'application/json'
-              }
+              },
+              redirect: 'follow'
             })
 
             return new Response(JSON.stringify({
