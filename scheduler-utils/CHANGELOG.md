@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.16](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.15...scheduler-utils@v0.0.16) (2024-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **scheduler-utils:** update README #551
+* **scheduler-utils:** accept GRAPHQL_URL instead of GATEWAY_URL #551
+
+* **scheduler-utils:** accept GRAPHQL_URL instead of GATEWAY_URL [#551](https://github.com/permaweb/ao/issues/551) ([dc5822b](https://github.com/permaweb/ao/commit/dc5822b7b53cdb95541efa1167de25adf9bcbc2b))
+* **scheduler-utils:** update README [#551](https://github.com/permaweb/ao/issues/551) ([b7d855b](https://github.com/permaweb/ao/commit/b7d855bd23baf830f59f44d09b4f1f78ec9351c9))
+
 ## [0.0.15](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.14...scheduler-utils@v0.0.15) (2024-03-18)
 
 
