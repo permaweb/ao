@@ -106,7 +106,7 @@ specify those coonfigurations by providing their values `connect`. You can curre
 import { connect } from "@permaweb/ao-scheduler-utils";
 
 const { validate, locate, raw } = connect({
-  GATEWAY_URL: "...",
+  GRAPHQL_URL: "...",
   cacheSize: 1000,
   followRedirects: true
 });
