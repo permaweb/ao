@@ -8,17 +8,17 @@ import { validateWith } from './validate.js'
 
 export * from './err.js'
 
-const DEFAULT_GATEWAY_URL = 'https://arweave.net'
+const DEFAULT_GRAPHQL_URL = 'https://arweave.net/graphql'
 
 /**
  * @typedef ConnectParams
  * @property {number} [cacheSize] - the size of the internal LRU cache
  * @property {boolean} [followRedirects] - whether to follow redirects and cache that url instead
- * @property {string} [GATEWAY_URL] - the url of the gateway to be used
+ * @property {string} [GRAPHQL_URL] - the url of the gateway to be used
  *
  * Build the apis using the provided configuration. You can currently specify
  *
- * - a GATEWAY_URL. Defaults to https://arweave.net
+ * - a GRAPHQL_URL. Defaults to https://arweave.net/graphql
  * - a cache size for the internal LRU cache. Defaults to 100
  * - whether or not to follow redirects when locating a scheduler. Defaults to false
  *
@@ -28,10 +28,10 @@ const DEFAULT_GATEWAY_URL = 'https://arweave.net'
  *
  * @param {ConnectParams} [params]
  */
-export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL, followRedirects = false } = {}) {
+export function connect ({ cacheSize = 100, GRAPHQL_URL = DEFAULT_GRAPHQL_URL, followRedirects = false } = {}) {
   const _cache = InMemoryClient.createLruCache({ size: cacheSize })
 
-  const loadScheduler = GatewayClient.loadSchedulerWith({ fetch, GATEWAY_URL })
+  const loadScheduler = GatewayClient.loadSchedulerWith({ fetch, GRAPHQL_URL })
   const cache = {
     getByProcess: InMemoryClient.getByProcessWith({ cache: _cache }),
     getByOwner: InMemoryClient.getByOwnerWith({ cache: _cache }),
@@ -42,7 +42,7 @@ export function connect ({ cacheSize = 100, GATEWAY_URL = DEFAULT_GATEWAY_URL, f
    * Locate the scheduler for the given process.
    */
   const locate = locateWith({
-    loadProcessScheduler: GatewayClient.loadProcessSchedulerWith({ fetch, GATEWAY_URL }),
+    loadProcessScheduler: GatewayClient.loadProcessSchedulerWith({ fetch, GRAPHQL_URL }),
     loadScheduler,
     cache,
     followRedirects,
