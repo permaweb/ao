@@ -22,9 +22,9 @@ const findTransactionTags = (err) => pipe(
   defaultTo([])
 )
 
-function gatewayWith ({ fetch, GATEWAY_URL }) {
+function gatewayWith ({ fetch, GRAPHQL_URL }) {
   return async ({ query, variables }) => {
-    return fetch(`${GATEWAY_URL}/graphql`, {
+    return fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables })
@@ -33,9 +33,9 @@ function gatewayWith ({ fetch, GATEWAY_URL }) {
   }
 }
 
-export function loadProcessSchedulerWith ({ fetch, GATEWAY_URL }) {
-  const gateway = gatewayWith({ fetch, GATEWAY_URL })
-  const loadScheduler = loadSchedulerWith({ fetch, GATEWAY_URL })
+export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL }) {
+  const gateway = gatewayWith({ fetch, GRAPHQL_URL })
+  const loadScheduler = loadSchedulerWith({ fetch, GRAPHQL_URL })
 
   const GET_TRANSACTIONS_QUERY = `
     query GetTransactions ($transactionIds: [ID!]!) {
@@ -55,7 +55,7 @@ export function loadProcessSchedulerWith ({ fetch, GATEWAY_URL }) {
   return async (process) => {
     return gateway({ query: GET_TRANSACTIONS_QUERY, variables: { transactionIds: [process] } })
       .then(path(['data', 'transactions', 'edges', '0', 'node']))
-      .then(findTransactionTags(`Process ${process} was not found on gateway ${GATEWAY_URL}`))
+      .then(findTransactionTags(`Process ${process} was not found on gateway`))
       .then(findTagValue(SCHEDULER_TAG))
       .then((walletAddress) => {
         if (!walletAddress) throw new SchedulerTagNotFoundError('No "Scheduler" tag found on process')
@@ -64,8 +64,8 @@ export function loadProcessSchedulerWith ({ fetch, GATEWAY_URL }) {
   }
 }
 
-export function loadSchedulerWith ({ fetch, GATEWAY_URL }) {
-  const gateway = gatewayWith({ fetch, GATEWAY_URL })
+export function loadSchedulerWith ({ fetch, GRAPHQL_URL }) {
+  const gateway = gatewayWith({ fetch, GRAPHQL_URL })
 
   const GET_SCHEDULER_LOCATION = `
     query GetSchedulerLocation ($owner: String!) {

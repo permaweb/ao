@@ -4,13 +4,13 @@ import * as assert from 'node:assert'
 import { InvalidSchedulerLocationError, SchedulerTagNotFoundError } from '../err.js'
 import { loadProcessSchedulerWith, loadSchedulerWith } from './gateway.js'
 
-const GATEWAY_URL = globalThis.GATEWAY_URL || 'https://arweave.net'
+const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 const SCHEDULER = 'gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w'
 const TWO_DAYS = 1000 * 60 * 60 * 48
 
 const mockFetch = async (url, options) => {
-  assert.equal(url, `${GATEWAY_URL}/graphql`)
+  assert.equal(url, GRAPHQL_URL)
   const body = JSON.parse(options.body)
   if (body.query.includes('GetTransactions')) return new Response(JSON.stringify(mockFetch.GetTransactions))
   if (body.query.includes('GetSchedulerLocation')) return new Response(JSON.stringify(mockFetch.GetSchedulerLocation))
@@ -62,7 +62,7 @@ describe('gateway', () => {
       }
 
       const loadProcessScheduler = loadProcessSchedulerWith({
-        GATEWAY_URL,
+        GRAPHQL_URL,
         fetch: mockFetch
       })
 
@@ -95,7 +95,7 @@ describe('gateway', () => {
       }
 
       const loadProcessScheduler = loadProcessSchedulerWith({
-        GATEWAY_URL,
+        GRAPHQL_URL,
         fetch: mockFetch
       })
 
@@ -130,7 +130,7 @@ describe('gateway', () => {
       }
 
       const loadScheduler = loadSchedulerWith({
-        GATEWAY_URL,
+        GRAPHQL_URL,
         fetch: mockFetch
       })
 
@@ -167,7 +167,7 @@ describe('gateway', () => {
       }
 
       const loadScheduler = loadSchedulerWith({
-        GATEWAY_URL,
+        GRAPHQL_URL,
         fetch: mockFetch
       })
 
@@ -203,7 +203,7 @@ describe('gateway', () => {
       }
 
       const loadScheduler = loadSchedulerWith({
-        GATEWAY_URL,
+        GRAPHQL_URL,
         fetch: mockFetch
       })
 

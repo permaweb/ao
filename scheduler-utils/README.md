@@ -96,7 +96,7 @@ The default size of the cache is `100`. If you'd like a smaller or larger cache,
 If you would like to use config other than the defaults, you can
 specify those coonfigurations by providing their values `connect`. You can currently specify
 
-- The `GATEWAY_URL`
+- The `GRAPHQL_URL`
 - The In-Memory `cacheSize`
 - Following Redirects `followRedirects`, a boolean that optimizes scheduler routing if `true`
 
