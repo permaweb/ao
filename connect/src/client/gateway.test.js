@@ -1,8 +1,11 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
+import { createLogger } from '../logger.js'
 import { loadTransactionMetaSchema } from '../dal.js'
 import { loadTransactionMetaWith } from './gateway.js'
+
+const logger = createLogger('ao-cu')
 
 const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
@@ -13,7 +16,8 @@ describe('gateway', () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
         loadTransactionMetaWith({
           fetch,
-          GRAPHQL_URL
+          GRAPHQL_URL,
+          logger
         })
       )
       const result = await loadTransactionMeta(PROCESS)
@@ -54,7 +58,8 @@ describe('gateway', () => {
             }
 
             return new Response(JSON.stringify({ byteLength: 214390 }))
-          }
+          },
+          logger
         }))
 
       await loadTransactionMeta(PROCESS)

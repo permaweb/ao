@@ -95,7 +95,7 @@ export function connect ({
    */
   const spawnLogger = logger.child('spawn')
   const spawn = spawnWith({
-    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL }),
+    loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GATEWAY_URL, logger: spawnLogger }),
     validateScheduler: validate,
     deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
     logger: spawnLogger
