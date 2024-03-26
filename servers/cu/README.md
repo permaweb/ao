@@ -40,8 +40,13 @@ Either command will start a server listening on `PORT` (`6363` by default).
 There are a few environment variables that you can set. Besides `WALLET`/`WALLET_FILE`, they
 each have a default:
 
-- `GATEWAY_URL`: The Arweave gateway for the CU to use fetch block metadata,
-  data on arweave, and Scheduler-Location data (defaults to `arweave.net`)
+- `GATEWAY_URL`: The url of the Arweave gateway to use. (Defaults to `https://arweave.net`)
+
+> `GATEWAY_URL` is solely used as a fallback for both `ARWEAVE_URL` and `GRAPHQL_URL`, if not provided (see below).
+
+- `ARWEAVE_URL`: The url for the Arweave http API server, to be used by the CU to fetch
+transaction data from Arweave, specifically ao `Modules`, and `Message` `Assignment`s. (Defaults to `GATEWAY_URL`)
+- `GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the CU. (Defaults to `${GATEWAY_URL}/graphql`)
 - `UPLOADER_URL`: The url of the uploader to use to upload Process `Checkpoints`
   to Arweave. (Defaults to `up.arweave.net`)
 - `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used by the CU, or a file to load it from

@@ -1,5 +1,3 @@
-import { join as joinPath } from 'node:path/posix'
-
 import { Rejected, Resolved } from 'hyper-async'
 import {
   F, T, __, allPass, always, append, assoc, chain, concat, cond, defaultTo, equals,
@@ -9,14 +7,35 @@ import { ZodError, ZodIssueCode } from 'zod'
 
 export const joinUrl = ({ url, path }) => {
   if (!path) return url
+  if (path.startsWith('/')) return joinUrl({ url, path: path.slice(1) })
+
   url = new URL(url)
-  /**
-   * posix will correctly join the paths
-   * in a url compatible way
-   */
-  url.pathname = joinPath(url.pathname, path)
+  url.pathname += path
   return url.toString()
 }
+
+/* eslint-disable no-throw-literal */
+/**
+ * If either ARWEAVE_URL or GRAPHQL_URL is not defined, then set them to their defaults
+ * using GATEWAY_URL, which will always have a value.
+ */
+export const preprocessUrls = (envConfig) => {
+  let { GATEWAY_URL, ARWEAVE_URL, GRAPHQL_URL, ...theRestOfTheConfig } = envConfig
+
+  if (ARWEAVE_URL && GRAPHQL_URL) return envConfig
+
+  if (!GATEWAY_URL) {
+    if (!ARWEAVE_URL && !GRAPHQL_URL) throw 'GATEWAY_URL is required, if either ARWEAVE_URL or GRAPHQL_URL is not provided'
+    if (!ARWEAVE_URL) throw 'GATEWAY_URL is required if ARWEAVE_URL is not provided'
+    if (!GRAPHQL_URL) throw 'GATEWAY_URL is required if GRAPHQL_URL is not provided'
+  }
+
+  if (!ARWEAVE_URL) ARWEAVE_URL = GATEWAY_URL
+  if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+
+  return { ARWEAVE_URL, GRAPHQL_URL, ...theRestOfTheConfig }
+}
+/* eslint-enable no-throw-literal */
 
 export const isNamed = has('name')
 

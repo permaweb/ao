@@ -20,12 +20,22 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_WASM_COMPUTE_MAX_LIMIT: positiveIntSchema,
   /**
-   * The gateway for the CU to use fetch block metadata, data on arweave,
-   * and Scheduler-Location data
+   * The url for the graphql server to be used by the CU
+   * to query for metadata from an Arweave Gateway
+   *
+   * ie. https://arweave.net/graphql
    */
-  GATEWAY_URL: z.string().url('GATEWAY_URL must be a a valid URL'),
+  GRAPHQL_URL: z.string().url('GRAPHQL_URL must be a valid URL'),
+  /**
+   * The url for the server that hosts the Arweave http API
+   *
+   * ie. https://arweave.net
+   */
+  ARWEAVE_URL: z.string().url('ARWEAVE_URL must be a valid URL'),
   /**
    * The url of the uploader to use to upload Process Checkpoints to Arweave
+   *
+   * ie. https://up.arweave.net
    */
   UPLOADER_URL: z.string().url('UPLOADER_URL must be a a valid URL'),
   /**

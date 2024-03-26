@@ -41,7 +41,7 @@ export function buildAndSignDataItemWith ({ WALLET, createDataItem = createData 
 /**
  * @typedef Env1
  * @property {fetch} fetch
- * @property {string} GATEWAY_URL
+ * @property {string} GRAPHQL_URL
  *
  * @callback LoadTransactionMeta
  * @param {string} id - the id of the process whose src is being loaded
@@ -50,7 +50,7 @@ export function buildAndSignDataItemWith ({ WALLET, createDataItem = createData 
  * @param {Env1} env
  * @returns {LoadTransactionMeta}
  */
-export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
+export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_PROCESSES_QUERY = `
@@ -83,12 +83,10 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
     })
   })
 
-  const GRAPHQL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
-
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(GRAPHQL, {
+        fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -98,11 +96,7 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
         })
           .then(async (res) => {
             if (res.ok) return res.json()
-            logger(
-              'Error Encountered when fetching transaction \'%s\' from gateway \'%s\'',
-              id,
-              GATEWAY_URL
-            )
+            logger('Error Encountered when fetching transaction \'%s\' from gateway', id)
             throw new Error(`${res.status}: ${await res.text()}`)
           })
           .then(transactionConnectionSchema.parse)
@@ -114,7 +108,7 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
 /**
    * @typedef Env2
    * @property {fetch} fetch
-   * @property {string} GATEWAY_URL
+   * @property {string} ARWEAVE_URL
    *
    * @callback LoadTransactionData
    * @param {string} id - the id of the process whose src is being loaded
@@ -123,30 +117,24 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL, logger }) {
    * @param {Env2} env
    * @returns {LoadTransactionData}
    */
-export function loadTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
+export function loadTransactionDataWith ({ fetch, ARWEAVE_URL, logger }) {
   // TODO: create a dataloader and use that to batch load processes
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(joinUrl({ url: GATEWAY_URL, path: `/raw/${id}` }))
+        fetch(joinUrl({ url: ARWEAVE_URL, path: `/raw/${id}` }))
           .then(async (res) => {
             if (res.ok) return res
-            logger(
-              'Error Encountered when fetching raw data for transaction \'%s\' from gateway \'%s\'',
-              id,
-              GATEWAY_URL
-            )
+            logger('Error Encountered when fetching raw data for transaction \'%s\'', id)
             throw new Error(`${res.status}: ${await res.text()}`)
           })
       ))
       .toPromise()
 }
 
-export function queryGatewayWith ({ fetch, GATEWAY_URL, logger }) {
-  const GRAPHQL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
-
+export function queryGatewayWith ({ fetch, GRAPHQL_URL, logger }) {
   return async ({ query, variables }) => {
-    return fetch(GRAPHQL, {
+    return fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables })

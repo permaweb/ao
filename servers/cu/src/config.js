@@ -2,10 +2,12 @@ import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import * as path from 'node:path'
 
+import { pipe } from 'ramda'
 import { z, ZodIssueCode } from 'zod'
 import ms from 'ms'
 
 import { domainConfigSchema, positiveIntSchema } from './domain/index.js'
+import { preprocessUrls } from './domain/utils.js'
 
 /**
  * Some frameworks will implicitly override NODE_ENV
@@ -33,45 +35,45 @@ const serverConfigSchema = domainConfigSchema.extend({
 })
 
 /**
+ * An Either would be nice here, but just throwing a literal
+ * get's us what we need, for now.
+ */
+/* eslint-disable no-throw-literal */
+
+/**
  * If the WALLET_FILE env var is defined, load the contents from the file.
  * Refuse to boot the app if both or none of WALLET and WALLET_FILE are defined.
  */
+export const preprocessWallet = (envConfig) => {
+  const { WALLET, WALLET_FILE, ...theRestOfTheConfig } = envConfig
+
+  // nothing to do here
+  if (!!WALLET && !WALLET_FILE) return envConfig
+
+  if (!WALLET && !WALLET_FILE) throw 'One of WALLET or WALLET_FILE is required'
+  if (!!WALLET && !!WALLET_FILE) throw 'Do not define both WALLET and WALLET_FILE'
+
+  const walletPath = path.resolve(WALLET_FILE)
+  if (!existsSync(walletPath)) throw `WALLET_FILE does not exist: ${walletPath}`
+
+  try {
+    const walletFromFile = readFileSync(walletPath, 'utf8')
+    return {
+      WALLET: walletFromFile,
+      ...theRestOfTheConfig
+    }
+  } catch (e) {
+    throw `An error occurred while reading WALLET_FILE from ${walletPath}\n${e}`
+  }
+}
+/* eslint-enable no-throw-literal */
+
 const preprocessedServerConfigSchema = z.preprocess(
   (envConfig, zodRefinementContext) => {
-    const { WALLET, WALLET_FILE, ...theRestOfTheConfig } = envConfig
-
-    const error = message => zodRefinementContext.addIssue({
-      code: ZodIssueCode.custom,
-      message
-    })
-
-    if (!!WALLET && !WALLET_FILE) {
-      // nothing to do here
-      return envConfig
-    }
-    if (!WALLET && !WALLET_FILE) {
-      error('One of WALLET or WALLET_FILE is required')
-      return
-    }
-    if (!!WALLET && !!WALLET_FILE) {
-      error('Do not define both WALLET and WALLET_FILE')
-      return
-    }
-
-    const walletPath = path.resolve(WALLET_FILE)
-    if (!existsSync(walletPath)) {
-      error(`WALLET_FILE does not exist: ${walletPath}`)
-      return
-    }
-
     try {
-      const walletFromFile = readFileSync(walletPath, 'utf8')
-      return {
-        WALLET: walletFromFile,
-        ...theRestOfTheConfig
-      }
-    } catch (e) {
-      error(`An error occurred while reading WALLET_FILE from ${walletPath}\n${e}`)
+      return pipe(preprocessWallet, preprocessUrls)(envConfig)
+    } catch (message) {
+      zodRefinementContext.addIssue({ code: ZodIssueCode.custom, message })
     }
   },
   serverConfigSchema
@@ -88,6 +90,8 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 6363,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    GRAPHQL_URL: process.env.GRAPHQL_URL,
+    ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_MODE: process.env.DB_MODE || 'embedded',
     DB_URL: process.env.DB_URL || 'ao-cache',
@@ -115,6 +119,8 @@ const CONFIG_ENVS = {
     MODE,
     port: process.env.PORT || 6363,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    GRAPHQL_URL: process.env.GRAPHQL_URL,
+    ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_MODE: process.env.DB_MODE || 'embedded',
     DB_URL: process.env.DB_URL || 'ao-cache',

@@ -8,7 +8,7 @@ import { createLogger } from '../logger.js'
 import { loadBlocksMetaSchema } from '../dal.js'
 import { loadBlocksMetaWith } from './ao-block.js'
 
-const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
+const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
 const logger = createLogger('ao-cu')
 
 describe('ao-block', () => {
@@ -19,7 +19,7 @@ describe('ao-block', () => {
     test('load the block data across multiple pages', async () => {
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch,
-        GATEWAY_URL,
+        GRAPHQL_URL,
         /**
          * Weird page size, so we know we are chopping off the excess
          * from the last page, correctly
