@@ -13,6 +13,7 @@ import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 import { resultsWith } from './lib/results/index.js'
 import { dryrunWith } from './lib/dryrun/index.js'
+import { joinUrl } from './lib/utils.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
@@ -22,6 +23,7 @@ const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
  * Build the sdk apis using the provided ao component urls. You can currently specify
  *
  * - a GATEWAY_URL
+ * - a GRAPHQL_URL (defaults to GATEWAY_URL/graphql)
  * - a Messenger Unit URL
  * - a Compute Unit URL
  *
@@ -44,27 +46,23 @@ const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
  *
  * @typedef Services
  * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
+ * @property {string} [GRAPHQL_URL] - the url of the desired Arweave Gateway GraphQL Server
  * @property {string} [MU_URL] - the url of the desried ao Messenger Unit.
  * @property {string} [CU_URL] - the url of the desried ao Compute Unit.
  *
  * @param {Services} [services]
  */
 export function connect ({
+  GRAPHQL_URL,
   GATEWAY_URL = DEFAULT_GATEWAY_URL,
   MU_URL = DEFAULT_MU_URL,
   CU_URL = DEFAULT_CU_URL
 } = {}) {
   const logger = createLogger()
 
-  /**
-   * See https://github.com/permaweb/ao/issues/534
-   * locating the scheduler is not done in aoconnect,
-   *
-   * but keeping here for posterity in case gateway stability
-   * improves and we can add it back
-   */
-  // eslint-disable-next-line no-unused-vars
-  const { locate, validate } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL })
+  if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+
+  const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL })
 
   const processMetaCache = SuClient.createProcessMetaCache({ MAX_SIZE: 25 })
 

@@ -4,6 +4,19 @@ import {
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
+export const joinUrl = ({ url, path }) => {
+  if (!path) return url
+  if (path.startsWith('/')) return joinUrl({ url, path: path.slice(1) })
+
+  url = new URL(url)
+  /**
+   * posix will correctly join the paths
+   * in a url compatible way
+   */
+  url.pathname += path
+  return url.toString()
+}
+
 /**
 * Parse tags into a object with key-value pairs of name -> values.
 *
