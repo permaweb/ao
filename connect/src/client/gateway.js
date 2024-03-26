@@ -14,7 +14,7 @@ import { z } from 'zod'
  * @param {Env1} env
  * @returns {LoadTransactionMeta}
  */
-export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL }) {
+export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_TRANSACTIONS_QUERY = `
@@ -60,7 +60,11 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL }) {
             variables: { transactionIds: [id] }
           })
         })
-          .then((res) => res.json())
+          .then(async (res) => {
+            if (res.ok) return res.json()
+            logger('Error Encountered when querying gateway for transaction "%s"', id)
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
           .then(transactionConnectionSchema.parse)
           .then(path(['data', 'transactions', 'edges', '0', 'node']))
       ))
