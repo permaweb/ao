@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.50](https://github.com/permaweb/ao/compare/connect@v0.0.49...connect@v0.0.50) (2024-03-26)
+
+
+### Features
+
+* **connect:** support passing full GRAPHQL_URL and use latest version of scheduler-utils [#551](https://github.com/permaweb/ao/issues/551) ([43b6462](https://github.com/permaweb/ao/commit/43b6462b4f0bfd9965d00d3dd403f50af801b039))
+
 ## [0.0.49](https://github.com/permaweb/ao/compare/connect@v0.0.48...connect@v0.0.49) (2024-03-25)
 
 ## [0.0.48](https://github.com/permaweb/ao/compare/connect@v0.0.47...connect@v0.0.48) (2024-03-12)
