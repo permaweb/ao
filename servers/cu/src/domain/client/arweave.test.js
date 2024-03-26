@@ -4,7 +4,8 @@ import * as assert from 'node:assert'
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { loadTransactionDataWith, loadTransactionMetaWith } from './arweave.js'
 
-const GATEWAY_URL = globalThis.GATEWAY || 'https://arweave.net'
+const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
+const ARWEAVE_URL = globalThis.ARWEAVE_URL || 'https://arweave.net'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 
 describe('arweave', () => {
@@ -13,7 +14,7 @@ describe('arweave', () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
         loadTransactionMetaWith({
           fetch,
-          GATEWAY_URL
+          GRAPHQL_URL
         })
       )
       const result = await loadTransactionMeta(PROCESS)
@@ -23,9 +24,9 @@ describe('arweave', () => {
     test('pass the correct variables', async () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
         loadTransactionMetaWith({
-          GATEWAY_URL,
+          GRAPHQL_URL,
           fetch: async (url, options) => {
-            assert.equal(url, `${GATEWAY_URL}/graphql`)
+            assert.equal(url, GRAPHQL_URL)
             const body = JSON.parse(options.body)
             assert.deepStrictEqual(body.variables, { processIds: [PROCESS] })
 
@@ -81,10 +82,10 @@ describe('arweave', () => {
       const loadTransactionData = loadTransactionDataSchema.implement(
         loadTransactionDataWith({
           fetch: (url, options) => {
-            assert.equal(url, `${GATEWAY_URL}/raw/${PROCESS}`)
+            assert.equal(url, `${ARWEAVE_URL}/raw/${PROCESS}`)
             return fetch(url, options)
           },
-          GATEWAY_URL
+          ARWEAVE_URL
         })
       )
       const result = await loadTransactionData(PROCESS)
@@ -98,10 +99,10 @@ describe('arweave', () => {
       const loadTransactionData = loadTransactionDataSchema.implement(
         loadTransactionDataWith({
           fetch: (url, options) => {
-            assert.equal(url, `${GATEWAY_URL}/raw/${PROCESS}?foo=bar`)
+            assert.equal(url, `${ARWEAVE_URL}/raw/${PROCESS}?foo=bar`)
             return fetch(url, options)
           },
-          GATEWAY_URL: `${GATEWAY_URL}?foo=bar`
+          ARWEAVE_URL: `${ARWEAVE_URL}?foo=bar`
         })
       )
       const result = await loadTransactionData(PROCESS)

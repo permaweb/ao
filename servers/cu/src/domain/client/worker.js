@@ -61,18 +61,14 @@ function writeWasmFileWith ({ DIR, logger }) {
  * #######################
  */
 
-function streamTransactionDataWith ({ fetch, GATEWAY_URL, logger }) {
+function streamTransactionDataWith ({ fetch, ARWEAVE_URL, logger }) {
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(joinUrl({ url: GATEWAY_URL, path: `/raw/${id}` }))
+        fetch(joinUrl({ url: ARWEAVE_URL, path: `/raw/${id}` }))
           .then(async (res) => {
             if (res.ok) return res
-            logger(
-              'Error Encountered when fetching raw data for transaction \'%s\' from gateway \'%s\'',
-              id,
-              GATEWAY_URL
-            )
+            logger('Error Encountered when fetching raw data for transaction \'%s\' from gateway \'%s\'', id)
             throw new Error(`${res.status}: ${await res.text()}`)
           })
       ))
@@ -338,7 +334,7 @@ if (!process.env.NO_WORKER) {
       wasmInstanceCache: createWasmInstanceCache({ MAX_SIZE: workerData.WASM_INSTANCE_CACHE_MAX_SIZE }),
       readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
       writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
-      streamTransactionData: streamTransactionDataWith({ fetch, GATEWAY_URL: workerData.GATEWAY_URL, logger }),
+      streamTransactionData: streamTransactionDataWith({ fetch, ARWEAVE_URL: workerData.ARWEAVE_URL, logger }),
       bootstrapWasmInstance: (wasmModule, gasLimit, memoryLimit) => AoLoader(
         (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
         gasLimit,

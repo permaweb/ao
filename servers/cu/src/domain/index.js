@@ -37,7 +37,7 @@ export const createApis = async (ctx) => {
 
   const { locate } = schedulerUtilsConnect({
     cacheSize: 100,
-    GATEWAY_URL: ctx.GATEWAY_URL,
+    GRAPHQL_URL: ctx.GRAPHQL_URL,
     followRedirects: true
   })
   const locateDataloader = new Dataloader(async (params) => {
@@ -75,7 +75,7 @@ export const createApis = async (ctx) => {
             WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
             WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
             WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
-            GATEWAY_URL: ctx.GATEWAY_URL,
+            ARWEAVE_URL: ctx.ARWEAVE_URL,
             id: workerId
           }
         }
@@ -103,7 +103,7 @@ export const createApis = async (ctx) => {
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
-    queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger: ctx.logger }),
+    queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: ctx.logger }),
     hashWasmMemory: WasmClient.hashWasmMemory,
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
@@ -154,12 +154,12 @@ export const createApis = async (ctx) => {
   })
 
   const sharedDeps = (logger) => ({
-    loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
-    loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+    loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
+    loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
     findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
     findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
       cache: wasmMemoryCache,
-      loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
         glob: fastGlob
@@ -169,7 +169,7 @@ export const createApis = async (ctx) => {
         readFile
       }),
       address,
-      queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, logger }),
+      queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
       logger
     }),
@@ -184,7 +184,7 @@ export const createApis = async (ctx) => {
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ pouchDb, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ pouchDb, logger }),
-    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GATEWAY_URL: ctx.GATEWAY_URL, pageSize: 90, logger }),
+    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, pageSize: 90, logger }),
     findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
     saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({

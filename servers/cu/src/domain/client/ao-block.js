@@ -4,7 +4,6 @@ import { z } from 'zod'
 
 import { blockSchema } from '../model.js'
 import { BLOCKS_ASC_IDX } from './pouchdb.js'
-import { joinUrl } from '../utils.js'
 
 const blockDocSchema = z.object({
   _id: z.string().min(1),
@@ -74,7 +73,7 @@ export function findBlocksWith ({ pouchDb }) {
 /**
  * @typedef Env2
  * @property {fetch} fetch
- * @property {string} GATEWAY_URL
+ * @property {string} GRAPHQL_URL
  * @property {number} pageSize
  *
  * @callback LoadBlocksMeta
@@ -84,11 +83,8 @@ export function findBlocksWith ({ pouchDb }) {
  * @param {Env1} env
  * @returns {LoadBlocksMeta}
  */
-export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
+export function loadBlocksMetaWith ({ fetch, GRAPHQL_URL, pageSize, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
-
-  const GRAPHQL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
-
   const GET_BLOCKS_QUERY = `
       query GetBlocks($min: Int!, $limit: Int!) {
         blocks(
@@ -129,7 +125,7 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
           return variables
         })
         .then((variables) =>
-          fetch(GRAPHQL, {
+          fetch(GRAPHQL_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -141,8 +137,7 @@ export function loadBlocksMetaWith ({ fetch, GATEWAY_URL, pageSize, logger }) {
         .then(async (res) => {
           if (res.ok) return res.json()
           logger(
-            'Error Encountered when fetching page of block metadata from gateway \'%s\' with minBlock \'%s\' and maxTimestamp \'%s\'',
-            GATEWAY_URL,
+            'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
             newMin,
             maxTimestamp
           )
