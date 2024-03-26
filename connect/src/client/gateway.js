@@ -5,7 +5,7 @@ import { z } from 'zod'
 /**
  * @typedef Env1
  * @property {fetch} fetch
- * @property {string} GATEWAY_URL
+ * @property {string} GRAPHQL_URL
  *
  * @callback LoadTransactionMeta
  * @param {string} id - the id of the contract whose src is being loaded
@@ -14,7 +14,7 @@ import { z } from 'zod'
  * @param {Env1} env
  * @returns {LoadTransactionMeta}
  */
-export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
+export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_TRANSACTIONS_QUERY = `
@@ -52,7 +52,7 @@ export function loadTransactionMetaWith ({ fetch, GATEWAY_URL }) {
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(`${GATEWAY_URL}/graphql`, {
+        fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
