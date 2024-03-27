@@ -1,5 +1,5 @@
-
+use cu::run;
 
 fn main() {
-    println!("Hello, world!");
+    run();
 }

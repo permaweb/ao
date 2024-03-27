@@ -2,65 +2,45 @@ use std::sync::{Arc, RwLock};
 use std::io;
 use std::result;
 use std::collections::HashMap;
-use wasmtime::{Engine, Linker, Module, Store, Error};
-use wasi_common::pipe::WritePipe;
-use wasi_common::sync::WasiCtxBuilder;
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use actix_web::web::{Query, Path};
+use wasmedge_sdk::Module;
+use wasmedge_sdk::{config::{ConfigBuilder, CommonConfigOptions, HostRegistrationConfigOptions}, params, NeverType, VmBuilder, Vm};
+use wasmedge_sdk_bindgen::*;
 
-fn invoke_wasm_module(module_name: String, params: HashMap<String, String>) -> result::Result<String, Error> {
-    let engine = Engine::default();
+fn do_work() -> Result<(), Box<dyn std::error::Error>> {
+    let common_options = CommonConfigOptions::default()
+        .bulk_memory_operations(true)
+        .multi_value(true)
+        .mutable_globals(true)
+        .non_trap_conversions(true)
+        .reference_types(true)
+        .sign_extension_operators(true)
+        .simd(true);
+    let host_options = HostRegistrationConfigOptions::default()
+        .wasi(true);
+    let config = ConfigBuilder::new(common_options)
+        .with_host_registration_config(host_options)
+        .build()
+        .unwrap();
 
-    let mut linker = Linker::new(&engine);
-    let linker_result = wasi_common::sync::add_to_linker(&mut linker, |s| s);
-    if let Err(e) = linker_result {
-        return Err(e);
+    let vm = VmBuilder::new().with_config(config).build()?;
+    let module = Module::from_file(None, "wasm/client_lib.wasm").unwrap();
+    let vm = vm.register_module(None, module).unwrap();
+    let mut bg = Bindgen::new(vm);
+
+    match bg.run_wasm("greet", params!()) {
+        Ok(res) => println!("{}", res.unwrap().pop().unwrap().downcast::<String>().unwrap()),
+        Err(e) => println!("{:?}", e)
     };
 
-    let stdout_buf: Vec<u8> = vec![];
-    let stdout_mutex = Arc::new(RwLock::new(stdout_buf));
-    let stdout = WritePipe::from_shared(stdout_mutex.clone());
-
-    let envs: Vec<(String, String)> = params.iter().map(|(key, value)| {
-        (key.clone(), value.clone())
-    }).collect();
-
-    let wasi_context = WasiCtxBuilder::new()
-        .stdout(Box::new(stdout))
-        .envs(&envs)?
-        .build();
-    let mut store = Store::new(&engine, wasi_context);
-
-    println!("Begin get wasm file");
-    let module = Module::from_file(&engine, &module_name)?;
-    println!("Did set wasm file");
-    linker.module(&mut store, &module_name, &module)?;
-
-    let instance = linker.instantiate(&mut store, &module)?;
-    let instance_main_result = instance.get_typed_func::<(), ()>(&mut store, "greet");
-    println!("found greet");
-    if let Err(e) = instance_main_result {
-        return Err(e);
-    }
-    let instance_main = instance_main_result.unwrap();
-    instance_main.call(&mut store, ())?;
-    println!("function called");
-
-    let mut buffer: Vec<u8> = Vec::new();
-    stdout_mutex.read().unwrap().iter().for_each(|i| {
-        buffer.push(*i)
-    });
-
-    let s = String::from_utf8(buffer)?;
-    println!("returned value {}", s.clone());
-    Ok(s)
+    Ok(())
 }
 
 #[get("/{module_name}")]
-async fn handler(module_name: Path<String>, query: Query<HashMap<String, String>>) -> impl Responder {
-    let wasm_module = format!("{}{}", module_name, ".wasm");
-    let val_result = invoke_wasm_module(wasm_module, query.into_inner()).expect("wasm invocation error");
-    HttpResponse::Ok().body(val_result)
+async fn handler(_module_name: Path<String>, _query: Query<HashMap<String, String>>) -> impl Responder {
+    _ = do_work();
+    return "";
 }
 
 #[actix_web::main]

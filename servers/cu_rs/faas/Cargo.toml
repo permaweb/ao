@@ -8,6 +8,5 @@ edition = "2021"
 [dependencies]
 actix-web = "4.5.1"
 anyhow = "1.0.81"
-wasmtime = "19.0.0"
-wasmtime-wasi = "19.0.0"
-wasi-common = "19.0.0"
+wasmedge-sdk = "0.13.2"
+wasmedge-sdk-bindgen = { path = "../rust-sdk/" }

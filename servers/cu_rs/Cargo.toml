@@ -1,2 +1,3 @@
 [workspace]
-members = ["cu", "client-lib", "faas", "sudoku-wasm"]
+members = ["cu", "client-lib", "faas"]
+resolver = "2"

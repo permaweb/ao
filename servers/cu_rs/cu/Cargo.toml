@@ -37,3 +37,4 @@ serde_repr = "0.1.18"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-stream = "0.1.15"
 uuid = { version = "1.8.0", features = ["v4", "serde"] }
+wasmedge-sdk = "0.13.2"
