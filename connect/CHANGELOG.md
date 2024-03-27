@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.51](https://github.com/permaweb/ao/compare/connect@v0.0.50...connect@v0.0.51) (2024-03-27)
+
+
+### Bug Fixes
+
+* **connect:** pass GRAPHQL_URL to GatewayClient ([e8c0f2c](https://github.com/permaweb/ao/commit/e8c0f2c58ba6a7adee6b5c674fb4c045f78169e9))
+
 ## [0.0.50](https://github.com/permaweb/ao/compare/connect@v0.0.49...connect@v0.0.50) (2024-03-26)
 
 
