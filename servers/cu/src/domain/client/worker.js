@@ -255,6 +255,7 @@ export function evaluateWith ({
       ),
       Error: pathOr(undefined, ['Error']),
       Messages: pathOr([], ['Messages']),
+      Assignments: pathOr([], ['Assignments']),
       Spawns: pathOr([], ['Spawns']),
       Output: pipe(
         pathOr('', ['Output']),
