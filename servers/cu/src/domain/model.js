@@ -196,6 +196,10 @@ export const messageSchema = z.object({
    * A canonical name that can used for logging purposes
    */
   name: z.string(),
+  /**
+   * Whether the message is a pure assignment of an on-chain message
+   */
+  isAssignment: z.boolean().default(false),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id
