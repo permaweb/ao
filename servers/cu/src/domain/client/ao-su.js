@@ -1,9 +1,158 @@
 /* eslint-disable camelcase */
 import { Transform, compose as composeStreams } from 'node:stream'
 import { of } from 'hyper-async'
-import { always, applySpec, filter, isNotNil, last, path, pathOr, pipe, prop } from 'ramda'
+import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 
-import { mapForwardedBy, mapFrom } from '../utils.js'
+import { mapForwardedBy, mapFrom, parseTags } from '../utils.js'
+
+const legacyNodeMap = applySpec({
+  cron: always(undefined),
+  /**
+   * Set the ordinate to the message's nonce value
+   */
+  ordinate: path(['nonce']),
+  name: (node) => `Scheduled Message ${node.message.id} ${node.timestamp}:${node.nonce}`,
+  message: applySpec({
+    Id: path(['message', 'id']),
+    Signature: path(['message', 'signature']),
+    /**
+     * SU currently has this outside of message, but we will place it inside message
+     * as that seems more kosher (since its part of the message)
+     */
+    Data: pathOr(undefined, ['data']),
+    Owner: path(['owner', 'address']),
+    Target: path(['process_id']),
+    Anchor: path(['message', 'anchor']),
+    From: (node) => mapFrom({ tags: node.message.tags, owner: node.owner.address }),
+    'Forwarded-By': (node) => mapForwardedBy({ tags: node.message.tags, owner: node.owner.address }),
+    Tags: pathOr([], ['message', 'tags']),
+    Epoch: path(['epoch']),
+    Nonce: path(['nonce']),
+    Timestamp: path(['timestamp']),
+    'Block-Height': pipe(
+      /**
+       * Returns a left padded integer like '000001331218'
+       *
+       * So use parseInt to convert it into a number
+       */
+      path(['block']),
+      (str) => parseInt(`${str}`)
+    ),
+    'Hash-Chain': path(['hash_chain']),
+    Cron: always(false)
+  }),
+  /**
+   * We need the block metadata per message,
+   * so that we can calculate cron messages
+   *
+   * Separating them here, makes it easier to access later
+   * down the pipeline
+   */
+  block: applySpec({
+    height: pipe(
+      path(['block']),
+      (block) => parseInt(block)
+    ),
+    timestamp: path(['timestamp'])
+  })
+})
+
+/**
+ * See new shape in https://github.com/permaweb/ao/issues/563#issuecomment-2020597581
+ */
+const nodeMap = pipe(
+  juxt([
+    // fromAssignment
+    pipe(
+      path(['assignment']),
+      (assignment) => parseTags(assignment.tags),
+      applySpec({
+        Message: path(['Message']),
+        Target: path(['Process']),
+        Epoch: pipe(path(['Epoch']), parseInt),
+        Nonce: pipe(path(['Nonce']), parseInt),
+        Timestamp: pipe(path(['Timestamp']), parseInt),
+        'Block-Height': pipe(
+          /**
+           * Returns a left padded integer like '000001331218'
+           *
+           * So use parseInt to convert it into a number
+           */
+          path(['Block-Height']),
+          parseInt
+        ),
+        'Hash-Chain': path(['Hash-Chain'])
+      })
+    ),
+    // fromMessage
+    pipe(
+      path(['message']),
+      ifElse(
+        isNil,
+        /**
+         * No message, meaning this is an Assignment for an existing message
+         * on chain, to be hydrated later (see hydrateMessages)
+         */
+        always(undefined),
+        applySpec({
+          Id: path(['id']),
+          Signature: path(['signature']),
+          Data: path(['data']),
+          Owner: path(['owner', 'address']),
+          Anchor: path(['anchor']),
+          From: (message) => mapFrom({ tags: message.tags, owner: message.owner.address }),
+          'Forwarded-By': (message) => mapForwardedBy({ tags: message.tags, owner: message.owner.address }),
+          Tags: pathOr([], ['tags'])
+        })
+      )
+    ),
+    // static
+    always({ Cron: false })
+  ]),
+  // Combine into the desired shape
+  ([fAssignment, fMessage = {}, fStatic]) => ({
+    cron: undefined,
+    ordinate: fAssignment.Nonce,
+    name: `Scheduled Message ${fMessage.Id || fAssignment.Message} ${fAssignment.Timestamp}:${fAssignment.Nonce}`,
+    isAssignment: !fMessage.Id,
+    message: mergeAll([
+      fMessage,
+      fAssignment,
+      /**
+       * Ensure Id is always set, regardless if this is a message
+       * or just an Assignment for an existing message on-chain
+       */
+      { Id: fMessage.Id || fAssignment.Message },
+      fStatic
+    ]),
+    /**
+     * We need the block metadata per message,
+     * so that we can calculate cron messages
+     *
+     * Separating them here, makes it easier to access later
+     * down the pipeline
+     */
+    block: {
+      height: fAssignment['Block-Height'],
+      timestamp: fAssignment.Timestamp
+    }
+  })
+)
+
+export const mapNode = ifElse(
+  /**
+   * The new shape returned from the SU will have { assignment, message }
+   * where as the old shape only has { message }
+   *
+   * So we check whether the node has an assignment field, and use the new mapper
+   * in that case, falling back to the legacy shape. This allows for seamlessly using the
+   * new mapper, whenever the new shape is live on the SUs. In other words, both shapes
+   * can be live, simoultaneously.
+   */
+  has('assignment'),
+  nodeMap,
+  legacyNodeMap
+)
 
 export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
@@ -80,19 +229,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     }
   }
 
-  function mapNodeFrom (node) {
-    return mapFrom({ tags: node.message.tags, owner: node.owner.address })
-  }
-
-  function mapNodeForwardedBy (node) {
-    return mapForwardedBy({ tags: node.message.tags, owner: node.owner.address })
-  }
-
-  function mapName (node) {
-    return `Scheduled Message ${node.message.id} ${node.timestamp}:${node.nonce}`
-  }
-
   function mapAoMessage ({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }) {
+    const AoGlobal = {
+      Process: { Id: processId, Owner: processOwner, Tags: processTags },
+      Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
+    }
+
     return async function * (edges) {
       for await (const edge of edges) {
         yield pipe(
@@ -101,61 +243,11 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             logger('Transforming Scheduled Message "%s" to process "%s"', node.message.id, processId)
             return node
           },
-          applySpec({
-            cron: always(undefined),
-            /**
-             * Set the ordinate to the message's nonce value
-             */
-            ordinate: path(['nonce']),
-            name: mapName,
-            message: applySpec({
-              Id: path(['message', 'id']),
-              Signature: path(['message', 'signature']),
-              /**
-               * SU currently has this outside of message, but we will place it inside message
-               * as that seems more kosher (since its part of the message)
-               */
-              Data: pathOr(undefined, ['data']),
-              Owner: path(['owner', 'address']),
-              Target: path(['process_id']),
-              Anchor: path(['message', 'anchor']),
-              From: mapNodeFrom,
-              'Forwarded-By': mapNodeForwardedBy,
-              Tags: pathOr([], ['message', 'tags']),
-              Epoch: path(['epoch']),
-              Nonce: path(['nonce']),
-              Timestamp: path(['timestamp']),
-              'Block-Height': pipe(
-                /**
-                 * Returns a left padded integer like '000001331218'
-                 *
-                 * So use parseInt to convert it into a number
-                 */
-                path(['block']),
-                (str) => parseInt(`${str}`)
-              ),
-              'Hash-Chain': path(['hash_chain']),
-              Cron: always(false)
-            }),
-            /**
-             * We need the block metadata per message,
-             * so that we can calculate cron messages
-             *
-             * Separating them here, makes it easier to access later
-             * down the pipeline
-             */
-            block: applySpec({
-              height: pipe(
-                path(['block']),
-                (block) => parseInt(block)
-              ),
-              timestamp: path(['timestamp'])
-            }),
-            AoGlobal: applySpec({
-              Process: always({ Id: processId, Owner: processOwner, Tags: processTags }),
-              Module: always({ Id: moduleId, Owner: moduleOwner, Tags: moduleTags })
-            })
-          })
+          mapNode,
+          (scheduled) => {
+            scheduled.AoGlobal = AoGlobal
+            return scheduled
+          }
         )(edge)
       }
     }
