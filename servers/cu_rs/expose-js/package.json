@@ -1,0 +1,25 @@
+{
+  "name": "expose-js",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@permaweb/ao-loader": "^0.0.22",
+    "@permaweb/ao-scheduler-utils": "^0.0.15",
+    "arweave": "^1.14.4",
+    "vite-plugin-node-polyfills": "^0.21.0",
+    "vite-plugin-wasm": "^3.3.0",
+    "warp-arbundles": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}

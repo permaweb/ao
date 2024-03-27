@@ -1,0 +1,2 @@
+[workspace]
+members = ["cu", "client-lib", "faas", "sudoku-wasm"]

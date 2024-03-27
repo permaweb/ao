@@ -1,0 +1,39 @@
+[package]
+name = "cu"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "cu"
+
+[dependencies]
+actix-cors = "0.7.0"
+actix-http = "3.6.0"
+actix-web = { version = "4.5.1", features = ["openssl", "rustls-0_21"] }
+actix-files = "0.6.5"
+actix-multipart = "0.6.1"
+chrono = { version = "0.4.35", features = ["serde"] }
+derive_more = "0.99.17"
+dotenv = "0.15.0"
+env_logger = "0.11.3"
+fake = { version = "2.9.2", features=['derive']}
+futures = "0.3.30"
+futures-util = "0.3.30"
+lazy_static = "1.4.0"
+log = "0.4.21"
+mockall = "0.12.1"
+multipart = "0.18.0"
+nix = "0.28.0"
+reqwest = { version = "0.12.2", features = ["json", "multipart"] }
+rustls = "0.23.4"
+rustls-pemfile = "2.1.1"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+serde_repr = "0.1.18"
+tokio = { version = "1.36.0", features = ["full"] }
+tokio-stream = "0.1.15"
+uuid = { version = "1.8.0", features = ["v4", "serde"] }
