@@ -243,6 +243,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             logger('Transforming Scheduled Message "%s" to process "%s"', node.message.id, processId)
             return node
           },
+          /**
+           * Map to the expected shape, depending on the response shape
+           * See https://github.com/permaweb/ao/issues/563
+           */
           mapNode,
           (scheduled) => {
             scheduled.AoGlobal = AoGlobal
@@ -310,6 +314,30 @@ export const loadTimestampWith = ({ fetch, logger }) => {
 }
 
 export const loadMessageMetaWith = ({ fetch, logger }) => {
+  const legacyMeta = (res) => ({
+    processId: res.process_id,
+    timestamp: res.timestamp,
+    nonce: res.nonce
+  })
+
+  const meta = pipe(
+    pathOr([], ['assignment', 'tags']),
+    parseTags,
+    applySpec({
+      processId: path(['Process']),
+      timestamp: pipe(
+        path(['Timestamp']),
+        parseInt
+      ),
+      nonce: pipe(
+        path(['Nonce']),
+        parseInt
+      )
+    })
+  )
+
+  const mapMeta = ifElse(has('assignment'), meta, legacyMeta)
+
   return async ({ suUrl, processId, messageTxId }) => {
     return fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' })
       .then(async (res) => {
@@ -320,10 +348,10 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
         )
         throw new Error(`${res.status}: ${await res.text()}`)
       })
-      .then((res) => ({
-        processId: res.process_id,
-        timestamp: res.timestamp,
-        nonce: res.nonce
-      }))
+      /**
+       * Map to the expected shape, depending on the response shape.
+       * See https://github.com/permaweb/ao/issues/563
+       */
+      .then(mapMeta)
   }
 }
