@@ -77,6 +77,11 @@ describe('worker', async () => {
         assert.deepStrictEqual(output.Messages, [expectedMessage])
       })
 
+      test('returns assignments', async () => {
+        const output = await evaluate(args)
+        assert.deepStrictEqual(output.Assignments, [])
+      })
+
       test('returns spawns', async () => {
         const expectedSpawn = {
           Owner: 'owner-123',

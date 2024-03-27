@@ -113,6 +113,7 @@ export function evaluateWith (env) {
           Memory: pathOr(null, ['result', 'Memory']),
           Error: pathOr(undefined, ['result', 'Error']),
           Messages: pathOr([], ['result', 'Messages']),
+          Assignments: pathOr([], ['result', 'Assignments']),
           Spawns: pathOr([], ['result', 'Spawns']),
           Output: pathOr('', ['result', 'Output']),
           GasUsed: pathOr(undefined, ['result', 'GasUsed']),

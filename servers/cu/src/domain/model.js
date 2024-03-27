@@ -309,13 +309,14 @@ export const evaluationSchema = z.object({
     z.date()
   ),
   /**
-   * ao processes return { Memory, Message, Spawns, Output, Error } }
+   * ao processes return { Memory, Message, Assignments, Spawns, Output, Error } }
    *
    * This is the output of process, after the action was applied
    */
   output: z.object({
     Memory: z.any().nullish(),
     Messages: z.array(z.any()).nullish(),
+    Assignments: z.array(z.any()).nullish(),
     Spawns: z.array(z.any()).nullish(),
     Output: z.any().nullish(),
     GasUsed: z.number().nullish(),

@@ -112,6 +112,7 @@ export function gatherResultsWith (env) {
                      */
                     applySpec({
                       Messages: pathOr([], ['Messages']),
+                      Assignments: pathOr([], ['Assignments']),
                       Spawns: pathOr([], ['Spawns']),
                       Output: pathOr(undefined, ['Output']),
                       Error: pathOr(undefined, ['Error'])
