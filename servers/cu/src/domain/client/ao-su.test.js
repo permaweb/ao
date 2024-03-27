@@ -142,9 +142,44 @@ describe('ao-su', () => {
       const loadMessageMeta = loadMessageMetaSchema.implement(
         loadMessageMetaWith({
           fetch: async (url, options) => {
-            assert.equal(url, 'https://ao-su-1.onrender.com/message-tx-123?process-id=process-123')
+            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
             assert.deepStrictEqual(options, { method: 'GET' })
 
+            return new Response(JSON.stringify({
+              message: {}, // not used, but will be present
+              assignment: {
+                tags: [
+                  { name: 'Process', value: 'process-123' },
+                  { name: 'Nonce', value: '3' },
+                  { name: 'Timestamp', value: '12345' }
+                ]
+              }
+            }))
+          }
+        })
+      )
+
+      const res = await loadMessageMeta({
+        suUrl: 'https://foo.bar',
+        processId: 'process-123',
+        messageTxId: 'message-tx-123'
+      })
+
+      assert.deepStrictEqual(res, {
+        processId: 'process-123',
+        timestamp: 12345,
+        nonce: 3
+      })
+    })
+
+    test('return the message meta from legacy shape', async () => {
+      const loadMessageMeta = loadMessageMetaSchema.implement(
+        loadMessageMetaWith({
+          fetch: async (url, options) => {
+            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
+            assert.deepStrictEqual(options, { method: 'GET' })
+
+            // legacy response shape from SU call
             return new Response(JSON.stringify({
               process_id: 'process-123',
               timestamp: 12345,
@@ -155,7 +190,7 @@ describe('ao-su', () => {
       )
 
       const res = await loadMessageMeta({
-        suUrl: 'https://ao-su-1.onrender.com',
+        suUrl: 'https://foo.bar',
         processId: 'process-123',
         messageTxId: 'message-tx-123'
       })
