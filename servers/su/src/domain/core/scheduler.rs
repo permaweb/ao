@@ -153,11 +153,11 @@ async fn fetch_values(deps: Arc<SchedulerDeps>, process_id: &String) -> Result<(
 
     match latest_message {
         Some(previous_message) => {
-            let epoch = previous_message.epoch;
-            let nonce = previous_message.nonce + 1;
+            let epoch = previous_message.epoch().unwrap();
+            let nonce = previous_message.nonce().unwrap() + 1;
             let hash_chain = gen_hash_chain(
-                &previous_message.hash_chain, 
-                Some(&previous_message.message.id)
+                &previous_message.hash_chain().unwrap(), 
+                Some(&previous_message.assignment_id().unwrap())
             )?;
             Ok((epoch, nonce, hash_chain, millis))
         },

@@ -151,25 +151,24 @@ impl DataStore for StoreClient {
         let conn = &mut self.get_conn()?;
     
         let new_message = NewMessage {
-            process_id: &message.process_id,
-            message_id: &message.message.id,
+            process_id: &message.process_id()?,
+            message_id: &message.message_id()?,
+            assignment_id: &message.assignment_id()?,
             message_data: serde_json::to_value(message).expect("Failed to serialize Message"),
-            epoch: &message.epoch,
-            nonce: &message.nonce,
-            timestamp: &message.timestamp,
+            epoch: &message.epoch()?,
+            nonce: &message.nonce()?,
+            timestamp: &message.timestamp()?,
             bundle: bundle_in,
-            hash_chain: &message.hash_chain,
+            hash_chain: &message.hash_chain()?,
         };
     
         match diesel::insert_into(messages)
             .values(&new_message)
-            .on_conflict(message_id)
-            .do_nothing() 
             .execute(conn)
         {
             Ok(row_count) => {
                 if row_count == 0 {
-                    Err(StoreErrorType::DatabaseError("Duplicate message id".to_string())) // Return a custom error for duplicates
+                    Err(StoreErrorType::DatabaseError("Error saving message".to_string())) // Return a custom error for duplicates
                 } else {
                     Ok("saved".to_string())
                 }
@@ -238,8 +237,13 @@ impl DataStore for StoreClient {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
+        /*
+            get the oldest match. in the case of a message that has
+            later assignments, it should be the original message itself.
+        */
         let db_message_result: Result<Option<DbMessage>, DieselError> = messages
             .filter(message_id.eq(message_id_in))
+            .order(timestamp.asc())
             .first(conn)
             .optional();
     
@@ -445,6 +449,7 @@ pub struct DbMessage {
     pub row_id: i32,
     pub process_id: String,
     pub message_id: String,
+    pub assignment_id: Option<String>,
     pub message_data: serde_json::Value,
     pub epoch: i32,
     pub nonce: i32,
@@ -459,6 +464,7 @@ pub struct DbMessage {
 pub struct NewMessage<'a> {
     pub process_id: &'a str,
     pub message_id: &'a str,
+    pub assignment_id: &'a str,
     pub message_data: serde_json::Value,
     pub bundle:  &'a [u8],
     pub epoch: &'a i32,

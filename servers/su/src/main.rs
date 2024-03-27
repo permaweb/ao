@@ -24,6 +24,7 @@ struct TxId {
     tx_id: String,
 }
 
+
 #[derive(Deserialize)]
 struct ProcessId {
     #[serde(rename = "process-id")]
@@ -33,6 +34,13 @@ struct ProcessId {
 #[derive(Deserialize)]
 struct ProcessIdRequired {
     process_id: String,
+}
+
+#[derive(Deserialize)]
+struct OptionalAssign {
+    #[serde(rename = "process-id")]
+    process_id: Option<String>,
+    assign: Option<String>,
 }
 
 fn err_response(err: String) -> HttpResponse {
@@ -82,17 +90,29 @@ async fn timestamp_route(deps: web::Data<Arc<Deps>>, query_params: web::Query<Pr
     }
 }
 
-async fn main_post_route(deps: web::Data<Arc<Deps>>, req_body: web::Bytes, req: HttpRequest) -> impl Responder {
+async fn main_post_route(
+    deps: web::Data<Arc<Deps>>, 
+    req_body: web::Bytes, 
+    req: HttpRequest, 
+    query_params: web::Query<OptionalAssign>
+) -> impl Responder {
     match router::redirect_data_item(deps.get_ref().clone(), req_body.to_vec()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
-            return HttpResponse::TemporaryRedirect().insert_header((LOCATION, target_url)).finish();
+            return HttpResponse::TemporaryRedirect()
+                .insert_header((LOCATION, target_url))
+                .finish();
         },
         Ok(None) => (),
         Err(err) => return err_response(err.to_string())
     }
 
-    match flows::write_item(deps.get_ref().clone(), req_body.to_vec()).await {
+    match flows::write_item(
+        deps.get_ref().clone(), 
+        req_body.to_vec(),
+        query_params.process_id.clone(),
+        query_params.assign.clone()
+    ).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
