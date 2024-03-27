@@ -305,9 +305,7 @@ describe('hydrateMessages', () => {
           ],
           Owner: 'owner-123',
           From: 'owner-123',
-          Data: await new Response('Hello World 🤖❌⚡️')
-            .arrayBuffer()
-            .then((ab) => Buffer.from(ab))
+          Data: 'Hello World 🤖❌⚡️'
         }
       })
     })

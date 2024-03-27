@@ -27,9 +27,7 @@ function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
   loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
 
   return async (id, encodeData) => Promise.all([
-    loadTransactionData(id)
-      .then(res => res.arrayBuffer())
-      .then((ab) => Buffer.from(ab)),
+    loadTransactionData(id),
     loadTransactionMeta(id)
   ])
   /**
@@ -37,7 +35,7 @@ function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
    * raw transaction data, and metadata about the
    * transactions (in the shape of a GQL Gateway Transaction)
    */
-    .then(async ([data, meta]) => ({
+    .then(async ([res, meta]) => ({
       Id: meta.id,
       Signature: meta.signature,
       Owner: meta.owner.address,
@@ -45,12 +43,18 @@ function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
       Tags: meta.tags,
       Anchor: meta.anchor,
       /**
-       * Encode the array buffer of the raw data as base64, if desired.
+       * Encode the array buffer of the raw data as base64, if desired (Load messages),
+       * otherwise parse the data as text (Assignments)
        *
-       * TODO: should data always be a buffer, or should cu use Content-Type
-       * tag to parse data? ie. json, text, etc.
+       * TODO: should cu use Content-Type tag to parse data? ie. json, text, etc.
+       * For now, Data is always text or base64-encoded array buffer, so this replicates
+       * current functionality
        */
-      Data: encodeData ? bytesToBase64(data) : data
+      Data: encodeData
+        ? await res.arrayBuffer()
+          .then((ab) => Buffer.from(ab))
+          .then((data) => bytesToBase64(data))
+        : await res.text()
     }))
 }
 
