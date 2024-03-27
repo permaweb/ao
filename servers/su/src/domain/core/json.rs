@@ -37,14 +37,6 @@ impl From<std::num::ParseIntError> for JsonErrorType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MessageInner {
-    pub id: String,
-    pub tags: Vec<Tag>,
-    pub signature: String,
-    pub anchor: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Owner {
     pub address: String,
     pub key: String,
@@ -63,16 +55,30 @@ pub struct Process {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Message {
-    pub message: MessageInner,
-    pub block: String,
+pub struct MessageInner {
+    pub id: String,
     pub owner: Owner,
-    pub process_id: String,
     pub data: Option<String>,
-    pub epoch: i32,
-    pub nonce: i32,
-    pub timestamp: i64,
-    pub hash_chain: String
+    pub tags: Vec<Tag>,
+    pub signature: String,
+    pub anchor: Option<String>,
+    pub target: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AssignmentInner {
+    pub id: String,
+    pub owner: Owner,
+    pub tags: Vec<Tag>,
+    pub signature: String,
+    pub anchor: Option<String>,
+    pub target: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Message {
+    pub message: Option<MessageInner>,
+    pub assignment: AssignmentInner
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -154,20 +160,12 @@ impl Message {
         let owner = data_bundle.items[0].owner().clone();
         let target = data_bundle.items[0].target().clone();
         let signature = data_bundle.items[0].signature().clone();
-        let data = data_bundle.items[0].data().clone();
         let anchor = data_bundle.items[0].anchor().clone();
 
         let ac = anchor.clone();
         let anchor_r = match &*anchor {
             "" => None,
             _ => Some(ac)
-        };
-
-        let message_inner = MessageInner {
-            id,
-            tags,
-            signature,
-            anchor: anchor_r
         };
 
         let owner_bytes = base64_url::decode(&owner)?;
@@ -179,42 +177,108 @@ impl Message {
             key: owner,
         };
 
-        let process_id = target;
+        let assignment_inner = AssignmentInner {
+            id,
+            owner,
+            tags,
+            signature,
+            anchor: anchor_r,
+            target: Some(target)
+        };
 
-        let bundle_tags = data_bundle.tags.clone();
 
-        let block_tag = bundle_tags.iter().find(|tag| tag.name == "Block-Height")
-            .ok_or("Block-Height tag not found")?;
-
-        let epoch_tag = bundle_tags.iter().find(|tag| tag.name == "Epoch")
-            .ok_or("Epoch tag not found")?;
-
-        let nonce_tag = bundle_tags.iter().find(|tag| tag.name == "Nonce")
-            .ok_or("Nonce tag not found")?;
-
-        let timestamp_tag = bundle_tags.iter().find(|tag| tag.name == "Timestamp")
-            .ok_or("Timestamp tag not found")?;
-
-        let hash_chain_tag = bundle_tags.iter().find(|tag| tag.name == "Hash-Chain")
-            .ok_or("Hash-Chain tag not found")?;
-
-        let block = block_tag.value.clone();
-        let epoch = epoch_tag.value.clone().parse::<i32>()?;
-        let nonce = nonce_tag.value.clone().parse::<i32>()?;
-        let timestamp = timestamp_tag.clone().value.parse::<i64>()?;
-        let hash_chain = hash_chain_tag.value.clone();
+        let message_inner = match data_bundle.items.len() {
+            // bundle is just an assignment
+            1 => None,
+            // bundle contains a message and an assignment
+            2 => {
+                let id = data_bundle.items[1].id().clone();
+                let tags = data_bundle.items[1].tags();
+                let owner = data_bundle.items[1].owner().clone();
+                let target = data_bundle.items[1].target().clone();
+                let signature = data_bundle.items[1].signature().clone();
+                let data = data_bundle.items[1].data().clone();
+                let anchor = data_bundle.items[1].anchor().clone();
+        
+                let ac = anchor.clone();
+                let anchor_r = match &*anchor {
+                    "" => None,
+                    _ => Some(ac)
+                };
+        
+                let owner_bytes = base64_url::decode(&owner)?;
+                let address_hash = hash(&owner_bytes);
+                let address = base64_url::encode(&address_hash);
+        
+                let owner = Owner {
+                    address: address,
+                    key: owner,
+                };
+        
+                Some(MessageInner {
+                    id,
+                    data,
+                    owner,
+                    tags,
+                    signature,
+                    anchor: anchor_r,
+                    target: Some(target)
+                })
+            },
+            _ => None
+        };
 
         Ok(Message {
             message: message_inner,
-            owner,
-            process_id,
-            data,
-            block,
-            epoch,
-            nonce,
-            timestamp,
-            hash_chain,
+            assignment: assignment_inner
         })
+    }
+
+    pub fn epoch(&self) -> Result<i32, JsonErrorType> {
+        let epoch_tag = self.assignment.tags.iter().find(|tag| tag.name == "Epoch")
+            .ok_or("Epoch tag not found")?;
+        Ok(epoch_tag.value.parse::<i32>()?)
+    }
+
+    pub fn nonce(&self) -> Result<i32, JsonErrorType> {
+        let nonce_tag = self.assignment.tags.iter().find(|tag| tag.name == "Nonce")
+            .ok_or("Nonce tag not found")?;
+        Ok(nonce_tag.value.parse::<i32>()?)
+    }
+
+    pub fn timestamp(&self) -> Result<i64, JsonErrorType> {
+        let timestamp_tag = self.assignment.tags.iter().find(|tag| tag.name == "Timestamp")
+            .ok_or("Timestamp tag not found")?;
+        Ok(timestamp_tag.value.parse::<i64>()?)
+    }
+
+    pub fn hash_chain(&self) -> Result<String, JsonErrorType> {
+        let hash_chain_tag = self.assignment.tags.iter().find(|tag| tag.name == "Hash-Chain")
+            .ok_or("Timestamp tag not found")?;
+        Ok(hash_chain_tag.value.clone())
+    }
+
+    pub fn block_height(&self) -> Result<String, JsonErrorType> {
+        let block_height_tag = self.assignment.tags.iter().find(|tag| tag.name == "Block-Height")
+            .ok_or("Block-Height tag not found")?;
+        Ok(block_height_tag.value.clone())
+    }
+
+    pub fn message_id(&self) -> Result<String, JsonErrorType> {
+        let message_tag = self.assignment.tags.iter().find(|tag| tag.name == "Message")
+            .ok_or("Message tag not found")?;
+        Ok(message_tag.value.clone())
+    }
+
+    pub fn assignment_id(&self) -> Result<String, JsonErrorType> {
+        let assignment_id = self.assignment.id.clone();
+        Ok(assignment_id)
+    }
+
+    pub fn process_id(&self) -> Result<String, JsonErrorType> {
+        let process_tag = self.assignment.tags.iter().find(|tag| tag.name == "Process")
+            .ok_or("Process tag not found")?;
+        Ok(process_tag.value.clone())
     }
 }
 
@@ -223,12 +287,21 @@ impl PaginatedMessages {
 
     pub fn from_messages(messages: Vec<Message>, has_next_page: bool) -> Result<Self, JsonErrorType> {
         let page_info = PageInfo { has_next_page };
-
-        let edges = messages.into_iter().map(|message| Edge {
-            node: message.clone(),
-            cursor: message.timestamp.clone().to_string(),
-        }).collect();
-
+    
+        let edges = messages.into_iter().try_fold(Vec::new(), |mut acc, message| {
+            let timestamp = match message.timestamp() {
+                Ok(t) => t.to_string(),
+                Err(e) => return Err(e), 
+            };
+    
+            acc.push(Edge {
+                node: message.clone(),
+                cursor: timestamp,
+            });
+    
+            Ok(acc)
+        })?;
+    
         Ok(PaginatedMessages { page_info, edges })
     }
 }

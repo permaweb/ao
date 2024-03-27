@@ -57,11 +57,52 @@ async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, Strin
     Ok(result)
 }
 
+async fn assignment_only(
+    deps: Arc<Deps>, 
+    process_id: String,
+    assign: String
+) -> Result<String, String> {
+    let builder = init_builder(&deps)?;
+
+    let locked_schedule_info = deps.scheduler.acquire_lock(process_id.clone()).await?;
+    let mut schedule_info = locked_schedule_info.lock().await;
+    let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, process_id.clone()).await?;
+
+    let build_result = builder.build_assignment(assign.clone(), process_id.clone(), &*updated_info).await?;
+    upload(&deps, build_result.binary.to_vec()).await?;
+    let message = Message::from_bundle(&build_result.bundle)?;
+    deps.data_store.save_message(&message, &build_result.binary)?;
+    deps.logger.log(format!("saved message - {:?}", &message));
+    drop(schedule_info);
+    match system_time_u64() {
+        Ok(timestamp) => {
+            let response_json = json!({ "timestamp": timestamp, "id": assign.clone() });
+            Ok(response_json.to_string())
+        }
+        Err(e) => Err(format!("{:?}", e))
+    }
+}
+
 /*
-    this writes a message or process data item,
-    it detects which it is creating by the tags
+    This writes a message or process data item,
+    it detects which it is creating by the tags.
+    If the process_id and assign params are set, it 
+    follows the Assignment flow instead. If one is
+    set both must be set.
 */
-pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, String> {
+pub async fn write_item(
+    deps: Arc<Deps>, 
+    input: Vec<u8>,
+    process_id: Option<String>,
+    assign: Option<String>
+) -> Result<String, String> {
+    // XOR, if we have one of these, we must have both.
+    if process_id.is_some() ^ assign.is_some() {
+        return Err("If sending assign or process-id, you must send both.".to_string());
+    } else if let (Some(process_id), Some(assign)) = (process_id, assign) {
+        return assignment_only(deps, process_id, assign).await;
+    }
+
     let builder = init_builder(&deps)?;
 
     let data_item = builder.parse_data_item(input.clone())?;
@@ -114,7 +155,7 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             let mut schedule_info = locked_schedule_info.lock().await;
             let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.target()).await?;
 
-            let build_result = builder.build(input, &*updated_info).await?;
+            let build_result = builder.build_message(input, &*updated_info).await?;
             upload(&deps, build_result.binary.to_vec()).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store.save_message(&message, &build_result.binary)?;
@@ -122,7 +163,7 @@ pub async fn write_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<String, Strin
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
-                    let response_json = json!({ "timestamp": timestamp, "id": message.message.id.clone() });
+                    let response_json = json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e))

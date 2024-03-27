@@ -64,53 +64,78 @@ impl<'a> Builder<'a> {
         })
     }
 
-    // TODO: unify build and build_process
-    pub async fn build(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
-        let item = DataItem::from_bytes(tx)?;
-        let process_id = item.target().clone();
-
-        self.logger.log(format!("attempting to verify data item id - {}", &item.id()));
-        self.logger.log(format!("owner - {}", &item.owner()));
-        self.logger.log(format!("target - {}", &item.target()));
-        self.logger.log(format!("tags - {:?}", &item.tags()));
-
-        self.verifier.verify_data_item(&item).await?;
-        self.logger.log(format!("verified data item id - {}", &item.id()));
-
+    async fn gen_assignment(&self, message_id: String, process_id: String, schedule_info: &dyn ScheduleProvider) -> Result<DataItem, BuilderErrorType> {
         let network_info = self.gateway.network_info().await?;
         let height = network_info.height.clone();
-
         let tags = vec![
-            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
-            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
             Tag::new(&"Process".to_string(), &process_id),
+            Tag::new(&"Message".to_string(), &message_id),
             Tag::new(&"Epoch".to_string(), &schedule_info.epoch()),
             Tag::new(&"Nonce".to_string(), &schedule_info.nonce()),
             Tag::new(&"Hash-Chain".to_string(), &schedule_info.hash_chain()),
             Tag::new(&"Block-Height".to_string(), &height.to_string()),
             Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
         ];
-        self.logger.log(format!("generated tags - {:?}", &tags));
 
-        let mut data_bundle = DataBundle::new(tags.clone());
-        data_bundle.add_item(item);
+        let mut assignment = DataItem::new(vec![], vec![], tags, self.signer.get_public_key())?;
+        let assignment_message = assignment.get_message()?.to_vec();
+        let assignment_signature = self.signer
+            .sign_tx(assignment_message).await?;
+
+        assignment.signature = assignment_signature;
+
+        self.logger.log(format!("built assignment {}", assignment.id()));
+
+        Ok(assignment)
+    }
+
+    async fn bundle_items(&self, items: Vec<DataItem>) -> Result<BuildResult, BuilderErrorType> {
+        let bundle_tags = vec![
+            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
+            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
+        ];
+
+        let mut data_bundle = DataBundle::new(bundle_tags.clone());
+
+        items.iter().for_each(|item| {
+            data_bundle.add_item(item.clone());
+        });
+
         let buffer = data_bundle.to_bytes()?;
 
-        let pub_key = self.signer.get_public_key();
-        let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;
-        let message = new_data_item.get_message()?.to_vec();
+        let mut bundle_data_item = DataItem::new(vec![], buffer, bundle_tags, self.signer.get_public_key())?;
+        let bundle_message = bundle_data_item.get_message()?.to_vec();
 
         let signature = self.signer
-            .sign_tx(message).await?;
+            .sign_tx(bundle_message).await?;
 
-        new_data_item.signature = signature;
+        bundle_data_item.signature = signature;
 
         self.logger.log(format!("signature succeeded {}", ""));
 
         Ok(BuildResult{
-            binary: new_data_item.as_bytes()?,
+            binary: bundle_data_item.as_bytes()?,
             bundle: data_bundle
         })
+    }
+
+    // Build a bundle containing only an assignment DataItem
+    pub async fn build_assignment(&self, message_id: String, process_id: String, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
+        match self.gen_assignment(message_id.clone(), process_id.clone(), schedule_info).await {
+            // bundle only the assignment
+            Ok(a) => self.bundle_items(vec![a]).await,
+            Err(e) => Err(e)
+        }
+    }
+
+    // Build a bundle containing both an assignment and message DataItem
+    pub async fn build_message(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
+        let message_item = DataItem::from_bytes(tx)?;
+        match self.gen_assignment(message_item.id(), message_item.target(), schedule_info).await {
+            // bundle both the assignment and the message
+            Ok(a) => self.bundle_items(vec![a, message_item]).await,
+            Err(e) => Err(e)
+        }
     }
 
     pub async fn build_process(&self, tx: Vec<u8>, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
