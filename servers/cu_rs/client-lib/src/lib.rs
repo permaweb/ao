@@ -1,5 +1,6 @@
 mod utils;
 
+#[allow(unused)]
 use crate::utils::set_panic_hook;
 #[allow(unused_imports)]
 use wasmedge_bindgen::*;
