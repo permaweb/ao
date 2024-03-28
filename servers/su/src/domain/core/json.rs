@@ -94,7 +94,7 @@ pub struct PageInfo {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Edge {
-    pub node: Message,
+    pub node: serde_json::Value,
     pub cursor: String,
 }
 
@@ -282,28 +282,57 @@ impl Message {
     }
 }
 
-
 impl PaginatedMessages {
-
-    pub fn from_messages(messages: Vec<Message>, has_next_page: bool) -> Result<Self, JsonErrorType> {
+    pub fn from_values(messages: Vec<serde_json::Value>, has_next_page: bool) -> Result<Self, JsonErrorType> {
         let page_info = PageInfo { has_next_page };
-    
-        let edges = messages.into_iter().try_fold(Vec::new(), |mut acc, message| {
-            let timestamp = match message.timestamp() {
-                Ok(t) => t.to_string(),
-                Err(e) => return Err(e), 
-            };
-    
-            acc.push(Edge {
+        let mut edges = Vec::new();
+
+        for message in messages {
+            let timestamp = extract_timestamp(&message)?;
+
+            let edge = Edge {
                 node: message.clone(),
-                cursor: timestamp,
-            });
-    
-            Ok(acc)
-        })?;
-    
+                cursor: timestamp, 
+            };
+            
+            edges.push(edge);
+        }
+
         Ok(PaginatedMessages { page_info, edges })
     }
+}
+
+/*
+    This is to handle pulling out the timestamp for
+    the older json shape as well as the
+    newer aopv0.1 shape.
+*/
+fn extract_timestamp(message: &serde_json::Value) -> Result<String, JsonErrorType> {
+    // Check if the timestamp is present in assignment tags
+    if let Some(assignment) = message.get("assignment") {
+        if let Some(tags) = assignment.get("tags").and_then(|tags| tags.as_array()) {
+            if let Some(timestamp) = tags
+                .iter()
+                .find_map(|tag| {
+                    if let (Some(name), Some(value)) = (tag.get("name"), tag.get("value")) {
+                        if name == "Timestamp" {
+                            return value.as_str().map(|s| s.to_string());
+                        }
+                    }
+                    None
+                }) {
+                return Ok(timestamp);
+            }
+        }
+    }
+    
+    // Check if the timestamp is present at the top level as an integer
+    if let Some(timestamp_value) = message.get("timestamp").and_then(|ts| ts.as_i64()) {
+        return Ok(timestamp_value.to_string());
+    }
+
+    // If timestamp is not found, return an error
+    Err(JsonErrorType::JsonError("Missing timestamp".to_string()))
 }
 
 

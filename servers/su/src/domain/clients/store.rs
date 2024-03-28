@@ -216,14 +216,14 @@ impl DataStore for StoreClient {
                 // Take only up to the limit if there's an extra indicating a next page
                 let messages_o = if has_next_page { &db_messages[..(limit_val as usize)] } else { &db_messages[..] };
     
-                let n_messages: Result<Vec<Message>, StoreErrorType> = messages_o
+                let n_messages: Result<Vec<serde_json::Value>, StoreErrorType> = messages_o
                     .iter()
                     .map(|db_message| serde_json::from_value(db_message.message_data.clone()).map_err(StoreErrorType::from))
                     .collect();
     
                 match n_messages {
                     Ok(messages_out) => {
-                        let paginated = PaginatedMessages::from_messages(messages_out, has_next_page)?;
+                        let paginated = PaginatedMessages::from_values(messages_out, has_next_page)?;
                         Ok(paginated)
                     },
                     Err(e) => return Err(e),
@@ -233,7 +233,7 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType> {
+    fn get_message(&self, message_id_in: &str) -> Result<serde_json::Value, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -249,7 +249,7 @@ impl DataStore for StoreClient {
     
         match db_message_result {
             Ok(Some(db_message)) => {
-                let message: Message = serde_json::from_value(db_message.message_data.clone())?;
+                let message: serde_json::Value = serde_json::from_value(db_message.message_data.clone())?;
                 Ok(message)
             },
             Ok(None) => Err(StoreErrorType::NotFound("Message not found".to_string())), // Adjust this error type as needed
