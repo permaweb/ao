@@ -19,7 +19,7 @@ const wasmBinary = fs.readFileSync('./test/process/process.wasm')
 
 describe('loader', async () => {
   it('load wasm and evaluate message', async () => {
-    const handle = await AoLoader(wasmBinary)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
     const mainResult = await handle(null,
       {
         Owner: 'tom',
@@ -67,7 +67,7 @@ describe('loader', async () => {
          */
         .then((mod) => WebAssembly.instantiate(mod, info))
         .then((instance) => receiveInstance(instance))
-    })
+    }, { format: 'wasm32-unknown-emscripten' })
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
@@ -83,7 +83,7 @@ describe('loader', async () => {
   })
 
   it('should load previous memory', async () => {
-    const handle = await AoLoader(wasmBinary)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
@@ -101,7 +101,7 @@ describe('loader', async () => {
   })
 
   it('should refill the gas on every invocation', async () => {
-    const handle = await AoLoader(wasmBinary)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
 
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
@@ -122,7 +122,7 @@ describe('loader', async () => {
   })
 
   it('should run out of gas', async () => {
-    const handle = await AoLoader(wasmBinary, 9_000_000_000)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten', computeLimit: 9_000_000_000 })
     try {
       await handle(null,
         { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
@@ -139,7 +139,7 @@ describe('loader', async () => {
   it('should resize the initial heap to accomodate the larger incoming buffer', async () => {
     const wasmBinary = fs.readFileSync('./test/aos/process.wasm')
 
-    const handle = await AoLoader(wasmBinary, 9_000_000_000_000)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten', computeLimit: 9_000_000_000_000 })
     const mainResult = handle(null,
       {
         Owner: 'tom',
@@ -170,7 +170,7 @@ describe('loader', async () => {
     // assert.equal(mainResult.GasUsed, 463918939)
     assert.ok(true)
 
-    const nextHandle = await AoLoader(wasmBinary, 9_000_000_000_000)
+    const nextHandle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
     const nextResult = nextHandle(mainResult.Memory,
       {
         Owner: 'tom',
@@ -189,7 +189,7 @@ describe('loader', async () => {
   })
 
   it('should get deterministic date', async () => {
-    const handle = await AoLoader(wasmBinary)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
 
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Date' }], Data: '' },
@@ -210,7 +210,7 @@ describe('loader', async () => {
   })
 
   it('should get deterministic random numbers', async () => {
-    const handle = await AoLoader(wasmBinary)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
 
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Random' }], Data: '' },
@@ -231,10 +231,10 @@ describe('loader', async () => {
   })
 
   it('should not list files', async () => {
-    const handle = await AoLoader(wasmBinary)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
     try {
-    // eslint-disable-next-line
-    const result = await handle(null,
+      // eslint-disable-next-line
+      const result = await handle(null,
         { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Directory' }], Data: '' },
         { Process: { Id: '1', Tags: [] } }
       )
