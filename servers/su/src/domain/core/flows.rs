@@ -163,7 +163,7 @@ pub async fn write_item(
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
-                    let response_json = json!({ "timestamp": timestamp, "id": message.message_id() });
+                    let response_json = json!({ "timestamp": timestamp, "id": message.message_id()? });
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e))
