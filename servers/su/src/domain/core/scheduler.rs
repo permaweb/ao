@@ -7,7 +7,7 @@ use dashmap::DashMap;
 use tokio::sync::Mutex;
 use base64_url;
 
-use crate::domain::core::dal::{ScheduleProvider, Log, DataStore};
+use crate::domain::core::dal::{ScheduleProvider, Log, DataStore, Message};
 
 pub struct SchedulerDeps {
     pub data_store: Arc<dyn DataStore>,
@@ -106,6 +106,9 @@ impl DecodeHash for [u8; 32] {
 }
 
 fn gen_hash_chain(previous_or_seed: &str, previous_message_id: Option<&str>) -> Result<String, String> {
+
+    println!("{}", previous_or_seed);
+    println!("{:?}", previous_message_id);
     let mut hasher = Sha256::new();
 
     let prev_bytes: [u8; 32] = match DecodeHash::from(previous_or_seed) {
@@ -153,17 +156,93 @@ async fn fetch_values(deps: Arc<SchedulerDeps>, process_id: &String) -> Result<(
 
     match latest_message {
         Some(previous_message) => {
-            let epoch = previous_message.epoch().unwrap();
-            let nonce = previous_message.nonce().unwrap() + 1;
+            let m_latest = parse_value(previous_message)?;
+            let epoch = m_latest.epoch;
+            let nonce = m_latest.nonce + 1;
             let hash_chain = gen_hash_chain(
-                &previous_message.hash_chain().unwrap(), 
-                Some(&previous_message.assignment_id().unwrap())
+                &m_latest.hash_chain, 
+                Some(&m_latest.id)
             )?;
             Ok((epoch, nonce, hash_chain, millis))
         },
         None => {
             let hash_chain = gen_hash_chain(&process_id, None)?;
             Ok((0, 0, hash_chain, millis))
+        }
+    }
+}
+
+struct ParseReturn {
+    epoch: i32,
+    nonce: i32,
+    hash_chain: String,
+    id: String
+}
+
+/*
+    this is needed to handle pre aopv0.1
+    json values in the databaseS
+*/
+fn parse_value(message_val: serde_json::Value) -> Result<ParseReturn, String> {
+    match message_val.get("assignment") {
+        Some(_) => {
+            /*
+                It matches the current structure of message 
+                so we can parse it using from_value
+            */
+            let m: Message = match serde_json::from_value(message_val) {
+                Ok(parsed) => parsed,
+                Err(_) => return Err("scheduler error parsing message".to_string())
+            };
+            Ok(ParseReturn {
+                epoch: m.epoch()?,
+                nonce: m.nonce()?,
+                hash_chain: m.hash_chain()?,
+                id: m.assignment_id()?
+            })
+        },
+        None => {
+            /*
+                old message structure so we have to break 
+                down the json by field
+            */
+            if let Some(epoch) = message_val.get("epoch").and_then(|e| e.as_i64()) {
+                if let Some(nonce) = message_val.get("nonce").and_then(|n| n.as_i64()) {
+                    let hash_chain = match message_val.get("hash_chain") {
+                        Some(e) => {
+                            match e.as_str().map(|s| s.to_string()) {
+                                Some(f) => f,
+                                None => return Err("empty hash chain".to_string())
+                            }
+                        },
+                        None => return Err("No hash_chain on a message".to_string())
+                    };
+        
+                    let id = match message_val.get("message") {
+                        Some(m) => {
+                            match m.get("id") {
+                                Some(message_id) => {
+                                    match message_id.as_str().map(|s| s.to_string()) {
+                                        Some(f) => f,
+                                        None => return Err("empty id".to_string())
+                                    }
+                                },
+                                None => return Err("no id on the inner message".to_string())
+                            }
+                        },
+                        None => return Err("No message top level".to_string())
+                    };
+
+                    return Ok(ParseReturn {
+                        epoch: epoch as i32,
+                        nonce: nonce as i32,
+                        hash_chain,
+                        id
+                    });
+                }
+            }
+
+            return Err("Invalid message in sequence".to_string());
         }
     }
 }

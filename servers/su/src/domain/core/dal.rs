@@ -89,7 +89,7 @@ pub trait DataStore: Send + Sync {
     ) -> Result<PaginatedMessages, StoreErrorType>;
     // returning serde_json::Value in order to handle older and new shapes
     fn get_message(&self, message_id_in: &str) -> Result<serde_json::Value, StoreErrorType>;
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType>;
+    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<serde_json::Value>, StoreErrorType>;
     fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType>;
     fn get_process_scheduler(&self, process_id_in: &str) -> Result<ProcessScheduler, StoreErrorType>;
     fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType>;

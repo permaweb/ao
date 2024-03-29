@@ -36,6 +36,12 @@ impl From<std::num::ParseIntError> for JsonErrorType {
     }
 }
 
+impl From<serde_json::Error> for JsonErrorType {
+    fn from(error: serde_json::Error) -> Self {
+        JsonErrorType::JsonError(format!("Json error: {:?}", error))
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Owner {
     pub address: String,
