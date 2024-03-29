@@ -261,7 +261,7 @@ mod tests {
 
         let scheduler = MockScheduler{};
 
-        let result = builder.build(tx, &scheduler).await;
+        let result = builder.build_message(tx, &scheduler).await;
 
         assert!(result.is_ok());
     }
