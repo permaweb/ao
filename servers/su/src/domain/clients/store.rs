@@ -257,7 +257,7 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
+    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<serde_json::Value>, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
