@@ -1,3 +1,6 @@
 [workspace]
-members = ["cu", "client-lib", "faas", "js-lib"]
+members = [
+    "cu", 
+    "client-lib"
+]
 resolver = "2"
