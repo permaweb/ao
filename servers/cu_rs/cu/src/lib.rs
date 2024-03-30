@@ -5,10 +5,11 @@ pub mod domain {
     pub mod client {
         pub mod arweave;
     }
+    pub mod model;
+    pub mod validation;
 }
 
 use std::env;
-use std::fs::File;
 use actix_cors::Cors;
 use actix_web::{ HttpServer, App, http::header, middleware::Logger, web };
 use log::{info, error};

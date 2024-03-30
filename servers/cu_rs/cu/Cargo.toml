@@ -16,6 +16,7 @@ actix-http = "3.6.0"
 actix-web = { version = "4.5.1", features = ["openssl", "rustls-0_21"] }
 actix-files = "0.6.5"
 actix-multipart = "0.6.1"
+arweave-rs = { git = "https://github.com/Irys-xyz/arweave-rs" }
 chrono = { version = "0.4.35", features = ["serde"] }
 derive_more = "0.99.17"
 dotenv = "0.15.0"
@@ -28,9 +29,7 @@ log = "0.4.21"
 mockall = "0.12.1"
 multipart = "0.18.0"
 nix = "0.28.0"
-reqwest = { version = "0.12.2", features = ["json", "multipart"] }
-rustls = "0.23.4"
-rustls-pemfile = "2.1.1"
+reqwest = { version = "0.11.2", features = ["json", "multipart"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 serde_repr = "0.1.18"
@@ -38,3 +37,5 @@ tokio = { version = "1.36.0", features = ["full"] }
 tokio-stream = "0.1.15"
 uuid = { version = "1.8.0", features = ["v4", "serde"] }
 wasmedge-sdk = "0.13.2"
+valid = { version = "0.3.1", features = ["serde1"] }
+regex = "1.10.4"
