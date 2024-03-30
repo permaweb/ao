@@ -1,14 +1,15 @@
 use valid::{invalid_value, FieldName, Validate, Validation};
 use std::fmt::Display;
+use regex::Regex;
 
 pub struct UrlConstraint {
-    regex: regex::Regex
+    regex: Regex
 }
 
 impl UrlConstraint {
     pub fn new() -> Self {
         UrlConstraint {
-            regex: regex::Regex::new(r"(http://|https://)+").unwrap()
+            regex: Regex::new(r"(http://|https://)+").unwrap()
         }
     }
 
@@ -92,5 +93,76 @@ impl Validate<IntegerConstraint, FieldName> for String {
             return Validation::success(self);
         }
         Validation::failure(vec![invalid_value("invalid-integer", context, self.clone(), "value must be an integer".to_string())])
+    }
+}
+
+pub struct TruthyConstraint;
+
+impl TruthyConstraint {
+    pub fn is_truthy(&self, val: Option<String>) -> bool {
+        if val.is_some() {
+            let val_str = val.unwrap().as_str();
+            if val_str != "0"
+                && val_str != ""
+                && val_str != "false"
+                && val_str != "null"
+                && val_str != "undefined"
+                && val_str != "NaN"
+                {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+impl Validate<TruthyConstraint, FieldName> for String {
+    fn validate(self, context: impl Into<FieldName>, constraint: &TruthyConstraint) -> Validation<TruthyConstraint, Self> {
+        if constraint.is_truthy(Some(self.clone())) {
+            return Validation::success(self);
+        }
+        Validation::failure(vec![invalid_value("invalid-truthy", context, self.clone(), "value must be js truthy".to_string())])
+    }
+}
+
+/// Checks if string is an array or comma separated list of uuid
+pub struct UuidArrayConstraint {
+    array_regex: Regex,
+    comma_delim_list_regex: Regex
+}
+
+impl UuidArrayConstraint {
+    pub fn new() -> Self {
+        UuidArrayConstraint {
+            array_regex: Regex::new(r#"^\[(?:\s*"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"(?:,\s*"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}")*)\]$"#).unwrap(),
+            comma_delim_list_regex: Regex::new(r#"^"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"(?:,\s*"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}")*$"#).unwrap()
+        }
+    }
+
+    pub fn is_array(&self, val: Option<String>) -> bool {
+        if val.is_some() {
+            if self.array_regex.is_match(val.unwrap().as_str()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn is_comma_delim_list(&self, val: Option<String>) -> bool {
+        if val.is_some() {
+            if self.comma_delim_list_regex.is_match(val.unwrap().as_str()) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+impl Validate<UuidArrayConstraint, FieldName> for String {
+    fn validate(self, context: impl Into<FieldName>, constraint: &UuidArrayConstraint) -> Validation<UuidArrayConstraint, Self> {
+        if constraint.is_array(Some(self.clone())) || constraint.is_comma_delim_list(Some(self.clone())) {
+            return Validation::success(self);
+        }
+        Validation::failure(vec![invalid_value("invalid-array", context, self.clone(), "value must be an array or comma delimited list".to_string())])
     }
 }
