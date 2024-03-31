@@ -103,7 +103,8 @@ pub struct TruthyConstraint;
 impl TruthyConstraint {
     pub fn is_truthy(&self, val: Option<String>) -> bool {
         if val.is_some() {
-            let val_str = val.unwrap().as_str();
+            let unwrapped_val = val.unwrap();
+            let val_str = unwrapped_val.as_str();
             if val_str != "0"
                 && val_str != ""
                 && val_str != "false"
@@ -177,13 +178,13 @@ impl StreamConstraint {
             return false;
         }
 
-        let stream = JsValue::from(val);
+        let stream = JsValue::from(val.clone());
         if stream.is_null() || !stream.is_object() {
             return false;
         }
         let emitter_result = serde_json::from_str::<EventEmitter>(val.unwrap().as_str());
         match emitter_result {
-            Ok(emitter) => true,
+            Ok(_) => true,
             _ => false
         }
     }

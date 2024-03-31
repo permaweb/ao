@@ -1,8 +1,8 @@
-use lazy_static::lazy_static;
-use std::{borrow::Cow, sync::{Arc, RwLock}};
+use std::borrow::Cow;
 use valid::{constraint::{CharCount, NotEmpty}, Validate, ValidationError, ValidationResult};
 use dotenv::dotenv;
 use regex::Regex;
+use once_cell::sync::OnceCell;
 use super::validation::{DbModeConstraint, IntegerConstraint, TruthyConstraint, UrlConstraint, UuidArrayConstraint};
 
 /// @FIL - function int limit
@@ -11,9 +11,9 @@ use super::validation::{DbModeConstraint, IntegerConstraint, TruthyConstraint, U
 /// 
 /// @FBOOL - function is truthy
 #[allow(non_snake_case)]
-struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
+struct DomainConfigSchema<'a, FIL, FURL, FBOOL, FARRAY>
     where
-        FIL: Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync,
+        FIL: Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync + 'a,
         FURL: Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync,
         FBOOL: Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync,
         FARRAY: Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync
@@ -23,13 +23,13 @@ struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
     *
     * ie. '1000' or '1_000'
     */
-    pub PROCESS_WASM_MEMORY_MAX_LIMIT: FIL,
+    pub PROCESS_WASM_MEMORY_MAX_LIMIT: &'a FIL,
     /**
     * The maximum Compute-Limit, in bytes, supported for ao processes
     *
     * ie. '1000' or '1_000'
     */
-    pub PROCESS_WASM_COMPUTE_MAX_LIMIT: FIL,
+    pub PROCESS_WASM_COMPUTE_MAX_LIMIT: &'a FIL,
     /**
     * The gateway for the CU to use fetch block metadata, data on arweave,
     * and Scheduler-Location data
@@ -51,7 +51,7 @@ struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
     /**
     * The maximum number of event listeners for the database
     */
-    pub DB_MAX_LISTENERS: FIL,
+    pub DB_MAX_LISTENERS: &'a FIL,
     /**
     * The wallet for the CU
     */
@@ -59,14 +59,14 @@ struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
     /**
     * The interval, in milliseconds, at which to log memory usage on this CU.
     */
-    pub MEM_MONITOR_INTERVAL: FIL,
+    pub MEM_MONITOR_INTERVAL: &'a FIL,
     /**
     * The amount of time, in milliseconds, that the CU should wait before creating a process Checkpoint,
     * if it has already created a Checkpoint for that process.
     *
     * This is effectively a throttle on Checkpoint creation, for a given process
     */
-    PROCESS_CHECKPOINT_CREATION_THROTTLE: FIL,
+    PROCESS_CHECKPOINT_CREATION_THROTTLE: &'a FIL,
     /**
     * Whether to disable Process Checkpoint creation entirely. Great for when developing locally,
     * of for an ephemeral CU
@@ -77,19 +77,19 @@ struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
     * then it will immediately create a Checkpoint at the end of the
     * evaluation stream
     */
-    EAGER_CHECKPOINT_THRESHOLD: FIL,
+    EAGER_CHECKPOINT_THRESHOLD: &'a FIL,
     /**
     * The number of workers to use for evaluating messages
     */
-    WASM_EVALUATION_MAX_WORKERS: FIL,
+    WASM_EVALUATION_MAX_WORKERS: &'a FIL,
     /**
     * The maximum size of the in-memory cache used for wasm instances
     */
-    WASM_INSTANCE_CACHE_MAX_SIZE: FIL,
+    WASM_INSTANCE_CACHE_MAX_SIZE: &'a FIL,
     /**
     * The maximum size of the in-memory cache used for Wasm modules
     */
-    WASM_MODULE_CACHE_MAX_SIZE: FIL,
+    WASM_MODULE_CACHE_MAX_SIZE: &'a FIL,
     /**
     * The directory to place wasm binaries downloaded from arweave.
     */
@@ -107,45 +107,45 @@ struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
     * The maximum size, in bytes, of the cache used to cache the latest memory
     * evaluated for an ao process
     */
-    PROCESS_MEMORY_CACHE_MAX_SIZE: FIL,
+    PROCESS_MEMORY_CACHE_MAX_SIZE: &'a FIL,
     /**
     * The time to live for a cache entry in the process latest memory cache.
     * An entries ttl is rest each time it is accessed
     */
-    PROCESS_MEMORY_CACHE_TTL: FIL,
+    PROCESS_MEMORY_CACHE_TTL: &'a FIL,
     /**
     * The amount of time in milliseconds, the CU should wait for evaluation to complete
     * before responding with a "busy" message to the client
     */
-    BUSY_THRESHOLD: FIL
+    BUSY_THRESHOLD: &'a FIL
 }
 
-unsafe impl<FIL, FURL, FBOOL, FARRAY> Send for DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
+unsafe impl<'a, FIL, FURL, FBOOL, FARRAY> Send for DomainConfigSchema<'a, FIL, FURL, FBOOL, FARRAY>
 where 
     FIL: Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync,
     FURL: Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync,
     FBOOL: Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync,
     FARRAY: Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync {}
 
-unsafe impl<FIL, FURL, FBOOL, FARRAY> Sync for DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
+unsafe impl<'a, FIL, FURL, FBOOL, FARRAY> Sync for DomainConfigSchema<'a, FIL, FURL, FBOOL, FARRAY>
 where 
     FIL: Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync,
     FURL: Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync,
     FBOOL: Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync,
     FARRAY: Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync {}
 
-impl<FIL, FURL, FBOOL, FARRAY> DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
+impl<'a, FIL, FURL, FBOOL, FARRAY> DomainConfigSchema<'a, FIL, FURL, FBOOL, FARRAY>
 where 
     FIL: Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync,
     FURL: Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync,
     FBOOL: Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync,
     FARRAY: Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync {
     fn new(
-        positive_int_schema: FIL, 
+        positive_int_schema: &'a FIL, 
         url_parse_schema: FURL,
         db_mode_schema: FURL,
         db_url_schema: FURL,
-        db_max_listeners_schema: FIL,
+        db_max_listeners_schema: &'a FIL,
         wallet_schema: FURL,
         truthy_schema: FBOOL,
         min_char_one_schema: FURL,
@@ -181,9 +181,9 @@ where
 
 fn positive_int_schema(val: Option<String>) -> Result<i64, ValidationError> {
     let regex = Regex::new(r"^(?!_)[0-9_]+(?!_)$").unwrap();
-    if let None = val {
+    if let None = val.clone() {
         return Ok(-1);
-    } else if regex.is_match(val.unwrap().as_str()) {
+    } else if regex.is_match(val.clone().unwrap().as_str()) {
         let final_val = val.unwrap().replace("_", "");
         let final_val = final_val.parse::<i64>().unwrap();
         return Ok(final_val);
@@ -277,13 +277,13 @@ fn array_schema(val: Option<String>) -> Result<Vec<String>, ValidationError> {
     match result {
         Ok(validated) => {
             let val = validated.unwrap();
-            if constraint.is_array(Some(val)) {
+            if constraint.is_array(Some(val.clone())) {
                 let list = val.replace("[", "").replace("]", "");
                 let list = list.split(',').map(|item| {
                     item.to_string()
                 }).collect::<Vec<String>>();
                 return Ok(list);
-            } else if constraint.is_comma_delim_list(Some(val)) {
+            } else if constraint.is_comma_delim_list(Some(val.clone())) {
                 let list = val.split(',').map(|item| {
                     item.to_string()
                 }).collect::<Vec<String>>();
@@ -312,36 +312,39 @@ fn validation_result<C, T>(result: ValidationResult<C, T>) -> Result<T, Validati
     }  
 }
 
-lazy_static! {
-    pub static ref DOMAIN_CONFIG_SCHEMA: Arc<
-        RwLock<
-            DomainConfigSchema<
-                Box<dyn Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync>, 
-                Box<dyn Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync>,
-                Box<dyn Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync>,
-                Box<dyn Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync>
-            >
-        >
-    > = {
-        let domain_config_schema = Arc::new(RwLock::new(
-            DomainConfigSchema::<
-                Box<dyn Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync>,
-                Box<dyn Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync>,
-                Box<dyn Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync>,
-                Box<dyn Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync>
-            >::new(
-                Box::new(&positive_int_schema), 
-                Box::new(&url_parse_schema), 
-                Box::new(&db_mode_schema), 
-                Box::new(&db_url_schema),
-                Box::new(&db_max_listeners_schema),
-                Box::new(&wallet_schema),
-                Box::new(&truthy_schema),
-                Box::new(&min_char_one_schema),
-                Box::new(&array_schema)
-            )
-        ));
-        domain_config_schema
-    };
+static mut DOMAIN_CONFIG_SCHEMA: OnceCell<DomainConfigSchema<
+    '_,
+    Box<dyn Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync + '_>, 
+    Box<dyn Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync>,
+    Box<dyn Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync>,
+    Box<dyn Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync>
+>> = OnceCell::new();
+
+fn get_domain_config_schema<'a>() -> DomainConfigSchema<
+    'a,
+    Box<dyn Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync + 'a>, 
+    Box<dyn Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync>,
+    Box<dyn Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync>,
+    Box<dyn Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync>
+> {
+    DOMAIN_CONFIG_SCHEMA.get_or_init(|| {
+        DomainConfigSchema::<
+            'a,
+            Box<dyn Fn(Option<String>) -> Result<i64, ValidationError> + Send + Sync + 'a>,
+            Box<dyn Fn(Option<String>) -> Result<String, ValidationError> + Send + Sync>,
+            Box<dyn Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync>,
+            Box<dyn Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync>
+        >::new(
+            Box::new(&positive_int_schema), 
+            Box::new(&url_parse_schema), 
+            Box::new(&db_mode_schema), 
+            Box::new(&db_url_schema),
+            Box::new(&db_max_listeners_schema),
+            Box::new(&wallet_schema),
+            Box::new(&truthy_schema),
+            Box::new(&min_char_one_schema),
+            Box::new(&array_schema)
+        )
+    }).value
 }
 

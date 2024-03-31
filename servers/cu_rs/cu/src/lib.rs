@@ -5,9 +5,10 @@ pub mod domain {
     pub mod client {
         pub mod arweave;
     }
-    pub mod model;
+    // pub mod model;
     pub mod validation;
 }
+pub mod env_vars;
 
 use std::env;
 use actix_cors::Cors;

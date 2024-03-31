@@ -2,9 +2,10 @@ use arweave_rs::{Arweave, ArweaveBuilder};
 use futures::{Future, FutureExt};
 use reqwest::{header::{HeaderMap, HeaderValue}, Url};
 use serde::{Deserialize, Serialize};
-use std::{any::Any, path::PathBuf, pin::Pin};
-use reqwest::Client;
+use std::{path::PathBuf, pin::Pin, sync::Arc};
+use reqwest::{Response, Client};
 use log::error;
+use crate::env_vars::{get_gateway_url, get_upload_url, GATEWAY_URL, UPLOADER_URL};
 
 pub struct InternalArweave {
     internal_arweave: Arweave,
@@ -60,7 +61,7 @@ impl InternalArweave {
      * @param {Env1} env
      * @returns {LoadTransactionMeta}
     */
-    pub fn load_tx_meta_with<'a>(&'a self, gateway_url: String) -> impl FnOnce(String) -> Pin<Box<dyn Future<Output = Record> + 'a>> {
+    pub fn load_tx_meta_with<'a>(&'a self) -> impl FnOnce(String) -> Pin<Box<dyn Future<Output = Record> + 'a>> {
         #[allow(non_snake_case)]
         let GET_PROCESSES_QUERY = r#"
             query GetProcesses ($processIds: [ID!]!) {
@@ -82,30 +83,26 @@ impl InternalArweave {
             }
         }"#;
 
-        let graphql = format!("{}{}", gateway_url, "/graphql");
-
         move |id: String| {
+            let graphql = format!("{}{}", get_gateway_url(), "/graphql");
             async move {
-                let mut headers = HeaderMap::new();
-                headers.append("Content-Type", HeaderValue::from_str("application/json").unwrap());
-                let body = serde_json::to_string(&GraphqlQuery {
-                    query: GET_PROCESSES_QUERY.to_string(),
-                    variables: ProcessIds {
-                        process_ids: vec![id.clone()]
-                    }
-                });
-                let result = self.client.post(graphql.clone())
-                    .headers(headers)
-                    .body(body.unwrap())
+                let result = self.client.post(graphql)
+                    .headers(get_content_type_headers())
+                    .body(serde_json::to_string(&GraphqlQuery {
+                        query: GET_PROCESSES_QUERY.to_string(),
+                        variables: ProcessIds {
+                            process_ids: vec![id.clone()]
+                        }
+                    }).unwrap())
                     .send()
                     .await;
                 match result {
                     Ok(res) => {
                         let json = res.json::<TransactionConnectionSchema>().await.unwrap();
-                        json.data.edges[0].node.clone()
+                        json.data.edges[0].node.clone() // todo: should get the actual schema for the node
                     },
                     Err(e) => {
-                        error!("Error Encountered when fetching transaction {} from gateway {}", id, graphql);
+                        error!("Error Encountered when fetching transaction {} from gateway {}", id, get_gateway_url());
                         panic!("{:?}", e);
                     }
                 }
@@ -113,6 +110,86 @@ impl InternalArweave {
             .boxed()
         }
     }
+
+    /**
+    * @typedef Env2
+    * @property {fetch} fetch
+    * @property {string} GATEWAY_URL
+    *
+    * @callback LoadTransactionData
+    * @param {string} id - the id of the process whose src is being loaded
+    * @returns {Async<Response>}
+    *
+    * @param {Env2} env
+    * @returns {LoadTransactionData}
+    */
+    pub fn load_tx_data_with<'a>(&'a self) -> impl FnOnce(String) -> Pin<Box<dyn Future<Output = Response> + 'a>> {
+        move |id: String| {
+            async move {
+                let result = self.client.get(format!("{}/raw/{}", get_gateway_url(), id)).send().await;
+                match result {
+                    Ok(res) => res,
+                    Err(e) => {
+                        error!("Error Encountered when fetching raw data for transaction {} from gateway {}", id, get_gateway_url());
+                        panic!("{:?}", e);
+                    }
+                }
+            }
+            .boxed()
+        }
+    }
+
+    pub fn query_gateway_with<'a, T: Serialize + Send + 'a>(&'a self) -> impl FnOnce(String, T) -> Pin<Box<dyn Future<Output = TransactionConnectionSchema> + 'a>> {        
+        move |query: String, variables: T| {
+            async move {
+                let result = self.client.post(format!("{}{}", get_gateway_url(), "/graphql"))
+                    .headers(get_content_type_headers())
+                    .body(serde_json::to_string(&GraphqlQuery {
+                        query,
+                        variables
+                    }).unwrap())
+                    .send()
+                    .await;
+
+                match result {
+                    Ok(res) => res.json::<TransactionConnectionSchema>().await.unwrap(),
+                    Err(e) => {
+                        error!("Error Encountered when querying gateway");
+                        panic!("{:?}", e);
+                    }
+                }
+            }
+            .boxed()
+        }
+    }
+
+    pub fn upload_data_item_with<'a>(&'a self) -> impl FnOnce(DataItem) -> Pin<Box<dyn Future<Output = TransactionConnectionSchema> + 'a>>{
+        move |data_item: DataItem| {
+            async move {
+                let result = self.client
+                    .post(format!("{}/tx/arweave", get_upload_url()))
+                    .headers(get_content_type_headers())
+                    .body(serde_json::to_string(&data_item).unwrap())
+                    .send()
+                    .await;
+
+                match result {
+                    Ok(res) => res.json::<TransactionConnectionSchema>().await.unwrap(),
+                    Err(e) => {
+                        error!("Error while communicating with uploader:");
+                        panic!("{:?}", e);
+                    }
+                }
+            }
+            .boxed()
+        }
+    }
+}
+
+fn get_content_type_headers() -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.append("Content-Type", HeaderValue::from_str("application/json").unwrap());
+    headers
 }
 
 #[derive(Deserialize)]
@@ -133,6 +210,7 @@ struct Edge {
 #[derive(Deserialize, Clone)]
 struct Record(String, String);
 
+#[derive(Serialize)]
 struct DataItem {
     id: String,
     data: Vec<u8>,
@@ -140,17 +218,19 @@ struct DataItem {
     anchor: String   
 }
 
+#[derive(Serialize)]
 struct Tag {
     name: String,
     value: String
 }
 
 #[derive(Serialize)]
-struct GraphqlQuery {
+struct GraphqlQuery<T> {
     query: String,
-    variables: ProcessIds
+    variables: T
 }
 
+/// variables type
 #[derive(Serialize)]
 struct ProcessIds {
     #[serde(rename = "processIds")]
