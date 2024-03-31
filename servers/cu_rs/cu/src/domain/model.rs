@@ -98,7 +98,26 @@ struct DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
     * An array of process ids that should not use Checkpoints
     * on Arweave.
     */
-    PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: FARRAY
+    PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: FARRAY,
+    /**
+    * The directory to cache Checkpoints created on Arweave
+    */
+    PROCESS_CHECKPOINT_FILE_DIRECTORY: FURL,
+    /**
+    * The maximum size, in bytes, of the cache used to cache the latest memory
+    * evaluated for an ao process
+    */
+    PROCESS_MEMORY_CACHE_MAX_SIZE: FIL,
+    /**
+    * The time to live for a cache entry in the process latest memory cache.
+    * An entries ttl is rest each time it is accessed
+    */
+    PROCESS_MEMORY_CACHE_TTL: FIL,
+    /**
+    * The amount of time in milliseconds, the CU should wait for evaluation to complete
+    * before responding with a "busy" message to the client
+    */
+    BUSY_THRESHOLD: FIL
 }
 
 unsafe impl<FIL, FURL, FBOOL, FARRAY> Send for DomainConfigSchema<FIL, FURL, FBOOL, FARRAY>
@@ -122,41 +141,45 @@ where
     FBOOL: Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync,
     FARRAY: Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync {
     fn new(
-        positive_int_parse: FIL, 
-        url_parse: FURL,
-        db_mode_parse: FURL,
-        db_url_parse: FURL,
-        db_max_listeners: FIL,
-        wallet_parse: FURL,
-        truthy_parse: FBOOL,
-        min_char_1_parse: FURL,
-        array_parse: FARRAY
+        positive_int_schema: FIL, 
+        url_parse_schema: FURL,
+        db_mode_schema: FURL,
+        db_url_schema: FURL,
+        db_max_listeners_schema: FIL,
+        wallet_schema: FURL,
+        truthy_schema: FBOOL,
+        min_char_one_schema: FURL,
+        array_schema: FARRAY
     ) -> Self {
         dotenv().ok();
 
         DomainConfigSchema {
-            PROCESS_WASM_MEMORY_MAX_LIMIT: positive_int_parse,
-            PROCESS_WASM_COMPUTE_MAX_LIMIT: positive_int_parse,
-            GATEWAY_URL: url_parse,
-            UPLOADER_URL: url_parse,
-            DB_MODE: db_mode_parse,
-            DB_URL: db_url_parse,
-            DB_MAX_LISTENERS: db_max_listeners,
-            WALLET: wallet_parse,
-            MEM_MONITOR_INTERVAL: positive_int_parse,
-            PROCESS_CHECKPOINT_CREATION_THROTTLE: positive_int_parse,
-            DISABLE_PROCESS_CHECKPOINT_CREATION: truthy_parse,
-            EAGER_CHECKPOINT_THRESHOLD: positive_int_parse,
-            WASM_EVALUATION_MAX_WORKERS: positive_int_parse,
-            WASM_INSTANCE_CACHE_MAX_SIZE: positive_int_parse,
-            WASM_MODULE_CACHE_MAX_SIZE: positive_int_parse,
-            WASM_BINARY_FILE_DIRECTORY: min_char_1_parse,
-            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: array_parse
+            PROCESS_WASM_MEMORY_MAX_LIMIT: positive_int_schema,
+            PROCESS_WASM_COMPUTE_MAX_LIMIT: positive_int_schema,
+            GATEWAY_URL: url_parse_schema,
+            UPLOADER_URL: url_parse_schema,
+            DB_MODE: db_mode_schema,
+            DB_URL: db_url_schema,
+            DB_MAX_LISTENERS: db_max_listeners_schema,
+            WALLET: wallet_schema,
+            MEM_MONITOR_INTERVAL: positive_int_schema,
+            PROCESS_CHECKPOINT_CREATION_THROTTLE: positive_int_schema,
+            DISABLE_PROCESS_CHECKPOINT_CREATION: truthy_schema,
+            EAGER_CHECKPOINT_THRESHOLD: positive_int_schema,
+            WASM_EVALUATION_MAX_WORKERS: positive_int_schema,
+            WASM_INSTANCE_CACHE_MAX_SIZE: positive_int_schema,
+            WASM_MODULE_CACHE_MAX_SIZE: positive_int_schema,
+            WASM_BINARY_FILE_DIRECTORY: min_char_one_schema,
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: array_schema,
+            PROCESS_CHECKPOINT_FILE_DIRECTORY: db_url_schema,
+            PROCESS_MEMORY_CACHE_MAX_SIZE: positive_int_schema,
+            PROCESS_MEMORY_CACHE_TTL: positive_int_schema,
+            BUSY_THRESHOLD: positive_int_schema
         }
     }    
 }
 
-fn positive_int_parse(val: Option<String>) -> Result<i64, ValidationError> {
+fn positive_int_schema(val: Option<String>) -> Result<i64, ValidationError> {
     let regex = Regex::new(r"^(?!_)[0-9_]+(?!_)$").unwrap();
     if let None = val {
         return Ok(-1);
@@ -175,14 +198,14 @@ fn positive_int_parse(val: Option<String>) -> Result<i64, ValidationError> {
 }
 
 const URL_MESSAGE: &str = "URL must be a a valid URL";
-fn url_parse(val: Option<String>) -> Result<String, ValidationError> {
+fn url_parse_schema(val: Option<String>) -> Result<String, ValidationError> {
     if let None = val {
         return option_validation_result(val.validate("val", &NotEmpty).with_message(URL_MESSAGE));
     }
     validation_result(val.unwrap().validate("val", &UrlConstraint::new()).with_message(URL_MESSAGE))
 }
 
-fn db_mode_parse(val: Option<String>) -> Result<String, ValidationError> {
+fn db_mode_schema(val: Option<String>) -> Result<String, ValidationError> {
     if let None = val {
         return option_validation_result(val.validate("val", &NotEmpty).result());
     }
@@ -190,14 +213,14 @@ fn db_mode_parse(val: Option<String>) -> Result<String, ValidationError> {
 }
 
 const DB_URL_MESSAGE: &str = "DB_URL must be set to the database connection string";
-fn db_url_parse(val: Option<String>) -> Result<String, ValidationError> {
+fn db_url_schema(val: Option<String>) -> Result<String, ValidationError> {
     if let None = val {
         return option_validation_result(val.validate("val", &NotEmpty).with_message(DB_URL_MESSAGE));
     }
     validation_result(val.unwrap().validate("val", &CharCount::Min(1)).with_message(DB_URL_MESSAGE))
 }
 
-fn min_char_1_parse(val: Option<String>) -> Result<String, ValidationError> {
+fn min_char_one_schema(val: Option<String>) -> Result<String, ValidationError> {
     if let None = val {
         return option_validation_result(val.validate("val", &NotEmpty).result());
     }
@@ -205,7 +228,7 @@ fn min_char_1_parse(val: Option<String>) -> Result<String, ValidationError> {
 }
 
 const DB_MAX_LISTENERS: &str = "DB_MAX_LISTENERS must be an integer";
-fn db_max_listeners(val: Option<String>) -> Result<i64, ValidationError> {
+fn db_max_listeners_schema(val: Option<String>) -> Result<i64, ValidationError> {
     if let None = val {
         return Err(ValidationError {
             message: Some(Cow::from(DB_MAX_LISTENERS)),
@@ -220,14 +243,14 @@ fn db_max_listeners(val: Option<String>) -> Result<i64, ValidationError> {
 }
 
 const WALLET_MESSAGE: &str = "WALLET must be a Wallet JWK Inteface";
-fn wallet_parse(val: Option<String>) -> Result<String, ValidationError> {
+fn wallet_schema(val: Option<String>) -> Result<String, ValidationError> {
     if let None = val {
         return option_validation_result(val.validate("val", &NotEmpty).with_message(WALLET_MESSAGE));
     }
     validation_result(val.unwrap().validate("val", &CharCount::Min(1)).with_message(WALLET_MESSAGE))
 }
 
-fn truthy_parse(val: Option<String>) -> Result<bool, ValidationError> {
+fn truthy_schema(val: Option<String>) -> Result<bool, ValidationError> {
     if let None = val {
         return Err(ValidationError {
             message: Some(Cow::from("value is falsey")),
@@ -241,7 +264,7 @@ fn truthy_parse(val: Option<String>) -> Result<bool, ValidationError> {
     }
 }
 
-fn array_parse(val: Option<String>) -> Result<Vec<String>, ValidationError> {
+fn array_schema(val: Option<String>) -> Result<Vec<String>, ValidationError> {
     if let None = val {
         return Err(ValidationError {
             message: Some(Cow::from("value is empty")),
@@ -307,15 +330,15 @@ lazy_static! {
                 Box<dyn Fn(Option<String>) -> Result<bool, ValidationError> + Send + Sync>,
                 Box<dyn Fn(Option<String>) -> Result<Vec<String>, ValidationError> + Send + Sync>
             >::new(
-                Box::new(&positive_int_parse), 
-                Box::new(&url_parse), 
-                Box::new(&db_mode_parse), 
-                Box::new(&db_url_parse),
-                Box::new(&db_max_listeners),
-                Box::new(&wallet_parse),
-                Box::new(&truthy_parse),
-                Box::new(&min_char_1_parse),
-                Box::new(&array_parse)
+                Box::new(&positive_int_schema), 
+                Box::new(&url_parse_schema), 
+                Box::new(&db_mode_schema), 
+                Box::new(&db_url_schema),
+                Box::new(&db_max_listeners_schema),
+                Box::new(&wallet_schema),
+                Box::new(&truthy_schema),
+                Box::new(&min_char_one_schema),
+                Box::new(&array_schema)
             )
         ));
         domain_config_schema

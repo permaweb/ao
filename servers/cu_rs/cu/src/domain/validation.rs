@@ -1,6 +1,8 @@
+use serde::Deserialize;
 use valid::{invalid_value, FieldName, Validate, Validation};
 use std::fmt::Display;
 use regex::Regex;
+use wasm_bindgen::JsValue;
 
 pub struct UrlConstraint {
     regex: Regex
@@ -164,5 +166,46 @@ impl Validate<UuidArrayConstraint, FieldName> for String {
             return Validation::success(self);
         }
         Validation::failure(vec![invalid_value("invalid-array", context, self.clone(), "value must be an array or comma delimited list".to_string())])
+    }
+}
+
+pub struct StreamConstraint;
+
+impl StreamConstraint {
+    fn is_stream(val: Option<String>) -> bool {
+        if let None = val {
+            return false;
+        }
+
+        let stream = JsValue::from(val);
+        if stream.is_null() || !stream.is_object() {
+            return false;
+        }
+        let emitter_result = serde_json::from_str::<EventEmitter>(val.unwrap().as_str());
+        match emitter_result {
+            Ok(emitter) => true,
+            _ => false
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct EventEmitter;
+pub struct Options {
+    pub end: Option<bool>
+}
+trait GenericEventEmitter<T> {
+    fn pipe(
+        destination: T,
+        options: Options
+    ) -> T;
+}
+
+impl<T> GenericEventEmitter<T> for EventEmitter {
+    fn pipe(
+        destination: T,
+        options: Options
+    ) -> T {
+        destination
     }
 }
