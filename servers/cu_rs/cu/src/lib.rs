@@ -12,6 +12,7 @@ pub mod env_vars;
 pub mod utils {
     pub mod datetime;
     pub mod string_converters;
+    pub mod paths;
 }
 
 use std::env;
