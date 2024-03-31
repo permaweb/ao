@@ -9,6 +9,10 @@ pub mod domain {
     pub mod validation;
 }
 pub mod env_vars;
+pub mod utils {
+    pub mod datetime;
+    pub mod string_converters;
+}
 
 use std::env;
 use actix_cors::Cors;

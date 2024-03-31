@@ -2,10 +2,10 @@ use arweave_rs::{Arweave, ArweaveBuilder};
 use futures::{Future, FutureExt};
 use reqwest::{header::{HeaderMap, HeaderValue}, Url};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, pin::Pin, sync::Arc};
+use std::{path::PathBuf, pin::Pin};
 use reqwest::{Response, Client};
 use log::error;
-use crate::env_vars::{get_gateway_url, get_upload_url, GATEWAY_URL, UPLOADER_URL};
+use crate::env_vars::{get_gateway_url, get_upload_url};
 
 pub struct InternalArweave {
     internal_arweave: Arweave,
