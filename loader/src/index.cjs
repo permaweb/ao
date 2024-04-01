@@ -1,4 +1,6 @@
-const Module = require('./formats/emscripten.cjs')
+const Emscripten = require('./formats/emscripten.cjs')
+const Emscripten2 = require('./formats/emscripten2.cjs')
+
 /* eslint-enable */
 
 /**
@@ -47,7 +49,18 @@ const Module = require('./formats/emscripten.cjs')
  */
 
 /**
+ * @typedef Options
+ * @property {string} format
+ * @property {string} input
+ * @property {string} output
+ * @property {string} memory
+ * @property {string} compute
+ * @property {String[]} extensions
+ */
+
+/**
  * @param {ArrayBuffer} binary
+ * @param {Options} options
  * @returns {Promise<handleFunction>}
  */
 module.exports = async function (binary, options) {
@@ -56,7 +69,9 @@ module.exports = async function (binary, options) {
     options = { format: 'wasm32-unknown-emscripten' }
   }
   if (options.format === "wasm32-unknown-emscripten") {
-    instance = await Module(binary, options)
+    instance = await Emscripten(binary, options)
+  } else if (options.format === "wasm32-unknown-emscripten2") {
+    instance = await Emscripten2(binary, options)
   }
 
   /**
@@ -83,19 +98,6 @@ module.exports = async function (binary, options) {
       /** start mock Math.random */
       Math.random = function () { return 0.5 }
       /** end mock Math.random */
-
-      /** start mock Date */
-      // eslint-disable-next-line no-global-assign
-      // Date = function () {
-      //   if (arguments.length === 0) {
-      //     // Return a specific date and time (e.g., January 1, 2022)
-      //     return new OriginalDate('2022-01-01T00:00:00.000Z')
-      //   } else {
-      //     // If arguments are provided, use the original Date constructor
-      //     return new OriginalDate(...arguments)
-      //   }
-      // }
-      /** end mock Date */
 
       /** start mock console.log */
       console.log = function () { return null }
