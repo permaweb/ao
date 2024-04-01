@@ -233,7 +233,7 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_message(&self, message_id_in: &str) -> Result<serde_json::Value, StoreErrorType> {
+    fn get_message(&self, tx_id: &str) -> Result<serde_json::Value, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -242,7 +242,7 @@ impl DataStore for StoreClient {
             later assignments, it should be the original message itself.
         */
         let db_message_result: Result<Option<DbMessage>, DieselError> = messages
-            .filter(message_id.eq(message_id_in))
+            .filter(message_id.eq(tx_id).or(assignment_id.eq(tx_id)))
             .order(timestamp.asc())
             .first(conn)
             .optional();
