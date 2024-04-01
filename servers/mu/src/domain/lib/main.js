@@ -40,8 +40,9 @@ export function sendDataItemWith ({
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess })
   const pullResult = pullResultWith({ fetchResult, logger })
-
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
+
+  const locateProcessLocal = fromPromise(locateProcess)
 
   /**
    * If the data item is a Message, then cranking and tracing
@@ -132,7 +133,14 @@ export function sendDataItemWith ({
       .chain((ctx) =>
         verifyParsedDataItem(ctx.dataItem)
           .chain(({ isMessage }) => {
-            if (isMessage) return sendMessage(ctx)
+            if (isMessage) {
+              /*
+                add schedLocation into the context, it is required
+                for writeMessage
+              */
+              return locateProcessLocal(ctx.dataItem.target)
+                .chain((schedLocation) => sendMessage({ ...ctx, schedLocation }))
+            }
             return sendProcess(ctx)
           })
       )
@@ -141,7 +149,7 @@ export function sendDataItemWith ({
 
 /**
  * process a single message and return its responses
- * the input to this is a cached cu result
+ * the input to this is a cu result
  */
 export function processMsgWith ({
   locateProcess,
@@ -155,7 +163,7 @@ export function processMsgWith ({
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeMessage = writeMessageTxWith({ writeDataItem, locateProcess, logger, writeDataItemArweave })
+  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave })
   const pullResult = pullResultWith({ fetchResult, logger })
 
   return (ctx) => {
