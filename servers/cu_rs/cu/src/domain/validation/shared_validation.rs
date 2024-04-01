@@ -1,8 +1,141 @@
 use serde::Deserialize;
-use valid::{invalid_value, FieldName, Validate, Validation};
-use std::fmt::Display;
+use valid::{constraint::{CharCount, NotEmpty}, invalid_value, FieldName, Validate, Validation, ValidationError, ValidationResult};
+use std::{borrow::Cow, fmt::Display};
 use regex::Regex;
 use wasm_bindgen::JsValue;
+
+pub fn parse_positive_int_schema(val: Option<String>) -> Result<i64, ValidationError> {
+    let regex = Regex::new(r"^(?!_)[0-9_]+(?!_)$").unwrap();
+    if let None = val.clone() {
+        return Ok(-1);
+    } else if regex.is_match(val.clone().unwrap().as_str()) {
+        let final_val = val.unwrap().replace("_", "");
+        let final_val = final_val.parse::<i64>().unwrap();
+        return Ok(final_val);
+    } else if let Ok(val) = val.unwrap().parse::<i64>() {
+        return Ok(val);
+    }
+
+    Err(ValidationError {
+        message: Some(Cow::from("Provided invalid value for positive_int_schema")),
+        violations: vec![]
+    })
+}
+
+const URL_MESSAGE: &str = "URL must be a a valid URL";
+pub fn parse_url_parse_schema(val: Option<String>) -> Result<String, ValidationError> {
+    if let None = val {
+        return option_validation_result(val.validate("val", &NotEmpty).with_message(URL_MESSAGE));
+    }
+    validation_result(val.unwrap().validate("val", &UrlConstraint::new()).with_message(URL_MESSAGE))
+}
+
+pub fn parse_db_mode_schema(val: Option<String>) -> Result<String, ValidationError> {
+    if let None = val {
+        return option_validation_result(val.validate("val", &NotEmpty).result());
+    }
+    validation_result(val.unwrap().validate("val", &DbModeConstraint::new()).result())
+}
+
+const DB_URL_MESSAGE: &str = "DB_URL must be set to the database connection string";
+pub fn parse_db_url_schema(val: Option<String>) -> Result<String, ValidationError> {
+    if let None = val {
+        return option_validation_result(val.validate("val", &NotEmpty).with_message(DB_URL_MESSAGE));
+    }
+    validation_result(val.unwrap().validate("val", &CharCount::Min(1)).with_message(DB_URL_MESSAGE))
+}
+
+const DB_MAX_LISTENERS: &str = "DB_MAX_LISTENERS must be an integer";
+pub fn parse_db_max_listeners_schema(val: Option<String>) -> Result<i64, ValidationError> {
+    if let None = val {
+        return Err(ValidationError {
+            message: Some(Cow::from(DB_MAX_LISTENERS)),
+            violations: vec![]
+        });
+    }
+    let result = val.unwrap().validate("val", &IntegerConstraint).with_message(DB_MAX_LISTENERS);
+    match result {
+        Ok(val) => Ok(val.parse::<i64>().unwrap()),
+        Err(e) => Err(e)
+    }
+}
+
+const WALLET_MESSAGE: &str = "WALLET must be a Wallet JWK Inteface";
+pub fn parse_wallet_schema(val: Option<String>) -> Result<String, ValidationError> {
+    if let None = val {
+        return option_validation_result(val.validate("val", &NotEmpty).with_message(WALLET_MESSAGE));
+    }
+    validation_result(val.unwrap().validate("val", &CharCount::Min(1)).with_message(WALLET_MESSAGE))
+}
+
+pub fn parse_truthy_schema(val: Option<String>) -> Result<bool, ValidationError> {
+    if let None = val {
+        return Err(ValidationError {
+            message: Some(Cow::from("value is falsey")),
+            violations: vec![]
+        });
+    }
+    let result = val.unwrap().validate("val", &TruthyConstraint).result();
+    match result {
+        Ok(val) => Ok(true),
+        Err(e) => Err(e)
+    }
+}
+
+pub fn parse_min_char_one_schema(val: Option<String>) -> Result<String, ValidationError> {
+    if let None = val {
+        return option_validation_result(val.validate("val", &NotEmpty).result());
+    }
+    validation_result(val.unwrap().validate("val", &CharCount::Min(1)).result())
+}
+
+pub fn parse_array_schema(val: Option<String>) -> Result<Vec<String>, ValidationError> {
+    if let None = val {
+        return Err(ValidationError {
+            message: Some(Cow::from("value is empty")),
+            violations: vec![]
+        });
+    }
+
+    let constraint = UuidArrayConstraint::new();
+    let result = val.unwrap().validate("val", &constraint).result();
+    match result {
+        Ok(validated) => {
+            let val = validated.unwrap();
+            if constraint.is_array(Some(val.clone())) {
+                let list = val.replace("[", "").replace("]", "");
+                let list = list.split(',').map(|item| {
+                    item.to_string()
+                }).collect::<Vec<String>>();
+                return Ok(list);
+            } else if constraint.is_comma_delim_list(Some(val.clone())) {
+                let list = val.split(',').map(|item| {
+                    item.to_string()
+                }).collect::<Vec<String>>();
+                return Ok(list);
+            }
+            Err(ValidationError {
+                message: Some(Cow::from("value is not an array or comma delimited list")),
+                violations: vec![]
+            })
+        },
+        Err(e) => Err(e)
+    }
+}
+
+fn option_validation_result<T>(result: ValidationResult<NotEmpty, Option<T>>) -> Result<T, ValidationError> {
+    match result {
+        Ok(res) => Ok(res.unwrap().unwrap()),
+        Err(e) => Err(e)
+    }  
+}
+
+fn validation_result<C, T>(result: ValidationResult<C, T>) -> Result<T, ValidationError> {
+    match result {
+        Ok(res) => Ok(res.unwrap()),
+        Err(e) => Err(e)
+    }  
+}
 
 pub struct UrlConstraint {
     regex: Regex
@@ -171,8 +304,9 @@ impl Validate<UuidArrayConstraint, FieldName> for String {
 }
 
 pub struct StreamConstraint;
+pub struct StreamState;
 
-impl StreamConstraint {
+impl StreamState {
     fn is_stream(val: Option<String>) -> bool {
         if let None = val {
             return false;

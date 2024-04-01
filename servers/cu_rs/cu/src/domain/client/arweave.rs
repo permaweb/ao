@@ -193,35 +193,35 @@ fn get_content_type_headers() -> HeaderMap {
 }
 
 #[derive(Deserialize)]
-struct TransactionConnectionSchema {
-    data: Transactions
+pub struct TransactionConnectionSchema {
+    pub data: Transactions
 }
 
 #[derive(Deserialize)]
-struct Transactions {
-    edges: Vec<Edge>
+pub struct Transactions {
+    pub edges: Vec<Edge>
 }
 
 #[derive(Deserialize)]
-struct Edge {
-    node: Record
+pub struct Edge {
+    pub node: Record
 }
 
 #[derive(Deserialize, Clone)]
-struct Record(String, String);
+pub struct Record(pub String, pub String);
 
 #[derive(Serialize)]
-struct DataItem {
-    id: String,
-    data: Vec<u8>,
-    tags: Vec<Tag>,
-    anchor: String   
+pub struct DataItem {
+    pub id: String,
+    pub data: Vec<u8>,
+    pub tags: Vec<Tag>,
+    pub anchor: String   
 }
 
 #[derive(Serialize)]
-struct Tag {
-    name: String,
-    value: String
+pub struct Tag {
+    pub name: String,
+    pub value: String
 }
 
 #[derive(Serialize)]

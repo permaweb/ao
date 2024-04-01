@@ -6,7 +6,11 @@ pub mod domain {
         pub mod arweave;
     }
     // pub mod model;
-    pub mod validation;
+    pub mod validation {
+        pub mod domain_config_schema;
+        pub mod shared_validation;
+    }
+    pub mod model;
 }
 pub mod env_vars;
 pub mod utils {
@@ -18,7 +22,7 @@ pub mod utils {
 use std::env;
 use actix_cors::Cors;
 use actix_web::{ HttpServer, App, http::header, middleware::Logger, web };
-use log::{info, error};
+use log::info;
 use dotenv::dotenv;
 
 pub async fn run() -> std::io::Result<()> {
