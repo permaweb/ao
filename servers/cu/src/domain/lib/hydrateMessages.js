@@ -1,4 +1,4 @@
-import { compose as composeStreams, Transform } from 'node:stream'
+import { compose as composeStreams, PassThrough, Transform } from 'node:stream'
 
 import { of } from 'hyper-async'
 import { mergeRight } from 'ramda'
@@ -217,29 +217,40 @@ export function hydrateMessagesWith (env) {
     return of(ctx)
       .map(({ messages: $messages }) => {
         /**
-         * There is some sort of bug in pipeline which will consistently cause this stream
-         * to not end IFF it emits an error.
-         *
-         * When errors are thrown in other places, pipeline seems to work and close the stream just fine.
-         * So not sure what's going on here.
-         *
-         * This seemed to be the only way to successfully
-         * end the stream, thus closing the pipeline, and resolving
-         * the promise wrapping the stream (see finished in evaluate.js)
-         *
          * See https://github.com/nodejs/node/issues/40279#issuecomment-1061124430
          */
-        $messages.on('error', () => $messages.emit('end'))
+        // $messages.on('error', () => $messages.emit('end'))
 
         return composeStreams(
+          /**
+           * There is some sort of bug in pipeline which will consistently cause this stream
+           * to not end IFF it emits an error.
+           *
+           * When errors are thrown in other points in the stream, pipeline seems to work and
+           * close the stream just fine, so not sure what's going on here.
+           *
+           * Before, we had a workaround to manually emit 'end' from the stream on eror, which seemed
+           * to work (See above commented out .on())
+           *
+           * That was UNTIL we composed more than 2 Transform streams after it, which caused that
+           * workaround to no longer work -- very strange.
+           *
+           * For some reason, wrapping the subsequent Transforms in another compose,
+           * AND adding a PassThrough stream at the end successfully ends the stream on errors,
+           * thus closing the pipeline, and resolving the promise wrapping the stream
+           * (see finished in evaluate.js)
+           */
           $messages,
-          Transform.from(maybeMessageId),
-          Transform.from(maybeAoLoad),
-          Transform.from(maybeAoAssignment),
-          // Ensure every message emitted satisfies the schema
-          Transform.from(async function * (messages) {
-            for await (const cur of messages) yield messageSchema.parse(cur)
-          })
+          composeStreams(
+            Transform.from(maybeMessageId),
+            Transform.from(maybeAoLoad),
+            Transform.from(maybeAoAssignment),
+            // Ensure every message emitted satisfies the schema
+            Transform.from(async function * (messages) {
+              for await (const cur of messages) yield messageSchema.parse(cur)
+            })
+          ),
+          new PassThrough({ objectMode: true })
         )
       })
       .map(messages => ({ messages }))
