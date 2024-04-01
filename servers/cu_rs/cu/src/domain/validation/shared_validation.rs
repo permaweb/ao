@@ -2,32 +2,10 @@ use valid::{constraint::{CharCount, NotEmpty}, invalid_value, FieldName, Validat
 use std::{borrow::Cow, fmt::Display};
 use regex::Regex;
 
-
-pub fn parse_positive_int_schema(val: Option<String>) -> Result<i64, ValidationError> {
-    let regex = Regex::new(r"^(?!_)[0-9_]+(?!_)$").unwrap();
-    if let None = val.clone() {
-        return Ok(-1);
-    } else if regex.is_match(val.clone().unwrap().as_str()) {
-        let final_val = val.unwrap().replace("_", "");
-        let final_val = final_val.parse::<i64>().unwrap();
-        return Ok(final_val);
-    } else if let Ok(val) = val.unwrap().parse::<i64>() {
-        return Ok(val);
-    }
-
-    Err(ValidationError {
-        message: Some(Cow::from("Provided invalid value for positive_int_schema")),
-        violations: vec![]
-    })
-}
-
-const URL_MESSAGE: &str = "URL must be a a valid URL";
-pub fn parse_url_parse_schema(val: Option<String>) -> Result<String, ValidationError> {
-    if let None = val {
-        return option_validation_result(val.validate("val", &NotEmpty).with_message(URL_MESSAGE));
-    }
-    validation_result(val.unwrap().validate("val", &UrlConstraint::new()).with_message(URL_MESSAGE))
-}
+pub const INVALID_EMPTY: &str = "invalid-empty";
+pub const INVALID_NOT_MATCH_UNDERSCORE: &str = "invalid-positive-int-no-match-underscore";
+pub const INVALID_NOT_MATCH_NUMBER: &str = "invalid-positive-int-no-match-number";
+pub const INVALID_URL: &str = "invalid-url";
 
 pub fn parse_db_mode_schema(val: Option<String>) -> Result<String, ValidationError> {
     if let None = val {
@@ -76,7 +54,7 @@ pub fn parse_truthy_schema(val: Option<String>) -> Result<bool, ValidationError>
     }
     let result = val.unwrap().validate("val", &TruthyConstraint).result();
     match result {
-        Ok(val) => Ok(true),
+        Ok(_val) => Ok(true),
         Err(e) => Err(e)
     }
 }
@@ -136,34 +114,6 @@ pub fn validation_result<C, T>(result: ValidationResult<C, T>) -> Result<T, Vali
     }  
 }
 
-pub struct UrlConstraint {
-    regex: Regex
-}
-
-impl UrlConstraint {
-    pub fn new() -> Self {
-        UrlConstraint {
-            regex: Regex::new(r"(http://|https://)+").unwrap()
-        }
-    }
-
-    pub fn is_url(&self, val: Option<String>) -> bool {        
-        if val.is_some() && self.regex.is_match(val.unwrap().as_str()) {
-            return true;
-        }
-        return false;
-    }
-}
-
-impl Validate<UrlConstraint, FieldName> for String {
-    fn validate(self, context: impl Into<FieldName>, constraint: &UrlConstraint) -> valid::Validation<UrlConstraint, Self> {
-        if constraint.is_url(Some(self.clone())) {
-            return Validation::success(self);
-        }
-        Validation::failure(vec![invalid_value("invalid-url", context, self.clone(), "string with http or https".to_string())])
-    }
-}
-
 pub enum DbMode {
     Remote,
     Embedded
@@ -213,7 +163,7 @@ pub struct IntegerConstraint;
 impl IntegerConstraint {
     pub fn is_integer(&self, val: Option<String>) -> bool {
         if val.is_some() {
-            if let Ok(val) = val.unwrap().parse::<i64>() {
+            if let Ok(_val) = val.unwrap().parse::<i64>() {
                 return true;
             }
         }

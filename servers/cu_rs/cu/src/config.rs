@@ -4,21 +4,6 @@ use once_cell::sync::OnceCell;
 use crate::utils::{datetime::{get_ms_from_hour, get_ms_from_sec}, paths::get_path_as_string, string_converters::get_array};
 use std::env::temp_dir;
 
-/**
- * The server config is an extension of the config required by the domain (business logic).
- * This prevents our domain from being aware of the environment it is running in ie.
- * An express server. Later, it could be anything
- */
-// struct ServerConfigSchema = domainConfigSchema.extend({
-//     MODE: z.enum(['development', 'production']),
-//     port: positiveIntSchema,
-//     DUMP_PATH: z.string().min(1)
-// })
-
-enum DevOrProd {
-    Development,
-    Production
-}
 
 /**
  * @type {z.infer<typeof serverConfigSchema>}

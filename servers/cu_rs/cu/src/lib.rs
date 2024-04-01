@@ -10,6 +10,10 @@ pub mod domain {
         pub mod domain_config_schema;
         pub mod shared_validation;
         pub mod stream_validation;
+        pub mod parse_schema;
+        pub mod server_config_schema;
+        pub mod positive_int_schema;
+        pub mod parse_url_parse_schema;
     }
     pub mod model;
 }
@@ -19,44 +23,12 @@ pub mod utils {
     pub mod string_converters;
     pub mod paths;
 }
+pub mod routes {
+    pub mod index;
+}
 
-use std::env;
-use actix_cors::Cors;
-use actix_web::{ HttpServer, App, http::header, middleware::Logger, web };
-use log::info;
-use dotenv::dotenv;
+use crate::app::server;
 
 pub async fn run() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
-
-    dotenv().ok();
-
-    let host = env::var("HOST").unwrap();
-    let port = env::var("PORT").unwrap().parse::<u16>().unwrap();
-
-    _ = HttpServer::new(move || {
-        App::new()
-            // .app_data(app_data.clone()) // if I need global shared state
-            .wrap(Logger::default())
-            .wrap(
-                Cors::default()
-                    // .allowed_origin() // add allowed origins with this call
-                    .allowed_methods(vec!["GET", "POST"])
-                    .allowed_headers(vec![
-                        header::CONTENT_TYPE,
-                        header::AUTHORIZATION
-                    ])
-            )
-            .service(
-                web::scope("/v1") // todo: needs update
-                    // .configure(config) // todo: add config
-            )
-    })
-    .bind((host, port))?
-    .run()
-    .await;
-
-    info!("Stats usage " );
-
-    Ok(())
+    server().await
 }

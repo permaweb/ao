@@ -1,13 +1,19 @@
-use valid::{constraint::NotEmpty, invalid_state, State, Validate, Validation, ValidationError};
+use valid::{invalid_state, State, Validate, Validation};
 use wasm_bindgen::JsValue;
 use serde::Deserialize;
-
-use super::shared_validation::{option_validation_result, validation_result};
 
 pub struct StreamConstraint;
 pub struct StreamState;
 
 impl StreamState {
+    // todo: fix this
+    // pub fn parse_stream_schema(val: Option<String>) -> Result<GenericEventEmitter<String>, ValidationError> {
+    //     if let None = val {
+    //         return option_validation_result(val.validate("val", &NotEmpty).with_message("Value must implement the iteration protocol"));
+    //     }
+    //     validation_result(val.validate(&StreamState, &StreamConstraint).with_message("Value must implement the iteration protocol"))
+    // }
+
     pub fn is_stream(&self, val: Option<String>) -> bool {
         if let None = val {
             return false;
@@ -26,7 +32,7 @@ impl StreamState {
 }
 
 impl<'a> Validate<StreamConstraint, State<&'a StreamState>> for String {
-    fn validate(self, context: impl Into<State<&'a StreamState>>, constraint: &StreamConstraint) -> Validation<StreamConstraint, Self> {
+    fn validate(self, context: impl Into<State<&'a StreamState>>, _constraint: &StreamConstraint) -> Validation<StreamConstraint, Self> {
         let context: State<&'a StreamState> = context.into();
         if context.is_stream(Some(self.clone())) {
             return Validation::success(self);
@@ -34,13 +40,6 @@ impl<'a> Validate<StreamConstraint, State<&'a StreamState>> for String {
         Validation::failure(vec![invalid_state("invalid-stream", vec![])])
     }
 }
-
-// pub fn parse_stream_schema(val: Option<String>) -> Result<GenericEventEmitter<String>, ValidationError> {
-//     if let None = val {
-//         return option_validation_result(val.validate("val", &NotEmpty).with_message("Value must implement the iteration protocol"));
-//     }
-//     validation_result(val.validate(&StreamState, &StreamConstraint).with_message("Value must implement the iteration protocol"))
-// }
 
 #[derive(Deserialize)]
 pub struct EventEmitter;
@@ -54,6 +53,7 @@ pub trait GenericEventEmitter<T> {
     ) -> T;
 }
 
+#[allow(unused)]
 impl<T> GenericEventEmitter<T> for EventEmitter {
     fn pipe(
         destination: T,
