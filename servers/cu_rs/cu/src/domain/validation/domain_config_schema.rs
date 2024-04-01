@@ -110,97 +110,97 @@ impl StartDomainConfigSchema {
     pub fn validate_domain_config_schema(&self) -> Result<FinalDomainConfigSchema, ValidationError> {
         let mut final_domain_config_schema = FinalDomainConfigSchema::default();
 
-        match parse_positive_int_schema(Some(self.PROCESS_WASM_MEMORY_MAX_LIMIT)) {
+        match parse_positive_int_schema(Some(self.PROCESS_WASM_MEMORY_MAX_LIMIT.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_WASM_MEMORY_MAX_LIMIT = val,
             Err(e) => return Err(e)
         };
         
-        match parse_positive_int_schema(Some(self.PROCESS_WASM_COMPUTE_MAX_LIMIT)) {
+        match parse_positive_int_schema(Some(self.PROCESS_WASM_COMPUTE_MAX_LIMIT.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_WASM_COMPUTE_MAX_LIMIT = val,
             Err(e) => return Err(e)
         };
         
-        match parse_url_parse_schema(Some(self.GATEWAY_URL)) {
+        match parse_url_parse_schema(Some(self.GATEWAY_URL.clone())) {
             Ok(val) => final_domain_config_schema.GATEWAY_URL = val,
             Err(e) => return Err(e)
         };
         
-        match parse_url_parse_schema(Some(self.UPLOADER_URL)) {
+        match parse_url_parse_schema(Some(self.UPLOADER_URL.clone())) {
             Ok(val) => final_domain_config_schema.UPLOADER_URL = val,
             Err(e) => return Err(e)
         };
         
-        match parse_db_mode_schema(Some(self.DB_MODE)) {
+        match parse_db_mode_schema(Some(self.DB_MODE.clone())) {
             Ok(val) => final_domain_config_schema.DB_MODE = val,
             Err(e) => return Err(e)
         };
         
-        match parse_db_url_schema(Some(self.DB_URL)) {
+        match parse_db_url_schema(Some(self.DB_URL.clone())) {
             Ok(val) => final_domain_config_schema.DB_URL = val,
             Err(e) => return Err(e)
         };
         
-        match parse_db_max_listeners_schema(Some(self.DB_MAX_LISTENERS)) {
+        match parse_db_max_listeners_schema(Some(self.DB_MAX_LISTENERS.clone())) {
             Ok(val) => final_domain_config_schema.DB_MAX_LISTENERS = val,
             Err(e) => return Err(e)
         };
         
-        match parse_wallet_schema(Some(self.WALLET)) {
+        match parse_wallet_schema(Some(self.WALLET.clone())) {
             Ok(val) => final_domain_config_schema.WALLET = val,
             Err(e) => return Err(e)
         };
 
-        match parse_positive_int_schema(Some(self.MEM_MONITOR_INTERVAL)) {
+        match parse_positive_int_schema(Some(self.MEM_MONITOR_INTERVAL.clone())) {
             Ok(val) => final_domain_config_schema.MEM_MONITOR_INTERVAL = val,
             Err(e) => return Err(e)
         };
         
-        match parse_positive_int_schema(Some(self.PROCESS_CHECKPOINT_CREATION_THROTTLE)) {
+        match parse_positive_int_schema(Some(self.PROCESS_CHECKPOINT_CREATION_THROTTLE.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_CHECKPOINT_CREATION_THROTTLE = val,
             Err(e) => return Err(e)
         };
         
-        match parse_truthy_schema(Some(self.DISABLE_PROCESS_CHECKPOINT_CREATION)) {
+        match parse_truthy_schema(Some(self.DISABLE_PROCESS_CHECKPOINT_CREATION.clone())) {
             Ok(val) => final_domain_config_schema.DISABLE_PROCESS_CHECKPOINT_CREATION = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.EAGER_CHECKPOINT_THRESHOLD)) {
+        match parse_positive_int_schema(Some(self.EAGER_CHECKPOINT_THRESHOLD.clone())) {
             Ok(val) => final_domain_config_schema.EAGER_CHECKPOINT_THRESHOLD = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.WASM_EVALUATION_MAX_WORKERS)) {
+        match parse_positive_int_schema(Some(self.WASM_EVALUATION_MAX_WORKERS.clone())) {
             Ok(val) => final_domain_config_schema.WASM_EVALUATION_MAX_WORKERS = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.WASM_INSTANCE_CACHE_MAX_SIZE)) {
+        match parse_positive_int_schema(Some(self.WASM_INSTANCE_CACHE_MAX_SIZE.clone())) {
             Ok(val) => final_domain_config_schema.WASM_INSTANCE_CACHE_MAX_SIZE = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.WASM_MODULE_CACHE_MAX_SIZE)) {
+        match parse_positive_int_schema(Some(self.WASM_MODULE_CACHE_MAX_SIZE.clone())) {
             Ok(val) => final_domain_config_schema.WASM_MODULE_CACHE_MAX_SIZE = val,
             Err(e) => return Err(e)
         };
-        match parse_min_char_one_schema(Some(self.WASM_BINARY_FILE_DIRECTORY)) {
+        match parse_min_char_one_schema(Some(self.WASM_BINARY_FILE_DIRECTORY.clone())) {
             Ok(val) => final_domain_config_schema.WASM_BINARY_FILE_DIRECTORY = val,
             Err(e) => return Err(e)
         };
-        match parse_array_schema(Some(self.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS)) {
+        match parse_array_schema(Some(self.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS = val,
             Err(e) => return Err(e)
         };
-        match parse_db_url_schema(Some(self.PROCESS_CHECKPOINT_FILE_DIRECTORY)) {
+        match parse_db_url_schema(Some(self.PROCESS_CHECKPOINT_FILE_DIRECTORY.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_CHECKPOINT_FILE_DIRECTORY = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.PROCESS_MEMORY_CACHE_MAX_SIZE)) {
+        match parse_positive_int_schema(Some(self.PROCESS_MEMORY_CACHE_MAX_SIZE.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_MEMORY_CACHE_MAX_SIZE = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.PROCESS_MEMORY_CACHE_TTL)) {
+        match parse_positive_int_schema(Some(self.PROCESS_MEMORY_CACHE_TTL.clone())) {
             Ok(val) => final_domain_config_schema.PROCESS_MEMORY_CACHE_TTL = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(Some(self.BUSY_THRESHOLD)) {
+        match parse_positive_int_schema(Some(self.BUSY_THRESHOLD.clone())) {
             Ok(val) => final_domain_config_schema.BUSY_THRESHOLD = val,
             Err(e) => return Err(e)
         };

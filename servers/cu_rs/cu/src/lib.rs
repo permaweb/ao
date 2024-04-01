@@ -9,6 +9,7 @@ pub mod domain {
     pub mod validation {
         pub mod domain_config_schema;
         pub mod shared_validation;
+        pub mod stream_validation;
     }
     pub mod model;
 }

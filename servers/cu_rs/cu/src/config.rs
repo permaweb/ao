@@ -9,11 +9,11 @@ use std::env::temp_dir;
  * This prevents our domain from being aware of the environment it is running in ie.
  * An express server. Later, it could be anything
  */
-struct ServerConfigSchema = domainConfigSchema.extend({
-    MODE: z.enum(['development', 'production']),
-    port: positiveIntSchema,
-    DUMP_PATH: z.string().min(1)
-})
+// struct ServerConfigSchema = domainConfigSchema.extend({
+//     MODE: z.enum(['development', 'production']),
+//     port: positiveIntSchema,
+//     DUMP_PATH: z.string().min(1)
+// })
 
 enum DevOrProd {
     Development,

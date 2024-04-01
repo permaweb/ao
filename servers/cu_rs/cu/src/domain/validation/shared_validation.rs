@@ -1,8 +1,7 @@
-use serde::Deserialize;
 use valid::{constraint::{CharCount, NotEmpty}, invalid_value, FieldName, Validate, Validation, ValidationError, ValidationResult};
 use std::{borrow::Cow, fmt::Display};
 use regex::Regex;
-use wasm_bindgen::JsValue;
+
 
 pub fn parse_positive_int_schema(val: Option<String>) -> Result<i64, ValidationError> {
     let regex = Regex::new(r"^(?!_)[0-9_]+(?!_)$").unwrap();
@@ -123,14 +122,14 @@ pub fn parse_array_schema(val: Option<String>) -> Result<Vec<String>, Validation
     }
 }
 
-fn option_validation_result<T>(result: ValidationResult<NotEmpty, Option<T>>) -> Result<T, ValidationError> {
+pub fn option_validation_result<T>(result: ValidationResult<NotEmpty, Option<T>>) -> Result<T, ValidationError> {
     match result {
         Ok(res) => Ok(res.unwrap().unwrap()),
         Err(e) => Err(e)
     }  
 }
 
-fn validation_result<C, T>(result: ValidationResult<C, T>) -> Result<T, ValidationError> {
+pub fn validation_result<C, T>(result: ValidationResult<C, T>) -> Result<T, ValidationError> {
     match result {
         Ok(res) => Ok(res.unwrap()),
         Err(e) => Err(e)
@@ -303,44 +302,3 @@ impl Validate<UuidArrayConstraint, FieldName> for String {
     }
 }
 
-pub struct StreamConstraint;
-pub struct StreamState;
-
-impl StreamState {
-    fn is_stream(val: Option<String>) -> bool {
-        if let None = val {
-            return false;
-        }
-
-        let stream = JsValue::from(val.clone());
-        if stream.is_null() || !stream.is_object() {
-            return false;
-        }
-        let emitter_result = serde_json::from_str::<EventEmitter>(val.unwrap().as_str());
-        match emitter_result {
-            Ok(_) => true,
-            _ => false
-        }
-    }
-}
-
-#[derive(Deserialize)]
-pub struct EventEmitter;
-pub struct Options {
-    pub end: Option<bool>
-}
-trait GenericEventEmitter<T> {
-    fn pipe(
-        destination: T,
-        options: Options
-    ) -> T;
-}
-
-impl<T> GenericEventEmitter<T> for EventEmitter {
-    fn pipe(
-        destination: T,
-        options: Options
-    ) -> T {
-        destination
-    }
-}
