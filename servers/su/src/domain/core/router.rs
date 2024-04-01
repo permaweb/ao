@@ -100,10 +100,24 @@ pub async fn redirect_tx_id(deps: Arc<Deps>, tx_id: String, process_id: Option<S
 
 
 // if this returns Ok(Some(String)) then the server should return a redirect to the String
-pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>) -> Result<Option<String>, String> {
+pub async fn redirect_data_item(deps: Arc<Deps>, input: Vec<u8>, process_id: Option<String>, assign: Option<String>) -> Result<Option<String>, String> {
     if deps.config.mode() != "router" {
         return Ok(None);
     }
+
+    // XOR, if we have one of these, we must have both.
+    if process_id.is_some() ^ assign.is_some() {
+        return Err("If sending assign or process-id, you must send both.".to_string());
+    } else if let (Some(process_id), Some(_assign)) = (process_id, assign) {
+        match deps.data_store.get_process_scheduler(&process_id) {
+            Ok(process_scheduler) => {
+                let scheduler = deps.data_store.get_scheduler(&process_scheduler.scheduler_row_id)?;
+                return Ok(Some(scheduler.url));
+            },
+            Err(_) => return Err("Unable to locate scheduler for process-id".to_string()),
+        }
+    }
+
     let builder = init_builder(&deps)?;
     let item = builder.parse_data_item(input.clone())?;
     let tags = item.tags().clone();

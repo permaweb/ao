@@ -96,7 +96,12 @@ async fn main_post_route(
     req: HttpRequest, 
     query_params: web::Query<OptionalAssign>
 ) -> impl Responder {
-    match router::redirect_data_item(deps.get_ref().clone(), req_body.to_vec()).await {
+    match router::redirect_data_item(
+        deps.get_ref().clone(), 
+        req_body.to_vec(), 
+        query_params.process_id.clone(), 
+        query_params.assign.clone()
+    ).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect()
