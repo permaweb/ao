@@ -17,7 +17,7 @@ const wasmBinary = fs.readFileSync('./test/aos/process.wasm')
 
 describe('loader', async () => {
   it('try to reproduce error', async () => {
-    const handle = await AoLoader(wasmBinary, 9_000_000_000_000)
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten2', computeLimit: 9_000_000_000_000 })
     const mainResult = await handle(null,
       {
         Owner: 'tom',
