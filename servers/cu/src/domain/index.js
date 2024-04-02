@@ -190,8 +190,8 @@ export const createApis = async (ctx) => {
     findBlocks: AoBlockClient.findBlocksWith({ db: sqlite, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db: sqlite, logger }),
     loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, pageSize: 90, logger }),
-    findModule: AoModuleClient.findModuleWith({ pouchDb, logger }),
-    saveModule: AoModuleClient.saveModuleWith({ pouchDb, logger }),
+    findModule: AoModuleClient.findModuleWith({ db: sqlite, logger }),
+    saveModule: AoModuleClient.saveModuleWith({ db: sqlite, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
       /**
        * Evaluation will invoke a worker available in the worker pool
