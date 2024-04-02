@@ -1,7 +1,11 @@
-use valid::{constraint::INVALID_DIGITS_INTEGER, invalid_value, ConstraintViolation, State, Validate, Validation, ValidationError};
-use super::{parse_schema::StartSchemaParser, parse_url_parse_schema::UrlConstraint, positive_int_schema::PositiveIntSchemaConstraint, shared_validation::{parse_array_schema, parse_db_max_listeners_schema, parse_db_mode_schema, parse_db_url_schema, parse_min_char_one_schema, parse_truthy_schema, parse_wallet_schema}};
+use valid::{constraint::{CharCount, NotEmpty, INVALID_CHAR_COUNT_MIN, INVALID_DIGITS_INTEGER}, invalid_value, ConstraintViolation, State, Validate, Validation, ValidationError};
+use super::{db_max_listeners_schema::IntegerConstraint, parse_schema::StartSchemaParser, positive_int_schema::PositiveIntSchemaConstraint, shared_validation::{parse_db_url_schema, parse_min_char_one_schema, parse_wallet_schema, INVALID_URL, INVALID_WALLET}, truthy_schema::{TruthyConstraint, INVALID_NOT_TRUTHY}, url_parse_schema::UrlConstraint, uuid_array_schema::{UuidArrayConstraint, INVALID_ARRAY}};
 use super::positive_int_schema::parse_positive_int_schema;
-use super::parse_url_parse_schema::parse_url_parse_schema;
+use super::url_parse_schema::parse_url_parse_schema;
+use super::db_mode_schema::parse_db_mode_schema;
+use super::db_max_listeners_schema::parse_db_max_listeners_schema;
+use super::truthy_schema::parse_truthy_schema;
+use super::uuid_array_schema::parse_array_schema;
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -113,22 +117,22 @@ impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
     fn parse(&self) -> Result<FinalDomainConfigSchema, ValidationError> {
         let mut final_domain_config_schema = FinalDomainConfigSchema::default();
 
-        match parse_positive_int_schema(self.PROCESS_WASM_MEMORY_MAX_LIMIT.clone()) {
+        match parse_positive_int_schema(self.PROCESS_WASM_MEMORY_MAX_LIMIT.clone(), "PROCESS_WASM_MEMORY_MAX_LIMIT") {
             Ok(val) => final_domain_config_schema.PROCESS_WASM_MEMORY_MAX_LIMIT = val,
             Err(e) => return Err(e)
         };
         
-        match parse_positive_int_schema(self.PROCESS_WASM_COMPUTE_MAX_LIMIT.clone()) {
+        match parse_positive_int_schema(self.PROCESS_WASM_COMPUTE_MAX_LIMIT.clone(), "PROCESS_WASM_COMPUTE_MAX_LIMIT") {
             Ok(val) => final_domain_config_schema.PROCESS_WASM_COMPUTE_MAX_LIMIT = val,
             Err(e) => return Err(e)
         };
         
-        match parse_url_parse_schema(self.GATEWAY_URL.clone()) {
+        match parse_url_parse_schema(self.GATEWAY_URL.clone(), "GATEWAY_URL") {
             Ok(val) => final_domain_config_schema.GATEWAY_URL = val,
             Err(e) => return Err(e)
         };
         
-        match parse_url_parse_schema(self.UPLOADER_URL.clone()) {
+        match parse_url_parse_schema(self.UPLOADER_URL.clone(), "UPLOADER_URL") {
             Ok(val) => final_domain_config_schema.UPLOADER_URL = val,
             Err(e) => return Err(e)
         };
@@ -138,7 +142,7 @@ impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
             Err(e) => return Err(e)
         };
         
-        match parse_db_url_schema(self.DB_URL.clone()) {
+        match parse_db_url_schema(self.DB_URL.clone(), "DB_URL") {
             Ok(val) => final_domain_config_schema.DB_URL = val,
             Err(e) => return Err(e)
         };
@@ -153,12 +157,12 @@ impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
             Err(e) => return Err(e)
         };
 
-        match parse_positive_int_schema(self.MEM_MONITOR_INTERVAL.clone()) {
+        match parse_positive_int_schema(self.MEM_MONITOR_INTERVAL.clone(), "MEM_MONITOR_INTERVAL") {
             Ok(val) => final_domain_config_schema.MEM_MONITOR_INTERVAL = val,
             Err(e) => return Err(e)
         };
         
-        match parse_positive_int_schema(self.PROCESS_CHECKPOINT_CREATION_THROTTLE.clone()) {
+        match parse_positive_int_schema(self.PROCESS_CHECKPOINT_CREATION_THROTTLE.clone(), "PROCESS_CHECKPOINT_CREATION_THROTTLE") {
             Ok(val) => final_domain_config_schema.PROCESS_CHECKPOINT_CREATION_THROTTLE = val,
             Err(e) => return Err(e)
         };
@@ -167,23 +171,23 @@ impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
             Ok(val) => final_domain_config_schema.DISABLE_PROCESS_CHECKPOINT_CREATION = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.EAGER_CHECKPOINT_THRESHOLD.clone()) {
+        match parse_positive_int_schema(self.EAGER_CHECKPOINT_THRESHOLD.clone(), "EAGER_CHECKPOINT_THRESHOLD") {
             Ok(val) => final_domain_config_schema.EAGER_CHECKPOINT_THRESHOLD = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.WASM_EVALUATION_MAX_WORKERS.clone()) {
+        match parse_positive_int_schema(self.WASM_EVALUATION_MAX_WORKERS.clone(), "WASM_EVALUATION_MAX_WORKERS") {
             Ok(val) => final_domain_config_schema.WASM_EVALUATION_MAX_WORKERS = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.WASM_INSTANCE_CACHE_MAX_SIZE.clone()) {
+        match parse_positive_int_schema(self.WASM_INSTANCE_CACHE_MAX_SIZE.clone(), "WASM_INSTANCE_CACHE_MAX_SIZE") {
             Ok(val) => final_domain_config_schema.WASM_INSTANCE_CACHE_MAX_SIZE = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.WASM_MODULE_CACHE_MAX_SIZE.clone()) {
+        match parse_positive_int_schema(self.WASM_MODULE_CACHE_MAX_SIZE.clone(), "WASM_MODULE_CACHE_MAX_SIZE") {
             Ok(val) => final_domain_config_schema.WASM_MODULE_CACHE_MAX_SIZE = val,
             Err(e) => return Err(e)
         };
-        match parse_min_char_one_schema(self.WASM_BINARY_FILE_DIRECTORY.clone()) {
+        match parse_min_char_one_schema(self.WASM_BINARY_FILE_DIRECTORY.clone(), "WASM_BINARY_FILE_DIRECTORY") {
             Ok(val) => final_domain_config_schema.WASM_BINARY_FILE_DIRECTORY = val,
             Err(e) => return Err(e)
         };
@@ -191,19 +195,19 @@ impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
             Ok(val) => final_domain_config_schema.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS = val,
             Err(e) => return Err(e)
         };
-        match parse_db_url_schema(self.PROCESS_CHECKPOINT_FILE_DIRECTORY.clone()) {
+        match parse_min_char_one_schema(self.PROCESS_CHECKPOINT_FILE_DIRECTORY.clone(), "PROCESS_CHECKPOINT_FILE_DIRECTORY") {
             Ok(val) => final_domain_config_schema.PROCESS_CHECKPOINT_FILE_DIRECTORY = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.PROCESS_MEMORY_CACHE_MAX_SIZE.clone()) {
+        match parse_positive_int_schema(self.PROCESS_MEMORY_CACHE_MAX_SIZE.clone(), "PROCESS_MEMORY_CACHE_MAX_SIZE") {
             Ok(val) => final_domain_config_schema.PROCESS_MEMORY_CACHE_MAX_SIZE = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.PROCESS_MEMORY_CACHE_TTL.clone()) {
+        match parse_positive_int_schema(self.PROCESS_MEMORY_CACHE_TTL.clone(), "PROCESS_MEMORY_CACHE_TTL") {
             Ok(val) => final_domain_config_schema.PROCESS_MEMORY_CACHE_TTL = val,
             Err(e) => return Err(e)
         };
-        match parse_positive_int_schema(self.BUSY_THRESHOLD.clone()) {
+        match parse_positive_int_schema(self.BUSY_THRESHOLD.clone(), "BUSY_THRESHOLD") {
             Ok(val) => final_domain_config_schema.BUSY_THRESHOLD = val,
             Err(e) => return Err(e)
         };
@@ -228,7 +232,65 @@ impl<'a> Validate<StartDomainConfigSchemaConstraint, State<&'a StartDomainConfig
             violations.push(invalid_value(INVALID_DIGITS_INTEGER, "PROCESS_WASM_COMPUTE_MAX_LIMIT", "".to_string(), "".to_string()));
         }
         if self.clone().GATEWAY_URL.validate("GATEWAY_URL", &UrlConstraint::new()).result().is_err() {
-            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "GATEWAY_URL", "".to_string(), "".to_string()));
+            violations.push(invalid_value(INVALID_URL, "GATEWAY_URL", "".to_string(), "".to_string()));
+        }
+        if self.clone().UPLOADER_URL.validate("UPLOADER_URL", &UrlConstraint::new()).result().is_err() {
+            violations.push(invalid_value(INVALID_URL, "UPLOADER_URL", "".to_string(), "".to_string()));
+        }
+        if self.clone().DB_MODE.validate("DB_MODE", &UrlConstraint::new()).result().is_err() {
+            violations.push(invalid_value(INVALID_URL, "DB_MODE", "".to_string(), "".to_string()));
+        }
+        if self.clone().DB_URL.validate("DB_URL", &NotEmpty).result().is_err()
+            || self.clone().DB_URL.unwrap().validate("DB_URL", &CharCount::Min(1)).result().is_err() {
+            violations.push(invalid_value(INVALID_URL, "DB_URL", "".to_string(), "".to_string()));
+        }
+        if self.clone().DB_MAX_LISTENERS.validate("DB_MAX_LISTENERS", &IntegerConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "DB_MAX_LISTENERS", "".to_string(), "".to_string()));
+        }
+        if self.clone().WALLET.validate("WALLET", &NotEmpty).result().is_err()
+            || self.clone().WALLET.unwrap().validate("WALLET", &CharCount::Min(1)).result().is_err() {
+            violations.push(invalid_value(INVALID_WALLET, "WALLET", "".to_string(), "".to_string()));
+        }
+        if self.clone().MEM_MONITOR_INTERVAL.validate("MEM_MONITOR_INTERVAL", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "MEM_MONITOR_INTERVAL", "".to_string(), "".to_string()));
+        }
+        if self.clone().PROCESS_CHECKPOINT_CREATION_THROTTLE.validate("PROCESS_CHECKPOINT_CREATION_THROTTLE", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "PROCESS_CHECKPOINT_CREATION_THROTTLE", "".to_string(), "".to_string()));
+        }
+        if self.clone().DISABLE_PROCESS_CHECKPOINT_CREATION.validate("DISABLE_PROCESS_CHECKPOINT_CREATION", &TruthyConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_NOT_TRUTHY, "DISABLE_PROCESS_CHECKPOINT_CREATION", "".to_string(), "".to_string()));
+        }
+        if self.clone().EAGER_CHECKPOINT_THRESHOLD.validate("EAGER_CHECKPOINT_THRESHOLD", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "EAGER_CHECKPOINT_THRESHOLD", "".to_string(), "".to_string()));
+        }
+        if self.clone().WASM_EVALUATION_MAX_WORKERS.validate("WASM_EVALUATION_MAX_WORKERS", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "WASM_EVALUATION_MAX_WORKERS", "".to_string(), "".to_string()));
+        }
+        if self.clone().WASM_INSTANCE_CACHE_MAX_SIZE.validate("WASM_INSTANCE_CACHE_MAX_SIZE", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "WASM_INSTANCE_CACHE_MAX_SIZE", "".to_string(), "".to_string()));
+        }
+        if self.clone().WASM_MODULE_CACHE_MAX_SIZE.validate("WASM_MODULE_CACHE_MAX_SIZE", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "WASM_MODULE_CACHE_MAX_SIZE", "".to_string(), "".to_string()));
+        }
+        if self.clone().WASM_BINARY_FILE_DIRECTORY.validate("WASM_BINARY_FILE_DIRECTORY", &NotEmpty).result().is_err()
+            || self.clone().WASM_BINARY_FILE_DIRECTORY.unwrap().validate("WASM_BINARY_FILE_DIRECTORY", &CharCount::Min(1)).result().is_err() {
+            violations.push(invalid_value(INVALID_CHAR_COUNT_MIN, "WASM_BINARY_FILE_DIRECTORY", "".to_string(), "".to_string()));
+        }
+        if self.clone().PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.validate("PROCESS_IGNORE_ARWEAVE_CHECKPOINTS", &UuidArrayConstraint::new()).result().is_err() {
+            violations.push(invalid_value(INVALID_ARRAY, "PROCESS_IGNORE_ARWEAVE_CHECKPOINTS", "".to_string(), "".to_string()));
+        }
+        if self.clone().PROCESS_CHECKPOINT_FILE_DIRECTORY.validate("PROCESS_CHECKPOINT_FILE_DIRECTORY", &NotEmpty).result().is_err()
+            || self.clone().DB_URL.unwrap().validate("PROCESS_CHECKPOINT_FILE_DIRECTORY", &CharCount::Min(1)).result().is_err() {
+            violations.push(invalid_value(INVALID_CHAR_COUNT_MIN, "PROCESS_CHECKPOINT_FILE_DIRECTORY", "".to_string(), "".to_string()));
+        }
+        if self.clone().PROCESS_MEMORY_CACHE_MAX_SIZE.validate("PROCESS_MEMORY_CACHE_MAX_SIZE", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "PROCESS_MEMORY_CACHE_MAX_SIZE", "".to_string(), "".to_string()));
+        }
+        if self.clone().PROCESS_MEMORY_CACHE_TTL.validate("PROCESS_MEMORY_CACHE_TTL", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "PROCESS_MEMORY_CACHE_TTL", "".to_string(), "".to_string()));
+        }
+        if self.clone().BUSY_THRESHOLD.validate("BUSY_THRESHOLD", &PositiveIntSchemaConstraint).result().is_err() {
+            violations.push(invalid_value(INVALID_DIGITS_INTEGER, "BUSY_THRESHOLD", "".to_string(), "".to_string()));
         }
 
         if violations.len() > 0 {

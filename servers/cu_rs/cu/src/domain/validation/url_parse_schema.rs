@@ -1,10 +1,10 @@
-use valid::{constraint::NotEmpty, invalid_value, FieldName, Validate, Validation, ValidationError};
+use valid::{invalid_value, FieldName, Validate, Validation, ValidationError};
 use super::shared_validation::{option_validation_result, INVALID_URL};
 use regex::Regex;
 
 const URL_MESSAGE: &str = "URL must be a a valid URL";
-pub fn parse_url_parse_schema(val: Option<String>) -> Result<String, ValidationError> {
-    option_validation_result(val.validate("val", &NotEmpty).with_message(URL_MESSAGE))    
+pub fn parse_url_parse_schema(val: Option<String>, field_name: &str) -> Result<String, ValidationError> {
+    option_validation_result(val.validate(field_name.to_string(), &UrlConstraint::new()).with_message(URL_MESSAGE))    
 }
 
 pub struct UrlConstraint {

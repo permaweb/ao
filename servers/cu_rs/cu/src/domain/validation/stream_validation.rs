@@ -6,7 +6,7 @@ pub struct StreamConstraint;
 pub struct StreamState;
 
 impl StreamState {
-    // todo: fix this
+    // todo: switch to ParseSchema trait
     // pub fn parse_stream_schema(val: Option<String>) -> Result<GenericEventEmitter<String>, ValidationError> {
     //     if let None = val {
     //         return option_validation_result(val.validate("val", &NotEmpty).with_message("Value must implement the iteration protocol"));
@@ -31,10 +31,10 @@ impl StreamState {
     }
 }
 
-impl<'a> Validate<StreamConstraint, State<&'a StreamState>> for String {
+impl<'a> Validate<StreamConstraint, State<&'a StreamState>> for Option<String> {
     fn validate(self, context: impl Into<State<&'a StreamState>>, _constraint: &StreamConstraint) -> Validation<StreamConstraint, Self> {
         let context: State<&'a StreamState> = context.into();
-        if context.is_stream(Some(self.clone())) {
+        if context.is_stream(self.clone()) {
             return Validation::success(self);
         }
         Validation::failure(vec![invalid_state("invalid-stream", vec![])])

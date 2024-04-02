@@ -32,6 +32,7 @@ impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
  * An express server. Later, it could be anything
  */
 #[allow(non_snake_case)]
+#[allow(unused)]
 struct FinalServerConfigSchema {
     pub base: FinalDomainConfigSchema,
     pub MODE: DevOrProd,
@@ -50,6 +51,7 @@ impl Default for FinalServerConfigSchema {
     }
 }
 
+#[allow(unused)]
 enum DevOrProd {
     Development,
     Production

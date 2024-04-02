@@ -3,8 +3,8 @@ use valid::{invalid_value, invalid_optional_value, ConstraintViolation, FieldNam
 use regex::Regex;
 use super::shared_validation::{INVALID_EMPTY, INVALID_NOT_MATCH_UNDERSCORE, INVALID_NOT_MATCH_NUMBER};
 
-pub fn parse_positive_int_schema(val: Option<String>) -> Result<i64, ValidationError> {
-    let validation = val.clone().validate("val", &PositiveIntSchemaConstraint).result();
+pub fn parse_positive_int_schema(val: Option<String>, field_name: &str) -> Result<i64, ValidationError> {
+    let validation = val.clone().validate(field_name.to_string(), &PositiveIntSchemaConstraint).result();
     if let Err(mut e) = validation {
         e.message = Some(Cow::from("Provided invalid value for positive_int_schema"));
         return Err(e);
