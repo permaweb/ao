@@ -1,36 +1,43 @@
 import { fromPromise, of } from 'hyper-async'
-import { always, applySpec, last, map, path, pathSatisfies, pipe, pluck, prop } from 'ramda'
+import { applySpec, last, map, path, pathSatisfies, pipe, pluck, prop, props } from 'ramda'
 import { z } from 'zod'
 
 import { blockSchema } from '../model.js'
-import { BLOCKS_ASC_IDX } from './pouchdb.js'
+import { BLOCKS_TABLE } from './sqlite.js'
 
 const blockDocSchema = z.object({
-  _id: z.string().min(1),
+  id: blockSchema.shape.height,
   height: blockSchema.shape.height,
-  timestamp: blockSchema.shape.timestamp,
-  type: z.literal('block')
+  timestamp: blockSchema.shape.timestamp
 })
-
-function createBlockId ({ height, timestamp }) {
-  return `block-${height}-${timestamp}`
-}
 
 const toBlock = applySpec({
   height: prop('height'),
   timestamp: prop('timestamp')
 })
 
-export function saveBlocksWith ({ pouchDb }) {
+export function saveBlocksWith ({ db }) {
+  function createQuery (blocks) {
+    return {
+      sql: `
+        INSERT OR IGNORE INTO ${BLOCKS_TABLE}
+        (id, height, timestamp)
+        VALUES
+          ${new Array(blocks.length).fill('(?, ?, ?)').join(',\n')}
+      `,
+      parameters: blocks.map(props(['height', 'height', 'timestamp']))
+    }
+  }
   return (blocks) => {
+    if (!blocks.length) return of().toPromise()
+
     return of(blocks)
       .map(
         map(pipe(
           applySpec({
-            _id: (block) => createBlockId(block),
+            id: prop('height'),
             height: prop('height'),
-            timestamp: prop('timestamp'),
-            type: always('block')
+            timestamp: prop('timestamp')
           }),
           /**
            * Ensure the expected shape before writing to the db
@@ -38,33 +45,30 @@ export function saveBlocksWith ({ pouchDb }) {
           blockDocSchema.parse
         ))
       )
-      .chain(fromPromise(docs => pouchDb.bulkDocs(docs)))
+      .chain(fromPromise(blocks => db.run(createQuery(blocks))))
       .toPromise()
   }
 }
 
-export function findBlocksWith ({ pouchDb }) {
+export function findBlocksWith ({ db }) {
   function createQuery ({ minHeight, maxTimestamp }) {
     return {
-      selector: {
-        height: { $gte: minHeight },
-        timestamp: { $lte: maxTimestamp }
-      },
-      sort: [{ height: 'asc' }],
-      limit: Number.MAX_SAFE_INTEGER,
-      use_index: BLOCKS_ASC_IDX
+      sql: `
+        SELECT height, timestamp
+        FROM ${BLOCKS_TABLE}
+        WHERE
+          height >= ?
+          AND timestamp <= ?
+        ORDER BY height ASC
+      `,
+      parameters: [minHeight, maxTimestamp]
     }
   }
 
   return ({ minHeight, maxTimestamp }) => {
     return of({ minHeight, maxTimestamp })
       .map(createQuery)
-      .chain(fromPromise((query) => {
-        return pouchDb.find(query).then((res) => {
-          if (res.warning) console.warn(res.warning)
-          return res.docs
-        })
-      }))
+      .chain(fromPromise((query) => db.query(query)))
       .map(map(toBlock))
       .toPromise()
   }
