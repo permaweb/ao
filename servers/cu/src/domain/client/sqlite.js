@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3'
 
-export const [PROCESSES_TABLE] = [
-  'processes'
+export const [PROCESSES_TABLE, BLOCKS_TABLE] = [
+  'processes',
+  'blocks'
 ]
 
 const createProcesses = async (db) => db.prepare(
@@ -13,6 +14,14 @@ const createProcesses = async (db) => db.prepare(
     owner TEXT,
     tags JSONB,
     block JSONB
+  ) WITHOUT ROWID;`
+).run()
+
+const createBlocks = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${BLOCKS_TABLE}(
+    id INTEGER PRIMARY KEY,
+    height INTEGER,
+    timestamp INTEGER
   ) WITHOUT ROWID;`
 ).run()
 
@@ -28,6 +37,7 @@ export async function createSqliteClient ({ url }) {
    */
   await Promise.resolve()
     .then(() => createProcesses(db))
+    .then(() => createBlocks(db))
 
   return {
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
