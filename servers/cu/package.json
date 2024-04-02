@@ -16,6 +16,7 @@
     "@permaweb/ao-loader": "^0.0.22",
     "@permaweb/ao-scheduler-utils": "^0.0.16",
     "arweave": "^1.14.4",
+    "better-sqlite3": "^9.4.3",
     "cors": "^2.8.5",
     "dataloader": "^2.2.2",
     "debug": "^4.3.4",
