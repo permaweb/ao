@@ -320,6 +320,7 @@ export function findProcessMemoryBeforeWith ({
   readCheckpointFile,
   address,
   queryGateway,
+  queryCheckpointGateway,
   loadTransactionData,
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   logger: _logger
@@ -329,6 +330,7 @@ export function findProcessMemoryBeforeWith ({
   readCheckpointFile = fromPromise(readCheckpointFile)
   address = fromPromise(address)
   queryGateway = fromPromise(queryGateway)
+  queryCheckpointGateway = fromPromise(queryCheckpointGateway)
   loadTransactionData = fromPromise(loadTransactionData)
 
   const GET_AO_PROCESS_CHECKPOINTS = `
@@ -510,12 +512,13 @@ export function findProcessMemoryBeforeWith ({
         .chain(Rejected)
     }
 
-    const queryCheckpoint = (attempt) => (variables) =>
-      queryGateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables })
+    const queryCheckpoint = (gateway, name = 'gateway') => (attempt) => (variables) =>
+      gateway({ query: GET_AO_PROCESS_CHECKPOINTS, variables })
         .bimap(
           (err) => {
             logger(
-              'Error encountered querying gateway for Checkpoint for process "%s", before "%j". Attempt %d...',
+              'Error encountered querying %s for Checkpoint for process "%s", before "%j". Attempt %d...',
+              name,
               processId,
               { timestamp, ordinate, cron },
               attempt,
@@ -526,20 +529,55 @@ export function findProcessMemoryBeforeWith ({
           identity
         )
 
+    const queryOnDefaultGateway = queryCheckpoint(queryGateway)
+    /**
+     * Because the Checkpoint gateway is defaulted to the default gateway, if
+     * no Checkpoint gateway is configured, this is effectively equivalent to
+     * queryOnDefaultGateway.
+     *
+     * This means we maintain retry logic on default gateway
+     */
+    const queryOnCheckpointGateway = queryCheckpoint(queryCheckpointGateway, 'Checkpoint gateway')
+
     return address()
       .map((owner) => ({ owner, processId, limit: 50 }))
-      /**
-       * The gateway tends to timeout when making this query,
-       * but then will start working on retries.
-       *
-       * (I suspect the gateway is performing work, and times out on the first request,
-       * but then work is cached, which HITs on subsequent requests)
-       */
-      .chain(queryCheckpoint(1))
-      // Retry
-      .bichain(queryCheckpoint(2), Resolved)
-      // Retry
-      .bichain(queryCheckpoint(3), Resolved)
+      .chain((variables) =>
+        of(variables)
+          /**
+           * First attempt to query the gateway configured specifically for Checkpoints
+           * If no Checkpoint gateway was configured, then this will simply be a call
+           * to the default gateway, which is what we want
+           */
+          .chain(queryOnCheckpointGateway(1))
+          /**
+           * Retry 1 on Checkpoint gateway
+           */
+          .bichain(queryOnCheckpointGateway(2), Resolved)
+          .chain((res) => {
+            /**
+             * Fallback to the default gateway if no results. In this way,
+             * we either fallback to the default gateway, or use it as the final
+             * retry attempt, which is what we want.
+             */
+            if (!path(['data', 'transactions', 'edges', '0'], res)) {
+              logger(
+                'Checkpoint gateway returned no results for process "%s", before "%j". Falling back to default gateway...',
+                processId,
+                { timestamp, ordinate, cron }
+              )
+              return Rejected(variables)
+            }
+            return Resolved(res)
+          })
+          /**
+           * Our final attempt will be made against the default gateway.
+           *
+           * Since we also fallback to this if no results are returned from the Checkpoint gateway,
+           * this simoultaneously serves as our fallback AND our (max) 3rd retry attempt
+           * on the default gteway
+           */
+          .bichain(queryOnDefaultGateway(3), Resolved)
+      )
       .map(path(['data', 'transactions', 'edges']))
       .map(determineLatestCheckpointBefore({ timestamp, ordinate, cron }))
       .chain((latestCheckpoint) => {

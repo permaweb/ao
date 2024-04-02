@@ -47,6 +47,7 @@ each have a default:
 - `ARWEAVE_URL`: The url for the Arweave http API server, to be used by the CU to fetch
 transaction data from Arweave, specifically ao `Modules`, and `Message` `Assignment`s. (Defaults to `GATEWAY_URL`)
 - `GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the CU. (Defaults to `${GATEWAY_URL}/graphql`)
+- `CHECKPOINT_GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the CU specifically for querying for Checkpoints. (Defaults to `GRAPHQL_URL`)
 - `UPLOADER_URL`: The url of the uploader to use to upload Process `Checkpoints`
   to Arweave. (Defaults to `up.arweave.net`)
 - `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used by the CU, or a file to load it from
