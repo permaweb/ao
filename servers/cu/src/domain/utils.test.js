@@ -31,11 +31,13 @@ describe('utils', () => {
     const GATEWAY_URL = 'https://foo.bar'
     const ARWEAVE_URL = 'https://arweave.net'
     const GRAPHQL_URL = 'https://my.custom/graphql'
+    const CHECKPOINT_GRAPHQL_URL = 'https://my.other/graphql'
 
     test('should use the provided values', () => {
-      const config = preprocessUrls({ GATEWAY_URL, ARWEAVE_URL, GRAPHQL_URL })
+      const config = preprocessUrls({ GATEWAY_URL, ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL })
       assert.equal(config.ARWEAVE_URL, ARWEAVE_URL)
       assert.equal(config.GRAPHQL_URL, GRAPHQL_URL)
+      assert.equal(config.CHECKPOINT_GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL)
     })
 
     test('should use the provided GATEWAY_URL to default ARWEAVE_URL and GRAPHQL_URL', () => {
@@ -50,6 +52,16 @@ describe('utils', () => {
       const neither = preprocessUrls({ GATEWAY_URL })
       assert.equal(neither.GRAPHQL_URL, `${GATEWAY_URL}/graphql`)
       assert.equal(neither.ARWEAVE_URL, GATEWAY_URL)
+    })
+
+    test('should default CHECKPOINT_GRAPHQL_URL to GRAPHQL_URL', () => {
+      const noGraphQlUrl = preprocessUrls({ GATEWAY_URL, ARWEAVE_URL })
+      assert.equal(noGraphQlUrl.CHECKPOINT_GRAPHQL_URL, noGraphQlUrl.GRAPHQL_URL)
+      assert.equal(noGraphQlUrl.CHECKPOINT_GRAPHQL_URL, `${GATEWAY_URL}/graphql`)
+
+      const config = preprocessUrls({ ARWEAVE_URL, GRAPHQL_URL })
+      assert.ok(config.CHECKPOINT_GRAPHQL_URL)
+      assert.equal(config.CHECKPOINT_GRAPHQL_URL, config.GRAPHQL_URL)
     })
   })
 

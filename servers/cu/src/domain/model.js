@@ -27,6 +27,13 @@ export const domainConfigSchema = z.object({
    */
   GRAPHQL_URL: z.string().url('GRAPHQL_URL must be a valid URL'),
   /**
+   * The url for the graphql server to be used by the CU
+   * to query for process Checkpoints.
+   *
+   * ie. https://arweave.net/graphql
+   */
+  CHECKPOINT_GRAPHQL_URL: z.string().url('CHECKPOINT_GRAPHQL_URL must be a valid URL'),
+  /**
    * The url for the server that hosts the Arweave http API
    *
    * ie. https://arweave.net
