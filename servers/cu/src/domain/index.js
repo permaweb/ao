@@ -11,6 +11,7 @@ import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
 import * as PouchDbClient from './client/pouchdb.js'
+import * as SqliteClient from './client/sqlite.js'
 import * as AoSuClient from './client/ao-su.js'
 import * as WasmClient from './client/wasm.js'
 import * as AoProcessClient from './client/ao-process.js'
@@ -62,6 +63,8 @@ export const createApis = async (ctx) => {
     maxListeners: ctx.DB_MAX_LISTENERS,
     url: ctx.DB_URL
   })
+
+  const sqlite = await SqliteClient.createSqliteClient({ url: `${ctx.DB_URL}.sqlite` })
 
   const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
     maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
@@ -157,7 +160,7 @@ export const createApis = async (ctx) => {
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
-    findProcess: AoProcessClient.findProcessWith({ pouchDb, logger }),
+    findProcess: AoProcessClient.findProcessWith({ db: sqlite, logger }),
     findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -181,7 +184,7 @@ export const createApis = async (ctx) => {
       saveCheckpoint,
       logger
     }),
-    saveProcess: AoProcessClient.saveProcessWith({ pouchDb, logger }),
+    saveProcess: AoProcessClient.saveProcessWith({ db: sqlite, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ pouchDb, logger }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ pouchDb, logger }),

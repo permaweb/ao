@@ -18,21 +18,19 @@ describe('ao-process', () => {
       const now = Math.floor(new Date().getTime() / 1000)
       const findProcess = findProcessSchema.implement(
         findProcessWith({
-          pouchDb: {
-            get: async () => ({
-              _id: 'proc-process-123',
-              processId: 'process-123',
+          db: {
+            query: async () => [{
+              id: 'process-123',
               owner: 'woohoo',
-              tags: [{ name: 'foo', value: 'bar' }],
+              tags: JSON.stringify([{ name: 'foo', value: 'bar' }]),
               signature: 'sig-123',
               anchor: null,
               data: 'data-123',
-              block: {
+              block: JSON.stringify({
                 height: 123,
                 timestamp: now
-              },
-              type: 'process'
-            })
+              })
+            }]
           },
           logger
         })
@@ -56,8 +54,8 @@ describe('ao-process', () => {
     test('return 404 status if not found', async () => {
       const findProcess = findProcessSchema.implement(
         findProcessWith({
-          pouchDb: {
-            get: async () => { throw { status: 404 } }
+          db: {
+            query: async () => []
           },
           logger
         })
@@ -75,8 +73,8 @@ describe('ao-process', () => {
     test('bubble error', async () => {
       const findProcess = findProcessSchema.implement(
         findProcessWith({
-          pouchDb: {
-            get: async () => { throw { status: 500 } }
+          db: {
+            query: async () => { throw { status: 500 } }
           },
           logger
         })
@@ -93,22 +91,20 @@ describe('ao-process', () => {
     test('save the process', async () => {
       const saveProcess = saveProcessSchema.implement(
         saveProcessWith({
-          pouchDb: {
-            put: (doc) => {
-              assert.deepStrictEqual(doc, {
-                _id: 'proc-process-123',
-                processId: 'process-123',
-                owner: 'woohoo',
-                tags: [{ name: 'foo', value: 'bar' }],
-                signature: 'sig-123',
-                anchor: null,
-                data: 'data-123',
-                block: {
+          db: {
+            run: ({ parameters }) => {
+              assert.deepStrictEqual(parameters, [
+                'process-123',
+                'sig-123',
+                'data-123',
+                null,
+                'woohoo',
+                JSON.stringify([{ name: 'foo', value: 'bar' }]),
+                JSON.stringify({
                   height: 123,
                   timestamp: now
-                },
-                type: 'process'
-              })
+                })
+              ])
               return Promise.resolve(true)
             }
           },
@@ -133,8 +129,10 @@ describe('ao-process', () => {
     test('noop if the process already exists', async () => {
       const saveProcess = saveProcessSchema.implement(
         saveProcessWith({
-          pouchDb: {
-            put: async () => { throw { status: 409 } }
+          db: {
+            run: async ({ sql }) => {
+              assert.ok(sql.trim().startsWith('INSERT OR IGNORE'))
+            }
           },
           logger
         })

@@ -4,12 +4,12 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, identity, map, path, prop, transduce } from 'ramda'
+import { always, applySpec, compose, defaultTo, evolve, head, identity, map, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
 import { processSchema } from '../model.js'
-import { COLLATION_SEQUENCE_MIN_CHAR } from './pouchdb.js'
+import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 
 const gunzipP = promisify(gunzip)
 const gzipP = promisify(gzip)
@@ -125,15 +125,13 @@ export function loadProcessCacheUsage () {
 }
 
 const processDocSchema = z.object({
-  _id: z.string().min(1),
-  processId: processSchema.shape.id,
+  id: z.string().min(1),
   signature: processSchema.shape.signature,
   data: processSchema.shape.data,
   anchor: processSchema.shape.anchor,
   owner: processSchema.shape.owner,
   tags: processSchema.shape.tags,
-  block: processSchema.shape.block,
-  type: z.literal('process')
+  block: processSchema.shape.block
 })
 
 function isLaterThan (eval1, eval2) {
@@ -196,69 +194,74 @@ function latestCheckpointBefore ({ timestamp, ordinate, cron }) {
 }
 
 export function createProcessId ({ processId }) {
-  /**
-   * transactions can sometimes start with an underscore,
-   * which is not allowed in PouchDB, so prepend to create
-   * an _id
-   */
-  return `proc-${processId}`
+  return processId
 }
 
-export function findProcessWith ({ pouchDb }) {
+export function findProcessWith ({ db }) {
+  function createQuery ({ processId }) {
+    return {
+      sql: `
+        SELECT id, signature, data, anchor, owner, tags, block
+        FROM ${PROCESSES_TABLE}
+        WHERE
+          id = ?;
+      `,
+      parameters: [processId]
+    }
+  }
+
   return ({ processId }) => of(processId)
-    .chain(fromPromise(id => pouchDb.get(createProcessId({ processId: id }))))
-    .bichain(
-      (err) => {
-        if (err.status === 404) return Rejected({ status: 404, message: 'Process not found' })
-        return Rejected(err)
-      },
-      (found) => of(found)
-        .map(processDocSchema.parse)
-        .map(applySpec({
-          id: prop('processId'),
-          signature: prop('signature'),
-          data: prop('data'),
-          anchor: prop('anchor'),
-          owner: prop('owner'),
-          tags: prop('tags'),
-          block: prop('block')
-        }))
-    )
+    .chain(fromPromise((id) => db.query(createQuery({ processId: id }))))
+    .map(defaultTo([]))
+    .map(head)
+    .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Process not found' }))
+    .map(evolve({
+      tags: JSON.parse,
+      block: JSON.parse
+    }))
+    .map(processDocSchema.parse)
+    .map(applySpec({
+      id: prop('id'),
+      signature: prop('signature'),
+      data: prop('data'),
+      anchor: prop('anchor'),
+      owner: prop('owner'),
+      tags: prop('tags'),
+      block: prop('block')
+    }))
     .toPromise()
 }
 
-export function saveProcessWith ({ pouchDb }) {
+export function saveProcessWith ({ db }) {
+  function createQuery (process) {
+    return {
+      sql: `
+        INSERT OR IGNORE INTO ${PROCESSES_TABLE}
+        (id, signature, data, anchor, owner, tags, block)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      parameters: [
+        process.id,
+        process.signature,
+        process.data,
+        process.anchor,
+        process.owner,
+        JSON.stringify(process.tags),
+        JSON.stringify(process.block)
+      ]
+    }
+  }
   return (process) => {
     return of(process)
-      .map(applySpec({
-        _id: process => createProcessId({ processId: process.id }),
-        processId: prop('id'),
-        signature: prop('signature'),
-        data: prop('data'),
-        anchor: prop('anchor'),
-        owner: prop('owner'),
-        tags: prop('tags'),
-        block: prop('block'),
-        type: always('process')
-      }))
       /**
        * Ensure the expected shape before writing to the db
        */
       .map(processDocSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.put(doc)))
-          .bichain(
-            (err) => {
-              /**
-               * Already exists, so just return the doc
-               */
-              if (err.status === 409) return Resolved(doc)
-              return Rejected(err)
-            },
-            Resolved
-          )
-          .map(always(doc._id))
+          .map(createQuery)
+          .chain(fromPromise((query) => db.run(query)))
+          .map(always(doc.id))
       )
       .toPromise()
   }
