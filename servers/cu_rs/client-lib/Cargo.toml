@@ -18,6 +18,7 @@ serde_json = "1.0.115"
 console_error_panic_hook = { version = "0.1.7", optional = true }
 wasmedge-bindgen = "0.4.1"
 wasmedge-bindgen-macro = "0.4.1"
+wasmedge_quickjs = "0.2.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

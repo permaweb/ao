@@ -12,8 +12,8 @@ pub fn greet() -> String {
     let mut ctx = Context::new();
 
     let code = r#"
-        import("/wasm/main.js")
-            .then(main => main.init())
+        let module = import("main.js")
+        module
     "#;
 
     let p = ctx.eval_global_str(code);

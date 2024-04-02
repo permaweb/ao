@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "cu", 
-    "client-lib"
+    "client-lib",
+    "faas"
 ]
 resolver = "2"
