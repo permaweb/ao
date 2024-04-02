@@ -88,7 +88,7 @@ const processMessageQueue = async () => {
         while (messageQueue.length > 0) {
             await apis.processMsg({ resultMsg: messageQueue.shift() })
                 .chain((res) => apis.fetchResult({
-                    processId: res.resultMsg.processId,
+                    processId: res.tx.processId,
                     txId: res.tx.id
                 }))
                 .map(publishResult)
