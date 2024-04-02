@@ -21,7 +21,7 @@
     "test": "node --test ./src"
   },
   "dependencies": {
-    "@permaweb/ao-scheduler-utils": "^0.0.14",
+    "@permaweb/ao-scheduler-utils": "^0.0.16",
     "arweave": "^1.14.4",
     "cors": "^2.8.5",
     "debug": "^4.3.4",
