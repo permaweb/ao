@@ -20,14 +20,12 @@ describe('ao-module', () => {
     test('find the module', async () => {
       const findModule = findModuleSchema.implement(
         findModuleWith({
-          pouchDb: {
-            get: async () => ({
-              _id: 'module-mod-123',
-              moduleId: 'mod-123',
-              tags: [{ name: 'foo', value: 'bar' }],
-              owner: 'owner-123',
-              type: 'module'
-            })
+          db: {
+            query: async () => [{
+              id: 'mod-123',
+              tags: JSON.stringify([{ name: 'foo', value: 'bar' }]),
+              owner: 'owner-123'
+            }]
           },
           logger
         })
@@ -44,8 +42,8 @@ describe('ao-module', () => {
     test('return 404 status if not found', async () => {
       const findModule = findModuleSchema.implement(
         findModuleWith({
-          pouchDb: {
-            get: async () => { throw { status: 404 } }
+          db: {
+            query: async () => undefined
           },
           logger
         })
@@ -63,8 +61,8 @@ describe('ao-module', () => {
     test('bubble error', async () => {
       const findModule = findModuleSchema.implement(
         findModuleWith({
-          pouchDb: {
-            get: async () => { throw { status: 500 } }
+          db: {
+            query: async () => { throw { status: 500 } }
           },
           logger
         })
@@ -80,19 +78,15 @@ describe('ao-module', () => {
     test('save the module', async () => {
       const saveModule = saveModuleSchema.implement(
         saveModuleWith({
-          pouchDb: {
-            put: async (doc) => {
-              const { _attachments, ...rest } = doc
-
-              assert.deepStrictEqual(rest, {
-                _id: 'module-mod-123',
-                moduleId: 'mod-123',
-                tags: [
+          db: {
+            run: async ({ parameters }) => {
+              assert.deepStrictEqual(parameters, [
+                'mod-123',
+                JSON.stringify([
                   { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
-                ],
-                owner: 'owner-123',
-                type: 'module'
-              })
+                ]),
+                'owner-123'
+              ])
               return Promise.resolve(true)
             }
           },
@@ -112,8 +106,10 @@ describe('ao-module', () => {
     test('noop if the module already exists', async () => {
       const saveModule = saveModuleSchema.implement(
         saveModuleWith({
-          pouchDb: {
-            put: async () => { throw { status: 409 } }
+          db: {
+            run: async ({ sql }) => {
+              assert.ok(sql.trim().startsWith('INSERT OR IGNORE'))
+            }
           },
           logger
         })
