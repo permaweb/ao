@@ -782,4 +782,5 @@ describe('ao-process', () => {
   })
 
   describe.todo('saveLatestProcessMemoryWith')
+  describe.todo('saveCheckpointWith')
 })
