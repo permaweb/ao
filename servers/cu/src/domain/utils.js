@@ -20,9 +20,9 @@ export const joinUrl = ({ url, path }) => {
  * using GATEWAY_URL, which will always have a value.
  */
 export const preprocessUrls = (envConfig) => {
-  let { GATEWAY_URL, ARWEAVE_URL, GRAPHQL_URL, ...theRestOfTheConfig } = envConfig
+  let { GATEWAY_URL, ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL, ...theRestOfTheConfig } = envConfig
 
-  if (ARWEAVE_URL && GRAPHQL_URL) return envConfig
+  if (ARWEAVE_URL && GRAPHQL_URL && CHECKPOINT_GRAPHQL_URL) return envConfig
 
   if (!GATEWAY_URL) {
     if (!ARWEAVE_URL && !GRAPHQL_URL) throw 'GATEWAY_URL is required, if either ARWEAVE_URL or GRAPHQL_URL is not provided'
@@ -32,8 +32,9 @@ export const preprocessUrls = (envConfig) => {
 
   if (!ARWEAVE_URL) ARWEAVE_URL = GATEWAY_URL
   if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+  if (!CHECKPOINT_GRAPHQL_URL) CHECKPOINT_GRAPHQL_URL = GRAPHQL_URL
 
-  return { ARWEAVE_URL, GRAPHQL_URL, ...theRestOfTheConfig }
+  return { ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL, ...theRestOfTheConfig }
 }
 /* eslint-enable no-throw-literal */
 
