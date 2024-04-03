@@ -10,7 +10,6 @@ import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
-import * as PouchDbClient from './client/pouchdb.js'
 import * as SqliteClient from './client/sqlite.js'
 import * as AoSuClient from './client/ao-su.js'
 import * as WasmClient from './client/wasm.js'
@@ -55,13 +54,6 @@ export const createApis = async (ctx) => {
     ))
   }, {
     cacheKeyFn: ({ processId }) => processId
-  })
-
-  const pouchDb = await PouchDbClient.createPouchDbClient({
-    logger: ctx.logger,
-    mode: ctx.DB_MODE,
-    maxListeners: ctx.DB_MAX_LISTENERS,
-    url: ctx.DB_URL
   })
 
   const sqlite = await SqliteClient.createSqliteClient({ url: `${ctx.DB_URL}.sqlite` })
@@ -185,8 +177,8 @@ export const createApis = async (ctx) => {
       logger
     }),
     saveProcess: AoProcessClient.saveProcessWith({ db: sqlite, logger }),
-    findEvaluation: AoEvaluationClient.findEvaluationWith({ pouchDb, logger }),
-    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ pouchDb, logger }),
+    findEvaluation: AoEvaluationClient.findEvaluationWith({ db: sqlite, logger }),
+    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db: sqlite, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ db: sqlite, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db: sqlite, logger }),
     loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, pageSize: 90, logger }),
@@ -199,7 +191,7 @@ export const createApis = async (ctx) => {
       evaluate: (...args) => workerPool.exec('evaluate', args),
       logger
     }),
-    findMessageHashBefore: AoEvaluationClient.findMessageHashBeforeWith({ pouchDb, logger }),
+    findMessageHashBefore: AoEvaluationClient.findMessageHashBeforeWith({ db: sqlite, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),
@@ -246,13 +238,13 @@ export const createApis = async (ctx) => {
   const readCronResultsLogger = ctx.logger.child('readCronResults')
   const readCronResults = readCronResultsWith({
     ...sharedDeps(readCronResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ pouchDb, logger: readCronResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readCronResultsLogger })
   })
 
   const readResultsLogger = ctx.logger.child('readResults')
   const readResults = readResultsWith({
     ...sharedDeps(readResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ pouchDb, logger: readResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readResultsLogger })
   })
 
   const healthcheck = healthcheckWith({ walletAddress: address })
