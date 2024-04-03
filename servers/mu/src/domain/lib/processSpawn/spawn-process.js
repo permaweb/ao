@@ -9,11 +9,11 @@ import { parseTags } from '../../utils.js'
 // }).passthrough()
 
 export function spawnProcessWith (env) {
-  let { logger, writeDataItem, locateScheduler, locateProcess, buildAndSign } = env
+  let { logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign } = env
 
   writeDataItem = fromPromise(writeDataItem)
   locateScheduler = fromPromise(locateScheduler)
-  locateProcess = fromPromise(locateProcess)
+  locateNoRedirect = fromPromise(locateNoRedirect)
 
   function findSchedulerTag (tags) {
     return of(tags)
@@ -61,7 +61,7 @@ export function spawnProcessWith (env) {
       .bichain(
         (_error) => {
           return of(ctx.cachedSpawn.processId)
-            .chain(locateProcess)
+            .chain(locateNoRedirect)
             .chain((schedulerResult) => {
               transformedData.tags.push({ name: 'Scheduler', value: schedulerResult.address })
               return of(transformedData.tags)

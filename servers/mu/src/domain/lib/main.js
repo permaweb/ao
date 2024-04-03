@@ -187,10 +187,11 @@ export function processSpawnWith ({
   logger,
   locateScheduler,
   locateProcess,
+  locateNoRedirect,
   writeDataItem,
   buildAndSign
 }) {
-  const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler, locateProcess, buildAndSign })
+  const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign })
   const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
   const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeDataItem, locateProcess })
 

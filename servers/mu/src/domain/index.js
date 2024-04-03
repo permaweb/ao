@@ -38,6 +38,7 @@ export const createApis = (ctx) => {
   const fetch = ctx.fetch
 
   const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GATEWAY_URL: ctx.GATEWAY_URL, followRedirects: true })
+  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GATEWAY_URL: ctx.GATEWAY_URL, followRedirects: false })
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -62,6 +63,7 @@ export const createApis = (ctx) => {
     logger: processSpawnLogger,
     locateScheduler: raw,
     locateProcess: locate,
+    locateNoRedirect,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processSpawnLogger })
   })
