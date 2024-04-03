@@ -67,66 +67,6 @@ export function findEvaluationWith ({ pouchDb }) {
   }
 }
 
-export function findLatestEvaluationsWith ({ pouchDb }) {
-  function createQuery ({ processId, to, ordinate, cron, limit }) {
-    const query = {
-      selector: {
-        _id: {
-          /**
-           * find any evaluations for the process
-           */
-          $gte: createEvaluationId({ processId, timestamp: '' }),
-          /**
-           * up to the latest evaluation.
-           *
-           * By using the max collation sequence char, this will give us all evaluations
-           * for the process, all the way up to the latest
-           */
-          $lte: createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
-        }
-      },
-      /**
-       * _ids for sequential evals are monotonically increasing
-       * and lexicographically sortable
-       *
-       * so by sorting descending, the first document will also be the latest
-       * in the evaluation stream
-       */
-      sort: [{ _id: 'desc' }],
-      /**
-       * Only get the latest document within the range,
-       * aka the latest evaluation
-       */
-      limit,
-      use_index: EVALS_ASC_IDX
-    }
-
-    /**
-     * Criteria was provided, so overwrite upper range with actual upper range
-     */
-    if (to || ordinate || cron) {
-      query.selector._id.$lte =
-        `${createEvaluationId({ processId, timestamp: to, ordinate, cron })}${COLLATION_SEQUENCE_MAX_CHAR}`
-    }
-
-    return query
-  }
-
-  return ({ processId, to, ordinate, cron }) => {
-    return of({ processId, to, ordinate, cron })
-      .map(createQuery)
-      .chain(fromPromise((query) => {
-        return pouchDb.find(query)
-          .then((res) => {
-            if (res.warning) console.warn(res.warning)
-            return res.docs
-          })
-      }))
-      .map(map(toEvaluation))
-      .toPromise()
-  }
-}
-
 export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
   return (evaluation) => {
     return of(evaluation)
