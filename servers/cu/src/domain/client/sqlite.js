@@ -52,6 +52,19 @@ const createEvaluations = async (db) => db.prepare(
   ) WITHOUT ROWID;`
 ).run()
 
+const createBlocksIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_blocks_height_timestamp
+    ON ${BLOCKS_TABLE}
+    (height, timestamp);`
+).run()
+
+const createEvaluationIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_evaluations_deepHash_id
+    ON ${EVALUATIONS_TABLE}
+    (deepHash, id);
+  `
+).run()
+
 let internalSqliteDb
 export async function createSqliteClient ({ url }) {
   if (internalSqliteDb) return internalSqliteDb
@@ -59,15 +72,13 @@ export async function createSqliteClient ({ url }) {
   const db = Database(url)
   db.pragma('encoding = "UTF-8"')
 
-  /**
-   * TODO:
-   * - Create indexes
-   */
   await Promise.resolve()
     .then(() => createProcesses(db))
     .then(() => createBlocks(db))
     .then(() => createModules(db))
     .then(() => createEvaluations(db))
+    .then(() => createBlocksIndexes(db))
+    .then(() => createEvaluationIndexes(db))
 
   return {
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
