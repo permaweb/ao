@@ -1,14 +1,25 @@
 use valid::{invalid_value, ConstraintViolation, State, Validate, Validation, ValidationError};
-use crate::domain::validation::domain_config_schema::{FinalDomainConfigSchema, StartDomainConfigSchema};
+use crate::{config::StartConfigEnv, domain::validation::domain_config_schema::{FinalDomainConfigSchema, StartDomainConfigSchema}};
 use super::{domain_config_schema::{StartDomainConfigSchemaConstraint, StartDomainConfigSchemaState}, parse_schema::StartSchemaParser};
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct StartServerConfigSchema {
     pub base: StartDomainConfigSchema,
-    pub MODE: String,
-    pub port: String,
-    pub DUMP_PATH: String
+    pub MODE: Option<String>,
+    pub port: Option<String>,
+    pub DUMP_PATH: Option<String>
+}
+
+impl StartServerConfigSchema {
+    pub fn new(start_config: StartConfigEnv, start_domain_config: StartDomainConfigSchema) -> Self {
+        StartServerConfigSchema {
+            base: start_domain_config,
+            MODE: start_config.MODE,
+            port: start_config.port,
+            DUMP_PATH: start_config.DUMP_PATH
+        }
+    }
 }
 
 impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
@@ -24,14 +35,14 @@ impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
 
         match self.clone().validate(&ServerConfigState, &ServerConfigConstraint).result() {
             Ok(server_config) => {
-                let config = server_config.unwrap();
-                final_server_config.MODE = if config.MODE == "development" { 
+                let unwrapped_config = server_config.unwrap();
+                final_server_config.MODE = if unwrapped_config.MODE == Some("development".to_string()) { 
                     DevOrProd::Development
                 } else {
                     DevOrProd::Production
                 };
-                final_server_config.port = config.port.parse::<u16>().ok().and_then(|p| Some(p)).unwrap_or(0);
-                final_server_config.DUMP_PATH = config.DUMP_PATH;
+                final_server_config.port = unwrapped_config.port.unwrap().parse::<u16>().ok().and_then(|p| Some(p)).unwrap_or(0);
+                final_server_config.DUMP_PATH = unwrapped_config.DUMP_PATH.unwrap();
             },
             Err(e) => return Err(e)
         };
@@ -66,6 +77,7 @@ impl Default for FinalServerConfigSchema {
 }
 
 #[allow(unused)]
+#[derive(PartialEq)]
 pub enum DevOrProd {
     Development,
     Production
@@ -74,21 +86,21 @@ pub enum DevOrProd {
 struct ServerConfigConstraint;
 impl ServerConfigConstraint {
     pub fn is_valid_mode(&self, val: &StartServerConfigSchema) -> bool {
-        if val.MODE == "development".to_string() || val.MODE == "production".to_string() {
+        if val.MODE == Some("development".to_string()) || val.MODE == Some("production".to_string()) {
             return true;
         }
         false
     }
 
     pub fn is_valid_port(&self, val: &StartServerConfigSchema) -> bool {
-        if val.port.parse::<u16>().is_ok() {
+        if val.port.is_some() && val.port.as_ref().unwrap().parse::<u16>().is_ok() {
             return true;
         }
         false
     }
 
     pub fn is_valid_dump_path(&self, val: &StartServerConfigSchema) -> bool {
-        if val.DUMP_PATH.len() > 0 {
+        if val.DUMP_PATH.is_some() && val.DUMP_PATH.as_ref().unwrap().len() > 0 {
             return true;
         }
         false

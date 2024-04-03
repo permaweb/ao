@@ -3,9 +3,8 @@ use dotenv::dotenv;
 use once_cell::sync::OnceCell;
 use valid::ValidationError;
 use crate::{
-    domain::validation::server_config_schema::{FinalServerConfigSchema, StartServerConfigSchema}, 
-    domain::validation::parse_schema::StartSchemaParser,
-    utils::{datetime::{get_ms_from_hour, get_ms_from_sec}, paths::get_path_as_string, string_converters::get_array}
+    domain::validation::{domain_config_schema::StartDomainConfigSchema, parse_schema::StartSchemaParser, server_config_schema::{DevOrProd, FinalServerConfigSchema, StartServerConfigSchema}}, 
+    utils::{datetime::{get_ms_from_hour, get_ms_from_sec}, paths::get_path_as_string}
 };
 use std::env::temp_dir;
 
@@ -15,18 +14,18 @@ use std::env::temp_dir;
  * We get some nice Intellisense by defining the type in JSDoc
  * before parsing with the serverConfig schema
  */
-pub static CONFIG_ENVS: OnceCell<ConfigEnvSet> = OnceCell::new();
+pub static CONFIG_ENVS: OnceCell<StartConfigEnvSet> = OnceCell::new();
 
 #[allow(non_snake_case)]
-pub fn get_config_env(development: bool) -> ConfigEnv {
+pub fn get_config_env(development: bool) -> StartConfigEnv {
     dotenv().ok();
 
     let MODE = env::var("NODE_CONFIG_ENV").unwrap_or("".to_string());
 
     if MODE.len() == 0 { panic!("NODE_CONFIG_ENV must be defined"); }
 
-    let envs = CONFIG_ENVS.get_or_init(|| ConfigEnvSet {
-        development: ConfigEnv {
+    let envs = CONFIG_ENVS.get_or_init(|| StartConfigEnvSet {
+        development: StartConfigEnv {
             MODE: Some(MODE.clone()),
             port: env::var("PORT")
                 .ok()
@@ -256,7 +255,7 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
                 )
                 .or(Some("0".to_string())) // disabled
         },
-        production: ConfigEnv {
+        production: StartConfigEnv {
             MODE: Some(MODE.clone()),
             port: env::var("PORT")
                 .ok()
@@ -494,14 +493,14 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
     }
 }
 
-pub struct ConfigEnvSet {
-    pub development: ConfigEnv,
-    pub production: ConfigEnv
+pub struct StartConfigEnvSet {
+    pub development: StartConfigEnv,
+    pub production: StartConfigEnv
 }
 
 #[allow(non_snake_case)]
 #[derive(Clone)]
-pub struct ConfigEnv {
+pub struct StartConfigEnv {
     pub MODE: Option<String>,
     pub port: Option<String>, // process.env.PORT || 6363,
     pub GATEWAY_URL: Option<String>, // process.env.GATEWAY_URL || 'https://arweave.net',
@@ -529,9 +528,112 @@ pub struct ConfigEnv {
     pub BUSY_THRESHOLD: Option<String>, // process.env.BUSY_THRESHOLD || 0 // disabled
 }
 
-static CONFIG: OnceCell<Result<FinalServerConfigSchema, ValidationError>> = OnceCell::new();
-pub fn get_server_config_schema<'a>(start_schema: StartServerConfigSchema) -> &'a Result<FinalServerConfigSchema, ValidationError> {
+#[allow(non_snake_case)]
+pub struct ConfigEnv {
+    pub MODE: String,
+    pub port: u16, // process.env.PORT || 6363,
+    pub DUMP_PATH: String, // process.env.DUMP_PATH || './static',
+    pub GATEWAY_URL: String, // process.env.GATEWAY_URL || 'https://arweave.net',
+    pub UPLOADER_URL: String, // process.env.UPLOADER_URL || 'https://up.arweave.net',
+    pub DB_MODE: String, // process.env.DB_MODE || 'embedded',
+    pub DB_URL: String, // process.env.DB_URL || 'ao-cache',
+    pub DB_MAX_LISTENERS: i64, // parseInt(process.env.DB_MAX_LISTENERS || '100'),    
+    pub WALLET: String, // process.env.WALLET,
+    pub WALLET_FILE: String, // process.env.WALLET_FILE,
+    pub MEM_MONITOR_INTERVAL: i64, // process.env.MEM_MONITOR_INTERVAL || ms('10s'),
+    pub PROCESS_CHECKPOINT_CREATION_THROTTLE: i64, // process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
+    pub DISABLE_PROCESS_CHECKPOINT_CREATION: bool, // process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
+    pub EAGER_CHECKPOINT_THRESHOLD: i64, // process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
+    pub PROCESS_WASM_MEMORY_MAX_LIMIT: i64, // process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
+    pub PROCESS_WASM_COMPUTE_MAX_LIMIT: i64, // process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000, // 9b
+    pub WASM_EVALUATION_MAX_WORKERS: i64, // process.env.WASM_EVALUATION_MAX_WORKERS || 3,
+    pub WASM_INSTANCE_CACHE_MAX_SIZE: i64, // process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
+    pub WASM_MODULE_CACHE_MAX_SIZE: i64, // process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
+    pub WASM_BINARY_FILE_DIRECTORY: String, // process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
+    pub PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: Vec<String>, // process.env.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS || [],
+    pub PROCESS_CHECKPOINT_FILE_DIRECTORY: String, // process.env.PROCESS_CHECKPOINT_FILE_DIRECTORY || tmpdir(),
+    pub PROCESS_MEMORY_CACHE_MAX_SIZE: i64, // process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
+    pub PROCESS_MEMORY_CACHE_TTL: i64, // process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
+    pub BUSY_THRESHOLD: i64, // process.env.BUSY_THRESHOLD || 0 // disabled
+}
+
+impl ConfigEnv {
+    pub fn new(final_server_config: FinalServerConfigSchema) -> Self {
+        ConfigEnv {
+            MODE: if final_server_config.MODE == DevOrProd::Development { "development".to_string() } else { "production".to_string() },
+            port: final_server_config.port,
+            DUMP_PATH: final_server_config.DUMP_PATH,
+            GATEWAY_URL: final_server_config.base.GATEWAY_URL,
+            UPLOADER_URL: final_server_config.base.UPLOADER_URL,
+            DB_MODE: final_server_config.base.DB_MODE,
+            DB_URL: final_server_config.base.DB_URL,
+            DB_MAX_LISTENERS: final_server_config.base.DB_MAX_LISTENERS,
+            WALLET: final_server_config.base.WALLET,
+            WALLET_FILE: "".to_string(),
+            MEM_MONITOR_INTERVAL: final_server_config.base.MEM_MONITOR_INTERVAL,
+            PROCESS_CHECKPOINT_CREATION_THROTTLE: final_server_config.base.PROCESS_CHECKPOINT_CREATION_THROTTLE,
+            DISABLE_PROCESS_CHECKPOINT_CREATION: final_server_config.base.DISABLE_PROCESS_CHECKPOINT_CREATION,
+            EAGER_CHECKPOINT_THRESHOLD: final_server_config.base.EAGER_CHECKPOINT_THRESHOLD,
+            PROCESS_WASM_MEMORY_MAX_LIMIT: final_server_config.base.PROCESS_WASM_MEMORY_MAX_LIMIT,
+            PROCESS_WASM_COMPUTE_MAX_LIMIT: final_server_config.base.PROCESS_WASM_COMPUTE_MAX_LIMIT,
+            WASM_EVALUATION_MAX_WORKERS: final_server_config.base.WASM_EVALUATION_MAX_WORKERS,
+            WASM_INSTANCE_CACHE_MAX_SIZE: final_server_config.base.WASM_INSTANCE_CACHE_MAX_SIZE,
+            WASM_MODULE_CACHE_MAX_SIZE: final_server_config.base.WASM_MODULE_CACHE_MAX_SIZE,
+            WASM_BINARY_FILE_DIRECTORY: final_server_config.base.WASM_BINARY_FILE_DIRECTORY,
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: final_server_config.base.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+            PROCESS_CHECKPOINT_FILE_DIRECTORY: final_server_config.base.PROCESS_CHECKPOINT_FILE_DIRECTORY,
+            PROCESS_MEMORY_CACHE_MAX_SIZE: final_server_config.base.PROCESS_MEMORY_CACHE_MAX_SIZE,
+            PROCESS_MEMORY_CACHE_TTL: final_server_config.base.PROCESS_MEMORY_CACHE_TTL,
+            BUSY_THRESHOLD: final_server_config.base.BUSY_THRESHOLD
+        }
+    }
+}
+
+impl Default for ConfigEnv {
+    fn default() -> Self {
+        ConfigEnv {
+            MODE: "".to_string(),
+            port: 0,
+            DUMP_PATH: "".to_string(),
+            PROCESS_WASM_MEMORY_MAX_LIMIT: 0,
+            PROCESS_WASM_COMPUTE_MAX_LIMIT: 0,
+            GATEWAY_URL: "".to_string(),
+            UPLOADER_URL: "".to_string(),
+            DB_MODE: "".to_string(),
+            DB_URL: "".to_string(),
+            DB_MAX_LISTENERS: 0,
+            WALLET: "".to_string(),
+            WALLET_FILE: "".to_string(),
+            MEM_MONITOR_INTERVAL: 0,
+            PROCESS_CHECKPOINT_CREATION_THROTTLE: 0,
+            DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+            EAGER_CHECKPOINT_THRESHOLD: 0,
+            WASM_EVALUATION_MAX_WORKERS: 0,
+            WASM_INSTANCE_CACHE_MAX_SIZE: 0,
+            WASM_MODULE_CACHE_MAX_SIZE: 0,
+            WASM_BINARY_FILE_DIRECTORY: "".to_string(),
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: vec![],
+            PROCESS_CHECKPOINT_FILE_DIRECTORY: "".to_string(),
+            PROCESS_MEMORY_CACHE_MAX_SIZE: 0,
+            PROCESS_MEMORY_CACHE_TTL: 0,
+            BUSY_THRESHOLD: 0
+        }
+    }
+}
+
+static CONFIG: OnceCell<Result<ConfigEnv, ValidationError>> = OnceCell::new();
+pub fn get_server_config_schema<'a>(start_config: StartConfigEnv) -> &'a Result<ConfigEnv, ValidationError> {
     CONFIG.get_or_init(|| {
-        start_schema.parse()
+        let start_domain_config = StartDomainConfigSchema::new(start_config.clone());
+        let start_server_config = StartServerConfigSchema::new(start_config, start_domain_config);
+        
+        match start_server_config.parse() {
+            Ok(final_server_config) => {
+                Ok(ConfigEnv::new(final_server_config))            
+            },
+            Err(e) => {
+                Err(e)
+            }
+        }    
     })
 }

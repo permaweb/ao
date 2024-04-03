@@ -1,15 +1,20 @@
 use valid::{constraint::{CharCount, NotEmpty, INVALID_CHAR_COUNT_MIN, INVALID_DIGITS_INTEGER}, invalid_value, ConstraintViolation, State, Validate, Validation, ValidationError};
-use crate::config::ConfigEnv;
+use crate::config::StartConfigEnv;
 
-use super::{db_max_listeners_schema::IntegerConstraint, parse_schema::StartSchemaParser, positive_int_schema::PositiveIntSchemaConstraint, shared_validation::{parse_db_url_schema, parse_min_char_one_schema, parse_wallet_schema, INVALID_URL, INVALID_WALLET}, truthy_schema::{TruthyConstraint, INVALID_NOT_TRUTHY}, url_parse_schema::UrlConstraint, uuid_array_schema::{UuidArrayConstraint, INVALID_ARRAY}};
+use super::{
+    db_max_listeners_schema::IntegerConstraint, 
+    parse_schema::StartSchemaParser, 
+    positive_int_schema::PositiveIntSchemaConstraint, 
+    shared_validation::{parse_db_url_schema, parse_min_char_one_schema, parse_wallet_schema, INVALID_URL, INVALID_WALLET}, 
+    truthy_schema::{TruthyConstraint, INVALID_NOT_TRUTHY}, 
+    url_parse_schema::UrlConstraint, uuid_array_schema::{UuidArrayConstraint, INVALID_ARRAY}
+};
 use super::positive_int_schema::parse_positive_int_schema;
 use super::url_parse_schema::parse_url_parse_schema;
 use super::db_mode_schema::parse_db_mode_schema;
 use super::db_max_listeners_schema::parse_db_max_listeners_schema;
 use super::truthy_schema::parse_truthy_schema;
 use super::uuid_array_schema::parse_array_schema;
-use std::env;
-use dotenv::dotenv;
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -116,7 +121,35 @@ pub struct StartDomainConfigSchema {
     pub BUSY_THRESHOLD: Option<String>
 }
 
-impl StartSchemaParser<FinalDomainConfigSchema> for ConfigEnv {
+impl StartDomainConfigSchema {
+    pub fn new(start_config_env: StartConfigEnv) -> Self {
+        StartDomainConfigSchema {
+            GATEWAY_URL: start_config_env.GATEWAY_URL,
+            UPLOADER_URL: start_config_env.UPLOADER_URL,
+            DB_MODE: start_config_env.DB_MODE,
+            DB_URL: start_config_env.DB_URL,
+            DB_MAX_LISTENERS: start_config_env.DB_MAX_LISTENERS,
+            WALLET: start_config_env.WALLET,
+            MEM_MONITOR_INTERVAL: start_config_env.MEM_MONITOR_INTERVAL,
+            PROCESS_CHECKPOINT_CREATION_THROTTLE: start_config_env.PROCESS_CHECKPOINT_CREATION_THROTTLE,
+            DISABLE_PROCESS_CHECKPOINT_CREATION: start_config_env.DISABLE_PROCESS_CHECKPOINT_CREATION,
+            EAGER_CHECKPOINT_THRESHOLD: start_config_env.EAGER_CHECKPOINT_THRESHOLD,
+            PROCESS_WASM_MEMORY_MAX_LIMIT: start_config_env.PROCESS_WASM_MEMORY_MAX_LIMIT,
+            PROCESS_WASM_COMPUTE_MAX_LIMIT: start_config_env.PROCESS_WASM_COMPUTE_MAX_LIMIT,
+            WASM_EVALUATION_MAX_WORKERS: start_config_env.WASM_EVALUATION_MAX_WORKERS,
+            WASM_INSTANCE_CACHE_MAX_SIZE: start_config_env.WASM_INSTANCE_CACHE_MAX_SIZE,
+            WASM_MODULE_CACHE_MAX_SIZE: start_config_env.WASM_MODULE_CACHE_MAX_SIZE,
+            WASM_BINARY_FILE_DIRECTORY: start_config_env.WASM_BINARY_FILE_DIRECTORY,
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: start_config_env.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+            PROCESS_CHECKPOINT_FILE_DIRECTORY: start_config_env.PROCESS_CHECKPOINT_FILE_DIRECTORY,
+            PROCESS_MEMORY_CACHE_MAX_SIZE: start_config_env.PROCESS_MEMORY_CACHE_MAX_SIZE,
+            PROCESS_MEMORY_CACHE_TTL: start_config_env.PROCESS_MEMORY_CACHE_TTL,
+            BUSY_THRESHOLD: start_config_env.BUSY_THRESHOLD
+        }
+    }
+}
+
+impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
     #[allow(non_snake_case)]
     fn parse(&self) -> Result<FinalDomainConfigSchema, ValidationError> {
         let mut final_domain_config_schema = FinalDomainConfigSchema::default();
