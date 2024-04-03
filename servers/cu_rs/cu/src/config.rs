@@ -27,70 +27,234 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
 
     let envs = CONFIG_ENVS.get_or_init(|| ConfigEnvSet {
         development: ConfigEnv {
-            MODE: MODE.clone(),
-            port: env::var("PORT").ok().and_then(|val| val.parse::<i64>().ok()).unwrap_or(6363),
-            DUMP_PATH: env::var("DUMP_PATH").unwrap_or("./static".to_string()),
-            GATEWAY_URL: env::var("GATEWAY_URL").unwrap_or("https://arweave.net".to_string()),
-            UPLOADER_URL: env::var("UPLOADER_URL").unwrap_or("https://up.arweave.net".to_string()),
-            DB_MODE: env::var("DB_MODE").unwrap_or("embedded".to_string()),
-            DB_URL: env::var("DB_URL").unwrap_or("ao-cache".to_string()),
+            MODE: Some(MODE.clone()),
+            port: env::var("PORT")
+                .ok()
+                .and_then(|p| p.is_empty().then_some("6363".to_string()).or(Some(p)))
+                .or(Some("6363".to_string())),
+            DUMP_PATH: env::var("DUMP_PATH")
+                .ok()
+                .and_then(|dp| dp.is_empty().then_some("./static".to_string()).or(Some(dp)))
+                .or(Some("./static".to_string())),
+            GATEWAY_URL: env::var("GATEWAY_URL")
+                .ok()
+                .and_then(|gu| gu.is_empty().then_some("https://arweave.net".to_string()).or(Some(gu)))
+                .or(Some("https://arweave.net".to_string())),
+            UPLOADER_URL: env::var("UPLOADER_URL")
+                .ok()
+                .and_then(|uu| uu.is_empty().then_some("https://up.arweave.net".to_string()).or(Some(uu)))
+                .or(Some("https://up.arweave.net".to_string())),
+            DB_MODE: env::var("DB_MODE")
+                .ok()
+                .and_then(|db| db.is_empty().then_some("embedded".to_string()).or(Some(db)))
+                .or(Some("embedded".to_string())),
+            DB_URL: env::var("DB_URL")
+                .ok()
+                .and_then(|du| du.is_empty().then_some("ao-cache".to_string()).or(Some(du)))
+                .or(Some("ao-cache".to_string())), // todo: need to see how this is used
             DB_MAX_LISTENERS: env::var("DB_MAX_LISTENERS")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(100),            
-            WALLET: env::var("WALLET").unwrap(),
-            WALLET_FILE: env::var("WALLET_FILE").unwrap(),
+                .and_then(|dml| 
+                    dml.is_empty()
+                        .then_some("100".to_string())
+                        .or(
+                            dml.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("100".to_string()))
+                        )
+                )
+                .or(Some("100".to_string())),
+            WALLET: env::var("WALLET")
+                .ok()                
+                .or(None),
+            WALLET_FILE: env::var("WALLET_FILE")
+                .ok()                
+                .or(None),
             MEM_MONITOR_INTERVAL: env::var("MEM_MONITOR_INTERVAL")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(get_ms_from_sec(10)),
+                .and_then(|mmi| 
+                    mmi.is_empty()
+                        .then_some(get_ms_from_sec(10).to_string())
+                        .or(
+                            mmi.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some(get_ms_from_sec(10).to_string()))
+                        )
+                )
+                .or(Some(get_ms_from_sec(10).to_string())),
             PROCESS_CHECKPOINT_CREATION_THROTTLE: env::var("PROCESS_CHECKPOINT_CREATION_THROTTLE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(get_ms_from_hour(24)),
-            DISABLE_PROCESS_CHECKPOINT_CREATION: env::var("DISABLE_PROCESS_CHECKPOINT_CREATION")
+                .and_then(|pc|
+                    pc.is_empty()
+                        .then_some(get_ms_from_hour(24).to_string())
+                        .or(
+                            pc.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some(get_ms_from_hour(24).to_string()))
+                        )    
+                )
+                .or(Some(get_ms_from_hour(24).to_string())),
+            DISABLE_PROCESS_CHECKPOINT_CREATION: if env::var("DISABLE_PROCESS_CHECKPOINT_CREATION")
                 .ok()
-                .and_then(|val| val.parse::<bool>().ok())
-                .unwrap_or(false) != false,
+                .and_then(|dp|
+                    dp.is_empty()
+                        .then_some(false)
+                        .or(
+                            dp.parse::<bool>()
+                                .ok()
+                                .and_then(|val| Some(val))
+                                .or(Some(false))
+                        )
+                )
+                .or(Some(false)) != Some(false) {
+                        Some("true".to_string())
+                } else {
+                    Some("false".to_string())
+                }, // TODO: disabled by default for now. Enable by default later
             EAGER_CHECKPOINT_THRESHOLD: env::var("EAGER_CHECKPOINT_THRESHOLD")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(100),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("100".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("100".to_string()))
+                        )
+                )
+                .or(Some("100".to_string())),
             PROCESS_WASM_MEMORY_MAX_LIMIT: env::var("PROCESS_WASM_MEMORY_MAX_LIMIT")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(1_000_000_000), // 1GB
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("1_000_000_000".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("1_000_000_000".to_string()))
+                        )
+                )
+                .or(Some("1_000_000_000".to_string())), // 1GB
             PROCESS_WASM_COMPUTE_MAX_LIMIT: env::var("PROCESS_WASM_COMPUTE_MAX_LIMIT")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(9_000_000_000), // 9b
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("9_000_000_000".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("9_000_000_000".to_string()))
+                        )
+                )
+                .or(Some("9_000_000_000".to_string())), // 9b
             WASM_EVALUATION_MAX_WORKERS: env::var("WASM_EVALUATION_MAX_WORKERS")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(3),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("3".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("3".to_string()))
+                        )
+                )
+                .or(Some("3".to_string())),
             WASM_INSTANCE_CACHE_MAX_SIZE: env::var("WASM_INSTANCE_CACHE_MAX_SIZE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(5), // 5 loaded wasm modules
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("5".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("5".to_string()))
+                        )
+                )
+                .or(Some("5".to_string())), // 5 loaded wasm modules
             WASM_MODULE_CACHE_MAX_SIZE: env::var("WASM_MODULE_CACHE_MAX_SIZE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(5), // 5 wasm binaries
-            WASM_BINARY_FILE_DIRECTORY: env::var("WASM_BINARY_FILE_DIRECTORY").unwrap_or(get_path_as_string(temp_dir())),
-            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: get_array(env::var("PROCESS_IGNORE_ARWEAVE_CHECKPOINTS").unwrap_or("".to_string())),
-            PROCESS_CHECKPOINT_FILE_DIRECTORY: env::var("PROCESS_CHECKPOINT_FILE_DIRECTORY").unwrap_or(get_path_as_string(temp_dir())),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("5".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("5".to_string()))
+                        )
+                )
+                .or(Some("5".to_string())), // 5 wasm binaries
+            WASM_BINARY_FILE_DIRECTORY: env::var("WASM_BINARY_FILE_DIRECTORY")
+                .ok()
+                .and_then(|wb| 
+                    wb.is_empty()
+                        .then_some(get_path_as_string(temp_dir()))
+                        .or(Some(wb))
+                )
+                .or(Some(get_path_as_string(temp_dir()))),
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: env::var("PROCESS_IGNORE_ARWEAVE_CHECKPOINTS") // this is a comma delimited list!
+                .ok()
+                .and_then(|pi|
+                    pi.is_empty()
+                        .then_some("".to_string())
+                        .or(Some(pi))
+                )
+                .or(Some("".to_string())),
+            PROCESS_CHECKPOINT_FILE_DIRECTORY: env::var("PROCESS_CHECKPOINT_FILE_DIRECTORY")
+                .ok()
+                .and_then(|pc| 
+                    pc.is_empty()
+                        .then_some(get_path_as_string(temp_dir()))
+                        .or(Some(pc))
+                )
+                .or(Some(get_path_as_string(temp_dir()))),
             PROCESS_MEMORY_CACHE_MAX_SIZE: env::var("PROCESS_MEMORY_CACHE_MAX_SIZE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(500_000_000), // 500MB
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("500_000_000".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("500_000_000".to_string()))
+                        )
+                )
+                .or(Some("500_000_000".to_string())), // 500MB
             PROCESS_MEMORY_CACHE_TTL: env::var("PROCESS_MEMORY_CACHE_TTL")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(get_ms_from_hour(24)),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some(get_ms_from_hour(24).to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some(get_ms_from_hour(24).to_string()))
+                        )
+                )
+                .or(Some(get_ms_from_hour(24).to_string())),
             BUSY_THRESHOLD: env::var("BUSY_THRESHOLD")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(0) // disabled
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("0".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("0".to_string()))
+                        )
+                )
+                .or(Some("0".to_string())) // disabled
         },
         production: ConfigEnv {
             MODE: Some(MODE.clone()),
@@ -100,7 +264,7 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
                 .or(Some("6363".to_string())),
             DUMP_PATH: env::var("DUMP_PATH")
                 .ok()
-                .and_then(|dp| dp.is_empty().then_some(get_path_as_string(temp_dir())))
+                .and_then(|dp| dp.is_empty().then_some(get_path_as_string(temp_dir())).or(Some(dp)))
                 .or(Some(get_path_as_string(temp_dir()))),
             GATEWAY_URL: env::var("GATEWAY_URL")
                 .ok()
@@ -158,54 +322,169 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
                         .or(
                             pc.parse::<i64>()
                                 .ok()
-                                .and_then(|va| Some(val.to_string()))
-                                .or(Some(get_msg_from_hour(24).to_string()))
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some(get_ms_from_hour(24).to_string()))
                         )    
                 )
                 .or(Some(get_ms_from_hour(24).to_string())),
-            DISABLE_PROCESS_CHECKPOINT_CREATION: env::var("DISABLE_PROCESS_CHECKPOINT_CREATION")
-                .ok()
-                .and_then(|val| val.parse::<bool>().ok())
-                .unwrap_or(false) != false, // TODO: disabled by default for now. Enable by default later
+            DISABLE_PROCESS_CHECKPOINT_CREATION: if env::var("DISABLE_PROCESS_CHECKPOINT_CREATION")
+                    .ok()
+                    .and_then(|dp|
+                        dp.is_empty()
+                            .then_some(false)
+                            .or(
+                                dp.parse::<bool>()
+                                    .ok()
+                                    .and_then(|val| Some(val))
+                                    .or(Some(false))
+                            )
+                    )
+                    .or(Some(false)) != Some(false) {
+                        Some("true".to_string())
+                } else {
+                    Some("false".to_string())
+                }, // TODO: disabled by default for now. Enable by default later
             EAGER_CHECKPOINT_THRESHOLD: env::var("EAGER_CHECKPOINT_THRESHOLD")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(100),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("100".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("100".to_string()))
+                        )
+                )
+                .or(Some("100".to_string())),
             PROCESS_WASM_MEMORY_MAX_LIMIT: env::var("PROCESS_WASM_MEMORY_MAX_LIMIT")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(1_000_000_000), // 1GB
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("1_000_000_000".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("1_000_000_000".to_string()))
+                        )
+                )
+                .or(Some("1_000_000_000".to_string())), // 1GB
             PROCESS_WASM_COMPUTE_MAX_LIMIT: env::var("PROCESS_WASM_COMPUTE_MAX_LIMIT")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(9_000_000_000), // 9b
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("9_000_000_000".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("9_000_000_000".to_string()))
+                        )
+                )
+                .or(Some("9_000_000_000".to_string())), // 9b
             WASM_EVALUATION_MAX_WORKERS: env::var("WASM_EVALUATION_MAX_WORKERS")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(3),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("3".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("3".to_string()))
+                        )
+                )
+                .or(Some("3".to_string())),
             WASM_INSTANCE_CACHE_MAX_SIZE: env::var("WASM_INSTANCE_CACHE_MAX_SIZE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(5), // 5 loaded wasm modules
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("5".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("5".to_string()))
+                        )
+                )
+                .or(Some("5".to_string())), // 5 loaded wasm modules
             WASM_MODULE_CACHE_MAX_SIZE: env::var("WASM_MODULE_CACHE_MAX_SIZE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(5), // 5 wasm binaries
-            WASM_BINARY_FILE_DIRECTORY: env::var("WASM_BINARY_FILE_DIRECTORY").unwrap_or(get_path_as_string(temp_dir())),
-            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: get_array(env::var("PROCESS_IGNORE_ARWEAVE_CHECKPOINTS").unwrap_or("".to_string())),
-            PROCESS_CHECKPOINT_FILE_DIRECTORY: env::var("PROCESS_CHECKPOINT_FILE_DIRECTORY").unwrap_or(get_path_as_string(temp_dir())),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("5".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("5".to_string()))
+                        )
+                )
+                .or(Some("5".to_string())), // 5 wasm binaries
+            WASM_BINARY_FILE_DIRECTORY: env::var("WASM_BINARY_FILE_DIRECTORY")
+                .ok()
+                .and_then(|wb| 
+                    wb.is_empty()
+                        .then_some(get_path_as_string(temp_dir()))
+                        .or(Some(wb))
+                )
+                .or(Some(get_path_as_string(temp_dir()))),
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: env::var("PROCESS_IGNORE_ARWEAVE_CHECKPOINTS") // this is a comma delimited list!
+                .ok()
+                .and_then(|pi|
+                    pi.is_empty()
+                        .then_some("".to_string())
+                        .or(Some(pi))
+                )
+                .or(Some("".to_string())),
+            PROCESS_CHECKPOINT_FILE_DIRECTORY: env::var("PROCESS_CHECKPOINT_FILE_DIRECTORY")
+                .ok()
+                .and_then(|pc| 
+                    pc.is_empty()
+                        .then_some(get_path_as_string(temp_dir()))
+                        .or(Some(pc))
+                )
+                .or(Some(get_path_as_string(temp_dir()))),
             PROCESS_MEMORY_CACHE_MAX_SIZE: env::var("PROCESS_MEMORY_CACHE_MAX_SIZE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(500_000_000), // 500MB
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("500_000_000".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("500_000_000".to_string()))
+                        )
+                )
+                .or(Some("500_000_000".to_string())), // 500MB
             PROCESS_MEMORY_CACHE_TTL: env::var("PROCESS_MEMORY_CACHE_TTL")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(get_ms_from_hour(24)),
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some(get_ms_from_hour(24).to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some(get_ms_from_hour(24).to_string()))
+                        )
+                )
+                .or(Some(get_ms_from_hour(24).to_string())),
             BUSY_THRESHOLD: env::var("BUSY_THRESHOLD")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(0) // disabled
+                .and_then(|ec| 
+                    ec.is_empty()
+                        .then_some("0".to_string())
+                        .or(
+                            ec.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("0".to_string()))
+                        )
+                )
+                .or(Some("0".to_string())) // disabled
         }        
     });
 
