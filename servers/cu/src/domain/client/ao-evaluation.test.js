@@ -2,77 +2,14 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { findEvaluationsSchema, findLatestEvaluationsSchema, saveEvaluationSchema } from '../dal.js'
-import { findEvaluationsWith, findLatestEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
+import { findEvaluationsSchema, saveEvaluationSchema } from '../dal.js'
+import { findEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
 import { createLogger } from '../logger.js'
 import { CRON_EVALS_ASC_IDX, EVALS_ASC_IDX } from './pouchdb.js'
 
 const logger = createLogger('ao-cu:readState')
 
 describe('ao-evaluation', () => {
-  describe('findLatestEvaluation', () => {
-    test('return the lastest evaluation for the process', async () => {
-      const evaluatedAt = new Date().toISOString()
-
-      const findLatestEvaluations = findLatestEvaluationsSchema.implement(
-        findLatestEvaluationsWith({
-          pouchDb: {
-            find: async (op) => {
-              return {
-                docs: [
-                  {
-                    _id: 'eval-process-123,1702677252111',
-                    timestamp: 1702677252111,
-                    ordinate: 1,
-                    blockHeight: 1234,
-                    processId: 'process-123',
-                    messageId: 'message-123',
-                    parent: 'proc-process-123',
-                    output: { Messages: [{ foo: 'bar' }] },
-                    evaluatedAt,
-                    type: 'evaluation'
-                  }
-                ]
-              }
-            }
-          },
-          logger
-        }))
-
-      const [res] = await findLatestEvaluations({
-        processId: 'process-123',
-        to: 1702677252111,
-        ordinate: '1',
-        cron: '1-10-minutes'
-      })
-
-      assert.equal(res.timestamp, 1702677252111)
-      assert.equal(res.ordinate, '1')
-      assert.equal(res.blockHeight, 1234)
-      assert.equal(res.processId, 'process-123')
-      assert.deepStrictEqual(res.output, { Messages: [{ foo: 'bar' }] })
-      assert.equal(res.evaluatedAt.toISOString(), evaluatedAt)
-    })
-
-    test('returns empty list if no evaluations are found', async () => {
-      const findLatestEvaluations = findLatestEvaluationsSchema.implement(
-        findLatestEvaluationsWith({
-          pouchDb: {
-            find: async () => ({ docs: [] })
-          },
-          logger
-        })
-      )
-
-      const res = await findLatestEvaluations({
-        processId: 'process-123',
-        to: '1702677252111'
-      })
-
-      assert.equal(res.length, 0)
-    })
-  })
-
   describe('saveEvaluation', () => {
     test('save the evaluation and the messageHash', async () => {
       const evaluatedAt = new Date().toISOString()

@@ -60,7 +60,7 @@ export const evaluatorSchema = z.function()
   .args(z.any())
   .returns(z.promise(z.any()))
 
-// DB
+// Evaluation
 
 export const findEvaluationSchema = z.function()
   .args(z.object({
@@ -70,16 +70,6 @@ export const findEvaluationSchema = z.function()
     cron: z.string().nullish()
   }))
   .returns(z.promise(evaluationSchema))
-
-export const findLatestEvaluationsSchema = z.function()
-  .args(z.object({
-    processId: z.string(),
-    to: z.coerce.number().nullish(),
-    ordinate: z.coerce.string().nullish(),
-    cron: z.string().nullish(),
-    limit: z.number().default(1)
-  }))
-  .returns(z.promise(z.array(evaluationSchema)))
 
 export const saveEvaluationSchema = z.function()
   .args(evaluationSchema.extend({ deepHash: z.string().nullish() }))
