@@ -4,32 +4,25 @@ import { z } from 'zod'
 
 import { evaluationSchema } from '../model.js'
 import { COLLATION_SEQUENCE_MAX_CHAR, CRON_EVALS_ASC_IDX, EVALS_ASC_IDX, EVALS_DEEPHASH_ASCENDING } from './pouchdb.js'
-import { createProcessId } from './ao-process.js'
+import { EVALUATIONS_TABLE } from './sqlite.js'
 
 const evaluationDocSchema = z.object({
-  _id: z.string().min(1),
+  id: z.string().min(1),
   processId: evaluationSchema.shape.processId,
   messageId: evaluationSchema.shape.messageId,
   deepHash: evaluationSchema.shape.deepHash,
-  timestamp: evaluationSchema.shape.timestamp,
   nonce: evaluationSchema.shape.nonce,
   epoch: evaluationSchema.shape.epoch,
+  timestamp: evaluationSchema.shape.timestamp,
   ordinate: evaluationSchema.shape.ordinate,
   blockHeight: evaluationSchema.shape.blockHeight,
   cron: evaluationSchema.shape.cron,
-  parent: z.string().min(1),
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output.omit({ Memory: true }),
-  type: z.literal('evaluation')
+  output: evaluationSchema.shape.output.omit({ Memory: true })
 })
 
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
-  /**
-   * transactions can sometimes start with an underscore,
-   * which is not allowed in PouchDB, so prepend to create
-   * an _id
-   */
-  return `eval-${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
+  return `${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
 }
 
 const toEvaluation = applySpec({
@@ -67,57 +60,69 @@ export function findEvaluationWith ({ pouchDb }) {
   }
 }
 
-export function saveEvaluationWith ({ pouchDb, logger: _logger }) {
+export function saveEvaluationWith ({ db, logger: _logger }) {
+  const toEvaluationDoc = converge(
+    unapply(mergeAll),
+    [
+      toEvaluation,
+      (evaluation) => ({
+        /**
+         * The processId concatenated with the timestamp, ordinate (aka most recent nonce)
+         * and the cron (if defined)
+         * is used as the id for an evaluation record.
+         *
+         * This makes it easier to query using a range query against the
+         * primary key
+         */
+        id: createEvaluationId({
+          processId: evaluation.processId,
+          timestamp: evaluation.timestamp,
+          ordinate: evaluation.ordinate,
+          /**
+           * By appending the cron identifier to the evaluation doc id,
+           * this guarantees the document will have a unique, but sortable, id
+           */
+          cron: evaluation.cron
+        })
+      })
+    ]
+  )
+
+  function createQuery (evaluation) {
+    return {
+      sql: `
+        INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+        (id, processId, messageId, deepHash, nonce, epoch, timestamp, ordinate, blockHeight, cron, evaluatedAt, output)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      parameters: [
+        evaluation.id,
+        evaluation.processId,
+        evaluation.messageId,
+        evaluation.deepHash,
+        evaluation.nonce,
+        evaluation.epoch,
+        evaluation.timestamp,
+        evaluation.ordinate,
+        evaluation.blockHeight,
+        evaluation.cron,
+        evaluation.evaluatedAt.getTime(),
+        evaluation.output
+      ]
+    }
+  }
+
   return (evaluation) => {
     return of(evaluation)
-      .map(
-        converge(
-          unapply(mergeAll),
-          [
-            toEvaluation,
-            applySpec({
-              /**
-               * The processId concatenated with the timestamp, and possible the cron (if defined)
-               * is used as the _id for an evaluation
-               *
-               * This makes it easier to query using a range query against the
-               * primary index
-               */
-              _id: (evaluation) =>
-                createEvaluationId({
-                  processId: evaluation.processId,
-                  timestamp: evaluation.timestamp,
-                  ordinate: evaluation.ordinate,
-                  /**
-                   * By appending the cron identifier to the evaluation doc _id,
-                   *
-                   * this guarantees the document will have a unique, but sortable, _id
-                   */
-                  cron: evaluation.cron
-                }),
-              parent: (evaluation) => createProcessId({ processId: evaluation.processId }),
-              type: always('evaluation')
-            })
-          ]
-        )
-      )
+      .map(toEvaluationDoc)
       /**
        * Ensure the expected shape before writing to the db
        */
       .map(evaluationDocSchema.parse)
       .chain((doc) =>
         of(doc)
-          .chain(fromPromise((doc) => pouchDb.put(doc)))
-          .bichain(
-            (err) => {
-              /**
-               * Already exists, so just return the doc
-               */
-              if (err.status === 409) return Resolved(doc)
-              return Rejected(err)
-            },
-            Resolved
-          )
+          .map((doc) => createQuery(doc))
+          .chain(fromPromise((query) => db.run(query)))
           .map(always(doc._id))
       )
       .toPromise()

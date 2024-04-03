@@ -1,9 +1,10 @@
 import Database from 'better-sqlite3'
 
-export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE] = [
+export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE] = [
   'processes',
   'blocks',
-  'modules'
+  'modules',
+  'evaluations'
 ]
 
 const createProcesses = async (db) => db.prepare(
@@ -34,6 +35,23 @@ const createModules = async (db) => db.prepare(
   ) WITHOUT ROWID;`
 ).run()
 
+const createEvaluations = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${EVALUATIONS_TABLE}(
+    id TEXT PRIMARY KEY,
+    processId TEXT,
+    messageId TEXT,
+    deepHash TEXT,
+    nonce INTEGER,
+    epoch INTEGER,
+    timestamp INTEGER,
+    ordinate TEXT,
+    blockHeight INTEGER,
+    cron BOOLEAN,
+    output JSONB,
+    evaluatedAt INTEGER
+  ) WITHOUT ROWID;`
+).run()
+
 let internalSqliteDb
 export async function createSqliteClient ({ url }) {
   if (internalSqliteDb) return internalSqliteDb
@@ -48,6 +66,7 @@ export async function createSqliteClient ({ url }) {
     .then(() => createProcesses(db))
     .then(() => createBlocks(db))
     .then(() => createModules(db))
+    .then(() => createEvaluations(db))
 
   return {
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
