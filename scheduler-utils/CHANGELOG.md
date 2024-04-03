@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.17](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.16...scheduler-utils@v0.0.17) (2024-04-03)
+
 ## [0.0.16](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.15...scheduler-utils@v0.0.16) (2024-03-25)
 
 
