@@ -239,10 +239,6 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       for await (const edge of edges) {
         yield pipe(
           prop('node'),
-          (node) => {
-            logger('Transforming Scheduled Message "%s" to process "%s"', node.message.id, processId)
-            return node
-          },
           /**
            * Map to the expected shape, depending on the response shape
            * See https://github.com/permaweb/ao/issues/563
