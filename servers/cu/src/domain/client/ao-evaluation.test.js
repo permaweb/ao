@@ -11,33 +11,56 @@ const logger = createLogger('ao-cu:readState')
 
 describe('ao-evaluation', () => {
   describe('saveEvaluation', () => {
+    const evaluatedAt = new Date()
     test('save the evaluation and the messageHash', async () => {
-      const evaluatedAt = new Date().toISOString()
-
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
-          pouchDb: {
-            put: async (evaluationDoc) => {
-              const { evaluatedAt, ...rest } = evaluationDoc
+          db: {
+            run: async ({ parameters }) => {
+              assert.deepStrictEqual(parameters, [
+                'process-123,1702677252111,1',
+                'process-123',
+                'message-123',
+                'deepHash-123',
+                1,
+                0,
+                1702677252111,
+                '1',
+                1234,
+                undefined,
+                evaluatedAt.getTime(),
+                { Messages: [{ foo: 'bar' }] }
+              ])
 
-              assert.deepStrictEqual(rest, {
-                _id: 'eval-process-123,1702677252111,1',
-                cron: undefined,
-                deepHash: 'deepHash-123',
-                timestamp: 1702677252111,
-                nonce: 1,
-                epoch: 0,
-                ordinate: '1',
-                blockHeight: 1234,
-                processId: 'process-123',
-                messageId: 'message-123',
-                parent: 'proc-process-123',
-                output: { Messages: [{ foo: 'bar' }] },
-                type: 'evaluation'
-              })
-              assert.equal(evaluatedAt.toISOString(), evaluatedAt.toISOString())
+              return Promise.resolve('process-123,1702677252111,1')
+            }
+          },
+          logger
+        })
+      )
 
-              return Promise.resolve('eval-process-123,1702677252111,1')
+      await saveEvaluation({
+        deepHash: 'deepHash-123',
+        timestamp: 1702677252111,
+        nonce: '1',
+        epoch: 0,
+        ordinate: 1,
+        blockHeight: 1234,
+        processId: 'process-123',
+        messageId: 'message-123',
+        output: { Messages: [{ foo: 'bar' }], Memory: 'foo' },
+        evaluatedAt
+      })
+    })
+
+    test('noop if evaluation already exists', async () => {
+      const saveEvaluation = saveEvaluationSchema.implement(
+        saveEvaluationWith({
+          db: {
+            run: async ({ sql }) => {
+              assert.ok(sql.trim().startsWith('INSERT OR IGNORE'))
+
+              return Promise.resolve('process-123,1702677252111,1')
             }
           },
           logger
@@ -120,8 +143,8 @@ describe('ao-evaluation', () => {
             find: async (op) => {
               assert.deepStrictEqual(op.selector, {
                 _id: {
-                  $gt: 'eval-process-123,1702677252111,3',
-                  $lte: 'eval-process-123,1702677252111'
+                  $gt: 'process-123,1702677252111,3',
+                  $lte: 'process-123,1702677252111'
                 }
               })
 
