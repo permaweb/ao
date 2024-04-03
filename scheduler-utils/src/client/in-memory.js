@@ -1,14 +1,7 @@
 import { LRUCache } from 'lru-cache'
 
-/**
- * @type {LRUCache}
- */
-let internalCache
-let internalSize
 export function createLruCache ({ size }) {
-  if (internalCache) return internalCache
-  internalSize = size
-  internalCache = new LRUCache({
+  const cache = new LRUCache({
     /**
      * number of entries
      */
@@ -25,33 +18,45 @@ export function createLruCache ({ size }) {
     sizeCalculation: (v) => JSON.stringify(v).length,
     allowStale: true
   })
-  return internalCache
+  return cache
 }
 
-export function getByProcessWith ({ cache = internalCache }) {
+/**
+ * @param {{ cache: LRUCache }} params
+ */
+export function getByProcessWith ({ cache }) {
   return async (process) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.get(process)
   }
 }
 
-export function setByProcessWith ({ cache = internalCache }) {
+/**
+ * @param {{ cache: LRUCache }} params
+ */
+export function setByProcessWith ({ cache }) {
   return async (process, { url, address }, ttl) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.set(process, { url, address }, { ttl })
   }
 }
 
-export function getByOwnerWith ({ cache = internalCache }) {
+/**
+ * @param {{ cache: LRUCache }} params
+ */
+export function getByOwnerWith ({ cache }) {
   return async (owner) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.get(owner)
   }
 }
 
-export function setByOwnerWith ({ cache = internalCache }) {
+/**
+ * @param {{ cache: LRUCache }} params
+ */
+export function setByOwnerWith ({ cache }) {
   return async (owner, url, ttl) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.set(owner, { url, address: owner }, { ttl })
   }
 }

@@ -17,36 +17,62 @@ describe('in-memory', () => {
   })
 
   describe('getByProcessWith', () => {
-    const getByProcess = getByProcessWith({ cache })
     test('returns the url if in cache', async () => {
+      const getByProcess = getByProcessWith({ cache })
       assert.equal(await getByProcess(PROCESS), undefined)
       cache.set(PROCESS, { url: DOMAIN, address: SCHEDULER })
       assert.deepStrictEqual(await getByProcess(PROCESS), { url: DOMAIN, address: SCHEDULER })
     })
+
+    test('returns undefined if cache size is set to 0', async () => {
+      const getByProcess = getByProcessWith({ cache: createLruCache({ size: 0 }) })
+      assert.equal(await getByProcess(PROCESS), undefined)
+      cache.set(PROCESS, { url: DOMAIN, address: SCHEDULER })
+      assert.deepStrictEqual(await getByProcess(PROCESS), undefined)
+    })
   })
 
   describe('getByOwnerWith', () => {
-    const getByOwner = getByOwnerWith({ cache })
     test('returns the url if in cache', async () => {
+      const getByOwner = getByOwnerWith({ cache })
       assert.equal(await getByOwner(SCHEDULER), undefined)
       cache.set(SCHEDULER, { url: DOMAIN, address: SCHEDULER })
       assert.deepStrictEqual(await getByOwner(SCHEDULER), { url: DOMAIN, address: SCHEDULER })
     })
+
+    test('returns undefined if cache size is set to 0', async () => {
+      const getByOwner = getByOwnerWith({ cache: createLruCache({ size: 0 }) })
+      assert.equal(await getByOwner(SCHEDULER), undefined)
+      cache.set(SCHEDULER, { url: DOMAIN, address: SCHEDULER })
+      assert.deepStrictEqual(await getByOwner(SCHEDULER), undefined)
+    })
   })
 
   describe('setByProcessWith', () => {
-    const setByProcess = setByProcessWith({ cache })
     test('sets the value in cache', async () => {
+      const setByProcess = setByProcessWith({ cache })
       await setByProcess(PROCESS, DOMAIN, TEN_MS)
       assert.ok(cache.has(PROCESS))
+    })
+
+    test('does nothing if cache size is set to 0', async () => {
+      const setByProcess = setByProcessWith({ cache: createLruCache({ size: 0 }) })
+      await setByProcess(PROCESS, DOMAIN, TEN_MS)
+      assert.ok(!cache.has(PROCESS))
     })
   })
 
   describe('setByOwnerWith', () => {
-    const setByOwner = setByOwnerWith({ cache })
     test('sets the value in cache', async () => {
+      const setByOwner = setByOwnerWith({ cache })
       await setByOwner(SCHEDULER, DOMAIN, TEN_MS)
       assert.ok(cache.has(SCHEDULER))
+    })
+
+    test('does nothing if cache size is set to 0', async () => {
+      const setByOwner = setByOwnerWith({ cache: createLruCache({ size: 0 }) })
+      await setByOwner(SCHEDULER, DOMAIN, TEN_MS)
+      assert.ok(!cache.has(SCHEDULER))
     })
   })
 })
