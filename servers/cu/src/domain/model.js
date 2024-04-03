@@ -46,18 +46,9 @@ export const domainConfigSchema = z.object({
    */
   UPLOADER_URL: z.string().url('UPLOADER_URL must be a a valid URL'),
   /**
-   * Whether the database being used by the CU is embedded within the CU (ie. PouchDB)
-   * or is on another remote process (ie. CouchDB)
-   */
-  DB_MODE: z.enum(['remote', 'embedded']),
-  /**
    * The connection string to the database
    */
   DB_URL: z.string().min(1, 'DB_URL must be set to the database connection string'),
-  /**
-   * The maximum number of event listeners for the database
-   */
-  DB_MAX_LISTENERS: z.number().int('DB_MAX_LISTENERS must be an integer'),
   /**
    * The wallet for the CU
    */
