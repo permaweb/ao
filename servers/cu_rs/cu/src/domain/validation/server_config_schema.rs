@@ -4,7 +4,7 @@ use super::{domain_config_schema::{StartDomainConfigSchemaConstraint, StartDomai
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
-struct StartServerConfigSchema {
+pub struct StartServerConfigSchema {
     pub base: StartDomainConfigSchema,
     pub MODE: String,
     pub port: String,
@@ -15,12 +15,26 @@ impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
     // todo: finish
     fn parse(&self) -> Result<FinalServerConfigSchema, ValidationError> {
         let mut final_server_config = FinalServerConfigSchema::default();
-        let l = self.clone().validate(&ServerConfigState, &ServerConfigConstraint).result();
+        
         let base = self.base.parse();
         match base {
             Ok(base) => final_server_config.base = base,
             Err(e) => return Err(e)
         }
+
+        match self.clone().validate(&ServerConfigState, &ServerConfigConstraint).result() {
+            Ok(server_config) => {
+                let config = server_config.unwrap();
+                final_server_config.MODE = if config.MODE == "development" { 
+                    DevOrProd::Development
+                } else {
+                    DevOrProd::Production
+                };
+                final_server_config.port = config.port.parse::<u16>().ok().and_then(|p| Some(p)).unwrap_or(0);
+                final_server_config.DUMP_PATH = config.DUMP_PATH;
+            },
+            Err(e) => return Err(e)
+        };
 
         Ok(final_server_config)
     }
@@ -33,7 +47,7 @@ impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
  */
 #[allow(non_snake_case)]
 #[allow(unused)]
-struct FinalServerConfigSchema {
+pub struct FinalServerConfigSchema {
     pub base: FinalDomainConfigSchema,
     pub MODE: DevOrProd,
     pub port: u16,
@@ -52,14 +66,13 @@ impl Default for FinalServerConfigSchema {
 }
 
 #[allow(unused)]
-enum DevOrProd {
+pub enum DevOrProd {
     Development,
     Production
 }
 
 struct ServerConfigConstraint;
-struct ServerConfigState;
-impl ServerConfigState {
+impl ServerConfigConstraint {
     pub fn is_valid_mode(&self, val: &StartServerConfigSchema) -> bool {
         if val.MODE == "development".to_string() || val.MODE == "production".to_string() {
             return true;
@@ -81,10 +94,10 @@ impl ServerConfigState {
         false
     }
 }
+struct ServerConfigState;
 
 impl<'a> Validate<ServerConfigConstraint, State<&'a ServerConfigState>> for StartServerConfigSchema {
-    fn validate(self, context: impl Into<State<&'a ServerConfigState>>, _constraint: &ServerConfigConstraint) -> Validation<ServerConfigConstraint, Self> {
-        let context: State<&'a ServerConfigState> = context.into();
+    fn validate(self, _context: impl Into<State<&'a ServerConfigState>>, constraint: &ServerConfigConstraint) -> Validation<ServerConfigConstraint, Self> {
         let mut violations: Vec<ConstraintViolation> = vec![];
         _ = self.base.clone().validate(&StartDomainConfigSchemaState, &StartDomainConfigSchemaConstraint).result()
             .err()
@@ -92,13 +105,13 @@ impl<'a> Validate<ServerConfigConstraint, State<&'a ServerConfigState>> for Star
                violations.append(&mut e.violations);
                Some(e)
             });
-        if !context.is_valid_mode(&self) {
+        if !constraint.is_valid_mode(&self) {
             violations.push(invalid_value("invalid-mode", "MODE", "".to_string(), "".to_string()));
         } 
-        if !context.is_valid_port(&self) {
+        if !constraint.is_valid_port(&self) {
             violations.push(invalid_value("invalid-port", "port", "".to_string(), "".to_string()));
         } 
-        if !context.is_valid_dump_path(&self) {
+        if !constraint.is_valid_dump_path(&self) {
             violations.push(invalid_value("invalid-dump-path", "DUMP_PATH", "".to_string(), "".to_string()));
         }
 

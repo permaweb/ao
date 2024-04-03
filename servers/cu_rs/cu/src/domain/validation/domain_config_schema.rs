@@ -1,4 +1,6 @@
 use valid::{constraint::{CharCount, NotEmpty, INVALID_CHAR_COUNT_MIN, INVALID_DIGITS_INTEGER}, invalid_value, ConstraintViolation, State, Validate, Validation, ValidationError};
+use crate::config::ConfigEnv;
+
 use super::{db_max_listeners_schema::IntegerConstraint, parse_schema::StartSchemaParser, positive_int_schema::PositiveIntSchemaConstraint, shared_validation::{parse_db_url_schema, parse_min_char_one_schema, parse_wallet_schema, INVALID_URL, INVALID_WALLET}, truthy_schema::{TruthyConstraint, INVALID_NOT_TRUTHY}, url_parse_schema::UrlConstraint, uuid_array_schema::{UuidArrayConstraint, INVALID_ARRAY}};
 use super::positive_int_schema::parse_positive_int_schema;
 use super::url_parse_schema::parse_url_parse_schema;
@@ -6,6 +8,8 @@ use super::db_mode_schema::parse_db_mode_schema;
 use super::db_max_listeners_schema::parse_db_max_listeners_schema;
 use super::truthy_schema::parse_truthy_schema;
 use super::uuid_array_schema::parse_array_schema;
+use std::env;
+use dotenv::dotenv;
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -112,7 +116,7 @@ pub struct StartDomainConfigSchema {
     pub BUSY_THRESHOLD: Option<String>
 }
 
-impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
+impl StartSchemaParser<FinalDomainConfigSchema> for ConfigEnv {
     #[allow(non_snake_case)]
     fn parse(&self) -> Result<FinalDomainConfigSchema, ValidationError> {
         let mut final_domain_config_schema = FinalDomainConfigSchema::default();

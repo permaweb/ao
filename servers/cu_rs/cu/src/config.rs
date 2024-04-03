@@ -1,9 +1,13 @@
 use std::env;
 use dotenv::dotenv;
 use once_cell::sync::OnceCell;
-use crate::utils::{datetime::{get_ms_from_hour, get_ms_from_sec}, paths::get_path_as_string, string_converters::get_array};
+use valid::ValidationError;
+use crate::{
+    domain::validation::server_config_schema::{FinalServerConfigSchema, StartServerConfigSchema}, 
+    domain::validation::parse_schema::StartSchemaParser,
+    utils::{datetime::{get_ms_from_hour, get_ms_from_sec}, paths::get_path_as_string, string_converters::get_array}
+};
 use std::env::temp_dir;
-
 
 /**
  * @type {z.infer<typeof serverConfigSchema>}
@@ -25,6 +29,7 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
         development: ConfigEnv {
             MODE: MODE.clone(),
             port: env::var("PORT").ok().and_then(|val| val.parse::<i64>().ok()).unwrap_or(6363),
+            DUMP_PATH: env::var("DUMP_PATH").unwrap_or("./static".to_string()),
             GATEWAY_URL: env::var("GATEWAY_URL").unwrap_or("https://arweave.net".to_string()),
             UPLOADER_URL: env::var("UPLOADER_URL").unwrap_or("https://up.arweave.net".to_string()),
             DB_MODE: env::var("DB_MODE").unwrap_or("embedded".to_string()),
@@ -32,8 +37,7 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
             DB_MAX_LISTENERS: env::var("DB_MAX_LISTENERS")
                 .ok()
                 .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(100),
-            DUMP_PATH: env::var("DUMP_PATH").unwrap_or("./static".to_string()),
+                .unwrap_or(100),            
             WALLET: env::var("WALLET").unwrap(),
             WALLET_FILE: env::var("WALLET_FILE").unwrap(),
             MEM_MONITOR_INTERVAL: env::var("MEM_MONITOR_INTERVAL")
@@ -89,24 +93,76 @@ pub fn get_config_env(development: bool) -> ConfigEnv {
                 .unwrap_or(0) // disabled
         },
         production: ConfigEnv {
-            MODE: MODE.clone(),
-            port: env::var("PORT").ok().and_then(|val| val.parse::<i64>().ok()).unwrap_or(6363),
-            GATEWAY_URL: env::var("GATEWAY_URL").unwrap_or("https://arweave.net".to_string()),
-            UPLOADER_URL: env::var("UPLOADER_URL").unwrap_or("https://up.arweave.net".to_string()),
-            DB_MODE: env::var("DB_MODE").unwrap_or("embedded".to_string()),
-            DB_URL: env::var("DB_URL").unwrap_or("ao-cache".to_string()), // todo: need to see how this is used
-            DB_MAX_LISTENERS: env::var("DB_MAX_LISTENERS").ok().and_then(|val| val.parse::<i64>().ok()).unwrap_or(100),
-            DUMP_PATH: env::var("DUMP_PATH").unwrap_or(get_path_as_string(temp_dir())),
-            WALLET: env::var("WALLET").unwrap(),
-            WALLET_FILE: env::var("WALLET_FILE").unwrap(),
+            MODE: Some(MODE.clone()),
+            port: env::var("PORT")
+                .ok()
+                .and_then(|p| p.is_empty().then_some("6363".to_string()).or(Some(p)))
+                .or(Some("6363".to_string())),
+            DUMP_PATH: env::var("DUMP_PATH")
+                .ok()
+                .and_then(|dp| dp.is_empty().then_some(get_path_as_string(temp_dir())))
+                .or(Some(get_path_as_string(temp_dir()))),
+            GATEWAY_URL: env::var("GATEWAY_URL")
+                .ok()
+                .and_then(|gu| gu.is_empty().then_some("https://arweave.net".to_string()).or(Some(gu)))
+                .or(Some("https://arweave.net".to_string())),
+            UPLOADER_URL: env::var("UPLOADER_URL")
+                .ok()
+                .and_then(|uu| uu.is_empty().then_some("https://up.arweave.net".to_string()).or(Some(uu)))
+                .or(Some("https://up.arweave.net".to_string())),
+            DB_MODE: env::var("DB_MODE")
+                .ok()
+                .and_then(|db| db.is_empty().then_some("embedded".to_string()).or(Some(db)))
+                .or(Some("embedded".to_string())),
+            DB_URL: env::var("DB_URL")
+                .ok()
+                .and_then(|du| du.is_empty().then_some("ao-cache".to_string()).or(Some(du)))
+                .or(Some("ao-cache".to_string())), // todo: need to see how this is used
+            DB_MAX_LISTENERS: env::var("DB_MAX_LISTENERS")
+                .ok()
+                .and_then(|dml| 
+                    dml.is_empty()
+                        .then_some("100".to_string())
+                        .or(
+                            dml.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some("100".to_string()))
+                        )
+                )
+                .or(Some("100".to_string())),
+            WALLET: env::var("WALLET")
+                .ok()                
+                .or(None),
+            WALLET_FILE: env::var("WALLET_FILE")
+                .ok()                
+                .or(None),
             MEM_MONITOR_INTERVAL: env::var("MEM_MONITOR_INTERVAL")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(get_ms_from_sec(30)),
+                .and_then(|mmi| 
+                    mmi.is_empty()
+                        .then_some(get_ms_from_sec(30).to_string())
+                        .or(
+                            mmi.parse::<i64>()
+                                .ok()
+                                .and_then(|val| Some(val.to_string()))
+                                .or(Some(get_ms_from_sec(30).to_string()))
+                        )
+                )
+                .or(Some(get_ms_from_sec(30).to_string())),
             PROCESS_CHECKPOINT_CREATION_THROTTLE: env::var("PROCESS_CHECKPOINT_CREATION_THROTTLE")
                 .ok()
-                .and_then(|val| val.parse::<i64>().ok())
-                .unwrap_or(get_ms_from_hour(24)),
+                .and_then(|pc|
+                    pc.is_empty()
+                        .then_some(get_ms_from_hour(24).to_string())
+                        .or(
+                            pc.parse::<i64>()
+                                .ok()
+                                .and_then(|va| Some(val.to_string()))
+                                .or(Some(get_msg_from_hour(24).to_string()))
+                        )    
+                )
+                .or(Some(get_ms_from_hour(24).to_string())),
             DISABLE_PROCESS_CHECKPOINT_CREATION: env::var("DISABLE_PROCESS_CHECKPOINT_CREATION")
                 .ok()
                 .and_then(|val| val.parse::<bool>().ok())
@@ -167,30 +223,36 @@ pub struct ConfigEnvSet {
 #[allow(non_snake_case)]
 #[derive(Clone)]
 pub struct ConfigEnv {
-    pub MODE: String,
-    pub port: i64, // process.env.PORT || 6363,
-    pub GATEWAY_URL: String, // process.env.GATEWAY_URL || 'https://arweave.net',
-    pub UPLOADER_URL: String, // process.env.UPLOADER_URL || 'https://up.arweave.net',
-    pub DB_MODE: String, // process.env.DB_MODE || 'embedded',
-    pub DB_URL: String, // process.env.DB_URL || 'ao-cache',
-    pub DB_MAX_LISTENERS: i64, // parseInt(process.env.DB_MAX_LISTENERS || '100'),
-    pub DUMP_PATH: String, // process.env.DUMP_PATH || './static',
-    pub  WALLET: String, // process.env.WALLET,
-    pub WALLET_FILE: String, // process.env.WALLET_FILE,
-    pub MEM_MONITOR_INTERVAL: i64, // process.env.MEM_MONITOR_INTERVAL || ms('10s'),
-    pub PROCESS_CHECKPOINT_CREATION_THROTTLE: i64, // process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
-    pub DISABLE_PROCESS_CHECKPOINT_CREATION: bool, // process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
-    pub EAGER_CHECKPOINT_THRESHOLD: i64, // process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
-    pub PROCESS_WASM_MEMORY_MAX_LIMIT: i64, // process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
-    pub PROCESS_WASM_COMPUTE_MAX_LIMIT: i64, // process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000, // 9b
-    pub WASM_EVALUATION_MAX_WORKERS: i64, // process.env.WASM_EVALUATION_MAX_WORKERS || 3,
-    pub WASM_INSTANCE_CACHE_MAX_SIZE: i64, // process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
-    pub WASM_MODULE_CACHE_MAX_SIZE: i64, // process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
-    pub WASM_BINARY_FILE_DIRECTORY: String, // process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
-    pub PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: Vec<String>, // process.env.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS || [],
-    pub PROCESS_CHECKPOINT_FILE_DIRECTORY: String, // process.env.PROCESS_CHECKPOINT_FILE_DIRECTORY || tmpdir(),
-    pub PROCESS_MEMORY_CACHE_MAX_SIZE: i64, // process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
-    pub PROCESS_MEMORY_CACHE_TTL: i64, // process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
-    pub BUSY_THRESHOLD: i64, // process.env.BUSY_THRESHOLD || 0 // disabled
+    pub MODE: Option<String>,
+    pub port: Option<String>, // process.env.PORT || 6363,
+    pub GATEWAY_URL: Option<String>, // process.env.GATEWAY_URL || 'https://arweave.net',
+    pub UPLOADER_URL: Option<String>, // process.env.UPLOADER_URL || 'https://up.arweave.net',
+    pub DB_MODE: Option<String>, // process.env.DB_MODE || 'embedded',
+    pub DB_URL: Option<String>, // process.env.DB_URL || 'ao-cache',
+    pub DB_MAX_LISTENERS: Option<String>, // parseInt(process.env.DB_MAX_LISTENERS || '100'),
+    pub DUMP_PATH: Option<String>, // process.env.DUMP_PATH || './static',
+    pub  WALLET: Option<String>, // process.env.WALLET,
+    pub WALLET_FILE: Option<String>, // process.env.WALLET_FILE,
+    pub MEM_MONITOR_INTERVAL: Option<String>, // process.env.MEM_MONITOR_INTERVAL || ms('10s'),
+    pub PROCESS_CHECKPOINT_CREATION_THROTTLE: Option<String>, // process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('24h'),
+    pub DISABLE_PROCESS_CHECKPOINT_CREATION: Option<String>, // process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
+    pub EAGER_CHECKPOINT_THRESHOLD: Option<String>, // process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
+    pub PROCESS_WASM_MEMORY_MAX_LIMIT: Option<String>, // process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
+    pub PROCESS_WASM_COMPUTE_MAX_LIMIT: Option<String>, // process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000, // 9b
+    pub WASM_EVALUATION_MAX_WORKERS: Option<String>, // process.env.WASM_EVALUATION_MAX_WORKERS || 3,
+    pub WASM_INSTANCE_CACHE_MAX_SIZE: Option<String>, // process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
+    pub WASM_MODULE_CACHE_MAX_SIZE: Option<String>, // process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
+    pub WASM_BINARY_FILE_DIRECTORY: Option<String>, // process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
+    pub PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: Option<String>, // process.env.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS || [],
+    pub PROCESS_CHECKPOINT_FILE_DIRECTORY: Option<String>, // process.env.PROCESS_CHECKPOINT_FILE_DIRECTORY || tmpdir(),
+    pub PROCESS_MEMORY_CACHE_MAX_SIZE: Option<String>, // process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
+    pub PROCESS_MEMORY_CACHE_TTL: Option<String>, // process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
+    pub BUSY_THRESHOLD: Option<String>, // process.env.BUSY_THRESHOLD || 0 // disabled
 }
 
+static CONFIG: OnceCell<Result<FinalServerConfigSchema, ValidationError>> = OnceCell::new();
+pub fn get_server_config_schema<'a>(start_schema: StartServerConfigSchema) -> &'a Result<FinalServerConfigSchema, ValidationError> {
+    CONFIG.get_or_init(|| {
+        start_schema.parse()
+    })
+}
