@@ -57,6 +57,7 @@ export async function createSqliteClient ({ url }) {
   if (internalSqliteDb) return internalSqliteDb
 
   const db = Database(url)
+  db.pragma('encoding = "UTF-8"')
 
   /**
    * TODO:
@@ -74,6 +75,12 @@ export async function createSqliteClient ({ url }) {
     db
   }
 }
+
+/**
+ * Use a high value unicode character to terminate a range query prefix.
+ * This will cause only string with a given prefix to match a range query
+ */
+export const COLLATION_SEQUENCE_MAX_CHAR = '\u{10FFFF}'
 
 /**
  * This technically isn't the smallest char, but it's small enough for our needs

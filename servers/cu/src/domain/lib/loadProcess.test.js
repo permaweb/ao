@@ -4,7 +4,7 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
-import { COLLATION_SEQUENCE_MIN_CHAR } from '../client/pouchdb.js'
+import { COLLATION_SEQUENCE_MIN_CHAR } from '../client/sqlite.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
