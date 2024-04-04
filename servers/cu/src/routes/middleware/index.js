@@ -2,6 +2,7 @@ import { compose } from 'ramda'
 
 import { withErrorHandler } from './withErrorHandler.js'
 import { withDomain } from './withDomain.js'
+import { withProcessRestriction } from './withProcessRestriction.js'
 
 /**
  * A convenience method that composes common middleware needed on most routes,
@@ -9,5 +10,6 @@ import { withDomain } from './withDomain.js'
  */
 export const withMiddleware = compose(
   withDomain,
+  withProcessRestriction,
   withErrorHandler
 )
