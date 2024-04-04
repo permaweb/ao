@@ -13,6 +13,15 @@ const logger = createLogger('ao-cu:worker')
 describe('worker', async () => {
   process.env.NO_WORKER = '1'
 
+  const moduleOptions = {
+    format: 'wasm32-unknown-emscripten',
+    inputEncoding: 'JSON-1',
+    outputEncoding: 'JSON-1',
+    memoryLimit: 524_288_000, // in bytes
+    computeLimit: 9_000_000_000_000,
+    extensions: []
+  }
+
   describe('evaluateWith', async () => {
     describe('output', async () => {
       let evaluate
@@ -24,11 +33,13 @@ describe('worker', async () => {
           readWasmFile: async () => createReadStream('./test/processes/happy/process.wasm'),
           writeWasmFile: async () => true,
           streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
-          bootstrapWasmInstance: (wasmModule, gas, memLimit) => AoLoader((info, receiveInstance) => {
-            assert.equal(gas, args.gas)
-            assert.equal(memLimit, args.memLimit)
-            return WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
-          }),
+          bootstrapWasmInstance: (wasmModule, _moduleOptions) => {
+            assert.deepStrictEqual(_moduleOptions, moduleOptions)
+            return AoLoader(
+              (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
+              _moduleOptions
+            )
+          },
           logger
         })
       })
@@ -38,8 +49,7 @@ describe('worker', async () => {
       const args = {
         streamId: 'stream-123',
         moduleId: 'module-123',
-        gas: 9_000_000_000_000,
-        memLimit: 9_000_000_000_000,
+        moduleOptions,
         name: 'message 123',
         processId: 'process-123',
         Memory: null,
@@ -164,9 +174,13 @@ describe('worker', async () => {
           readWasmFile: async () => createReadStream('./test/processes/sad/process.wasm'),
           writeWasmFile: async () => true,
           streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
-          bootstrapWasmInstance: (wasmModule) => AoLoader((info, receiveInstance) =>
-            WebAssembly.instantiate(wasmModule, info).then(receiveInstance)
-          ),
+          bootstrapWasmInstance: (wasmModule, _moduleOptions) => {
+            assert.deepStrictEqual(_moduleOptions, moduleOptions)
+            return AoLoader(
+              (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
+              _moduleOptions
+            )
+          },
           logger
         })
       })
@@ -174,8 +188,7 @@ describe('worker', async () => {
       const args = {
         streamId: 'stream-123',
         moduleId: 'module-123',
-        gas: 9_000_000_000_000,
-        memLimit: 9_000_000_000_000,
+        moduleOptions,
         name: 'message 123',
         processId: 'process-123',
         Memory: Buffer.from('Hello', 'utf-8'),

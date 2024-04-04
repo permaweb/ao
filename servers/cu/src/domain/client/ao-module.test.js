@@ -127,6 +127,14 @@ describe('ao-module', () => {
 
   describe('evaluateWith', () => {
     const moduleId = 'foo-module'
+    const moduleOptions = {
+      format: 'wasm32-unknown-emscripten',
+      inputEncoding: 'JSON-1',
+      outputEncoding: 'JSON-1',
+      memoryLimit: 524_288_000, // in bytes
+      computeLimit: 9_000_000_000_000,
+      extensions: []
+    }
     const args = {
       name: 'foobar Message',
       processId: 'foobar-process',
@@ -150,21 +158,20 @@ describe('ao-module', () => {
 
     test('should eval the message', async () => {
       const evaluator = evaluatorWith({
-        evaluate: ({ streamId, moduleId: mId, gas, memLimit, name, processId, Memory, message, AoGlobal }) => {
+        evaluate: ({ streamId, moduleId: mId, moduleOptions: mOptions, name, processId, Memory, message, AoGlobal }) => {
           assert.ok(streamId)
           assert.equal(mId, moduleId)
-          assert.equal(gas, 9_000_000_000_000)
-          assert.equal(memLimit, 8_000_000_000_000)
+          assert.deepStrictEqual(mOptions, moduleOptions)
           assert.equal(name, args.name)
           assert.equal(processId, args.processId)
 
-          return AoLoader(readFileSync('./test/processes/happy/process.wasm'))
+          return AoLoader(readFileSync('./test/processes/happy/process.wasm'), mOptions)
             .then((wasmModule) => wasmModule(Memory, message, AoGlobal))
         },
         logger
       })
 
-      const res = await (await evaluator({ moduleId, gas: 9_000_000_000_000, memLimit: 8_000_000_000_000 }))(args)
+      const res = await (await evaluator({ moduleId, moduleOptions }))(args)
 
       assert.ok(res.Memory)
       assert.ok(res.Output)

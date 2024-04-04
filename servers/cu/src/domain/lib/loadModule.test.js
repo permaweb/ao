@@ -4,29 +4,44 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { loadModuleWith } from './loadModule.js'
+import { lensIndex, remove, set } from 'ramda'
 
 const PROCESS = 'contract-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadModule', () => {
-  test('append moduleId, moduleOwner, and moduleTags, moduleComputeLimit, moduleMemoryLimit', async () => {
+  const moduleTags = [
+    { name: 'Data-Protocol', value: 'ao' },
+    { name: 'Type', value: 'Module' },
+    { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
+    { name: 'Input-Encoding', value: 'JSON-1' },
+    { name: 'Output-Encoding', value: 'JSON-1' },
+    { name: 'Compute-Limit', value: '15000' },
+    { name: 'Memory-Limit', value: '15-kb' }
+  ]
+
+  test('append moduleId, moduleOwner, moduleTags, and moduleOptions', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
         owner: {
           address: 'owner-123'
         },
-        tags: [
-          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' },
-          { name: 'Compute-Limit', value: '15000' },
-          { name: 'Memory-Limit', value: '15000' }
-        ]
+        tags: moduleTags
       }),
       findModule: async () => { throw { status: 404 } },
       saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => false,
+      isModuleMemoryLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 11264)
+        return true
+      },
+      isModuleComputeLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 10000)
+        return true
+      },
+      isModuleFormatSupported: async ({ format }) => {
+        assert.equal(format, 'wasm32-unknown-emscripten')
+        return true
+      },
       logger
     })
 
@@ -35,21 +50,21 @@ describe('loadModule', () => {
       tags: [
         { name: 'Module', value: 'foobar' },
         { name: 'Compute-Limit', value: '10000' },
-        { name: 'Memory-Limit', value: '10000' }
+        { name: 'Memory-Limit', value: '11-kb' }
       ]
     }).toPromise()
 
     assert.equal(result.moduleId, 'foobar')
-    assert.deepStrictEqual(result.moduleTags, [
-      { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-      { name: 'Data-Protocol', value: 'ao' },
-      { name: 'Type', value: 'Module' },
-      { name: 'Compute-Limit', value: '15000' },
-      { name: 'Memory-Limit', value: '15000' }
-    ])
+    assert.deepStrictEqual(result.moduleTags, moduleTags)
     assert.equal(result.moduleOwner, 'owner-123')
-    assert.equal(result.moduleComputeLimit, 10000)
-    assert.equal(result.moduleMemoryLimit, 10000)
+    assert.deepStrictEqual(result.moduleOptions, {
+      format: 'wasm32-unknown-emscripten',
+      inputEncoding: 'JSON-1',
+      outputEncoding: 'JSON-1',
+      computeLimit: 10000,
+      memoryLimit: 11264,
+      extensions: []
+    })
     assert.equal(result.id, PROCESS)
   })
 
@@ -59,17 +74,19 @@ describe('loadModule', () => {
         owner: {
           address: 'owner-123'
         },
-        tags: [
-          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' },
-          { name: 'Memory-Limit', value: '12000' }
-        ]
+        tags: moduleTags
       }),
       findModule: async () => { throw { status: 404 } },
       saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => false,
+      isModuleMemoryLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 15360)
+        return true
+      },
+      isModuleComputeLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 10000)
+        return true
+      },
+      isModuleFormatSupported: async ({ format }) => true,
       logger
     })
 
@@ -82,45 +99,119 @@ describe('loadModule', () => {
     }).toPromise()
 
     assert.equal(result.moduleId, 'foobar')
-    assert.deepStrictEqual(result.moduleTags, [
-      { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-      { name: 'Data-Protocol', value: 'ao' },
-      { name: 'Type', value: 'Module' },
-      { name: 'Memory-Limit', value: '12000' }
-    ])
+    assert.deepStrictEqual(result.moduleTags, moduleTags)
     assert.equal(result.moduleOwner, 'owner-123')
-    assert.equal(result.moduleComputeLimit, 10000)
-    assert.equal(result.moduleMemoryLimit, 12000)
+    assert.deepStrictEqual(result.moduleOptions, {
+      format: 'wasm32-unknown-emscripten',
+      inputEncoding: 'JSON-1',
+      outputEncoding: 'JSON-1',
+      computeLimit: 10000,
+      memoryLimit: 15360,
+      extensions: []
+    })
     assert.equal(result.id, PROCESS)
   })
 
-  test('use module from db to set moduleId', async () => {
+  test('use module from db', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => assert.fail('should not load transaction meta if found in db'),
-      findModule: async () => ({
-        id: 'foobar',
-        tags: [],
-        owner: 'owner-123'
-      }),
-      saveModule: async () => assert.fail('should not save if foudn in db'),
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => false,
+      findModule: async ({ moduleId }) => {
+        assert.equal(moduleId, 'foobar')
+        return {
+          id: 'foobar',
+          tags: moduleTags,
+          owner: 'owner-123'
+        }
+      },
+      saveModule: async () => assert.fail('should not save if found in db'),
+      isModuleMemoryLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 15360)
+        return true
+      },
+      isModuleComputeLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 15000)
+        return true
+      },
+      isModuleFormatSupported: async ({ format }) => {
+        assert.equal(format, 'wasm32-unknown-emscripten')
+        return true
+      },
       logger
     })
 
     const result = await loadModule({
       id: PROCESS,
       tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Compute-Limit', value: '10000' },
-        { name: 'Memory-Limit', value: '10000' }
+        { name: 'Module', value: 'foobar' }
       ]
     }).toPromise()
 
     assert.equal(result.moduleId, 'foobar')
-    assert.deepStrictEqual(result.moduleTags, [])
+    assert.deepStrictEqual(result.moduleTags, moduleTags)
+    assert.deepStrictEqual(result.moduleOptions, {
+      format: 'wasm32-unknown-emscripten',
+      inputEncoding: 'JSON-1',
+      outputEncoding: 'JSON-1',
+      computeLimit: 15000,
+      memoryLimit: 15360,
+      extensions: []
+    })
     assert.equal(result.moduleOwner, 'owner-123')
     assert.equal(result.id, PROCESS)
+  })
+
+  test('throw if "Input-Encoding" is not found', async () => {
+    const loadModule = loadModuleWith({
+      loadTransactionMeta: async () => ({
+        owner: {
+          address: 'owner-123'
+        },
+        tags: remove(3, 1, moduleTags)
+      }),
+      findModule: async () => { throw { status: 404 } },
+      saveModule: async () => 'foobar',
+      isModuleMemoryLimitSupported: async () => true,
+      isModuleComputeLimitSupported: async () => true,
+      isModuleFormatSupported: async () => true,
+      logger
+    })
+
+    await loadModule({
+      id: PROCESS,
+      tags: [{ name: 'Module', value: 'foobar' }]
+    }).toPromise()
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.deepStrictEqual(err, {
+        status: 413,
+        message: 'Input-Encoding for module "foobar" is not supported'
+      }))
+  })
+
+  test('throw if "Output-Encoding" is not found', async () => {
+    const loadModule = loadModuleWith({
+      loadTransactionMeta: async () => ({
+        owner: {
+          address: 'owner-123'
+        },
+        tags: remove(4, 1, moduleTags)
+      }),
+      findModule: async () => { throw { status: 404 } },
+      saveModule: async () => 'foobar',
+      isModuleMemoryLimitSupported: async () => true,
+      isModuleComputeLimitSupported: async () => true,
+      isModuleFormatSupported: async () => true,
+      logger
+    })
+
+    await loadModule({
+      id: PROCESS,
+      tags: [{ name: 'Module', value: 'foobar' }]
+    }).toPromise()
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.deepStrictEqual(err, {
+        status: 413,
+        message: 'Output-Encoding for module "foobar" is not supported'
+      }))
   })
 
   test('throw if "Module-Format" is not supported', async () => {
@@ -129,148 +220,128 @@ describe('loadModule', () => {
         owner: {
           address: 'owner-123'
         },
-        tags: [
+        tags: set(
+          lensIndex(2),
           { name: 'Module-Format', value: 'wasm64-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' }
-        ]
+          moduleTags
+        )
       }),
       findModule: async () => { throw { status: 404 } },
       saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => false,
+      isModuleMemoryLimitSupported: async () => true,
+      isModuleComputeLimitSupported: async () => true,
+      isModuleFormatSupported: async () => false,
       logger
     })
 
     await loadModule({
       id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Compute-Limit', value: '10000' },
-        { name: 'Memory-Limit', value: '10000' }
-      ]
+      tags: [{ name: 'Module', value: 'foobar' }]
     }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.equal(err, "Tag 'Module-Format': only 'wasm32-unknown-emscripten' module format is supported by this CU"))
+      .catch(err => assert.deepStrictEqual(err, {
+        status: 413,
+        message: 'Module-Format for module "foobar" is not supported'
+      }))
   })
 
-  test('throw if "Compute-Limit" is not found', async () => {
-    const loadModule = loadModuleWith({
-      loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
-        tags: [
-          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' }
-        ]
-      }),
-      findModule: async () => { throw { status: 404 } },
-      saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => false,
-      logger
+  describe('Compute-Limit', () => {
+    test('throw if not found', async () => {
+      const loadModule = loadModuleWith({
+        loadTransactionMeta: async () => ({
+          owner: {
+            address: 'owner-123'
+          },
+          tags: remove(5, 1, moduleTags)
+        }),
+        findModule: async () => { throw { status: 404 } },
+        saveModule: async () => 'foobar',
+        isModuleMemoryLimitSupported: async () => true,
+        isModuleComputeLimitSupported: async () => true,
+        isModuleFormatSupported: async () => true,
+        logger
+      })
+
+      await loadModule({
+        id: PROCESS,
+        tags: [{ name: 'Module', value: 'foobar' }]
+      }).toPromise()
+        .then(() => assert.fail('unreachable. Should have thrown'))
+        .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Compute-Limit for process "${PROCESS}" exceeds supported limit` }))
     })
 
-    await loadModule({
-      id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Memory-Limit', value: '10000' }
-      ]
-    }).toPromise()
-      .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Compute-Limit for process "${PROCESS}" exceeds supported limit` }))
+    test('throw if exceeds max allowed', async () => {
+      const loadModule = loadModuleWith({
+        loadTransactionMeta: async () => ({
+          owner: {
+            address: 'owner-123'
+          },
+          tags: moduleTags
+        }),
+        findModule: async () => { throw { status: 404 } },
+        saveModule: async () => 'foobar',
+        isModuleMemoryLimitSupported: async () => true,
+        isModuleComputeLimitSupported: async () => false,
+        isModuleFormatSupported: async () => true,
+        logger
+      })
+
+      await loadModule({
+        id: PROCESS,
+        tags: [{ name: 'Module', value: 'foobar' }]
+      }).toPromise()
+        .then(() => assert.fail('unreachable. Should have thrown'))
+        .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Compute-Limit for process "${PROCESS}" exceeds supported limit` }))
+    })
   })
 
-  test('throw if "Compute-Limit" exceeds max allowed', async () => {
-    const loadModule = loadModuleWith({
-      loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
-        tags: [
-          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' }
-        ]
-      }),
-      findModule: async () => { throw { status: 404 } },
-      saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => true,
-      logger
+  describe('Memory-Limit', () => {
+    test('throw if is not found', async () => {
+      const loadModule = loadModuleWith({
+        loadTransactionMeta: async () => ({
+          owner: {
+            address: 'owner-123'
+          },
+          tags: remove(6, 1, moduleTags)
+        }),
+        findModule: async () => { throw { status: 404 } },
+        saveModule: async () => 'foobar',
+        isModuleMemoryLimitSupported: async () => true,
+        isModuleComputeLimitSupported: async () => true,
+        isModuleFormatSupported: async () => true,
+        logger
+      })
+
+      await loadModule({
+        id: PROCESS,
+        tags: [{ name: 'Module', value: 'foobar' }]
+      }).toPromise()
+        .then(() => assert.fail('unreachable. Should have thrown'))
+        .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Memory-Limit for process "${PROCESS}" exceeds supported limit` }))
     })
 
-    await loadModule({
-      id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Memory-Limit', value: '10000' }
-      ]
-    }).toPromise()
-      .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Compute-Limit for process "${PROCESS}" exceeds supported limit` }))
-  })
+    test('throw if exceeds max allowed', async () => {
+      const loadModule = loadModuleWith({
+        loadTransactionMeta: async () => ({
+          owner: {
+            address: 'owner-123'
+          },
+          tags: moduleTags
+        }),
+        findModule: async () => { throw { status: 404 } },
+        saveModule: async () => 'foobar',
+        isModuleMemoryLimitSupported: async () => false,
+        isModuleComputeLimitSupported: async () => true,
+        isModuleFormatSupported: async () => true,
+        logger
+      })
 
-  test('throw if "Memory-Limit" is not found', async () => {
-    const loadModule = loadModuleWith({
-      loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
-        tags: [
-          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' }
-        ]
-      }),
-      findModule: async () => { throw { status: 404 } },
-      saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => false,
-      doesExceedModuleMaxCompute: async () => false,
-      logger
+      await loadModule({
+        id: PROCESS,
+        tags: [{ name: 'Module', value: 'foobar' }]
+      }).toPromise()
+        .then(() => assert.fail('unreachable. Should have thrown'))
+        .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Memory-Limit for process "${PROCESS}" exceeds supported limit` }))
     })
-
-    await loadModule({
-      id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Compute-Limit', value: '10000' }
-      ]
-    }).toPromise()
-      .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Memory-Limit for process "${PROCESS}" exceeds supported limit` }))
-  })
-
-  test('throw if "Memory-Limit" exceeds max allowed', async () => {
-    const loadModule = loadModuleWith({
-      loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
-        tags: [
-          { name: 'Module-Format', value: 'wasm32-unknown-emscripten' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Module' }
-        ]
-      }),
-      findModule: async () => { throw { status: 404 } },
-      saveModule: async () => 'foobar',
-      doesExceedModuleMaxMemory: async () => true,
-      doesExceedModuleMaxCompute: async () => false,
-      logger
-    })
-
-    await loadModule({
-      id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Compute-Limit', value: '10000' }
-      ]
-    }).toPromise()
-      .then(() => assert.fail('unreachable. Should have thrown'))
-      .catch(err => assert.deepStrictEqual(err, { status: 413, message: `Memory-Limit for process "${PROCESS}" exceeds supported limit` }))
   })
 })

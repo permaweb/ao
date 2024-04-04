@@ -196,8 +196,9 @@ export const createApis = async (ctx) => {
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),
     locateProcess: locateDataloader.load.bind(locateDataloader),
-    doesExceedModuleMaxMemory: WasmClient.doesExceedModuleMaxMemoryWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
-    doesExceedModuleMaxCompute: WasmClient.doesExceedModuleMaxComputeWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
+    isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
+    isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
+    isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith(),
     /**
      * This is not configurable, as Load message support will be dictated by the protocol,
      * which proposes Assignments as a more flexible and extensible solution that also includes

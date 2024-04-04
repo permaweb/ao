@@ -14,12 +14,19 @@ async function * toAsyncIterable (iterable) {
   while (iterable.length) yield iterable.shift()
 }
 
-const happyWasm = await AoLoader(readFileSync('./test/processes/happy/process.wasm'))
-const sadWasm = await AoLoader(readFileSync('./test/processes/sad/process.wasm'))
-async function evaluateHappyMessage ({ moduleId, gas, memLimit }) {
+const moduleOptions = {
+  format: 'wasm32-unknown-emscripten',
+  inputEncoding: 'JSON-1',
+  outputEncoding: 'JSON-1',
+  memoryLimit: 524_288_000, // in bytes
+  computeLimit: 9_000_000_000_000,
+  extensions: []
+}
+const happyWasm = await AoLoader(readFileSync('./test/processes/happy/process.wasm'), moduleOptions)
+const sadWasm = await AoLoader(readFileSync('./test/processes/sad/process.wasm'), moduleOptions)
+async function evaluateHappyMessage ({ moduleId, moduleOptions: mOptions }) {
   assert.equal(moduleId, 'foo-module')
-  assert.equal(gas, 9_000_000_000_000)
-  assert.equal(memLimit, 9_000_000_000_000)
+  assert.deepStrictEqual(mOptions, moduleOptions)
   return ({ Memory, message, AoGlobal }) => happyWasm(Memory, message, AoGlobal)
 }
 
@@ -42,8 +49,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: new Date().getTime(),
       moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
+      moduleOptions,
       stats: {
         messages: {
           scheduled: 0,
@@ -148,8 +154,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
+      moduleOptions,
       stats: {
         messages: {
           scheduled: 0,
@@ -252,8 +257,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
+      moduleOptions,
       stats: {
         messages: {
           scheduled: 0,
@@ -350,8 +354,7 @@ describe('evaluate', () => {
       from: 1702846520559,
       fromCron: '1-10-minutes',
       moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
+      moduleOptions,
       stats: {
         messages: {
           scheduled: 0,
@@ -488,8 +491,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: 1702846520559,
       moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
+      moduleOptions,
       stats: {
         messages: {
           scheduled: 0,
@@ -589,8 +591,7 @@ describe('evaluate', () => {
       id: 'ctr-1234',
       from: new Date().getTime(),
       moduleId: 'foo-module',
-      moduleComputeLimit: 9_000_000_000_000,
-      moduleMemoryLimit: 9_000_000_000_000,
+      moduleOptions,
       stats: {
         messages: {
           scheduled: 0,

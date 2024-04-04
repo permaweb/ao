@@ -82,31 +82,32 @@ export function findModuleWith ({ db }) {
 
 export function evaluatorWith ({ evaluate }) {
   const EVAL_DEFER_BACKPRESSURE = 10
-  return ({ moduleId, gas, memLimit }) => of({ moduleId, gas, memLimit })
+  return ({ moduleId, moduleOptions }) =>
+    of(moduleOptions)
     /**
      * Create an evaluator function scoped to this particular
      * stream of messages
      */
-    .chain(fromPromise(async () => {
-      const streamId = await new Promise((resolve, reject) =>
-        randomBytes(8, (err, buffer) => err ? reject(err) : resolve(buffer.toString('hex')))
-      )
+      .chain(fromPromise(async (moduleOptions) => {
+        const streamId = await new Promise((resolve, reject) =>
+          randomBytes(8, (err, buffer) => err ? reject(err) : resolve(buffer.toString('hex')))
+        )
 
-      let backpressure = 0
+        let backpressure = 0
 
-      return ({ name, processId, Memory, message, AoGlobal }) =>
-        Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
-          .then(async (defer) => {
+        return ({ name, processId, Memory, message, AoGlobal }) =>
+          Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
+            .then(async (defer) => {
             /**
              * defer the next wasm module invocation to the
              * end of the current event queue.
              *
              * We may want to defer to prevent starvation of other tasks on the main thread
              */
-            if (defer) await new Promise(resolve => setImmediate(resolve))
+              if (defer) await new Promise(resolve => setImmediate(resolve))
 
-            return evaluate({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
-          })
-    }))
-    .toPromise()
+              return evaluate({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal })
+            })
+      }))
+      .toPromise()
 }

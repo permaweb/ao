@@ -123,16 +123,16 @@ export function evaluateWith ({
   bootstrapWasmInstance,
   logger
 }) {
-  function maybeCachedModule ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+  function maybeCachedModule ({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal }) {
     return of(moduleId)
       .map((moduleId) => wasmModuleCache.get(moduleId))
       .chain((wasm) => wasm
         ? Resolved(wasm)
-        : Rejected({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
+        : Rejected({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal })
       )
   }
 
-  function maybeStoredBinary ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+  function maybeStoredBinary ({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal }) {
     logger('Checking for wasm file to load module "%s"...', moduleId)
 
     return of(moduleId)
@@ -141,7 +141,7 @@ export function evaluateWith ({
         WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream)))
       ))
       .bimap(
-        () => ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }),
+        () => ({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal }),
         identity
       )
   }
@@ -165,15 +165,15 @@ export function evaluateWith ({
       .map(([, res]) => res)
   }
 
-  function loadInstance ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
-    return maybeCachedModule({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
+  function loadInstance ({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal }) {
+    return maybeCachedModule({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal })
       .bichain(
         /**
          * Potentially Compile the Wasm Module, cache it for next time,
          *
          * then create the Wasm instance
          */
-        () => of({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
+        () => of({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal })
           .chain(maybeStoredBinary)
           .bichain(loadTransaction, Resolved)
           /**
@@ -189,7 +189,7 @@ export function evaluateWith ({
          */
         Resolved
       )
-      .chain(fromPromise((wasmModule) => bootstrapWasmInstance(wasmModule, gas, memLimit)))
+      .chain(fromPromise((wasmModule) => bootstrapWasmInstance(wasmModule, moduleOptions)))
       /**
        * Cache the wasm module for this particular stream,
        * in memory, for quick retrieval next time
@@ -200,12 +200,12 @@ export function evaluateWith ({
       })
   }
 
-  function maybeCachedInstance ({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal }) {
+  function maybeCachedInstance ({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal }) {
     return of(streamId)
       .map((streamId) => wasmInstanceCache.get(streamId))
       .chain((wasmInstance) => wasmInstance
         ? Resolved(wasmInstance)
-        : Rejected({ streamId, moduleId, gas, memLimit, Memory, message, AoGlobal })
+        : Rejected({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal })
       )
   }
 
@@ -291,12 +291,12 @@ export function evaluateWith ({
    *
    * Finally, evaluates the message and returns the result of the evaluation.
    */
-  return ({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal }) =>
+  return ({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal }) =>
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
-    maybeCachedInstance({ streamId, moduleId, gas, memLimit, name, processId, Memory, message, AoGlobal })
+    maybeCachedInstance({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal })
       .bichain(loadInstance, Resolved)
       /**
        * Perform the evaluation
@@ -336,11 +336,12 @@ if (!process.env.NO_WORKER) {
       readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
       writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
       streamTransactionData: streamTransactionDataWith({ fetch, ARWEAVE_URL: workerData.ARWEAVE_URL, logger }),
-      bootstrapWasmInstance: (wasmModule, gasLimit, memoryLimit) => AoLoader(
-        (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
-        gasLimit,
-        memoryLimit
-      ),
+      bootstrapWasmInstance: (wasmModule, moduleOptions) => {
+        return AoLoader(
+          (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
+          moduleOptions
+        )
+      },
       logger
     })
   })
