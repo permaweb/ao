@@ -33,10 +33,29 @@ export async function hashWasmMemory (memoryStream, encoding) {
     })
 }
 
-export function doesExceedModuleMaxMemoryWith ({ PROCESS_WASM_MEMORY_MAX_LIMIT }) {
-  return async ({ limit }) => limit > PROCESS_WASM_MEMORY_MAX_LIMIT
+export function isModuleMemoryLimitSupportedWith ({ PROCESS_WASM_MEMORY_MAX_LIMIT }) {
+  return async ({ limit }) => {
+    return limit <= PROCESS_WASM_MEMORY_MAX_LIMIT
+  }
 }
 
-export function doesExceedModuleMaxComputeWith ({ PROCESS_WASM_COMPUTE_MAX_LIMIT }) {
-  return async ({ limit }) => limit > PROCESS_WASM_COMPUTE_MAX_LIMIT
+export function isModuleComputeLimitSupportedWith ({ PROCESS_WASM_COMPUTE_MAX_LIMIT }) {
+  return async ({ limit }) => {
+    return limit <= PROCESS_WASM_COMPUTE_MAX_LIMIT
+  }
+}
+
+export function isModuleFormatSupportedWith () {
+  /**
+   * TODO: should this be configurable?
+   * Or maybe exposed on AoLoader and injected here?
+   *
+   * For now, just hardcoding
+   */
+  const supportedFormats = [
+    'wasm32-unknown-emscripten',
+    'wasm32-unknown-emscripten2'
+  ]
+
+  return async ({ format }) => supportedFormats.includes(format.trim())
 }

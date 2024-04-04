@@ -6,6 +6,13 @@ export const positiveIntSchema = z.preprocess((val) => {
   return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
 }, z.number().nonnegative())
 
+export const commaDelimitedArraySchema = z.preprocess((val) => {
+  if (Array.isArray(val)) return val
+  // ',' delimited string
+  if (typeof val === 'string') return val.split(',').map((s) => s.trim())
+  return val
+}, z.array(z.string()))
+
 export const domainConfigSchema = z.object({
   /**
    * The maximum Memory-Limit, in bytes, supported for ao processes
