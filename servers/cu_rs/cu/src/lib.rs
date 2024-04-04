@@ -1,7 +1,11 @@
 pub mod app;
 pub mod config;
+pub mod app_state;
 pub mod domain {
     pub mod index;
+    pub mod utils {
+        pub mod error;
+    }
     pub mod client {
         pub mod arweave;
     }
@@ -29,6 +33,10 @@ pub mod utils {
 }
 pub mod routes {
     pub mod index;
+    pub mod state;
+    pub mod middleware {
+        pub mod with_error_handler;
+    }
 }
 
 use crate::app::server;

@@ -1,8 +1,9 @@
-    use actix_web::web::{self, ServiceConfig};
+use actix_web::web::ServiceConfig;
+use super::state::with_state_routes;
 
-    pub fn index(cfg: &mut ServiceConfig) {
-        // cfg.service(
-        //     web::resource("/path")
-        //         .route(web::get().to(handler))   
-        // )
-    }
+/// todo: need real paths
+pub fn index(cfg: &mut ServiceConfig) {
+    cfg.service(
+        with_state_routes()
+    );
+}

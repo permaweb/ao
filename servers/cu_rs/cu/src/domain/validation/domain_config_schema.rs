@@ -149,10 +149,10 @@ impl StartDomainConfigSchema {
     }
 }
 
-impl StartSchemaParser<FinalDomainConfigSchema> for StartDomainConfigSchema {
+impl StartSchemaParser<DomainConfigSchema> for StartDomainConfigSchema {
     #[allow(non_snake_case)]
-    fn parse(&self) -> Result<FinalDomainConfigSchema, ValidationError> {
-        let mut final_domain_config_schema = FinalDomainConfigSchema::default();
+    fn parse(&self) -> Result<DomainConfigSchema, ValidationError> {
+        let mut final_domain_config_schema = DomainConfigSchema::default();
 
         match parse_positive_int_schema(self.PROCESS_WASM_MEMORY_MAX_LIMIT.clone(), "PROCESS_WASM_MEMORY_MAX_LIMIT") {
             Ok(val) => final_domain_config_schema.PROCESS_WASM_MEMORY_MAX_LIMIT = val,
@@ -339,7 +339,7 @@ impl<'a> Validate<StartDomainConfigSchemaConstraint, State<&'a StartDomainConfig
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
-pub struct FinalDomainConfigSchema {
+pub struct DomainConfigSchema {
     /**
     * The maximum Memory-Limit, in bytes, supported for ao processes
     *
@@ -442,9 +442,9 @@ pub struct FinalDomainConfigSchema {
     pub BUSY_THRESHOLD: i64
 }
 
-impl Default for FinalDomainConfigSchema {
+impl Default for DomainConfigSchema {
     fn default() -> Self {
-        FinalDomainConfigSchema {
+        DomainConfigSchema {
             PROCESS_WASM_MEMORY_MAX_LIMIT: 0,
             PROCESS_WASM_COMPUTE_MAX_LIMIT: 0,
             GATEWAY_URL: "".to_string(),

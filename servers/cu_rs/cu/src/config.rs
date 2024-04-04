@@ -3,7 +3,7 @@ use dotenv::dotenv;
 use once_cell::sync::OnceCell;
 use valid::ValidationError;
 use crate::{
-    domain::validation::{domain_config_schema::StartDomainConfigSchema, parse_schema::StartSchemaParser, server_config_schema::{DevOrProd, FinalServerConfigSchema, StartServerConfigSchema}}, 
+    domain::validation::{domain_config_schema::{DomainConfigSchema, StartDomainConfigSchema}, parse_schema::StartSchemaParser, server_config_schema::{DevOrProd, ServerConfigSchema, StartServerConfigSchema}}, 
     utils::{datetime::{get_ms_from_hour, get_ms_from_sec}, paths::get_path_as_string}
 };
 use std::env::temp_dir;
@@ -17,7 +17,7 @@ use std::env::temp_dir;
 pub static CONFIG_ENVS: OnceCell<StartConfigEnvSet> = OnceCell::new();
 
 #[allow(non_snake_case)]
-pub fn get_config_env(development: bool) -> StartConfigEnv {
+fn get_config_env(development: bool) -> StartConfigEnv {
     dotenv().ok();
 
     let MODE = env::var("NODE_CONFIG_ENV").unwrap_or("".to_string());
@@ -558,7 +558,7 @@ pub struct ConfigEnv {
 }
 
 impl ConfigEnv {
-    pub fn new(final_server_config: FinalServerConfigSchema) -> Self {
+    pub fn new(final_server_config: ServerConfigSchema) -> Self {
         ConfigEnv {
             MODE: if final_server_config.MODE == DevOrProd::Development { "development".to_string() } else { "production".to_string() },
             port: final_server_config.port,
@@ -621,13 +621,23 @@ impl Default for ConfigEnv {
     }
 }
 
+static DOMAIN_CONFIG: OnceCell<Result<DomainConfigSchema, ValidationError>> = OnceCell::new();
+pub fn get_domain_config_schema<'a>(development: bool) -> &'a Result<DomainConfigSchema, ValidationError> {
+    DOMAIN_CONFIG.get_or_init(|| {
+        match StartDomainConfigSchema::new(get_config_env(development)).parse() {
+            Ok(final_domain_config) => Ok(final_domain_config),
+            Err(e) => Err(e)
+        }
+    })
+}
+
 static CONFIG: OnceCell<Result<ConfigEnv, ValidationError>> = OnceCell::new();
-pub fn get_server_config_schema<'a>(start_config: StartConfigEnv) -> &'a Result<ConfigEnv, ValidationError> {
+pub fn get_server_config_schema<'a>(development: bool) -> &'a Result<ConfigEnv, ValidationError> {
     CONFIG.get_or_init(|| {
+        let start_config = get_config_env(development);
         let start_domain_config = StartDomainConfigSchema::new(start_config.clone());
-        let start_server_config = StartServerConfigSchema::new(start_config, start_domain_config);
         
-        match start_server_config.parse() {
+        match StartServerConfigSchema::new(start_config, start_domain_config).parse() {
             Ok(final_server_config) => {
                 Ok(ConfigEnv::new(final_server_config))            
             },
@@ -637,3 +647,5 @@ pub fn get_server_config_schema<'a>(start_config: StartConfigEnv) -> &'a Result<
         }    
     })
 }
+
+// todo: setup remaining schema functions 

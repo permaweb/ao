@@ -1,5 +1,5 @@
 use valid::{invalid_value, ConstraintViolation, State, Validate, Validation, ValidationError};
-use crate::{config::StartConfigEnv, domain::validation::domain_config_schema::{FinalDomainConfigSchema, StartDomainConfigSchema}};
+use crate::{config::StartConfigEnv, domain::validation::domain_config_schema::{DomainConfigSchema, StartDomainConfigSchema}};
 use super::{domain_config_schema::{StartDomainConfigSchemaConstraint, StartDomainConfigSchemaState}, parse_schema::StartSchemaParser};
 
 #[derive(Clone)]
@@ -22,10 +22,10 @@ impl StartServerConfigSchema {
     }
 }
 
-impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
+impl StartSchemaParser<ServerConfigSchema> for StartServerConfigSchema {
     // todo: finish
-    fn parse(&self) -> Result<FinalServerConfigSchema, ValidationError> {
-        let mut final_server_config = FinalServerConfigSchema::default();
+    fn parse(&self) -> Result<ServerConfigSchema, ValidationError> {
+        let mut final_server_config = ServerConfigSchema::default();
         
         let base = self.base.parse();
         match base {
@@ -58,17 +58,17 @@ impl StartSchemaParser<FinalServerConfigSchema> for StartServerConfigSchema {
  */
 #[allow(non_snake_case)]
 #[allow(unused)]
-pub struct FinalServerConfigSchema {
-    pub base: FinalDomainConfigSchema,
+pub struct ServerConfigSchema {
+    pub base: DomainConfigSchema,
     pub MODE: DevOrProd,
     pub port: u16,
     pub DUMP_PATH: String
 }
 
-impl Default for FinalServerConfigSchema {
+impl Default for ServerConfigSchema {
     fn default() -> Self {
-        FinalServerConfigSchema {
-            base: FinalDomainConfigSchema::default(),
+        ServerConfigSchema {
+            base: DomainConfigSchema::default(),
             MODE: DevOrProd::Development,
             port: 0,
             DUMP_PATH: "".to_string()
