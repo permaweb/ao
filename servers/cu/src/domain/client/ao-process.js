@@ -898,6 +898,11 @@ export function saveCheckpointWith ({
   }
 
   function createCheckpoint ({ Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) {
+    logger(
+      'Checking Gateway for existing Checkpoint for evaluation: %j',
+      { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+    )
+
     return address()
       .chain((owner) => queryCheckpoints({
         query: GET_AO_PROCESS_CHECKPOINTS(!!cron),
