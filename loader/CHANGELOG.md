@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.24](https://github.com/permaweb/ao/compare/loader@v0.0.23...loader@v0.0.24) (2024-04-04)
+
+
+### Features
+
+* [wip] working on modifying loader api to accept multiple formats ([63bbd35](https://github.com/permaweb/ao/commit/63bbd35df4a491948d2438735625662e5b30a683))
+* **loader:** add new module format to support sqlite with aos ([6ff5837](https://github.com/permaweb/ao/commit/6ff583772289b11760bc85a310dbe1919c7fd67a))
+* reverted container to use emscripten Os ([9ea1ec7](https://github.com/permaweb/ao/commit/9ea1ec7a155894de98d5084731bc1c25f20afd41))
+
 ## [0.0.23](https://github.com/permaweb/ao/compare/loader@v0.0.22...loader@v0.0.23) (2024-03-06)
 
 
