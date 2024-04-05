@@ -277,9 +277,9 @@ impl Message {
     }
 
     pub fn message_id(&self) -> Result<String, JsonErrorType> {
-        // if let Some(message) = self.message {
-
-        // }
+        if let Some(message) = &self.message {
+            return Ok(message.id.clone());
+        }
         let message_tag = self.assignment.tags.iter().find(|tag| tag.name == "Message")
             .ok_or("Message tag not found")?;
         Ok(message_tag.value.clone())
