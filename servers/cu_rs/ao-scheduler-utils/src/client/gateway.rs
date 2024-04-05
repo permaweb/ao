@@ -24,7 +24,7 @@ impl Gateway {
     
     fn find_transaction_tags<'a>(err_msg: &'a str, transaction_node: &'a Option<Node>) -> Result<Vec<Tag>, FindTxTagsError> {
         if let Some(node) = transaction_node {
-            return Ok(node.tags.clone());
+            return Ok(if node.tags.is_none() { vec![] } else { node.tags.as_ref().unwrap().clone() });
         }
         Err(FindTxTagsError { message: err_msg.to_string() })
     }
@@ -198,30 +198,30 @@ mod tests {
     #[test]
     fn test_find_transaction_tags() {
         let node = Node {
-            id: "123".to_string(),
-            anchor: "123".to_string(),
-            signature: "123".to_string(),
-            recipient: "123".to_string(),
-            owner: Owner {
+            id: Some("123".to_string()),
+            anchor: Some("123".to_string()),
+            signature: Some("123".to_string()),
+            recipient: Some("123".to_string()),
+            owner: Some(Owner {
                 address: "123".to_string(),
                 key: "123".to_string()
-            },
-            fee: Amount {
+            }),
+            fee: Some(Amount {
                 winston: "123".to_string(),
                 ar: "123".to_string()
-            },
-            quantity: Amount {
+            }),
+            quantity: Some(Amount {
                 winston: "123".to_string(),
                 ar: "123".to_string()
-            },
-            data: MetaData {
+            }),
+            data: Some(MetaData {
                 size: 123,
                 content_type: Some("application/json".to_string())
-            },
-            tags: vec![
+            }),
+            tags: Some(vec![
                 Tag { name: "hello".to_string(), value: "22".to_string() },
                 Tag { name: "world".to_string(), value: "tim".to_string() }
-            ],
+            ]),
             block: None,            
             parent: None,
             bundled_in: None
@@ -240,7 +240,7 @@ mod tests {
         let gateway = Gateway {
             arweave: InternalArweave::new("../test-utils/wallet.json")
         };
-        const WALLET_ADDRESS: &str = "VN7HC19VXz2EcOgJ1ACAZgdYVDK1geWxqqAppddN_io";
+        const WALLET_ADDRESS: &str = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA"; // "VN7HC19VXz2EcOgJ1ACAZgdYVDK1geWxqqAppddN_io";
         let result = gateway.load_scheduler_with(GATEWAY_URL, WALLET_ADDRESS).await;
         match result {
             Ok(scheduler) => assert!(scheduler.owner == WALLET_ADDRESS.to_string()),

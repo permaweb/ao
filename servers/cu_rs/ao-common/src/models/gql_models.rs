@@ -30,17 +30,18 @@ pub struct NodeParent {
     pub node: Node
 }
 
+/// Regardless of the schema def, graphql queries can return any combination of fields 
 #[derive(Deserialize, Clone)]
 pub struct Node {
-    pub id: String,
-    pub anchor: String,
-    pub signature: String,
-    pub recipient: String,
-    pub owner: Owner,
-    pub fee: Amount,
-    pub quantity: Amount,
-    pub data: MetaData,
-    pub tags: Vec<Tag>,
+    pub id: Option<String>,
+    pub anchor: Option<String>,
+    pub signature: Option<String>,
+    pub recipient: Option<String>,
+    pub owner: Option<Owner>,
+    pub fee: Option<Amount>,
+    pub quantity: Option<Amount>,
+    pub data: Option<MetaData>,
+    pub tags: Option<Vec<Tag>>,
     pub block: Option<Block>,
     /// parent is deprecated
     pub parent: Option<Parent>,
