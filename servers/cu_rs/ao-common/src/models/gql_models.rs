@@ -16,12 +16,17 @@ pub struct TransactionConnectionSchema {
 #[derive(Deserialize)]
 pub struct Transactions {
     #[serde(rename = "pageInfo")]
-    pub page_info: PageInfo,
-    pub edges: Vec<TransactionEdge>
+    pub page_info: Option<PageInfo>,
+    pub transactions: Edges
 }
 
 #[derive(Deserialize)]
-pub struct TransactionEdge {
+pub struct Edges {
+    pub edges: Vec<NodeParent>
+}
+
+#[derive(Deserialize)]
+pub struct NodeParent {
     pub node: Node
 }
 
@@ -37,24 +42,25 @@ pub struct Node {
     pub data: MetaData,
     pub tags: Vec<Tag>,
     pub block: Option<Block>,
+    /// parent is deprecated
     pub parent: Option<Parent>,
-    /// replaces deprecated parent field
+    /// bundled_in replaces deprecated parent field
     pub bundled_in: Option<Bundle>
 }
 
 #[allow(unused)]
 #[derive(Deserialize, Clone)]
 pub struct Amount {
-    winston: String,
-    ar: String
+    pub winston: String,
+    pub ar: String
 }
 
 #[allow(unused)]
 #[derive(Deserialize, Clone)]
 pub struct MetaData {
-    size: i64,
+    pub size: i64,
     #[serde(rename = "type")]
-    content_type: Option<String>
+    pub content_type: Option<String>
 }
 
 #[allow(unused)]

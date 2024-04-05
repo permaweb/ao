@@ -3,11 +3,14 @@ name = "ao-scheduler-utils"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 derive_more = "0.99.17"
 ao-common = { path = "../ao-common" }
+dotenv = "0.15.0"
+env_logger = "0.11.3"
+log = "0.4.21"
+reqwest = { version = "0.12.3", features = ["json", "multipart"] }
 serde = "1.0.197"
 serde_json = "1.0.115"
-reqwest = { version = "0.12.2", features = ["json", "multipart"] }
+tokio = { version = "1.37.0", features = ["full"] }
+tokio-stream = "0.1.15"

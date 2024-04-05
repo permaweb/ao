@@ -22,8 +22,8 @@ pub async fn state_handler(_app_data: Data<AppState>, query: Query<String>, path
     ""
 }
 
+#[allow(unused)]
 #[derive(Deserialize)]
-
 struct InputSchema {
     process_id: i64,
     to: String

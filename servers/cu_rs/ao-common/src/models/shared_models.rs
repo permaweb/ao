@@ -10,6 +10,6 @@ pub struct Tag {
 #[allow(unused)]
 #[derive(Deserialize, Clone)]
 pub struct Owner { 
-    address: String, 
-    key: String
+    pub address: String, 
+    pub key: String
 }

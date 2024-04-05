@@ -3,7 +3,8 @@ use futures::{Future, FutureExt};
 use reqwest::{Response, Client, Error, Url};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, pin::Pin};
-use log::error;
+#[allow(unused)]
+use log::{error, info};
 use crate::network::utils::get_content_type_headers;
 use crate::models::gql_models::{Node, TransactionConnectionSchema};
 use crate::models::shared_models::Tag;
@@ -28,7 +29,7 @@ impl InternalArweave {
         path.push(keypair_path);
         arweave_builder
             .keypair_path(path)
-            .base_url(Url::parse("arweave.net").unwrap())
+            .base_url(Url::parse("https://arweave.net").unwrap())
             .build().unwrap()
         // arweave.upload_file_from_path(file_path, additional_tags, fee);
     }
@@ -62,7 +63,7 @@ impl InternalArweave {
      * @param {Env1} env
      * @returns {LoadTransactionMeta}
     */
-    pub async fn load_tx_meta_with(self, gateway_url: &str, id: &str) -> Result<Node, Error> {
+    pub async fn load_tx_meta_with(self, gateway_url: &str, id: &str) -> Result<Node, Box<dyn std::error::Error>> {
         #[allow(non_snake_case)]
         let GET_PROCESSES_QUERY = r#"
             query GetProcesses ($processIds: [ID!]!) {
@@ -90,7 +91,7 @@ impl InternalArweave {
 
         match result {
             Ok(tx) => {
-                Ok(tx.data.edges[0].node.clone())
+                Ok(tx.data.transactions.edges[0].node.clone())
             },
             Err(e) => {
                 error!("Error Encountered when fetching transaction {} from gateway {}", id, gateway_url);
@@ -123,7 +124,7 @@ impl InternalArweave {
     }
 
     pub async fn query_gateway_with<'a, T: Serialize, U: for<'de> Deserialize<'de>>(&'a self, gateway_url: &'a str, query: &'a str, variables: T) -> 
-        Result<U, Error> {        
+        Result<U, Box<dyn std::error::Error>> {        
         let result = self.client.post(format!("{}{}", gateway_url, "/graphql"))
             .headers(get_content_type_headers())
             .body(
@@ -136,10 +137,20 @@ impl InternalArweave {
             .await;
 
         match result {
-            Ok(res) => Ok(res.json::<U>().await.unwrap()),
+            Ok(res) => {
+                let body_str = res.text().await.unwrap();
+                println!("result raw body: {}", body_str.clone());
+                match serde_json::from_str::<U>(&body_str) {
+                    Ok(res) => Ok(res),
+                    Err(e) => {                        
+                        error!("Serialization error {:?}", e);
+                        Err(Box::new(e))
+                    }
+                }
+            },
             Err(e) => {
                 error!("Error Encountered when querying gateway");
-                Err(e)
+                Err(Box::new(e))
             }
         }
     }
