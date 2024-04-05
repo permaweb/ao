@@ -6,6 +6,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { streamSchema } from '../model.js'
+import { mapFrom } from '../utils.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
@@ -638,9 +639,17 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
                 Target: ctx.id,
                 Anchor: ctx.anchor,
                 /**
-                 * the process message is from the owner of the process
+                 * Since a process may be spawned from another process,
+                 * the owner may not always be an "end user" wallet,
+                 * but the MU wallet that signed and pushed the spawn.
+                 *
+                 * The MU sets From-Process on any data item it pushes
+                 * on behalf of a process, including spawns.
+                 *
+                 * So we can set From here using the Process tags
+                 * and owner, just like we do for any other message
                  */
-                From: ctx.owner,
+                From: mapFrom({ tags: ctx.tags, owner: ctx.owner }),
                 Tags: ctx.tags,
                 Epoch: undefined,
                 Nonce: undefined,
