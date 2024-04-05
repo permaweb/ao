@@ -85,7 +85,7 @@ impl Gateway {
         }
     }
 
-    pub async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, wallet_address: &'a str) -> Result<SchedulerResult, Box<dyn std::error::Error>> {
+    pub async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, Box<dyn std::error::Error>> {
         #[allow(non_snake_case)]
         let GET_SCHEDULER_LOCATION = r#"
             query GetSchedulerLocation ($owner: String!) {
@@ -111,12 +111,12 @@ impl Gateway {
             }
         "#;
 
-        let result = self.gateway_with::<WalletAddress, TransactionConnectionSchema>(gateway_url, GET_SCHEDULER_LOCATION, WalletAddress { owner: wallet_address }).await;        
+        let result = self.gateway_with::<WalletAddress, TransactionConnectionSchema>(gateway_url, GET_SCHEDULER_LOCATION, WalletAddress { owner: scheduler_wallet_address }).await;        
         match result {
             Ok(tx) => {
                 let node = if tx.data.transactions.edges.is_empty() { None } else { Some(tx.data.transactions.edges[0].node.clone()) };
                 let tags = Gateway::find_transaction_tags(
-                    format!("Could not find 'Scheduler-Location' owner by wallet {}", wallet_address).as_str(), 
+                    format!("Could not find 'Scheduler-Location' owner by wallet {}", scheduler_wallet_address).as_str(), 
                     &node
                 );
                 match tags {
@@ -137,7 +137,7 @@ impl Gateway {
                         return Ok(SchedulerResult {
                             url,
                             ttl,
-                            owner: wallet_address.to_string()
+                            owner: scheduler_wallet_address.to_string()
                         });
                     },
                     Err(e) => {
@@ -168,6 +168,7 @@ struct FindTxTagsError {
     message: String
 }
 
+#[derive(Debug)]
 pub struct SchedulerResult {
     pub url: String,
     pub ttl: String,
@@ -176,11 +177,18 @@ pub struct SchedulerResult {
 
 #[cfg(test)]
 mod tests {
-    use dotenv::dotenv;
+    use std::sync::Once;
     use ao_common::models::{gql_models::{Amount, MetaData}, shared_models::Owner};
     use super::*;
 
     const GATEWAY_URL: &str = "https://arweave.net";
+    const WALLET_FILE_PATH: &str = "../test-utils/wallet.json";
+    const SCHEDULER_WALLET_ADDRESS: &str = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA";
+    static INIT: Once = Once::new();
+
+    fn init() {
+        INIT.call_once(|| env_logger::init_from_env(env_logger::Env::new().default_filter_or("info")));
+    }
   
     #[test]
     fn test_find_tag_value() {
@@ -234,16 +242,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_scheduler_with() {
-        env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-        dotenv().ok();
+        init();
 
         let gateway = Gateway {
-            arweave: InternalArweave::new("../test-utils/wallet.json")
+            arweave: InternalArweave::new(WALLET_FILE_PATH)
         };
-        const WALLET_ADDRESS: &str = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA"; // "VN7HC19VXz2EcOgJ1ACAZgdYVDK1geWxqqAppddN_io";
-        let result = gateway.load_scheduler_with(GATEWAY_URL, WALLET_ADDRESS).await;
+        
+        let result = gateway.load_scheduler_with(GATEWAY_URL, SCHEDULER_WALLET_ADDRESS).await;
         match result {
-            Ok(scheduler) => assert!(scheduler.owner == WALLET_ADDRESS.to_string()),
+            Ok(scheduler) => assert!(scheduler.owner == SCHEDULER_WALLET_ADDRESS.to_string()),
+            Err(e) => panic!("{:?}", e)
+        };
+    }
+
+    #[tokio::test]
+    async fn test_load_process_scheduler_with() {
+        init();
+
+        let gateway = Gateway {
+            arweave: InternalArweave::new(WALLET_FILE_PATH)
+        };
+        
+        let result = gateway.load_process_scheduler_with(GATEWAY_URL, "KHruEP5dOP_MgNHava2kEPleihEc915GlRRr3rQ5Jz4").await;
+        match result {
+            Ok(scheduler) => {
+                println!("{:?}", scheduler);
+                assert!(scheduler.owner == SCHEDULER_WALLET_ADDRESS.to_string());
+            },
             Err(e) => panic!("{:?}", e)
         };
     }

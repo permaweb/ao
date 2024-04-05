@@ -139,7 +139,6 @@ impl InternalArweave {
         match result {
             Ok(res) => {
                 let body_str = res.text().await.unwrap();
-                println!("result raw body: {}", body_str.clone());
                 match serde_json::from_str::<U>(&body_str) {
                     Ok(res) => Ok(res),
                     Err(e) => {                        
