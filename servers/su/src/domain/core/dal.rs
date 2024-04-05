@@ -73,7 +73,8 @@ pub enum StoreErrorType {
     NotFound(String),
     JsonError(String),
     EnvVarError(String),
-    IntError(String)
+    IntError(String),
+    MessageExists(String)
 }
 
 pub trait DataStore: Send + Sync {
@@ -87,9 +88,8 @@ pub trait DataStore: Send + Sync {
         to: &Option<String>,
         limit: &Option<i32>,
     ) -> Result<PaginatedMessages, StoreErrorType>;
-    // returning serde_json::Value in order to handle older and new shapes
-    fn get_message(&self, message_id_in: &str) -> Result<serde_json::Value, StoreErrorType>;
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<serde_json::Value>, StoreErrorType>;
+    fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
+    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType>;
     fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType>;
     fn get_process_scheduler(&self, process_id_in: &str) -> Result<ProcessScheduler, StoreErrorType>;
     fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType>;
@@ -97,4 +97,5 @@ pub trait DataStore: Send + Sync {
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType>;
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType>;
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
+    fn check_existing_message(&self, message: &Message) -> Result<(), StoreErrorType>;
 }
