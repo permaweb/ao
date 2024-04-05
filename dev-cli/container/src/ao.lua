@@ -129,10 +129,8 @@ function ao.spawn(module, msg)
     -- inc spawn reference
     ao._ref = ao._ref + 1
 
-    if not msg.Data then data = "NODATA" end
-
     local spawn = {
-        Data = data,
+        Data = msg.Data or "NODATA",
         Anchor = padZero32(ao._ref),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
