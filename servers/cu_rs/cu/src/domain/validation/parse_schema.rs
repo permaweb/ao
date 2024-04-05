@@ -44,8 +44,23 @@ pub struct ViolationIssue {
     message: String
 }
 
+/// There is no Zod in Rust. This is here for compat with the javascript codebase of ao
 #[allow(non_camel_case_types)]
 pub enum ZodIssueCode {
     invalid_type,
     invalid_literal,    
+    custom,
+    invalid_union,
+    invalid_union_discriminator,
+    invalid_enum_value,
+    unrecognized_keys,
+    invalid_arguments,
+    invalid_return_type,
+    invalid_date,
+    invalid_string,
+    too_small,
+    too_big,
+    invalid_intersection_types,
+    not_multiple_of,
+    not_finite
 }

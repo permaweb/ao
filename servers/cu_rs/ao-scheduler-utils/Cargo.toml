@@ -1,0 +1,13 @@
+[package]
+name = "ao-scheduler-utils"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+derive_more = "0.99.17"
+ao-common = { path = "../ao-common" }
+serde = "1.0.197"
+serde_json = "1.0.115"
+reqwest = { version = "0.12.2", features = ["json", "multipart"] }

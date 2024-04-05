@@ -6,9 +6,7 @@ pub mod domain {
     pub mod utils {
         pub mod error;
     }
-    pub mod client {
-        pub mod arweave;
-    }
+    pub mod client{}
     // pub mod model;
     pub mod validation {
         pub mod domain_config_schema;

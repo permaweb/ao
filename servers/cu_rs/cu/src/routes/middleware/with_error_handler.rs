@@ -47,8 +47,7 @@ where
 
         Box::pin(async move {
             let res = fut.await?;
-            if let Some(_err) = res.response().error() {
-                
+            if let Some(_err) = res.response().error() {                
                 Err(ErrorMessage {
                     error: "Internal Server Error".to_string() // todo: gather the message info from errors that occur
                 }.into()) // todo: need to verify that this into conversion does not loose the error message

@@ -2,6 +2,9 @@
 members = [
     "cu", 
     "client-lib",
-    "faas"
+    "faas", 
+    "ao-scheduler-utils", 
+    "loader", 
+    "ao-common"
 ]
 resolver = "2"
