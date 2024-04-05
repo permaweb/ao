@@ -69,10 +69,10 @@ async fn assignment_only(
     let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, process_id.clone()).await?;
 
     let build_result = builder.build_assignment(assign.clone(), process_id.clone(), &*updated_info).await?;
-    upload(&deps, build_result.binary.to_vec()).await?;
     let message = Message::from_bundle(&build_result.bundle)?;
     deps.data_store.save_message(&message, &build_result.binary)?;
     deps.logger.log(format!("saved message - {:?}", &message));
+    upload(&deps, build_result.binary.to_vec()).await?;
     drop(schedule_info);
     match system_time_u64() {
         Ok(timestamp) => {
@@ -156,10 +156,10 @@ pub async fn write_item(
             let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.target()).await?;
 
             let build_result = builder.build_message(input, &*updated_info).await?;
-            upload(&deps, build_result.binary.to_vec()).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store.save_message(&message, &build_result.binary)?;
             deps.logger.log(format!("saved message - {:?}", &message));
+            upload(&deps, build_result.binary.to_vec()).await?;
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {

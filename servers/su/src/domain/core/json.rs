@@ -4,7 +4,7 @@
 use serde::{Serialize, Deserialize}; 
 use sha2::{Digest, Sha256};
 
-use super::bytes::{DataBundle};
+use super::bytes::{DataBundle, DataItem, ByteErrorType};
 use bundlr_sdk::{tags::*};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -38,6 +38,12 @@ impl From<std::num::ParseIntError> for JsonErrorType {
 
 impl From<serde_json::Error> for JsonErrorType {
     fn from(error: serde_json::Error) -> Self {
+        JsonErrorType::JsonError(format!("Json error: {:?}", error))
+    }
+}
+
+impl From<ByteErrorType> for JsonErrorType {
+    fn from(error: ByteErrorType) -> Self {
         JsonErrorType::JsonError(format!("Json error: {:?}", error))
     }
 }
@@ -100,7 +106,7 @@ pub struct PageInfo {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Edge {
-    pub node: serde_json::Value,
+    pub node: Message,
     pub cursor: String,
 }
 
@@ -271,6 +277,9 @@ impl Message {
     }
 
     pub fn message_id(&self) -> Result<String, JsonErrorType> {
+        // if let Some(message) = self.message {
+
+        // }
         let message_tag = self.assignment.tags.iter().find(|tag| tag.name == "Message")
             .ok_or("Message tag not found")?;
         Ok(message_tag.value.clone())
@@ -286,59 +295,144 @@ impl Message {
             .ok_or("Process tag not found")?;
         Ok(process_tag.value.clone())
     }
-}
 
-impl PaginatedMessages {
-    pub fn from_values(messages: Vec<serde_json::Value>, has_next_page: bool) -> Result<Self, JsonErrorType> {
-        let page_info = PageInfo { has_next_page };
-        let mut edges = Vec::new();
+    /*
+        This code is to handle mapping from the old 
+        json structure before the aop-1 was added to
+        handle assign. If the shape changes again
+        we can modify this mapping to handle it.
+    */
+    pub fn from_val(value: &serde_json::Value, bundle: Vec<u8>) -> Result<Self, JsonErrorType> {
+        match value.get("assignment") {
+            Some(_) => {
+                /*
+                    Current message structure we can directly 
+                    parse it using the current shape
+                */
+                let message: Message = serde_json::from_value(value.clone())?;
+                Ok(message)
+            },
+            None => {
+                /*
+                    old message structure so we have to break 
+                    down the json by field
+                */
+                let old_message = extract_val(&value, "message")?;
+                let message_owner = serde_json::from_value(extract_val(&value, "owner")?)?;
+                let message_data = extract_option_str(&value, "data");
+                let message_target = extract_option_str(&value, "process_id");
 
-        for message in messages {
-            let timestamp = extract_timestamp(&message)?;
+                let message_id = str_val(&extract_val(&old_message, "id")?)?;
+                let message_tags = to_tags(&extract_val(&old_message, "tags")?)?;
+                let message_signature = str_val(&extract_val(&old_message, "signature")?)?;
+                let message_anchor = extract_option_str(&old_message, "data");
 
-            let edge = Edge {
-                node: message.clone(),
-                cursor: timestamp, 
-            };
-            
-            edges.push(edge);
-        }
+                // there is always a message in the old structure
+                let message: Option<MessageInner> = Some(MessageInner {
+                    id: message_id,
+                    owner: message_owner,
+                    data: message_data,
+                    tags: message_tags,
+                    signature: message_signature,
+                    anchor: message_anchor,
+                    target: message_target
+                });
 
-        Ok(PaginatedMessages { page_info, edges })
-    }
-}
+                let bundle_data_item = DataItem::from_bytes(bundle)?;
 
-/*
-    This is to handle pulling out the timestamp for
-    the older json shape as well as the
-    newer aopv0.1 shape.
-*/
-fn extract_timestamp(message: &serde_json::Value) -> Result<String, JsonErrorType> {
-    // Check if the timestamp is present in assignment tags
-    if let Some(assignment) = message.get("assignment") {
-        if let Some(tags) = assignment.get("tags").and_then(|tags| tags.as_array()) {
-            if let Some(timestamp) = tags
-                .iter()
-                .find_map(|tag| {
-                    if let (Some(name), Some(value)) = (tag.get("name"), tag.get("value")) {
-                        if name == "Timestamp" {
-                            return value.as_str().map(|s| s.to_string());
-                        }
-                    }
-                    None
-                }) {
-                return Ok(timestamp);
+                let owner = bundle_data_item.owner();
+                let owner_bytes = base64_url::decode(&owner)?;
+                let address_hash = hash(&owner_bytes);
+                let address = base64_url::encode(&address_hash);
+
+                let anchor = match bundle_data_item.anchor().is_empty() {
+                    true => None,
+                    false => Some(bundle_data_item.anchor().clone()),
+                };
+                
+                let target = match bundle_data_item.target().is_empty() {
+                    true => None,
+                    false => Some(bundle_data_item.target().clone()),
+                };
+
+                let assignment: AssignmentInner = AssignmentInner {
+                    id: bundle_data_item.id(),
+                    owner: Owner {
+                        address: address,
+                        key: owner,
+                    },
+                    tags: bundle_data_item.tags(),
+                    signature: bundle_data_item.signature(),
+                    anchor,
+                    target
+                };
+
+                Ok(Message {
+                    message,
+                    assignment
+                })
             }
         }
     }
-    
-    // Check if the timestamp is present at the top level as an integer
-    if let Some(timestamp_value) = message.get("timestamp").and_then(|ts| ts.as_i64()) {
-        return Ok(timestamp_value.to_string());
-    }
+}
 
-    // If timestamp is not found, return an error
-    Err(JsonErrorType::JsonError("Missing timestamp".to_string()))
+fn extract_val(val: &serde_json::Value, prop: &str) -> Result<serde_json::Value, JsonErrorType> {
+    match val.get(prop) { 
+        Some(v) => Ok(v.clone()), 
+        None => Err(JsonErrorType::JsonError("Message missing field".to_string())) 
+    }
+}
+
+fn extract_option_str(val: &serde_json::Value, prop: &str) -> Option<String> {
+    match val.get(prop) { 
+        Some(v) => v.as_str().map(|s| s.to_string()), 
+        None => None 
+    }
+}
+
+fn str_val(val: &serde_json::Value) -> Result<String, JsonErrorType> {
+    match val.as_str().map(|s| s.to_string()) {
+        Some(f) => Ok(f),
+        None => Err(JsonErrorType::JsonError("invalid string field".to_string())) 
+    }
+}
+
+fn to_tags(val: &serde_json::Value) -> Result<Vec<Tag>, JsonErrorType> {
+    if let Some(tags_array) = val.as_array() {
+        let mut tags: Vec<Tag> = vec![];
+        for tag in tags_array {
+            if let (Some(name), Some(value)) = (tag.get("name"), tag.get("value")) {
+                if let (Some(name_str), Some(value_str)) = (name.as_str(), value.as_str()) {
+                    tags.push(Tag::new(&name_str, &value_str));
+                }
+            }
+        }
+        Ok(tags)
+    } else {
+        Err(JsonErrorType::JsonError("Invalid tags".to_string()))
+    }
+}
+
+impl PaginatedMessages {
+    pub fn from_messages(messages: Vec<Message>, has_next_page: bool) -> Result<Self, JsonErrorType> {
+        let page_info = PageInfo { has_next_page };
+    
+        let edges = messages.into_iter().try_fold(Vec::new(), |mut acc, message| {
+            let timestamp = match message.timestamp() {
+                Ok(t) => t.to_string(),
+                Err(e) => return Err(e), 
+            };
+    
+            acc.push(Edge {
+                node: message.clone(),
+                cursor: timestamp,
+            });
+    
+            Ok(acc)
+        })?;
+    
+        Ok(PaginatedMessages { page_info, edges })
+    }
 }
 
 

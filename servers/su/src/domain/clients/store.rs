@@ -145,11 +145,44 @@ impl DataStore for StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+
+    /*
+        If we are trying to write an actual data item
+        not just an assignment we need to check that it
+        doesnt already exist.
+    */
+    fn check_existing_message(&self, message: &Message) -> Result<(), StoreErrorType> {
+        match &message.message {
+            Some(m) => {
+                match self.get_message(&m.id) {
+                    Ok(parsed) => {
+                        /*
+                            If the message already exists and it contains 
+                            an actual message (it is not just an assignment)
+                            then throw an error to avoid duplicate data items
+                            being written
+                        */
+                        match parsed.message {
+                            Some(_) => Err(StoreErrorType::MessageExists("Message already exists".to_string())),
+                            None => Ok(())
+                        }
+                    },
+                    // The message wasnt found at all so it can be written
+                    Err(StoreErrorType::NotFound(_)) => Ok(()),
+                    // Some other error happened
+                    Err(_) => Err(StoreErrorType::DatabaseError("Error checking message".to_string()))
+                }
+            },
+            None => Ok(())
+        }
+    }
     
     fn save_message(&self, message: &Message, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
+        self.check_existing_message(message)?;
+
         let new_message = NewMessage {
             process_id: &message.process_id()?,
             message_id: &message.message_id()?,
@@ -216,24 +249,22 @@ impl DataStore for StoreClient {
                 // Take only up to the limit if there's an extra indicating a next page
                 let messages_o = if has_next_page { &db_messages[..(limit_val as usize)] } else { &db_messages[..] };
     
-                let n_messages: Result<Vec<serde_json::Value>, StoreErrorType> = messages_o
-                    .iter()
-                    .map(|db_message| serde_json::from_value(db_message.message_data.clone()).map_err(StoreErrorType::from))
-                    .collect();
-    
-                match n_messages {
-                    Ok(messages_out) => {
-                        let paginated = PaginatedMessages::from_values(messages_out, has_next_page)?;
-                        Ok(paginated)
-                    },
-                    Err(e) => return Err(e),
+                let mut messages_mapped: Vec<Message> = vec![];
+                for db_message in messages_o.iter() {
+                    let json = serde_json::from_value(db_message.message_data.clone())?;
+                    let bytes: Vec<u8> = db_message.bundle.clone();
+                    let mapped = Message::from_val(&json, bytes)?;
+                    messages_mapped.push(mapped);
                 }
+
+                let paginated = PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                Ok(paginated)
             },
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
 
-    fn get_message(&self, tx_id: &str) -> Result<serde_json::Value, StoreErrorType> {
+    fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -249,7 +280,8 @@ impl DataStore for StoreClient {
     
         match db_message_result {
             Ok(Some(db_message)) => {
-                let message: serde_json::Value = serde_json::from_value(db_message.message_data.clone())?;
+                let message_val: serde_json::Value = serde_json::from_value(db_message.message_data.clone())?;
+                let message:Message = Message::from_val(&message_val, db_message.bundle.clone())?;
                 Ok(message)
             },
             Ok(None) => Err(StoreErrorType::NotFound("Message not found".to_string())), // Adjust this error type as needed
@@ -257,7 +289,7 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<serde_json::Value>, StoreErrorType> {
+    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
     
@@ -270,8 +302,10 @@ impl DataStore for StoreClient {
         match latest_db_message_result {
             Ok(db_message) => {
                 // Deserialize the message_data into Message
-                let message = serde_json::from_value(db_message.message_data)
+                let message_val:serde_json::Value = serde_json::from_value(db_message.message_data)
                     .map_err(|e| StoreErrorType::from(e))?;
+
+                let message: Message = Message::from_val(&message_val, db_message.bundle.clone())?;
     
                 Ok(Some(message))
             },
