@@ -2,9 +2,7 @@ use actix_web::web::{Data, Path, Query};
 use actix_web::{web::resource, Resource};
 use actix_web::{web, Responder};
 use serde::Deserialize;
-
 use crate::app_state::AppState;
-
 use super::middleware::with_error_handler::ErrorHandler;
 
 pub fn with_state_routes() -> Resource {
