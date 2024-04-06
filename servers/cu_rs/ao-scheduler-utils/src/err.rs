@@ -57,3 +57,41 @@ impl Display for TransactionNotFoundError {
         write!(f, "name: {}, message: {}", self.name, self.message)
     }
 }
+
+#[derive(Debug)]
+pub enum SchedulerError {
+    Network(Option<Box<dyn std::error::Error + 'static>>),    
+    Serialization(Option<Box<dyn std::error::Error + 'static>>),
+    Url,
+}
+
+impl Display for SchedulerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Network(_) => write!(f, "Network error has occurred"),
+            Self::Serialization(_) => write!(f, "Serialization error has occurred"),
+            Self::Url => write!(f, "Url is invalid")
+        }
+    }
+}
+
+/// cause and description are deprecated
+impl std::error::Error for SchedulerError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Network(err) => {
+                match err {
+                    Some(err) => Some(err.as_ref()),
+                    None => None
+                }
+            },
+            Self::Url => None,
+            Self::Serialization(err) => {
+                match err {
+                    Some(err) => Some(err.as_ref()),
+                    None => None
+                }
+            }
+        }
+    }        
+}

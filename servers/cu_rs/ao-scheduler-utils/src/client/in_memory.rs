@@ -31,8 +31,9 @@ impl LocalLruCache {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct UrlOwner {
-    url: String,
+    pub url: String,
     /// Owner address
-    address: String
+    pub address: String
 }
