@@ -51,7 +51,6 @@ mod tests {
             .create();
 
         let result = check_for_redirect_with(url.as_str(), "123").await;
-        println!("result: {:?}", result);
         assert!(result.unwrap() == REDIRECT_URL.to_string());
     }
 
