@@ -1,64 +1,48 @@
-use lru::LruCache;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use lazy_static::lazy_static;
+use async_trait::async_trait;
+use moka::future::Cache;
+use once_cell::sync::OnceCell;
 
+/// moka is internally thread safe, but requires cache to be cloned
+#[derive(Clone)]
+#[allow(unused)]
 pub struct LocalLruCache {
-    internal_cache: Option<LruCache<String, UrlOwner>>,
-    internal_size: usize
+    internal_cache: Cache<String, UrlOwner>,
+    internal_size: u64
 }
 
-pub trait Cacher {
-    fn create_lru_cache(&mut self, size: usize);
-    fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner>;
-    fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner);
-    fn set_by_owner_with(&mut self, owner: &str, url: &str);
-}
-
-impl Cacher for LocalLruCache {
-    fn create_lru_cache(&mut self, size: usize) {
-        if let Some(_) = self.internal_cache {
-            return;
+impl LocalLruCache {
+    pub fn new(size: u64) -> Self {
+        Self {
+            internal_size: size,
+            internal_cache: Cache::new(size)
         }
-
-        self.internal_size = size;
-        self.internal_cache = Some(LruCache::new(NonZeroUsize::new(size).unwrap()));
     }
+}
 
+#[async_trait]
+pub trait Cacher {    
+    async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner>;
+    async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner);
+    async fn set_by_owner_with(&mut self, owner: &str, url: &str);
+}
+
+#[async_trait]
+impl Cacher for LocalLruCache {
     /// Key can be process tx id or owner address
-    fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
-        if let None = self.internal_cache {
-            return None;
-        }
-        let result = self.internal_cache.as_mut().unwrap().get(key);
+    async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
+        let result = self.internal_cache.get(key).await;
         if let Some(result) = result {
-            return Some(result.clone());
+            return Some(result);
         }
         None
     }
 
-    fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner) {
-        if let None = self.internal_cache {
-            return;
-        }
-        self.internal_cache.as_mut().unwrap().put(process_tx_id.to_string(), value);
+    async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner) {
+        self.internal_cache.insert(process_tx_id.to_string(), value).await;
     }    
 
-    fn set_by_owner_with(&mut self, owner: &str, url: &str) {
-        if let None = self.internal_cache {
-            return;
-        }
-        self.internal_cache.as_mut().unwrap().put(owner.to_string(), UrlOwner { url: url.to_string(), address: owner.to_string() });
-    }
-}
-
-impl Default for LocalLruCache {
-    fn default() -> Self {
-        LocalLruCache {
-            internal_cache: None,
-            internal_size: 0
-        }
+    async fn set_by_owner_with(&mut self, owner: &str, url: &str) {
+        self.internal_cache.insert(owner.to_string(), UrlOwner { url: url.to_string(), address: owner.to_string() }).await;
     }
 }
 
@@ -69,13 +53,12 @@ pub struct UrlOwner {
     pub address: String
 }
 
-lazy_static! {
-    pub static ref CACHE: Arc<Mutex<LocalLruCache>> = {
-        let mut cache = LocalLruCache::default();
-        cache.create_lru_cache(10);
-
-        Arc::new(Mutex::new(cache))
-    };
+static CACHE: OnceCell<LocalLruCache> = OnceCell::new();
+pub fn get_cache() -> LocalLruCache {
+    let cache = CACHE.get_or_init(|| {
+        LocalLruCache::new(10)
+    });
+    cache.clone()
 }
 
 #[cfg(test)]
@@ -85,49 +68,45 @@ mod tests {
     const PROCESS: &str = "zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24";
     const SCHEDULER: &str = "gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w";
     const DOMAIN: &str = "https://foo.bar";
-    const SIZE: usize = 10;
+    const SIZE: u64 = 10;
 
-    #[test]
-    fn test_get_by_process() {
-        let mut cache = LocalLruCache::default();
-        cache.create_lru_cache(SIZE);
-        let internal_cache = cache.internal_cache.as_mut();
-        internal_cache.unwrap().put(PROCESS.to_string(), UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() });
+    #[tokio::test]
+    async fn test_get_by_process() {
+        let mut cache = LocalLruCache::new(SIZE);
+        let internal_cache = cache.clone().internal_cache;
+        internal_cache.insert(PROCESS.to_string(), UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() }).await;
 
-        let result = cache.get_by_key_with(PROCESS).unwrap();
-        assert!(result.url == DOMAIN.to_string() && result.address == SCHEDULER.to_string());
+        let result = cache.get_by_key_with(PROCESS).await;
+        assert!(result.clone().unwrap().url == DOMAIN.to_string() && result.unwrap().address == SCHEDULER.to_string());
     }
 
-    #[test]
-    fn test_get_by_owner() {
-        let mut cache = LocalLruCache::default();
-        cache.create_lru_cache(SIZE);
-        let internal_cache = cache.internal_cache.as_mut();
-        internal_cache.unwrap().put(SCHEDULER.to_string(), UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string()});
+    #[tokio::test]
+    async fn test_get_by_owner() {
+        let mut cache = LocalLruCache::new(SIZE);
+        let internal_cache = cache.clone().internal_cache;
+        internal_cache.insert(SCHEDULER.to_string(), UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string()}).await;
 
-        let result = cache.get_by_key_with(SCHEDULER).unwrap();
-        assert!(result.url == DOMAIN.to_string() && result.address == SCHEDULER.to_string());
+        let result = cache.get_by_key_with(SCHEDULER).await;
+        assert!(result.clone().unwrap().url == DOMAIN.to_string() && result.unwrap().address == SCHEDULER.to_string());
     }
 
-    #[test]
-    fn test_set_by_process() {
-        let mut cache = LocalLruCache::default();
-        cache.create_lru_cache(SIZE);        
+    #[tokio::test]
+    async fn test_set_by_process() {
+        let cache = LocalLruCache::new(SIZE);    
 
-        cache.set_by_process_with(PROCESS, UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() });
+        cache.clone().set_by_process_with(PROCESS, UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() }).await;
 
-        let internal_cache = cache.internal_cache.as_mut();
-        assert!(internal_cache.unwrap().contains(PROCESS));
+        let internal_cache = cache.internal_cache;
+        assert!(internal_cache.get(PROCESS).await.is_some());
     }
 
-    #[test]
-    fn test_set_by_owner() {
-        let mut cache = LocalLruCache::default();
-        cache.create_lru_cache(SIZE);
+    #[tokio::test]
+    async fn test_set_by_owner() {
+        let cache = LocalLruCache::new(SIZE);
 
-        cache.set_by_owner_with(SCHEDULER, DOMAIN);
+        cache.clone().set_by_owner_with(SCHEDULER, DOMAIN).await;
 
-        let internal_cache = cache.internal_cache.as_mut();
-        assert!(internal_cache.unwrap().contains(SCHEDULER));
+        let internal_cache = cache.internal_cache;
+        assert!(internal_cache.get(SCHEDULER).await.is_some());
     }
 }

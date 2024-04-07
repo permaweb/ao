@@ -1,17 +1,14 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use crate::{client::{gateway::GatewayMaker, in_memory::Cacher}, err::SchedulerErrors};
 
-pub async fn validate_with<C: Cacher, G: GatewayMaker>(cache: Arc<Mutex<C>>, gateway: &G, gateway_url: &str, address: &str) -> Result<bool, SchedulerErrors> {
-    let mut cache = cache.lock().await;
-    let cached = cache.get_by_key_with(address);
+pub async fn validate_with<C: Cacher, G: GatewayMaker>(mut cache: C, gateway: &G, gateway_url: &str, address: &str) -> Result<bool, SchedulerErrors> {
+    let cached = cache.get_by_key_with(address).await;
     if let Some(_) = cached {
         return Ok(true);
     }
   
     match gateway.load_scheduler_with(gateway_url, address).await {
         Ok(sched) => {
-            cache.set_by_owner_with(address, &sched.url);
+            cache.set_by_owner_with(address, &sched.url).await;
             return Ok(true);
         },
         Err(e) => {
@@ -34,16 +31,16 @@ mod tests {
     const TEN_MS: &str = "10";
 
     pub struct MockLruCacheForIsValid;
+    #[async_trait]
     impl Cacher for MockLruCacheForIsValid {
-        fn create_lru_cache(&mut self, _size: usize) { unimplemented!() }    
         /// Key can be process tx id or owner address
-        fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
+        async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
             assert!(key == SCHEDULER);
             None
         }    
-        fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner) { unimplemented!() }    
+        async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner) { unimplemented!() }    
     
-        fn set_by_owner_with(&mut self, owner: &str, url: &str) {
+        async fn set_by_owner_with(&mut self, owner: &str, url: &str) {
             assert!(owner == SCHEDULER);
             assert!(url == DOMAIN);
         }
@@ -64,7 +61,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_with_is_valid() {
-        let result = validate_with(Arc::new(Mutex::new(MockLruCacheForIsValid)), &MockGatewayForIsValid, "", SCHEDULER).await;
+        let result = validate_with(MockLruCacheForIsValid, &MockGatewayForIsValid, "", SCHEDULER).await;
         assert!(result.is_ok());
     }
 
@@ -82,21 +79,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_with_is_not_valid() {
-        let result = validate_with(Arc::new(Mutex::new(MockLruCacheForIsValid)), &MockGatewayForIsNotValid, "", SCHEDULER).await;
+        let result = validate_with(MockLruCacheForIsValid, &MockGatewayForIsNotValid, "", SCHEDULER).await;
         assert!(result.ok().unwrap() == false);
     }
 
     pub struct MockLruCacheForIsFromCache;
+    #[async_trait]
     impl Cacher for MockLruCacheForIsFromCache {
-        fn create_lru_cache(&mut self, _size: usize) { unimplemented!() }
         /// Key can be process tx id or owner address
-        fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
+        async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
             assert!(key == SCHEDULER);
             Some(UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() })
         }
-        fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner) { unimplemented!() }    
+        async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner) { unimplemented!() }    
     
-        fn set_by_owner_with(&mut self, _owner: &str, _url: &str) {
+        async fn set_by_owner_with(&mut self, _owner: &str, _url: &str) {
             unimplemented!()
         }
     }
@@ -113,7 +110,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_with_is_from_cache() {
-        let result = validate_with(Arc::new(Mutex::new(MockLruCacheForIsFromCache)), &MockGatewayForIsFromCache, "", SCHEDULER).await;
+        let result = validate_with(MockLruCacheForIsFromCache, &MockGatewayForIsFromCache, "", SCHEDULER).await;
         assert!(result.ok().unwrap() == true);
     }
 }
