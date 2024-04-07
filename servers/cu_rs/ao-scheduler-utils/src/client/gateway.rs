@@ -118,7 +118,7 @@ impl GatewayMaker for Gateway {
                         }
                         return Ok(SchedulerResult {
                             url,
-                            ttl,
+                            ttl: ttl.parse::<u64>().unwrap(),
                             owner: scheduler_wallet_address.to_string()
                         });
                     },
@@ -186,7 +186,7 @@ struct TransactionIds<'a> {
 #[derive(Debug)]
 pub struct SchedulerResult {
     pub url: String,
-    pub ttl: String,
+    pub ttl: u64,
     pub owner: String
 }
 

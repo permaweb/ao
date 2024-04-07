@@ -5,3 +5,4 @@ pub mod client {
 }
 pub mod validate;
 pub mod err;
+pub mod raw;
