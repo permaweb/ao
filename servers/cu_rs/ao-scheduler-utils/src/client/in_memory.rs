@@ -1,15 +1,23 @@
 use lru::LruCache;
-use std::{num::NonZeroUsize, sync::{Arc, RwLock}};
+use std::num::NonZeroUsize;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use lazy_static::lazy_static;
 
-#[derive(Clone)]
 pub struct LocalLruCache {
     internal_cache: Option<LruCache<String, UrlOwner>>,
     internal_size: usize
 }
 
-impl LocalLruCache {
-    pub fn create_lru_cache(&mut self, size: usize) {
+pub trait Cacher {
+    fn create_lru_cache(&mut self, size: usize);
+    fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner>;
+    fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner);
+    fn set_by_owner_with(&mut self, owner: &str, url: &str);
+}
+
+impl Cacher for LocalLruCache {
+    fn create_lru_cache(&mut self, size: usize) {
         if let Some(_) = self.internal_cache {
             return;
         }
@@ -19,21 +27,25 @@ impl LocalLruCache {
     }
 
     /// Key can be process tx id or owner address
-    pub fn get_by_key_with(&mut self, key: &str) -> Option<&UrlOwner> {
+    fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
         if let None = self.internal_cache {
             return None;
         }
-        self.internal_cache.as_mut().unwrap().get(key)
+        let result = self.internal_cache.as_mut().unwrap().get(key);
+        if let Some(result) = result {
+            return Some(result.clone());
+        }
+        None
     }
 
-    pub fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner) {
+    fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner) {
         if let None = self.internal_cache {
             return;
         }
         self.internal_cache.as_mut().unwrap().put(process_tx_id.to_string(), value);
     }    
 
-    pub fn set_by_owner_with(&mut self, owner: &str, url: &str) {
+    fn set_by_owner_with(&mut self, owner: &str, url: &str) {
         if let None = self.internal_cache {
             return;
         }
@@ -58,11 +70,11 @@ pub struct UrlOwner {
 }
 
 lazy_static! {
-    static ref CACHE: Arc<RwLock<LocalLruCache>> = {
+    pub static ref CACHE: Arc<Mutex<LocalLruCache>> = {
         let mut cache = LocalLruCache::default();
         cache.create_lru_cache(10);
 
-        Arc::new(RwLock::new(cache))
+        Arc::new(Mutex::new(cache))
     };
 }
 

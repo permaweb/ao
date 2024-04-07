@@ -3,8 +3,8 @@ use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum QueryGatewayErrors {
-    Network(Option<Box<dyn std::error::Error + 'static>>),    
-    Serialization(Option<Box<dyn std::error::Error + 'static>>)
+    Network(Option<Box<dyn std::error::Error + 'static + Send>>),    
+    Serialization(Option<Box<dyn std::error::Error + 'static + Send>>)
 }
 
 impl Error for QueryGatewayErrors {

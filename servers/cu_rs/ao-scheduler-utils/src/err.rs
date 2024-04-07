@@ -14,8 +14,8 @@ pub enum SchedulerErrors {
         name: String,
         message: String
     },
-    Network(Option<Box<dyn std::error::Error + 'static>>),    
-    Serialization(Option<Box<dyn std::error::Error + 'static>>),
+    Network(Option<Box<dyn std::error::Error + 'static + Send>>),    
+    Serialization(Option<Box<dyn std::error::Error + 'static + Send>>),
     Url,
 }
 
@@ -28,14 +28,14 @@ impl std::error::Error for SchedulerErrors {
             Self::TransactionNotFoundError { name: _, message: _ } => None,
             Self::Network(err) => {
                 match err {
-                    Some(err) => Some(err.as_ref()),
+                    Some(err) => Some(&*err.as_ref()),
                     None => None
                 }
             },
             Self::Url => None,
             Self::Serialization(err) => {
                 match err {
-                    Some(err) => Some(err.as_ref()),
+                    Some(err) => Some(&*err.as_ref()),
                     None => None
                 }
             }

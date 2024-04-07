@@ -193,3 +193,10 @@ struct ProcessIds {
     #[serde(rename = "processIds")]
     process_ids: Vec<String>
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // todo: write tests
+}

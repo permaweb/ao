@@ -1,19 +1,119 @@
-use crate::{client::{gateway::get_gateway, in_memory::LocalLruCache}, err::SchedulerErrors};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use crate::{client::{gateway::GatewayMaker, in_memory::Cacher}, err::SchedulerErrors};
 
-pub async fn validate_with(gateway_url: &str, cache: &mut LocalLruCache, address: &str) -> Result<bool, SchedulerErrors> {
+pub async fn validate_with<C: Cacher, G: GatewayMaker>(cache: Arc<Mutex<C>>, gateway: &G, gateway_url: &str, address: &str) -> Result<bool, SchedulerErrors> {
+    let mut cache = cache.lock().await;
     let cached = cache.get_by_key_with(address);
     if let Some(_) = cached {
         return Ok(true);
     }
-
-    let gateway = get_gateway("");    
+  
     match gateway.load_scheduler_with(gateway_url, address).await {
         Ok(sched) => {
             cache.set_by_owner_with(address, &sched.url);
             return Ok(true);
         },
         Err(e) => {
-            return Err(e);
+            if let SchedulerErrors::InvalidSchedulerLocationError { name: _, message: _ } = e {
+                return Ok(false);
+            }
+            Err(e)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::client::{gateway::SchedulerResult, in_memory::UrlOwner};
+    use super::*;
+    use async_trait::async_trait;
+
+    const SCHEDULER: &str = "gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w";
+    const DOMAIN: &str = "https://foo.bar";
+    const TEN_MS: &str = "10";
+
+    pub struct MockLruCacheForIsValid;
+    impl Cacher for MockLruCacheForIsValid {
+        fn create_lru_cache(&mut self, _size: usize) { unimplemented!() }    
+        /// Key can be process tx id or owner address
+        fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
+            assert!(key == SCHEDULER);
+            None
+        }    
+        fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner) { unimplemented!() }    
+    
+        fn set_by_owner_with(&mut self, owner: &str, url: &str) {
+            assert!(owner == SCHEDULER);
+            assert!(url == DOMAIN);
+        }
+    }
+    pub struct MockGatewayForIsValid;
+    #[async_trait]
+    impl GatewayMaker for MockGatewayForIsValid {
+        async fn load_process_scheduler_with<'a>(&self, _gateway_url: &'a str, _process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+            unimplemented!()
+        }
+        async fn load_scheduler_with<'a>(&self, _gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors>  {
+            assert!(scheduler_wallet_address == SCHEDULER);
+            Ok(SchedulerResult {
+                url: DOMAIN.to_string(), ttl: TEN_MS.to_string(), owner: SCHEDULER.to_string()
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_with_is_valid() {
+        let result = validate_with(Arc::new(Mutex::new(MockLruCacheForIsValid)), &MockGatewayForIsValid, "", SCHEDULER).await;
+        assert!(result.is_ok());
+    }
+
+    pub struct MockGatewayForIsNotValid;
+    #[async_trait]
+    impl GatewayMaker for MockGatewayForIsNotValid {
+        async fn load_process_scheduler_with<'a>(&self, _gateway_url: &'a str, _process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+            unimplemented!()
+        }
+        async fn load_scheduler_with<'a>(&self, _gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors>  {
+            assert!(scheduler_wallet_address == SCHEDULER);
+            Err(SchedulerErrors::new_invalid_scheduler_location("Big womp".to_string()))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_with_is_not_valid() {
+        let result = validate_with(Arc::new(Mutex::new(MockLruCacheForIsValid)), &MockGatewayForIsNotValid, "", SCHEDULER).await;
+        assert!(result.ok().unwrap() == false);
+    }
+
+    pub struct MockLruCacheForIsFromCache;
+    impl Cacher for MockLruCacheForIsFromCache {
+        fn create_lru_cache(&mut self, _size: usize) { unimplemented!() }
+        /// Key can be process tx id or owner address
+        fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
+            assert!(key == SCHEDULER);
+            Some(UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() })
+        }
+        fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner) { unimplemented!() }    
+    
+        fn set_by_owner_with(&mut self, _owner: &str, _url: &str) {
+            unimplemented!()
+        }
+    }
+    pub struct MockGatewayForIsFromCache;
+    #[async_trait]
+    impl GatewayMaker for MockGatewayForIsFromCache {
+        async fn load_process_scheduler_with<'a>(&self, _gateway_url: &'a str, _process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+            unimplemented!()
+        }
+        async fn load_scheduler_with<'a>(&self, _gateway_url: &'a str, _scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors>  {
+            panic!("should never call on chain if in cache")
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_with_is_from_cache() {
+        let result = validate_with(Arc::new(Mutex::new(MockLruCacheForIsFromCache)), &MockGatewayForIsFromCache, "", SCHEDULER).await;
+        assert!(result.ok().unwrap() == true);
     }
 }

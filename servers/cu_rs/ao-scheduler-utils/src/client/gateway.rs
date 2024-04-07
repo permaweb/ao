@@ -1,10 +1,10 @@
 use ao_common::errors::QueryGatewayErrors;
 use ao_common::models::gql_models::{Node, TransactionConnectionSchema};
 use ao_common::models::shared_models::Tag;
+use async_trait::async_trait;
 use serde::Serialize;
 use ao_common::arweave::InternalArweave;
 use once_cell::sync::OnceCell;
-
 use crate::err::SchedulerErrors;
 
 const URL_TAG: &str = "Url";
@@ -15,35 +15,15 @@ pub struct Gateway {
     arweave: InternalArweave
 }
 
-impl Gateway {
-    fn new(wallet_path: &str) -> Self {
-        Gateway { arweave: InternalArweave::new(wallet_path) }
-    }
+#[async_trait]
+pub trait GatewayMaker {
+    async fn load_process_scheduler_with<'a>(&self, gateway_url: &'a str, process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors>;
+    async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors>;
+}
 
-    fn find_tag_value(name: &str, tags: &Vec<Tag>) -> String {
-        match tags.iter().find(|tag| tag.name == name) {
-            Some(found_tag) => found_tag.value.to_string(),
-            None => "".to_string()
-        }
-    }
-    
-    fn find_transaction_tags<'a>(err_msg: &'a str, transaction_node: &'a Option<Node>) -> Result<Vec<Tag>, SchedulerErrors> {
-        if let Some(node) = transaction_node {
-            return Ok(if node.tags.is_none() { vec![] } else { node.tags.as_ref().unwrap().clone() });
-        }
-        Err(SchedulerErrors::new_transaction_not_found(err_msg.to_string()))
-    }
-    
-    async fn gateway_with<'a, T: Serialize, U: for<'de> serde::Deserialize<'de>>(&self, gateway_url: &'a str, query: &'a str, variables: T) -> Result<U, QueryGatewayErrors> {
-        let result = self.arweave.query_gateway_with::<T, U>(gateway_url, query, variables).await;
-        
-        match result {
-            Ok(res) => Ok(res),
-            Err(e) => Err(e)
-        }
-    }
-
-    pub async fn load_process_scheduler_with<'a>(&self, gateway_url: &'a str, process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+#[async_trait]
+impl GatewayMaker for Gateway {
+    async fn load_process_scheduler_with<'a>(&self, gateway_url: &'a str, process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
         #[allow(non_snake_case)]
         let GET_TRANSACTIONS_QUERY = r#"
             query GetTransactions ($transactionIds: [ID!]!) {
@@ -89,7 +69,7 @@ impl Gateway {
         }
     }
 
-    pub async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+    async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
         #[allow(non_snake_case)]
         let GET_SCHEDULER_LOCATION = r#"
             query GetSchedulerLocation ($owner: String!) {
@@ -154,7 +134,38 @@ impl Gateway {
     }
 }
 
+impl Gateway {
+    /// If you need readonly querying, pass an empty path
+    fn new(wallet_path: &str) -> Self {
+        Gateway { arweave: InternalArweave::new(wallet_path) }
+    }
+
+    fn find_tag_value(name: &str, tags: &Vec<Tag>) -> String {
+        match tags.iter().find(|tag| tag.name == name) {
+            Some(found_tag) => found_tag.value.to_string(),
+            None => "".to_string()
+        }
+    }
+    
+    fn find_transaction_tags<'a>(err_msg: &'a str, transaction_node: &'a Option<Node>) -> Result<Vec<Tag>, SchedulerErrors> {
+        if let Some(node) = transaction_node {
+            return Ok(if node.tags.is_none() { vec![] } else { node.tags.as_ref().unwrap().clone() });
+        }
+        Err(SchedulerErrors::new_transaction_not_found(err_msg.to_string()))
+    }
+    
+    async fn gateway_with<'a, T: Serialize, U: for<'de> serde::Deserialize<'de>>(&self, gateway_url: &'a str, query: &'a str, variables: T) -> Result<U, QueryGatewayErrors> {
+        let result = self.arweave.query_gateway_with::<T, U>(gateway_url, query, variables).await;
+        
+        match result {
+            Ok(res) => Ok(res),
+            Err(e) => Err(e)
+        }
+    }    
+}
+
 static GATEWAY: OnceCell<Gateway> = OnceCell::new();
+/// If you need readonly querying, pass an empty path
 pub fn get_gateway(wallet_path: &str) -> &Gateway {
     GATEWAY.get_or_init(|| {
         Gateway::new(wallet_path)

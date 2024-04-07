@@ -448,6 +448,7 @@ name = "ao-scheduler-utils"
 version = "0.1.0"
 dependencies = [
  "ao-common",
+ "async-trait",
  "derive_more",
  "dotenv",
  "env_logger",
