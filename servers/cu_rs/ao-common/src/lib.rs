@@ -7,3 +7,4 @@ pub mod network {
     pub mod utils;
 }
 pub mod arweave;
+pub mod errors;

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, pin::Pin};
 #[allow(unused)]
 use log::{error, info};
+use crate::errors::QueryGatewayErrors;
 use crate::network::utils::get_content_type_headers;
 use crate::models::gql_models::{Node, TransactionConnectionSchema};
 use crate::models::shared_models::Tag;
@@ -63,7 +64,7 @@ impl InternalArweave {
      * @param {Env1} env
      * @returns {LoadTransactionMeta}
     */
-    pub async fn load_tx_meta_with(self, gateway_url: &str, id: &str) -> Result<Node, Box<dyn std::error::Error>> {
+    pub async fn load_tx_meta_with(self, gateway_url: &str, id: &str) -> Result<Node, QueryGatewayErrors> {
         #[allow(non_snake_case)]
         let GET_PROCESSES_QUERY = r#"
             query GetProcesses ($processIds: [ID!]!) {
@@ -124,7 +125,7 @@ impl InternalArweave {
     }
 
     pub async fn query_gateway_with<'a, T: Serialize, U: for<'de> Deserialize<'de>>(&'a self, gateway_url: &'a str, query: &'a str, variables: T) -> 
-        Result<U, Box<dyn std::error::Error>> {        
+        Result<U, QueryGatewayErrors> {        
         let result = self.client.post(format!("{}{}", gateway_url, "/graphql"))
             .headers(get_content_type_headers())
             .body(
@@ -143,13 +144,13 @@ impl InternalArweave {
                     Ok(res) => Ok(res),
                     Err(e) => {                        
                         error!("Serialization error {:?}", e);
-                        Err(Box::new(e))
+                        Err(QueryGatewayErrors::Serialization(Some(Box::new(e))))
                     }
                 }
             },
             Err(e) => {
                 error!("Error Encountered when querying gateway");
-                Err(Box::new(e))
+                Err(QueryGatewayErrors::Network(Some(Box::new(e))))
             }
         }
     }

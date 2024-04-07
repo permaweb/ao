@@ -1,8 +1,8 @@
 use url::Url;
-use crate::err::SchedulerError;
+use crate::err::SchedulerErrors;
 use reqwest::Client;
 
-pub async fn check_for_redirect_with (url: &str, process: &str) -> Result<String, SchedulerError> {
+pub async fn check_for_redirect_with (url: &str, process: &str) -> Result<String, SchedulerErrors> {
     let client = Client::builder().redirect(reqwest::redirect::Policy::none()).build().unwrap();
     
     // In an HTTP redirect the Location header is the new url
@@ -20,13 +20,13 @@ pub async fn check_for_redirect_with (url: &str, process: &str) -> Result<String
                             let url_str = origin.unicode_serialization();
                             return Ok(url_str);
                         },
-                        Err(_) => return Err(SchedulerError::Url)
+                        Err(_) => return Err(SchedulerErrors::Url)
                     }                
                 }
             }
             Ok(url.to_string())
         }, 
-        Err(e) => Err(SchedulerError::Network(Some(Box::new(e))))
+        Err(e) => Err(SchedulerErrors::Network(Some(Box::new(e))))
     }    
 }
 

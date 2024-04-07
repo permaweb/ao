@@ -1,5 +1,6 @@
 use lru::LruCache;
-use std::num::NonZeroUsize;
+use std::{num::NonZeroUsize, sync::{Arc, RwLock}};
+use lazy_static::lazy_static;
 
 #[derive(Clone)]
 pub struct LocalLruCache {
@@ -54,6 +55,15 @@ pub struct UrlOwner {
     pub url: String,
     /// Owner address
     pub address: String
+}
+
+lazy_static! {
+    static ref CACHE: Arc<RwLock<LocalLruCache>> = {
+        let mut cache = LocalLruCache::default();
+        cache.create_lru_cache(10);
+
+        Arc::new(RwLock::new(cache))
+    };
 }
 
 #[cfg(test)]

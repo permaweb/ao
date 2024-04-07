@@ -3,5 +3,5 @@ pub mod client {
     pub mod in_memory;
     pub mod scheduler;
 }
-
+pub mod validate;
 pub mod err;

@@ -1,10 +1,11 @@
+use ao_common::errors::QueryGatewayErrors;
 use ao_common::models::gql_models::{Node, TransactionConnectionSchema};
 use ao_common::models::shared_models::Tag;
 use serde::Serialize;
 use ao_common::arweave::InternalArweave;
-use derive_more::{Display, Error};
+use once_cell::sync::OnceCell;
 
-use crate::err::{InvalidSchedulerLocationError, SchedulerTagNotFoundError};
+use crate::err::SchedulerErrors;
 
 const URL_TAG: &str = "Url";
 const TTL_TAG: &str = "Time-To-Live";
@@ -15,6 +16,10 @@ pub struct Gateway {
 }
 
 impl Gateway {
+    fn new(wallet_path: &str) -> Self {
+        Gateway { arweave: InternalArweave::new(wallet_path) }
+    }
+
     fn find_tag_value(name: &str, tags: &Vec<Tag>) -> String {
         match tags.iter().find(|tag| tag.name == name) {
             Some(found_tag) => found_tag.value.to_string(),
@@ -22,14 +27,14 @@ impl Gateway {
         }
     }
     
-    fn find_transaction_tags<'a>(err_msg: &'a str, transaction_node: &'a Option<Node>) -> Result<Vec<Tag>, FindTxTagsError> {
+    fn find_transaction_tags<'a>(err_msg: &'a str, transaction_node: &'a Option<Node>) -> Result<Vec<Tag>, SchedulerErrors> {
         if let Some(node) = transaction_node {
             return Ok(if node.tags.is_none() { vec![] } else { node.tags.as_ref().unwrap().clone() });
         }
-        Err(FindTxTagsError { message: err_msg.to_string() })
+        Err(SchedulerErrors::new_transaction_not_found(err_msg.to_string()))
     }
     
-    async fn gateway_with<'a, T: Serialize, U: for<'de> serde::Deserialize<'de>>(&self, gateway_url: &'a str, query: &'a str, variables: T) -> Result<U, Box<dyn std::error::Error>> {
+    async fn gateway_with<'a, T: Serialize, U: for<'de> serde::Deserialize<'de>>(&self, gateway_url: &'a str, query: &'a str, variables: T) -> Result<U, QueryGatewayErrors> {
         let result = self.arweave.query_gateway_with::<T, U>(gateway_url, query, variables).await;
         
         match result {
@@ -38,7 +43,7 @@ impl Gateway {
         }
     }
 
-    pub async fn load_process_scheduler_with<'a>(&self, gateway_url: &'a str, process_tx_id: &'a str) -> Result<SchedulerResult, Box<dyn std::error::Error>> {
+    pub async fn load_process_scheduler_with<'a>(&self, gateway_url: &'a str, process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
         #[allow(non_snake_case)]
         let GET_TRANSACTIONS_QUERY = r#"
             query GetTransactions ($transactionIds: [ID!]!) {
@@ -68,9 +73,8 @@ impl Gateway {
                     Ok(tags) => {
                         let tag_val = Gateway::find_tag_value(SCHEDULER_TAG, &tags);
                         if tag_val.is_empty() {
-                            let mut error = SchedulerTagNotFoundError::new();
-                            error.message = "No 'Scheduler' tag found on process".to_string();
-                            return Err(Box::new(error));
+                            let error = SchedulerErrors::new_tag_not_found("No 'Scheduler' tag found on process".to_string());
+                            return Err(error);
                         }
                         let load_scheduler = self.load_scheduler_with(gateway_url, &tag_val).await;
                         match load_scheduler {
@@ -78,14 +82,14 @@ impl Gateway {
                             Err(e) => Err(e)
                         }
                     },
-                    Err(e) => Err(Box::new(e))
+                    Err(e) => Err(e)
                 }
             },
-            Err(e) => Err(e)
+            Err(e) => Err(SchedulerErrors::Network(Some(Box::new(e))))
         }
     }
 
-    pub async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, Box<dyn std::error::Error>> {
+    pub async fn load_scheduler_with<'a>(&self, gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
         #[allow(non_snake_case)]
         let GET_SCHEDULER_LOCATION = r#"
             query GetSchedulerLocation ($owner: String!) {
@@ -125,14 +129,12 @@ impl Gateway {
                         let ttl = Gateway::find_tag_value(TTL_TAG, &tags);
 
                         if url.is_empty() {
-                            let mut error = InvalidSchedulerLocationError::new();
-                            error.message = "No 'Url' tag found on Scheduler-Location";
-                            return Err(Box::new(error));
+                            let error = SchedulerErrors::new_invalid_scheduler_location("No 'Url' tag found on Scheduler-Location".to_string());
+                            return Err(error);
                         }
                         if ttl.is_empty() {
-                            let mut error = InvalidSchedulerLocationError::new();
-                            error.message = "No 'Time-To-Live' tag found on Scheduler-Location";
-                            return Err(Box::new(error));
+                            let error = SchedulerErrors::new_invalid_scheduler_location("No 'Time-To-Live' tag found on Scheduler-Location".to_string());
+                            return Err(error);
                         }
                         return Ok(SchedulerResult {
                             url,
@@ -141,15 +143,22 @@ impl Gateway {
                         });
                     },
                     Err(e) => {
-                        return Err(Box::new(e));
+                        return Err(e);
                     }
                 }
             },
             Err(e) => {
-                Err(e)
+                Err(SchedulerErrors::Network(Some(Box::new(e))))
             }
         }
     }
+}
+
+static GATEWAY: OnceCell<Gateway> = OnceCell::new();
+pub fn get_gateway(wallet_path: &str) -> &Gateway {
+    GATEWAY.get_or_init(|| {
+        Gateway::new(wallet_path)
+    })
 }
 
 #[derive(Serialize)]
@@ -161,11 +170,6 @@ struct WalletAddress<'a> {
 struct TransactionIds<'a> {
     #[serde(rename = "transactionIds")]
     transaction_ids: Vec<&'a str>
-}
-
-#[derive(Error, Display, Debug)]
-struct FindTxTagsError {
-    message: String
 }
 
 #[derive(Debug)]
@@ -244,9 +248,7 @@ mod tests {
     async fn test_load_scheduler_with() {
         init();
 
-        let gateway = Gateway {
-            arweave: InternalArweave::new(WALLET_FILE_PATH)
-        };
+        let gateway = Gateway::new(WALLET_FILE_PATH);
         
         let result = gateway.load_scheduler_with(GATEWAY_URL, SCHEDULER_WALLET_ADDRESS).await;
         match result {
@@ -259,9 +261,7 @@ mod tests {
     async fn test_load_process_scheduler_with() {
         init();
 
-        let gateway = Gateway {
-            arweave: InternalArweave::new(WALLET_FILE_PATH)
-        };
+        let gateway = Gateway::new(WALLET_FILE_PATH);
         
         let result = gateway.load_process_scheduler_with(GATEWAY_URL, "KHruEP5dOP_MgNHava2kEPleihEc915GlRRr3rQ5Jz4").await;
         match result {
