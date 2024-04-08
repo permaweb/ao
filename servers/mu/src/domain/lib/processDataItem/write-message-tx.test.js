@@ -9,12 +9,7 @@ const logger = createLogger('ao-mu:processMsg')
 describe('writeMessageTxWith', () => {
   test('write a tx to the scheduler', async () => {
     const writeMessageTx = writeMessageTxWith({
-      locateProcess: async (processId) => {
-        assert.equal(processId, 'id-1')
-        return { url: 'https://foo.bar' }
-      },
-      writeDataItem: async ({ suUrl, data }) => {
-        assert.equal(suUrl, 'https://foo.bar')
+      writeDataItem: async ({ data }) => {
         assert.equal(data, 'raw-123')
 
         return {
@@ -30,6 +25,9 @@ describe('writeMessageTxWith', () => {
         processId: 'id-1',
         id: 'id-2',
         data: 'raw-123'
+      },
+      schedLocation: {
+        url: 'https://foo.bar'
       },
       tracer: ({
         child: (id) => {
