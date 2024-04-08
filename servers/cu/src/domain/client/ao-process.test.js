@@ -448,7 +448,7 @@ describe('ao-process', () => {
         findCheckpointFileBefore: async () => undefined,
         readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
         address: async () => 'address-123',
-        queryCheckpointGateway: async ({ query, variables }) => {
+        queryGateway: async ({ query, variables }) => {
           assert.ok(query)
           assert.deepStrictEqual(variables, {
             owner: 'address-123',
@@ -458,7 +458,7 @@ describe('ao-process', () => {
 
           return { data: { transactions: { edges } } }
         },
-        queryGateway: async () => assert.fail('should not call if Checkpoint gateway returns results'),
+        queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
         loadTransactionData: async (id) => {
           assert.equal(id, 'tx-123')
           return new Response(Readable.toWeb(Readable.from(zipped)))
@@ -508,7 +508,7 @@ describe('ao-process', () => {
       test('should NOT decode the memory if not needed', async () => {
         const findProcessMemoryBefore = findProcessMemoryBeforeWith({
           ...deps,
-          queryCheckpointGateway: async () => ({
+          queryGateway: async () => ({
             data: {
               transactions: {
                 edges: [
@@ -542,7 +542,7 @@ describe('ao-process', () => {
       test('should use the latest retrieved checkpoint', async () => {
         const findProcessMemoryBefore = findProcessMemoryBeforeWith({
           ...deps,
-          queryCheckpointGateway: async () => ({
+          queryGateway: async () => ({
             data: {
               transactions: {
                 edges: [
@@ -573,7 +573,7 @@ describe('ao-process', () => {
         let count = 1
         const findProcessMemoryBefore = findProcessMemoryBeforeWith({
           ...deps,
-          queryCheckpointGateway: async () => {
+          queryGateway: async () => {
             if (count++ < 2) throw new Error('timeout')
 
             return {
@@ -604,58 +604,11 @@ describe('ao-process', () => {
         assert.deepStrictEqual(res.ordinate, '12')
       })
 
-      test('should fallback to default gateway if Checkpoint gateway reaches max retries', async () => {
+      test('should fallback to Checkpoint gateway if default gateway reaches max retries', async () => {
         const findProcessMemoryBefore = findProcessMemoryBeforeWith({
           ...deps,
-          queryCheckpointGateway: async () => { throw new Error('timeout') },
-          queryGateway: async ({ query, variables }) => {
-            assert.ok(query)
-            assert.deepStrictEqual(variables, {
-              owner: 'address-123',
-              processId: PROCESS,
-              limit: 50
-            })
-
-            return {
-              data: {
-                transactions: {
-                  edges: [
-                    {
-                      ...edges[0],
-                      node: {
-                        ...edges[0].node,
-                        tags: [
-                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                          { name: 'Nonce', value: '12' },
-                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        })
-
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res.ordinate, '12')
-      })
-
-      test('should fallback to default gateway if Checkpoint gateway reaches max retries', async () => {
-        let count = 1
-        const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-          ...deps,
-          queryCheckpointGateway: async () => {
-            // Ensure not retried if successful response
-            assert.equal(count, 1)
-            count++
-            // Successful response, but no results
-            return { data: { transactions: { edges: [] } } }
-          },
-          queryGateway: async ({ query, variables }) => {
+          queryGateway: async () => { throw new Error('timeout') },
+          queryCheckpointGateway: async ({ query, variables }) => {
             assert.ok(query)
             assert.deepStrictEqual(variables, {
               owner: 'address-123',
