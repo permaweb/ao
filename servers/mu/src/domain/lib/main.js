@@ -166,9 +166,16 @@ export function processMsgWith ({
   const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave })
   const pullResult = pullResultWith({ fetchResult, logger })
 
+  const locateProcessLocal = fromPromise(locateProcess)
+
   return (ctx) => {
     return of(ctx)
       .chain(buildTx)
+      .chain((ctx) => locateProcessLocal(ctx.tx.processId)
+        .map((schedLocation) => {
+          return { ...ctx, schedLocation }
+        })
+      )
       /*
         If the tx has a target that is not a process, it has
         been written directly to Arweave. So we dont go through
