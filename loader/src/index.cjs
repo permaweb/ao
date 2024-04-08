@@ -1,5 +1,6 @@
 const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
+const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
 
 /* eslint-enable */
 
@@ -91,6 +92,8 @@ module.exports = async function (binary, options) {
     instance = await Emscripten(binary, options)
   } else if (options.format === "wasm32-unknown-emscripten2") {
     instance = await Emscripten2(binary, options)
+  } else if (options.format === "wasm64-unknown-emscripten") {
+    instance = await Wasm64Emscripten(binary, options)
   }
 
   /**

@@ -164,7 +164,8 @@ def main():
 
     # Finally, compile to wasm
     debug_print('Start to compile as WASM')
-    cmd = ['emcc', '-Os', 
+    cmd = ['emcc', '-O0', 
+      '-s', 'MEMORY64=1',
       '-s', 'ALLOW_MEMORY_GROWTH=1', 
       '-s', 'INITIAL_MEMORY=6291456', 
       '-s', 'MAXIMUM_MEMORY=524288000', 
@@ -186,9 +187,9 @@ def main():
     shell_exec(*cmd)
 
     # add metering library
-    meter_cmd = ['node', '/opt/node/apply-metering.cjs']
-    shell_exec(*meter_cmd)
-    shell_exec(*['rm', '/src/process.js'])
+    # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
+    # shell_exec(*meter_cmd)
+    # shell_exec(*['rm', '/src/process.js'])
 
 if __name__ == '__main__':
     main()
