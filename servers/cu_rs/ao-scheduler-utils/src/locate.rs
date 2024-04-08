@@ -1,4 +1,4 @@
-use crate::{client::{gateway::{GatewayMaker, SchedulerResult, DEFAULT_TTL}, in_memory::{Cacher, UrlOwner}, scheduler::CheckForRedirectFn}, err::SchedulerErrors};
+use crate::{client::{gateway::{GatewayMaker, SchedulerResult}, in_memory::{Cacher, UrlOwner}, scheduler::CheckForRedirectFn}, err::SchedulerErrors};
 
 /**
    * Locate the scheduler for the given process.
@@ -33,15 +33,15 @@ use crate::{client::{gateway::{GatewayMaker, SchedulerResult, DEFAULT_TTL}, in_m
       if scheduler_hint.is_some() {
         if let Some(by_owner) = cache.get_by_owner_with(scheduler_hint.unwrap()).await {
           println!("use cache");
-          scheduler = Some(SchedulerResult { url: by_owner.url, ttl: DEFAULT_TTL, owner: by_owner.address });
-        } else {
-          match gateway.load_scheduler_with(gateway_url, scheduler_hint.unwrap()).await {
-            Ok(sched) => {
-              cache.set_by_owner_with(&sched.owner, &sched.url, sched.ttl).await;
-              scheduler = Some(sched);
-            },
-            Err(e) => return Err(e)
-          }
+          return Ok(by_owner);
+        }
+
+        match gateway.load_scheduler_with(gateway_url, scheduler_hint.unwrap()).await {
+          Ok(sched) => {
+            cache.set_by_owner_with(&sched.owner, &sched.url, sched.ttl).await;
+            scheduler = Some(sched);
+          },
+          Err(e) => return Err(e)
         }
       } else {
         match gateway.load_process_scheduler_with(gateway_url, process).await {
@@ -306,11 +306,10 @@ use crate::{client::{gateway::{GatewayMaker, SchedulerResult, DEFAULT_TTL}, in_m
         assert!(owner == SCHEDULER);
         Some(UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() })
       }    
-      async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner, ttl: u64) { 
+      async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner, _ttl: u64) { 
         assert!(process_tx_id == PROCESS);
         assert!(value.url == DOMAIN_REDIRECT);
         assert!(value.address == SCHEDULER);
-        assert!(ttl == TEN_MS);
       }    
       async fn set_by_owner_with(&mut self, _owner: &str, _url: &str, _ttl: u64) {
         panic!("should not cache by owner if cached");
@@ -343,6 +342,6 @@ use crate::{client::{gateway::{GatewayMaker, SchedulerResult, DEFAULT_TTL}, in_m
       println!("result {:?}", result);
       println!("DOMAIN_REDIRECT {:?}", DOMAIN_REDIRECT);
       println!("SCHEDULER {:?}", SCHEDULER);
-      assert!(result.url == DOMAIN_REDIRECT && result.address == SCHEDULER);
+      assert!(result.url == DOMAIN && result.address == SCHEDULER);
     }
   }
