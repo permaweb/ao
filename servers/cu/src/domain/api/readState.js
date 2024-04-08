@@ -1,7 +1,7 @@
 import { isNotNil, join } from 'ramda'
 import { Resolved, fromPromise, of } from 'hyper-async'
 
-import { findPendingForProcessBeforeWith } from '../utils.js'
+import { findPendingForProcessBeforeWith, isLaterThan } from '../utils.js'
 import { loadProcessWith } from '../lib/loadProcess.js'
 import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
@@ -76,104 +76,160 @@ export function readStateWith (env) {
       return res
     }
 
-    const key = pendingKey([processId, to, ordinate, cron, exact, needsMemory])
-    if (!pendingReadState.has(key)) {
-      let newEntry
-      const pendingForProcessBefore = findPendingForProcessBefore({ processId, timestamp: to })
-      /**
-       * Determine whether we can chain off of a pending readState
-       * eval stream
-       */
-      if (pendingForProcessBefore) {
-        const [pendingKey, { pending, chainedTo }] = pendingForProcessBefore
-        env.logger(
-          'found pending readState at "%j" to chain to, for incoming readState "%s"',
-          { key: pendingKey, chainedTo },
-          key
-        )
-        newEntry = {
-          startTime: new Date(),
-          chainedTo: pendingKey,
-          /**
-           * chain off already pending readState, to start evaling
-           * where it left off from
-           *
-           * @type {Promise}
-           */
-          pending
-        }
-      } else {
-        newEntry = {
-          startTime: new Date(),
-          chainedTo: undefined,
-          /**
-           * Nothing to chain from, so just resolve
-           */
-          pending: Promise.resolve()
-        }
-      }
+    return of(pendingKey([processId, to, ordinate, cron, exact, needsMemory]))
+      .chain((key) => {
+        /**
+         * Already pending evaluation, so just return its eval stream
+         */
+        if (pendingReadState.has(key)) return of(key).chain(fromPromise((key) => pendingReadState.get(key).pending))
 
-      pendingReadState.set(
-        key,
-        {
-          startTime: newEntry.startTime,
-          chainedTo: newEntry.chainedTo, // string (key) or undefined if not chained
-          /**
-           * chain off newEntry.start, then continue eval
-           */
-          pending: newEntry.pending.then(() =>
-            of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
-              .chain(loadProcess)
-              .chain((res) => {
+        /**
+        * Determine whether to:
+        * - return the exact match if found
+        * - chain off an existing evaluation stream
+        * - start a brand new evaluation stream
+        */
+        return of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
+          .chain(loadProcess)
+          .chain((res) => {
+            /**
+            * The exact evaluation (identified by its input messages timestamp)
+            * was found in the cache, so just return it.
+            *
+            * evaluate sets output below, so since we've found the output
+            * without evaluating, we simply set output to the result of the cached
+            * evaluation.
+            *
+            * This exposes a single api for upstream to consume
+            */
+            if (res.exact) return Resolved({ ...res, output: res.result })
+
+            /**
+             * Often times, multiple requests will be sent to eval the same message,
+             * So before we duplicate work, we double-check if there is a pending readState.
+             *
+             * A bit clunky, but helps prevent duplicate work, due to both requests coming
+             * in before the process could be loaded
+             */
+            if (pendingReadState.has(key)) return of(key).chain(fromPromise((key) => pendingReadState.get(key).pending))
+
+            /**
+            * Check if the starting point found in caching layers
+            * is earlier than a pending eval stream, and simply
+            * chain off the pending eval stream if so.
+            *
+            * Otherwise, we start a separate evaluation stream using the
+            * starting point from the cache.
+            *
+            * This will help ensure a request to evaluate an old message
+            * does not cause delays on evaluations of newer messages that may
+            * have later checkpoints available on chain to "hot start" from.
+            */
+            let newEntry
+
+            const pendingForProcessBefore = findPendingForProcessBefore({ processId, timestamp: to })
+            if (pendingForProcessBefore) {
+              const [pendingKey, { pending, chainedTo }] = pendingForProcessBefore
+              const [, pTo, pOrdinate, pCron] = pendingKey.split(',')
+
+              const isPendingLaterThanCached = !!res.from && isLaterThan(
+                { timestamp: res.from, ordinate: res.ordinate, cron: res.fromCron },
+                { timestamp: pTo, ordinate: pOrdinate, cron: pCron }
+              )
+
+              if (isPendingLaterThanCached) {
+                env.logger(
+                  'found pending readState at "%j" to chain to, later than cached %j, for incoming readState "%s"',
+                  { key: pendingKey, chainedTo },
+                  res.from
+                    ? { timestamp: res.from, ordinate: res.ordinate, cron: res.fromCron }
+                    : { COLD_START: true },
+                  key
+                )
+                newEntry = {
+                  startTime: new Date(),
+                  chainedTo: pendingKey,
+                  /**
+                  * chain off already pending readState,
+                  * then call loadProcess to match expected shape
+                  * whether new eval stream, or chaining on existing eval stream
+                  *
+                  * Unwrapping here to prevent duplicate work,
+                  * as a result of the same Async being forked twice.
+                  * It is still wrapped in an Async below, but it's the same
+                  * underlying Promise, so no duplicate work
+                  *
+                  * @type {Promise}
+                  */
+                  pending: pending
+                    .then(() =>
+                      of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
+                        .chain(loadProcess)
+                        .toPromise())
+                }
+              }
+            }
+
+            if (!newEntry) {
+              newEntry = {
+                startTime: new Date(),
+                chainedTo: undefined,
                 /**
-                 * The exact evaluation (identified by its input messages timestamp)
-                 * was found in the cache, so just return it.
-                 *
-                 * evaluate sets output below, so since we've found the output
-                 * without evaluating, we simply set output to the result of the cached
-                 * evaluation.
-                 *
-                 * This exposes a single api for upstream to consume
-                 */
-                if (res.exact) return Resolved({ ...res, output: res.result })
+                  * Nothing to chain from, so just resolve what was returned
+                  * from loadProcess to continue the current work
+                  */
+                pending: Promise.resolve(res)
+              }
+            }
 
-                return of(res)
-                  .chain(loadModule)
-                  .chain(loadMessages)
-                  .chain(hydrateMessages)
-                  // { output }
-                  .chain(evaluate)
-                  .chain((ctx) => Resolved({
-                    ...ctx,
-                    result: ctx.output,
-                    from: ctx.last.timestamp,
-                    fromBlockHeight: ctx.last.blockHeight,
-                    ordinate: ctx.last.ordinate
-                  }))
-              })
-              .bimap(logStats, logStats)
-              /**
-               * Always remove the pending work, when it's complete
-               */
-              .bimap(removePending(key), removePending(key))
-              /**
-               * TODO: Need to figure out how to push this to the edge.
-               *
-               * Unwrapping here to prevent duplicate work,
-               * as a result of the same Async being forked twice.
-               * It is still wrapped in an Async below, but it's the same
-               * underlying Promise, so no duplicate work
-               *
-               * Need to figure out how to push this to the edge.
-               *
-               * The only other place toPromise is used is on clients, routes (edges),
-               * and evaluate (to prevent callstack overflow)
-               */
-              .toPromise())
-        }
-      )
-    }
+            /**
+             * Add the entry to the pending readStates
+             */
+            pendingReadState.set(key, {
+              startTime: newEntry.startTime,
+              chainedTo: newEntry.chainedTo,
+              pending: newEntry.pending
+                .then((res) =>
+                  of(res)
+                    .chain((res) => {
+                      return of(res)
+                        .chain(loadModule)
+                        .chain(loadMessages)
+                        .chain(hydrateMessages)
+                        // { output }
+                        .chain(evaluate)
+                        .chain((ctx) => Resolved({
+                          ...ctx,
+                          result: ctx.output,
+                          from: ctx.last.timestamp,
+                          fromBlockHeight: ctx.last.blockHeight,
+                          ordinate: ctx.last.ordinate
+                        }))
+                    })
+                    .bimap(logStats, logStats)
+                    /**
+                      * Always remove the pending work, when it's complete
+                      */
+                    .bimap(removePending(key), removePending(key))
+                    /**
+                      * Unwrapping here to prevent duplicate work,
+                      * as a result of the same Async being forked twice.
+                      * It is still wrapped in an Async below, but it's the same
+                      * underlying Promise, so no duplicate work
+                      *
+                      * The only other place toPromise is used is on clients, routes (edges),
+                      * and evaluate (to prevent callstack overflow)
+                      */
+                    .toPromise()
+                )
+            })
 
-    return of(key).chain(fromPromise((key) => pendingReadState.get(key).pending))
+            /**
+             * Return an Async wrapping the actual promise, so minimal
+             * duplicate work is performed
+             */
+            return of(key).chain(fromPromise((key) => pendingReadState.get(key).pending))
+          })
+      })
   }
 }
