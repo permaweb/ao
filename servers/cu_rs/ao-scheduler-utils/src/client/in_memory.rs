@@ -21,25 +21,34 @@ impl LocalLruCache {
                 .build()
         }
     }    
-}
 
-/// ttl: milliseconds
-#[async_trait]
-pub trait Cacher {    
     /// Key can be process tx id or owner address
-    async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner>;
-    async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner, ttl: u64);
-    async fn set_by_owner_with(&mut self, owner: &str, url: &str, ttl: u64);
-}
-
-#[async_trait]
-impl Cacher for LocalLruCache {    
     async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
         let result = self.internal_cache.get(key).await;
         if let Some(result) = result {
             return Some(result.1);
         }
         None
+    }
+}
+
+/// ttl: milliseconds
+#[async_trait]
+pub trait Cacher {        
+    async fn get_by_process_with(&mut self, key: &str) -> Option<UrlOwner>;
+    async fn get_by_owner_with(&mut self, key: &str) -> Option<UrlOwner>;
+    async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner, ttl: u64);
+    async fn set_by_owner_with(&mut self, owner: &str, url: &str, ttl: u64);
+}
+
+#[async_trait]
+impl Cacher for LocalLruCache {    
+    async fn get_by_process_with(&mut self, process: &str) -> Option<UrlOwner> {
+        self.get_by_key_with(process).await
+    }
+
+    async fn get_by_owner_with(&mut self, owner: &str) -> Option<UrlOwner> {
+        self.get_by_key_with(owner).await
     }
     
     async fn set_by_process_with(&mut self, process_tx_id: &str, value: UrlOwner, ttl: u64) {

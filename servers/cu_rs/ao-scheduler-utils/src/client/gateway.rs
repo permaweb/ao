@@ -190,6 +190,8 @@ pub struct SchedulerResult {
     pub owner: String
 }
 
+pub const DEFAULT_TTL: u64 = 10;
+
 #[cfg(test)]
 mod tests {
     use std::sync::Once;
@@ -277,7 +279,6 @@ mod tests {
         let result = gateway.load_process_scheduler_with(GATEWAY_URL, "KHruEP5dOP_MgNHava2kEPleihEc915GlRRr3rQ5Jz4").await;
         match result {
             Ok(scheduler) => {
-                println!("{:?}", scheduler);
                 assert!(scheduler.owner == SCHEDULER_WALLET_ADDRESS.to_string());
             },
             Err(e) => panic!("{:?}", e)

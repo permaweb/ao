@@ -1,4 +1,4 @@
-use crate::{client::{gateway::{Gateway, GatewayMaker}, in_memory::{Cacher, LocalLruCache}}, err::SchedulerErrors};
+use crate::{client::{gateway::GatewayMaker, in_memory::Cacher}, err::SchedulerErrors};
 
 /**
    * Return the `Scheduler-Location` record for the address
@@ -7,8 +7,8 @@ use crate::{client::{gateway::{Gateway, GatewayMaker}, in_memory::{Cacher, Local
    * @param {string} address - the wallet address used by the Scheduler
    * @returns {{ url: string } | None >} whether the wallet address is Scheduler
    */
-pub async fn raw_with<C: Cacher, G: GatewayMaker>(mut cache: LocalLruCache, gateway: Gateway, gateway_url: &str, address: &str) -> Result<Option<SchedulerLocation>, SchedulerErrors> {
-    let result = cache.get_by_key_with(address).await;
+pub async fn raw_with<C: Cacher, G: GatewayMaker>(mut cache: C, gateway: &G, gateway_url: &str, address: &str) -> Result<Option<SchedulerLocation>, SchedulerErrors> {
+    let result = cache.get_by_owner_with(address).await;
     if let Some(result) = result {
         return Ok(Some(SchedulerLocation { url: result.url }))
     }
@@ -36,7 +36,6 @@ pub struct SchedulerLocation {
 mod tests {
     use crate::client::in_memory::UrlOwner;
     use crate::client::gateway::SchedulerResult;
-
     use super::*;
     use async_trait::async_trait;
 
@@ -47,10 +46,13 @@ mod tests {
     struct MockCacheRawFound;
     #[async_trait]
     impl Cacher for MockCacheRawFound {
-        async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
-            assert!(key == SCHEDULER);
+        async fn get_by_owner_with(&mut self, scheduler: &str) -> Option<UrlOwner> {
+            assert!(scheduler == SCHEDULER);
             None
-        }    
+        }
+        async fn get_by_process_with(&mut self, _process: &str) -> Option<UrlOwner> {
+            unimplemented!()
+        }
         async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner, _ttl: u64) { unimplemented!() }    
     
         async fn set_by_owner_with(&mut self, owner: &str, url: &str, ttl: u64) {
@@ -71,6 +73,71 @@ mod tests {
             Ok(SchedulerResult {
                 url: DOMAIN.to_string(), ttl: TEN_MS, owner: SCHEDULER.to_string()
             })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_raw_found() {
+        let result = raw_with(MockCacheRawFound, &MockGatewayRawFound, "", SCHEDULER).await;
+        assert!(result.unwrap().unwrap().url == DOMAIN);
+    }
+
+    struct MockCacheRawNotFound;
+    #[async_trait]
+    impl Cacher for MockCacheRawNotFound {
+        async fn get_by_owner_with(&mut self, scheduler: &str) -> Option<UrlOwner> {
+            assert!(scheduler == SCHEDULER);
+            None
+        }
+        async fn get_by_process_with(&mut self, _process: &str) -> Option<UrlOwner> {
+            unimplemented!()
+        }
+        async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner, _ttl: u64) { unimplemented!() }    
+    
+        async fn set_by_owner_with(&mut self, _owner: &str, _url: &str, _ttl: u64) { unimplemented!() }
+    }
+
+    struct MockGatewayRawNotFound;
+    #[async_trait]
+    impl GatewayMaker for MockGatewayRawNotFound {
+        async fn load_process_scheduler_with<'a>(&self, _gateway_url: &'a str, _process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+            unimplemented!()
+        }
+        async fn load_scheduler_with<'a>(&self, _gateway_url: &'a str, scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors>  {
+            assert!(scheduler_wallet_address == SCHEDULER);
+            Err(SchedulerErrors::new_invalid_scheduler_location("Big womp".to_string()))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_raw_not_found() {
+        let result = raw_with(MockCacheRawNotFound, &MockGatewayRawNotFound, "", SCHEDULER).await;
+        assert!(result.unwrap().is_none());
+    }
+
+    struct MockCacheRawUseCachedValue;
+    #[async_trait]
+    impl Cacher for MockCacheRawUseCachedValue {
+        async fn get_by_owner_with(&mut self, wallet_address: &str) -> Option<UrlOwner> {
+            assert!(wallet_address == SCHEDULER);
+            Some(UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() })
+        }
+        async fn get_by_process_with(&mut self, _process: &str) -> Option<UrlOwner> {
+            unimplemented!()
+        }
+        async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner, _ttl: u64) { unimplemented!() }    
+    
+        async fn set_by_owner_with(&mut self, _owner: &str, _url: &str, _ttl: u64) { unimplemented!() }
+    }
+
+    struct MockGatewayRawUseCachedValue;
+    #[async_trait]
+    impl GatewayMaker for MockGatewayRawUseCachedValue {
+        async fn load_process_scheduler_with<'a>(&self, _gateway_url: &'a str, _process_tx_id: &'a str) -> Result<SchedulerResult, SchedulerErrors> {
+            unimplemented!()
+        }
+        async fn load_scheduler_with<'a>(&self, _gateway_url: &'a str, _scheduler_wallet_address: &'a str) -> Result<SchedulerResult, SchedulerErrors>  {
+            panic!("should never call on chain if in cache");
         }
     }
 }

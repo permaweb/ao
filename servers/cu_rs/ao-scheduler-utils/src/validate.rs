@@ -7,7 +7,7 @@ use crate::{client::{gateway::GatewayMaker, in_memory::Cacher}, err::SchedulerEr
    * @returns {<boolean>} whether the wallet address is Scheduler
    */
 pub async fn validate_with<C: Cacher, G: GatewayMaker>(mut cache: C, gateway: &G, gateway_url: &str, address: &str) -> Result<bool, SchedulerErrors> {
-    let cached = cache.get_by_key_with(address).await;
+    let cached = cache.get_by_owner_with(address).await;
     if let Some(_) = cached {
         return Ok(true);
     }
@@ -39,10 +39,13 @@ mod tests {
     pub struct MockLruCacheForIsValid;
     #[async_trait]
     impl Cacher for MockLruCacheForIsValid {
-        async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
-            assert!(key == SCHEDULER);
+        async fn get_by_owner_with(&mut self, scheduler: &str) -> Option<UrlOwner> {
+            assert!(scheduler == SCHEDULER);
             None
         }    
+        async fn get_by_process_with(&mut self, _process: &str) -> Option<UrlOwner> {
+            unimplemented!()
+        }   
         async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner, _ttl: u64) { unimplemented!() }    
     
         async fn set_by_owner_with(&mut self, owner: &str, url: &str, ttl: u64) {
@@ -92,10 +95,13 @@ mod tests {
     pub struct MockLruCacheForIsFromCache;
     #[async_trait]
     impl Cacher for MockLruCacheForIsFromCache {
-        async fn get_by_key_with(&mut self, key: &str) -> Option<UrlOwner> {
+        async fn get_by_owner_with(&mut self, key: &str) -> Option<UrlOwner> {
             assert!(key == SCHEDULER);
             Some(UrlOwner { url: DOMAIN.to_string(), address: SCHEDULER.to_string() })
         }
+        async fn get_by_process_with(&mut self, _process: &str) -> Option<UrlOwner> {
+            unimplemented!()
+        }   
         async fn set_by_process_with(&mut self, _process_tx_id: &str, _value: UrlOwner, _ttl: u64) { unimplemented!() }    
     
         async fn set_by_owner_with(&mut self, _owner: &str, _url: &str, _ttl: u64) {
