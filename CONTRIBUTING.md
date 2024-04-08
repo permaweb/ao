@@ -6,6 +6,7 @@ to make it as easy as possible to contribute to this project.
 <!-- toc -->
 
 - [What you need to know?](#what-you-need-to-know)
+  - [Getting Started](#getting-started)
   - [Functional Thinking](#functional-thinking)
   - [Solve The Problem, Not The Solution](#solve-the-problem-not-the-solution)
   - [Dependencies](#dependencies)
@@ -33,6 +34,16 @@ instances, tools like Deno, Lua, and Docker.
 
 Here are some topics and resources you should consider reviewing before
 contributing.
+
+### Getting Started
+
+The `ao` repo uses `npm` and `node` to install and execute top level, repo-wide, tooling. So first, you should run `npm i` at the root to install those dependencies. This will set up git hooks that will help ensure you're following some of the guidelines outlined in this document:
+
+- All JavaScript projects in the repo follow [`standard` style](https://standardjs.com/)
+- All Commit Messages follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+- All Markdown files should contain a Table of Contents
+
+Once you've install the top level tooling, each of these conventions are enforced, via git a commit hook, automatically.
 
 ### Functional Thinking
 
