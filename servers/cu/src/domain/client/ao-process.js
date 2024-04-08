@@ -356,38 +356,15 @@ function queryCheckpointsWith ({ queryGateway, queryCheckpointGateway, logger })
     const queryOnCheckpointGateway = queryCheckpoint(queryCheckpointGateway, 'Checkpoint gateway')
 
     return of()
+      .chain(queryOnDefaultGateway(1))
       /**
-       * First attempt to query the gateway configured specifically for Checkpoints.
+       * Retry the default gateway one more time
        */
-      .chain(queryOnCheckpointGateway(1))
+      .bichain(queryOnDefaultGateway(2), Resolved)
       /**
-       * Retry 1 on Checkpoint gateway
+       * Fallback to gateway configured specifically for Checkpoints.
        */
-      .bichain(queryOnCheckpointGateway(2), Resolved)
-      .chain((res) => {
-        /**
-         * Fallback to the default gateway if no results. In this way,
-         * we either fallback to the default gateway, or use it as the final
-         * retry attempt, which is what we want.
-         */
-        if (!path(['data', 'transactions', 'edges', '0'], res)) {
-          logger(
-            'Checkpoint gateway returned no results for process "%s", before "%j". Falling back to default gateway...',
-            processId,
-            { timestamp, ordinate, cron }
-          )
-          return Rejected(variables)
-        }
-        return Resolved(res)
-      })
-      /**
-       * Our final attempt will be made against the default gateway.
-       *
-       * Since we also fallback to this if no results are returned from the Checkpoint gateway,
-       * this simoultaneously serves as our fallback AND our (max) 3rd retry attempt
-       * on the default gteway
-       */
-      .bichain(queryOnDefaultGateway(3), Resolved)
+      .bichain(queryOnCheckpointGateway(3), Resolved)
   }
 }
 
