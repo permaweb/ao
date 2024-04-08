@@ -278,6 +278,38 @@ export async function busyIn (millis, p, busyFn) {
   ])
 }
 
+export function isLaterThan (eval1, eval2) {
+  const t1 = `${eval1.timestamp}`
+  const t2 = `${eval2.timestamp}`
+  /**
+   * timestamps are equal some might be two crons on overlapping interval,
+   * so compare the crons
+   */
+  if (t2 === t1) return (eval2.cron || '') > (eval1.cron || '')
+
+  return t2 > t1
+}
+
+export function isEarlierThan (eval1, eval2) {
+  const t1 = `${eval1.timestamp}`
+  const t2 = `${eval2.timestamp}`
+  /**
+   * timestamps are equal some might be two crons on overlapping interval,
+   * so compare the crons
+   */
+  if (t2 === t1) return (eval2.cron || '') < (eval1.cron || '')
+
+  return t2 < t1
+}
+
+export function isEqualTo (eval1, eval2) {
+  const t1 = `${eval1.timestamp}`
+  const t2 = `${eval2.timestamp}`
+
+  return t2 === t1 &&
+    (eval2.cron || '') === (eval1.cron || '')
+}
+
 export const findPendingForProcessBeforeWith = (map) => ({ processId, timestamp }) => {
   if (!timestamp) return // latest
 

@@ -8,6 +8,7 @@ import { always, applySpec, compose, defaultTo, evolve, head, identity, map, pat
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
+import { isEarlierThan, isEqualTo, isLaterThan } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 
@@ -134,38 +135,6 @@ const processDocSchema = z.object({
   block: processSchema.shape.block
 })
 
-function isLaterThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
-  /**
-   * timestamps are equal some might be two crons on overlapping interval,
-   * so compare the crons
-   */
-  if (t2 === t1) return (eval2.cron || '') > (eval1.cron || '')
-
-  return t2 > t1
-}
-
-function isEarlierThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
-  /**
-   * timestamps are equal some might be two crons on overlapping interval,
-   * so compare the crons
-   */
-  if (t2 === t1) return (eval2.cron || '') < (eval1.cron || '')
-
-  return t2 < t1
-}
-
-function isEqualTo (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
-
-  return t2 === t1 &&
-    (eval2.cron || '') === (eval1.cron || '')
-}
-
 function latestCheckpointBefore ({ timestamp, ordinate, cron }) {
   return (latest, checkpoint) => {
     if (
@@ -191,10 +160,6 @@ function latestCheckpointBefore ({ timestamp, ordinate, cron }) {
      */
     return checkpoint
   }
-}
-
-export function createProcessId ({ processId }) {
-  return processId
 }
 
 export function findProcessWith ({ db }) {
