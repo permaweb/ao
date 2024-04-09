@@ -100,7 +100,7 @@ describe('loader', async () => {
     assert.ok(true)
   })
 
-  it.skip('should refill the gas on every invocation', async () => {
+  it('should refill the gas on every invocation', async () => {
     const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
 
     const result = await handle(null,
@@ -136,8 +136,9 @@ describe('loader', async () => {
     assert.ok(true)
   })
 
-  it.skip('should resize the initial heap to accomodate the larger incoming buffer', async () => {
-    const wasmBinary = fs.readFileSync('./test/aos/process.wasm')
+  // need to create a wasm64 aos
+  it('should resize the initial heap to accomodate the larger incoming buffer', async () => {
+    const wasmBinary = fs.readFileSync('./test/aos64/process.wasm')
 
     const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten', computeLimit: 9_000_000_000_000 })
     const mainResult = handle(null,

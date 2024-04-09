@@ -893,6 +893,7 @@ const Module = (() => {
       var info = {
         'env': wasmImports,
         'wasi_snapshot_preview1': wasmImports,
+        'metering': { usegas: function (gas) { Module.gas.use(gas); if (Module.gas.isEmpty()) throw Error('out of gas!') } }
       };
       // Load the wasm module and create an instance of using native support in the JS engine.
       // handle a generated wasm instance, receiving its exports and
