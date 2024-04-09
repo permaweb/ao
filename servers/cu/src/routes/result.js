@@ -2,7 +2,7 @@ import { compose } from 'ramda'
 import { z } from 'zod'
 
 import { busyIn } from '../domain/utils.js'
-import { withMiddleware } from './middleware/index.js'
+import { withMiddleware, withProcessRestrictionFromQuery } from './middleware/index.js'
 import { withInMemoryCache } from './middleware/withInMemoryCache.js'
 
 const inputSchema = z.object({
@@ -15,6 +15,7 @@ export const withResultRoutes = app => {
     '/result/:messageTxId',
     compose(
       withMiddleware,
+      withProcessRestrictionFromQuery,
       withInMemoryCache({
         keyer: (req) => {
           const { params: { messageTxId } } = req
