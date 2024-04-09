@@ -9,7 +9,7 @@ dotenv.config()
 export const configSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
   MU_WALLET: z.record(z.any()),
-  GATEWAY_URL: z.string(),
+  GRAPHQL_URL: z.string(),
   UPLOADER_URL: z.string()
 })
 
@@ -25,14 +25,14 @@ const CONFIG_ENVS = {
     MODE,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'https://cu.ao-testnet.xyz',
-    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   },
   production: {
     MODE,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
-    GATEWAY_URL: process.env.GATEWAY_URL,
+    GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
   }
 }

@@ -24,7 +24,7 @@ export const createApis = (ctx) => {
   const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 100, GATEWAY_URL: ctx.GATEWAY_URL })
+  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL: ctx.GRAPHQL_URL })
 
   const logger = ctx.logger
 

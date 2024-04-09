@@ -27,7 +27,7 @@ There are a few environment variables that you can set:
 - `CU_URL`: Which `ao` Compute Unit to use (defaults to
   `http://localhost:6363` in development mode)
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
-- `GATEWAY_URL`: an arweave gateway to use (defaults to https://arweave.net in development mode)
+- `GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the MU. (defaults to https://arweave.net/graphql)
 - `PATH_TO_WALLET`: the path to the wallet JWK interface you would like the `mu`
   to use to sign messages that it is pushing
 - `DEBUG`: if DEBUG=* or DEBUG=ao-mu* then verbose debug logs will be provided in the console.

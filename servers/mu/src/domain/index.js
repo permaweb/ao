@@ -31,7 +31,7 @@ export const domainConfigSchema = z.object({
   MU_WALLET: z.record(z.any()),
   SCHEDULED_INTERVAL: z.number(),
   DUMP_PATH: z.string(),
-  GATEWAY_URL: z.string(),
+  GRAPHQL_URL: z.string(),
   UPLOADER_URL: z.string()
 })
 
@@ -43,8 +43,8 @@ export const createApis = (ctx) => {
   const logger = ctx.logger
   const fetch = ctx.fetch
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GATEWAY_URL: ctx.GATEWAY_URL, followRedirects: true })
-  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GATEWAY_URL: ctx.GATEWAY_URL, followRedirects: false })
+  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: true })
+  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: false })
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
