@@ -48,7 +48,7 @@ const CONFIG_ENVS = {
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'http://localhost:6363',
-    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
@@ -58,7 +58,7 @@ const CONFIG_ENVS = {
     port: process.env.PORT || 3005,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
-    GATEWAY_URL: process.env.GATEWAY_URL,
+    GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
