@@ -4,7 +4,7 @@ local ao = {
     _module = "",
     authorities = {},
     _ref = 0,
-    outbox = {Output = {}, Messages = {}, Spawns = {}}
+    outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
 }
 
 local function _includes(list)
@@ -65,7 +65,7 @@ function ao.init(env)
         end
     end
 
-    ao.outbox = {Output = {}, Messages = {}, Spawns = {}}
+    ao.outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
     ao.env = env
 
 end
@@ -78,7 +78,7 @@ function ao.log(txt)
 end
 
 -- clears outbox
-function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}} end
+function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}} end
 
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
@@ -166,6 +166,14 @@ function ao.spawn(module, msg)
     table.insert(ao.outbox.Spawns, spawn)
 
     return spawn
+end
+
+function ao.assign(assignment)
+    assert(type(assignment) == 'table', 'assignment should be a table')
+    assert(type(assignment.Processes) == 'table', 'Processes should be a table')
+    assert.ok(#assignment.Processes > 0, "Processes should have at least one entry")
+    assert(type(assignment.Message) == "string", "Message should be a string")
+    table.insert(ao.outbox.Assignments, assignment)
 end
 
 function ao.isTrusted(msg)
