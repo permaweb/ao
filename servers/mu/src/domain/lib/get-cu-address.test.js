@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
+import { createLogger } from '../logger.js'
 import { getCuAddressWith } from './get-cu-address.js'
 
 const logger = createLogger('ao-mu:processMsg')
@@ -21,13 +21,7 @@ describe('getCuAddress', () => {
     const result = await getCuAddress({
       tx: {
         processId: 'id-1'
-      },
-      tracer: ({
-        trace: (s) => {
-          assert.ok(typeof s === 'string')
-          return 1
-        }
-      })
+      }
     }).toPromise()
 
     assert.equal(result.cuAddress, 'id-1')

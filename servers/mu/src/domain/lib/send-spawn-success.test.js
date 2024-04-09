@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
+import { createLogger } from '../logger.js'
 import { sendSpawnSuccessWith } from './send-spawn-success.js'
 
 const logger = createLogger('ao-mu:spawnProcess')

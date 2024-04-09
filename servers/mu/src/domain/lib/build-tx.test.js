@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
+import { createLogger } from '../logger.js'
 import { buildTxWith } from './build-tx.js'
 
 const logger = createLogger('ao-mu:processMsg')
@@ -52,13 +52,7 @@ describe('buildTx', () => {
           Data: 'data-1'
         },
         processId: 'process-123'
-      },
-      tracer: ({
-        trace: (s) => {
-          assert.ok(typeof s === 'string')
-          return 1
-        }
-      })
+      }
     }).toPromise()
 
     assert.equal(result.tx.processId, 'id-1')

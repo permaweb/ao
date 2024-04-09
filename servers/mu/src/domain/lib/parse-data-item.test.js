@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
+import { createLogger } from '../logger.js'
 import { parseDataItemWith } from './parse-data-item.js'
 
 const logger = createLogger('ao-mu:processMsg')

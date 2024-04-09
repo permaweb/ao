@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
+import { createLogger } from '../logger.js'
 import { writeProcessTxWith } from './write-process-tx.js'
 
 const logger = createLogger('ao-mu:processMsg')
@@ -36,17 +36,7 @@ describe('writeProcessTxWith', () => {
         tags: [
           { name: 'Scheduler', value: 'wallet-123' }
         ]
-      },
-      tracer: ({
-        child: (id) => {
-          assert.equal(id, 'id-2')
-          return 1
-        },
-        trace: (s) => {
-          assert.ok(typeof s === 'string')
-          return 1
-        }
-      })
+      }
     }).toPromise()
 
     assert.deepStrictEqual(result.schedulerTx, {
@@ -81,17 +71,7 @@ describe('writeProcessTxWith', () => {
         tags: [
           { name: 'Not_scheduler', value: 'wallet-123' }
         ]
-      },
-      tracer: ({
-        child: (id) => {
-          assert.equal(id, 'id-2')
-          return 1
-        },
-        trace: (s) => {
-          assert.ok(typeof s === 'string')
-          return 1
-        }
-      })
+      }
     }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
       .catch(err => assert.equal(err, 'No Scheduler tag found on \'Process\' DataItem'))

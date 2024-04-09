@@ -2,7 +2,7 @@ import { of, fromPromise } from 'hyper-async'
 import z from 'zod'
 import { assoc, __, defaultTo, concat } from 'ramda'
 
-import { removeTagsByNameMaybeValue } from '../../utils.js'
+import { removeTagsByNameMaybeValue } from '../utils.js'
 
 const ctxSchema = z.object({
   spawnSuccessTx: z.any()
