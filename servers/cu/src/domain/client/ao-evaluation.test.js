@@ -243,7 +243,7 @@ describe('ao-evaluation', () => {
 
               assert.deepStrictEqual(parameters, [
                 'process-123,1702677252111,3', // gt
-                'process-123,1702677252111', // lte
+                `process-123,1702677252111,${COLLATION_SEQUENCE_MAX_CHAR}`, // lte
                 10 // limit
               ])
 

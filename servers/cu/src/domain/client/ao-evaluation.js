@@ -176,7 +176,7 @@ export function findEvaluationsWith ({ db }) {
           : createEvaluationId({ processId, timestamp: from.timestamp, ordinate: from.ordinate, cron: from.cron }),
         isEmpty(to)
           ? createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
-          : createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate, cron: to.cron }),
+          : createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate || COLLATION_SEQUENCE_MAX_CHAR, cron: to.cron }),
         limit
       ]
     }
