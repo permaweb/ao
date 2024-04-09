@@ -1,6 +1,6 @@
 import { always, compose, identity } from 'ramda'
 
-import { withMiddleware } from './middleware/index.js'
+import { withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
 import { z } from 'zod'
 
 /**
@@ -47,6 +47,7 @@ export const withResultsRoutes = app => {
     '/results/:processId',
     compose(
       withMiddleware,
+      withProcessRestrictionFromPath,
       always(async (req, res) => {
         const {
           params: { processId },

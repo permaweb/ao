@@ -1,7 +1,7 @@
 import { always, compose, identity } from 'ramda'
-
-import { withMiddleware } from './middleware/index.js'
 import { z } from 'zod'
+
+import { withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
 
 /**
  * TODO: could be moved into a route utils or middleware
@@ -41,6 +41,7 @@ export const withCronRoutes = app => {
     '/cron/:processId',
     compose(
       withMiddleware,
+      withProcessRestrictionFromPath,
       always(async (req, res) => {
         const {
           params: { processId },

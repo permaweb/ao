@@ -2,7 +2,7 @@ import { always, compose } from 'ramda'
 import { z } from 'zod'
 
 import { busyIn } from '../domain/utils.js'
-import { withMiddleware } from './middleware/index.js'
+import { withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
@@ -15,6 +15,7 @@ export const withStateRoutes = (app) => {
     '/state/:processId',
     compose(
       withMiddleware,
+      withProcessRestrictionFromPath,
       always(async (req, res) => {
         const {
           params: { processId },
