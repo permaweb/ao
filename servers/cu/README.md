@@ -88,6 +88,7 @@ for quick retrieval later (Defaults to the os temp directory)
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
 - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for a process evaluation stream to complete before sending a "busy" respond to the client (defaults to `0s` ie. disabled). If disabled, this could cause the CU to maintain long-open connections with clients until it completes long process evaluation streams.
+- `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a `blacklist`
 
 ## Tests
 
