@@ -13,9 +13,6 @@ export function parseDataItemWith ({ createDataItem, logger }) {
       .map(createDataItem)
       /**
        * Everything downstream expects a tx field, so construct it and add to context
-       *
-       * We will also include the fully parsed message, so that it can be persisted as part
-       * of trace
        */
       .chain(fromPromise(
         async (dataItem) => ({

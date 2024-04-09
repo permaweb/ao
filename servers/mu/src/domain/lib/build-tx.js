@@ -1,6 +1,5 @@
 import { fromPromise, Resolved, Rejected } from 'hyper-async'
 import z from 'zod'
-import { tap } from 'ramda'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -71,9 +70,5 @@ export function buildTxWith (env) {
       })
       .map(ctxSchema.parse)
       .map(logger.tap('Added tx and schedLocation to ctx'))
-      .bimap(
-        tap(() => ctx.tracer.trace('Failed to build and sign message from outbox')),
-        tap(() => ctx.tracer.trace('Built and signed message from outbox'))
-      )
   }
 }

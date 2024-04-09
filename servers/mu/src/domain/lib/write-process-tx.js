@@ -2,7 +2,7 @@ import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
 import { __, assoc, defaultTo, is } from 'ramda'
 import z from 'zod'
 
-import { parseTags } from '../../utils.js'
+import { parseTags } from '../utils.js'
 
 const ctxSchema = z.object({
   schedulerTx: z.object({

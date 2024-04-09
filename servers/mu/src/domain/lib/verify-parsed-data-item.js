@@ -1,7 +1,7 @@
 import { anyPass, propOr, tap } from 'ramda'
 import { Rejected, Resolved, of } from 'hyper-async'
 
-import { eqOrIncludes, parseTags } from '../../utils.js'
+import { eqOrIncludes, parseTags } from '../utils.js'
 
 export function verifyParsedDataItemWith () {
   const checkTag = (name, pred, err) => (tags) => pred(tags[name])

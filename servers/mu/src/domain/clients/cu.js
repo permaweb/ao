@@ -11,6 +11,7 @@ function resultWith ({ fetch, CU_URL, logger }) {
       .then(res => res || {
         Messages: [],
         Spawns: [],
+        Assignments: [],
         Output: ''
       })
   }

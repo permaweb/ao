@@ -34,6 +34,38 @@ function writeDataItemWith ({ fetch, logger }) {
   }
 }
 
+function writeAssignmentWith ({ fetch, logger }) {
+  return async ({ txId, processId, suUrl }) => {
+    return of({ txId, processId, suUrl })
+      .map(logger.tap(`Forwarding Assignment to SU ${suUrl}`))
+      .chain(fromPromise(({ txId, processId, suUrl }) =>
+        fetch(`${suUrl}/?process-id=${processId}&assign=${txId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Accept: 'application/json'
+          }
+        })
+      ))
+      .bimap(
+        logger.tap('Error while communicating with SU:'),
+        identity
+      )
+      .bichain(
+        (err) => Rejected(JSON.stringify(err)),
+        fromPromise(async (res) => {
+          if (!res?.ok) {
+            const text = await res.text()
+            throw new Error(`${res.status}: ${text}`)
+          }
+          return res.json()
+        })
+      )
+      .map(logger.tap('Successfully forwarded Assignment to SU'))
+      .toPromise()
+  }
+}
+
 function fetchSchedulerProcessWith ({ fetch, logger, setByProcess, getByProcess }) {
   return (processId, suUrl) => {
     return getByProcess(processId)
@@ -61,5 +93,6 @@ function fetchSchedulerProcessWith ({ fetch, logger, setByProcess, getByProcess 
 
 export default {
   writeDataItemWith,
+  writeAssignmentWith,
   fetchSchedulerProcessWith
 }

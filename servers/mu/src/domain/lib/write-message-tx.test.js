@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../../logger.js'
+import { createLogger } from '../logger.js'
 import { writeMessageTxWith } from './write-message-tx.js'
 
 const logger = createLogger('ao-mu:processMsg')
@@ -28,17 +28,7 @@ describe('writeMessageTxWith', () => {
       },
       schedLocation: {
         url: 'https://foo.bar'
-      },
-      tracer: ({
-        child: (id) => {
-          assert.equal(id, 'id-2')
-          return 1
-        },
-        trace: (s) => {
-          assert.ok(typeof s === 'string')
-          return 1
-        }
-      })
+      }
     }).toPromise()
 
     assert.deepStrictEqual(result.schedulerTx, {

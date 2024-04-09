@@ -1,10 +1,10 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
-import { tap } from 'ramda'
 import z from 'zod'
 
 const ctxSchema = z.object({
   msgs: z.any(),
   spawns: z.any(),
+  assigns: z.any(),
   initialTxId: z.string().nullable()
 }).passthrough()
 
@@ -32,7 +32,16 @@ function fetchResultWith ({ fetchResult }) {
           }
         })
 
-        return of({ ...ctx, msgs, spawns })
+        const assigns = fetchedResult.Assignments.map(assign => {
+          return {
+            fromTxId: ctx.tx.id,
+            assign,
+            processId: ctx.tx.processId,
+            initialTxId: ctx.initialTxId
+          }
+        })
+
+        return of({ ...ctx, msgs, spawns, assigns })
       })
 }
 
@@ -43,14 +52,9 @@ export function pullResultWith (env) {
 
   return (ctx) => {
     return of(ctx)
-      .map(tap(() => ctx.tracer.trace('Fetching message result from SU')))
       .chain(fetchResult)
       .bichain(Resolved, Resolved)
       .map(ctxSchema.parse)
-      .map(logger.tap('Added "msgs and spawns" to ctx'))
-      .bimap(
-        tap(() => ctx.tracer.trace('Failed to fetch and cache message result')),
-        tap(() => ctx.tracer.trace('Fetched and cached message result'))
-      )
+      .map(logger.tap('Added "msgs, spawns, and assigns" to ctx'))
   }
 }
