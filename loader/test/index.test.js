@@ -206,4 +206,24 @@ describe('loader', async () => {
   //   //assert.equal(result.Error, 'Out of memory')
   //   assert.ok(true)
   // })
+
+  it('should handle Assignments', async () => {
+    const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
+    
+    // eslint-disable-next-line
+    const result = await handle(null,
+      { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Assignment' }], Data: '' },
+      { Process: { Id: '1', Tags: [] } }
+    )
+
+    assert.deepStrictEqual(
+      result.Output, 
+      [ 
+        { Processes: [ 'pid-1', 'pid-2' ], Message: 'mid-1' },
+        { Processes: [ 'pid-1', 'pid-2' ], Message: 'mid-2' } 
+      ]
+    )
+
+    assert.ok(true)
+  })
 })

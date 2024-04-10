@@ -143,6 +143,7 @@ The `Result` Object returns a Successful Result:
   Output,
   Messages,
   Spawns,
+  Assignments,
   GasUsed
 }
 ```

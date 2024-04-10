@@ -1,4 +1,8 @@
+
+
 local process = {_version = "0.0.1"}
+
+local _ao = require('ao')
 
 Log = {}
 Count = 0
@@ -26,6 +30,11 @@ function process.handle(msg, ao)
         p:close()
         return {Output = Files}
     end
+    if action == "Assignment" then 
+        ao.assign({ Processes = { 'pid-1', 'pid-2' }, Message = 'mid-1' })
+        ao.assign({ Processes = { 'pid-1', 'pid-2' }, Message = 'mid-2' })
+        return { Output = ao.outbox.Assignments }
+    end 
     while true do Count = Count + 1 end
 end
 

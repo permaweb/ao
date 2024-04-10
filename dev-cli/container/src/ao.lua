@@ -171,7 +171,6 @@ end
 function ao.assign(assignment)
     assert(type(assignment) == 'table', 'assignment should be a table')
     assert(type(assignment.Processes) == 'table', 'Processes should be a table')
-    assert.ok(#assignment.Processes > 0, "Processes should have at least one entry")
     assert(type(assignment.Message) == "string", "Message should be a string")
     table.insert(ao.outbox.Assignments, assignment)
 end
@@ -194,7 +193,8 @@ function ao.result(result)
     return {
         Output = result.Output or ao.outbox.Output,
         Messages = ao.outbox.Messages,
-        Spawns = ao.outbox.Spawns
+        Spawns = ao.outbox.Spawns,
+        Assignments = ao.outbox.Assignments
     }
 end
 
