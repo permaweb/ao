@@ -329,6 +329,8 @@ describe('ao-process', () => {
           ordinate: cachedEval.ordinate
         })
       })
+
+      test.todo('should omit the memory if omitMemory is received', async () => {})
     })
 
     describe('checkpoint cached in a file', () => {
@@ -425,6 +427,8 @@ describe('ao-process', () => {
 
         assert.deepStrictEqual(res.Memory, Memory)
       })
+
+      test.todo('should omit the memory if omitMemory is received', async () => {})
     })
 
     describe('checkpoint retrieved from the checkpoint gateway', () => {
@@ -643,6 +647,8 @@ describe('ao-process', () => {
 
         assert.deepStrictEqual(res.ordinate, '12')
       })
+
+      test.todo('should omit the memory if omitMemory is received', async () => {})
     })
 
     describe('cold start', () => {

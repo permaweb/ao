@@ -436,7 +436,9 @@ export function findProcessMemoryBeforeWith ({
       .chain(fromPromise(decodeData(checkpoint.encoding)))
   }
 
-  function maybeCached ({ processId, timestamp, ordinate, cron }) {
+  function maybeCached (args) {
+    const { processId, timestamp, ordinate, cron, omitMemory } = args
+
     return of(processId)
       .chain((processId) => {
         const cached = cache.get(processId)
@@ -448,7 +450,7 @@ export function findProcessMemoryBeforeWith ({
         if (
           !cached ||
           (timestamp && isLaterThan({ timestamp, ordinate, cron }, cached.evaluation))
-        ) return Rejected({ processId, timestamp, ordinate, cron })
+        ) return Rejected(args)
 
         logger(
           'MEMORY CHECKPOINT: Found Checkpoint in in-memory cache for process "%s" before message with parameters "%j": "%j"',
@@ -458,7 +460,10 @@ export function findProcessMemoryBeforeWith ({
         )
 
         return of(cached)
-          .chain(fromPromise((cached) => gunzipP(cached.Memory)))
+          .chain((cached) => {
+            if (omitMemory) return Resolved(null)
+            return of(cached).chain(fromPromise((cached) => gunzipP(cached.Memory)))
+          })
           /**
            * Finally map the Checkpoint to the expected shape
            */
@@ -472,13 +477,15 @@ export function findProcessMemoryBeforeWith ({
       })
   }
 
-  function maybeFile ({ processId, timestamp, ordinate, cron }) {
+  function maybeFile (args) {
+    const { processId, timestamp, ordinate, cron, omitMemory } = args
+
     /**
      * Attempt to find the lastest checkpoint in a file before the parameters
      */
     return findCheckpointFileBefore({ processId, timestamp, ordinate, cron })
       .chain((latest) => {
-        if (!latest) return Rejected({ processId, timestamp, ordinate, cron })
+        if (!latest) return Rejected(args)
 
         logger(
           'FILE CHECKPOINT: Found Checkpoint for process "%s", before "%j", on Filesystem, with parameters "%j"',
@@ -496,7 +503,10 @@ export function findProcessMemoryBeforeWith ({
           .chain(readCheckpointFile)
           .chain((checkpoint) =>
             of(checkpoint.Memory)
-              .chain(downloadCheckpointFromArweave)
+              .chain((id) => {
+                if (omitMemory) return Resolved(null)
+                return downloadCheckpointFromArweave(id)
+              })
               /**
                * Finally map the Checkpoint to the expected shape
                */
@@ -516,7 +526,7 @@ export function findProcessMemoryBeforeWith ({
                     { checkpointTxId: checkpoint.id, ...checkpoint },
                     err
                   )
-                  return { processId, timestamp, ordinate, cron }
+                  return args
                 },
                 identity
               )
@@ -524,11 +534,12 @@ export function findProcessMemoryBeforeWith ({
       })
   }
 
-  function maybeCheckpointFromArweave ({ processId, timestamp, ordinate, cron }) {
+  function maybeCheckpointFromArweave (args) {
+    const { processId, timestamp, ordinate, cron, omitMemory } = args
+
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
       logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query gateway...', processId)
-      return of({ processId, timestamp, ordinate, cron })
-        .chain(Rejected)
+      return Rejected(args)
     }
 
     return address()
@@ -543,7 +554,7 @@ export function findProcessMemoryBeforeWith ({
       .map(path(['data', 'transactions', 'edges']))
       .map(determineLatestCheckpointBefore({ timestamp, ordinate, cron }))
       .chain((latestCheckpoint) => {
-        if (!latestCheckpoint) return Rejected({ processId, timestamp, ordinate, cron })
+        if (!latestCheckpoint) return Rejected(args)
 
         logger(
           'ARWEAVE CHECKPOINT: Found Checkpoint for process "%s", before "%j", on Arweave, with parameters "%j"',
@@ -556,7 +567,11 @@ export function findProcessMemoryBeforeWith ({
          * We have found a Checkpoint that we can use, so
          * now let's load the snapshotted Memory from arweave
          */
-        return downloadCheckpointFromArweave(latestCheckpoint)
+        return of()
+          .chain(() => {
+            if (omitMemory) return Resolved(null)
+            return downloadCheckpointFromArweave(latestCheckpoint)
+          })
           /**
            * Finally map the Checkpoint to the expected shape
            */
@@ -580,7 +595,7 @@ export function findProcessMemoryBeforeWith ({
                 { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint },
                 err
               )
-              return { processId, timestamp, ordinate, cron }
+              return args
             },
             identity
           )
@@ -616,8 +631,8 @@ export function findProcessMemoryBeforeWith ({
     })
   }
 
-  return ({ processId, timestamp, ordinate, cron }) =>
-    of({ processId, timestamp, ordinate, cron })
+  return ({ processId, timestamp, ordinate, cron, omitMemory = false }) =>
+    of({ processId, timestamp, ordinate, cron, omitMemory })
       .chain(maybeCached)
       .bichain(maybeFile, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
