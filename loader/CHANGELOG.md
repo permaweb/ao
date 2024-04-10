@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.25](https://github.com/permaweb/ao/compare/loader@v0.0.24...loader@v0.0.25) (2024-04-10)
+
+
+### Features
+
+* **dev-cli:** add assignment support to ao.lua [#598](https://github.com/permaweb/ao/issues/598) ([5a04dda](https://github.com/permaweb/ao/commit/5a04dda5490137af1a298157bf4ee6cc094859ac))
+
+
+### Bug Fixes
+
+* **dev-cli:** remove unused import [#598](https://github.com/permaweb/ao/issues/598) ([089a142](https://github.com/permaweb/ao/commit/089a1423a108cf5e9ef38fc8f62cef9df73a27bf))
+* **loader:** fix unit test [#598](https://github.com/permaweb/ao/issues/598) ([042f728](https://github.com/permaweb/ao/commit/042f728672f60a4475120aec3927b6ca6dbf3701))
+
 ## [0.0.24](https://github.com/permaweb/ao/compare/loader@v0.0.23...loader@v0.0.24) (2024-04-04)
 
 
