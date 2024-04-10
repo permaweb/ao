@@ -187,7 +187,7 @@ describe('loader', async () => {
         { Process: { Id: '1', Tags: [] } }
       )
     } catch (e) {
-      assert.equal(e, '[string ".process"]:47: \'popen\' not supported')
+      assert.equal(e, '[string ".process"]:51: \'popen\' not supported')
       assert.ok(true)
     }
 
