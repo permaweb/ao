@@ -2,8 +2,6 @@
 
 local process = {_version = "0.0.1"}
 
-local _ao = require('ao')
-
 Log = {}
 Count = 0
 
