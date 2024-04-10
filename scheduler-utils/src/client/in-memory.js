@@ -52,6 +52,6 @@ export function getByOwnerWith ({ cache = internalCache }) {
 export function setByOwnerWith ({ cache = internalCache }) {
   return async (owner, url, ttl) => {
     if (!internalSize) return
-    return cache.set(owner, { url, address: owner }, { ttl })
+    return cache.set(owner, { url, owner, ttl }, { ttl })
   }
 }
