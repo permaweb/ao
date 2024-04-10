@@ -29,7 +29,13 @@ export function locateWith ({
            */
           if (schedulerHint) {
             const byOwner = await cache.getByOwner(schedulerHint)
-            if (byOwner) return byOwner
+            if (byOwner) {
+              return {
+                url: byOwner.url,
+                owner: byOwner.owner,
+                ttl: byOwner.ttl
+              }
+            }
 
             return loadScheduler(schedulerHint).then((scheduler) => {
               cache.setByOwner(scheduler.owner, scheduler.url, scheduler.ttl)
@@ -40,7 +46,6 @@ export function locateWith ({
           return loadProcessScheduler(process)
         })
         .then(async (scheduler) => {
-          console.log('scheduler', scheduler)
           let finalUrl = scheduler.url
           /**
            * If following redirects, then the initial request will be
@@ -49,10 +54,7 @@ export function locateWith ({
            */
           if (followRedirects) { finalUrl = await checkForRedirect(scheduler.url, process) }
 
-          const byProcess = {
-            url: finalUrl,
-            address: scheduler.owner
-          }
+          const byProcess = { url: finalUrl, address: scheduler.owner }
           await cache.setByProcess(process, byProcess, scheduler.ttl)
           return byProcess
         })
