@@ -28,6 +28,21 @@ const Emscripten2 = require('./formats/emscripten2.cjs')
  */
 
 /**
+ * @namespace AssignmentTypes
+ */
+
+/**
+ * @typedef {Object} AssignmentTypes.Message
+ * @property {string} content
+ */
+
+/**
+ * @typedef {Object} AssignmentTypes.Assignment
+ * @property {string[]} Processes
+ * @property {string} Message
+ */
+
+/**
  * @typedef Environment
  * @property {{id: string, owner: string, tags: Tag[]}} process
  */
@@ -38,6 +53,7 @@ const Emscripten2 = require('./formats/emscripten2.cjs')
  * @property {DataItem} Output
  * @property {Message[]} Messages
  * @property {Message[]} Spawns
+ * @property {AssignmentTypes.Assignment[]} Assignments
  */
 
 /**
