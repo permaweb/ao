@@ -15,6 +15,7 @@ import { processSpawnWith } from './api/processSpawn.js'
 import { monitorProcessWith } from './api/monitorProcess.js'
 import { stopMonitorProcessWith } from './api/stopMonitorProcess.js'
 import { sendDataItemWith } from './api/sendDataItem.js'
+import { sendAssignWith } from './api/sendAssign.js'
 import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
@@ -102,6 +103,16 @@ export const createApis = (ctx) => {
     logger: sendDataItemLogger
   })
 
+  const sendAssignLogger = logger.child('sendAssign')
+  const sendAssign = sendAssignWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
+    locateProcess: locate,
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: processAssignLogger }),
+    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
+    crank: crankMsgs,
+    logger: sendAssignLogger
+  })
+
   const monitorProcessLogger = logger.child('monitorProcess')
   const monitorProcess = monitorProcessWith({
     startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger }),
@@ -116,5 +127,5 @@ export const createApis = (ctx) => {
     logger: monitorProcessLogger
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess, stopMonitorProcess }
+  return { sendDataItem, crankMsgs, monitorProcess, stopMonitorProcess, sendAssign }
 }

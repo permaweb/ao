@@ -62,10 +62,10 @@ export function sendDataItemWith ({
           crank: () => of({ ...res, initialTxId: res.tx.id })
             .chain(getCuAddress)
             .chain(pullResult)
-            .chain(({ msgs, spawns, initialTxId }) => crank({
-              message,
+            .chain(({ msgs, spawns, assigns, initialTxId }) => crank({
               msgs,
               spawns,
+              assigns,
               initialTxId
             }))
             .bimap(

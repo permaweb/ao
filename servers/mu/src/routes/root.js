@@ -16,41 +16,65 @@ const withMessageRoutes = (app) => {
         const {
           body,
           logger: _logger,
-          domain: { apis: { sendDataItem } }
+          domain: { apis: { sendDataItem, sendAssign } },
+          query: { 'process-id': processId, assign }
         } = req
 
         const logger = _logger.child('POST_root')
 
-        const inputSchema = z.object({
-          body: z.any().refine(
-            async (val) => DataItem.verify(val).catch((err) => {
-              logger('Error verifying DataItem', err)
-              return false
-            }),
-            { message: 'A valid and signed data item must be provided as the body' }
-          )
-        })
-
-        const input = await inputSchema.parseAsync({ body })
-
-        /**
-         * Forward the DataItem
-         */
-        await of({ raw: input.body })
-          .chain(sendDataItem)
-          .bimap(
-            logger.tap('Failed to send the DataItem'),
-            logger.tap('Successfully sent DataItem. Beginning to crank...')
-          )
-          .chain(({ tx, crank: crankIt }) => {
-            /**
-             * Respond to the client after the initial data item has been forwarded,
-             * then transparently continue cranking its results
-             */
-            res.status(202).send({ message: 'Processing DataItem', id: tx.id })
-            return crankIt()
+        if ((processId && !assign) || (!processId && assign)) {
+          res.status(400).send({ error: 'You must set both process-id and assign to send an assignment, not just one' })
+        } else if (processId && assign) {
+          /**
+           * Forward the Assignment
+           */
+          await of({ assign: { processId, txId: assign } })
+            .chain(sendAssign)
+            .bimap(
+              logger.tap('Failed to send the Assignment'),
+              logger.tap('Successfully sent Assignment. Beginning to crank...')
+            )
+            .chain(({ tx, crank: crankIt }) => {
+              /**
+               * Respond to the client after the initial data item has been forwarded,
+               * then transparently continue cranking its results
+               */
+              res.status(202).send({ message: 'Processing Assignment', id: tx.id })
+              return crankIt()
+            })
+            .toPromise()
+        } else {
+          const inputSchema = z.object({
+            body: z.any().refine(
+              async (val) => DataItem.verify(val).catch((err) => {
+                logger('Error verifying DataItem', err)
+                return false
+              }),
+              { message: 'A valid and signed data item must be provided as the body' }
+            )
           })
-          .toPromise()
+
+          const input = await inputSchema.parseAsync({ body })
+
+          /**
+           * Forward the DataItem
+           */
+          await of({ raw: input.body })
+            .chain(sendDataItem)
+            .bimap(
+              logger.tap('Failed to send the DataItem'),
+              logger.tap('Successfully sent DataItem. Beginning to crank...')
+            )
+            .chain(({ tx, crank: crankIt }) => {
+              /**
+               * Respond to the client after the initial data item has been forwarded,
+               * then transparently continue cranking its results
+               */
+              res.status(202).send({ message: 'Processing DataItem', id: tx.id })
+              return crankIt()
+            })
+            .toPromise()
+        }
       })
     )()
   )

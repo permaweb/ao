@@ -7,7 +7,8 @@ const ctxSchema = z.object({
     data: z.any(),
     processId: z.string()
   }),
-  schedLocation: z.any().nullable()
+  schedLocation: z.any().nullable(),
+  tagAssignments: z.any()
 }).passthrough()
 
 export function buildTxWith (env) {
@@ -36,33 +37,58 @@ export function buildTxWith (env) {
             later use in the pipeline
           */
           return fetchSchedulerProcess(ctx.cachedMsg.processId, scheduler.url)
-            .map((schedulerResult) => ({ schedLocation: scheduler, schedData: schedulerResult }))
+            .map((schedulerResult) => ({
+              schedLocation: scheduler,
+              schedData: schedulerResult
+            }))
         }
       )
       .map((res) => {
         const tagsIn = [
           ...ctx.cachedMsg.msg.Tags?.filter((tag) => {
-            return !['Data-Protocol', 'Type', 'Variant', 'From-Process', 'From-Module'].includes(tag.name)
+            return ![
+              'Data-Protocol',
+              'Type',
+              'Variant',
+              'From-Process',
+              'From-Module',
+              'Assignments'
+            ].includes(tag.name)
           }) ?? [],
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'From-Process', value: ctx.cachedMsg.processId },
-          { name: 'From-Module', value: res.schedData.tags.find((t) => t.name === 'Module')?.value ?? '' }
+          {
+            name: 'From-Module',
+            value: res.schedData.tags.find((t) => t.name === 'Module')?.value ?? ''
+          }
         ]
         if (ctx.cachedMsg.initialTxId) {
           tagsIn.push({ name: 'Pushed-For', value: ctx.cachedMsg.initialTxId })
         }
-        return { tags: tagsIn, scheduler: res.schedLocation }
+        const assignmentsTag = ctx.cachedMsg.msg.Tags?.find(tag => tag.name === 'Assignments')
+        const tagAssignments = assignmentsTag ? JSON.parse(assignmentsTag.value) : []
+        return {
+          tags: tagsIn,
+          scheduler: res.schedLocation,
+          tagAssignments
+        }
       })
       .chain(
-        ({ tags, schedLocation }) => buildAndSign({
+        ({ tags, schedLocation, tagAssignments }) => buildAndSign({
           processId: ctx.cachedMsg.msg.Target,
           tags,
           anchor: ctx.cachedMsg.msg.Anchor,
           data: ctx.cachedMsg.msg.Data
         })
-          .map((tx) => { return { tx, schedLocation } })
+          .map((tx) => {
+            return {
+              tx,
+              schedLocation,
+              tagAssignments
+            }
+          })
       )
       .map((res) => {
         // add tx and schedLocation to the result

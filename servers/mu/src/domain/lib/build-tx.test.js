@@ -47,7 +47,9 @@ describe('buildTx', () => {
       cachedMsg: {
         msg: {
           Target: 'id-1',
-          Tags: [],
+          Tags: [
+            { name: 'Assignments', value: '[{"Processes":["p2"],"Message":"m2"}]' }
+          ],
           Anchor: 'anchor-1',
           Data: 'data-1'
         },
@@ -56,5 +58,6 @@ describe('buildTx', () => {
     }).toPromise()
 
     assert.equal(result.tx.processId, 'id-1')
+    assert.deepStrictEqual(result.tagAssignments, [{ Processes: ['p2'], Message: 'm2' }])
   })
 })

@@ -40,10 +40,13 @@ describe('pullResultWith', () => {
         id: 'id-1',
         processId: 'pid-1'
       },
-      initialTxId: 'i-1'
+      initialTxId: 'i-1',
+      tagAssignments: [{ Processes: ['p2'], Message: 'm2' }]
     }).toPromise()
 
     assert.deepStrictEqual(result.msgs[0], cachedMsg1)
     assert.deepStrictEqual(result.spawns[0], cachedSpawn1)
+    assert.deepStrictEqual(result.assigns[0], assign1)
+    assert.deepStrictEqual(result.assigns[1], { Processes: ['p2'], Message: 'm2' })
   })
 })
