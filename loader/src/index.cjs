@@ -127,6 +127,7 @@ module.exports = async function (binary, options) {
         Output: response.Output,
         Messages: response.Messages,
         Spawns: response.Spawns,
+        Assignments: response.Assignments,
         GasUsed: instance.gas.used
       }
     } finally {
