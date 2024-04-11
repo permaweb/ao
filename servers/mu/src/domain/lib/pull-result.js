@@ -32,14 +32,16 @@ function fetchResultWith ({ fetchResult }) {
           }
         })
 
-        const assigns = fetchedResult.Assignments.map(assign => {
-          return {
-            fromTxId: ctx.tx.id,
-            assign,
-            processId: ctx.tx.processId,
-            initialTxId: ctx.initialTxId
-          }
-        })
+        /*
+          we have to concat on any assignments that
+          come from the Assignments tag, so they get
+          returned in the final result and picked up
+          by the crank
+        */
+        const assigns = ctx.tagAssignments
+          ? fetchedResult.Assignments
+            .concat(ctx.tagAssignments)
+          : fetchedResult.Assignments
 
         return of({ ...ctx, msgs, spawns, assigns })
       })
