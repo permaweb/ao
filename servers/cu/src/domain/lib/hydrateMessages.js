@@ -7,7 +7,6 @@ import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { messageSchema, streamSchema } from '../model.js'
-import { findRawTag } from '../utils.js'
 
 const { createData } = WarpArBundles
 
@@ -130,43 +129,6 @@ export function maybeMessageIdWith ({ logger }) {
   }
 }
 
-/**
- * @deprecated Load messages will be replaced by Assignments of on-chain messages.
- * Keeping code here, to be deactivated at block AO_LOAD_MAX_BLOCK
- */
-export function maybeAoLoadWith ({ loadTransactionData, loadTransactionMeta, AO_LOAD_MAX_BLOCK, logger }) {
-  const loadFromChain = loadFromChainWith({ loadTransactionData, loadTransactionMeta })
-
-  return async function * maybeAoLoad (messages) {
-    for await (const cur of messages) {
-      const tag = findRawTag('Load', cur.message.Tags)
-      /**
-       * Either a cron message or not an ao-load message, so no work is needed
-       */
-      if (!tag || cur.message.Cron) { yield cur; continue }
-
-      /**
-       * TODO: should this use the actual current block height,
-       * or the block height at the time of scheduling (which is what is currently being checked)
-       */
-      if (cur.block.height >= AO_LOAD_MAX_BLOCK) {
-        logger(
-          'Load message "%s" scheduled after block %d. Removing message from eval stream and skipping...',
-          cur.message.name,
-          AO_LOAD_MAX_BLOCK
-        )
-        continue
-      }
-      /**
-       * set as 'data' on the ao-load message
-       */
-      cur.message.Data = await loadFromChain(tag.value, true)
-
-      yield cur
-    }
-  }
-}
-
 export function maybeAoAssignmentWith ({ loadTransactionData, loadTransactionMeta }) {
   const loadFromChain = loadFromChainWith({ loadTransactionData, loadTransactionMeta })
 
@@ -210,7 +172,6 @@ export function hydrateMessagesWith (env) {
   env = { ...env, logger }
 
   const maybeMessageId = maybeMessageIdWith(env)
-  const maybeAoLoad = maybeAoLoadWith(env)
   const maybeAoAssignment = maybeAoAssignmentWith(env)
 
   return (ctx) => {
@@ -243,7 +204,6 @@ export function hydrateMessagesWith (env) {
           $messages,
           composeStreams(
             Transform.from(maybeMessageId),
-            Transform.from(maybeAoLoad),
             Transform.from(maybeAoAssignment),
             // Ensure every message emitted satisfies the schema
             Transform.from(async function * (messages) {
