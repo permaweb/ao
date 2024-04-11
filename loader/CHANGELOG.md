@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.26](https://github.com/permaweb/ao/compare/loader@v0.0.25...loader@v0.0.26) (2024-04-11)
+
+
+### Bug Fixes
+
+* **loader:** add Assignments to loader return shape ([ff46dc6](https://github.com/permaweb/ao/commit/ff46dc6874feeaff4124a9d3e30510cc49d2fab3))
+
 ## [0.0.25](https://github.com/permaweb/ao/compare/loader@v0.0.24...loader@v0.0.25) (2024-04-10)
 
 
