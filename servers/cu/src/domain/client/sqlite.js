@@ -1,4 +1,7 @@
+import { stat } from 'node:fs'
+
 import Database from 'better-sqlite3'
+import bytes from 'bytes'
 
 export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE] = [
   'processes',
@@ -66,11 +69,19 @@ const createEvaluationIndexes = async (db) => db.prepare(
 ).run()
 
 let internalSqliteDb
-export async function createSqliteClient ({ url }) {
+export async function createSqliteClient ({ url, walLimit = bytes.parse('100mb') }) {
   if (internalSqliteDb) return internalSqliteDb
 
   const db = Database(url)
   db.pragma('encoding = "UTF-8"')
+  db.pragma('journal_mode = WAL')
+  /**
+   * https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md#checkpoint-starvation
+   */
+  setInterval(stat.bind(null, `${url}-wal`, (err, stat) => {
+    if (err && err.code !== 'ENOENT') throw err
+    if (stat && stat.size > walLimit) db.pragma('wal_checkpoint(RESTART)')
+  }), 5000).unref()
 
   await Promise.resolve()
     .then(() => createProcesses(db))
