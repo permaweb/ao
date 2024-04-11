@@ -40,32 +40,6 @@ describe('ao-su', () => {
       }
     }
 
-    test('should map the legacy shape', () => {
-      const res = mapNode({
-        message: {
-          id: messageId,
-          tags: [{ name: 'Foo', value: 'Bar' }],
-          signature: 'sig-123',
-          anchor: '00000000123'
-        },
-        block: '000000000123',
-        owner: {
-          address: 'owner-123',
-          key: 'key-123'
-        },
-        process_id: 'process-123',
-        data: 'data-123',
-        epoch: 0,
-        nonce: 23,
-        timestamp: now,
-        hash_chain: 'hash-123'
-      })
-      assert.deepStrictEqual(
-        withoutAoGlobal.parse(res),
-        withoutAoGlobal.parse(expected)
-      )
-    })
-
     test('should map the current shape', () => {
       const res = mapNode({
         message: {
@@ -154,36 +128,6 @@ describe('ao-su', () => {
                   { name: 'Timestamp', value: '12345' }
                 ]
               }
-            }))
-          }
-        })
-      )
-
-      const res = await loadMessageMeta({
-        suUrl: 'https://foo.bar',
-        processId: 'process-123',
-        messageTxId: 'message-tx-123'
-      })
-
-      assert.deepStrictEqual(res, {
-        processId: 'process-123',
-        timestamp: 12345,
-        nonce: 3
-      })
-    })
-
-    test('return the message meta from legacy shape', async () => {
-      const loadMessageMeta = loadMessageMetaSchema.implement(
-        loadMessageMetaWith({
-          fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
-            assert.deepStrictEqual(options, { method: 'GET' })
-
-            // legacy response shape from SU call
-            return new Response(JSON.stringify({
-              process_id: 'process-123',
-              timestamp: 12345,
-              nonce: 3
             }))
           }
         })

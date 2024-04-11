@@ -5,62 +5,10 @@ import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, me
 
 import { mapForwardedBy, mapFrom, parseTags } from '../utils.js'
 
-const legacyNodeMap = applySpec({
-  cron: always(undefined),
-  /**
-   * Set the ordinate to the message's nonce value
-   */
-  ordinate: path(['nonce']),
-  name: (node) => `Scheduled Message ${node.message.id} ${node.timestamp}:${node.nonce}`,
-  message: applySpec({
-    Id: path(['message', 'id']),
-    Signature: path(['message', 'signature']),
-    /**
-     * SU currently has this outside of message, but we will place it inside message
-     * as that seems more kosher (since its part of the message)
-     */
-    Data: pathOr(undefined, ['data']),
-    Owner: path(['owner', 'address']),
-    Target: path(['process_id']),
-    Anchor: path(['message', 'anchor']),
-    From: (node) => mapFrom({ tags: node.message.tags, owner: node.owner.address }),
-    'Forwarded-By': (node) => mapForwardedBy({ tags: node.message.tags, owner: node.owner.address }),
-    Tags: pathOr([], ['message', 'tags']),
-    Epoch: path(['epoch']),
-    Nonce: path(['nonce']),
-    Timestamp: path(['timestamp']),
-    'Block-Height': pipe(
-      /**
-       * Returns a left padded integer like '000001331218'
-       *
-       * So use parseInt to convert it into a number
-       */
-      path(['block']),
-      (str) => parseInt(`${str}`)
-    ),
-    'Hash-Chain': path(['hash_chain']),
-    Cron: always(false)
-  }),
-  /**
-   * We need the block metadata per message,
-   * so that we can calculate cron messages
-   *
-   * Separating them here, makes it easier to access later
-   * down the pipeline
-   */
-  block: applySpec({
-    height: pipe(
-      path(['block']),
-      (block) => parseInt(block)
-    ),
-    timestamp: path(['timestamp'])
-  })
-})
-
 /**
  * See new shape in https://github.com/permaweb/ao/issues/563#issuecomment-2020597581
  */
-const nodeMap = pipe(
+export const mapNode = pipe(
   juxt([
     // fromAssignment
     pipe(
@@ -137,21 +85,6 @@ const nodeMap = pipe(
       timestamp: fAssignment.Timestamp
     }
   })
-)
-
-export const mapNode = ifElse(
-  /**
-   * The new shape returned from the SU will have { assignment, message }
-   * where as the old shape only has { message }
-   *
-   * So we check whether the node has an assignment field, and use the new mapper
-   * in that case, falling back to the legacy shape. This allows for seamlessly using the
-   * new mapper, whenever the new shape is live on the SUs. In other words, both shapes
-   * can be live, simoultaneously.
-   */
-  has('assignment'),
-  nodeMap,
-  legacyNodeMap
 )
 
 export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
@@ -240,8 +173,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         yield pipe(
           prop('node'),
           /**
-           * Map to the expected shape, depending on the response shape
-           * See https://github.com/permaweb/ao/issues/563
+           * Map to the expected shape
            */
           mapNode,
           (scheduled) => {
