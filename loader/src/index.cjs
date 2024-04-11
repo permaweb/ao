@@ -32,14 +32,17 @@ const Emscripten2 = require('./formats/emscripten2.cjs')
  */
 
 /**
- * @typedef {Object} AssignmentTypes.Message
- * @property {string} content
+ * @typedef {string} AssignmentTypes.Message
+ */
+
+/**
+ * @typedef {string[]} AssignmentTypes.Processes
  */
 
 /**
  * @typedef {Object} AssignmentTypes.Assignment
- * @property {string[]} Processes
- * @property {string} Message
+ * @property {AssignmentTypes.Processes} Processes
+ * @property {AssignmentTypes.Message} Message
  */
 
 /**
