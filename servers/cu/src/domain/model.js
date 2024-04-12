@@ -131,7 +131,12 @@ export const domainConfigSchema = z.object({
    * A list of process ids that the CU should restrict
    * aka. blacklist
    */
-  RESTRICT_PROCESSES: commaDelimitedArraySchema
+  RESTRICT_PROCESSES: commaDelimitedArraySchema,
+  /**
+   * A list of process ids that the CU should exclusively allow
+   * aka. whitelist
+   */
+  ALLOW_PROCESSES: commaDelimitedArraySchema
 })
 
 export const streamSchema = z.any().refine(stream => {

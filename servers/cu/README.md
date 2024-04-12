@@ -89,6 +89,8 @@ for quick retrieval later (Defaults to the os temp directory)
   usage on this CU.
 - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for a process evaluation stream to complete before sending a "busy" respond to the client (defaults to `0s` ie. disabled). If disabled, this could cause the CU to maintain long-open connections with clients until it completes long process evaluation streams.
 - `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a `blacklist`
+- `ALLOW_PROCESSES`: The counterpart to RESTRICT_PROCESSES. When configured the CU will 
+   only execute these processes (`whitelist`)
 
 ## Tests
 
