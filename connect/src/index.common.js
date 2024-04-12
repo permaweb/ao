@@ -13,6 +13,7 @@ import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 import { resultsWith } from './lib/results/index.js'
 import { dryrunWith } from './lib/dryrun/index.js'
+import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
 
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
@@ -153,5 +154,18 @@ export function connect ({
     logger: dryrunLogger
   })
 
-  return { result, results, message, spawn, monitor, unmonitor, dryrun }
+  /**
+   * POSTs an Assignment to the MU
+   */
+  const assignLogger = logger.child('assign')
+  const assign = assignWith({
+    deployAssign: MuClient.deployAssignWith({
+      fetch,
+      MU_URL,
+      logger: assignLogger
+    }),
+    logger: messageLogger
+  })
+
+  return { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
 }

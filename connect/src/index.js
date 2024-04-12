@@ -7,9 +7,9 @@ const MU_URL = process.env.MU_URL || undefined
 const CU_URL = process.env.CU_URL || undefined
 const GRAPHQL_URL = process.env.GRAPHQL_URL || undefined
 
-const { result, results, message, spawn, monitor, unmonitor, dryrun } = connect({ GATEWAY_URL, MU_URL, CU_URL, GRAPHQL_URL })
+const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = connect({ GATEWAY_URL, MU_URL, CU_URL, GRAPHQL_URL })
 
-export { result, results, message, spawn, monitor, unmonitor, dryrun }
+export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
 export { connect }
 
 /**
