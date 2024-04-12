@@ -86,7 +86,7 @@ export function buildTxWith (env) {
             return {
               tx,
               schedLocation,
-              tagAssignments
+              tagAssignments: tagAssignments.length > 0 ? [{ Processes: tagAssignments, Message: tx.id }] : []
             }
           })
       )

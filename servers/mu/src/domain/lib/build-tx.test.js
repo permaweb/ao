@@ -48,7 +48,7 @@ describe('buildTx', () => {
         msg: {
           Target: 'id-1',
           Tags: [
-            { name: 'Assignments', value: '[{"Processes":["p2"],"Message":"m2"}]' }
+            { name: 'Assignments', value: '["p1", "p2"]' }
           ],
           Anchor: 'anchor-1',
           Data: 'data-1'
@@ -58,6 +58,6 @@ describe('buildTx', () => {
     }).toPromise()
 
     assert.equal(result.tx.processId, 'id-1')
-    assert.deepStrictEqual(result.tagAssignments, [{ Processes: ['p2'], Message: 'm2' }])
+    assert.deepStrictEqual(result.tagAssignments, [{ Processes: ['p1', 'p2'], Message: 'id-1' }])
   })
 })
