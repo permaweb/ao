@@ -85,6 +85,7 @@ export const createApis = async (ctx) => {
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
+  ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
 
   const stats = statsWith({
     loadWorkerStats: () => workerPool.stats(),
