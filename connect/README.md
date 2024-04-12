@@ -199,6 +199,19 @@ const result = await dryrun({
 console.log(result.Messages[0]);
 ```
 
+#### `assign`
+
+Create an Assignment for an `ao` process
+
+```js
+import { assign } from "@permaweb/aoconnect";
+
+const processId = await assign({
+  process: 'process-id',
+  message: 'message-id'
+});
+```
+
 #### Environment Variables
 
 The library also allows configuring ao components described above, using

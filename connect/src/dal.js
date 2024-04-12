@@ -73,6 +73,17 @@ export const deployProcessSchema = z.function()
     }).passthrough()
   ))
 
+export const deployAssignSchema = z.function()
+  .args(z.object({
+    process: z.string(),
+    message: z.string()
+  }))
+  .returns(z.promise(
+    z.object({
+      assignmentId: z.string()
+    }).passthrough()
+  ))
+
 /**
  * Same contract shape
  */
