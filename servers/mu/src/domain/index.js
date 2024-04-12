@@ -79,6 +79,7 @@ export const createApis = (ctx) => {
   const processAssign = processAssignWith({
     logger: processSpawnLogger,
     locateProcess: locate,
+    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processAssignLogger }),
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: processAssignLogger })
   })
 
