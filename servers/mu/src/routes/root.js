@@ -82,6 +82,21 @@ const withMessageRoutes = (app) => {
   return app
 }
 
+const withBaseRoute = (app) => {
+  app.get(
+    '/',
+    compose(
+      withMiddleware,
+      always(async (_req, res) => {
+        return res.send('ao messenger unit')
+      })
+    )()
+  )
+
+  return app
+}
+
 export const withRootRoutes = pipe(
-  withMessageRoutes
+  withMessageRoutes,
+  withBaseRoute
 )
