@@ -120,12 +120,23 @@ impl<'a> Builder<'a> {
     }
 
     // Build a bundle containing only an assignment DataItem
-    pub async fn build_assignment(&self, message_id: String, process_id: String, schedule_info: &dyn ScheduleProvider) -> Result<BuildResult, BuilderErrorType> {
-        match self.gen_assignment(message_id.clone(), process_id.clone(), schedule_info).await {
-            // bundle only the assignment
-            Ok(a) => self.bundle_items(vec![a]).await,
-            Err(e) => Err(e)
+    pub async fn build_assignment(
+        &self, 
+        message_id: String, 
+        process_id: String, 
+        schedule_info: &dyn ScheduleProvider
+    ) -> Result<BuildResult, BuilderErrorType> {
+        match self.verifier.verify_assignment(&message_id, &process_id).await {
+            Ok(_) => {
+                match self.gen_assignment(message_id.clone(), process_id.clone(), schedule_info).await {
+                    // bundle only the assignment
+                    Ok(a) => self.bundle_items(vec![a]).await,
+                    Err(e) => Err(e)
+                }
+            },
+            Err(e) => Err(BuilderErrorType::from(e))
         }
+        
     }
 
     // Build a bundle containing both an assignment and message DataItem
@@ -146,7 +157,6 @@ impl<'a> Builder<'a> {
         self.logger.log(format!("target - {}", &item.target()));
         self.logger.log(format!("tags - {:?}", &item.tags()));
         
-        self.verifier.verify_data_item(&item).await?;
         self.logger.log(format!("verified data item id - {}", &item.id()));
 
         let network_info = self.gateway.network_info().await?;
