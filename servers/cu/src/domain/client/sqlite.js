@@ -3,11 +3,12 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE] = [
+export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE] = [
   'processes',
   'blocks',
   'modules',
-  'evaluations'
+  'evaluations',
+  'messages'
 ]
 
 const createProcesses = async (db) => db.prepare(
@@ -49,27 +50,36 @@ const createEvaluations = async (db) => db.prepare(
     timestamp INTEGER,
     ordinate TEXT,
     blockHeight INTEGER,
-    cron BOOLEAN,
+    cron TEXT,
     output JSONB,
     evaluatedAt INTEGER
   ) WITHOUT ROWID;`
 ).run()
 
+const createMessages = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${MESSAGES_TABLE}(
+    id TEXT,
+    processId TEXT,
+    seq TEXT,
+    PRIMARY KEY (id, processId)
+  ) WITHOUT ROWID;`
+).run()
+
 const createBlocksIndexes = async (db) => db.prepare(
-  `CREATE INDEX IF NOT EXISTS idx_blocks_height_timestamp
+  `CREATE INDEX IF NOT EXISTS idx_${BLOCKS_TABLE}_height_timestamp
     ON ${BLOCKS_TABLE}
     (height, timestamp);`
 ).run()
 
-const createEvaluationIndexes = async (db) => db.prepare(
-  `CREATE INDEX IF NOT EXISTS idx_evaluations_deepHash_id
-    ON ${EVALUATIONS_TABLE}
-    (deepHash, id);
+const createMessagesIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${MESSAGES_TABLE}_id_processId_seq
+    ON ${MESSAGES_TABLE}
+    (id, processId, seq);
   `
 ).run()
 
 let internalSqliteDb
-export async function createSqliteClient ({ url, walLimit = bytes.parse('100mb') }) {
+export async function createSqliteClient ({ url, bootstrap = false, walLimit = bytes.parse('100mb') }) {
   if (internalSqliteDb) return internalSqliteDb
 
   const db = Database(url)
@@ -83,17 +93,23 @@ export async function createSqliteClient ({ url, walLimit = bytes.parse('100mb')
     if (stat && stat.size > walLimit) db.pragma('wal_checkpoint(RESTART)')
   }), 5000).unref()
 
-  await Promise.resolve()
-    .then(() => createProcesses(db))
-    .then(() => createBlocks(db))
-    .then(() => createModules(db))
-    .then(() => createEvaluations(db))
-    .then(() => createBlocksIndexes(db))
-    .then(() => createEvaluationIndexes(db))
+  if (bootstrap) {
+    await Promise.resolve()
+      .then(() => createProcesses(db))
+      .then(() => createBlocks(db))
+      .then(() => createModules(db))
+      .then(() => createEvaluations(db))
+      .then(() => createMessages(db))
+      .then(() => createBlocksIndexes(db))
+      .then(() => createMessagesIndexes(db))
+  }
 
   return {
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
     run: async ({ sql, parameters }) => db.prepare(sql).run(...parameters),
+    transaction: async (statements) => db.transaction(
+      (statements) => statements.map(({ sql, parameters }) => db.prepare(sql).run(...parameters))
+    )(statements),
     db
   }
 }

@@ -56,7 +56,7 @@ export const createApis = async (ctx) => {
     cacheKeyFn: ({ processId }) => processId
   })
 
-  const sqlite = await SqliteClient.createSqliteClient({ url: `${ctx.DB_URL}.sqlite` })
+  const sqlite = await SqliteClient.createSqliteClient({ url: `${ctx.DB_URL}.sqlite`, bootstrap: true })
 
   const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
     maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
