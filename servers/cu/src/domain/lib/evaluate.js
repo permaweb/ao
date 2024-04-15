@@ -4,7 +4,7 @@ import { always, applySpec, evolve, identity, mergeLeft, mergeRight, pathOr, pip
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { evaluatorSchema, findMessageHashBeforeSchema, saveEvaluationSchema } from '../dal.js'
+import { evaluatorSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
 import { removeTagsByNameMaybeValue } from '../utils.js'
 
@@ -46,9 +46,8 @@ function evaluatorWith ({ loadEvaluator }) {
 function saveEvaluationWith ({ saveEvaluation, logger }) {
   saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
 
-  return ({ name, ...evaluation }) =>
-    of(evaluation)
-      .chain(saveEvaluation)
+  return (args) =>
+    saveEvaluation(args)
       .bimap(
         logger.tap('Failed to save evaluation'),
         identity
@@ -57,14 +56,14 @@ function saveEvaluationWith ({ saveEvaluation, logger }) {
        * Always ensure this Async resolves
        */
       .bichain(Resolved, Resolved)
-      .map(() => evaluation)
+      .map(() => args)
 }
 
-function doesMessageHashExistWith ({ findMessageHashBefore }) {
-  findMessageHashBefore = fromPromise(findMessageHashBeforeSchema.implement(findMessageHashBefore))
+function doesMessageExistWith ({ findMessageBefore }) {
+  findMessageBefore = fromPromise(findMessageBeforeSchema.implement(findMessageBefore))
 
-  return ({ deepHash, processId, timestamp, ordinate }) => {
-    return findMessageHashBefore({ messageHash: deepHash, processId, timestamp, ordinate })
+  return (args) => {
+    return findMessageBefore(args)
       .bichain(
         (err) => {
           if (err.status === 404) return Resolved(false)
@@ -94,7 +93,7 @@ export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
   env = { ...env, logger }
 
-  const doesMessageHashExist = doesMessageHashExistWith(env)
+  const doesMessageExist = doesMessageExistWith(env)
   const saveEvaluation = saveEvaluationWith(env)
   const loadEvaluator = evaluatorWith(env)
 
@@ -166,16 +165,10 @@ export function evaluateWith (env) {
                 if (ctx.fromCron) evaledCrons.add(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }))
 
                 /**
-                 * Keep track of any deepHashes in the eval stream
-                 * as a quick way to eliminate dupes in the same eval stream
-                 */
-                const deepHashes = new Set()
-
-                /**
                  * Iterate over the async iterable of messages,
                  * and evaluate each one
                  */
-                for await (const { noSave, cron, ordinate, name, message, deepHash, AoGlobal } of messages) {
+                for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, AoGlobal } of messages) {
                   if (cron) {
                     const key = toEvaledCron({ timestamp: message.Timestamp, cron })
                     if (evaledCrons.has(key)) continue
@@ -188,28 +181,36 @@ export function evaluateWith (env) {
                   }
 
                   /**
-                   * We skip over forwarded messages (which we've calculated a deepHash for - see hydrateMessages)
-                   * if their deepHash is found in the cache.
+                   * We make sure to remove duplicate pushed (matching deepHash)
+                   * and duplicate assignments (matching messageId) from the eval stream
                    *
-                   * This prevents duplicate evals from double cranks
+                   * Which prevents them from corrupting the process.
+                   *
+                   * NOTE: We should only need to check if the message is an assignment
+                   * or a pushed message, since the SU rejects any messages with the same id,
+                   * that are not an assignment
+                   *
+                   * TODO: should the CU check every message, ergo not trusting the SU?
                    */
-                  if (deepHash) {
-                    if (deepHashes.has(deepHash) ||
-                        await doesMessageHashExist({
-                          deepHash,
-                          processId: ctx.id,
-                          timestamp: message.Timestamp,
-                          ordinate
-                        }).toPromise()
-                    ) {
-                      logger(
-                        'Prior Message to process "%s" with deepHash "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream',
-                        ctx.id,
-                        deepHash,
-                        name
-                      )
-                      continue
-                    } else deepHashes.add(deepHash)
+                  if (
+                    (deepHash || isAssignment) &&
+                    await doesMessageExist({
+                      messageId: message.Id,
+                      deepHash,
+                      isAssignment,
+                      processId: ctx.id,
+                      epoch: message.Epoch,
+                      nonce: message.Nonce
+                    }).toPromise()
+                  ) {
+                    const log = deepHash ? 'deepHash of' : 'assigned id'
+                    logger(
+                      `Prior Message to process "%s" with ${log} "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream`,
+                      ctx.id,
+                      deepHash || message.Id,
+                      name
+                    )
+                    continue
                   }
 
                   prev = await Promise.resolve(prev)
@@ -218,7 +219,7 @@ export function evaluateWith (env) {
                         /**
                          * Where the actual evaluation is performed
                          */
-                        .then((Memory) => ctx.evaluator({ name, processId: ctx.id, Memory, message, AoGlobal }))
+                        .then((Memory) => ctx.evaluator({ name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
                         /**
                          * These values are folded,
                          * so that we can potentially update the process memory cache
@@ -240,41 +241,40 @@ export function evaluateWith (env) {
                             ctx.stats.messages.error++
                           }
 
-                          return Promise.resolve(output)
-                            .then((output) => {
-                              /**
-                               * Noop saving the evaluation is noSave flag is set
-                               */
-                              if (noSave) return output
+                          /**
+                           * Noop saving the evaluation is noSave flag is set
+                           */
+                          if (noSave) return output
 
-                              /**
-                               * Create a new evaluation to be cached in the local db
-                               */
-                              return saveEvaluation({
+                          /**
+                           * Create a new evaluation to be cached in the local db
+                           *
+                           * TODO: move saving evaluation into worker thread
+                           */
+                          return saveEvaluation({
+                            deepHash,
+                            cron,
+                            ordinate,
+                            isAssignment,
+                            processId: ctx.id,
+                            messageId: message.Id,
+                            timestamp: message.Timestamp,
+                            nonce: message.Nonce,
+                            epoch: message.Epoch,
+                            blockHeight: message['Block-Height'],
+                            evaluatedAt: new Date(),
+                            output
+                          })
+                            .toPromise()
+                            .catch((err) => {
+                              logger(
+                                'Unexpected Error occurred when saving evaluation of "%s" to process "%s"',
                                 name,
-                                deepHash,
-                                cron,
-                                ordinate,
-                                processId: ctx.id,
-                                messageId: message.Id,
-                                timestamp: message.Timestamp,
-                                nonce: message.Nonce,
-                                epoch: message.Epoch,
-                                blockHeight: message['Block-Height'],
-                                evaluatedAt: new Date(),
-                                output
-                              })
-                                .toPromise()
-                                .catch((err) => {
-                                  logger(
-                                    'Unexpected Error occurred when saving evaluation of "%s" to process "%s"',
-                                    name,
-                                    ctx.id,
-                                    err
-                                  )
-                                })
-                                .then(() => output)
+                                ctx.id,
+                                err
+                              )
                             })
+                            .then(() => output)
                         })
                     )
                 }

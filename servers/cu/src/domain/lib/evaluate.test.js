@@ -39,7 +39,7 @@ describe('evaluate', () => {
   test('adds output and last to context', async () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
-      findMessageHashBefore: async () => { throw { status: 404 } },
+      findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -63,6 +63,7 @@ describe('evaluate', () => {
       messages: toAsyncIterable([
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -81,6 +82,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -142,7 +144,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHashBefore: async () => { throw { status: 404 } },
+      findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -170,6 +172,7 @@ describe('evaluate', () => {
         {
           noSave: true,
           ordinate: 0,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -188,6 +191,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -206,6 +210,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -229,22 +234,33 @@ describe('evaluate', () => {
     assert.equal(cacheCount, 2)
   })
 
-  test('skip over messages that are already evaluated (deepHash)', async () => {
+  test('skip over dupliate messages (dup assignment or dup push (deepHash))', async () => {
     let cacheCount = 0
-    let messageHash = 0
+    let messageCount = 0
     const env = {
       saveEvaluation: async (evaluation) => {
         cacheCount++
         return undefined
       },
-      findMessageHashBefore: async () => {
-        if (!messageHash) {
-          messageHash++
+      findMessageBefore: async (args) => {
+        // first message
+        if (messageCount === 0) {
+          assert.deepStrictEqual(args, {
+            messageId: 'message-123',
+            isAssignment: true,
+            deepHash: undefined,
+            processId: 'ctr-1234',
+            epoch: 0,
+            nonce: 1
+          })
+        }
+        if (!messageCount) {
+          messageCount++
           throw { status: 404 }
         }
 
-        messageHash++
-        return { _id: 'evaluation-doc-123' }
+        messageCount++
+        return { id: 'evaluation-doc-123' }
       },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
@@ -269,18 +285,21 @@ describe('evaluate', () => {
         Memory: null
       },
       messages: toAsyncIterable([
+        // assignment
         {
           ordinate: 1,
+          isAssignment: true,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
             Owner: 'owner-123',
+            Epoch: 0,
+            Nonce: 1,
             Tags: [
               { name: 'function', value: 'hello' }
             ],
             'Block-Height': 1234
           },
-          deepHash: 'deephash-123',
           AoGlobal: {
             Process: {
               Id: '1234',
@@ -288,18 +307,22 @@ describe('evaluate', () => {
             }
           }
         },
+        // deepHash
         {
           ordinate: 1,
+          isAssignment: false,
+          deepHash: 'deephash-123',
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
             Owner: 'owner-456',
+            Epoch: 0,
+            Nonce: 1,
             Tags: [
               { name: 'function', value: 'world' }
             ],
             'Block-Height': 1235
           },
-          deepHash: 'deephash-456',
           AoGlobal: {
             Process: {
               Id: '1234',
@@ -307,13 +330,16 @@ describe('evaluate', () => {
             }
           }
         },
-        // no deep hash
+        // no deep hash or assignment
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
             Owner: 'owner-456',
+            Epoch: 0,
+            Nonce: 1,
             Tags: [
               { name: 'function', value: 'world' }
             ],
@@ -330,7 +356,7 @@ describe('evaluate', () => {
     }
 
     await evaluate(ctx).toPromise()
-    assert.equal(messageHash, 2)
+    assert.equal(messageCount, 2)
     assert.equal(cacheCount, 2)
   })
 
@@ -341,7 +367,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHashBefore: async () => { throw { status: 404 } },
+      findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -370,6 +396,7 @@ describe('evaluate', () => {
         {
           ordinate: 1,
           cron: '1-10-minutes',
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -379,7 +406,6 @@ describe('evaluate', () => {
             ],
             'Block-Height': 1234
           },
-          deepHash: 'deephash-123',
           AoGlobal: {
             Process: {
               Id: '1234',
@@ -389,6 +415,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -398,7 +425,6 @@ describe('evaluate', () => {
             ],
             'Block-Height': 1235
           },
-          deepHash: 'deephash-456',
           AoGlobal: {
             Process: {
               Id: '1234',
@@ -409,6 +435,7 @@ describe('evaluate', () => {
         {
           ordinate: 2,
           cron: '1-20-minutes',
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520600,
@@ -429,6 +456,7 @@ describe('evaluate', () => {
         {
           ordinate: 2,
           cron: '1-20-minutes',
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520600,
@@ -447,6 +475,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 3,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520700,
@@ -456,7 +485,6 @@ describe('evaluate', () => {
             ],
             'Block-Height': 1235
           },
-          deepHash: 'deephash-789',
           AoGlobal: {
             Process: {
               Id: '1234',
@@ -479,7 +507,7 @@ describe('evaluate', () => {
         cacheCount++
         return undefined
       },
-      findMessageHashBefore: async () => { throw { status: 404 } },
+      findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateSadMessage,
       saveLatestProcessMemory: async () => {},
       logger
@@ -506,6 +534,7 @@ describe('evaluate', () => {
         {
           // Will include an error in result.error
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,
@@ -524,6 +553,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 1,
+          isAssignment: false,
           // Will increment a counter in global state
           message: {
             Id: 'message-123',
@@ -543,6 +573,7 @@ describe('evaluate', () => {
         },
         {
           ordinate: 1,
+          isAssignment: false,
           // Will increment a counter in global state
           message: {
             Id: 'message-123',
@@ -574,7 +605,7 @@ describe('evaluate', () => {
   test('removes invalid tags', async () => {
     const evaluate = evaluateWith({
       saveEvaluation: async (evaluation) => evaluation,
-      findMessageHashBefore: async () => { throw { status: 404 } },
+      findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: () => ({ message }) => {
         assert.deepStrictEqual(
           message.Tags,
@@ -605,6 +636,7 @@ describe('evaluate', () => {
       messages: toAsyncIterable([
         {
           ordinate: 1,
+          isAssignment: false,
           message: {
             Id: 'message-123',
             Timestamp: 1702846520559,

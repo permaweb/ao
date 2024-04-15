@@ -3,7 +3,7 @@ import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply,
 import { z } from 'zod'
 
 import { evaluationSchema } from '../model.js'
-import { EVALUATIONS_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
+import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
 
 const evaluationDocSchema = z.object({
   id: z.string().min(1),
@@ -22,6 +22,26 @@ const evaluationDocSchema = z.object({
 
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
   return `${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
+}
+
+/**
+ * Each message evaluated by the CU must have a unique idenfier. Messages can be:
+ * - an "end-user" message (signed by a "end-user" wallet)
+ * - an assignment (either signed by an "end-user" wallet or pushed from a MU)
+ * - a pushed message (from a MU)
+ *
+ * If the message is an assignment, then we know that its unique identifier
+ * is always the messageId.
+ *
+ * Otherwise, we must check if a deepHash was calculated by the CU (ie. for a pushed message)
+ * and use that as the unique identifier
+ *
+ * Finally, if it is not an assignment and also not pushed from a MU, then it MUST
+ * be a "end-user" message, and therefore its unique identifier is, once again, the messageId
+ */
+function createMessageId ({ messageId, deepHash, isAssignment }) {
+  if (isAssignment) return messageId
+  return deepHash || messageId
 }
 
 const toEvaluation = applySpec({
@@ -111,38 +131,69 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
     evaluationDocSchema.parse
   )
 
+  const messageDocParamsSchema = z.tuple([
+    z.string().min(1),
+    z.string().min(1),
+    z.string().min(1)
+  ])
+
   function createQuery (evaluation) {
-    return {
-      sql: `
-        INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-        (id, processId, messageId, deepHash, nonce, epoch, timestamp, ordinate, blockHeight, cron, evaluatedAt, output)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-      `,
-      parameters: [
-        evaluation.id,
-        evaluation.processId,
-        evaluation.messageId,
-        evaluation.deepHash,
-        evaluation.nonce,
-        evaluation.epoch,
-        evaluation.timestamp,
-        evaluation.ordinate,
-        evaluation.blockHeight,
-        evaluation.cron,
-        evaluation.evaluatedAt.getTime(),
-        JSON.stringify(evaluation.output)
-      ]
+    const evalDoc = toEvaluationDoc(evaluation)
+    const statements = [
+      {
+        sql: `
+          INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+            (id, processId, messageId, deepHash, nonce, epoch, timestamp, ordinate, blockHeight, cron, evaluatedAt, output)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        `,
+        parameters: [
+          // evaluations insert
+          evalDoc.id,
+          evalDoc.processId,
+          evalDoc.messageId,
+          evalDoc.deepHash,
+          evalDoc.nonce,
+          evalDoc.epoch,
+          evalDoc.timestamp,
+          evalDoc.ordinate,
+          evalDoc.blockHeight,
+          evalDoc.cron,
+          evalDoc.evaluatedAt.getTime(),
+          JSON.stringify(evalDoc.output)
+        ]
+      }
+    ]
+
+    /**
+      * Cron messages are not needed to be saved in the messages table
+      */
+    if (!evaluation.cron) {
+      statements.push({
+        sql: `
+          INSERT OR IGNORE INTO ${MESSAGES_TABLE} (id, processId, seq) VALUES (?, ?, ?);
+         `,
+        parameters: messageDocParamsSchema.parse([
+          createMessageId({
+            messageId: evaluation.messageId,
+            deepHash: evaluation.deepHash,
+            isAssignment: evaluation.isAssignment
+          }),
+          evaluation.processId,
+          `${evaluation.epoch}:${evaluation.nonce}`
+        ])
+      })
     }
+
+    return statements
   }
 
   return (evaluation) => {
     return of(evaluation)
-      .map(toEvaluationDoc)
-      .chain((doc) =>
-        of(doc)
-          .map((doc) => createQuery(doc))
-          .chain(fromPromise((query) => db.run(query)))
-          .map(always(doc._id))
+      .chain((data) =>
+        of(data)
+          .map((data) => createQuery(data))
+          .chain(fromPromise((statements) => db.transaction(statements)))
+          .map(always(data.id))
       )
       .toPromise()
   }
@@ -191,45 +242,34 @@ export function findEvaluationsWith ({ db }) {
   }
 }
 
-export function findMessageHashBeforeWith ({ db }) {
-  function createQuery ({ deepHash, processId, timestamp, ordinate }) {
+export function findMessageBeforeWith ({ db }) {
+  function createQuery ({ messageId, deepHash, isAssignment, processId, nonce, epoch }) {
     return {
       sql: `
         SELECT
-          id, processId, messageId, deepHash, nonce, epoch, timestamp,
-          ordinate, blockHeight, cron, evaluatedAt, output
-        FROM ${EVALUATIONS_TABLE}
+          id, seq
+        FROM ${MESSAGES_TABLE}
         WHERE
-          deepHash = ?
-          AND id > ? AND id < ?
+          id = ?
+          AND processId = ?
+          AND seq <= ?
         LIMIT 1;
       `,
       parameters: [
-        deepHash,
-        /**
-         * Since eval doc id are each lexicographically sortable, we can find an
-         * prior evaluation, with matching deepHash, by comparing the ids.
-         *
-         * $gt processId ensures we only consider evaluations for the process
-         * we are interested in
-         */
-        createEvaluationId({ processId, timestamp: '' }),
-        /**
-         * $lt because we are looking for any evaluation on this process,
-         * PRIOR to this one with a matching deepHash
-         */
-        createEvaluationId({ processId, timestamp, ordinate })
+        createMessageId({ messageId, deepHash, isAssignment }),
+        processId,
+        `${epoch}:${nonce}` // 0:13
       ]
     }
   }
 
-  return ({ messageHash, processId, timestamp, ordinate }) =>
-    of({ deepHash: messageHash, processId, timestamp, ordinate })
+  return (args) =>
+    of(args)
       .map(createQuery)
       .chain(fromPromise((query) => db.query(query)))
       .map(defaultTo([]))
       .map(head)
-      .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Evaluation result not found' }))
-      .map(fromEvaluationDoc)
+      .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Message Not Found' }))
+      .map((row) => ({ id: row.id }))
       .toPromise()
 }
