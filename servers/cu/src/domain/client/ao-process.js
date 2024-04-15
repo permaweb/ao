@@ -203,7 +203,7 @@ export function saveProcessWith ({ db }) {
       sql: `
         INSERT OR IGNORE INTO ${PROCESSES_TABLE}
         (id, signature, data, anchor, owner, tags, block)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
       `,
       parameters: [
         process.id,
