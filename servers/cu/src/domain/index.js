@@ -194,7 +194,7 @@ export const createApis = async (ctx) => {
       evaluate: (...args) => workerPool.exec('evaluate', args),
       logger
     }),
-    findMessageHashBefore: AoEvaluationClient.findMessageHashBeforeWith({ db: sqlite, logger }),
+    findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),

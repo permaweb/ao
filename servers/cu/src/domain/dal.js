@@ -72,7 +72,7 @@ export const findEvaluationSchema = z.function()
   .returns(z.promise(evaluationSchema))
 
 export const saveEvaluationSchema = z.function()
-  .args(evaluationSchema.extend({ deepHash: z.string().nullish() }))
+  .args(evaluationSchema.extend({ deepHash: z.string().nullish(), isAssignment: z.boolean() }))
   .returns(z.promise(z.any()))
 
 export const findEvaluationsSchema = z.function()
@@ -94,6 +94,27 @@ export const findEvaluationsSchema = z.function()
   }))
   .returns(z.promise(z.array(evaluationSchema)))
 
+// Messages
+
+export const findMessageBeforeSchema = z.function()
+  .args(z.object({
+    messageId: z.string().nullish(),
+    deepHash: z.string().nullish(),
+    isAssignment: z.boolean(),
+    processId: z.string(),
+    epoch: z.coerce.number(),
+    nonce: z.coerce.number()
+  }))
+  /**
+   * Our business logic doesn't use the output,
+   * only the presence or absence of the record,
+   *
+   * So we don't need to enforce a shape to return here
+   */
+  .returns(z.promise(z.any()))
+
+// Blocks
+
 export const saveBlocksSchema = z.function()
   .args(z.array(blockSchema))
   .returns(z.promise(z.any()))
@@ -104,22 +125,6 @@ export const findBlocksSchema = z.function()
     maxTimestamp: z.number()
   }))
   .returns(z.promise(z.array(blockSchema)))
-
-export const findMessageHashBeforeSchema = z.function()
-  .args(z.object({
-    messageHash: z.string().nullish(),
-    processId: z.string(),
-    timestamp: z.coerce.number(),
-    ordinate: z.coerce.string()
-  }))
-  /**
-   * Our business logic doesn't use the output of findMessageHash,
-   * only the presence or absence of the document,
-   *
-   * So we don't need to enforce a shape to return here,
-   * as long as it's a document (an object)
-   */
-  .returns(z.promise(z.any()))
 
 // SU
 

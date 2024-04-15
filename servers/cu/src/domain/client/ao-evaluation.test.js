@@ -3,9 +3,9 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { findEvaluationSchema, findEvaluationsSchema, findMessageHashBeforeSchema, saveEvaluationSchema } from '../dal.js'
-import { findEvaluationWith, findEvaluationsWith, findMessageHashBeforeWith, saveEvaluationWith } from './ao-evaluation.js'
-import { COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
+import { findEvaluationSchema, findEvaluationsSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../dal.js'
+import { findMessageBeforeWith, findEvaluationWith, findEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
+import { COLLATION_SEQUENCE_MAX_CHAR, EVALUATIONS_TABLE, MESSAGES_TABLE } from './sqlite.js'
 
 const logger = createLogger('ao-cu:readState')
 
@@ -84,58 +84,13 @@ describe('ao-evaluation', () => {
 
       assert(res.ok)
     })
-
-    test('bubble error', async () => {
-      const findEvaluation = findEvaluationSchema.implement(
-        findEvaluationWith({
-          db: {
-            query: async () => { throw { status: 500 } }
-          },
-          logger
-        })
-      )
-
-      await findEvaluation({
-        processId: 'process-123',
-        to: 1702677252111,
-        ordinate: '1',
-        cron: undefined
-      })
-        .then(assert.fail)
-        .catch(assert.ok)
-    })
   })
 
   describe('saveEvaluation', () => {
     const evaluatedAt = new Date()
-    test('save the evaluation and the messageHash', async () => {
-      const saveEvaluation = saveEvaluationSchema.implement(
-        saveEvaluationWith({
-          db: {
-            run: async ({ parameters }) => {
-              assert.deepStrictEqual(parameters, [
-                'process-123,1702677252111,1',
-                'process-123',
-                'message-123',
-                'deepHash-123',
-                1,
-                0,
-                1702677252111,
-                '1',
-                1234,
-                undefined,
-                evaluatedAt.getTime(),
-                JSON.stringify({ Messages: [{ foo: 'bar' }] })
-              ])
-
-              return Promise.resolve('process-123,1702677252111,1')
-            }
-          },
-          logger
-        })
-      )
-
-      await saveEvaluation({
+    describe('save the evaluation and message', () => {
+      const args = {
+        isAssignment: false,
         deepHash: 'deepHash-123',
         timestamp: 1702677252111,
         nonce: '1',
@@ -146,15 +101,132 @@ describe('ao-evaluation', () => {
         messageId: 'message-123',
         output: { Messages: [{ foo: 'bar' }], Memory: 'foo' },
         evaluatedAt
+      }
+
+      test('use deepHash as the messageDocId', async () => {
+        const saveEvaluation = saveEvaluationSchema.implement(
+          saveEvaluationWith({
+            db: {
+              transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
+                assert.deepStrictEqual(evaluationDocParams, [
+                  'process-123,1702677252111,1',
+                  'process-123',
+                  'message-123',
+                  'deepHash-123',
+                  1,
+                  0,
+                  1702677252111,
+                  '1',
+                  1234,
+                  undefined,
+                  evaluatedAt.getTime(),
+                  JSON.stringify({ Messages: [{ foo: 'bar' }] })
+                ])
+
+                assert.deepStrictEqual(messageDocParams, [
+                  'deepHash-123',
+                  'process-123',
+                  '0:1'
+                ])
+
+                return Promise.resolve('process-123,1702677252111,1')
+              }
+            },
+            logger
+          })
+        )
+
+        await saveEvaluation(args)
+      })
+
+      test('use messageId as the messageDocId if assignment', async () => {
+        const saveEvaluation = saveEvaluationSchema.implement(
+          saveEvaluationWith({
+            db: {
+              transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
+                assert.deepStrictEqual(evaluationDocParams, [
+                  'process-123,1702677252111,1',
+                  'process-123',
+                  'message-123',
+                  'deepHash-123',
+                  1,
+                  0,
+                  1702677252111,
+                  '1',
+                  1234,
+                  undefined,
+                  evaluatedAt.getTime(),
+                  JSON.stringify({ Messages: [{ foo: 'bar' }] })
+                ])
+
+                assert.deepStrictEqual(messageDocParams, [
+                  'message-123',
+                  'process-123',
+                  '0:1'
+                ])
+
+                return Promise.resolve('process-123,1702677252111,1')
+              }
+            },
+            logger
+          })
+        )
+
+        // isAssignment
+        await saveEvaluation({
+          ...args,
+          isAssignment: true
+        })
+      })
+
+      test('use messageId as the messageDocId if no deepHash', async () => {
+        const saveEvaluation = saveEvaluationSchema.implement(
+          saveEvaluationWith({
+            db: {
+              transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
+                assert.deepStrictEqual(evaluationDocParams, [
+                  'process-123,1702677252111,1',
+                  'process-123',
+                  'message-123',
+                  undefined,
+                  1,
+                  0,
+                  1702677252111,
+                  '1',
+                  1234,
+                  undefined,
+                  evaluatedAt.getTime(),
+                  JSON.stringify({ Messages: [{ foo: 'bar' }] })
+                ])
+
+                assert.deepStrictEqual(messageDocParams, [
+                  'message-123',
+                  'process-123',
+                  '0:1'
+                ])
+
+                return Promise.resolve('process-123,1702677252111,1')
+              }
+            },
+            logger
+          })
+        )
+
+        // no deepHash
+        await saveEvaluation({
+          ...args,
+          deepHash: undefined
+        })
       })
     })
 
-    test('noop if evaluation already exists', async () => {
+    test('noop insert evaluation or message if it already exists', async () => {
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
           db: {
-            run: async ({ sql }) => {
-              assert.ok(sql.trim().startsWith('INSERT OR IGNORE'))
+            transaction: async ([{ sql: evaluationDocSql }, { sql: messageDocSql }]) => {
+              assert.ok(evaluationDocSql.trim().startsWith(`INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}`))
+              assert.ok(messageDocSql.trim().startsWith(`INSERT OR IGNORE INTO ${MESSAGES_TABLE}`))
 
               return Promise.resolve('process-123,1702677252111,1')
             }
@@ -164,6 +236,7 @@ describe('ao-evaluation', () => {
       )
 
       await saveEvaluation({
+        isAssignment: false,
         deepHash: 'deepHash-123',
         timestamp: 1702677252111,
         nonce: '1',
@@ -268,65 +341,117 @@ describe('ao-evaluation', () => {
     })
   })
 
-  describe('findMessageHashBefore', () => {
-    test('find the prior evaluation by deepHash', async () => {
-      const evaluatedAt = new Date()
-      const findMessageHashBefore = findMessageHashBeforeSchema.implement(
-        findMessageHashBeforeWith({
+  describe('findMessageBeforeWith', () => {
+    test('find the prior message by deepHash', async () => {
+      const findMessageBefore = findMessageBeforeSchema.implement(
+        findMessageBeforeWith({
           db: {
             query: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, [
                 'deepHash-123',
-                'process-123,',
-                'process-123,1802677252111,3'
+                'process-123',
+                '0:3'
               ])
 
-              const mockEval = {
-                id: 'process-123,1702677252111,1',
+              const mockAssigment = {
+                id: 'deepHash-123',
                 processId: 'process-123',
-                messageId: 'message-123',
-                deepHash: 'deepHash-123',
-                nonce: 2,
-                epoch: 0,
-                timestamp: 1702677252111,
-                ordinate: '2',
-                blockHeight: 1234,
-                cron: undefined,
-                evaluatedAt: evaluatedAt.getTime(),
-                output: JSON.stringify({ Messages: [{ foo: 'bar' }] })
+                seq: '0:3'
               }
 
-              return [mockEval]
+              return [mockAssigment]
             }
           }
         })
       )
 
-      const res = await findMessageHashBefore({
-        processId: 'process-123',
-        timestamp: 1802677252111,
-        ordinate: '3',
-        messageHash: 'deepHash-123'
-      })
-
-      assert.deepStrictEqual(res, {
+      const res = await findMessageBefore({
         processId: 'process-123',
         messageId: 'message-123',
         deepHash: 'deepHash-123',
-        nonce: 2,
+        isAssignment: false,
         epoch: 0,
-        timestamp: 1702677252111,
-        ordinate: '2',
-        blockHeight: 1234,
-        cron: undefined,
-        evaluatedAt,
-        output: { Messages: [{ foo: 'bar' }] }
+        nonce: 3
+      })
+
+      assert.deepStrictEqual(res, { id: 'deepHash-123' })
+    })
+
+    describe('find the prior message by messageId', () => {
+      test('if no deepHash was calculated', async () => {
+        const findMessageBefore = findMessageBeforeSchema.implement(
+          findMessageBeforeWith({
+            db: {
+              query: async ({ parameters }) => {
+                assert.deepStrictEqual(parameters, [
+                  'message-123',
+                  'process-123',
+                  '0:3'
+                ])
+
+                const mockAssigment = {
+                  id: 'message-123',
+                  processId: 'process-123',
+                  seq: '0:3'
+                }
+
+                return [mockAssigment]
+              }
+            }
+          })
+        )
+
+        const res = await findMessageBefore({
+          processId: 'process-123',
+          messageId: 'message-123',
+          deepHash: undefined,
+          isAssignment: false,
+          epoch: 0,
+          nonce: 3
+        })
+
+        assert.deepStrictEqual(res, { id: 'message-123' })
+      })
+
+      test('if it is an assignment', async () => {
+        const findMessageBefore = findMessageBeforeSchema.implement(
+          findMessageBeforeWith({
+            db: {
+              query: async ({ parameters }) => {
+                assert.deepStrictEqual(parameters, [
+                  'message-123',
+                  'process-123',
+                  '0:3'
+                ])
+
+                const mockAssigment = {
+                  id: 'message-123',
+                  processId: 'process-123',
+                  seq: '0:3'
+                }
+
+                return [mockAssigment]
+              }
+            }
+          })
+        )
+
+        const res = await findMessageBefore({
+          processId: 'process-123',
+          messageId: 'message-123',
+          deepHash: 'deepHash-123',
+          isAssignment: true,
+          epoch: 0,
+          nonce: 3
+        })
+
+        assert.deepStrictEqual(res, { id: 'message-123' })
       })
     })
 
     test('return 404 status if not found', async () => {
-      const findMessageHashBefore = findMessageHashBeforeSchema.implement(
-        findMessageHashBeforeWith({
+      const findMessageBefore = findMessageBeforeSchema.implement(
+        findMessageBeforeWith({
           db: {
             query: async () => []
           },
@@ -334,11 +459,13 @@ describe('ao-evaluation', () => {
         })
       )
 
-      const res = await findMessageHashBefore({
+      const res = await findMessageBefore({
         processId: 'process-123',
-        timestamp: 1802677252111,
-        ordinate: '3',
-        messageHash: 'deepHash-123'
+        messageId: 'message-123',
+        deepHash: 'deepHash-123',
+        isAssignment: true,
+        epoch: 0,
+        nonce: 3
       })
         .catch(err => {
           assert.equal(err.status, 404)
@@ -346,25 +473,6 @@ describe('ao-evaluation', () => {
         })
 
       assert(res.ok)
-    })
-
-    test('bubble error', async () => {
-      const findMessageHashBefore = findMessageHashBeforeSchema.implement(
-        findMessageHashBeforeWith({
-          db: {
-            query: async () => { throw { status: 500 } }
-          },
-          logger
-        })
-      )
-
-      await findMessageHashBefore({
-        processId: 'process-123',
-        timestamp: 1802677252111,
-        ordinate: '3',
-        messageHash: 'deepHash-123'
-      })
-        .catch(assert.ok)
     })
   })
 })
