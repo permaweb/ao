@@ -40,12 +40,17 @@ export const server = pipeP(
     }, config.MEM_MONITOR_INTERVAL)
     memMonitor.unref()
 
-    process.on('SIGTERM', () => {
+    process.on('SIGTERM', async () => {
       logger('Received SIGTERM. Gracefully shutting down server...')
       app.close(
         () => logger('Server shut down.'),
         (e) => logger('Failed to shut down server!', e)
       )
+
+      logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+      await domain.apis.drainWasmMemoryCache().toPromise()
+      logger('Done checkpointing all processes in WASM heap cache. Exiting...')
+      process.exit()
     })
 
     process.on('SIGUSR2', () => {

@@ -7,6 +7,7 @@ import Dataloader from 'dataloader'
 import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+import { fromPromise } from 'hyper-async'
 
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
@@ -132,32 +133,6 @@ export const createApis = async (ctx) => {
         })
   })
 
-  /**
-   * TODO: determine a way to hoist this event listener to a dirtier level,
-   * then simply call something like a "drainWasmMemoryCache()" api
-   *
-   * For now, just adding another listener
-   */
-  process.on('SIGTERM', async () => {
-    ctx.logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
-    const promises = []
-    wasmMemoryCache.lru.forEach((value) => {
-      promises.push(
-        saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
-          .catch((err) => {
-            ctx.logger(
-              'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-              value.evaluation,
-              err
-            )
-          })
-      )
-    })
-    await Promise.allSettled(promises)
-    ctx.logger('Done checkpointing all processes in WASM heap cache. Exiting...')
-    process.exit()
-  })
-
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -257,7 +232,24 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readResultsLogger })
   })
 
+  const drainWasmMemoryCache = fromPromise(async () => {
+    const promises = []
+    wasmMemoryCache.lru.forEach((value) => {
+      promises.push(
+        saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+          .catch((err) => {
+            ctx.logger(
+              'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
+              value.evaluation,
+              err
+            )
+          })
+      )
+    })
+    await Promise.allSettled(promises)
+  })
+
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, healthcheck }
+  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, drainWasmMemoryCache, healthcheck }
 }
