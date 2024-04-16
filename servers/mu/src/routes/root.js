@@ -1,11 +1,13 @@
 import { always, compose, pipe } from 'ramda'
 import { of } from 'hyper-async'
 import { z } from 'zod'
-import WarpArBundles from 'warp-arbundles'
+// import WarpArBundles from 'warp-arbundles'
+// arbundles verifies cross chain signed data items, warp-arbundles only supports arweave
+import { DataItem } from 'arbundles'
 
 import { withMiddleware } from './middleware/index.js'
 
-const { DataItem } = WarpArBundles
+// const { DataItem } = WarpArBundles
 
 const withMessageRoutes = (app) => {
   app.post(
