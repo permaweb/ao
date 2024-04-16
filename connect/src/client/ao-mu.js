@@ -257,6 +257,8 @@ export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
  * @typedef WriteAssignArgs
  * @property {string} process
  * @property {string} message
+ * @property {string[]} [exclude]
+ * @property {boolean} [baseLayer]
  *
  * @callback WriteAssign
  * @param {WriteAssignArgs} args
