@@ -1,4 +1,14 @@
+import { checkForRedirectSchema, getByOwnerSchema, getByProcessSchema, loadProcessSchedulerSchema, loadSchedulerSchema, setByOwnerSchema, setByProcessSchema } from './dal.js'
+
 export function locateWith ({ loadProcessScheduler, loadScheduler, cache, followRedirects, checkForRedirect }) {
+  loadProcessScheduler = loadProcessSchedulerSchema.implement(loadProcessScheduler)
+  loadScheduler = loadSchedulerSchema.implement(loadScheduler)
+  checkForRedirect = checkForRedirectSchema.implement(checkForRedirect)
+  const getByProcess = getByProcessSchema.implement(cache.getByProcess)
+  const getByOwner = getByOwnerSchema.implement(cache.getByOwner)
+  const setByProcess = setByProcessSchema.implement(cache.setByProcess)
+  const setByOwner = setByOwnerSchema.implement(cache.setByOwner)
+
   /**
    * Locate the scheduler for the given process.
    *
@@ -11,7 +21,7 @@ export function locateWith ({ loadProcessScheduler, loadScheduler, cache, follow
    * @returns {Promise<{ url: string, address: string }>} - an object whose url field is the Scheduler Location
    */
   return (process, schedulerHint) =>
-    cache.getByProcess(process)
+    getByProcess(process)
       .then(async (cached) => {
         if (cached) return cached
 
@@ -23,11 +33,11 @@ export function locateWith ({ loadProcessScheduler, loadScheduler, cache, follow
              * query the Scheduler-Location record directly
              */
             if (schedulerHint) {
-              const byOwner = await cache.getByOwner(schedulerHint)
-              if (byOwner) return (byOwner)
+              const byOwner = await getByOwner(schedulerHint)
+              if (byOwner) return byOwner
 
               return loadScheduler(schedulerHint).then((scheduler) => {
-                cache.setByOwner(scheduler.owner, scheduler.url, scheduler.ttl)
+                setByOwner(scheduler.address, scheduler.url, scheduler.ttl)
                 return scheduler
               })
             }
@@ -43,8 +53,8 @@ export function locateWith ({ loadProcessScheduler, loadScheduler, cache, follow
              */
             if (followRedirects) finalUrl = await checkForRedirect(scheduler.url, process)
 
-            const byProcess = { url: finalUrl, address: scheduler.owner }
-            await cache.setByProcess(process, byProcess, scheduler.ttl)
+            const byProcess = { url: finalUrl, address: scheduler.address }
+            await setByProcess(process, byProcess, scheduler.ttl)
             return byProcess
           })
       })
