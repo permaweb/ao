@@ -4,10 +4,11 @@ import { tmpdir } from 'node:os'
 import { writeFileSync, readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
+import * as ethers from 'ethers'
 
 import Arweave from 'arweave'
 
-import { createDataItemSigner } from './wallet.js'
+import { createDataItemSigner, createEthereumDataItemSigner } from './wallet.js'
 
 describe('node - wallet', () => {
   /**
@@ -25,10 +26,27 @@ describe('node - wallet', () => {
   })
 
   describe('createDataItemSigner', () => {
-    test('should create and sign the data item', async () => {
+    test('should create and sign the data item with Arweave signer', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
       const signDataItem = createDataItemSigner(wallet)
+
+      const res = await signDataItem({
+        data: 'foobar',
+        tags: [{ name: 'foo', value: 'bar' }],
+        target: 'xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw',
+        anchor: randomBytes(32)
+      })
+
+      console.log('signedDataItem', res)
+      assert.ok(res.id)
+      assert.ok(res.raw)
+    })
+
+    test('should create and sign the data item with Ethereum signer', async () => {
+      const wallet = ethers.Wallet.createRandom().privateKey
+
+      const signDataItem = createEthereumDataItemSigner(wallet)
 
       const res = await signDataItem({
         data: 'foobar',
