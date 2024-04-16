@@ -210,7 +210,7 @@ import { assign } from "@permaweb/aoconnect";
 const processId = await assign({
   process: 'process-id',
   message: 'message-id',
-  exclude: 'data, owner etc...' // optional csv list of DataItem fields to exclude
+  exclude: ['data', 'owner', 'etc.'] // optional list of DataItem fields to exclude
 });
 ```
 
