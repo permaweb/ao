@@ -252,7 +252,7 @@ export function findMessageBeforeWith ({ db }) {
         WHERE
           id = ?
           AND processId = ?
-          AND seq <= ?
+          AND seq < ?
         LIMIT 1;
       `,
       parameters: [
