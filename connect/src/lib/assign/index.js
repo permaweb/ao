@@ -11,6 +11,8 @@ import { sendAssignWith } from './send-assign.js'
  * @typedef AssignArgs
  * @property {string} process
  * @property {string} message
+ * @property {string[]} [exclude]
+ * @property {boolean} [baseLayer]
  *
  * @callback Assign
  * @param {AssignArgs} args
