@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "^0.0.17",
+    "arbundles": "^0.11.0",
     "arweave": "^1.14.4",
     "cors": "^2.8.5",
     "debug": "^4.3.4",
@@ -36,6 +37,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/node": "^20.12.7",
     "nodemon": "^3.0.1",
     "supertest": "^6.3.3"
   },
