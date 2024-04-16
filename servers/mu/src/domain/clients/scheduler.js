@@ -35,17 +35,27 @@ function writeDataItemWith ({ fetch, logger }) {
 }
 
 function writeAssignmentWith ({ fetch, logger }) {
-  return async ({ txId, processId, suUrl }) => {
-    return of({ txId, processId, suUrl })
+  return async ({ txId, processId, baseLayer, exclude, suUrl }) => {
+    return of({ txId, processId, baseLayer, exclude, suUrl })
       .map(logger.tap(`Forwarding Assignment to SU ${suUrl}`))
-      .chain(fromPromise(({ txId, processId, suUrl }) =>
-        fetch(`${suUrl}/?process-id=${processId}&assign=${txId}`, {
+      .chain(fromPromise(({ txId, processId, baseLayer, exclude, suUrl }) => {
+        let url = `${suUrl}/?process-id=${processId}&assign=${txId}`
+        // aop2 base-layer param
+        if (baseLayer === '') {
+          url += '&base-layer'
+        }
+        // aop1 exclude param
+        if (exclude) {
+          url += `&exclude=${exclude}`
+        }
+        return fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',
             Accept: 'application/json'
           }
         })
+      }
       ))
       .bimap(
         logger.tap('Error while communicating with SU:'),
