@@ -1,4 +1,5 @@
 import * as WarpArBundles from 'warp-arbundles'
+import { EthereumSigner } from 'arbundles'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
@@ -27,6 +28,28 @@ export function createDataItemSigner (wallet) {
         id: await dataItem.id,
         raw: await dataItem.getRaw()
       }))
+  }
+
+  return signer
+}
+
+export function createEthereumDataItemSigner (pk) {
+  /**
+   * createDataItem can be passed here for the purposes of unit testing
+   * with a stub
+   */
+  const ethSigner = new EthereumSigner(pk)
+  const signer = async ({ data, tags, target, anchor }) => {
+    const dataItem = createData(data, ethSigner, { tags, target, anchor })
+
+    const res = await dataItem.sign(ethSigner)
+      .then(async () => ({
+        id: await dataItem.id,
+        raw: await dataItem.getRaw()
+
+      })).catch((e) => console.error(e))
+
+    return res
   }
 
   return signer
