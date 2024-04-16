@@ -138,18 +138,24 @@ export const createApis = async (ctx) => {
    *
    * For now, just adding another listener
    */
-  process.on('SIGTERM', () => {
-    ctx.logger('Recevied SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+  process.on('SIGTERM', async () => {
+    ctx.logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+    const promises = []
     wasmMemoryCache.lru.forEach((value) => {
-      saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        })
+      promises.push(
+        saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+          .catch((err) => {
+            ctx.logger(
+              'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
+              value.evaluation,
+              err
+            )
+          })
+      )
     })
+    await Promise.allSettled(promises)
+    ctx.logger('Done checkpointing all processes in WASM heap cache. Exiting...')
+    process.exit()
   })
 
   const sharedDeps = (logger) => ({

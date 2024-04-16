@@ -8,11 +8,13 @@ import FastifyMiddie from '@fastify/middie'
 import cors from 'cors'
 import helmet from 'helmet'
 
-import { logger } from './logger.js'
+import { logger as _logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 
 import { domain } from './routes/middleware/withDomain.js'
+
+const logger = _logger.child('app')
 
 const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)))
 
@@ -39,8 +41,11 @@ export const server = pipeP(
     memMonitor.unref()
 
     process.on('SIGTERM', () => {
-      logger('Recevied SIGTERM. Gracefully shutting down server...')
-      app.close(() => logger('Server Shut Down'))
+      logger('Received SIGTERM. Gracefully shutting down server...')
+      app.close(
+        () => logger('Server shut down.'),
+        (e) => logger('Failed to shut down server!', e)
+      )
     })
 
     process.on('SIGUSR2', () => {
