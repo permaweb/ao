@@ -14,7 +14,7 @@ describe('rawWith', () => {
       const raw = rawWith({
         loadScheduler: async (walletAddress) => {
           assert.equal(walletAddress, SCHEDULER)
-          return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+          return { url: DOMAIN, ttl: TEN_MS, address: SCHEDULER }
         },
         cache: {
           getByOwner: async (scheduler) => {
@@ -43,7 +43,8 @@ describe('rawWith', () => {
           getByOwner: async (scheduler) => {
             assert.equal(scheduler, SCHEDULER)
             return undefined
-          }
+          },
+          setByOwner: async () => assert.fail('should not call if not scheduler is found')
         }
       })
 
@@ -60,8 +61,9 @@ describe('rawWith', () => {
       cache: {
         getByOwner: async (walletAddress) => {
           assert.equal(walletAddress, SCHEDULER)
-          return { url: DOMAIN, address: SCHEDULER }
-        }
+          return { url: DOMAIN, address: SCHEDULER, ttl: 10 }
+        },
+        setByOwner: async () => assert.fail('should not call if not scheduler is in cache')
       }
     })
 
