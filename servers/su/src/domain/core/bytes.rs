@@ -101,7 +101,6 @@ pub struct DataItem {
     tags: Vec<Tag>,
     data: Data,
 }
-
 #[derive(Clone)]
 pub struct Config {
     pub sig_length: usize,
@@ -113,14 +112,57 @@ pub struct Config {
 pub enum SignerMap {
     None = -1,
     Arweave = 1,
+    Ed25519,
+    Ethereum,
+    Solana,
+    InjectedAptos = 5,
+    MultiAptos = 6,
+    TypedEthereum = 7,
 }
 
 impl SignerMap {
     pub fn get_config(&self) -> Config {
-        Config {
-            sig_length: 512,
-            pub_length: 512,
-            sig_name: "arweave".to_owned(),
+        match self {
+            SignerMap::Arweave => Config {
+                sig_length: 512,
+                pub_length: 512,
+                sig_name: "arweave".to_owned(),
+            },
+            SignerMap::Ed25519 => Config {
+                sig_length: 64,
+                pub_length: 32,
+                sig_name: "ed25519".to_owned(),
+            },
+            SignerMap::Ethereum => Config {
+                sig_length: 65,
+                pub_length: 65,
+                sig_name: "ethereum".to_owned(),
+            },
+            SignerMap::Solana => Config {
+                sig_length: 64,
+                pub_length: 32,
+                sig_name: "solana".to_owned(),
+            },
+            SignerMap::InjectedAptos => Config {
+                sig_length: 64,
+                pub_length: 32,
+                sig_name: "injectedAptos".to_owned(),
+            },
+            SignerMap::MultiAptos => Config {
+                sig_length: 64 * 32 + 4,
+                pub_length: 32 * 32 + 1,
+                sig_name: "multiAptos".to_owned(),
+            },
+            SignerMap::TypedEthereum => Config {
+                sig_length: 65,
+                pub_length: 42,
+                sig_name: "typedEthereum".to_owned(),
+            },
+            _ => Config {
+                sig_length: 0,
+                pub_length: 0,
+                sig_name: "none".to_owned(),
+            },
         }
     }
 }
@@ -129,6 +171,12 @@ impl SignerMap {
     pub fn as_u16(&self) -> u16 {
         match self {
             SignerMap::Arweave => 1,
+            SignerMap::Ed25519 => 2,
+            SignerMap::Ethereum => 3,
+            SignerMap::Solana => 4,
+            SignerMap::InjectedAptos => 5,
+            SignerMap::MultiAptos => 6,
+            SignerMap::TypedEthereum => 7,
             _ => u16::MAX,
         }
     }
@@ -138,6 +186,12 @@ impl From<u16> for SignerMap {
     fn from(t: u16) -> Self {
         match t {
             1 => SignerMap::Arweave,
+            2 => SignerMap::Ed25519,
+            3 => SignerMap::Ethereum,
+            4 => SignerMap::Solana,
+            5 => SignerMap::InjectedAptos,
+            6 => SignerMap::MultiAptos,
+            7 => SignerMap::TypedEthereum,
             _ => SignerMap::None,
         }
     }
