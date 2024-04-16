@@ -57,7 +57,8 @@ export const createApis = async (ctx) => {
     cacheKeyFn: ({ processId }) => processId
   })
 
-  const sqlite = await SqliteClient.createSqliteClient({ url: `${ctx.DB_URL}.sqlite`, bootstrap: true })
+  const DB_URL = `${ctx.DB_URL}.sqlite`
+  const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
   const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
     maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
@@ -72,6 +73,7 @@ export const createApis = async (ctx) => {
             WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
             WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
             ARWEAVE_URL: ctx.ARWEAVE_URL,
+            DB_URL,
             id: workerId
           }
         }

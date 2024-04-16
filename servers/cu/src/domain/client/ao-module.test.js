@@ -137,6 +137,11 @@ describe('ao-module', () => {
     }
     const args = {
       name: 'foobar Message',
+      noSave: false,
+      deepHash: undefined,
+      cron: undefined,
+      ordinate: '1',
+      isAssignment: false,
       processId: 'foobar-process',
       Memory: null,
       message: {
@@ -158,12 +163,20 @@ describe('ao-module', () => {
 
     test('should eval the message', async () => {
       const evaluator = evaluatorWith({
-        evaluate: ({ streamId, moduleId: mId, moduleOptions: mOptions, name, processId, Memory, message, AoGlobal }) => {
+        evaluate: ({ streamId, moduleId: mId, moduleOptions: mOptions, Memory, message, AoGlobal, ...rest }) => {
           assert.ok(streamId)
           assert.equal(mId, moduleId)
           assert.deepStrictEqual(mOptions, moduleOptions)
-          assert.equal(name, args.name)
-          assert.equal(processId, args.processId)
+
+          assert.deepStrictEqual(rest, {
+            name: 'foobar Message',
+            noSave: false,
+            deepHash: undefined,
+            cron: undefined,
+            ordinate: '1',
+            isAssignment: false,
+            processId: 'foobar-process'
+          })
 
           return AoLoader(readFileSync('./test/processes/happy/process.wasm'), mOptions)
             .then((wasmModule) => wasmModule(Memory, message, AoGlobal))
