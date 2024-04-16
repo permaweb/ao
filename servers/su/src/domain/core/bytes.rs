@@ -4,14 +4,14 @@ use bytes::{BufMut, Bytes};
 
 use bundlr_sdk::{error::BundlrError, tags::*};
 
-use sha2::{Digest, Sha256, Sha384};
 use base64_url;
+use sha2::{Digest, Sha256, Sha384};
 
 use ring::rand::SecureRandom;
 
 #[derive(Debug)]
 pub enum ByteErrorType {
-    ByteError(String)
+    ByteError(String),
 }
 
 impl From<BundlrError> for ByteErrorType {
@@ -29,12 +29,15 @@ impl From<&str> for ByteErrorType {
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
-    pub tags: Vec<Tag>
+    pub tags: Vec<Tag>,
 }
 
 impl DataBundle {
     pub fn new(tags: Vec<Tag>) -> Self {
-        DataBundle { items: Vec::new(), tags: tags }
+        DataBundle {
+            items: Vec::new(),
+            tags: tags,
+        }
     }
 
     pub fn add_item(&mut self, item: DataItem) {
@@ -46,14 +49,14 @@ impl DataBundle {
         let mut binaries = Vec::new();
 
         for (index, item) in self.items.iter().enumerate() {
-            let id = item.raw_id(); 
+            let id = item.raw_id();
 
             let mut header = Vec::with_capacity(64);
-            header.extend_from_slice(&long_to_32_byte_array(item.as_bytes()?.len() as u64)?); 
+            header.extend_from_slice(&long_to_32_byte_array(item.as_bytes()?.len() as u64)?);
             header.extend_from_slice(&id);
 
             headers.splice(64 * index..64 * (index + 1), header.iter().cloned());
-            binaries.extend_from_slice(&item.as_bytes()?); 
+            binaries.extend_from_slice(&item.as_bytes()?);
         }
 
         let mut buffer = Vec::new();
@@ -85,7 +88,7 @@ fn long_to_32_byte_array(value: u64) -> Result<Vec<u8>, ByteErrorType> {
 #[derive(Clone)]
 enum Data {
     None,
-    Bytes(Vec<u8>)
+    Bytes(Vec<u8>),
 }
 
 #[derive(Clone)]
@@ -111,7 +114,6 @@ pub enum SignerMap {
     None = -1,
     Arweave = 1,
 }
-
 
 impl SignerMap {
     pub fn get_config(&self) -> Config {
@@ -187,7 +189,12 @@ fn sha384hash(b: Bytes) -> Bytes {
 }
 
 impl DataItem {
-    pub fn new(target: Vec<u8>, data: Vec<u8>, tags: Vec<Tag>, owner: Vec<u8>) -> Result<Self, ByteErrorType> {
+    pub fn new(
+        target: Vec<u8>,
+        data: Vec<u8>,
+        tags: Vec<Tag>,
+        owner: Vec<u8>,
+    ) -> Result<Self, ByteErrorType> {
         let mut randoms: [u8; 32] = [0; 32];
         let sr = ring::rand::SystemRandom::new();
         match sr.fill(&mut randoms) {
@@ -233,7 +240,6 @@ impl DataItem {
             }
         }
     }
-    
 
     pub fn is_signed(&self) -> bool {
         !self.signature.is_empty() && self.signature_type != SignerMap::None
@@ -241,7 +247,9 @@ impl DataItem {
 
     fn from_info_bytes(buffer: &[u8]) -> Result<(Self, usize), ByteErrorType> {
         if buffer.len() < 2 {
-            return Err(ByteErrorType::ByteError("Buffer too short for signature type".to_string()));
+            return Err(ByteErrorType::ByteError(
+                "Buffer too short for signature type".to_string(),
+            ));
         }
 
         let sig_type_b = &buffer[0..2];
@@ -250,7 +258,7 @@ impl DataItem {
                 .map_err(|err| ByteErrorType::ByteError(err.to_string()))?,
         );
         let signer = SignerMap::from(signature_type);
-    
+
         let Config {
             pub_length,
             sig_length,
@@ -258,16 +266,19 @@ impl DataItem {
         } = signer.get_config();
 
         if buffer.len() < 2 + sig_length + pub_length {
-            return Err(ByteErrorType::ByteError("Buffer too short for signature and public key".to_string()));
+            return Err(ByteErrorType::ByteError(
+                "Buffer too short for signature and public key".to_string(),
+            ));
         }
-    
+
         let signature = &buffer[2..2 + sig_length];
         let owner = &buffer[2 + sig_length..2 + sig_length + pub_length];
-    
+
         let target_start = 2 + sig_length + pub_length;
         let target_present = u8::from_le_bytes(
-            <[u8; 1]>::try_from(&buffer[target_start..target_start + 1])
-                .map_err(|err| ByteErrorType::ByteError(format!("target bytes error - {}", err.to_string())))?,
+            <[u8; 1]>::try_from(&buffer[target_start..target_start + 1]).map_err(|err| {
+                ByteErrorType::ByteError(format!("target bytes error - {}", err.to_string()))
+            })?,
         );
         let target = match target_present {
             0 => &[],
@@ -276,40 +287,48 @@ impl DataItem {
         };
         let anchor_start = target_start + 1 + target.len();
         let anchor_present = u8::from_le_bytes(
-            <[u8; 1]>::try_from(&buffer[anchor_start..anchor_start + 1])
-                .map_err(|err| ByteErrorType::ByteError(format!("anchor bytes error - {}", err.to_string())))?,
+            <[u8; 1]>::try_from(&buffer[anchor_start..anchor_start + 1]).map_err(|err| {
+                ByteErrorType::ByteError(format!("anchor bytes error - {}", err.to_string()))
+            })?,
         );
         let anchor = match anchor_present {
             0 => &[],
             1 => &buffer[anchor_start + 1..anchor_start + 33],
-            b => return Err(ByteErrorType::ByteError(format!("anchor bytes error - {}", b.to_string()))),
+            b => {
+                return Err(ByteErrorType::ByteError(format!(
+                    "anchor bytes error - {}",
+                    b.to_string()
+                )))
+            }
         };
-    
+
         let tags_start = anchor_start + 1 + anchor.len();
         let number_of_tags = u64::from_le_bytes(
-            <[u8; 8]>::try_from(&buffer[tags_start..tags_start + 8])
-                .map_err(|err| ByteErrorType::ByteError(format!("tag bytes error - {}", err.to_string())))?,
+            <[u8; 8]>::try_from(&buffer[tags_start..tags_start + 8]).map_err(|err| {
+                ByteErrorType::ByteError(format!("tag bytes error - {}", err.to_string()))
+            })?,
         );
-    
+
         let number_of_tags_bytes = u64::from_le_bytes(
-            <[u8; 8]>::try_from(&buffer[tags_start + 8..tags_start + 16])
-                .map_err(|err| ByteErrorType::ByteError(format!("tag bytes error - {}", err.to_string())))?,
+            <[u8; 8]>::try_from(&buffer[tags_start + 8..tags_start + 16]).map_err(|err| {
+                ByteErrorType::ByteError(format!("tag bytes error - {}", err.to_string()))
+            })?,
         );
-    
+
         let mut b = buffer.to_vec();
         let mut tags_bytes =
             &mut b[tags_start + 16..tags_start + 16 + number_of_tags_bytes as usize];
-    
+
         let tags = if number_of_tags_bytes > 0 {
             tags_bytes.decode()?
         } else {
             vec![]
         };
-    
+
         if number_of_tags != tags.len() as u64 {
             return Err(ByteErrorType::ByteError("invalid tag encoding".to_string()));
         }
-    
+
         let data_item = DataItem {
             signature_type: signer,
             signature: signature.to_vec(),
@@ -319,7 +338,7 @@ impl DataItem {
             tags,
             data: Data::None,
         };
-    
+
         Ok((data_item, tags_start + 16 + number_of_tags_bytes as usize))
     }
 
@@ -356,10 +375,9 @@ impl DataItem {
             + encoded_tags.len() as u64
             + data.len() as u64;
 
-        let mut b = Vec::with_capacity(
-            TryInto::<usize>::try_into(length)
-                .map_err(|err| ByteErrorType::ByteError(format!("data length error - {} ", err.to_string())))?,
-        );
+        let mut b = Vec::with_capacity(TryInto::<usize>::try_into(length).map_err(|err| {
+            ByteErrorType::ByteError(format!("data length error - {} ", err.to_string()))
+        })?);
 
         let sig_type: [u8; 2] = (self.signature_type.clone() as u16).to_le_bytes();
         let target_presence_byte = if self.target.is_empty() {
@@ -418,13 +436,11 @@ impl DataItem {
 
     pub fn data(&self) -> Option<String> {
         match &self.data {
-            Data::Bytes(d) => {
-                match String::from_utf8(d.clone()) {
-                    Ok(s) => Some(s),
-                    Err(_) => None, 
-                }
+            Data::Bytes(d) => match String::from_utf8(d.clone()) {
+                Ok(s) => Some(s),
+                Err(_) => None,
             },
-            Data::None => None
+            Data::None => None,
         }
     }
 
@@ -436,7 +452,7 @@ impl DataItem {
     pub fn anchor(&self) -> String {
         match String::from_utf8(self.anchor.clone()) {
             Ok(s) => s,
-            Err(_) => "".to_string(), 
+            Err(_) => "".to_string(),
         }
     }
 }
@@ -452,7 +468,8 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        let reconverted_string = base64_url::encode(&data_item.as_bytes().expect("failed to convert to bytes"));
+        let reconverted_string =
+            base64_url::encode(&data_item.as_bytes().expect("failed to convert to bytes"));
         assert_eq!(d_item_string, reconverted_string);
     }
 
@@ -461,9 +478,15 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        assert_eq!("6oYAxVAnH8yKsZKpMgHSbRv7uVWey68PAqYuSXeZBbg".to_string(), data_item.id());
+        assert_eq!(
+            "6oYAxVAnH8yKsZKpMgHSbRv7uVWey68PAqYuSXeZBbg".to_string(),
+            data_item.id()
+        );
         assert_eq!("goGuTJ-Qzcnz1bUY2-twI0dI3OEXyg8i1ThCejv7HnZkg4CN90VxdNgtBhTtd-voYppEHJ6Y-uRuSsml0HxFBES3etBEM0ZFDSOds-frY9C6C-yz3wlmf0PhJw26xtuAoyKGPgyp9cTaa3sBv17DHl3TV34zB_cPqYbP8REEmAmjxvXX1tFd02-BQMkLnw0V3hyEQ5QXiZvKPalkH0_t_HbbIS9XvLoM3O4q-TTZhC3tPAvux3EfU9PrcJgnHS2VUYYO8mEYpRDA58NpccUyO65SVdr-SVMlPnARvvxoDKHfevDSf3Ck5qRMiTYqB6RskDNVYJPQF8uus6Eqzfnnr9377aYuZws442iwGNIuiS6-3KtM5ftu0pF_pmXmXfC3GwVo-A7ozdDL1RHjoC0rvpdIVB32RwN_9CPUXKuiclL96dAVZiflSb3uYOdhP1InAykMVL8VgFMqWw2GxXLXURbmQq6jqZNGV95slr0JC_43NtRqN3u6UBwzhU1Zi34ptuFVm1RRTGAO9cl2XBFJhHlTwnBLN7ex9q1vmZt2z4QBL61PuCvCu9NvjBHPbR70BG0GDqQL_HxC6MeYU5En3vOsWWee6c9uxaDBbPxt9P1EwXLnFQTUoMK2cmqn4zcWhbBBzixEQjIKXtDolOr-yU975fC30Lmiq6Ph79Kg65M".to_string(), data_item.owner());
-        assert_eq!("-oM8CYgbqsRcpI3tE_cpGM3kgDlamnYjSGA4nptPao0".to_string(), data_item.target());
+        assert_eq!(
+            "-oM8CYgbqsRcpI3tE_cpGM3kgDlamnYjSGA4nptPao0".to_string(),
+            data_item.target()
+        );
     }
 
     #[test]

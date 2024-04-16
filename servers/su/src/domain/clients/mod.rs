@@ -1,7 +1,5 @@
-
-
 /*
-glue code for interacting with outside world 
+glue code for interacting with outside world
 and producing side effects
 */
 

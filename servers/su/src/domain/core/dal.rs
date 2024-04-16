@@ -1,39 +1,40 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-pub use super::json::{Message, Process, PaginatedMessages, JsonErrorType};
-pub use super::router::{Scheduler, ProcessScheduler};
+pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
+pub use super::router::{ProcessScheduler, Scheduler};
 
 /*
-Interfaces for core dependencies. Implement these traits 
+Interfaces for core dependencies. Implement these traits
 in clients etc... to inject side effects into the core
 */
 
 #[derive(Deserialize)]
 pub struct NetworkInfo {
     pub height: String,
-    pub current: String
+    pub current: String,
 }
 
+#[derive(Deserialize)]
 pub struct TxStatus {
     pub block_height: i32,
     pub number_of_confirmations: i32,
 }
 
 #[async_trait]
-pub trait Gateway: Send + Sync  {
+pub trait Gateway: Send + Sync {
     async fn check_head(&self, tx_id: String) -> Result<bool, String>;
     async fn network_info(&self) -> Result<NetworkInfo, String>;
-    async fn status(&self, tx_id: String) -> Result<TxStatus, String>;
+    async fn status(&self, tx_id: &String) -> Result<TxStatus, String>;
 }
 
-pub trait Wallet: Send + Sync  {
+pub trait Wallet: Send + Sync {
     fn wallet_json(&self) -> Result<String, String>;
     fn wallet_address(&self) -> Result<String, String>;
 }
 
 #[async_trait]
-pub trait Signer: Send + Sync  {
+pub trait Signer: Send + Sync {
     async fn sign_tx(&self, buffer: Vec<u8>) -> Result<Vec<u8>, String>;
     fn get_public_key(&self) -> Vec<u8>;
 }
@@ -60,7 +61,7 @@ pub trait Config: Send + Sync {
 
 #[derive(Debug)]
 pub enum UploaderErrorType {
-    UploadError(String)
+    UploadError(String),
 }
 
 impl From<UploaderErrorType> for String {
@@ -80,7 +81,7 @@ pub enum StoreErrorType {
     JsonError(String),
     EnvVarError(String),
     IntError(String),
-    MessageExists(String)
+    MessageExists(String),
 }
 
 pub trait DataStore: Send + Sync {
@@ -96,8 +97,14 @@ pub trait DataStore: Send + Sync {
     ) -> Result<PaginatedMessages, StoreErrorType>;
     fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
     fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType>;
-    fn save_process_scheduler(&self, process_scheduler: &ProcessScheduler) -> Result<String, StoreErrorType>;
-    fn get_process_scheduler(&self, process_id_in: &str) -> Result<ProcessScheduler, StoreErrorType>;
+    fn save_process_scheduler(
+        &self,
+        process_scheduler: &ProcessScheduler,
+    ) -> Result<String, StoreErrorType>;
+    fn get_process_scheduler(
+        &self,
+        process_id_in: &str,
+    ) -> Result<ProcessScheduler, StoreErrorType>;
     fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType>;
     fn update_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType>;
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType>;

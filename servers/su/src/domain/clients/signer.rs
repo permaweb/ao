@@ -1,9 +1,8 @@
-
-use bytes::Bytes;
-use std::{path::PathBuf};
-use std::{str::FromStr};
-use async_trait::async_trait;
 use arweave_rs::ArweaveSigner as SdkSigner;
+use async_trait::async_trait;
+use bytes::Bytes;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::domain::core::dal::Signer;
 
@@ -14,14 +13,11 @@ pub struct ArweaveSigner {
 const PUB_LENGTH: u16 = 512;
 
 impl ArweaveSigner {
-    pub fn new( 
-        wallet_path: &str, 
-    ) -> Result<Self, String> {
-        let wallet = PathBuf::from_str(wallet_path)
-            .expect("wallet file does not exist");
-        let sdk =  match SdkSigner::from_keypair_path(wallet) {
+    pub fn new(wallet_path: &str) -> Result<Self, String> {
+        let wallet = PathBuf::from_str(wallet_path).expect("wallet file does not exist");
+        let sdk = match SdkSigner::from_keypair_path(wallet) {
             Ok(s) => s,
-            Err(e) => return Err(e.to_string())
+            Err(e) => return Err(e.to_string()),
         };
         let pub_key = sdk.get_public_key().0;
         if pub_key.len() as u16 == PUB_LENGTH {
@@ -38,7 +34,7 @@ impl Signer for ArweaveSigner {
         let as_bytes = Bytes::from(buffer);
         let signed = match self.sdk.sign(&as_bytes) {
             Ok(s) => s,
-            Err(e) => return Err(e.to_string())
+            Err(e) => return Err(e.to_string()),
         };
         Ok(Bytes::copy_from_slice(&signed.0).to_vec())
     }
