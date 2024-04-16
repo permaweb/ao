@@ -17,7 +17,9 @@ export function writeAssignWith (env) {
     return writeAssignment({
       suUrl: ctx.schedLocation.url,
       txId: ctx.assign.txId,
-      processId: ctx.assign.processId
+      processId: ctx.assign.processId,
+      baseLayer: ctx.assign.baseLayer,
+      exclude: ctx.assign.exclude
     })
     /*
             return the tx in this shape so we can pull

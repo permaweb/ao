@@ -17,7 +17,12 @@ const withMessageRoutes = (app) => {
           body,
           logger: _logger,
           domain: { apis: { sendDataItem, sendAssign } },
-          query: { 'process-id': processId, assign }
+          query: {
+            'process-id': processId,
+            assign,
+            'base-layer': baseLayer,
+            exclude
+          }
         } = req
 
         const logger = _logger.child('POST_root')
@@ -28,7 +33,14 @@ const withMessageRoutes = (app) => {
           /**
            * Forward the Assignment
            */
-          await of({ assign: { processId, txId: assign } })
+          await of({
+            assign: {
+              processId,
+              txId: assign,
+              baseLayer,
+              exclude
+            }
+          })
             .chain(sendAssign)
             .bimap(
               logger.tap('Failed to send the Assignment'),
