@@ -79,7 +79,7 @@ for quick retrieval later (Defaults to the os temp directory)
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds,
   that the CU should wait before creating a process `Checkpoint` IFF it has
   already created a Checkpoint for that process, since it last started. This is effectively a throttle
-  on `Checkpoint` creation, for a given process (defaults to `4 hours`)
+  on `Checkpoint` creation, for a given process (defaults to `30 minutes`)
 - `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint`
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
