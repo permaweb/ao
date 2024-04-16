@@ -12,8 +12,11 @@ import { LRUCache } from 'lru-cache'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 
+import { saveEvaluationSchema } from '../dal.js'
 import { createLogger } from '../logger.js'
 import { joinUrl } from '../utils.js'
+import { saveEvaluationWith } from './ao-evaluation.js'
+import { createSqliteClient } from './sqlite.js'
 
 const pipelineP = promisify(pipeline)
 
@@ -121,8 +124,14 @@ export function evaluateWith ({
   writeWasmFile,
   streamTransactionData,
   bootstrapWasmInstance,
+  saveEvaluation,
   logger
 }) {
+  streamTransactionData = fromPromise(streamTransactionData)
+  readWasmFile = fromPromise(readWasmFile)
+  bootstrapWasmInstance = fromPromise(bootstrapWasmInstance)
+  saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
+
   function maybeCachedModule ({ streamId, moduleId, moduleOptions, Memory, message, AoGlobal }) {
     return of(moduleId)
       .map((moduleId) => wasmModuleCache.get(moduleId))
@@ -136,7 +145,7 @@ export function evaluateWith ({
     logger('Checking for wasm file to load module "%s"...', moduleId)
 
     return of(moduleId)
-      .chain(fromPromise(readWasmFile))
+      .chain(readWasmFile)
       .chain(fromPromise((stream) =>
         WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream)))
       ))
@@ -150,7 +159,7 @@ export function evaluateWith ({
     logger('Loading wasm transaction "%s"...', moduleId)
 
     return of(moduleId)
-      .chain(fromPromise(streamTransactionData))
+      .chain(streamTransactionData)
       .map((res) => res.body.tee())
       /**
        * Simoultaneously cache the binary in a file
@@ -189,7 +198,7 @@ export function evaluateWith ({
          */
         Resolved
       )
-      .chain(fromPromise((wasmModule) => bootstrapWasmInstance(wasmModule, moduleOptions)))
+      .chain((wasmModule) => bootstrapWasmInstance(wasmModule, moduleOptions))
       /**
        * Cache the wasm module for this particular stream,
        * in memory, for quick retrieval next time
@@ -291,7 +300,7 @@ export function evaluateWith ({
    *
    * Finally, evaluates the message and returns the result of the evaluation.
    */
-  return ({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal }) =>
+  return ({ streamId, moduleId, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) =>
     /**
      * Dynamically load the module, either from cache,
      * or from a file
@@ -320,12 +329,45 @@ export function evaluateWith ({
             Resolved
           )
           .map(mergeOutput(Memory, name, processId))
+          .chain((output) => {
+            /**
+             * Noop saving the evaluation is noSave flag is set
+             */
+            if (noSave) return Resolved(output)
+
+            return saveEvaluation({
+              deepHash,
+              cron,
+              ordinate,
+              isAssignment,
+              processId,
+              messageId: message.Id,
+              timestamp: message.Timestamp,
+              nonce: message.Nonce,
+              epoch: message.Epoch,
+              blockHeight: message['Block-Height'],
+              evaluatedAt: new Date(),
+              output
+            })
+              .bimap(
+                logger.tap('Failed to save evaluation'),
+                identity
+              )
+              /**
+               * Always ensure this Async resolves
+               */
+              .bichain(Resolved, Resolved)
+              .map(() => output)
+          })
       )
       .toPromise()
 }
 
 if (!process.env.NO_WORKER) {
   const logger = createLogger(`ao-cu:${hostname()}:worker-${workerData.id}`)
+
+  const sqlite = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false })
+
   /**
    * Expose our worker api
    */
@@ -342,6 +384,7 @@ if (!process.env.NO_WORKER) {
           moduleOptions
         )
       },
+      saveEvaluation: saveEvaluationWith({ db: sqlite, logger }),
       logger
     })
   })

@@ -95,18 +95,22 @@ export function evaluatorWith ({ evaluate }) {
 
         let backpressure = 0
 
-        return ({ name, processId, Memory, message, AoGlobal }) =>
+        return (args) =>
           Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
             .then(async (defer) => {
-            /**
-             * defer the next wasm module invocation to the
-             * end of the current event queue.
-             *
-             * We may want to defer to prevent starvation of other tasks on the main thread
-             */
+              /**
+               * defer the next wasm module invocation to the
+               * end of the current event queue.
+               *
+               * We may want to defer to prevent starvation of other tasks on the main thread
+               */
               if (defer) await new Promise(resolve => setImmediate(resolve))
 
-              return evaluate({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal })
+              args.streamId = streamId
+              args.moduleId = moduleId
+              args.moduleOptions = moduleOptions
+
+              return evaluate(args)
             })
       }))
       .toPromise()

@@ -1,10 +1,10 @@
 import { Transform, compose as composeStreams, finished } from 'node:stream'
 
-import { always, applySpec, evolve, identity, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
+import { always, applySpec, evolve, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { evaluatorSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../dal.js'
+import { evaluatorSchema, findMessageBeforeSchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
 import { removeTagsByNameMaybeValue } from '../utils.js'
 
@@ -43,22 +43,6 @@ function evaluatorWith ({ loadEvaluator }) {
   }).map((evaluator) => ({ evaluator, ...ctx }))
 }
 
-function saveEvaluationWith ({ saveEvaluation, logger }) {
-  saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
-
-  return (args) =>
-    saveEvaluation(args)
-      .bimap(
-        logger.tap('Failed to save evaluation'),
-        identity
-      )
-      /**
-       * Always ensure this Async resolves
-       */
-      .bichain(Resolved, Resolved)
-      .map(() => args)
-}
-
 function doesMessageExistWith ({ findMessageBefore }) {
   findMessageBefore = fromPromise(findMessageBeforeSchema.implement(findMessageBefore))
 
@@ -94,7 +78,6 @@ export function evaluateWith (env) {
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
-  const saveEvaluation = saveEvaluationWith(env)
   const loadEvaluator = evaluatorWith(env)
 
   const saveLatestProcessMemory = env.saveLatestProcessMemory
@@ -219,7 +202,7 @@ export function evaluateWith (env) {
                         /**
                          * Where the actual evaluation is performed
                          */
-                        .then((Memory) => ctx.evaluator({ name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
+                        .then((Memory) => ctx.evaluator({ noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
                         /**
                          * These values are folded,
                          * so that we can potentially update the process memory cache
@@ -241,40 +224,7 @@ export function evaluateWith (env) {
                             ctx.stats.messages.error++
                           }
 
-                          /**
-                           * Noop saving the evaluation is noSave flag is set
-                           */
-                          if (noSave) return output
-
-                          /**
-                           * Create a new evaluation to be cached in the local db
-                           *
-                           * TODO: move saving evaluation into worker thread
-                           */
-                          return saveEvaluation({
-                            deepHash,
-                            cron,
-                            ordinate,
-                            isAssignment,
-                            processId: ctx.id,
-                            messageId: message.Id,
-                            timestamp: message.Timestamp,
-                            nonce: message.Nonce,
-                            epoch: message.Epoch,
-                            blockHeight: message['Block-Height'],
-                            evaluatedAt: new Date(),
-                            output
-                          })
-                            .toPromise()
-                            .catch((err) => {
-                              logger(
-                                'Unexpected Error occurred when saving evaluation of "%s" to process "%s"',
-                                name,
-                                ctx.id,
-                                err
-                              )
-                            })
-                            .then(() => output)
+                          return output
                         })
                     )
                 }
