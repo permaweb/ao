@@ -26,4 +26,28 @@ describe('send-assign', () => {
     }).toPromise()
       .then(res => assert.equal(res.assignmentId, 'assignment-1'))
   })
+
+  test('send an assignment to the MU with baseLayer and exclude', async () => {
+    const sendAssign = sendAssignWith({
+      deployAssign: async ({ process, message, baseLayer, exclude }) => {
+        assert.ok(process)
+        assert.ok(message)
+        assert.equal(process, 'process-1')
+        assert.equal(message, 'message-1')
+        assert.equal(exclude, 'data,tags')
+        assert.equal(baseLayer, true)
+
+        return { assignmentId: 'assignment-1' }
+      },
+      logger
+    })
+
+    await sendAssign({
+      process: 'process-1',
+      message: 'message-1',
+      baseLayer: true,
+      exclude: 'data,tags'
+    }).toPromise()
+      .then(res => assert.equal(res.assignmentId, 'assignment-1'))
+  })
 })

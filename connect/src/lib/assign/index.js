@@ -22,8 +22,8 @@ import { sendAssignWith } from './send-assign.js'
 export function assignWith (env) {
   const sendAssign = sendAssignWith(env)
 
-  return ({ process, message }) => {
-    return of({ process, message })
+  return ({ process, message, baseLayer, exclude }) => {
+    return of({ process, message, baseLayer, exclude })
       .chain(sendAssign)
       .map((ctx) => ctx.assignmentId)
       .bimap(errFrom, identity)

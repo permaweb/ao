@@ -228,4 +228,34 @@ describe('ao-mu', () => {
       })
     })
   })
+
+  describe('deployAssignWith', () => {
+    test('deploy an assignment to the MU with base-layer and exclude', async () => {
+      const deployAssign = deployAssignSchema.implement(
+        deployAssignWith({
+          MU_URL,
+          logger,
+          fetch: async (url, options) => {
+            assert.equal(url, `${MU_URL}?process-id=process-1&assign=message-1&base-layer&exclude=data,tags`)
+            assert.deepStrictEqual(options, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              }
+            })
+
+            return new Response(JSON.stringify({ id: 'assignment-id' }))
+          }
+        })
+      )
+
+      await deployAssign({
+        process: 'process-1',
+        message: 'message-1',
+        baseLayer: true,
+        exclude: 'data,tags'
+      })
+    })
+  })
 })
