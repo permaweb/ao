@@ -11,7 +11,7 @@ pub struct AoConfig {
     pub gateway_url: String,
     pub upload_node_url: String,
     pub mode: String,
-    pub scheduler_list_path: String
+    pub scheduler_list_path: String,
 }
 
 impl AoConfig {
@@ -19,7 +19,7 @@ impl AoConfig {
         dotenv().ok();
         let mode_out = match mode {
             Some(m) => m,
-            None => env::var("MODE")?
+            None => env::var("MODE")?,
         };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,

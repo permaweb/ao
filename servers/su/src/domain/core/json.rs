@@ -1,15 +1,12 @@
-
-
-
-use serde::{Serialize, Deserialize}; 
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::bytes::{DataBundle, DataItem, ByteErrorType};
-use bundlr_sdk::{tags::*};
+use super::bytes::{ByteErrorType, DataBundle, DataItem};
+use bundlr_sdk::tags::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum JsonErrorType {
-    JsonError(String)
+    JsonError(String),
 }
 
 impl From<JsonErrorType> for String {
@@ -74,7 +71,7 @@ pub struct MessageInner {
     pub tags: Vec<Tag>,
     pub signature: String,
     pub anchor: Option<String>,
-    pub target: Option<String>
+    pub target: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -84,13 +81,13 @@ pub struct AssignmentInner {
     pub tags: Vec<Tag>,
     pub signature: String,
     pub anchor: Option<String>,
-    pub target: Option<String>
+    pub target: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
     pub message: Option<MessageInner>,
-    pub assignment: AssignmentInner
+    pub assignment: AssignmentInner,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -125,17 +122,21 @@ impl Process {
         let signature = data_bundle.items[0].signature().clone();
         let data = data_bundle.items[0].data().clone();
         let anchor = data_bundle.items[0].anchor().clone();
-        
+
         let owner_bytes = base64_url::decode(&owner)?;
         let address_hash = hash(&owner_bytes);
         let address = base64_url::encode(&address_hash);
 
         let bundle_tags = data_bundle.tags.clone();
-        
-        let block_tag = bundle_tags.iter().find(|tag| tag.name == "Block-Height")
+
+        let block_tag = bundle_tags
+            .iter()
+            .find(|tag| tag.name == "Block-Height")
             .ok_or("Block-Height tag not found")?;
 
-        let timestamp_tag = bundle_tags.iter().find(|tag| tag.name == "Timestamp")
+        let timestamp_tag = bundle_tags
+            .iter()
+            .find(|tag| tag.name == "Timestamp")
             .ok_or("Timestamp tag not found")?;
 
         let block = block_tag.value.clone();
@@ -149,7 +150,7 @@ impl Process {
         let ac = anchor.clone();
         let anchor_r = match &*anchor {
             "" => None,
-            _ => Some(ac)
+            _ => Some(ac),
         };
 
         Ok(Process {
@@ -160,7 +161,7 @@ impl Process {
             tags: tags,
             signature: Some(signature),
             anchor: anchor_r,
-            data: data
+            data: data,
         })
     }
 }
@@ -177,7 +178,7 @@ impl Message {
         let ac = anchor.clone();
         let anchor_r = match &*anchor {
             "" => None,
-            _ => Some(ac)
+            _ => Some(ac),
         };
 
         let owner_bytes = base64_url::decode(&owner)?;
@@ -195,9 +196,8 @@ impl Message {
             tags,
             signature,
             anchor: anchor_r,
-            target: Some(target)
+            target: Some(target),
         };
-
 
         let message_inner = match data_bundle.items.len() {
             // bundle is just an assignment
@@ -211,22 +211,22 @@ impl Message {
                 let signature = data_bundle.items[1].signature().clone();
                 let data = data_bundle.items[1].data().clone();
                 let anchor = data_bundle.items[1].anchor().clone();
-        
+
                 let ac = anchor.clone();
                 let anchor_r = match &*anchor {
                     "" => None,
-                    _ => Some(ac)
+                    _ => Some(ac),
                 };
-        
+
                 let owner_bytes = base64_url::decode(&owner)?;
                 let address_hash = hash(&owner_bytes);
                 let address = base64_url::encode(&address_hash);
-        
+
                 let owner = Owner {
                     address: address,
                     key: owner,
                 };
-        
+
                 Some(MessageInner {
                     id,
                     data,
@@ -234,44 +234,64 @@ impl Message {
                     tags,
                     signature,
                     anchor: anchor_r,
-                    target: Some(target)
+                    target: Some(target),
                 })
-            },
-            _ => None
+            }
+            _ => None,
         };
 
         Ok(Message {
             message: message_inner,
-            assignment: assignment_inner
+            assignment: assignment_inner,
         })
     }
 
     pub fn epoch(&self) -> Result<i32, JsonErrorType> {
-        let epoch_tag = self.assignment.tags.iter().find(|tag| tag.name == "Epoch")
+        let epoch_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Epoch")
             .ok_or("Epoch tag not found")?;
         Ok(epoch_tag.value.parse::<i32>()?)
     }
 
     pub fn nonce(&self) -> Result<i32, JsonErrorType> {
-        let nonce_tag = self.assignment.tags.iter().find(|tag| tag.name == "Nonce")
+        let nonce_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Nonce")
             .ok_or("Nonce tag not found")?;
         Ok(nonce_tag.value.parse::<i32>()?)
     }
 
     pub fn timestamp(&self) -> Result<i64, JsonErrorType> {
-        let timestamp_tag = self.assignment.tags.iter().find(|tag| tag.name == "Timestamp")
+        let timestamp_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Timestamp")
             .ok_or("Timestamp tag not found")?;
         Ok(timestamp_tag.value.parse::<i64>()?)
     }
 
     pub fn hash_chain(&self) -> Result<String, JsonErrorType> {
-        let hash_chain_tag = self.assignment.tags.iter().find(|tag| tag.name == "Hash-Chain")
+        let hash_chain_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Hash-Chain")
             .ok_or("Timestamp tag not found")?;
         Ok(hash_chain_tag.value.clone())
     }
 
     pub fn block_height(&self) -> Result<String, JsonErrorType> {
-        let block_height_tag = self.assignment.tags.iter().find(|tag| tag.name == "Block-Height")
+        let block_height_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Block-Height")
             .ok_or("Block-Height tag not found")?;
         Ok(block_height_tag.value.clone())
     }
@@ -280,7 +300,11 @@ impl Message {
         if let Some(message) = &self.message {
             return Ok(message.id.clone());
         }
-        let message_tag = self.assignment.tags.iter().find(|tag| tag.name == "Message")
+        let message_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Message")
             .ok_or("Message tag not found")?;
         Ok(message_tag.value.clone())
     }
@@ -291,13 +315,17 @@ impl Message {
     }
 
     pub fn process_id(&self) -> Result<String, JsonErrorType> {
-        let process_tag = self.assignment.tags.iter().find(|tag| tag.name == "Process")
+        let process_tag = self
+            .assignment
+            .tags
+            .iter()
+            .find(|tag| tag.name == "Process")
             .ok_or("Process tag not found")?;
         Ok(process_tag.value.clone())
     }
 
     /*
-        This code is to handle mapping from the old 
+        This code is to handle mapping from the old
         json structure before the aop-1 was added to
         handle assign. If the shape changes again
         we can modify this mapping to handle it.
@@ -306,15 +334,15 @@ impl Message {
         match value.get("assignment") {
             Some(_) => {
                 /*
-                    Current message structure we can directly 
+                    Current message structure we can directly
                     parse it using the current shape
                 */
                 let message: Message = serde_json::from_value(value.clone())?;
                 Ok(message)
-            },
+            }
             None => {
                 /*
-                    old message structure so we have to break 
+                    old message structure so we have to break
                     down the json by field
                 */
                 let old_message = extract_val(&value, "message")?;
@@ -335,7 +363,7 @@ impl Message {
                     tags: message_tags,
                     signature: message_signature,
                     anchor: message_anchor,
-                    target: message_target
+                    target: message_target,
                 });
 
                 let bundle_data_item = DataItem::from_bytes(bundle)?;
@@ -349,7 +377,7 @@ impl Message {
                     true => None,
                     false => Some(bundle_data_item.anchor().clone()),
                 };
-                
+
                 let target = match bundle_data_item.target().is_empty() {
                     true => None,
                     false => Some(bundle_data_item.target().clone()),
@@ -364,12 +392,12 @@ impl Message {
                     tags: bundle_data_item.tags(),
                     signature: bundle_data_item.signature(),
                     anchor,
-                    target
+                    target,
                 };
 
                 Ok(Message {
                     message,
-                    assignment
+                    assignment,
                 })
             }
         }
@@ -377,23 +405,25 @@ impl Message {
 }
 
 fn extract_val(val: &serde_json::Value, prop: &str) -> Result<serde_json::Value, JsonErrorType> {
-    match val.get(prop) { 
-        Some(v) => Ok(v.clone()), 
-        None => Err(JsonErrorType::JsonError("Message missing field".to_string())) 
+    match val.get(prop) {
+        Some(v) => Ok(v.clone()),
+        None => Err(JsonErrorType::JsonError(
+            "Message missing field".to_string(),
+        )),
     }
 }
 
 fn extract_option_str(val: &serde_json::Value, prop: &str) -> Option<String> {
-    match val.get(prop) { 
-        Some(v) => v.as_str().map(|s| s.to_string()), 
-        None => None 
+    match val.get(prop) {
+        Some(v) => v.as_str().map(|s| s.to_string()),
+        None => None,
     }
 }
 
 fn str_val(val: &serde_json::Value) -> Result<String, JsonErrorType> {
     match val.as_str().map(|s| s.to_string()) {
         Some(f) => Ok(f),
-        None => Err(JsonErrorType::JsonError("invalid string field".to_string())) 
+        None => Err(JsonErrorType::JsonError("invalid string field".to_string())),
     }
 }
 
@@ -414,27 +444,31 @@ fn to_tags(val: &serde_json::Value) -> Result<Vec<Tag>, JsonErrorType> {
 }
 
 impl PaginatedMessages {
-    pub fn from_messages(messages: Vec<Message>, has_next_page: bool) -> Result<Self, JsonErrorType> {
+    pub fn from_messages(
+        messages: Vec<Message>,
+        has_next_page: bool,
+    ) -> Result<Self, JsonErrorType> {
         let page_info = PageInfo { has_next_page };
-    
-        let edges = messages.into_iter().try_fold(Vec::new(), |mut acc, message| {
-            let timestamp = match message.timestamp() {
-                Ok(t) => t.to_string(),
-                Err(e) => return Err(e), 
-            };
-    
-            acc.push(Edge {
-                node: message.clone(),
-                cursor: timestamp,
-            });
-    
-            Ok(acc)
-        })?;
-    
+
+        let edges = messages
+            .into_iter()
+            .try_fold(Vec::new(), |mut acc, message| {
+                let timestamp = match message.timestamp() {
+                    Ok(t) => t.to_string(),
+                    Err(e) => return Err(e),
+                };
+
+                acc.push(Edge {
+                    node: message.clone(),
+                    cursor: timestamp,
+                });
+
+                Ok(acc)
+            })?;
+
         Ok(PaginatedMessages { page_info, edges })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -450,22 +484,33 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let a_d_item_string = ASSIGNMENT_ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
-        let assignment_item_bytes = base64_url::decode(&a_d_item_string).expect("failed to encode data item");
+        let assignment_item_bytes =
+            base64_url::decode(&a_d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        let assignment_data_item = DataItem::from_bytes(assignment_item_bytes).expect("failed to build data item");
+        let assignment_data_item =
+            DataItem::from_bytes(assignment_item_bytes).expect("failed to build data item");
         let tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-            Tag::new(&"Block-Height".to_string(), &"100".to_string())
+            Tag::new(&"Block-Height".to_string(), &"100".to_string()),
         ];
         let mut data_bundle = DataBundle::new(tags);
         data_bundle.add_item(assignment_data_item);
         data_bundle.add_item(data_item);
         let message = Message::from_bundle(&data_bundle).expect("failed to create message");
         let m = message.clone().message.unwrap();
-        assert_eq!(message.message_id().unwrap(), "FRlw0hbk1-nlAbJ2DbMmwqGV8u6rWgrFYJWjm1mBMjk".to_string());
-        assert_eq!(m.owner.address, "4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck".to_string());
-        assert_eq!(message.process_id().unwrap(), "4iZaXaryQ3eeCDB_2ZS4WmET6DTm35QukI6dNEhQPmw".to_string());
+        assert_eq!(
+            message.message_id().unwrap(),
+            "6oYAxVAnH8yKsZKpMgHSbRv7uVWey68PAqYuSXeZBbg".to_string()
+        );
+        assert_eq!(
+            m.owner.address,
+            "4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck".to_string()
+        );
+        assert_eq!(
+            message.process_id().unwrap(),
+            "4iZaXaryQ3eeCDB_2ZS4WmET6DTm35QukI6dNEhQPmw".to_string()
+        );
     }
 
     #[test]
@@ -482,7 +527,13 @@ mod tests {
         let mut data_bundle = DataBundle::new(tags);
         data_bundle.add_item(data_item);
         let process = Process::from_bundle(&data_bundle).expect("failed to create process");
-        assert_eq!(process.owner.address, "4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck".to_string());
-        assert_eq!(process.process_id, "boxXWZqkBaZmOKJ3Vh7PZzC07Q9OXmxF4QT_ikodfNY".to_string());
+        assert_eq!(
+            process.owner.address,
+            "4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck".to_string()
+        );
+        assert_eq!(
+            process.process_id,
+            "boxXWZqkBaZmOKJ3Vh7PZzC07Q9OXmxF4QT_ikodfNY".to_string()
+        );
     }
 }

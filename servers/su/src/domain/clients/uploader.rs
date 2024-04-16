@@ -1,17 +1,15 @@
-
-
 use std::sync::Arc;
 
-use reqwest::{Url, Client};
+use reqwest::{Client, Url};
 
 extern crate serde;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use tokio::spawn;
 use tokio::time::{sleep, Duration};
 
-use crate::domain::Log;
 use crate::domain::core::dal::{Uploader, UploaderErrorType};
+use crate::domain::Log;
 
 pub struct UploaderClient {
     node_url: Url,
@@ -26,7 +24,6 @@ struct IrysResponse {
     public: String,
     signature: String,
 }
-
 
 impl From<reqwest::Error> for UploaderErrorType {
     fn from(error: reqwest::Error) -> Self {
@@ -44,12 +41,12 @@ impl UploaderClient {
     pub fn new(node_url: &str, logger: Arc<dyn Log>) -> Result<Self, UploaderErrorType> {
         let url = match Url::parse(node_url) {
             Ok(u) => u,
-            Err(e) => return Err(UploaderErrorType::UploadError(format!("{}", e)))
+            Err(e) => return Err(UploaderErrorType::UploadError(format!("{}", e))),
         };
 
         Ok(UploaderClient {
             node_url: url,
-            logger
+            logger,
         })
     }
 }
