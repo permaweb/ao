@@ -254,7 +254,7 @@ describe('ao-mu', () => {
         process: 'process-1',
         message: 'message-1',
         baseLayer: true,
-        exclude: 'data,tags'
+        exclude: ['data', 'tags']
       })
     })
   })

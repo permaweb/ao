@@ -78,7 +78,7 @@ export const deployAssignSchema = z.function()
     process: z.string(),
     message: z.string(),
     baseLayer: z.boolean().optional(),
-    exclude: z.string().optional()
+    exclude: z.array(z.string()).optional()
   }))
   .returns(z.promise(
     z.object({

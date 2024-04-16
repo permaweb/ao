@@ -272,7 +272,7 @@ export function deployAssignWith ({ fetch, MU_URL, logger: _logger }) {
     return of(args)
       .chain(fromPromise(async ({ process, message, baseLayer, exclude }) =>
         fetch(
-            `${MU_URL}?process-id=${process}&assign=${message}${baseLayer ? '&base-layer' : ''}${exclude ? '&exclude=' + exclude : ''}`,
+            `${MU_URL}?process-id=${process}&assign=${message}${baseLayer ? '&base-layer' : ''}${exclude ? '&exclude=' + exclude.join(',') : ''}`,
             {
               method: 'POST',
               headers: {
