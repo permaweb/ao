@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.18](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.17...scheduler-utils@v0.0.18) (2024-04-17)
+
+
+### Bug Fixes
+
+* **scheduler-utils:** wrap all side effects in schemas. Store ttl in byOwner cache ([add734a](https://github.com/permaweb/ao/commit/add734a4676e4d8c367959d0a086c06a8d5c0285))
+
 ## [0.0.17](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.16...scheduler-utils@v0.0.17) (2024-04-03)
 
 ## [0.0.16](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.15...scheduler-utils@v0.0.16) (2024-03-25)
