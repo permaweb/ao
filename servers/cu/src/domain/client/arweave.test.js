@@ -13,7 +13,17 @@ describe('arweave', () => {
     test('load transaction meta', async () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
         loadTransactionMetaWith({
-          fetch,
+          fetch: (url, options) => {
+            const body = JSON.parse(options.body)
+            assert.deepStrictEqual(body.variables, {
+              processIds: [PROCESS],
+              skipTags: false,
+              skipAnchor: false,
+              skipSignature: false
+            })
+
+            return fetch(url, options)
+          },
           GRAPHQL_URL
         })
       )
@@ -28,7 +38,12 @@ describe('arweave', () => {
           fetch: async (url, options) => {
             assert.equal(url, GRAPHQL_URL)
             const body = JSON.parse(options.body)
-            assert.deepStrictEqual(body.variables, { processIds: [PROCESS] })
+            assert.deepStrictEqual(body.variables, {
+              processIds: [PROCESS],
+              skipTags: false,
+              skipAnchor: false,
+              skipSignature: true
+            })
 
             return new Response(JSON.stringify({
               data: {
@@ -73,7 +88,7 @@ describe('arweave', () => {
           }
         }))
 
-      await loadTransactionMeta(PROCESS)
+      await loadTransactionMeta(PROCESS, { skipSignature: true })
     })
   })
 

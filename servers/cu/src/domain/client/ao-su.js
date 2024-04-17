@@ -15,21 +15,34 @@ export const mapNode = pipe(
       path(['assignment']),
       (assignment) => parseTags(assignment.tags),
       applySpec({
-        Message: path(['Message']),
-        Target: path(['Process']),
-        Epoch: pipe(path(['Epoch']), parseInt),
-        Nonce: pipe(path(['Nonce']), parseInt),
-        Timestamp: pipe(path(['Timestamp']), parseInt),
-        'Block-Height': pipe(
+        /**
+         * There could be multiple Exclude tags,
+         * but parseTags will accumulate them into an array,
+         *
+         * which is what we want
+         */
+        Exclude: path(['Exclude']),
+        /**
+         * Data from the assignment, to be placed
+         * on the message
+         */
+        message: applySpec({
+          Message: path(['Message']),
+          Target: path(['Process']),
+          Epoch: pipe(path(['Epoch']), parseInt),
+          Nonce: pipe(path(['Nonce']), parseInt),
+          Timestamp: pipe(path(['Timestamp']), parseInt),
+          'Block-Height': pipe(
           /**
            * Returns a left padded integer like '000001331218'
            *
            * So use parseInt to convert it into a number
            */
-          path(['Block-Height']),
-          parseInt
-        ),
-        'Hash-Chain': path(['Hash-Chain'])
+            path(['Block-Height']),
+            parseInt
+          ),
+          'Hash-Chain': path(['Hash-Chain'])
+        })
       })
     ),
     // fromMessage
@@ -60,17 +73,18 @@ export const mapNode = pipe(
   // Combine into the desired shape
   ([fAssignment, fMessage = {}, fStatic]) => ({
     cron: undefined,
-    ordinate: fAssignment.Nonce,
-    name: `Scheduled Message ${fMessage.Id || fAssignment.Message} ${fAssignment.Timestamp}:${fAssignment.Nonce}`,
+    ordinate: fAssignment.message.Nonce,
+    name: `Scheduled Message ${fMessage.Id || fAssignment.message.Message} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
+    exclude: fAssignment.Exclude,
     isAssignment: !fMessage.Id,
     message: mergeAll([
       fMessage,
-      fAssignment,
+      fAssignment.message,
       /**
        * Ensure Id is always set, regardless if this is a message
        * or just an Assignment for an existing message on-chain
        */
-      { Id: fMessage.Id || fAssignment.Message },
+      { Id: fMessage.Id || fAssignment.message.Message },
       fStatic
     ]),
     /**
@@ -81,8 +95,8 @@ export const mapNode = pipe(
      * down the pipeline
      */
     block: {
-      height: fAssignment['Block-Height'],
-      timestamp: fAssignment.Timestamp
+      height: fAssignment.message['Block-Height'],
+      timestamp: fAssignment.message.Timestamp
     }
   })
 )

@@ -5,13 +5,15 @@ import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchem
 // Arweave
 
 export const loadTransactionMetaSchema = z.function()
-  .args(z.string())
+  // Zod function doesn't allow optional arguments
+  // https://github.com/colinhacks/zod/issues/2990
+  // .args(z.string(), z.any())
   .returns(z.promise(
     z.object({
       owner: z.object({
         address: z.string()
       }),
-      tags: z.array(rawTagSchema)
+      tags: z.array(rawTagSchema).default([])
     }).passthrough()
   ))
 

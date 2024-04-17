@@ -54,17 +54,22 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_PROCESSES_QUERY = `
-    query GetProcesses ($processIds: [ID!]!) {
+    query GetProcesses (
+      $processIds: [ID!]!
+      $skipTags: Boolean!
+      $skipSignature: Boolean!
+      $skipAnchor: Boolean!
+    ) {
       transactions(ids: $processIds) {
         edges {
           node {
             id
-            signature
-            anchor
+            signature @skip (if: $skipSignature)
+            anchor @skip (if: $skipAnchor)
             owner {
               address
             }
-            tags {
+            tags @skip (if: $skipTags) {
               name
               value
             }
@@ -83,16 +88,31 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
     })
   })
 
-  return (id) =>
+  /**
+   * Ideally, this would be in the function schema,
+   * but there is a bug with zod and optional function\
+   * args https://github.com/colinhacks/zod/issues/2990
+   *
+   * So we manually run it
+   */
+  const optionsSchema = z.object({
+    skipTags: z.boolean().default(false),
+    skipSignature: z.boolean().default(false),
+    skipAnchor: z.boolean().default(false)
+  }).default({})
+
+  return (id, options) =>
     of(id)
-      .chain(fromPromise((id) =>
+      .map((id) => {
+        const variables = optionsSchema.parse(options)
+        variables.processIds = [id]
+        return variables
+      })
+      .chain(fromPromise((variables) =>
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: GET_PROCESSES_QUERY,
-            variables: { processIds: [id] }
-          })
+          body: JSON.stringify({ query: GET_PROCESSES_QUERY, variables })
         })
           .then(async (res) => {
             if (res.ok) return res.json()
