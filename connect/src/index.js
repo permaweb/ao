@@ -20,3 +20,5 @@ export { connect }
  * to use, but consumers can also implement their own signer
  */
 export const createDataItemSigner = WalletClient.createDataItemSigner
+export const createEthereumDataItemSigner = WalletClient.createEthereumDataItemSigner
+export const createSolanaDataItemSigner = WalletClient.createSolanaDataItemSigner
