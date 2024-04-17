@@ -187,9 +187,9 @@ def main():
     shell_exec(*cmd)
 
     # add metering library
-    # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
-    # shell_exec(*meter_cmd)
-    # shell_exec(*['rm', '/src/process.js'])
+    meter_cmd = ['node', '/opt/node/apply-metering.cjs']
+    shell_exec(*meter_cmd)
+    shell_exec(*['rm', '/src/process.js'])
 
 if __name__ == '__main__':
     main()
