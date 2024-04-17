@@ -7,6 +7,7 @@ import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { messageSchema, streamSchema } from '../model.js'
+import { mapFrom } from '../utils.js'
 
 const { createData } = WarpArBundles
 
@@ -25,36 +26,51 @@ function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
   loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
   loadTransactionMeta = loadTransactionMetaSchema.implement(loadTransactionMeta)
 
-  return async (id, encodeData) => Promise.all([
-    loadTransactionData(id),
-    loadTransactionMeta(id)
-  ])
-  /**
-   * Construct the JSON representation of a DataItem using
-   * raw transaction data, and metadata about the
-   * transactions (in the shape of a GQL Gateway Transaction)
-   */
-    .then(async ([res, meta]) => ({
-      Id: meta.id,
-      Signature: meta.signature,
-      Owner: meta.owner.address,
-      From: meta.owner.address,
-      Tags: meta.tags,
-      Anchor: meta.anchor,
+  return async ({ id, exclude = [], encodeData }) => {
+    const promises = []
+
+    const options = exclude.reduce((options, e) => {
+      options[`skip${e}`] = true
+      return options
+    }, {})
+
+    promises.push(loadTransactionMeta(id, options))
+
+    if (!exclude.includes('Data')) {
+      promises.push(
+        loadTransactionData(id)
+          /**
+           * Encode the array buffer of the raw data as base64, if desired (Load messages),
+           * otherwise parse the data as text (Assignments)
+           *
+           * TODO: should cu use Content-Type tag to parse data? ie. json, text, etc.
+           * For now, Data is always text or base64-encoded array buffer, so this replicates
+           * current functionality
+           */
+          .then((res) => encodeData
+            ? res.arrayBuffer()
+              .then((ab) => Buffer.from(ab))
+              .then((data) => bytesToBase64(data))
+            : res.text())
+      )
+    }
+
+    return Promise.all(promises)
       /**
-       * Encode the array buffer of the raw data as base64, if desired (Load messages),
-       * otherwise parse the data as text (Assignments)
-       *
-       * TODO: should cu use Content-Type tag to parse data? ie. json, text, etc.
-       * For now, Data is always text or base64-encoded array buffer, so this replicates
-       * current functionality
+       * Construct the JSON representation of a DataItem using
+       * raw transaction data, and metadata about the
+       * transactions (in the shape of a GQL Gateway Transaction)
        */
-      Data: encodeData
-        ? await res.arrayBuffer()
-          .then((ab) => Buffer.from(ab))
-          .then((data) => bytesToBase64(data))
-        : await res.text()
-    }))
+      .then(async ([meta, Data]) => ({
+        Id: meta.id,
+        Signature: meta.signature,
+        Owner: meta.owner.address,
+        From: mapFrom({ tags: meta.tags, owner: meta.owner.address }),
+        Tags: meta.tags,
+        Anchor: meta.anchor,
+        Data
+      }))
+  }
 }
 
 /**
@@ -146,7 +162,14 @@ export function maybeAoAssignmentWith ({ loadTransactionData, loadTransactionMet
        * TODO: should Owner be overwritten? If so, what about From?
        * currently, this will overwrite both, set to the owner of the message on-chain
        */
-      cur.message = mergeRight(cur.message, await loadFromChain(cur.message.Id))
+      cur.message = mergeRight(
+        cur.message,
+        await loadFromChain({
+          id: cur.message.Id,
+          exclude: cur.exclude,
+          encodeData: false
+        })
+      )
 
       yield cur
     }

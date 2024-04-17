@@ -215,6 +215,11 @@ export const messageSchema = z.object({
    * Whether the message is a pure assignment of an on-chain message
    */
   isAssignment: z.boolean().default(false),
+  /**
+   * For assignments, any exclusions to not be passed to the process,
+   * and potentially not loaded from the gateway or arweave
+   */
+  exclude: z.array(z.string()).nullish(),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id

@@ -17,6 +17,7 @@ describe('ao-su', () => {
       cron: undefined,
       ordinate: '23',
       name: `Scheduled Message ${messageId} ${now}:23`,
+      exclude: undefined,
       message: {
         Id: messageId,
         Signature: 'sig-123',
