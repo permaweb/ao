@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.52](https://github.com/permaweb/ao/compare/connect@v0.0.51...connect@v0.0.52) (2024-04-18)
+
+
+### Features
+
+* **connect:** add assign function [#612](https://github.com/permaweb/ao/issues/612) ([d557ebb](https://github.com/permaweb/ao/commit/d557ebbb95792f5200f641c47abf2230be9c3cdf))
+* **connect:** add baseLayer and exclude params [#611](https://github.com/permaweb/ao/issues/611) ([f50e58a](https://github.com/permaweb/ao/commit/f50e58a0e37edb4724a103d429d67ed1f212b620))
+
+
+### Bug Fixes
+
+* **connect:** change param to list [#611](https://github.com/permaweb/ao/issues/611) ([bed821c](https://github.com/permaweb/ao/commit/bed821cca8443646f3966fbc66b3d7261ca5678e))
+* **connect:** fix test and types [#611](https://github.com/permaweb/ao/issues/611) ([1b7a5cd](https://github.com/permaweb/ao/commit/1b7a5cdd2854a1cbb76849028c3f758635a96646))
+
 ## [0.0.51](https://github.com/permaweb/ao/compare/connect@v0.0.50...connect@v0.0.51) (2024-03-27)
 
 
