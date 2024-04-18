@@ -4,9 +4,6 @@ import { tmpdir } from 'node:os'
 import { writeFileSync, readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
-import * as ethers from 'ethers'
-import b58 from 'bs58'
-import * as SolanaWeb3 from '@solana/web3.js'
 
 import Arweave from 'arweave'
 
@@ -46,7 +43,8 @@ describe('node - wallet', () => {
     })
 
     test('should create and sign the data item with Ethereum signer', async () => {
-      const wallet = ethers.Wallet.createRandom().privateKey
+      // const wallet = ethers.Wallet.createRandom().privateKey
+      const wallet = '0x5cb525ddd4b766761a10526dadfa84816f1ff272ba52c29ae55b1c8ac734984b'
 
       const signDataItem = createEthereumDataItemSigner(wallet)
 
@@ -63,7 +61,8 @@ describe('node - wallet', () => {
     })
 
     test('should create and sign the data item with Solana signer', async () => {
-      const wallet = b58.encode(SolanaWeb3.Keypair.generate().secretKey)
+      // const wallet = b58.encode(SolanaWeb3.Keypair.generate().secretKey)
+      const wallet = '37ku4b5nwE2KBxoMvvkUV8nhcGQj8hdfGcLcv81tEbQhopLnccPwsxJGZdYasyCjbBrZsaAaiCVaC2EJfSbSib6p'
 
       const signDataItem = createSolanaDataItemSigner(wallet)
 
