@@ -1,3 +1,5 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
-docker build . -t p3rmaw3b/ao
+cd $(dirname $0)
+
+docker build . -t p3rmaw3b/ao:0.0.34-10GiB

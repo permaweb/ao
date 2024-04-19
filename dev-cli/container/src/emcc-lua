@@ -167,8 +167,9 @@ def main():
     cmd = ['emcc', '-O0', 
       '-s', 'MEMORY64=1',
       '-s', 'ALLOW_MEMORY_GROWTH=1', 
-      '-s', 'INITIAL_MEMORY=6291456', 
-      '-s', 'MAXIMUM_MEMORY=524288000', 
+      '-s', 'INITIAL_MEMORY=20971520',    # 20 MiB
+      '-s', 'MAXIMUM_MEMORY=10737418240', # 10 GiB
+      '-s', 'STACK_SIZE=10485760',        # 10 MiB
       '-s', 'WASM=1', 
       '-s', 'MODULARIZE', 
       # '-s', 'FILESYSTEM=0', 

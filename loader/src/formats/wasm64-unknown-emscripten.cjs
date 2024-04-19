@@ -4528,9 +4528,10 @@ const Module = (() => {
     }
 
     var getHeapMax = () =>
-      524288000;
+      10737418240;
 
     var growMemory = (size) => {
+      console.error('growMemory to', size)
       var b = wasmMemory.buffer;
       var pages = (size - b.byteLength + 65535) / 65536;
       try {
@@ -4540,12 +4541,14 @@ const Module = (() => {
         return 1 /*success*/;
       } catch (e) {
         err(`growMemory: Attempted to grow heap from ${b.byteLength} bytes to ${size} bytes, but got error: ${e}`);
+        console.error(e)
       }
       // implicit 0 return to save code size (caller will cast "undefined" into 0
       // anyhow)
     };
 
     function _emscripten_resize_heap(requestedSize) {
+      console.error('_emscripten_resize_heap to', requestedSize)
       requestedSize = bigintToI53Checked(requestedSize);;
 
 

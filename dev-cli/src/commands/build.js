@@ -9,6 +9,7 @@ export async function build () {
     cmd: [
       'docker',
       'run',
+      '--rm',
       '--platform',
       'linux/amd64',
       '-v',
