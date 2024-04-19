@@ -68,7 +68,7 @@ export function buildTxWith (env) {
           tagsIn.push({ name: 'Pushed-For', value: ctx.cachedMsg.initialTxId })
         }
         const assignmentsTag = ctx.cachedMsg.msg.Tags?.find(tag => tag.name === 'Assignments')
-        const tagAssignments = assignmentsTag ? JSON.parse(assignmentsTag.value) : []
+        const tagAssignments = assignmentsTag ? assignmentsTag.value : []
         return {
           tags: tagsIn,
           scheduler: res.schedLocation,
