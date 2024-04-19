@@ -123,6 +123,13 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
   /**
+   * The interval at which the CU should Checkpoint all processes stored in it's
+   * cache.
+   *
+   * Set to 0 to disable
+   */
+  PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: positiveIntSchema,
+  /**
    * The amount of time in milliseconds, the CU should wait for evaluation to complete
    * before responding with a "busy" message to the client
    */

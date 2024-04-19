@@ -8,7 +8,7 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 - [Environment Variables](#environment-variables)
 - [Tests](#tests)
 - [Debug Logging](#debug-logging)
-- [Heap Snapshot](#heap-snapshot)
+- [Manually Trigger Checkpointing](#manually-trigger-checkpointing)
 - [Project Structure](#project-structure)
   - [Business Logic](#business-logic)
     - [Driven Adapters](#driven-adapters)
@@ -76,6 +76,7 @@ for quick retrieval later (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process
   latest memory LRU In-Memory cache. An entries age is reset each time it is
   accessed
+- `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU should Checkpoint all processes stored in it's cache. Set to `0` to disabled (defaults to `4h`)
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds,
   that the CU should wait before creating a process `Checkpoint` IFF it has
   already created a Checkpoint for that process, since it last started. This is effectively a throttle
@@ -104,29 +105,10 @@ environment variable to the scope of logs you're interested in
 All logging is scoped under the name `ao-cu*`. You can use wildcards to enable a
 subset of logs ie. `ao-cu:readState*`
 
-## Heap Snapshot
+## Manually Trigger Checkpointing
 
-The `ao` Compute Unit is a Compute and Memory Intensive application. It must
-continuously:
-
-- Load Web Assembly Modules, alloating spaces for the compiled binaries, as well
-  as Web Assembly Instance Heaps.
-- Cache `ao` Process memory
-- Load arbitrary amounts of Scheduled Messages from `ao` Scheduler Units
-- Generate arbitrary amounts of Cron Messages
-- Evaluate arbitrary length streams of messages flowing into an `ao` Process.
-
-Each of these tasks have a non-trivial memory and compute footprint, and the
-implementation tries its best to predictably utilize resources.
-
-This implementation heavily utilizes `streams` which have a more predictable
-memory footprint, can properly handle backpressure to prevent any one evaluation
-stream from hogging all of the resources (aka noisy neighbor), and handling
-evaluation streams of arbitrary length, without having to load all of the
-messages into memory, at once.
-
-Regardless, you sometimes may need to peer into the memory usage of the Server.
-This Compute Unit supports exporting a snapshot of it's current heap.
+If you'd like to manually trigger the CU to Checkpoint all Processes it has in it's in-memory cache,
+you can do so by sending the node process a `SIGUSR2` signal.
 
 First, obtain the process id for the CU:
 
@@ -136,9 +118,7 @@ pgrep node
 lsof -i $PORT
 ```
 
-Once you have the process id, you can initiate a heap dump using
-`npm run heapdump -- <pid>`. This will synchronously place a heap snapshot in
-the `DUMP_PATH` and print the name of the snapshot to the console.
+Then send a `SIGUSR2` signal to that process: `kill -USR2 <process>`
 
 ## Project Structure
 
