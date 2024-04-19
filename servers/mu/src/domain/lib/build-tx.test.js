@@ -48,7 +48,7 @@ describe('buildTx', () => {
         msg: {
           Target: 'id-1',
           Tags: [
-            { name: 'Assignments', value: '["p1", "p2"]' }
+            { name: 'Assignments', value: ["p1", "p2"] }
           ],
           Anchor: 'anchor-1',
           Data: 'data-1'
