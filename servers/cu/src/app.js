@@ -1,7 +1,8 @@
-import { join } from 'node:path'
+// import { join } from 'node:path'
 
-import heapdump from 'heapdump'
+// import heapdump from 'heapdump'
 import { unapply, pipeWith } from 'ramda'
+import ms from 'ms'
 
 import Fastify from 'fastify'
 import FastifyMiddie from '@fastify/middie'
@@ -40,6 +41,16 @@ export const server = pipeP(
     }, config.MEM_MONITOR_INTERVAL)
     memMonitor.unref()
 
+    if (config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL) {
+      logger('Setting up Interval to Checkpoint all Processes every %s', ms(config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL))
+      const cacheCheckpointInterval = setInterval(async () => {
+        logger('Checkpoint Interval Reached. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+        await domain.apis.checkpointWasmMemoryCache().toPromise()
+        logger('Interval Checkpoint Done. Done checkpointing all processes in WASM heap cache.')
+      }, config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL)
+      cacheCheckpointInterval.unref()
+    }
+
     process.on('SIGTERM', async () => {
       logger('Received SIGTERM. Gracefully shutting down server...')
       app.close(
@@ -48,15 +59,21 @@ export const server = pipeP(
       )
 
       logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
-      await domain.apis.drainWasmMemoryCache().toPromise()
+      await domain.apis.checkpointWasmMemoryCache().toPromise()
       logger('Done checkpointing all processes in WASM heap cache. Exiting...')
       process.exit()
     })
 
-    process.on('SIGUSR2', () => {
-      const name = `${Date.now()}.heapsnapshot`
-      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
-      console.log(name)
+    // process.on('SIGUSR2', () => {
+    //   const name = `${Date.now()}.heapsnapshot`
+    //   heapdump.writeSnapshot(join(config.DUMP_PATH, name))
+    //   console.log(name)
+    // })
+
+    process.on('SIGUSR2', async () => {
+      logger('Received SIGUSR2. Manually Attempting to Checkpoint all Processes currently in WASM heap cache...')
+      await domain.apis.checkpointWasmMemoryCache().toPromise()
+      logger('SIGUSR2 Done. Done checkpointing all processes in WASM heap cache.')
     })
 
     process.on('uncaughtException', (err) => {

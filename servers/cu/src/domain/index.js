@@ -234,7 +234,7 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readResultsLogger })
   })
 
-  const drainWasmMemoryCache = fromPromise(async () => {
+  const checkpointWasmMemoryCache = fromPromise(async () => {
     const promises = []
     wasmMemoryCache.lru.forEach((value) => {
       promises.push(
@@ -253,5 +253,5 @@ export const createApis = async (ctx) => {
 
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, drainWasmMemoryCache, healthcheck }
+  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
 }
