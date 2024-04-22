@@ -28,6 +28,7 @@
     "hyper-async": "^1.1.2",
     "lru-cache": "^10.2.0",
     "ms": "^2.1.3",
+    "p-map": "^7.0.2",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
     "workerpool": "^9.1.0",

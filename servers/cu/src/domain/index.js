@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 
+import pMap from 'p-map'
 import Dataloader from 'dataloader'
 import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
@@ -235,20 +236,39 @@ export const createApis = async (ctx) => {
   })
 
   const checkpointWasmMemoryCache = fromPromise(async () => {
-    const promises = []
-    wasmMemoryCache.lru.forEach((value) => {
-      promises.push(
-        saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
-          .catch((err) => {
-            ctx.logger(
-              'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-              value.evaluation,
-              err
-            )
-          })
-      )
-    })
-    await Promise.allSettled(promises)
+    const pArgs = []
+    wasmMemoryCache.lru.forEach((value) => pArgs.push(value))
+
+    await pMap(
+      pArgs,
+      (value) => saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+        .catch((err) => {
+          ctx.logger(
+            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
+            value.evaluation,
+            err
+          )
+        }),
+      {
+        /**
+         * TODO: allow to be configured on CU
+         *
+         * Helps prevent the gateway from being overwhelmed and then timing out
+         */
+        concurrency: 15,
+        /**
+         * Prevent any one rejected promise from causing other invocations
+         * to not be attempted.
+         *
+         * The overall promise will still reject, which is why we have
+         * an empty catch below, which will allow all Promises to either resolve,
+         * or reject, then the final wrapping promise to always resolve.
+         *
+         * https://github.com/sindresorhus/p-map?tab=readme-ov-file#stoponerror
+         */
+        stopOnError: false
+      }
+    ).catch(() => {})
   })
 
   const healthcheck = healthcheckWith({ walletAddress: address })
