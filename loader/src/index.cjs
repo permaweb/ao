@@ -92,7 +92,7 @@ module.exports = async function (binary, options) {
     instance = await Emscripten(binary, options)
   } else if (options.format === "wasm32-unknown-emscripten2") {
     instance = await Emscripten2(binary, options)
-  } else if (options.format === "wasm64-unknown-emscripten") {
+  } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
     instance = await Wasm64Emscripten(binary, options)
   }
 
