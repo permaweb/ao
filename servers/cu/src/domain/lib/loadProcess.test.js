@@ -23,12 +23,17 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId: id }) => {
         assert.equal(id, PROCESS)
         return { url: 'https://foo.bar' }
@@ -87,12 +92,17 @@ describe('loadProcess', () => {
       saveProcess: async () => assert.fail('should not save if found in db'),
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId, schedulerHint }) => {
         assert.equal(processId, PROCESS)
         assert.equal(schedulerHint, 'scheduler-123')
@@ -113,7 +123,7 @@ describe('loadProcess', () => {
     assert.equal(res.id, PROCESS)
   })
 
-  test('use latest evaluation from db to set Memory, result, from, and evaluatedAt on ctx', async () => {
+  test('use exact match from db', async () => {
     const cachedEvaluation = {
       processId: PROCESS,
       messageId: 'message-123',
@@ -146,9 +156,10 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => cachedEvaluation,
-      findLatestEvaluation: async ({ processId, timestamp }) => {
+      findProcessMemoryBefore: async ({ processId, timestamp }) => {
         assert.fail('should not be called when exact match is found')
       },
+      saveLatestProcessMemory: async () => assert.fail('should not be called if exact match if found'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -165,6 +176,101 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.fromCron, cachedEvaluation.cron)
     assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
     assert.equal(res.id, PROCESS)
+  })
+
+  test('use latest in cache', async () => {
+    const cached = {
+      src: 'memory',
+      Memory: Buffer.from('hello world'),
+      moduleId: 'module-123',
+      timestamp: 1697574792000,
+      epoch: 0,
+      nonce: 11,
+      blockHeight: 123,
+      cron: undefined,
+      ordinate: '11'
+    }
+
+    const tags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Type', value: 'Process' },
+      { name: 'Foo', value: 'Bar' }
+    ]
+    const loadProcess = loadProcessWith({
+      findProcess: async () => { throw { status: 404 } },
+      saveProcess: async () => PROCESS,
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async ({ processId, timestamp }) => cached,
+      saveLatestProcessMemory: async () => assert.fail('should not be called if memory'),
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
+        tags,
+        block: { height: 123, timestamp: 1697574792000 }
+      }),
+      logger
+    })
+
+    const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    assert.deepStrictEqual(res.from, cached.timestamp)
+    assert.deepStrictEqual(res.ordinate, cached.ordinate)
+    assert.deepStrictEqual(res.fromCron, cached.cron)
+    assert.deepStrictEqual(res.fromBlockHeight, cached.blockHeight)
+    assert.equal(res.id, PROCESS)
+  })
+
+  test('backfill cache if latest from arweave or file', async () => {
+    const cached = {
+      Memory: Buffer.from('hello world'),
+      moduleId: 'module-123',
+      timestamp: 1697574792000,
+      epoch: 0,
+      nonce: 11,
+      blockHeight: 123,
+      cron: undefined,
+      ordinate: '11'
+    }
+
+    const tags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Type', value: 'Process' },
+      { name: 'Foo', value: 'Bar' }
+    ]
+    const loadProcess = loadProcessWith({
+      findProcess: async () => { throw { status: 404 } },
+      saveProcess: async () => PROCESS,
+      findEvaluation: async () => { throw { status: 404 } },
+      findProcessMemoryBefore: async ({ processId, timestamp }) => cached,
+      saveLatestProcessMemory: async (args) => {
+        assert.deepStrictEqual(args, {
+          processId: PROCESS,
+          evalCount: 0,
+          Memory: cached.Memory,
+          moduleId: cached.moduleId,
+          timestamp: cached.timestamp,
+          epoch: cached.epoch,
+          nonce: cached.nonce,
+          ordinate: cached.ordinate,
+          blockHeight: cached.blockHeight,
+          cron: cached.cron
+        })
+      },
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
+        tags,
+        block: { height: 123, timestamp: 1697574792000 }
+      }),
+      logger
+    })
+
+    cached.src = 'file'
+    await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+
+    cached.src = 'arweave'
+    await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
   })
 
   test('save process to db if fetched from chain', async () => {
@@ -187,12 +293,17 @@ describe('loadProcess', () => {
       },
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -217,12 +328,17 @@ describe('loadProcess', () => {
       saveProcess: async () => { throw { status: 409 } },
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -245,12 +361,17 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -275,12 +396,17 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
@@ -305,12 +431,17 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
       findProcessMemoryBefore: async () => ({
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: COLLATION_SEQUENCE_MIN_CHAR
       }),
+      saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
         owner: 'woohoo',
