@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.27](https://github.com/permaweb/ao/compare/loader@v0.0.26...loader@v0.0.27) (2024-04-22)
+
+
+### Features
+
+* apply metering to wasm64 modules ([a615396](https://github.com/permaweb/ao/commit/a615396d32160320be112c122e4e77afe95042b4))
+* wasm64 work in progress ([5486f9f](https://github.com/permaweb/ao/commit/5486f9f7783ab1b7bca5c64a6545e76f553bf313))
+* wasm64 working with no metering ([57298d6](https://github.com/permaweb/ao/commit/57298d6706b63e9ae57878c38e767714ec36d8ac))
+
 ## [0.0.26](https://github.com/permaweb/ao/compare/loader@v0.0.25...loader@v0.0.26) (2024-04-11)
 
 
