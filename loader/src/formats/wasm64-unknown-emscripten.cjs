@@ -106,8 +106,7 @@ const Module = (() => {
     //   conosle.log(f)
     //   console.log('hyperbeam', Module['hyperbeam'])
     //   return Promise.resolve('foo')
-    // }
-    // end include: /opt/pre.js
+    // }// end include: /opt/pre.js
 
 
     // Sometimes an existing Module object exists with properties
@@ -791,7 +790,7 @@ const Module = (() => {
     // include: runtime_exceptions.js
     // end include: runtime_exceptions.js
     var wasmBinaryFile;
-    wasmBinaryFile = 'process.wasm';
+    wasmBinaryFile = 'AOS.wasm';
     if (!isDataURI(wasmBinaryFile)) {
       wasmBinaryFile = locateFile(wasmBinaryFile);
     }
@@ -912,7 +911,7 @@ const Module = (() => {
         // This assertion doesn't hold when emscripten is run in --post-link
         // mode.
         // TODO(sbc): Read INITIAL_MEMORY out of the wasm file in post-link mode.
-        //assert(wasmMemory.buffer.byteLength === 6291456);
+        //assert(wasmMemory.buffer.byteLength === 75497472);
         updateMemoryViews();
 
         wasmTable = wasmExports['__indirect_function_table'];
@@ -1636,7 +1635,10 @@ const Module = (() => {
       return Math.ceil(size / alignment) * alignment;
     };
     var mmapAlloc = (size) => {
-      abort('internal error: mmapAlloc called but `emscripten_builtin_memalign` native symbol not exported');
+      size = alignMemory(size, 65536);
+      var ptr = _emscripten_builtin_memalign(65536, size);
+      if (!ptr) return 0;
+      return zeroMemory(ptr, size);
     };
     var MEMFS = {
       ops_table: null,
@@ -4007,6 +4009,27 @@ const Module = (() => {
         return stream;
       },
     };
+
+    var MAX_INT53 = 9007199254740992;
+
+    var MIN_INT53 = -9007199254740992;
+    var bigintToI53Checked = (num) => (num < MIN_INT53 || num > MAX_INT53) ? NaN : Number(num);
+    function ___syscall_chmod(path, mode) {
+      path = bigintToI53Checked(path);;
+
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        FS.chmod(path, mode);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
     function ___syscall_dup3(fd, newfd, flags) {
       try {
 
@@ -4023,10 +4046,62 @@ const Module = (() => {
     }
 
 
-    var MAX_INT53 = 9007199254740992;
+    function ___syscall_faccessat(dirfd, path, amode, flags) {
+      path = bigintToI53Checked(path);;
 
-    var MIN_INT53 = -9007199254740992;
-    var bigintToI53Checked = (num) => (num < MIN_INT53 || num > MAX_INT53) ? NaN : Number(num);
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        assert(flags === 0);
+        path = SYSCALLS.calculateAt(dirfd, path);
+        if (amode & ~7) {
+          // need a valid mode
+          return -28;
+        }
+        var lookup = FS.lookupPath(path, { follow: true });
+        var node = lookup.node;
+        if (!node) {
+          return -44;
+        }
+        var perms = '';
+        if (amode & 4) perms += 'r';
+        if (amode & 2) perms += 'w';
+        if (amode & 1) perms += 'x';
+        if (perms /* otherwise, they've just passed F_OK */ && FS.nodePermissions(node, perms)) {
+          return -2;
+        }
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+    function ___syscall_fchmod(fd, mode) {
+      try {
+
+        FS.fchmod(fd, mode);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+    }
+
+    function ___syscall_fchown32(fd, owner, group) {
+      try {
+
+        FS.fchown(fd, owner, group);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+    }
+
+
     function ___syscall_fcntl64(fd, cmd, varargs) {
       varargs = bigintToI53Checked(varargs);;
 
@@ -4070,6 +4145,64 @@ const Module = (() => {
             return 0; // Pretend that the locking is successful.
         }
         return -28;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
+    function ___syscall_fstat64(fd, buf) {
+      buf = bigintToI53Checked(buf);;
+
+
+      try {
+
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        return SYSCALLS.doStat(FS.stat, stream.path, buf);
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+    function ___syscall_ftruncate64(fd, length) {
+      length = bigintToI53Checked(length);;
+
+
+      try {
+
+        if (isNaN(length)) return 61;
+        FS.ftruncate(fd, length);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
+    var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
+      assert(typeof maxBytesToWrite == 'number', 'stringToUTF8(str, outPtr, maxBytesToWrite) is missing the third parameter that specifies the length of the output buffer!');
+      return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+    };
+
+    function ___syscall_getcwd(buf, size) {
+      buf = bigintToI53Checked(buf);;
+      size = bigintToI53Checked(size);;
+
+
+      try {
+
+        if (size === 0) return -28;
+        var cwd = FS.cwd();
+        var cwdLengthInBytes = lengthBytesUTF8(cwd) + 1;
+        if (size < cwdLengthInBytes) return -68;
+        stringToUTF8(cwd, buf, size);
+        return cwdLengthInBytes;
       } catch (e) {
         if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
         return -e.errno;
@@ -4178,6 +4311,67 @@ const Module = (() => {
     }
 
 
+    function ___syscall_lstat64(path, buf) {
+      path = bigintToI53Checked(path);;
+      buf = bigintToI53Checked(buf);;
+
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        return SYSCALLS.doStat(FS.lstat, path, buf);
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
+    function ___syscall_mkdirat(dirfd, path, mode) {
+      path = bigintToI53Checked(path);;
+
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        path = SYSCALLS.calculateAt(dirfd, path);
+        // remove a trailing slash, if one - /a/b/ has basename of '', but
+        // we want to create b in the context of this function
+        path = PATH.normalize(path);
+        if (path[path.length - 1] === '/') path = path.substr(0, path.length - 1);
+        FS.mkdir(path, mode, 0);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
+    function ___syscall_newfstatat(dirfd, path, buf, flags) {
+      path = bigintToI53Checked(path);;
+      buf = bigintToI53Checked(buf);;
+
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        var nofollow = flags & 256;
+        var allowEmpty = flags & 4096;
+        flags = flags & (~6400);
+        assert(!flags, `unknown flags in __syscall_newfstatat: ${flags}`);
+        path = SYSCALLS.calculateAt(dirfd, path, allowEmpty);
+        return SYSCALLS.doStat(nofollow ? FS.lstat : FS.stat, path, buf);
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
     function ___syscall_openat(dirfd, path, flags, varargs) {
       path = bigintToI53Checked(path);;
       varargs = bigintToI53Checked(varargs);;
@@ -4198,10 +4392,6 @@ const Module = (() => {
     }
 
 
-    var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
-      assert(typeof maxBytesToWrite == 'number', 'stringToUTF8(str, outPtr, maxBytesToWrite) is missing the third parameter that specifies the length of the output buffer!');
-      return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
-    };
 
 
     function ___syscall_readlinkat(dirfd, path, buf, bufsize) {
@@ -4270,6 +4460,23 @@ const Module = (() => {
     }
 
 
+    function ___syscall_stat64(path, buf) {
+      path = bigintToI53Checked(path);;
+      buf = bigintToI53Checked(buf);;
+
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        return SYSCALLS.doStat(FS.stat, path, buf);
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
     function ___syscall_unlinkat(dirfd, path, flags) {
       path = bigintToI53Checked(path);;
 
@@ -4285,6 +4492,42 @@ const Module = (() => {
         } else {
           abort('Invalid flags passed to unlinkat');
         }
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+    var readI53FromI64 = (ptr) => {
+      return HEAPU32[((ptr) / 4)] + HEAP32[(((ptr) + (4)) / 4)] * 4294967296;
+    };
+
+
+    function ___syscall_utimensat(dirfd, path, times, flags) {
+      path = bigintToI53Checked(path);;
+      times = bigintToI53Checked(times);;
+
+
+      try {
+
+        path = SYSCALLS.getStr(path);
+        assert(flags === 0);
+        path = SYSCALLS.calculateAt(dirfd, path, true);
+        if (!times) {
+          var atime = Date.now();
+          var mtime = atime;
+        } else {
+          var seconds = readI53FromI64(times);
+          var nanoseconds = HEAP32[(((times) + (8)) / 4)];
+          atime = (seconds * 1000) + (nanoseconds / (1000 * 1000));
+          times += 16;
+          seconds = readI53FromI64(times);
+          nanoseconds = HEAP32[(((times) + (8)) / 4)];
+          mtime = (seconds * 1000) + (nanoseconds / (1000 * 1000));
+        }
+        FS.utime(path, atime, mtime);
         return 0;
       } catch (e) {
         if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
@@ -4458,6 +4701,54 @@ const Module = (() => {
     };
 
 
+
+
+
+
+    function __mmap_js(len, prot, flags, fd, offset, allocated, addr) {
+      len = bigintToI53Checked(len);;
+      offset = bigintToI53Checked(offset);;
+      allocated = bigintToI53Checked(allocated);;
+      addr = bigintToI53Checked(addr);;
+
+
+      try {
+
+        if (isNaN(offset)) return 61;
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        var res = FS.mmap(stream, len, offset, prot, flags);
+        var ptr = res.ptr;
+        HEAP32[((allocated) / 4)] = res.allocated;
+        HEAPU64[((addr) / 8)] = BigInt(ptr);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
+    function __munmap_js(addr, len, prot, flags, fd, offset) {
+      addr = bigintToI53Checked(addr);;
+      len = bigintToI53Checked(len);;
+      offset = bigintToI53Checked(offset);;
+
+
+      try {
+
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        if (prot & 2) {
+          SYSCALLS.doMsync(addr, stream, len, flags, offset);
+        }
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return -e.errno;
+      }
+      ;
+    }
+
+
     function __tzset_js(timezone, daylight, std_name, dst_name) {
       timezone = bigintToI53Checked(timezone);;
       daylight = bigintToI53Checked(daylight);;
@@ -4510,7 +4801,12 @@ const Module = (() => {
       abort('native code called abort()');
     };
 
-    var _emscripten_date_now = () => Date.now();
+    var _emscripten_date_now = () => 0;
+
+    var getHeapMax = () =>
+      524288000;
+
+    var _emscripten_get_heap_max = () => BigInt(getHeapMax());;
 
     var _emscripten_get_now;
     // Modern environment where performance.now() is supported:
@@ -4527,8 +4823,6 @@ const Module = (() => {
       return HEAPU8.copyWithin(dest, src, src + num);
     }
 
-    var getHeapMax = () =>
-      524288000;
 
     var growMemory = (size) => {
       var b = wasmMemory.buffer;
@@ -4721,6 +5015,37 @@ const Module = (() => {
       }
     }
 
+
+    function _fd_fdstat_get(fd, pbuf) {
+      pbuf = bigintToI53Checked(pbuf);;
+
+
+      try {
+
+        var rightsBase = 0;
+        var rightsInheriting = 0;
+        var flags = 0;
+        {
+          var stream = SYSCALLS.getStreamFromFD(fd);
+          // All character devices are terminals (other things a Linux system would
+          // assume is a character device, like the mouse, we have special APIs for).
+          var type = stream.tty ? 2 :
+            FS.isDir(stream.mode) ? 3 :
+              FS.isLink(stream.mode) ? 7 :
+                4;
+        }
+        HEAP8[pbuf] = type;
+        HEAP16[(((pbuf) + (2)) / 2)] = flags;
+        HEAP64[(((pbuf) + (8)) / 8)] = BigInt(rightsBase);
+        HEAP64[(((pbuf) + (16)) / 8)] = BigInt(rightsInheriting);
+        return 0;
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return e.errno;
+      }
+      ;
+    }
+
     /** @param {number=} offset */
     var doReadv = (stream, iov, iovcnt, offset) => {
       var ret = 0;
@@ -4778,6 +5103,20 @@ const Module = (() => {
         return e.errno;
       }
       ;
+    }
+
+    function _fd_sync(fd) {
+      try {
+
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        if (stream.stream_ops?.fsync) {
+          return stream.stream_ops.fsync(stream);
+        }
+        return 0; // we can't do anything synchronously; the in-memory FS is already synced to
+      } catch (e) {
+        if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+        return e.errno;
+      }
     }
 
     /** @param {number=} offset */
@@ -5256,11 +5595,31 @@ const Module = (() => {
     }
     var wasmImports = {
       /** @export */
+      __syscall_chmod: ___syscall_chmod,
+      /** @export */
       __syscall_dup3: ___syscall_dup3,
+      /** @export */
+      __syscall_faccessat: ___syscall_faccessat,
+      /** @export */
+      __syscall_fchmod: ___syscall_fchmod,
+      /** @export */
+      __syscall_fchown32: ___syscall_fchown32,
       /** @export */
       __syscall_fcntl64: ___syscall_fcntl64,
       /** @export */
+      __syscall_fstat64: ___syscall_fstat64,
+      /** @export */
+      __syscall_ftruncate64: ___syscall_ftruncate64,
+      /** @export */
+      __syscall_getcwd: ___syscall_getcwd,
+      /** @export */
       __syscall_ioctl: ___syscall_ioctl,
+      /** @export */
+      __syscall_lstat64: ___syscall_lstat64,
+      /** @export */
+      __syscall_mkdirat: ___syscall_mkdirat,
+      /** @export */
+      __syscall_newfstatat: ___syscall_newfstatat,
       /** @export */
       __syscall_openat: ___syscall_openat,
       /** @export */
@@ -5270,7 +5629,11 @@ const Module = (() => {
       /** @export */
       __syscall_rmdir: ___syscall_rmdir,
       /** @export */
+      __syscall_stat64: ___syscall_stat64,
+      /** @export */
       __syscall_unlinkat: ___syscall_unlinkat,
+      /** @export */
+      __syscall_utimensat: ___syscall_utimensat,
       /** @export */
       _emscripten_get_now_is_monotonic: __emscripten_get_now_is_monotonic,
       /** @export */
@@ -5284,11 +5647,17 @@ const Module = (() => {
       /** @export */
       _mktime_js: __mktime_js,
       /** @export */
+      _mmap_js: __mmap_js,
+      /** @export */
+      _munmap_js: __munmap_js,
+      /** @export */
       _tzset_js: __tzset_js,
       /** @export */
       abort: _abort,
       /** @export */
       emscripten_date_now: _emscripten_date_now,
+      /** @export */
+      emscripten_get_heap_max: _emscripten_get_heap_max,
       /** @export */
       emscripten_get_now: _emscripten_get_now,
       /** @export */
@@ -5304,9 +5673,13 @@ const Module = (() => {
       /** @export */
       fd_close: _fd_close,
       /** @export */
+      fd_fdstat_get: _fd_fdstat_get,
+      /** @export */
       fd_read: _fd_read,
       /** @export */
       fd_seek: _fd_seek,
+      /** @export */
+      fd_sync: _fd_sync,
       /** @export */
       fd_write: _fd_write,
       /** @export */
@@ -5319,6 +5692,7 @@ const Module = (() => {
     var _handle = Module['_handle'] = createExportWrapper('handle');
     var _main = Module['_main'] = createExportWrapper('main');
     var _fflush = createExportWrapper('fflush');
+    var _emscripten_builtin_memalign = createExportWrapper('emscripten_builtin_memalign');
     var _sbrk = createExportWrapper('sbrk');
     var _setThrew = createExportWrapper('setThrew');
     var _emscripten_stack_init = () => (_emscripten_stack_init = wasmExports['emscripten_stack_init'])();
@@ -5349,12 +5723,14 @@ const Module = (() => {
       wasmExports = Object.assign({}, wasmExports);
       var makeWrapper___PP = (f) => function (a0, a1, a2) { return f(a0, BigInt(a1 ? a1 : 0), BigInt(a2 ? a2 : 0)) };
       var makeWrapper__p = (f) => function (a0) { return f(BigInt(a0)) };
+      var makeWrapper_ppp = (f) => function (a0, a1) { return Number(f(BigInt(a0), BigInt(a1))) };
       var makeWrapper_pP = (f) => function (a0) { return Number(f(BigInt(a0 ? a0 : 0))) };
       var makeWrapper_p = (f) => function () { return Number(f()) };
       var makeWrapper_pp = (f) => function (a0) { return Number(f(BigInt(a0))) };
 
       wasmExports['main'] = makeWrapper___PP(wasmExports['main']);
       wasmExports['fflush'] = makeWrapper__p(wasmExports['fflush']);
+      wasmExports['emscripten_builtin_memalign'] = makeWrapper_ppp(wasmExports['emscripten_builtin_memalign']);
       wasmExports['sbrk'] = makeWrapper_pP(wasmExports['sbrk']);
       wasmExports['setThrew'] = makeWrapper__p(wasmExports['setThrew']);
       wasmExports['emscripten_stack_get_base'] = makeWrapper_p(wasmExports['emscripten_stack_get_base']);
@@ -5414,7 +5790,6 @@ const Module = (() => {
       'writeI53ToI64Signaling',
       'writeI53ToU64Clamped',
       'writeI53ToU64Signaling',
-      'readI53FromI64',
       'readI53FromU64',
       'convertI32PairToI53',
       'convertI32PairToI53Checked',
@@ -5589,6 +5964,7 @@ const Module = (() => {
       'setTempRet0',
       'writeStackCookie',
       'checkStackCookie',
+      'readI53FromI64',
       'MAX_INT53',
       'MIN_INT53',
       'bigintToI53Checked',
