@@ -8,7 +8,7 @@ import { always, applySpec, compose, defaultTo, evolve, head, identity, map, pat
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
-import { isEarlierThan, isEqualTo, isLaterThan } from '../utils.js'
+import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 
@@ -392,13 +392,17 @@ export function findProcessMemoryBeforeWith ({
       compose(
         map(prop('node')),
         map((node) => {
+          const tags = parseTags(node.tags)
           return {
             id: node.id,
-            timestamp: pluckTagValue('Timestamp', node.tags),
-            ordinate: pluckTagValue('Nonce', node.tags),
-            blockHeight: pluckTagValue('Block-Height', node.tags),
-            cron: pluckTagValue('Cron-Interval', node.tags),
-            encoding: pluckTagValue('Content-Encoding', node.tags)
+            timestamp: parseInt(tags.Timestamp),
+            epoch: parseInt(tags.Epoch),
+            nonce: parseInt(tags.Nonce),
+            ordinate: tags.Nonce,
+            module: tags.Module,
+            blockHeight: parseInt(tags['Block-Height']),
+            cron: tags['Cron-Interval'],
+            encoding: tags['Content-Encoding']
           }
         })
       ),
@@ -468,11 +472,15 @@ export function findProcessMemoryBeforeWith ({
            * Finally map the Checkpoint to the expected shape
            */
           .map((Memory) => ({
+            src: 'memory',
             Memory,
+            moduleId: cached.evaluation.moduleId,
             timestamp: cached.evaluation.timestamp,
             blockHeight: cached.evaluation.blockHeight,
-            cron: cached.evaluation.cron,
-            ordinate: cached.evaluation.ordinate
+            epoch: cached.evaluation.epoch,
+            nonce: cached.evaluation.nonce,
+            ordinate: cached.evaluation.ordinate,
+            cron: cached.evaluation.cron
           }))
       })
   }
@@ -511,11 +519,15 @@ export function findProcessMemoryBeforeWith ({
                * Finally map the Checkpoint to the expected shape
                */
               .map((Memory) => ({
+                src: 'file',
                 Memory,
+                moduleId: checkpoint.evaluation.moduleId,
                 timestamp: checkpoint.evaluation.timestamp,
+                epoch: checkpoint.evaluation.epoch,
+                nonce: checkpoint.evaluation.nonce,
+                ordinate: checkpoint.evaluation.ordinate,
                 blockHeight: checkpoint.evaluation.blockHeight,
-                cron: checkpoint.evaluation.cron,
-                ordinate: checkpoint.evaluation.ordinate
+                cron: checkpoint.evaluation.cron
               }))
               .bimap(
                 (err) => {
@@ -574,17 +586,23 @@ export function findProcessMemoryBeforeWith ({
           })
           /**
            * Finally map the Checkpoint to the expected shape
+           *
+           * (see determineLatestCheckpointBefore)
            */
           .map((Memory) => ({
+            src: 'arweave',
             Memory,
+            moduleId: latestCheckpoint.module,
             timestamp: latestCheckpoint.timestamp,
-            blockHeight: latestCheckpoint.blockHeight,
-            cron: latestCheckpoint.cron,
+            epoch: latestCheckpoint.epoch,
+            nonce: latestCheckpoint.nonce,
             /**
              * Derived from Nonce on Checkpoint
              * (see determineLatestCheckpointBefore)
              */
-            ordinate: latestCheckpoint.ordinate
+            ordinate: latestCheckpoint.ordinate,
+            blockHeight: latestCheckpoint.blockHeight,
+            cron: latestCheckpoint.cron
           }))
           .bimap(
             (err) => {
@@ -612,8 +630,12 @@ export function findProcessMemoryBeforeWith ({
     }
 
     return Resolved({
+      src: 'cold_start',
       Memory: null,
+      moduleId: undefined,
       timestamp: undefined,
+      epoch: undefined,
+      nonce: undefined,
       blockHeight: undefined,
       cron: undefined,
       /**
@@ -654,7 +676,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     if (cached && isLaterThan(cached, { timestamp, ordinate, cron })) return
 
     logger(
-      'Saving latest memory for process "%s" with parameters "%j"',
+      'Caching latest memory for process "%s" with parameters "%j"',
       processId,
       { messageId, timestamp, ordinate, cron, blockHeight }
     )

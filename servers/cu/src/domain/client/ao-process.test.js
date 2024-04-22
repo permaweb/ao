@@ -322,7 +322,11 @@ describe('ao-process', () => {
         const res = await findProcessMemoryBefore(target)
 
         assert.deepStrictEqual(res, {
+          src: 'memory',
           Memory,
+          moduleId: 'module-123',
+          epoch: cachedEval.epoch,
+          nonce: cachedEval.nonce,
           timestamp: cachedEval.timestamp,
           blockHeight: cachedEval.blockHeight,
           cron: cachedEval.cron,
@@ -369,13 +373,19 @@ describe('ao-process', () => {
 
       describe('should use if in LRU In-Memory Cache cannot be used', () => {
         test('no checkpoint in LRU In-Memory cache', async () => {
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'file',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
 
         test('later checkpoint in LRU In-Memory cache', async () => {
@@ -392,13 +402,19 @@ describe('ao-process', () => {
             }
           })
 
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'file',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
       })
 
@@ -437,7 +453,9 @@ describe('ao-process', () => {
           node: {
             id: 'tx-123',
             tags: [
+              { name: 'Module', value: `${cachedEval.moduleId}` },
               { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+              { name: 'Epoch', value: `${cachedEval.epoch}` },
               { name: 'Nonce', value: `${cachedEval.nonce}` },
               { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
               { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -474,13 +492,19 @@ describe('ao-process', () => {
 
       describe('should use if the LRU In-Memory and File checkpoint cannot be used', async () => {
         test('no file checkpoint is found or is later than target', async () => {
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
 
         test('file checkpoint fails to be downloaded', async () => {
@@ -494,13 +518,19 @@ describe('ao-process', () => {
             }
           })
 
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
       })
 
@@ -522,7 +552,9 @@ describe('ao-process', () => {
                       ...edges[0].node,
                       id: 'tx-not-encoded',
                       tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: `${cachedEval.nonce}` },
                         { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                         { name: 'Not-Content-Encoding', value: `${cachedEval.encoding}` }
@@ -555,7 +587,9 @@ describe('ao-process', () => {
                     node: {
                       ...edges[0].node,
                       tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: '12' },
                         { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                         { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -589,7 +623,9 @@ describe('ao-process', () => {
                       node: {
                         ...edges[0].node,
                         tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: '12' },
                           { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                           { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -629,7 +665,9 @@ describe('ao-process', () => {
                       node: {
                         ...edges[0].node,
                         tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: '12' },
                           { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                           { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -669,8 +707,12 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
       }
       const COLDSTART = {
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: '0'
@@ -695,7 +737,9 @@ describe('ao-process', () => {
                       node: {
                         id: 'tx-123',
                         tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 11000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: `${cachedEval.nonce}` },
                           { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                           { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
