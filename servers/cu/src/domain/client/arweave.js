@@ -121,6 +121,14 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
           })
           .then(transactionConnectionSchema.parse)
           .then(path(['data', 'transactions', 'edges', '0', 'node']))
+          .then((node) => {
+            if (node) return node
+            logger('Transaction "%s" was not found on gateway', id)
+            // TODO: better error handling
+            const err = new Error(`Transaction '${id}' not found on gateway`)
+            err.status = 404
+            throw err
+          })
       ))
       .toPromise()
 }
@@ -146,7 +154,7 @@ export function loadTransactionDataWith ({ fetch, ARWEAVE_URL, logger }) {
           .then(async (res) => {
             if (res.ok) return res
             logger('Error Encountered when fetching raw data for transaction \'%s\'', id)
-            throw new Error(`${res.status}: ${await res.text()}`)
+            throw new Error(`Error encountered when fetching transaction '${id}' from arweave: ${res.status}: ${await res.text()}`)
           })
       ))
       .toPromise()
