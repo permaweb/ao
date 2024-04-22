@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.28](https://github.com/permaweb/ao/compare/loader@v0.0.27...loader@v0.0.28) (2024-04-22)
+
+
+### Features
+
+* wip experimental wasm 64 ([1799ae4](https://github.com/permaweb/ao/commit/1799ae417492e0093bb22c083eb75315ddf7334f))
+
 ## [0.0.27](https://github.com/permaweb/ao/compare/loader@v0.0.26...loader@v0.0.27) (2024-04-22)
 
 
