@@ -19,7 +19,7 @@ const wasmBinary = fs.readFileSync('./test/process64/process.wasm')
 
 describe('loader', async () => {
   it('load wasm and evaluate message', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
     const mainResult = await handle(null,
       {
         Owner: 'tom',
@@ -83,7 +83,7 @@ describe('loader', async () => {
   })
 
   it('should load previous memory', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
@@ -101,7 +101,7 @@ describe('loader', async () => {
   })
 
   it('should refill the gas on every invocation', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
 
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'inc' }], Data: '' },
@@ -122,7 +122,7 @@ describe('loader', async () => {
   })
 
   it.skip('should run out of gas', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten', computeLimit: 9_000_000_000 })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15', computeLimit: 9_000_000_000 })
     try {
       await handle(null,
         { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'foo' }], Data: '' },
@@ -140,7 +140,7 @@ describe('loader', async () => {
   it('should resize the initial heap to accomodate the larger incoming buffer', async () => {
     const wasmBinary = fs.readFileSync('./test/aos64/process.wasm')
 
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten', computeLimit: 9_000_000_000_000 })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15', computeLimit: 9_000_000_000_000 })
     const mainResult = handle(null,
       {
         Owner: 'tom',
@@ -171,7 +171,7 @@ describe('loader', async () => {
     // assert.equal(mainResult.GasUsed, 463918939)
     assert.ok(true)
 
-    const nextHandle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const nextHandle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
     const nextResult = nextHandle(mainResult.Memory,
       {
         Owner: 'tom',
@@ -190,7 +190,7 @@ describe('loader', async () => {
   })
 
   it('should get deterministic date', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
 
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Date' }], Data: '' },
@@ -211,7 +211,7 @@ describe('loader', async () => {
   })
 
   it('should get deterministic random numbers', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
 
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Random' }], Data: '' },
@@ -232,7 +232,7 @@ describe('loader', async () => {
   })
 
   it('should not list files', async () => {
-    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten' })
+    const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15' })
     try {
       // eslint-disable-next-line
       const result = await handle(null,
