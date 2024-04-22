@@ -121,7 +121,7 @@ describe('loader', async () => {
     assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 600000)
   })
 
-  it.skip('should run out of gas', async () => {
+  it('should run out of gas', async () => {
     const handle = await AoLoader(wasmBinary, { format: 'wasm64-unknown-emscripten-draft_2024_02_15', computeLimit: 9_000_000_000 })
     try {
       await handle(null,
