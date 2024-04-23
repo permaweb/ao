@@ -105,7 +105,9 @@ function crankListWith ({ processMsg, processSpawn, processAssign, logger }) {
         const result = await of({
           assign: {
             txId: cachedAssign.Message,
-            processId
+            processId,
+            baseLayer: cachedAssign.BaseLayer === true ? '' : null,
+            exclude: cachedAssign.Exclude && cachedAssign.Exclude.length > 0 ? cachedAssign.Exclude.join(',') : null
           },
           initialTxId
         })
