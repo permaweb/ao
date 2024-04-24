@@ -6,7 +6,7 @@ const inputSchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   sort: z.enum(['ASC', 'DESC']).default('ASC'),
-  limit: z.string().optional()
+  limit: z.number().optional()
 })
 
 /**

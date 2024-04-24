@@ -10,12 +10,14 @@ describe('verify-input', () => {
     await verifyInput({
       process: 'process-123',
       from: '1',
-      to: '2'
+      to: '2',
+      limit: 1
     }).toPromise()
       .then(res => assert.deepStrictEqual(res, {
         process: 'process-123',
         from: '1',
-        to: '2'
+        to: '2',
+        limit: 1
       }))
   })
 

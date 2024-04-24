@@ -31,7 +31,7 @@ export const queryResultsSchema = z.function()
     from: z.string().optional(),
     to: z.string().optional(),
     sort: z.enum(['ASC', 'DESC']).default('ASC'),
-    limit: z.string().optional()
+    limit: z.number().optional()
   }))
   .returns(z.promise(z.object({
     edges: z.array(z.object({
