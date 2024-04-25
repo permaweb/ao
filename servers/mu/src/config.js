@@ -3,8 +3,6 @@ import fs from 'node:fs'
 
 import { z } from 'zod'
 
-import { domainConfigSchema } from './domain/index.js'
-
 const walletPath = process.env.PATH_TO_WALLET
 const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
 
@@ -21,6 +19,16 @@ const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
 const MODE = process.env.NODE_CONFIG_ENV
 
 if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
+
+export const domainConfigSchema = z.object({
+  CU_URL: z.string().url('CU_URL must be a a valid URL'),
+  MU_WALLET: z.record(z.any()),
+  SCHEDULED_INTERVAL: z.number(),
+  DUMP_PATH: z.string(),
+  GRAPHQL_URL: z.string(),
+  UPLOADER_URL: z.string(),
+  PROC_FILE_PATH: z.string()
+})
 
 /**
  * The server config is an extension of the config required by the domain (business logic).
@@ -51,7 +59,8 @@ const CONFIG_ENVS = {
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
     DUMP_PATH: process.env.DUMP_PATH || '',
-    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
+    PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json'
   },
   production: {
     MODE,
@@ -61,7 +70,8 @@ const CONFIG_ENVS = {
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
     DUMP_PATH: process.env.DUMP_PATH || '',
-    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
+    PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json'
   }
 }
 

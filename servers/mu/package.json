@@ -23,6 +23,7 @@
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "^0.0.17",
     "arweave": "^1.14.4",
+    "async-mutex": "^0.5.0",
     "cors": "^2.8.5",
     "debug": "^4.3.4",
     "dotenv": "^16.3.1",
