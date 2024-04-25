@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 
@@ -20,6 +19,8 @@ import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
 
+import { config } from '../config.js'
+
 export { errFrom } from './utils.js'
 
 const { DataItem } = warpArBundles
@@ -27,19 +28,13 @@ const { DataItem } = warpArBundles
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
 
-export const domainConfigSchema = z.object({
-  CU_URL: z.string().url('CU_URL must be a a valid URL'),
-  MU_WALLET: z.record(z.any()),
-  SCHEDULED_INTERVAL: z.number(),
-  DUMP_PATH: z.string(),
-  GRAPHQL_URL: z.string(),
-  UPLOADER_URL: z.string()
-})
+export const initCronProcs = osClient.initProcsWith({ PROC_FILE_PATH: config.PROC_FILE_PATH })
 
 export const createApis = (ctx) => {
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
+  const PROC_FILE_PATH = ctx.PROC_FILE_PATH
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -116,14 +111,14 @@ export const createApis = (ctx) => {
 
   const monitorProcessLogger = logger.child('monitorProcess')
   const monitorProcess = monitorProcessWith({
-    startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger }),
+    startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger, PROC_FILE_PATH }),
     createDataItem,
     logger: monitorProcessLogger
   })
 
   const stopMonitorProcessLogger = logger.child('stopMonitorProcess')
   const stopMonitorProcess = stopMonitorProcessWith({
-    stopProcessMonitor: osClient.killMonitoredProcessWith({ logger: stopMonitorProcessLogger }),
+    stopProcessMonitor: osClient.killMonitoredProcessWith({ logger: stopMonitorProcessLogger, PROC_FILE_PATH }),
     createDataItem,
     logger: monitorProcessLogger
   })

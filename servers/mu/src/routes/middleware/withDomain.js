@@ -1,6 +1,6 @@
-import { config } from '../../config.js'
+import { domainConfigSchema, config } from '../../config.js'
 import { logger } from '../../logger.js'
-import { createApis, domainConfigSchema } from '../../domain/index.js'
+import { createApis } from '../../domain/index.js'
 
 /**
  * A middleware that exposes the domain business logic to a request
