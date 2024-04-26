@@ -80,6 +80,7 @@ export function loadResultWith ({ fetch, CU_URL, logger }) {
  * @property {string} from - cursor to start the list of results
  * @property {string} to - cursor to stop the list of results
  * @property {string} sort - "ASC" or "DESC" to describe the order of list
+ * @property {number} limit - the number of results to return
  *
  * @callback QueryResults
  * @param {QueryResultsArgs} args

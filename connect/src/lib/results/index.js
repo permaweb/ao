@@ -40,8 +40,8 @@ export function resultsWith (env) {
   const verifyInput = verifyInputWith(env)
   const query = queryWith(env)
 
-  return ({ process, from, to, sort }) => {
-    return of({ process, from, to, sort })
+  return ({ process, from, to, sort, limit }) => {
+    return of({ process, from, to, sort, limit })
       .chain(verifyInput)
       .chain(query)
       .map(

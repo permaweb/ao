@@ -20,7 +20,7 @@ export function queryWith ({ queryResults }) {
   queryResults = fromPromise(queryResultsSchema.implement(queryResults))
 
   return (ctx) => {
-    return of({ process: ctx.process, from: ctx.from, to: ctx.to, sort: ctx.sort })
+    return of({ process: ctx.process, from: ctx.from, to: ctx.to, sort: ctx.sort, limit: ctx.limit })
       .chain(queryResults)
   }
 }
