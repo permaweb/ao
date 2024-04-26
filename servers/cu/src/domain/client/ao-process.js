@@ -11,6 +11,7 @@ import { LRUCache } from 'lru-cache'
 import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
+import { timer } from './metrics.js'
 
 const gunzipP = promisify(gunzip)
 const gzipP = promisify(gzip)
@@ -240,12 +241,14 @@ export function saveProcessWith ({ db }) {
 
 export function findCheckpointFileBeforeWith ({ DIR, glob }) {
   return ({ processId, timestamp, ordinate, cron }) => {
+    const { stop: stopTimer } = timer('findCheckpointFileBefore', { processId, timestamp, ordinate, cron })
     /**
      * Find all the Checkpoint files for this process
      *
      * names like: eval-{processId},{timestamp},{ordinate},{cron}.json
      */
     return glob(join(DIR, `checkpoint-${processId}*.json`))
+      .finally(stopTimer)
       .then((paths) =>
         paths.map(path => {
           const file = basename(path)
@@ -267,18 +270,22 @@ export function findCheckpointFileBeforeWith ({ DIR, glob }) {
 }
 
 export function readCheckpointFileWith ({ DIR, readFile }) {
-  return (name) => readFile(join(DIR, name))
-    .then((raw) => JSON.parse(raw))
+  return (name) => {
+    const { stop: stopTimer } = timer('readCheckpointFile', { name })
+    return readFile(join(DIR, name))
+      .finally(stopTimer)
+      .then((raw) => JSON.parse(raw))
+  }
 }
 
 export function writeCheckpointFileWith ({ DIR, writeFile }) {
   return ({ Memory, evaluation }) => {
-    const path = join(
-      DIR,
-      `checkpoint-${[evaluation.processId, evaluation.timestamp, evaluation.ordinate, evaluation.cron].join(',')}.json`
-    )
+    const file = `checkpoint-${[evaluation.processId, evaluation.timestamp, evaluation.ordinate, evaluation.cron].join(',')}.json`
+    const { stop: stopTimer } = timer('writeCheckpointFile', { file })
+    const path = join(DIR, file)
 
     return writeFile(path, JSON.stringify({ Memory, evaluation }))
+      .finally(stopTimer)
   }
 }
 
@@ -293,10 +300,13 @@ function queryCheckpointsWith ({ queryGateway, queryCheckpointGateway, logger })
   queryCheckpointGateway = fromPromise(queryCheckpointGateway)
 
   return ({ query, variables, processId, timestamp, ordinate, cron }) => {
-    const queryCheckpoint = (gateway, name = 'gateway') => (attempt) => () =>
-      gateway({ query, variables })
+    const queryCheckpoint = (gateway, name = 'gateway') => (attempt) => () => {
+      const { stop: stopTimer } = timer('queryCheckpoint', { gateway: name, attempt, processId })
+
+      return gateway({ query, variables })
         .bimap(
           (err) => {
+            stopTimer()
             logger(
               'Error encountered querying %s for Checkpoint for process "%s", before "%j". Attempt %d...',
               name,
@@ -307,8 +317,12 @@ function queryCheckpointsWith ({ queryGateway, queryCheckpointGateway, logger })
             )
             return variables
           },
-          identity
+          (res) => {
+            stopTimer()
+            return res
+          }
         )
+    }
 
     const queryOnDefaultGateway = queryCheckpoint(queryGateway)
     /**
@@ -431,7 +445,13 @@ export function findProcessMemoryBeforeWith ({
    * @param {{ id, encoding }} checkpoint
    */
   function downloadCheckpointFromArweave (checkpoint) {
+    const { stop: stopTimer } = timer('downloadCheckpointFromArweave', { id: checkpoint.id })
+
     return loadTransactionData(checkpoint.id)
+      .map((res) => {
+        stopTimer()
+        return res
+      })
       .chain(fromPromise((res) => res.arrayBuffer()))
       .map((arrayBuffer) => Buffer.from(arrayBuffer))
       /**
