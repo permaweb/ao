@@ -10,7 +10,8 @@ export const configSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
   MU_WALLET: z.record(z.any()),
   GRAPHQL_URL: z.string(),
-  UPLOADER_URL: z.string()
+  UPLOADER_URL: z.string(),
+  CRON_CURSOR_DIR: z.string()
 })
 
 const walletPath = process.env.PATH_TO_WALLET
@@ -26,14 +27,16 @@ const CONFIG_ENVS = {
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'https://cu.ao-testnet.xyz',
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
-    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
+    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt'
   },
   production: {
     MODE,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://arweave.net/graphql',
-    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net'
+    UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
+    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt'
   }
 }
 
