@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.53](https://github.com/permaweb/ao/compare/connect@v0.0.52...connect@v0.0.53) (2024-04-26)
+
+
+### Bug Fixes
+
+* **connect:** add missing limit arg to results ([1ad6c44](https://github.com/permaweb/ao/commit/1ad6c44e3a0d7ee406856aa3a5b914843896a3b1))
+* **connect:** add missing limit property to ao-cu results jsdoc ([9a92054](https://github.com/permaweb/ao/commit/9a920540f2969941888bb78fa4c26ee9b1c473c5))
+
 ## [0.0.52](https://github.com/permaweb/ao/compare/connect@v0.0.51...connect@v0.0.52) (2024-04-18)
 
 
