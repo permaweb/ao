@@ -41,6 +41,38 @@ jobs:
         env:
           CI: true
 
+  publish:
+    runs-on: ubuntu-latest
+    # Only publish on main branch
+    if: github.ref == 'refs/heads/main'
+    needs: [test]
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.TAG }}
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # TODO: use local .nvmrc file with node-version-file
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push container image to GitHub Container Registry
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: servers/mu
+          tags: |
+            ghcr.io/permaweb/ao-mu:latest
+            ghcr.io/permaweb/ao-mu:${{ github.sha }}
+
   deploy:
     runs-on: ubuntu-latest
     # Only deploy on main branch
