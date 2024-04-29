@@ -51,6 +51,11 @@ jobs:
     # Only publish on main branch
     if: github.ref == 'refs/heads/main'
     needs: [test]
+    permissions:
+      id-token: write
+      contents: read
+      checks: write
+      packages: write
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
