@@ -4,6 +4,7 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 
 <!-- toc -->
 
+- [Prerequisites](#prerequisites)
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
 - [Tests](#tests)
@@ -18,6 +19,10 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 - [System Requirements](#system-requirements)
 
 <!-- tocstop -->
+
+## Prerequisites
+
+You will need Node 22 installed. If you use `nvm`, then simply run `nvm install`
 
 ## Usage
 
