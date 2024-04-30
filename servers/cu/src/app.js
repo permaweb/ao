@@ -1,6 +1,3 @@
-// import { join } from 'node:path'
-
-// import heapdump from 'heapdump'
 import { unapply, pipeWith } from 'ramda'
 import ms from 'ms'
 
@@ -63,12 +60,6 @@ export const server = pipeP(
       logger('Done checkpointing all processes in WASM heap cache. Exiting...')
       process.exit()
     })
-
-    // process.on('SIGUSR2', () => {
-    //   const name = `${Date.now()}.heapsnapshot`
-    //   heapdump.writeSnapshot(join(config.DUMP_PATH, name))
-    //   console.log(name)
-    // })
 
     process.on('SIGUSR2', async () => {
       logger('Received SIGUSR2. Manually Attempting to Checkpoint all Processes currently in WASM heap cache...')

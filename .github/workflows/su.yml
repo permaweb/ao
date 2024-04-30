@@ -1,4 +1,4 @@
-name: 🦘 Test & Deploy AO Sequencer Unit
+name: 👧 Test & Deploy AO Sequencer Unit
 on:
   workflow_dispatch:
   pull_request:
