@@ -54,8 +54,6 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.bump.outputs.TAG }}
 
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@v1
