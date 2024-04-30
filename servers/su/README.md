@@ -70,8 +70,8 @@ To build with docker on your local machine delete all su images and containers i
 
 ```sh
 docker system prune -a
-docker build -t su-app .
-docker create --name temp-container su-app
+docker build --target builder -t su-binary .
+docker create --name temp-container su-binary
 docker cp temp-container:/usr/src/su/target/x86_64-unknown-linux-musl/release/su .
 ```
 
@@ -87,14 +87,15 @@ Can run directly in the terminal (for compatible machines)
 
 Or in Docker
 ```sh
-docker build -f RunDockerfile -t su-runner .
-docker run --name su-app su-runner
+cp .env.example .env.su && sed -i '' 's/MODE=.*/MODE=su/' .env.su
+docker build -t su-runner .
+docker run --env-file .env.su -v ./.wallet.json:/usr/app/.wallet.json su-runner 
 ```
 
 When running the static binary in docker you will need to make sure the environment
 variables are set in the container. If not see a NotPresent error you are missing the 
 environment variables. You will also need to make sure the database url is accessible 
-in the container.
+in the container. 
 
 - `SU_WALLET_PATH` a local filepath to an arweave wallet the SU will use to write tx's
 - `DATABASE_URL` a postgres database url, you must create a postgres database called `su`
@@ -137,8 +138,9 @@ Can run directly in the terminal (for compatible machines)
 
 Or in Docker
 ```sh
-docker build -f RunRouterDockerfile -t su-runner .
-docker run --name su-app su-runner
+cp .env.example .env.router && sed -i '' 's/MODE=.*/MODE=router/' .env.router
+docker build -t su-router .
+docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-router
 ```
 
 
