@@ -73,6 +73,7 @@ and cookbook - https://cookbook_ao.arweave.dev
 
 - [What is `ao`?](#what-is-ao)
 - [Projects](#projects)
+- [Self Hosting an ao Unit](#self-hosting-an-ao-unit)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -99,6 +100,15 @@ and cookbook - https://cookbook_ao.arweave.dev
   "youwer" 🔀)
 - [`ao` Lua Examples](./lua-examples): Various examples of projects leveraging
   `ao` Contracts and components.
+
+## Self Hosting an ao Unit
+
+The core team's current focus is the active development of the ao Data Protocol
+and reference implementations, which are undergoing constant change.
+
+Folks are welcome to run their own instances of the ao Unit reference
+implementations for the purpose of experimentation, but there are currently no
+guarantees or core support for doing so.
 
 ## Contributing
 
