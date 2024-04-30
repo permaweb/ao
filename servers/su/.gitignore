@@ -1,4 +1,6 @@
 /target
 .env
+.env.su
+.env.router
 .wallet.json
 .schedulers.json
