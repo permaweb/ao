@@ -1,5 +1,6 @@
 const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
+const Emscripten3 = require('./formats/emscripten3.cjs')
 const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
 
 /* eslint-enable */
@@ -92,6 +93,8 @@ module.exports = async function (binary, options) {
     instance = await Emscripten(binary, options)
   } else if (options.format === "wasm32-unknown-emscripten2") {
     instance = await Emscripten2(binary, options)
+  } else if (options.format === "wasm32-unknown-emscripten3") {
+    instance = await Emscripten3(binary, options)
   } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
     instance = await Wasm64Emscripten(binary, options)
   }
@@ -133,6 +136,23 @@ module.exports = async function (binary, options) {
        * Make sure to refill the gas tank for each invocation
        */
       instance.gas.refill()
+
+      // Sending binary data to AOS is best done with base64
+      // You do have to decode it from base64 in lua, but that can
+      // be done with require('.base64').decode(msg.Data)
+      //
+      // if application/octet-stream convert to base64
+      if (msg.Tags.find(t => t.name == 'Content-Type')?.value == 'application/octet-stream') {
+        function uint8ArrayToBase64(uint8Array) {
+          // Convert Uint8Array to a binary string. Each byte is converted to a char.
+          const binaryString = new Uint8Array(uint8Array).reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+
+          // Encode the binary string to Base64 using btoa
+          return btoa(binaryString);
+        }
+        msg.Data = uint8ArrayToBase64(msg.Data)
+      }
+
       const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
       if (!ok) throw response
 
