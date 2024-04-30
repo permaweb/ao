@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs'
 import * as esbuild from 'esbuild'
-import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 /**
  * By importing from manifest, build will always be in sync with the manifest
@@ -37,13 +36,7 @@ await esbuild.build({
   format: 'esm',
   external: allDepsExcept(['hyper-async']),
   bundle: true,
-  outfile: manifest.exports['.'].import,
-  plugins: [polyfillNode({
-    polyfills: {
-      crypto: true,
-      stream: true
-    }
-  })]
+  outfile: manifest.exports['.'].import
 })
 
 // Browser ESM
@@ -53,11 +46,5 @@ await esbuild.build({
   format: 'esm',
   bundle: true,
   minify: false,
-  outfile: manifest.exports['.'].browser,
-  plugins: [polyfillNode({
-    polyfills: {
-      crypto: true,
-      stream: true
-    }
-  })]
+  outfile: manifest.exports['.'].browser
 })

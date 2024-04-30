@@ -1,10 +1,12 @@
 import { Buffer } from 'buffer/index.js'
-import { DataItem } from 'arbundles'
+import * as WarpArBundles from 'warp-arbundles'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
 
 if (!globalThis.Buffer) globalThis.Buffer = Buffer
+
+const { DataItem } = WarpArBundles
 
 /**
  * A function that builds a signer using the global arweaveWallet
