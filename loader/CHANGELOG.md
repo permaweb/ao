@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.29](https://github.com/permaweb/ao/compare/loader@v0.0.28...loader@v0.0.29) (2024-04-30)
+
+
+### Features
+
+* added upgraded emscripten to work with llama wasm [#654](https://github.com/permaweb/ao/issues/654) ([29c72b3](https://github.com/permaweb/ao/commit/29c72b386acac5110daa03c193ee77dd80711f23))
+
+
+### Bug Fixes
+
+* fix the integration test [#654](https://github.com/permaweb/ao/issues/654) ([0244421](https://github.com/permaweb/ao/commit/02444213596ddb10e24f6d19f1317409049b7a90))
+
 ## [0.0.28](https://github.com/permaweb/ao/compare/loader@v0.0.27...loader@v0.0.28) (2024-04-22)
 
 
