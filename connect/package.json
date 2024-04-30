@@ -46,7 +46,6 @@
     "@permaweb/ao-scheduler-utils": "~0.0.16",
     "buffer": "^6.0.3",
     "debug": "^4.3.4",
-    "esbuild-plugin-polyfill-node": "^0.3.0",
     "hyper-async": "^1.1.2",
     "mnemonist": "^0.39.8",
     "ramda": "^0.29.1",
