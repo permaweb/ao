@@ -89,7 +89,7 @@ Or in Docker
 ```sh
 cp .env.example .env.su
 docker build -t su-runner .
-docker run --env-file .env.su -v ./.wallet.json:/usr/app/.wallet.json su-runner su 9000
+docker run --env-file .env.su -v ./.wallet.json:/app/.wallet.json su-runner su 9000
 ```
 
 When running the static binary in docker you will need to make sure the environment
