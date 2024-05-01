@@ -139,8 +139,8 @@ Can run directly in the terminal (for compatible machines)
 Or in Docker
 ```sh
 cp .env.example .env.router
-docker build -t su-router .
-docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-router router 9000
+docker build -t su-runner .
+docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-runner router 9000
 ```
 
 
