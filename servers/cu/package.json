@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@fastify/middie": "^8.3.0",
-    "@permaweb/ao-loader": "^0.0.26",
+    "@permaweb/ao-loader": "^0.0.29",
     "@permaweb/ao-scheduler-utils": "^0.0.19",
     "arweave": "^1.15.0",
     "better-sqlite3": "^9.6.0",
