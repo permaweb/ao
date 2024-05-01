@@ -87,9 +87,9 @@ Can run directly in the terminal (for compatible machines)
 
 Or in Docker
 ```sh
-cp .env.example .env.su && sed -i '' 's/MODE=.*/MODE=su/' .env.su
+cp .env.example .env.su
 docker build -t su-runner .
-docker run --env-file .env.su -v ./.wallet.json:/usr/app/.wallet.json su-runner 
+docker run --env-file .env.su -v ./.wallet.json:/usr/app/.wallet.json su-runner su 9000
 ```
 
 When running the static binary in docker you will need to make sure the environment
@@ -138,9 +138,9 @@ Can run directly in the terminal (for compatible machines)
 
 Or in Docker
 ```sh
-cp .env.example .env.router && sed -i '' 's/MODE=.*/MODE=router/' .env.router
+cp .env.example .env.router
 docker build -t su-router .
-docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-router
+docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-router router 9000
 ```
 
 
