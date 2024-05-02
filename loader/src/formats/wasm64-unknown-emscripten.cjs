@@ -6222,6 +6222,26 @@ const Module = (() => {
   */
     Module.resizeHeap = _emscripten_resize_heap;
 
+    Module.fs = {
+      init: FS.init,
+      writeFile: FS.writeFile,
+      mkdir: FS.mkdir,
+      dirExists: function (dir) {
+        try {
+          var stat = FS.state(dir)
+          return FS.isDir(stat.mode)
+        } catch (e) {
+          return false;
+        }
+      },
+      readOnly: function () {
+        FS.write = FS.writeFile = FS.unlink = FS.rename = function () {
+          //console.error("Write operation blocked.");
+          throw new Error("File system is read-only for WASM.");
+        };
+      }
+    };
+
     return Module.ready;
   };
 })();

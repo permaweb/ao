@@ -142,15 +142,22 @@ module.exports = async function (binary, options) {
       // be done with require('.base64').decode(msg.Data)
       //
       // if application/octet-stream convert to base64
-      if (msg.Tags.find(t => t.name == 'Content-Type')?.value == 'application/octet-stream') {
-        function uint8ArrayToBase64(uint8Array) {
-          // Convert Uint8Array to a binary string. Each byte is converted to a char.
-          const binaryString = new Uint8Array(uint8Array).reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+      if (
+        msg.Tags.find(t => t.name === 'Content-Type')?.value === 'application/octet-stream' &&
+        options.extensions?.includes('VFS-0')
+      ) {
+        const bS = new Uint8Array(msg.Data).reduce((acc, byte) => acc + String.fromCharCode(byte), '')
 
-          // Encode the binary string to Base64 using btoa
-          return btoa(binaryString);
+        if (!instance.fs.dirExists('/data')) {
+          instance.fs.mkdir('/data')
         }
-        msg.Data = uint8ArrayToBase64(msg.Data)
+        if (!instance.fs.dirExists('/header')) {
+          instance.fs.mkdir('/header')
+        }
+        instance.fs.writeFile(`/data/${msg.Id}.bin`, bS)
+        delete msg.Data
+        instance.fs.writeFile(`/header/${msg.Id}.json`, JSON.stringify(msg))
+        instance.fs.readOnly();
       }
 
       const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))

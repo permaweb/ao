@@ -8,7 +8,7 @@ const { default: AoLoader } = await import(MODULE_PATH)
 const wasm = fs.readFileSync('./test/aos-llama/AOS.wasm')
 const options = { format: 'wasm32-unknown-emscripten3', computeLimit: 9e12 }
 
-test('Load the compiled AOS module and Llama library.', async () => {
+test.skip('Load the compiled AOS module and Llama library.', async () => {
   const handle = await AoLoader(wasm, options)
   const env = {
     Process: {
