@@ -6242,6 +6242,56 @@ const Module = (() => {
       }
     };
 
+    const fsReadFile = FS.readFile
+    FS.readFile = function (path, options) {
+      console.log('path: ', path)
+      console.log('options: ', options)
+      return fsReadFile(path, options)
+    }
+
+    const fsRead = FS.read
+    FS.read = function (stream, buffer, offset, length, position) {
+      console.log('called read...', stream.path)
+      if (stream.url) {
+
+        return fetchAndStream(stream.url, buffer, offset, length, position, stream)
+      } else {
+        return fsRead(stream, buffer, offset, length, position)
+      }
+    }
+
+    const fsOpen = FS.open
+    FS.open = function (path, flags, mode) {
+
+      if (path.includes('/data/FOOBAR.bin')) {
+        console.log('stream mode: ', path)
+
+        var stream = fsOpen(path, flags, mode)
+        stream.url = "https://arweave.net/m9ibqUzBAwc8PXgMXHBw5RP_TR-Ra3vJnt90RTTuuLg"
+        console.log('come on man', stream)
+        return stream
+      }
+      return fsOpen(path, flags, mode)
+    }
+
+    function fetchAndStream(url, buffer, offset, length, position, stream) {
+      // This is a simplified and conceptual example
+      return fetch(url)
+        .then(response => {
+          const reader = response.body.getReader();
+          return reader.read().then(function processText({ done, value }) {
+            if (done) return 0;
+            buffer.set(value, offset); // Copy fetched data into Emscripten heap
+            return value.length; // Return the number of bytes read
+          });
+        })
+        .catch(err => {
+          console.error('Failed to fetch:', err);
+          throw err;
+        });
+    }
+
+
     return Module.ready;
   };
 })();

@@ -2,7 +2,7 @@ const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
 const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
-
+const stream = require('stream')
 /* eslint-enable */
 
 /**
@@ -115,7 +115,7 @@ module.exports = async function (binary, options) {
   instance.cleanupListeners()
   const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
 
-  return (buffer, msg, env) => {
+  return async (buffer, msg, env) => {
     const originalRandom = Math.random
     // const OriginalDate = Date
     const originalLog = console.log
@@ -125,7 +125,7 @@ module.exports = async function (binary, options) {
       /** end mock Math.random */
 
       /** start mock console.log */
-      console.log = function () { return null }
+      // console.log = function () { return null }
       /** end mock console.log */
 
       if (buffer) {
@@ -137,7 +137,7 @@ module.exports = async function (binary, options) {
        */
       instance.gas.refill()
 
-      // Sending binary data to AOS is best done with base64
+      // VFS-0 - Sending binary data to AOS is best done with base64
       // You do have to decode it from base64 in lua, but that can
       // be done with require('.base64').decode(msg.Data)
       //
@@ -146,7 +146,10 @@ module.exports = async function (binary, options) {
         msg.Tags.find(t => t.name === 'Content-Type')?.value === 'application/octet-stream' &&
         options.extensions?.includes('VFS-0')
       ) {
-        const bS = new Uint8Array(msg.Data).reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+        function writeToVFS(chunk) {
+          instance.fs.writeFile(`/data/${msg.Id}.bin`, new Uint8Array(chunk), { flags: 'a' }) // Using append mode
+        }
+        // const bS = new Uint8Array(msg.Data).reduce((acc, byte) => acc + String.fromCharCode(byte), '')
 
         if (!instance.fs.dirExists('/data')) {
           instance.fs.mkdir('/data')
@@ -154,14 +157,43 @@ module.exports = async function (binary, options) {
         if (!instance.fs.dirExists('/header')) {
           instance.fs.mkdir('/header')
         }
-        instance.fs.writeFile(`/data/${msg.Id}.bin`, bS)
-        delete msg.Data
+        if (msg.Data instanceof stream.Stream) {
+          // Define a writable stream that writes chunks to Emscripten VFS
+          const vfsWriteStream = new stream.Writable({
+            write(chunk, encoding, callback) {
+              writeToVFS(chunk)
+              callback() // Signal completion of the current chunk write
+            }
+          })
+          await new Promise((resolved) => msg.Data.pipe(vfsWriteStream)
+            .on('finish', resolved))
+        }
+        // instance.fs.writeFile(`/data/${msg.Id}.bin`, bS)
+        delete msg.Data // remove data from message
         instance.fs.writeFile(`/header/${msg.Id}.json`, JSON.stringify(msg))
-        instance.fs.readOnly();
+        instance.fs.readOnly()
+      }
+      // VFS-1 
+      if (
+        msg.Tags.find(t => t.name === 'Content-Type')?.value === 'application/octet-stream' &&
+        options.extensions?.includes('VFS-1')
+      ) {
+        if (!instance.fs.dirExists('/data')) {
+          instance.fs.mkdir('/data')
+        }
+        if (!instance.fs.dirExists('/header')) {
+          instance.fs.mkdir('/header')
+        }
+        // create empty data 
+        // instance.fs.writeFile(`/data/${msg.Id}.bin`, Buffer.from(msg.Id))
+        instance.fs.writeFile('/data/FOOBAR.bin', Buffer.from(msg.Id))
+        instance.fs.writeFile(`/data/${msg.Id}.json`, JSON.stringify(msg))
       }
 
       const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
       if (!ok) throw response
+
+      // VFS-0: TODO remove file
 
       /** unmock functions */
       // eslint-disable-next-line no-global-assign
