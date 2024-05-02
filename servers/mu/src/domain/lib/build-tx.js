@@ -1,4 +1,4 @@
-import { fromPromise, Resolved, Rejected } from 'hyper-async'
+import { fromPromise, of } from 'hyper-async'
 import z from 'zod'
 
 const ctxSchema = z.object({
@@ -12,35 +12,42 @@ const ctxSchema = z.object({
 }).passthrough()
 
 export function buildTxWith (env) {
-  let { buildAndSign, logger, locateProcess, fetchSchedulerProcess } = env
+  let { buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet } = env
   locateProcess = fromPromise(locateProcess)
   fetchSchedulerProcess = fromPromise(fetchSchedulerProcess)
   buildAndSign = fromPromise(buildAndSign)
+  isWallet = fromPromise(isWallet)
 
   return (ctx) => {
-    return locateProcess(ctx.cachedMsg.processId)
-      .bichain(
-        (error) => {
-          /*
-              If it is one of these errors This means  that it is supposed
-              to go directly to Arweave. If it is some other error we need
-              to reject.
-          */
-          if (error.name !== 'TransactionNotFound' && error.name !== 'SchedulerTagNotFound') {
-            return Rejected(error)
-          }
-          return Resolved()
-        },
-        (scheduler) => {
-          /*
-            We have a scheduler so return that for
-            later use in the pipeline
-          */
-          return fetchSchedulerProcess(ctx.cachedMsg.processId, scheduler.url)
-            .map((schedulerResult) => ({
-              schedLocation: scheduler,
-              schedData: schedulerResult
-            }))
+    return isWallet(ctx.cachedMsg.processId)
+      .chain(
+        (isWalletId) => {
+          return locateProcess(ctx.cachedMsg.fromProcessId)
+            .chain(
+              (fromSchedLocation) => fetchSchedulerProcess(
+                ctx.cachedMsg.fromProcessId,
+                fromSchedLocation.url
+              )
+                .map((schedulerResult) => ({
+                  fromProcessSchedData: schedulerResult
+                }))
+                .chain(({ fromProcessSchedData }) => {
+                  /*
+                    If the target is a wallet id we will move
+                    on here without setting a schedLocation
+                    later in the pipeline this will mean the tx
+                    goes straight to Arweave.
+                  */
+                  if (isWalletId) { return of({ fromProcessSchedData }) }
+                  return locateProcess(ctx.cachedMsg.processId)
+                    .map((schedLocation) => {
+                      return {
+                        schedLocation,
+                        fromProcessSchedData
+                      }
+                    })
+                })
+            )
         }
       )
       .map((res) => {
@@ -58,20 +65,23 @@ export function buildTxWith (env) {
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
           { name: 'Variant', value: 'ao.TN.1' },
-          { name: 'From-Process', value: ctx.cachedMsg.processId },
+          { name: 'From-Process', value: ctx.cachedMsg.fromProcessId },
           {
             name: 'From-Module',
-            value: res.schedData.tags.find((t) => t.name === 'Module')?.value ?? ''
+            value: res.fromProcessSchedData.tags.find((t) => t.name === 'Module')?.value ?? ''
           }
         ]
+
         if (ctx.cachedMsg.initialTxId) {
           tagsIn.push({ name: 'Pushed-For', value: ctx.cachedMsg.initialTxId })
         }
+
         const assignmentsTag = ctx.cachedMsg.msg.Tags?.find(tag => tag.name === 'Assignments')
         const tagAssignments = assignmentsTag ? assignmentsTag.value : []
+
         return {
           tags: tagsIn,
-          scheduler: res.schedLocation,
+          schedLocation: res.schedLocation,
           tagAssignments
         }
       })
