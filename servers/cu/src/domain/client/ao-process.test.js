@@ -846,6 +846,7 @@ describe('ao-process', () => {
           .then(() => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
             status: 404,
+            ordinate: laterCachedEval.ordinate,
             message: 'no cached process memory found'
           }))
       })
@@ -881,6 +882,7 @@ describe('ao-process', () => {
           .then(() => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
             status: 404,
+            ordinate: laterCachedEval.ordinate,
             message: 'no cached process memory found'
           }))
       })
@@ -929,6 +931,7 @@ describe('ao-process', () => {
           .then(() => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
             status: 404,
+            ordinate: laterCachedEval.ordinate,
             message: 'no cached process memory found'
           }))
       })

@@ -226,6 +226,21 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, lo
       cron: ctx.cron,
       omitMemory: false
     })
+      .bimap(
+        (err) => {
+          if (err.status !== 404) return err
+
+          const id = ctx.ordinate
+            ? `at nonce ${ctx.ordinate}`
+            : `at timestamp ${ctx.to}`
+
+          return {
+            status: 404,
+            message: `message ${id} not found cached, and earlier than latest known nonce ${err.ordinate}`
+          }
+        },
+        identity
+      )
       .chain((found) => {
         const exact = found.timestamp === ctx.to &&
           found.ordinate === ctx.ordinate &&
