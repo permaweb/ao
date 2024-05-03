@@ -682,6 +682,34 @@ export function findLatestProcessMemoryWith ({
   function maybeOld ({ processId, before }) {
     return (found) => {
       /**
+       * We only care about a COLD start if the message being evaluated
+       * is not the first message (which will of course always start at the beginning)
+       * So we only care to log a COLD start if there _should_ have been some memory
+       * cached, and there wasn't.
+       *
+       * Otherwise, it's just business as usual -- evaluating a new process
+       */
+      if (found.src === 'cold_start') {
+        if (before.ordinate > 0) {
+          logger(
+            '**COLD START**: Could not find a Checkpoint for process "%s" before parameters "%j". Initializing Cold Start...',
+            processId,
+            before
+          )
+        }
+
+        /**
+         * TODO: could we check the before.ordinate
+         * and reject is the ordinate is sufficiently high,
+         * which is to assume that it's checkpointed somewhere.
+         *
+         * For now, not doing this, since there could actually be long streams
+         * of messages that have not been evaluated due to 'Cast'
+         */
+
+        return Resolved(found)
+      }
+      /**
        * The CU will only evaluate a new message it has not evaluated before,
        * which is to say the message's result is not in the CU's evaluation results cache
        * AND a later checkpoint is not found in the CU's process memory caches.
@@ -701,33 +729,16 @@ export function findLatestProcessMemoryWith ({
           before,
           omit(['Memory'], found)
         )
-        return Rejected({ status: 404, message: 'previously evaluated message not in CU result cache' })
+        return Rejected({ status: 404, message: 'no cached process memory found' })
       }
 
-      /**
-       * We only care about a COLD start if the message being evaluated
-       * is not the first message (which will of course always start at the beginning)
-       * So we only care to log a COLD start if there _should_ have been some memory
-       * cached, and there wasn't.
-       *
-       * Otherwise, it's just business as usual -- evaluating a new process
-       */
-      if (found.src === 'cold_start' && before.ordinate > 0) {
-        logger(
-          '**COLD START**: Could not find a Checkpoint for process "%s" before parameters "%j". Initializing Cold Start...',
-          processId,
-          before
-        )
-      } else {
-        logger(
-          '%s CHECKPOINT: Found Checkpoint for process "%s" at "%j" before parameters "%j"',
-          found.src.toUpperCase(),
-          processId,
-          before,
-          omit(['Memory'], found)
-        )
-      }
-
+      logger(
+        '%s CHECKPOINT: Found Checkpoint for process "%s" at "%j" before parameters "%j"',
+        found.src.toUpperCase(),
+        processId,
+        before,
+        omit(['Memory'], found)
+      )
       return Resolved(found)
     }
   }
