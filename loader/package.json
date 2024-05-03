@@ -20,7 +20,9 @@
     "test": "npm run build && node --experimental-wasm-memory64 --test",
     "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --experimental-wasm-memory64 --test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@webassemblyjs/wasm-edit": "^1.12.1"
+  },
   "devDependencies": {
     "esbuild": "^0.19.5",
     "typescript": "^5.2.2"

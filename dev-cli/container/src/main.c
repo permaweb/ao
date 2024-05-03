@@ -104,11 +104,29 @@ static int docall (lua_State *L, int narg, int nres) {
   return status;
 }
 
+void data_load_callback(const char* data) {
+  printf("Data loaded from server %s\n", data);
+}
+
+EM_ASYNC_JS(char*, loadDataFromServer, (), {
+  const d = await fetch('https://arweave.net').then(res => res.text()).then(data => {
+    console.log('Loading Data....', data);
+    return data
+    // _data_load_callback(data);
+  })
+  .catch(error => {
+    console.error('Error', error.message)
+    return error.message
+  })
+  return d
+})
+
 // Boot function
 int main(void) {
   if (wasm_lua_state != NULL) {
     return 0;
   }
+  
   wasm_lua_state = luaL_newstate();
   if (boot_lua(wasm_lua_state)) {
     printf("failed to boot lua runtime\\n");
@@ -116,6 +134,7 @@ int main(void) {
     return 1;
   }
   //printf("Boot Lua Webassembly!\n");
+
   return 0;
 }
 
