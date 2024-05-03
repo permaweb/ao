@@ -12,6 +12,7 @@ import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
+import { setTimeout, clearTimeout } from 'long-timeout';
 
 const gunzipP = promisify(gunzip)
 const gzipP = promisify(gzip)
