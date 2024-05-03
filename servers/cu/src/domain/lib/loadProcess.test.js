@@ -22,7 +22,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
@@ -91,7 +91,7 @@ describe('loadProcess', () => {
       }),
       saveProcess: async () => assert.fail('should not save if found in db'),
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
@@ -156,7 +156,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => cachedEvaluation,
-      findProcessMemoryBefore: async ({ processId, timestamp }) => {
+      findLatestProcessMemory: async ({ processId, timestamp }) => {
         assert.fail('should not be called when exact match is found')
       },
       saveLatestProcessMemory: async () => assert.fail('should not be called if exact match if found'),
@@ -201,7 +201,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async ({ processId, timestamp }) => cached,
+      findLatestProcessMemory: async ({ processId, timestamp }) => cached,
       saveLatestProcessMemory: async () => assert.fail('should not be called if memory'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
@@ -242,7 +242,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async ({ processId, timestamp }) => cached,
+      findLatestProcessMemory: async ({ processId, timestamp }) => cached,
       saveLatestProcessMemory: async (args) => {
         assert.deepStrictEqual(args, {
           processId: PROCESS,
@@ -292,7 +292,7 @@ describe('loadProcess', () => {
         return PROCESS
       },
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
@@ -327,7 +327,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
@@ -360,7 +360,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
@@ -395,7 +395,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
@@ -430,7 +430,7 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
-      findProcessMemoryBefore: async () => ({
+      findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,

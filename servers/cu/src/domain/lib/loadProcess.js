@@ -177,10 +177,10 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
       }))
 }
 
-function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, loadLatestSnapshot, saveLatestProcessMemory, logger }) {
+function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, loadLatestSnapshot, saveLatestProcessMemory, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   // TODO: wrap in zod schemas to enforce contract
-  findProcessMemoryBefore = fromPromise(findProcessMemoryBefore)
+  findLatestProcessMemory = fromPromise(findLatestProcessMemory)
   loadLatestSnapshot = fromPromise(loadLatestSnapshot)
   saveLatestProcessMemory = fromPromise(saveLatestProcessMemory)
 
@@ -219,7 +219,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, lo
   function maybeCachedMemory (ctx) {
     logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
 
-    return findProcessMemoryBefore({
+    return findLatestProcessMemory({
       processId: ctx.id,
       timestamp: ctx.to,
       ordinate: ctx.ordinate,
