@@ -47,10 +47,6 @@ export const createApis = (ctx) => {
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
 
-  const isWalletCache = InMemoryClient.createLruCache({ size: 1000 })
-  const getById = InMemoryClient.getByIdWith({ isWalletCache })
-  const setById = InMemoryClient.setByIdWith({ isWalletCache })
-
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
@@ -62,7 +58,7 @@ export const createApis = (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     logger,
-    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
+    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
   })
 

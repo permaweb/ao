@@ -41,17 +41,3 @@ export function setByProcessWith ({ cache = internalCache }) {
     return cache.set(processId, processData)
   }
 }
-
-export function getByIdWith ({ cache = internalCache }) {
-  return async (id) => {
-    if (!internalSize) return
-    return cache.get(id)
-  }
-}
-
-export function setByIdWith ({ cache = internalCache }) {
-  return async (id, val) => {
-    if (!internalSize) return
-    return cache.set(id, val)
-  }
-}
