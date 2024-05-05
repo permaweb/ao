@@ -6,7 +6,6 @@ import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
 import osClient from './clients/os.js'
-import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -58,7 +57,6 @@ export const createApis = (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     logger,
-    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
   })
 
@@ -98,9 +96,7 @@ export const createApis = (ctx) => {
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: sendDataItemLogger }),
     crank: crankMsgs,
-    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
-    logger: sendDataItemLogger,
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch })
+    logger: sendDataItemLogger
   })
 
   const sendAssignLogger = logger.child('sendAssign')

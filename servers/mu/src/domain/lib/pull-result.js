@@ -18,9 +18,8 @@ function fetchResultWith ({ fetchResult }) {
           return {
             fromTxId: ctx.tx.id,
             msg,
-            processId: msg.Target,
-            initialTxId: ctx.initialTxId,
-            fromProcessId: ctx.tx.processId
+            processId: ctx.tx.processId,
+            initialTxId: ctx.initialTxId
           }
         })
 

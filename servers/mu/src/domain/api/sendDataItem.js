@@ -22,13 +22,12 @@ export function sendDataItemWith ({
   fetchResult,
   crank,
   logger,
-  fetchSchedulerProcess,
-  writeDataItemArweave
+  fetchSchedulerProcess
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
+  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess })
   const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
 
@@ -102,11 +101,9 @@ export function sendDataItemWith ({
           .chain(({ isMessage }) => {
             if (isMessage) {
               /*
-                  add schedLocation into the context if the
-                  target is a process. if its a wallet dont add
-                  schedLocation and it will get sent directly to
-                  Arweave
-              */
+                  add schedLocation into the context, it is required
+                  for writeMessage
+                */
               return locateProcessLocal(ctx.dataItem.target)
                 .chain((schedLocation) => sendMessage({ ...ctx, schedLocation }))
             }
