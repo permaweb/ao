@@ -1,15 +1,32 @@
-function isWalletWith ({ fetch, GRAPHQL_URL, logger }) {
+function isWalletWith ({ fetch, GRAPHQL_URL, logger, setById, getById }) {
   return async (id) => {
     logger(`Checking if id is a wallet ${id}`)
 
+    const cachedIsWallet = await getById(id)
+
+    if (cachedIsWallet !== null && cachedIsWallet !== undefined) {
+      logger(`Found id: ${id} in cache with value: ${cachedIsWallet}`)
+      return cachedIsWallet
+    }
+
+    logger(`id: ${id} not cached checking gateway for tx`)
+
     /*
-            Only if this is actually a tx will this
-            return true. That means if it doesnt its
-            either a wallet or something else.
-        */
+      Only if this is actually a tx will this
+      return true. That means if it doesnt its
+      either a wallet or something else.
+    */
     return fetch(`${GRAPHQL_URL.replace('/graphql', '')}/${id}`, { method: 'HEAD' })
-      .then((res) => { return !res.ok })
-      .catch((_err) => { return true })
+      .then((res) => {
+        return setById(id, !res.ok).then(() => {
+          return !res.ok
+        })
+      })
+      .catch((_err) => {
+        return setById(id, true).then(() => {
+          return true
+        })
+      })
   }
 }
 
