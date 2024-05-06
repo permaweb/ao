@@ -6,7 +6,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { streamSchema } from '../model.js'
-import { mapFrom } from '../utils.js'
+import { backoff, mapFrom } from '../utils.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
@@ -419,7 +419,17 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
        * Merge the scheduled messages stream with cron messages,
        * producing a single merged stream
        */
-      return loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl })
+      return of()
+        .chain(fromPromise(() =>
+          /**
+           * The SU will sporadically timeout or respond with an error here,
+           * so we wrap fetching the timestamp with an exponential backoff
+           */
+          backoff(
+            () => loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl }).toPromise(),
+            { maxRetries: 3, delay: 500, name: 'loadTimestamp', log: logger }
+          )
+        ))
         .map(logger.tap('loaded current timestamp from SU'))
         /**
          * In order to generate cron messages and merge them with the
@@ -619,7 +629,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
            * It will be the first message evaluated by the module
            */
           if (isColdStart) {
-            logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id)
+            logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
             yield {
               /**
                * Ensure the noSave flag is set, so evaluation does not persist

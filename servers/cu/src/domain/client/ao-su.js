@@ -240,6 +240,10 @@ export const loadProcessWith = ({ fetch, logger }) => {
 
 export const loadTimestampWith = ({ fetch, logger }) => {
   return ({ suUrl, processId }) => fetch(`${suUrl}/timestamp?process-id=${processId}`)
+    .catch((err) => {
+      logger('Error Encountered when attempting to communicate to SU "%s" to fetch timestamp for process "%s"', suUrl, processId)
+      throw err
+    })
     .then(async (res) => {
       if (res.ok) return res.json()
       logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
