@@ -48,8 +48,8 @@ export const createApis = (ctx) => {
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
 
   const isWalletCache = InMemoryClient.createLruCache({ size: 1000 })
-  const getById = InMemoryClient.getByIdWith({ isWalletCache })
-  const setById = InMemoryClient.setByIdWith({ isWalletCache })
+  const getById = InMemoryClient.getByIdWith({ cache: isWalletCache })
+  const setById = InMemoryClient.setByIdWith({ cache: isWalletCache })
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({

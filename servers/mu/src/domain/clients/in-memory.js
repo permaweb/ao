@@ -3,12 +3,8 @@ import { LRUCache } from 'lru-cache'
 /**
  * @type {LRUCache}
  */
-let internalCache
-let internalSize
 export function createLruCache ({ size }) {
-  if (internalCache) return internalCache
-  internalSize = size
-  internalCache = new LRUCache({
+  return new LRUCache({
     /**
      * number of entries
      */
@@ -25,33 +21,32 @@ export function createLruCache ({ size }) {
     sizeCalculation: (v) => JSON.stringify(v).length,
     allowStale: true
   })
-  return internalCache
 }
 
-export function getByProcessWith ({ cache = internalCache }) {
+export function getByProcessWith ({ cache }) {
   return async (processId) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.get(processId)
   }
 }
 
-export function setByProcessWith ({ cache = internalCache }) {
+export function setByProcessWith ({ cache }) {
   return async (processId, processData) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.set(processId, processData)
   }
 }
 
-export function getByIdWith ({ cache = internalCache }) {
+export function getByIdWith ({ cache }) {
   return async (id) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.get(id)
   }
 }
 
-export function setByIdWith ({ cache = internalCache }) {
+export function setByIdWith ({ cache }) {
   return async (id, val) => {
-    if (!internalSize) return
+    if (!cache.max) return
     return cache.set(id, val)
   }
 }
