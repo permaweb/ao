@@ -177,10 +177,10 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
       }))
 }
 
-function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, loadLatestSnapshot, saveLatestProcessMemory, logger }) {
+function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, loadLatestSnapshot, saveLatestProcessMemory, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   // TODO: wrap in zod schemas to enforce contract
-  findProcessMemoryBefore = fromPromise(findProcessMemoryBefore)
+  findLatestProcessMemory = fromPromise(findLatestProcessMemory)
   loadLatestSnapshot = fromPromise(loadLatestSnapshot)
   saveLatestProcessMemory = fromPromise(saveLatestProcessMemory)
 
@@ -219,13 +219,28 @@ function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, lo
   function maybeCachedMemory (ctx) {
     logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
 
-    return findProcessMemoryBefore({
+    return findLatestProcessMemory({
       processId: ctx.id,
       timestamp: ctx.to,
       ordinate: ctx.ordinate,
       cron: ctx.cron,
       omitMemory: false
     })
+      .bimap(
+        (err) => {
+          if (err.status !== 404) return err
+
+          const id = ctx.ordinate
+            ? `at nonce ${ctx.ordinate}`
+            : `at timestamp ${ctx.to}`
+
+          return {
+            status: 404,
+            message: `message ${id} not found cached, and earlier than latest known nonce ${err.ordinate}`
+          }
+        },
+        identity
+      )
       .chain((found) => {
         const exact = found.timestamp === ctx.to &&
           found.ordinate === ctx.ordinate &&

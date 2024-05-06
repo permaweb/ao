@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, defaultTo, evolve, head, identity, map, path, prop, transduce } from 'ramda'
+import { always, applySpec, compose, defaultTo, evolve, head, identity, map, omit, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
@@ -20,6 +20,12 @@ function pluckTagValue (name, tags) {
   const tag = tags.find((t) => t.name === name)
   return tag ? tag.value : undefined
 }
+
+/**
+ * Used to indicate we are interested in the latest cached
+ * memory for the given process
+ */
+export const LATEST = 'LATEST'
 
 /**
  * @type {{
@@ -136,8 +142,32 @@ const processDocSchema = z.object({
   block: processSchema.shape.block
 })
 
-function latestCheckpointBefore ({ timestamp, ordinate, cron }) {
-  return (latest, checkpoint) => {
+function latestCheckpointBefore (destination) {
+  return (curLatest, checkpoint) => {
+    /**
+     * Often times, we are just interested in the latest checkpoint --
+     * the latest point we can start evaluating from, up to the present.
+     *
+     * So we have a special case where instead of passing criteria
+     * such as { timestamp, ordinate, cron } to serve as the right-most limit,
+     * the caller can simply pass the string 'latest'.
+     *
+     * Our destination is the latest, so we should
+     * just find the latest checkpoint
+     */
+    if (destination === LATEST) {
+      if (!curLatest) return checkpoint
+      return isEarlierThan(curLatest, checkpoint) ? curLatest : checkpoint
+    }
+
+    /**
+     * We need to use our destination as the right-most (upper) limit
+     * for our comparisons.
+     *
+     * In other words, we're only interested in checkpoints before
+     * our destination
+     */
+    const { timestamp, ordinate, cron } = destination
     if (
       /**
        * checkpoint is later than the timestamp we're interested in,
@@ -153,8 +183,8 @@ function latestCheckpointBefore ({ timestamp, ordinate, cron }) {
        * The checkpoint is earlier than the latest checkpoint we've found so far,
        * and we're looking for the latest, so just ignore this checkpoint
        */
-      (latest && isEarlierThan(latest, checkpoint))
-    ) return latest
+      (curLatest && isEarlierThan(curLatest, checkpoint))
+    ) return curLatest
 
     /**
      * this checkpoint is the new latest we've come across
@@ -240,8 +270,8 @@ export function saveProcessWith ({ db }) {
  */
 
 export function findCheckpointFileBeforeWith ({ DIR, glob }) {
-  return ({ processId, timestamp, ordinate, cron }) => {
-    const { stop: stopTimer } = timer('findCheckpointFileBefore', { processId, timestamp, ordinate, cron })
+  return ({ processId, before }) => {
+    const { stop: stopTimer } = timer('findCheckpointFileBefore', { processId, before })
     /**
      * Find all the Checkpoint files for this process
      *
@@ -263,7 +293,7 @@ export function findCheckpointFileBeforeWith ({ DIR, glob }) {
        * Find the latest Checkpoint before the params we are interested in
        */
       .then((parsed) => parsed.reduce(
-        latestCheckpointBefore({ timestamp, ordinate, cron }),
+        latestCheckpointBefore(before),
         undefined
       ))
   }
@@ -299,7 +329,7 @@ function queryCheckpointsWith ({ queryGateway, queryCheckpointGateway, logger })
   queryGateway = fromPromise(queryGateway)
   queryCheckpointGateway = fromPromise(queryCheckpointGateway)
 
-  return ({ query, variables, processId, timestamp, ordinate, cron }) => {
+  return ({ query, variables, processId, before }) => {
     const queryCheckpoint = (gateway, name = 'gateway') => (attempt) => () => {
       const { stop: stopTimer } = timer('queryCheckpoint', { gateway: name, attempt, processId })
 
@@ -311,7 +341,7 @@ function queryCheckpointsWith ({ queryGateway, queryCheckpointGateway, logger })
               'Error encountered querying %s for Checkpoint for process "%s", before "%j". Attempt %d...',
               name,
               processId,
-              { timestamp, ordinate, cron },
+              before,
               attempt,
               err
             )
@@ -347,6 +377,399 @@ function queryCheckpointsWith ({ queryGateway, queryCheckpointGateway, logger })
   }
 }
 
+export function findLatestProcessMemoryWith ({
+  cache,
+  findCheckpointFileBefore,
+  readCheckpointFile,
+  address,
+  queryGateway,
+  queryCheckpointGateway,
+  loadTransactionData,
+  PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+  logger: _logger
+}) {
+  const logger = _logger.child('ao-process:findProcessMemoryBefore')
+  address = fromPromise(address)
+  findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
+  readCheckpointFile = fromPromise(readCheckpointFile)
+  loadTransactionData = fromPromise(loadTransactionData)
+
+  const queryCheckpoints = queryCheckpointsWith({ queryGateway, queryCheckpointGateway, logger })
+
+  const GET_AO_PROCESS_CHECKPOINTS = `
+    query GetAoProcessCheckpoints(
+      $owner: String!
+      $processId: String!
+      $limit: Int!
+    ) {
+      transactions(
+        tags: [
+          { name: "Process", values: [$processId] }
+          { name: "Type", values: ["Checkpoint"] }
+          { name: "Data-Protocol", values: ["ao"] }
+        ],
+        owners: [$owner]
+        first: $limit,
+        sort: HEIGHT_DESC
+      ) {
+        edges {
+          node {
+            id
+            owner {
+              address
+            }
+            tags {
+              name
+              value
+            }
+          }
+        }
+      }
+    }
+  `
+
+  /**
+   * TODO: lots of room for optimization here
+   */
+  function determineLatestCheckpoint (edges) {
+    return transduce(
+      compose(
+        map(prop('node')),
+        map((node) => {
+          const tags = parseTags(node.tags)
+          return {
+            id: node.id,
+            timestamp: parseInt(tags.Timestamp),
+            epoch: parseInt(tags.Epoch),
+            nonce: parseInt(tags.Nonce),
+            ordinate: tags.Nonce,
+            module: tags.Module,
+            blockHeight: parseInt(tags['Block-Height']),
+            cron: tags['Cron-Interval'],
+            encoding: tags['Content-Encoding']
+          }
+        })
+      ),
+      /**
+       * Pass the LATEST flag, which configures latestCheckpointBefore
+       * to only be concerned with finding the absolute latest checkpoint
+       * in the list
+       */
+      latestCheckpointBefore(LATEST),
+      undefined,
+      edges
+    )
+  }
+
+  function decodeData (encoding) {
+    /**
+     * TODO: add more encoding options
+     */
+    if (encoding && encoding !== 'gzip') {
+      throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
+    }
+
+    return async (data) => {
+      if (!encoding) return data
+
+      return gunzipP(data)
+    }
+  }
+
+  /**
+   * @param {{ id, encoding }} checkpoint
+   */
+  function downloadCheckpointFromArweave (checkpoint) {
+    const { stop: stopTimer } = timer('downloadCheckpointFromArweave', { id: checkpoint.id })
+
+    return loadTransactionData(checkpoint.id)
+      .map((res) => {
+        stopTimer()
+        return res
+      })
+      .chain(fromPromise((res) => res.arrayBuffer()))
+      .map((arrayBuffer) => Buffer.from(arrayBuffer))
+      /**
+       * If the buffer is encoded, we need to decode it before continuing
+       */
+      .chain(fromPromise(decodeData(checkpoint.encoding)))
+  }
+
+  function maybeCached (args) {
+    const { processId, omitMemory } = args
+
+    return of(processId)
+      .chain((processId) => {
+        const cached = cache.get(processId)
+
+        /**
+         * There is no cached memory, so keep looking
+         */
+        if (!cached) return Rejected(args)
+
+        return of(cached)
+          .chain((cached) => {
+            if (omitMemory) return Resolved(null)
+            return of(cached).chain(fromPromise((cached) => gunzipP(cached.Memory)))
+          })
+          /**
+           * Finally map the Checkpoint to the expected shape
+           */
+          .map((Memory) => ({
+            src: 'memory',
+            Memory,
+            moduleId: cached.evaluation.moduleId,
+            timestamp: cached.evaluation.timestamp,
+            blockHeight: cached.evaluation.blockHeight,
+            epoch: cached.evaluation.epoch,
+            nonce: cached.evaluation.nonce,
+            ordinate: cached.evaluation.ordinate,
+            cron: cached.evaluation.cron
+          }))
+      })
+  }
+
+  function maybeFile (args) {
+    const { processId, omitMemory } = args
+
+    /**
+     * Attempt to find the latest checkpoint in a file
+     */
+    return findCheckpointFileBefore({ processId, before: LATEST })
+      .chain((latest) => {
+        /**
+         * No previously created checkpoint is cached in a file,
+         * so keep looking
+         */
+        if (!latest) return Rejected(args)
+
+        /**
+         * We have found a previously created checkpoint, cached in a file, so
+         * we can skip querying the gateway for it, and instead download the
+         * checkpointed Memory directly, from arweave.
+         *
+         * The "file" checkpoint already contains all the metadata we would
+         * otherwise have to pull from the gateway
+         */
+        return of(latest.file)
+          // { Memory: { id, encoding }, evaluation }
+          .chain(readCheckpointFile)
+          .chain((checkpoint) =>
+            of(checkpoint.Memory)
+              .chain((id) => {
+                if (omitMemory) return Resolved(null)
+                return downloadCheckpointFromArweave(id)
+              })
+              /**
+               * Finally map the Checkpoint to the expected shape
+               */
+              .map((Memory) => ({
+                src: 'file',
+                Memory,
+                moduleId: checkpoint.evaluation.moduleId,
+                timestamp: checkpoint.evaluation.timestamp,
+                epoch: checkpoint.evaluation.epoch,
+                nonce: checkpoint.evaluation.nonce,
+                ordinate: checkpoint.evaluation.ordinate,
+                blockHeight: checkpoint.evaluation.blockHeight,
+                cron: checkpoint.evaluation.cron
+              }))
+              .bimap(
+                (err) => {
+                  logger(
+                    'Error encountered when downloading Checkpoint using cached file for process "%s", from Arweave, with parameters "%j"',
+                    processId,
+                    { checkpointTxId: checkpoint.id, ...checkpoint },
+                    err
+                  )
+                  return args
+                },
+                identity
+              )
+          )
+      })
+  }
+
+  function maybeCheckpointFromArweave (args) {
+    const { processId, omitMemory } = args
+
+    if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
+      logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query gateway...', processId)
+      return Rejected(args)
+    }
+
+    return address()
+      .chain((owner) => queryCheckpoints({
+        query: GET_AO_PROCESS_CHECKPOINTS,
+        variables: { owner, processId, limit: 50 },
+        processId,
+        before: LATEST
+      }))
+      .map(path(['data', 'transactions', 'edges']))
+      .map(determineLatestCheckpoint)
+      .chain((latestCheckpoint) => {
+        if (!latestCheckpoint) return Rejected(args)
+
+        /**
+         * We have found a Checkpoint that we can use, so
+         * now let's load the snapshotted Memory from arweave
+         */
+        return of()
+          .chain(() => {
+            if (omitMemory) return Resolved(null)
+            return downloadCheckpointFromArweave(latestCheckpoint)
+          })
+          /**
+           * Finally map the Checkpoint to the expected shape
+           *
+           * (see determineLatestCheckpointBefore)
+           */
+          .map((Memory) => ({
+            src: 'arweave',
+            Memory,
+            moduleId: latestCheckpoint.module,
+            timestamp: latestCheckpoint.timestamp,
+            epoch: latestCheckpoint.epoch,
+            nonce: latestCheckpoint.nonce,
+            /**
+             * Derived from Nonce on Checkpoint
+             * (see determineLatestCheckpointBefore)
+             */
+            ordinate: latestCheckpoint.ordinate,
+            blockHeight: latestCheckpoint.blockHeight,
+            cron: latestCheckpoint.cron
+          }))
+          .bimap(
+            (err) => {
+              logger(
+                'Error encountered when downloading Checkpoint found for process "%s", from Arweave, with parameters "%j"',
+                processId,
+                { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint },
+                err
+              )
+              return args
+            },
+            identity
+          )
+      })
+  }
+
+  function coldStart () {
+    return Resolved({
+      src: 'cold_start',
+      Memory: null,
+      moduleId: undefined,
+      timestamp: undefined,
+      epoch: undefined,
+      nonce: undefined,
+      blockHeight: undefined,
+      cron: undefined,
+      /**
+       * No cached evaluation was found, but we still need an ordinate,
+       * in case there are Cron messages to generate prior to any scheduled
+       * messages existing in the sequence.
+       *
+       * The important attribute we need is for the ordinate to be lexicographically
+       * sortable.
+       *
+       * So we use a very small unicode character, as a pseudo-ordinate, which gets
+       * us exactly what we need
+       */
+      ordinate: COLLATION_SEQUENCE_MIN_CHAR
+    })
+  }
+
+  function maybeOld ({ processId, before }) {
+    return (found) => {
+      /**
+       * We only care about a COLD start if the message being evaluated
+       * is not the first message (which will of course always start at the beginning)
+       * So we only care to log a COLD start if there _should_ have been some memory
+       * cached, and there wasn't.
+       *
+       * Otherwise, it's just business as usual -- evaluating a new process
+       */
+      if (found.src === 'cold_start') {
+        if (before.ordinate > 0) {
+          logger(
+            '**COLD START**: Could not find a Checkpoint for process "%s" before parameters "%j". Initializing Cold Start...',
+            processId,
+            before
+          )
+        }
+
+        /**
+         * TODO: could we check the before.ordinate
+         * and reject is the ordinate is sufficiently high,
+         * which is to assume that it's checkpointed somewhere.
+         *
+         * For now, not doing this, since there could actually be long streams
+         * of messages that have not been evaluated due to 'Cast'
+         */
+
+        return Resolved(found)
+      }
+      /**
+       * The CU will only evaluate a new message it has not evaluated before,
+       * which is to say the message's result is not in the CU's evaluation results cache
+       * AND a later checkpoint is not found in the CU's process memory caches.
+       *
+       * So if we're not interested in the latest, we check if the found cached process memory
+       * is later than "before" and Reject if so.
+       *
+       * See https://github.com/permaweb/ao/issues/667
+       */
+      if (
+        before !== LATEST &&
+        isEarlierThan(found, before)
+      ) {
+        logger(
+          'OLD MESSAGE: Request for old message, sent to process "%s", with parameters "%j" when CU has found checkpoint with parameters "%j"',
+          processId,
+          before,
+          omit(['Memory'], found)
+        )
+        return Rejected({ status: 404, ordinate: found.ordinate, message: 'no cached process memory found' })
+      }
+
+      logger(
+        '%s CHECKPOINT: Found Checkpoint for process "%s" at "%j" before parameters "%j"',
+        found.src.toUpperCase(),
+        processId,
+        before,
+        omit(['Memory'], found)
+      )
+      return Resolved(found)
+    }
+  }
+
+  return ({ processId, timestamp, ordinate, cron, omitMemory = false }) => {
+    /**
+     * If no timestamp is provided, then we're actually interested in the
+     * latest cached memory, so we make sure to set before to that flag used downstream
+     */
+    const before = timestamp ? { timestamp, ordinate, cron } : LATEST
+
+    return of({ processId, before, omitMemory })
+      .chain(maybeCached)
+      .bichain(maybeFile, Resolved)
+      .bichain(maybeCheckpointFromArweave, Resolved)
+      .bichain(coldStart, Resolved)
+      .chain(maybeOld({ processId, before }))
+      .toPromise()
+  }
+}
+
+/**
+ * @deprecated - we no longer need to find the latest memory
+ * before a certain evaluation, since the CU will simply not evaluate an old message.
+ *
+ * Instead findLatestProcessMemory is used.
+ *
+ * See https://github.com/permaweb/ao/issues/667
+ *
+ * TODO: eventually remove when we know we won't need this anymore
+ */
 export function findProcessMemoryBeforeWith ({
   cache,
   findCheckpointFileBefore,

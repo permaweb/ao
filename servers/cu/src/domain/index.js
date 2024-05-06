@@ -140,7 +140,7 @@ export const createApis = async (ctx) => {
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
     findProcess: AoProcessClient.findProcessWith({ db: sqlite, logger }),
-    findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
+    findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({

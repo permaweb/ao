@@ -23,10 +23,10 @@ export const pendingReadStates = () => Object.fromEntries(pendingReadState.entri
 
 const findPendingForProcessBefore = findPendingForProcessBeforeWith(pendingReadState)
 
-function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, logger }) {
+function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   // TODO: wrap in zod schemas to enforce contract
-  findProcessMemoryBefore = fromPromise(findProcessMemoryBefore)
+  findLatestProcessMemory = fromPromise(findLatestProcessMemory)
 
   function maybeExactEvaluation (ctx) {
     /**
@@ -61,7 +61,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, lo
   }
 
   function maybeCachedMemory (ctx) {
-    return findProcessMemoryBefore({
+    return findLatestProcessMemory({
       processId: ctx.id,
       timestamp: ctx.to,
       ordinate: ctx.ordinate,
@@ -78,6 +78,21 @@ function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, lo
        */
       omitMemory: true
     })
+      .bimap(
+        (err) => {
+          if (err.status !== 404) return err
+
+          const id = ctx.ordinate
+            ? `at nonce ${ctx.ordinate}`
+            : `at timestamp ${ctx.to}`
+
+          return {
+            status: 404,
+            message: `message ${id} not found cached, and earlier than latest known nonce ${err.ordinate}`
+          }
+        },
+        identity
+      )
       .map((found) => {
         const exact = found.timestamp === ctx.to &&
             found.ordinate === ctx.ordinate &&
