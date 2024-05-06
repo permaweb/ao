@@ -8,12 +8,13 @@ const logger = createLogger('ao-mu:processMsg')
 
 describe('pullResultWith', () => {
   test('fetch result by transaction id', async () => {
-    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
+    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }], Target: 'pid-1' }
     const spawn1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
     const assign1 = { Processes: ['p1'], Message: 'm1' }
     const cachedMsg1 = {
       fromTxId: 'id-1',
       msg: msg1,
+      fromProcessId: 'pid-1',
       processId: 'pid-1',
       initialTxId: 'i-1'
     }
