@@ -293,9 +293,9 @@
     "@ethersproject/strings" "^5.7.0"
 
 "@fastify/busboy@^2.0.0":
-  "integrity" "sha512-+KpH+QxZU7O4675t3mnkQKcZZg56u+K/Ct2K+N2AZYNVK8kyeo/bI18tI8aPm3tvNNRyTWfj6s5tnGNlcbQRsA=="
-  "resolved" "https://registry.npmjs.org/@fastify/busboy/-/busboy-2.1.0.tgz"
-  "version" "2.1.0"
+  "integrity" "sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA=="
+  "resolved" "https://registry.npmjs.org/@fastify/busboy/-/busboy-2.1.1.tgz"
+  "version" "2.1.1"
 
 "@irys/arweave@^0.0.2":
   "integrity" "sha512-ddE5h4qXbl0xfGlxrtBIwzflaxZUDlDs43TuT0u1OMfyobHul4AA1VEX72Rpzw2bOh4vzoytSqA1jCM7x9YtHg=="
@@ -1515,9 +1515,9 @@
   "version" "5.26.5"
 
 "undici@^5.19.1":
-  "integrity" "sha512-3ItfzbrhDlINjaP0duwnNsKpDQk3acHI3gVJ1z4fmwMK31k5G9OVIAMLSIaP6w4FaGkaAkN6zaQO9LUvZ1t7VA=="
-  "resolved" "https://registry.npmjs.org/undici/-/undici-5.28.3.tgz"
-  "version" "5.28.3"
+  "integrity" "sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g=="
+  "resolved" "https://registry.npmjs.org/undici/-/undici-5.28.4.tgz"
+  "version" "5.28.4"
   dependencies:
     "@fastify/busboy" "^2.0.0"
 
