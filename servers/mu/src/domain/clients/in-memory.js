@@ -4,7 +4,7 @@ import { LRUCache } from 'lru-cache'
  * @type {LRUCache}
  */
 export function createLruCache ({ size }) {
-  return new LRUCache({
+  const cache = new LRUCache({
     /**
      * number of entries
      */
@@ -21,6 +21,7 @@ export function createLruCache ({ size }) {
     sizeCalculation: (v) => JSON.stringify(v).length,
     allowStale: true
   })
+  return cache
 }
 
 export function getByProcessWith ({ cache }) {

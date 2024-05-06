@@ -5,8 +5,8 @@ function isWalletWith ({ fetch, GRAPHQL_URL, logger, setById, getById }) {
     const cachedIsWallet = await getById(id)
 
     if (cachedIsWallet !== null && cachedIsWallet !== undefined) {
-      logger(`Found id: ${id} in cache with value: ${cachedIsWallet}`)
-      return cachedIsWallet
+      logger(`Found id: ${id} in cache with value: ${cachedIsWallet.isWallet}`)
+      return cachedIsWallet.isWallet
     }
 
     logger(`id: ${id} not cached checking gateway for tx`)
@@ -18,12 +18,12 @@ function isWalletWith ({ fetch, GRAPHQL_URL, logger, setById, getById }) {
     */
     return fetch(`${GRAPHQL_URL.replace('/graphql', '')}/${id}`, { method: 'HEAD' })
       .then((res) => {
-        return setById(id, !res.ok).then(() => {
+        return setById(id, { isWallet: !res.ok }).then(() => {
           return !res.ok
         })
       })
       .catch((_err) => {
-        return setById(id, true).then(() => {
+        return setById(id, { isWallet: true }).then(() => {
           return true
         })
       })

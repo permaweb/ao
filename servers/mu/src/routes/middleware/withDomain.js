@@ -8,18 +8,17 @@ import { createApis } from '../../domain/index.js'
  *
  * This allows routes to be encapsulated and easily testable with unit tests
  */
+
+export const domain = {
+  ...(domainConfigSchema.parse(config)),
+  fetch,
+  logger
+}
+
+domain.apis = createApis(domain)
+
 export const withDomain = (handler) => (req, res) => {
   req.logger = logger
-  req.domain = {
-    /**
-     * Ensure server lvl config is never exposed to domain,
-     * by simply parsing it out
-     */
-    ...(domainConfigSchema.parse(config)),
-    fetch,
-    logger
-  }
-  req.domain.apis = createApis(req.domain)
-
+  req.domain = domain
   return handler(req, res)
 }
