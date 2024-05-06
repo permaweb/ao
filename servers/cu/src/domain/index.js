@@ -235,11 +235,17 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readResultsLogger })
   })
 
+  let checkpointP
   const checkpointWasmMemoryCache = fromPromise(async () => {
+    if (checkpointP) {
+      ctx.logger('Checkpointing of WASM Memory Cache already in progress. Nooping...')
+      return checkpointP
+    }
+
     const pArgs = []
     wasmMemoryCache.lru.forEach((value) => pArgs.push(value))
 
-    await pMap(
+    checkpointP = pMap(
       pArgs,
       (value) => saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
         .catch((err) => {
@@ -268,7 +274,11 @@ export const createApis = async (ctx) => {
          */
         stopOnError: false
       }
-    ).catch(() => {})
+    )
+      .catch(() => {})
+
+    await checkpointP
+    checkpointP = undefined
   })
 
   const healthcheck = healthcheckWith({ walletAddress: address })
