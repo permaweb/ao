@@ -5,8 +5,10 @@ import assert from 'node:assert'
 import { loadMessageMetaSchema } from '../dal.js'
 import { loadMessageMetaWith, mapNode } from './ao-su.js'
 import { messageSchema } from '../model.js'
+import { createLogger } from '../logger.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
+const logger = createLogger('ao-cu:ao-su')
 
 describe('ao-su', () => {
   describe('mapNode', () => {
@@ -130,7 +132,8 @@ describe('ao-su', () => {
                 ]
               }
             }))
-          }
+          },
+          logger
         })
       )
 
@@ -139,6 +142,87 @@ describe('ao-su', () => {
         processId: 'process-123',
         messageTxId: 'message-tx-123'
       })
+
+      assert.deepStrictEqual(res, {
+        processId: 'process-123',
+        timestamp: 12345,
+        nonce: 3
+      })
+    })
+
+    test('retry if error received from SU', async () => {
+      let count = 0
+      const loadMessageMeta = loadMessageMetaSchema.implement(
+        loadMessageMetaWith({
+          fetch: async (url, options) => {
+            if (!count) {
+              count++
+              throw new Error('woops')
+            }
+
+            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
+            assert.deepStrictEqual(options, { method: 'GET' })
+
+            return new Response(JSON.stringify({
+              message: {}, // not used, but will be present
+              assignment: {
+                tags: [
+                  { name: 'Process', value: 'process-123' },
+                  { name: 'Nonce', value: '3' },
+                  { name: 'Timestamp', value: '12345' }
+                ]
+              }
+            }))
+          },
+          logger
+        })
+      )
+
+      const res = await loadMessageMeta({
+        suUrl: 'https://foo.bar',
+        processId: 'process-123',
+        messageTxId: 'message-tx-123'
+      })
+
+      assert.ok(!!count)
+
+      assert.deepStrictEqual(res, {
+        processId: 'process-123',
+        timestamp: 12345,
+        nonce: 3
+      })
+    })
+
+    test('retry if not OK res received from SU', async () => {
+      let count = 0
+      const loadMessageMeta = loadMessageMetaSchema.implement(
+        loadMessageMetaWith({
+          fetch: async (url, options) => {
+            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
+            assert.deepStrictEqual(options, { method: 'GET' })
+
+            return new Response(JSON.stringify({
+              message: {}, // not used, but will be present
+              assignment: {
+                tags: [
+                  { name: 'Process', value: 'process-123' },
+                  { name: 'Nonce', value: '3' },
+                  { name: 'Timestamp', value: '12345' }
+                ]
+              }
+            }), { status: !(count++) ? 408 : 200 })
+          },
+          logger
+        })
+      )
+
+      const res = await loadMessageMeta({
+        suUrl: 'https://foo.bar',
+        processId: 'process-123',
+        messageTxId: 'message-tx-123'
+      })
+
+      assert.ok(!!count)
 
       assert.deepStrictEqual(res, {
         processId: 'process-123',
