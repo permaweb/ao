@@ -388,7 +388,7 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   logger: _logger
 }) {
-  const logger = _logger.child('ao-process:findProcessMemoryBefore')
+  const logger = _logger.child('ao-process:findLatestProcessMemory')
   address = fromPromise(address)
   findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
   readCheckpointFile = fromPromise(readCheckpointFile)
