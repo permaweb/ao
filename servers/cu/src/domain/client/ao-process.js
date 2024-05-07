@@ -729,7 +729,7 @@ export function findLatestProcessMemoryWith ({
           before,
           omit(['Memory'], found)
         )
-        return Rejected({ status: 404, ordinate: found.ordinate, message: 'no cached process memory found' })
+        return Rejected({ status: 425, ordinate: found.ordinate, message: 'no cached process memory found' })
       }
 
       logger(

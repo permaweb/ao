@@ -6,7 +6,7 @@ describe.todo('chainEvaluationWith', () => {
 
   test.todo('should not chain if no pending evaluation stream exists', () => {})
 
-  test.todo('should not chain if the cached checkpoint is later than the pending evaluation stream', () => {})
+  test.todo('should reject with a 425 if the cached checkpoint is later than the pending evaluation stream', () => {})
 
   test.todo('should clear the evaluation stream from pending once it is complete', () => {})
 })

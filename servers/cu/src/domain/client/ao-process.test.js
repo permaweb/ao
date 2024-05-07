@@ -811,7 +811,7 @@ describe('ao-process', () => {
       })
     })
 
-    describe('should reject with a 404', () => {
+    describe('should reject with a 425', () => {
       const laterCachedEval = {
         ...cachedEval,
         timestamp: now,
@@ -845,7 +845,7 @@ describe('ao-process', () => {
         await findLatestProcessMemory(target)
           .then(() => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
-            status: 404,
+            status: 425,
             ordinate: laterCachedEval.ordinate,
             message: 'no cached process memory found'
           }))
@@ -881,7 +881,7 @@ describe('ao-process', () => {
         await findLatestProcessMemory(target)
           .then(() => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
-            status: 404,
+            status: 425,
             ordinate: laterCachedEval.ordinate,
             message: 'no cached process memory found'
           }))
@@ -930,7 +930,7 @@ describe('ao-process', () => {
         await findLatestProcessMemory(target)
           .then(() => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
-            status: 404,
+            status: 425,
             ordinate: laterCachedEval.ordinate,
             message: 'no cached process memory found'
           }))

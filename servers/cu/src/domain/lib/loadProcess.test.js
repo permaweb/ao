@@ -355,7 +355,7 @@ describe('loadProcess', () => {
     assert.equal(res.id, PROCESS)
   })
 
-  test('bubble 404 if latestProcessMemory is later than requested message', async () => {
+  test('bubble 425 if latestProcessMemory is later than requested message', async () => {
     const tags = [
       { name: 'Module', value: 'foobar' },
       { name: 'Data-Protocol', value: 'ao' },
@@ -367,7 +367,7 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
       findLatestProcessMemory: async ({ processId, timestamp }) => {
-        throw { status: 404, ordinate: '12', message: 'foobar' }
+        throw { status: 425, ordinate: '12', message: 'foobar' }
       },
       saveLatestProcessMemory: async () => assert.fail('should not be called if memory'),
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
@@ -384,7 +384,7 @@ describe('loadProcess', () => {
       .toPromise()
       .then(() => assert.fail('should have rejected'))
       .catch((err) => assert.deepStrictEqual(err, {
-        status: 404,
+        status: 425,
         message: 'message at timestamp 1697574792000 not found cached, and earlier than latest known nonce 12'
       }))
 
@@ -393,7 +393,7 @@ describe('loadProcess', () => {
       .toPromise()
       .then(() => assert.fail('should have rejected'))
       .catch((err) => assert.deepStrictEqual(err, {
-        status: 404,
+        status: 425,
         message: 'message at nonce 11 not found cached, and earlier than latest known nonce 12'
       }))
   })

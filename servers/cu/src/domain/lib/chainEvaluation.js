@@ -80,14 +80,14 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, lo
     })
       .bimap(
         (err) => {
-          if (err.status !== 404) return err
+          if (err.status !== 425) return err
 
           const id = ctx.ordinate
             ? `at nonce ${ctx.ordinate}`
             : `at timestamp ${ctx.to}`
 
           return {
-            status: 404,
+            status: 425,
             message: `message ${id} not found cached, and earlier than latest known nonce ${err.ordinate}`
           }
         },
