@@ -736,8 +736,8 @@ export function findLatestProcessMemoryWith ({
         '%s CHECKPOINT: Found Checkpoint for process "%s" at "%j" before parameters "%j"',
         found.src.toUpperCase(),
         processId,
-        before,
-        omit(['Memory'], found)
+        omit(['Memory'], found),
+        before
       )
       return Resolved(found)
     }
