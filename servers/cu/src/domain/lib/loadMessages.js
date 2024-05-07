@@ -6,7 +6,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { streamSchema } from '../model.js'
-import { backoff, mapFrom } from '../utils.js'
+import { mapFrom } from '../utils.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
@@ -419,17 +419,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
        * Merge the scheduled messages stream with cron messages,
        * producing a single merged stream
        */
-      return of()
-        .chain(fromPromise(() =>
-          /**
-           * The SU will sporadically timeout or respond with an error here,
-           * so we wrap fetching the timestamp with an exponential backoff
-           */
-          backoff(
-            () => loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl }).toPromise(),
-            { maxRetries: 3, delay: 500, name: 'loadTimestamp', log: logger }
-          )
-        ))
+      return loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl })
         .map(logger.tap('loaded current timestamp from SU'))
         /**
          * In order to generate cron messages and merge them with the
