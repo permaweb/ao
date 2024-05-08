@@ -1,5 +1,5 @@
 import { promisify } from 'node:util'
-import { gunzip, gzip } from 'node:zlib'
+import { gunzip, gzip, constants as zlibConstants } from 'node:zlib'
 import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
@@ -1110,6 +1110,16 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     const cached = cache.get(processId)
 
     /**
+     * Ensure that we are always passing a Buffer and not a TypedArray
+     *
+     * To avoid a copy, use the typed array's underlying ArrayBuffer to back
+     * new Buffer, respecting the "view", i.e. byteOffset and byteLength
+     */
+    Memory = ArrayBuffer.isView(Memory)
+      ? Buffer.from(Memory.buffer, Memory.byteOffset, Memory.byteLength)
+      : Buffer.from(Memory)
+
+    /**
      * The provided value is not later than the currently cached value,
      * so simply ignore it and return, keeping the current value in cache
      *
@@ -1127,7 +1137,10 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
      * Either no value was cached or the provided evaluation is later than
      * the value currently cached, so overwrite it
      */
-    const zipped = await gzipP(Memory)
+    const { stop: stopTimer } = timer('saveLatestProcessMemory:gzip', { processId, timestamp, ordinate, cron, size: Memory.byteLength })
+    const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
+    stopTimer()
+
     const evaluation = {
       processId,
       moduleId,
@@ -1137,9 +1150,17 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       blockHeight,
       ordinate,
       encoding: 'gzip',
+      // /**
+      //  * We cache the unencoded memory, as gzipping can become
+      //  * slow given a buffer with a lot of entropy
+      //  *
+      //  * NOTE: this consumes more memory in the LRU In-Memory Cache
+      //  */
+      // encoding: undefined,
       cron
     }
     cache.set(processId, { Memory: zipped, evaluation })
+    // cache.set(processId, { Memory, evaluation })
 
     if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
 
@@ -1156,6 +1177,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       )
 
       return saveCheckpoint({ Memory: zipped, ...evaluation })
+      // return saveCheckpoint({ Memory, ...evaluation })
         .catch((err) => {
           logger(
             'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
@@ -1249,12 +1271,12 @@ export function saveCheckpointWith ({
       .chain((buffer) =>
         of(buffer)
           .chain((buffer) => hashWasmMemory(Readable.from(buffer), encoding))
-          .map((sha) => {
+          .chain(fromPromise(async (sha) => {
             /**
              * TODO: what should we set anchor to?
              */
             const dataItem = {
-              data: buffer,
+              data: undefined,
               tags: [
                 { name: 'Data-Protocol', value: 'ao' },
                 { name: 'Variant', value: 'ao.TN.1' },
@@ -1266,15 +1288,26 @@ export function saveCheckpointWith ({
                 { name: 'Timestamp', value: `${timestamp}`.trim() },
                 { name: 'Block-Height', value: `${blockHeight}`.trim() },
                 { name: 'Content-Type', value: 'application/octet-stream' },
-                { name: 'SHA-256', value: sha }
+                { name: 'SHA-256', value: sha },
+                /**
+                 * We will always upload Checkpoints to Arweave as
+                 * gzipped encoded (see below)
+                 */
+                { name: 'Content-Encoding', value: 'gzip' }
               ]
             }
 
             if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
-            if (encoding) dataItem.tags.push({ name: 'Content-Encoding', value: encoding })
+
+            if (encoding === 'gzip') dataItem.data = buffer
+            /**
+             * Always ensure the process memory is encoded
+             * before adding it as part of the data item
+             */
+            else dataItem.data = await gzipP(buffer, { level: zlibConstants.Z_BEST_COMPRESSION })
 
             return dataItem
-          })
+          }))
       )
       .chain(buildAndSignDataItem)
   }
