@@ -12,7 +12,26 @@ function writeDataItemWith ({ fetch, logger }) {
             'Content-Type': 'application/octet-stream',
             Accept: 'application/json'
           },
+          redirect: 'manual',
           body
+        }).then(async response => {
+          /*
+            After upgrading to node 22 we have to handle
+            the redirects manually otherwise fetch throws
+            an error
+          */
+          if ([307, 308].includes(response.status)) {
+            const newUrl = response.headers.get('Location')
+            return fetch(newUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              body
+            })
+          }
+          return response
         })
       ))
       .bimap(
@@ -53,7 +72,20 @@ function writeAssignmentWith ({ fetch, logger }) {
           headers: {
             'Content-Type': 'application/octet-stream',
             Accept: 'application/json'
+          },
+          redirect: 'manual'
+        }).then(response => {
+          if ([307, 308].includes(response.status)) {
+            const newUrl = response.headers.get('Location')
+            return fetch(newUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              }
+            })
           }
+          return response
         })
       }
       ))
