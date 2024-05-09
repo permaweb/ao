@@ -574,6 +574,7 @@ export function findLatestProcessMemoryWith ({
 
             return of(cached)
               .chain((cached) => {
+                if (cached.Memory) return of(cached.Memory)
                 /**
                  * The process memory was drained into a file,
                  * so we need to read it back in from the file
@@ -583,7 +584,7 @@ export function findLatestProcessMemoryWith ({
                   return readProcessMemoryFile(cached.File)
                 }
 
-                return of(cached.Memory)
+                return Rejected('either Memory or File required')
               })
               /**
                * decode according to whatever encoding is being used to cache
@@ -1343,11 +1344,13 @@ export function saveCheckpointWith ({
     const { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory, File } = args
     return of()
       .chain(() => {
+        if (Memory) return of(Memory)
         if (File) {
           logger('Reloading cached process memory from file "%s"', File)
           return readProcessMemoryFile(File)
         }
-        return of(Memory)
+
+        return Rejected('either File or Memory required')
       })
       .chain((buffer) =>
         of(buffer)
