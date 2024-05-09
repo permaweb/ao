@@ -3,6 +3,7 @@ import { Transform, compose as composeStreams, finished } from 'node:stream'
 import { always, applySpec, evolve, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
+import { LRUCache } from 'lru-cache'
 
 import { evaluatorSchema, findMessageBeforeSchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
@@ -133,19 +134,22 @@ export function evaluateWith (env) {
                  * is itself a Cron Message.
                  *
                  * So to get around this, we maintain a set of strings that unique identify
-                 * Cron messages (timestamp+cron interval). We will add each cron message identifier to this Set.
+                 * Cron messages (timestamp+cron interval). We will add each cron message identifier.
                  * If an iteration comes across an identifier already present in this list, then we consider it
                  * a duplicate and remove it from the eval stream.
                  *
                  * This should prevent duplicate Cron Messages from being duplicate evaluated, thus not "tainting"
-                 * Memory that is folded as part of the eval stream
+                 * Memory that is folded as part of the eval stream.
+                 *
+                 * Since this will only happen at the end and beginning of boundaries generated in loadMessages
+                 * this cache can be small, which prevents bloating memory on long cron runs
                  */
-                const evaledCrons = new Set()
+                const evaledCrons = new LRUCache({ maxSize: 100, sizeCalculation: always(1) })
                 /**
                  * If the starting point ('from') is itself a Cron Message,
                  * then that will be our first identifier added to the set
                  */
-                if (ctx.fromCron) evaledCrons.add(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }))
+                if (ctx.fromCron) evaledCrons.set(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }), true)
 
                 /**
                  * Iterate over the async iterable of messages,
@@ -156,11 +160,11 @@ export function evaluateWith (env) {
                     const key = toEvaledCron({ timestamp: message.Timestamp, cron })
                     if (evaledCrons.has(key)) continue
                     /**
-                     * We add the crons identifier to the Set,
+                     * We add the crons identifier to the cache,
                      * thus preventing a duplicate evaluation if we come across it
                      * again in the eval stream
                      */
-                    else evaledCrons.add(key)
+                    else evaledCrons.set(key, true)
                   }
 
                   /**
