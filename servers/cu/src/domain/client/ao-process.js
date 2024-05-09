@@ -595,6 +595,7 @@ export function findLatestProcessMemoryWith ({
            */
           .map((Memory) => ({
             src: 'memory',
+            fromFile: cached.File,
             Memory,
             moduleId: cached.evaluation.moduleId,
             timestamp: cached.evaluation.timestamp,

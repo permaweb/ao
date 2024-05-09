@@ -409,6 +409,7 @@ describe('ao-process', () => {
 
           assert.deepStrictEqual(res, {
             src: 'memory',
+            fromFile: undefined,
             Memory,
             moduleId: 'module-123',
             epoch: cachedEval.epoch,
@@ -425,6 +426,7 @@ describe('ao-process', () => {
 
           assert.deepStrictEqual(res, {
             src: 'memory',
+            fromFile: undefined,
             Memory,
             moduleId: 'module-123',
             epoch: cachedEval.epoch,
@@ -456,6 +458,7 @@ describe('ao-process', () => {
 
         assert.deepStrictEqual(res, {
           src: 'memory',
+          fromFile: 'state-process123.dat',
           Memory,
           moduleId: 'module-123',
           epoch: cachedEval.epoch,
