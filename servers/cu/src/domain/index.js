@@ -273,7 +273,7 @@ export const createApis = async (ctx) => {
          *
          * Helps prevent the gateway from being overwhelmed and then timing out
          */
-        concurrency: 15,
+        concurrency: 10,
         /**
          * Prevent any one rejected promise from causing other invocations
          * to not be attempted.
