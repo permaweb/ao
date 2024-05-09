@@ -252,7 +252,8 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, lo
              * Nothing to backfill in-memory cache with,
              * so simply noop
              */
-            if (['memory', 'cold_start'].includes(found.src)) return Resolved(found)
+            if (['cold_start'].includes(found.src)) return Resolved(found)
+            if (['memory'].includes(found.src) && !found.fromFile) return Resolved(found)
 
             logger(
               'Seeding cache with latest checkpoint found with parameters "%j"',
