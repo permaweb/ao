@@ -1477,7 +1477,7 @@ export function saveCheckpointWith ({
 
         logger(
           'Creating Checkpoint for evaluation: %j',
-          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding: 'gzip' }
         )
         /**
          * Construct and sign an ao Checkpoint data item
@@ -1491,7 +1491,7 @@ export function saveCheckpointWith ({
               logger(
                 'Successfully uploaded Checkpoint DataItem for process "%s" on evaluation "%j"',
                 processId,
-                { checkpointTxId: res.id, processId, nonce, timestamp, cron }
+                { checkpointTxId: res.id, processId, nonce, timestamp, cron, encoding: 'gzip' }
               )
               /**
                * Track that we've recently created a checkpoint for this
