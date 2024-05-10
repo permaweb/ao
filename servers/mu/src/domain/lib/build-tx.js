@@ -19,14 +19,6 @@ export function buildTxWith (env) {
   isWallet = fromPromise(isWallet)
 
   return (ctx) => {
-    console.log('jjjjjjjjjjjjjjjjj')
-    console.log(ctx)
-    console.log('ctx.cachedMsg')
-    console.log(ctx.cachedMsg)
-    console.log('ctx.cachedMsg.msg')
-    console.log(ctx.cachedMsg.msg)
-    console.log(ctx.cachedMsg.msg.Target)
-    console.log(ctx.cachedMsg.processId)
     return isWallet(ctx.cachedMsg.processId)
       .chain(
         (isWalletId) => {

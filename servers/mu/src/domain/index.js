@@ -52,8 +52,6 @@ export const createApis = (ctx) => {
   const getById = InMemoryClient.getByIdWith({ cache: isWalletCache })
   const setById = InMemoryClient.setByIdWith({ cache: isWalletCache })
 
-  initCronProcs()
-
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
