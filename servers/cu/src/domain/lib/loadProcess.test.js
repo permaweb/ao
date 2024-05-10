@@ -273,6 +273,57 @@ describe('loadProcess', () => {
     await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
   })
 
+  test('backfill cache if latest from memory drained to file', async () => {
+    const cached = {
+      Memory: Buffer.from('hello world'),
+      moduleId: 'module-123',
+      timestamp: 1697574792000,
+      epoch: 0,
+      nonce: 11,
+      blockHeight: 123,
+      cron: undefined,
+      ordinate: '11'
+    }
+
+    const tags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Type', value: 'Process' },
+      { name: 'Foo', value: 'Bar' }
+    ]
+    const loadProcess = loadProcessWith({
+      findProcess: async () => { throw { status: 404 } },
+      saveProcess: async () => PROCESS,
+      findEvaluation: async () => { throw { status: 404 } },
+      findLatestProcessMemory: async ({ processId, timestamp }) => cached,
+      saveLatestProcessMemory: async (args) => {
+        assert.deepStrictEqual(args, {
+          processId: PROCESS,
+          evalCount: 0,
+          Memory: cached.Memory,
+          moduleId: cached.moduleId,
+          timestamp: cached.timestamp,
+          epoch: cached.epoch,
+          nonce: cached.nonce,
+          ordinate: cached.ordinate,
+          blockHeight: cached.blockHeight,
+          cron: cached.cron
+        })
+      },
+      locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
+      loadProcess: async (id) => ({
+        owner: 'woohoo',
+        tags,
+        block: { height: 123, timestamp: 1697574792000 }
+      }),
+      logger
+    })
+
+    cached.src = 'memory'
+    cached.fromFile = 'state-process-123.dat'
+    await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+  })
+
   test('save process to db if fetched from chain', async () => {
     const tags = [
       { name: 'Module', value: 'foobar' },

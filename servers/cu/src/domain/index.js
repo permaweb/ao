@@ -85,6 +85,11 @@ export const createApis = async (ctx) => {
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
 
+  const readProcessMemoryFile = AoProcessClient.readProcessMemoryFileWith({
+    DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
+    readFile
+  })
+
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
@@ -105,6 +110,7 @@ export const createApis = async (ctx) => {
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
+    readProcessMemoryFile,
     queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: ctx.logger }),
     queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger: ctx.logger }),
     hashWasmMemory: WasmClient.hashWasmMemory,
@@ -122,11 +128,16 @@ export const createApis = async (ctx) => {
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
+    DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
+    writeProcessMemoryFile: AoProcessClient.writeProcessMemoryFileWith({
+      DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
+      writeFile
+    }),
     /**
      * Save the evicted process memory as a Checkpoint on Arweave
      */
     onEviction: ({ value }) =>
-      saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+      saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
         .catch((err) => {
           ctx.logger(
             'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
@@ -143,6 +154,7 @@ export const createApis = async (ctx) => {
     findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
+      readProcessMemoryFile,
       findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
         glob: fastGlob
@@ -247,7 +259,7 @@ export const createApis = async (ctx) => {
 
     checkpointP = pMap(
       pArgs,
-      (value) => saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+      (value) => saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
         .catch((err) => {
           ctx.logger(
             'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
@@ -261,7 +273,7 @@ export const createApis = async (ctx) => {
          *
          * Helps prevent the gateway from being overwhelmed and then timing out
          */
-        concurrency: 15,
+        concurrency: 10,
         /**
          * Prevent any one rejected promise from causing other invocations
          * to not be attempted.

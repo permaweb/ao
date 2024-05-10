@@ -99,6 +99,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, lo
             found.cron === ctx.cron
 
         return {
+          isColdStart: found.src === 'cold_start',
           result: {
             Memory: found.Memory
           },
@@ -210,16 +211,37 @@ export function chainEvaluationWith (env) {
             const [pendingKey, { pending, chainedTo }] = pendingForProcessBefore
             const [, pTo, pOrdinate, pCron] = pendingKey.split(',')
 
-            const isPendingLaterThanCached = !!res.from && isLaterThan(
+            /**
+             * If the incoming eval stream will be cold started,
+             * then we chain it to ANY pending eval stream. This is to
+             * prevent multiple cold starts of the same process. This could mean that, in some cases,
+             * a message eval from a cold start could "wait" unnecessarily longer (ie. the pending is evaluating
+             * up to a much later message than the one being requested). To that, there are two points:
+             *
+             * 1. the request to eval an old message ought to be dispreferred anyway
+             * 2. the old message will be in the CUs result cache, and so immediately
+             * be returned to the client, without starting another eval stream, a boon for the CU.
+             *
+             * Regardless, this branch should only trigger when there is a process with a lengthy eval stream from a cold start,
+             * and most of the time cold starts happen only for new processes, whose message history is short, and typically cheaper
+             * to compute.
+             *
+             * ---
+             *
+             * Alternatively (not a cold start), we must compare the actual chronology
+             * between the loaded latest evaluation and the found
+             * pending readState, and decide whether it is advantageous to chain
+             */
+            const isPendingLaterThanCached = res.isColdStart || (!!res.from && isLaterThan(
               { timestamp: res.from, ordinate: res.ordinate, cron: res.fromCron },
               { timestamp: pTo, ordinate: pOrdinate, cron: pCron }
-            )
+            ))
 
             if (isPendingLaterThanCached) {
               env.logger(
                 'found pending readState at "%j" to chain to, later than cached %j, for incoming readState "%s"',
                 { key: pendingKey, chainedTo },
-                res.from
+                !res.isColdStart
                   ? { timestamp: res.from, ordinate: res.ordinate, cron: res.fromCron }
                   : { COLD_START: true },
                 key

@@ -338,13 +338,14 @@ describe('ao-process', () => {
     })
 
     describe('checkpoint cached in LRU In-Memory Cache', () => {
-      const findLatestProcessMemory = findLatestProcessMemoryWith({
+      const deps = {
         cache: {
           get: () => ({
             Memory: zipped,
             evaluation: cachedEval
           })
         },
+        readProcessMemoryFile: async () => assert.fail('should not call if memory is in cache'),
         findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
         readCheckpointFile: async () => assert.fail('should not call if found in cache'),
         address: async () => assert.fail('should not call if found in cache'),
@@ -353,11 +354,53 @@ describe('ao-process', () => {
         loadTransactionData: async () => assert.fail('should not call if found in cache'),
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+      }
+      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+      describe('should decode memory', () => {
+        test('hot in a cache', async () => {
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res.Memory, Memory)
+        })
+
+        test('drained to a file', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            cache: {
+              get: () => ({
+                File: 'state-process123.dat',
+                evaluation: cachedEval
+              })
+            },
+            readProcessMemoryFile: async (file) => {
+              assert.equal(file, 'state-process123.dat')
+              return zipped
+            }
+          })
+
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res.Memory, Memory)
+        })
       })
 
-      test('should decode the memory', async () => {
-        const res = await findLatestProcessMemory(target)
-        assert.deepStrictEqual(res.Memory, Memory)
+      describe('should NOT decode the memory', () => {
+        test('drained to a file', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            cache: {
+              get: () => ({
+                File: 'state-process123.dat',
+                evaluation: { ...cachedEval, encoding: undefined }
+              })
+            },
+            readProcessMemoryFile: async (file) => {
+              assert.equal(file, 'state-process123.dat')
+              return Memory
+            }
+          })
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res.Memory, Memory)
+        })
       })
 
       describe('should use the memory', () => {
@@ -366,6 +409,7 @@ describe('ao-process', () => {
 
           assert.deepStrictEqual(res, {
             src: 'memory',
+            fromFile: undefined,
             Memory,
             moduleId: 'module-123',
             epoch: cachedEval.epoch,
@@ -382,6 +426,7 @@ describe('ao-process', () => {
 
           assert.deepStrictEqual(res, {
             src: 'memory',
+            fromFile: undefined,
             Memory,
             moduleId: 'module-123',
             epoch: cachedEval.epoch,
@@ -391,6 +436,37 @@ describe('ao-process', () => {
             cron: cachedEval.cron,
             ordinate: cachedEval.ordinate
           })
+        })
+      })
+
+      test('should reload the memory from a file', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              File: 'state-process123.dat',
+              evaluation: cachedEval
+            })
+          },
+          readProcessMemoryFile: async (file) => {
+            assert.equal(file, 'state-process123.dat')
+            return zipped
+          }
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res, {
+          src: 'memory',
+          fromFile: 'state-process123.dat',
+          Memory,
+          moduleId: 'module-123',
+          epoch: cachedEval.epoch,
+          nonce: cachedEval.nonce,
+          timestamp: cachedEval.timestamp,
+          blockHeight: cachedEval.blockHeight,
+          cron: cachedEval.cron,
+          ordinate: cachedEval.ordinate
         })
       })
 
