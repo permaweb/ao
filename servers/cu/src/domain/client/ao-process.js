@@ -367,14 +367,29 @@ export function readProcessMemoryFileWith ({ DIR, readFile }) {
 }
 
 export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
+  const pendingWrites = new Map()
+
   return ({ Memory, evaluation }) => {
     const file = `state-${evaluation.processId}.dat`
-    const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
-    const path = join(DIR, file)
 
-    return writeFile(path, Memory)
-      .then(() => file)
-      .finally(stopTimer)
+    /**
+     * Wait on the current write to resolve, before beginning to write.
+     * This prevent multiple concurrent writes to the same state file,
+     * and corrupting the state.
+     */
+    return (pendingWrites.get(file) || Promise.resolve())
+      .then(() => {
+        const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
+        const path = join(DIR, file)
+
+        const pending = writeFile(path, Memory)
+          .then(() => file)
+          .finally(stopTimer)
+        pendingWrites.set(file, pending)
+
+        return pending
+      })
+      .finally(() => pendingWrites.delete(file))
   }
 }
 
