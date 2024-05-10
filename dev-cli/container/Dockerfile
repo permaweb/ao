@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.55
+FROM emscripten/emsdk:3.1.59
 LABEL maintainer "tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there

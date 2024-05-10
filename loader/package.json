@@ -8,7 +8,7 @@
   },
   "sideEffects": false,
   "type": "module",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "./dist"
@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
-    "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
+    "build:types": "tsc src/index2.js --declaration --allowJs --emitDeclarationOnly --outDir dist",
     "test": "npm run build && node --experimental-wasm-memory64 --test",
     "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --experimental-wasm-memory64 --test"
   },
@@ -26,6 +26,6 @@
     "typescript": "^5.2.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   }
 }
