@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, identity, isNotNil, mergeRight, pick } from 'ramda'
+import { always, identity, isNotNil, mergeRight, omit, pick } from 'ramda'
 import { z } from 'zod'
 
 import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateProcessSchema, saveProcessSchema } from '../dal.js'
@@ -177,11 +177,12 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
       }))
 }
 
-function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, loadLatestSnapshot, logger }) {
+function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, loadLatestSnapshot, saveLatestProcessMemory, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   // TODO: wrap in zod schemas to enforce contract
-  findProcessMemoryBefore = fromPromise(findProcessMemoryBefore)
+  findLatestProcessMemory = fromPromise(findLatestProcessMemory)
   loadLatestSnapshot = fromPromise(loadLatestSnapshot)
+  saveLatestProcessMemory = fromPromise(saveLatestProcessMemory)
 
   function maybeExactEvaluation (ctx) {
     /**
@@ -218,27 +219,80 @@ function loadLatestEvaluationWith ({ findEvaluation, findProcessMemoryBefore, lo
   function maybeCachedMemory (ctx) {
     logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
 
-    return findProcessMemoryBefore({
+    return findLatestProcessMemory({
       processId: ctx.id,
       timestamp: ctx.to,
       ordinate: ctx.ordinate,
-      cron: ctx.cron
+      cron: ctx.cron,
+      omitMemory: false
     })
-      .map((found) => {
+      .bimap(
+        (err) => {
+          if (err.status !== 425) return err
+
+          const id = ctx.ordinate
+            ? `at nonce ${ctx.ordinate}`
+            : `at timestamp ${ctx.to}`
+
+          return {
+            status: 425,
+            message: `message ${id} not found cached, and earlier than latest known nonce ${err.ordinate}`
+          }
+        },
+        identity
+      )
+      .chain((found) => {
         const exact = found.timestamp === ctx.to &&
           found.ordinate === ctx.ordinate &&
           found.cron === ctx.cron
 
-        return {
-          result: {
-            Memory: found.Memory
-          },
-          from: found.timestamp,
-          ordinate: found.ordinate,
-          fromBlockHeight: found.blockHeight,
-          fromCron: found.cron,
-          exact
-        }
+        return of()
+          .chain(() => {
+            /**
+             * Nothing to backfill in-memory cache with,
+             * so simply noop
+             */
+            if (['cold_start'].includes(found.src)) return Resolved(found)
+            if (['memory'].includes(found.src) && !found.fromFile) return Resolved(found)
+
+            logger(
+              'Seeding cache with latest checkpoint found with parameters "%j"',
+              omit(['Memory'], found)
+            )
+            /**
+             * Immediatley attempt to save the memory loaded from a checkpoint
+             * into the LRU In-memory cache, which will cut
+             * down on calls to load checkpoints from arweave (it will load from cache instead)
+             */
+            return saveLatestProcessMemory({
+              processId: ctx.id,
+              evalCount: 0,
+              /**
+               * map found
+               */
+              Memory: found.Memory,
+              moduleId: found.moduleId,
+              // messageId: found.messageId,
+              timestamp: found.timestamp,
+              epoch: found.epoch,
+              nonce: found.nonce,
+              ordinate: found.ordinate,
+              blockHeight: found.blockHeight,
+              cron: found.cron
+            })
+              .bichain(Resolved, Resolved)
+              .map(() => found)
+          })
+          .map(() => ({
+            result: {
+              Memory: found.Memory
+            },
+            from: found.timestamp,
+            ordinate: found.ordinate,
+            fromBlockHeight: found.blockHeight,
+            fromCron: found.cron,
+            exact
+          }))
       })
   }
 

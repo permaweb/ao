@@ -123,6 +123,25 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
   /**
+   * The time in milliseconds that a process' Memory should remain in the heap,
+   * as part of the cache entry, before being drained to a file.
+   *
+   * This helps free up memory from processes who've been evalated and cached,
+   * but have not been accessed recently
+   */
+  PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: positiveIntSchema,
+  /**
+   * The directory to store drained process memory files
+   */
+  PROCESS_MEMORY_CACHE_FILE_DIR: z.string().min(1),
+  /**
+   * The interval at which the CU should Checkpoint all processes stored in it's
+   * cache.
+   *
+   * Set to 0 to disable
+   */
+  PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: positiveIntSchema,
+  /**
    * The amount of time in milliseconds, the CU should wait for evaluation to complete
    * before responding with a "busy" message to the client
    */
@@ -215,6 +234,11 @@ export const messageSchema = z.object({
    * Whether the message is a pure assignment of an on-chain message
    */
   isAssignment: z.boolean().default(false),
+  /**
+   * For assignments, any exclusions to not be passed to the process,
+   * and potentially not loaded from the gateway or arweave
+   */
+  exclude: z.array(z.string()).nullish(),
   message: z.object({
     /**
      * The tx id of the message ie. the data item id

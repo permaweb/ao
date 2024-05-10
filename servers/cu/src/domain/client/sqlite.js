@@ -83,17 +83,18 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
   if (internalSqliteDb) return internalSqliteDb
 
   const db = Database(url)
-  db.pragma('encoding = "UTF-8"')
-  db.pragma('journal_mode = WAL')
-  /**
-   * https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md#checkpoint-starvation
-   */
-  setInterval(stat.bind(null, `${url}-wal`, (err, stat) => {
-    if (err && err.code !== 'ENOENT') throw err
-    if (stat && stat.size > walLimit) db.pragma('wal_checkpoint(RESTART)')
-  }), 5000).unref()
 
   if (bootstrap) {
+    db.pragma('encoding = "UTF-8"')
+    db.pragma('journal_mode = WAL')
+    /**
+     * https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md#checkpoint-starvation
+     */
+    setInterval(stat.bind(null, `${url}-wal`, (err, stat) => {
+      if (err && err.code !== 'ENOENT') throw err
+      if (stat && stat.size > walLimit) db.pragma('wal_checkpoint(RESTART)')
+    }), 5000).unref()
+
     await Promise.resolve()
       .then(() => createProcesses(db))
       .then(() => createBlocks(db))

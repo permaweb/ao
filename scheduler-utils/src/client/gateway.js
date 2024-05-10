@@ -102,6 +102,6 @@ export function loadSchedulerWith ({ fetch, GRAPHQL_URL }) {
       .then(([url, ttl]) => {
         if (!url) throw new InvalidSchedulerLocationError('No "Url" tag found on Scheduler-Location')
         if (!ttl) throw new InvalidSchedulerLocationError('No "Time-To-Live" tag found on Scheduler-Location')
-        return { url, ttl, owner: walletAddress }
+        return { url, ttl, address: walletAddress }
       })
 }

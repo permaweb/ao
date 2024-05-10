@@ -5,7 +5,7 @@ const ctxSchema = z.object({
   msgs: z.any(),
   spawns: z.any(),
   assigns: z.any(),
-  initialTxId: z.string().nullable()
+  initialTxId: z.any()
 }).passthrough()
 
 function fetchResultWith ({ fetchResult }) {
@@ -16,16 +16,15 @@ function fetchResultWith ({ fetchResult }) {
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
           return {
-            fromTxId: ctx.tx.id,
             msg,
-            processId: ctx.tx.processId,
-            initialTxId: ctx.initialTxId
+            processId: msg.Target,
+            initialTxId: ctx.initialTxId,
+            fromProcessId: ctx.tx.processId
           }
         })
 
         const spawns = fetchedResult.Spawns.map(spawn => {
           return {
-            fromTxId: ctx.tx.id,
             spawn,
             processId: ctx.tx.processId,
             initialTxId: ctx.initialTxId

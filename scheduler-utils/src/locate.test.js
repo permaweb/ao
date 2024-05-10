@@ -14,7 +14,7 @@ describe('locateWith', () => {
     const locate = locateWith({
       loadProcessScheduler: async (process) => {
         assert.equal(process, PROCESS)
-        return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+        return { url: DOMAIN, ttl: TEN_MS, address: SCHEDULER }
       },
       loadScheduler: async () => assert.fail('should not load the scheduler if no hint'),
       cache: {
@@ -28,12 +28,14 @@ describe('locateWith', () => {
           assert.equal(address, SCHEDULER)
           assert.equal(ttl, TEN_MS)
         },
+        getByOwner: async () => assert.fail('should not get by owner, if no scheduler hint'),
         setByOwner: async (owner, url, ttl) => {
           assert.equal(owner, SCHEDULER)
           assert.equal(url, DOMAIN)
           assert.equal(ttl, TEN_MS)
         }
       },
+      checkForRedirect: async () => assert.fail('should not check for redirect if followRedirects is false'),
       followRedirects: false
     })
 
@@ -55,7 +57,9 @@ describe('locateWith', () => {
         getByOwner: async () => assert.fail('should not check cache by owner if cached by process'),
         setByProcess: async () => assert.fail('should not set cache by process if cached by process'),
         setByOwner: async () => assert.fail('should not set cache by owner if cached by process')
-      }
+      },
+      checkForRedirect: async () => assert.fail('should not check for redirect if followRedirects is false'),
+      followRedirects: false
     })
 
     await locate(PROCESS)
@@ -66,7 +70,7 @@ describe('locateWith', () => {
     const locate = locateWith({
       loadProcessScheduler: async (process) => {
         assert.equal(process, PROCESS)
-        return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+        return { url: DOMAIN, ttl: TEN_MS, address: SCHEDULER }
       },
       loadScheduler: async () => assert.fail('should not load the scheduler if no hint'),
       cache: {
@@ -80,6 +84,7 @@ describe('locateWith', () => {
           assert.equal(address, SCHEDULER)
           assert.equal(ttl, TEN_MS)
         },
+        getByOwner: async () => assert.fail('should not get by owner, if no scheduler hint'),
         setByOwner: async (owner, url, ttl) => {
           assert.equal(owner, SCHEDULER)
           /**
@@ -106,7 +111,7 @@ describe('locateWith', () => {
       loadProcessScheduler: async () => assert.fail('should not load process if given a scheduler hint'),
       loadScheduler: async (owner) => {
         assert.equal(owner, SCHEDULER)
-        return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+        return { url: DOMAIN, ttl: TEN_MS, address: SCHEDULER }
       },
       cache: {
         getByProcess: async (process) => {
@@ -155,7 +160,7 @@ describe('locateWith', () => {
         },
         getByOwner: async (owner) => {
           assert.equal(owner, SCHEDULER)
-          return { url: DOMAIN, ttl: TEN_MS, owner: SCHEDULER }
+          return { url: DOMAIN, ttl: TEN_MS, address: SCHEDULER }
         },
         setByProcess: async (process, { url, address }, ttl) => {
           assert.equal(process, PROCESS)

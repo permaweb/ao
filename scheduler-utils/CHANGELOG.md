@@ -2,6 +2,55 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+<!-- toc -->
+
+- [[0.0.19](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.18...scheduler-utils@v0.0.19) (2024-04-30)](#0019httpsgithubcompermawebaocomparescheduler-utilsv0018scheduler-utilsv0019-2024-04-30)
+- [[0.0.18](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.17...scheduler-utils@v0.0.18) (2024-04-17)](#0018httpsgithubcompermawebaocomparescheduler-utilsv0017scheduler-utilsv0018-2024-04-17)
+  - [Bug Fixes](#bug-fixes)
+- [[0.0.17](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.16...scheduler-utils@v0.0.17) (2024-04-03)](#0017httpsgithubcompermawebaocomparescheduler-utilsv0016scheduler-utilsv0017-2024-04-03)
+- [[0.0.16](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.15...scheduler-utils@v0.0.16) (2024-03-25)](#0016httpsgithubcompermawebaocomparescheduler-utilsv0015scheduler-utilsv0016-2024-03-25)
+  - [⚠ BREAKING CHANGES](#-breaking-changes)
+- [[0.0.15](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.14...scheduler-utils@v0.0.15) (2024-03-18)](#0015httpsgithubcompermawebaocomparescheduler-utilsv0014scheduler-utilsv0015-2024-03-18)
+  - [Features](#features)
+  - [Bug Fixes](#bug-fixes-1)
+- [[0.0.14](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.13...scheduler-utils@v0.0.14) (2024-03-12)](#0014httpsgithubcompermawebaocomparescheduler-utilsv0013scheduler-utilsv0014-2024-03-12)
+- [[0.0.13](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.12...scheduler-utils@v0.0.13) (2024-03-11)](#0013httpsgithubcompermawebaocomparescheduler-utilsv0012scheduler-utilsv0013-2024-03-11)
+  - [Bug Fixes](#bug-fixes-2)
+- [[0.0.12](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.11...scheduler-utils@v0.0.12) (2024-03-06)](#0012httpsgithubcompermawebaocomparescheduler-utilsv0011scheduler-utilsv0012-2024-03-06)
+- [[0.0.11](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.10...scheduler-utils@v0.0.11) (2024-03-04)](#0011httpsgithubcompermawebaocomparescheduler-utilsv0010scheduler-utilsv0011-2024-03-04)
+- [[0.0.10](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.9...scheduler-utils@v0.0.10) (2024-02-12)](#0010httpsgithubcompermawebaocomparescheduler-utilsv009scheduler-utilsv0010-2024-02-12)
+  - [Features](#features-1)
+  - [Bug Fixes](#bug-fixes-3)
+- [[0.0.9](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.8...scheduler-utils@v0.0.9) (2024-02-07)](#009httpsgithubcompermawebaocomparescheduler-utilsv008scheduler-utilsv009-2024-02-07)
+  - [Features](#features-2)
+- [[0.0.8](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.7...scheduler-utils@v0.0.8) (2024-01-10)](#008httpsgithubcompermawebaocomparescheduler-utilsv007scheduler-utilsv008-2024-01-10)
+  - [Features](#features-3)
+- [[0.0.7](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.6...scheduler-utils@v0.0.7) (2023-12-21)](#007httpsgithubcompermawebaocomparescheduler-utilsv006scheduler-utilsv007-2023-12-21)
+  - [Bug Fixes](#bug-fixes-4)
+- [[0.0.6](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.5...scheduler-utils@v0.0.6) (2023-12-20)](#006httpsgithubcompermawebaocomparescheduler-utilsv005scheduler-utilsv006-2023-12-20)
+  - [Features](#features-4)
+- [[0.0.5](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.4...scheduler-utils@v0.0.5) (2023-12-19)](#005httpsgithubcompermawebaocomparescheduler-utilsv004scheduler-utilsv005-2023-12-19)
+  - [Features](#features-5)
+- [[0.0.4](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.3...scheduler-utils@v0.0.4) (2023-12-18)](#004httpsgithubcompermawebaocomparescheduler-utilsv003scheduler-utilsv004-2023-12-18)
+  - [⚠ BREAKING CHANGES](#-breaking-changes-1)
+  - [Features](#features-6)
+- [[0.0.3](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.2...scheduler-utils@v0.0.3) (2023-12-13)](#003httpsgithubcompermawebaocomparescheduler-utilsv002scheduler-utilsv003-2023-12-13)
+  - [Bug Fixes](#bug-fixes-5)
+- [[0.0.2](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.1...scheduler-utils@v0.0.2) (2023-12-13)](#002httpsgithubcompermawebaocomparescheduler-utilsv001scheduler-utilsv002-2023-12-13)
+- [0.0.1 (2023-12-13)](#001-2023-12-13)
+  - [Features](#features-7)
+
+<!-- tocstop -->
+
+## [0.0.19](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.18...scheduler-utils@v0.0.19) (2024-04-30)
+
+## [0.0.18](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.17...scheduler-utils@v0.0.18) (2024-04-17)
+
+
+### Bug Fixes
+
+* **scheduler-utils:** wrap all side effects in schemas. Store ttl in byOwner cache ([add734a](https://github.com/permaweb/ao/commit/add734a4676e4d8c367959d0a086c06a8d5c0285))
+
 ## [0.0.17](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.16...scheduler-utils@v0.0.17) (2024-04-03)
 
 ## [0.0.16](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.15...scheduler-utils@v0.0.16) (2024-03-25)

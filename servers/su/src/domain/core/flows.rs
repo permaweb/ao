@@ -1,23 +1,14 @@
-
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH, SystemTimeError};
+use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
 use dotenv::dotenv;
 use serde_json::json;
 
+use super::builder::Builder;
 use super::json::{Message, Process};
-use super::builder::{Builder};
 use super::scheduler;
 
-use super::dal::{
-    Gateway, 
-    Signer, 
-    Log, 
-    Wallet, 
-    Config, 
-    Uploader, 
-    DataStore
-};
+use super::dal::{Config, DataStore, Gateway, Log, Signer, Uploader, Wallet};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
@@ -41,7 +32,6 @@ pub struct Deps {
     flows.rs is the main business logic of the su
 */
 
-
 pub fn init_builder(deps: &Arc<Deps>) -> Result<Builder, String> {
     dotenv().ok();
     let builder = Builder::new(deps.gateway.clone(), deps.signer.clone(), &deps.logger)?;
@@ -52,55 +42,75 @@ async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, Strin
     let uploaded_tx = &deps.uploader.upload(build_result)?;
     let result = match serde_json::to_string(&uploaded_tx) {
         Ok(r) => r,
-        Err(e) => return Err(format!("{:?}", e))
+        Err(e) => return Err(format!("{:?}", e)),
     };
     Ok(result)
 }
 
 async fn assignment_only(
-    deps: Arc<Deps>, 
+    deps: Arc<Deps>,
     process_id: String,
-    assign: String
+    assign: String,
+    base_layer: Option<String>,
+    exclude: Option<String>,
 ) -> Result<String, String> {
     let builder = init_builder(&deps)?;
 
     let locked_schedule_info = deps.scheduler.acquire_lock(process_id.clone()).await?;
     let mut schedule_info = locked_schedule_info.lock().await;
-    let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, process_id.clone()).await?;
+    let updated_info = deps
+        .scheduler
+        .update_schedule_info(&mut *schedule_info, process_id.clone())
+        .await?;
 
-    let build_result = builder.build_assignment(assign.clone(), process_id.clone(), &*updated_info).await?;
+    let process = deps.data_store.get_process(&process_id)?;
+    let build_result = builder
+        .build_assignment(
+            assign.clone(),
+            &process,
+            &*updated_info,
+            &base_layer,
+            &exclude,
+        )
+        .await?;
+
     let message = Message::from_bundle(&build_result.bundle)?;
-    deps.data_store.save_message(&message, &build_result.binary)?;
+    deps.data_store
+        .save_message(&message, &build_result.binary)?;
     deps.logger.log(format!("saved message - {:?}", &message));
     upload(&deps, build_result.binary.to_vec()).await?;
     drop(schedule_info);
+
     match system_time_u64() {
         Ok(timestamp) => {
-            let response_json = json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
+            let response_json =
+                json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
             Ok(response_json.to_string())
         }
-        Err(e) => Err(format!("{:?}", e))
+        Err(e) => Err(format!("{:?}", e)),
     }
 }
 
 /*
     This writes a message or process data item,
     it detects which it is creating by the tags.
-    If the process_id and assign params are set, it 
+    If the process_id and assign params are set, it
     follows the Assignment flow instead. If one is
     set both must be set.
 */
 pub async fn write_item(
-    deps: Arc<Deps>, 
+    deps: Arc<Deps>,
     input: Vec<u8>,
     process_id: Option<String>,
-    assign: Option<String>
+    assign: Option<String>,
+    base_layer: Option<String>,
+    exclude: Option<String>,
 ) -> Result<String, String> {
     // XOR, if we have one of these, we must have both.
     if process_id.is_some() ^ assign.is_some() {
         return Err("If sending assign or process-id, you must send both.".to_string());
     } else if let (Some(process_id), Some(assign)) = (process_id, assign) {
-        return assignment_only(deps, process_id, assign).await;
+        return assignment_only(deps, process_id, assign, base_layer, exclude).await;
     }
 
     let builder = init_builder(&deps)?;
@@ -120,7 +130,9 @@ pub async fn write_item(
             let sched_tag_exists = tags.iter().any(|tag| tag.name == "Scheduler");
 
             if !mod_tag_exists || !sched_tag_exists {
-                return Err("Required Module and Scheduler tags for Process type not present".to_string());
+                return Err(
+                    "Required Module and Scheduler tags for Process type not present".to_string(),
+                );
             }
 
             /*
@@ -130,43 +142,53 @@ pub async fn write_item(
             */
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
-            let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.id()).await?;
+            let updated_info = deps
+                .scheduler
+                .update_schedule_info(&mut *schedule_info, data_item.id())
+                .await?;
 
             let build_result = builder.build_process(input, &*updated_info).await?;
             upload(&deps, build_result.binary.to_vec()).await?;
             let process = Process::from_bundle(&build_result.bundle)?;
-            deps.data_store.save_process(&process, &build_result.binary)?;
+            deps.data_store
+                .save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
-                    let response_json = json!({ "timestamp": timestamp, "id": process.process_id.clone() });
+                    let response_json =
+                        json!({ "timestamp": timestamp, "id": process.process_id.clone() });
                     Ok(response_json.to_string())
                 }
-                Err(e) => Err(format!("{:?}", e))
+                Err(e) => Err(format!("{:?}", e)),
             }
         } else if type_tag.value == "Message" {
             /*
                 acquire the mutex locked scheduling info for the
-                process we are writing a message to. this ensures 
+                process we are writing a message to. this ensures
                 no conflicts in the schedule
             */
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
-            let updated_info = deps.scheduler.update_schedule_info(&mut*schedule_info, data_item.target()).await?;
+            let updated_info = deps
+                .scheduler
+                .update_schedule_info(&mut *schedule_info, data_item.target())
+                .await?;
 
             let build_result = builder.build_message(input, &*updated_info).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
-            deps.data_store.save_message(&message, &build_result.binary)?;
+            deps.data_store
+                .save_message(&message, &build_result.binary)?;
             deps.logger.log(format!("saved message - {:?}", &message));
             upload(&deps, build_result.binary.to_vec()).await?;
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
-                    let response_json = json!({ "timestamp": timestamp, "id": message.message_id()? });
+                    let response_json =
+                        json!({ "timestamp": timestamp, "id": message.message_id()? });
                     Ok(response_json.to_string())
                 }
-                Err(e) => Err(format!("{:?}", e))
+                Err(e) => Err(format!("{:?}", e)),
             }
         } else {
             return Err("Type tag not present".to_string());
@@ -176,18 +198,17 @@ pub async fn write_item(
     }
 }
 
-
 pub async fn read_message_data(
     deps: Arc<Deps>,
-    tx_id: String, 
-    from: Option<String>, 
+    tx_id: String,
+    from: Option<String>,
     to: Option<String>,
-    limit: Option<i32>
+    limit: Option<i32>,
 ) -> Result<String, String> {
     if let Ok(message) = deps.data_store.get_message(&tx_id) {
         let result = match serde_json::to_string(&message) {
             Ok(r) => r,
-            Err(e) => return Err(format!("{:?}", e))
+            Err(e) => return Err(format!("{:?}", e)),
         };
         return Ok(result);
     }
@@ -196,7 +217,7 @@ pub async fn read_message_data(
         let messages = deps.data_store.get_messages(&tx_id, &from, &to, &limit)?;
         let result = match serde_json::to_string(&messages) {
             Ok(r) => r,
-            Err(e) => return Err(format!("{:?}", e))
+            Err(e) => return Err(format!("{:?}", e)),
         };
         return Ok(result);
     }
@@ -204,18 +225,14 @@ pub async fn read_message_data(
     Err("Message or Process not found".to_string())
 }
 
-pub async fn read_process(
-    deps: Arc<Deps>,
-    process_id: String
-) -> Result<String, String> {
+pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
     let process = deps.data_store.get_process(&process_id)?;
     let result = match serde_json::to_string(&process) {
         Ok(r) => r,
-        Err(e) => return Err(format!("{:?}", e))
+        Err(e) => return Err(format!("{:?}", e)),
     };
     Ok(result)
 }
-
 
 fn system_time() -> Result<String, SystemTimeError> {
     let start_time = SystemTime::now();
@@ -232,7 +249,7 @@ fn system_time_u64() -> Result<u64, SystemTimeError> {
     Ok(millis)
 }
 
-pub async fn timestamp(deps: Arc<Deps>) -> Result<String, String>{
+pub async fn timestamp(deps: Arc<Deps>) -> Result<String, String> {
     match system_time() {
         Ok(timestamp) => {
             let network_info = deps.gateway.network_info().await;
@@ -240,30 +257,27 @@ pub async fn timestamp(deps: Arc<Deps>) -> Result<String, String>{
                 Ok(info) => {
                     let height = info.height.clone();
                     let height_string = format!("{:0>12}", height);
-                    let response_json = json!({ "timestamp": timestamp, "block_height": height_string });
+                    let response_json =
+                        json!({ "timestamp": timestamp, "block_height": height_string });
                     Ok(response_json.to_string())
-                },
-                Err(e) => {
-                    Err(format!("{:?}", e))
                 }
+                Err(e) => Err(format!("{:?}", e)),
             }
-            
         }
-        Err(e) => Err(format!("{:?}", e))
+        Err(e) => Err(format!("{:?}", e)),
     }
 }
 
-pub async fn health(deps: Arc<Deps>) -> Result<String, String>{
+pub async fn health(deps: Arc<Deps>) -> Result<String, String> {
     match system_time() {
         Ok(timestamp) => {
             let wallet_address = match deps.wallet.wallet_address() {
                 Ok(w) => w,
-                Err(e) => return Err(e)
+                Err(e) => return Err(e),
             };
             let response_json = json!({ "timestamp": timestamp, "address": wallet_address });
             Ok(response_json.to_string())
-            
         }
-        Err(e) => Err(format!("{:?}", e))
+        Err(e) => Err(format!("{:?}", e)),
     }
 }

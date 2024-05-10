@@ -619,7 +619,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
            * It will be the first message evaluated by the module
            */
           if (isColdStart) {
-            logger('Emitting process message at beginning of evaluation stream for process %s cold start: %o', ctx.id)
+            logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
             yield {
               /**
                * Ensure the noSave flag is set, so evaluation does not persist

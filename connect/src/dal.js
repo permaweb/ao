@@ -31,7 +31,7 @@ export const queryResultsSchema = z.function()
     from: z.string().optional(),
     to: z.string().optional(),
     sort: z.enum(['ASC', 'DESC']).default('ASC'),
-    limit: z.string().optional()
+    limit: z.number().optional()
   }))
   .returns(z.promise(z.object({
     edges: z.array(z.object({
@@ -76,7 +76,9 @@ export const deployProcessSchema = z.function()
 export const deployAssignSchema = z.function()
   .args(z.object({
     process: z.string(),
-    message: z.string()
+    message: z.string(),
+    baseLayer: z.boolean().optional(),
+    exclude: z.array(z.string()).optional()
   }))
   .returns(z.promise(
     z.object({

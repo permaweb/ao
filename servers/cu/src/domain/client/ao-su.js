@@ -3,7 +3,14 @@ import { Transform, compose as composeStreams } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 
-import { mapForwardedBy, mapFrom, parseTags } from '../utils.js'
+import { backoff, mapForwardedBy, mapFrom, parseTags } from '../utils.js'
+
+const okRes = (res) => {
+  if (res.ok) return res
+  throw res
+}
+
+const resToJson = (res) => res.json()
 
 /**
  * See new shape in https://github.com/permaweb/ao/issues/563#issuecomment-2020597581
@@ -15,21 +22,34 @@ export const mapNode = pipe(
       path(['assignment']),
       (assignment) => parseTags(assignment.tags),
       applySpec({
-        Message: path(['Message']),
-        Target: path(['Process']),
-        Epoch: pipe(path(['Epoch']), parseInt),
-        Nonce: pipe(path(['Nonce']), parseInt),
-        Timestamp: pipe(path(['Timestamp']), parseInt),
-        'Block-Height': pipe(
+        /**
+         * There could be multiple Exclude tags,
+         * but parseTags will accumulate them into an array,
+         *
+         * which is what we want
+         */
+        Exclude: path(['Exclude']),
+        /**
+         * Data from the assignment, to be placed
+         * on the message
+         */
+        message: applySpec({
+          Message: path(['Message']),
+          Target: path(['Process']),
+          Epoch: pipe(path(['Epoch']), parseInt),
+          Nonce: pipe(path(['Nonce']), parseInt),
+          Timestamp: pipe(path(['Timestamp']), parseInt),
+          'Block-Height': pipe(
           /**
            * Returns a left padded integer like '000001331218'
            *
            * So use parseInt to convert it into a number
            */
-          path(['Block-Height']),
-          parseInt
-        ),
-        'Hash-Chain': path(['Hash-Chain'])
+            path(['Block-Height']),
+            parseInt
+          ),
+          'Hash-Chain': path(['Hash-Chain'])
+        })
       })
     ),
     // fromMessage
@@ -60,17 +80,18 @@ export const mapNode = pipe(
   // Combine into the desired shape
   ([fAssignment, fMessage = {}, fStatic]) => ({
     cron: undefined,
-    ordinate: fAssignment.Nonce,
-    name: `Scheduled Message ${fMessage.Id || fAssignment.Message} ${fAssignment.Timestamp}:${fAssignment.Nonce}`,
+    ordinate: fAssignment.message.Nonce,
+    name: `Scheduled Message ${fMessage.Id || fAssignment.message.Message} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
+    exclude: fAssignment.Exclude,
     isAssignment: !fMessage.Id,
     message: mergeAll([
       fMessage,
-      fAssignment,
+      fAssignment.message,
       /**
        * Ensure Id is always set, regardless if this is a message
        * or just an Assignment for an existing message on-chain
        */
-      { Id: fMessage.Id || fAssignment.Message },
+      { Id: fMessage.Id || fAssignment.message.Message },
       fStatic
     ]),
     /**
@@ -81,8 +102,8 @@ export const mapNode = pipe(
      * down the pipeline
      */
     block: {
-      height: fAssignment['Block-Height'],
-      timestamp: fAssignment.Timestamp
+      height: fAssignment.message['Block-Height'],
+      timestamp: fAssignment.message.Timestamp
     }
   })
 )
@@ -105,9 +126,11 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
         .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
-        .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`))
-        .then(async (res) => {
-          if (res.ok) return res.json()
+        .then((params) => backoff(
+          () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
+          { maxRetries: 3, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
+        ))
+        .catch(async (res) => {
           logger(
             'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
             suUrl,
@@ -117,6 +140,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           )
           throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${res.status}: ${await res.text()}`)
         })
+        .then(resToJson)
     }
 
     return async function * scheduled () {
@@ -153,7 +177,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       }
 
       logger(
-        'Successfully loaded %s scheduled messages for process "%s" from SU "%s" between "%s" and "%s"...',
+        'Successfully loaded a total of %s scheduled messages for process "%s" from SU "%s" between "%s" and "%s"...',
         total,
         processId,
         suUrl,
@@ -201,12 +225,15 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
 
 export const loadProcessWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId }) => {
-    return fetch(`${suUrl}/processes/${processId}`, { method: 'GET' })
-      .then(async (res) => {
-        if (res.ok) return res.json()
+    return backoff(
+      () => fetch(`${suUrl}/processes/${processId}`, { method: 'GET' }).then(okRes),
+      { maxRetries: 3, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
+    )
+      .catch(async (res) => {
         logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
         throw new Error(`${res.status}: ${await res.text()}`)
       })
+      .then(resToJson)
       .then(applySpec({
         owner: path(['owner', 'address']),
         tags: path(['tags']),
@@ -225,13 +252,16 @@ export const loadProcessWith = ({ fetch, logger }) => {
 }
 
 export const loadTimestampWith = ({ fetch, logger }) => {
-  return ({ suUrl, processId }) => fetch(`${suUrl}/timestamp?process-id=${processId}`)
-    .then(async (res) => {
-      if (res.ok) return res.json()
+  return ({ suUrl, processId }) => backoff(
+    () => fetch(`${suUrl}/timestamp?process-id=${processId}`).then(okRes),
+    { maxRetries: 3, delay: 500, log: logger, name: `loadTimestamp(${JSON.stringify({ suUrl, processId })})` }
+  )
+    .catch(async (res) => {
       logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
       throw new Error(`${res.status}: ${await res.text()}`)
     })
-    .then(res => ({
+    .then(resToJson)
+    .then((res) => ({
       /**
        * TODO: SU currently sends these back as strings
        * so need to parse them to integers
@@ -267,15 +297,18 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
   const mapMeta = ifElse(has('assignment'), meta, legacyMeta)
 
   return async ({ suUrl, processId, messageTxId }) => {
-    return fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' })
-      .then(async (res) => {
-        if (res.ok) return res.json()
+    return backoff(
+      () => fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' }).then(okRes),
+      { maxRetries: 3, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageTxId })})` }
+    )
+      .catch(async (res) => {
         logger(
           'Error Encountered when loading message meta for message "%s" to process "%s" from SU "%s"',
           messageTxId, processId, suUrl
         )
         throw new Error(`${res.status}: ${await res.text()}`)
       })
+      .then(resToJson)
       /**
        * Map to the expected shape, depending on the response shape.
        * See https://github.com/permaweb/ao/issues/563

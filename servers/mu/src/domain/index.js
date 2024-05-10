@@ -1,12 +1,13 @@
-import { z } from 'zod'
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+import { fromPromise } from 'hyper-async'
 
 import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
 import osClient from './clients/os.js'
+import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -20,6 +21,8 @@ import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
 
+import { config } from '../config.js'
+
 export { errFrom } from './utils.js'
 
 const { DataItem } = warpArBundles
@@ -27,19 +30,13 @@ const { DataItem } = warpArBundles
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
 
-export const domainConfigSchema = z.object({
-  CU_URL: z.string().url('CU_URL must be a a valid URL'),
-  MU_WALLET: z.record(z.any()),
-  SCHEDULED_INTERVAL: z.number(),
-  DUMP_PATH: z.string(),
-  GRAPHQL_URL: z.string(),
-  UPLOADER_URL: z.string()
-})
+export const initCronProcs = osClient.initProcsWith({ PROC_FILE_PATH: config.PROC_FILE_PATH })
 
 export const createApis = (ctx) => {
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
+  const PROC_FILE_PATH = ctx.PROC_FILE_PATH
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -50,6 +47,10 @@ export const createApis = (ctx) => {
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
+
+  const isWalletCache = InMemoryClient.createLruCache({ size: 1000 })
+  const getById = InMemoryClient.getByIdWith({ cache: isWalletCache })
+  const setById = InMemoryClient.setByIdWith({ cache: isWalletCache })
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
@@ -62,6 +63,7 @@ export const createApis = (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
     logger,
+    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
   })
 
@@ -101,7 +103,9 @@ export const createApis = (ctx) => {
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: sendDataItemLogger }),
     crank: crankMsgs,
-    logger: sendDataItemLogger
+    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
+    logger: sendDataItemLogger,
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch })
   })
 
   const sendAssignLogger = logger.child('sendAssign')
@@ -116,17 +120,30 @@ export const createApis = (ctx) => {
 
   const monitorProcessLogger = logger.child('monitorProcess')
   const monitorProcess = monitorProcessWith({
-    startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger }),
+    startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger, PROC_FILE_PATH }),
     createDataItem,
     logger: monitorProcessLogger
   })
 
   const stopMonitorProcessLogger = logger.child('stopMonitorProcess')
   const stopMonitorProcess = stopMonitorProcessWith({
-    stopProcessMonitor: osClient.killMonitoredProcessWith({ logger: stopMonitorProcessLogger }),
+    stopProcessMonitor: osClient.killMonitoredProcessWith({ logger: stopMonitorProcessLogger, PROC_FILE_PATH }),
     createDataItem,
     logger: monitorProcessLogger
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess, stopMonitorProcess, sendAssign }
+  const cronLogger = logger.child('fetchCron')
+  const fetchCron = fromPromise(cuClient.fetchCronWith({ CU_URL, logger: cronLogger }))
+
+  return {
+    sendDataItem,
+    crankMsgs,
+    monitorProcess,
+    stopMonitorProcess,
+    sendAssign,
+    fetchCron,
+    processMsg,
+    processAssign,
+    processSpawn
+  }
 }

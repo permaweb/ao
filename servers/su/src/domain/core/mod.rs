@@ -1,5 +1,4 @@
 mod bytes;
-mod verifier;
 // main tx building logic
 mod builder;
 // build json from raw data

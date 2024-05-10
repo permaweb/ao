@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 
 import { createLogger } from '../logger.js'
 import { findProcessSchema, saveProcessSchema } from '../dal.js'
-import { findCheckpointFileBeforeWith, findProcessMemoryBeforeWith, findProcessWith, saveProcessWith } from './ao-process.js'
+import { LATEST, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessMemoryBeforeWith, findProcessWith, saveProcessWith } from './ao-process.js'
 import { Readable } from 'node:stream'
 
 const gzipP = promisify(gzip)
@@ -169,9 +169,11 @@ describe('ao-process', () => {
 
       await findCheckpointFileBefore({
         processId: 'process-123',
-        timestamp: now,
-        ordinate: '12',
-        cron: undefined
+        before: {
+          timestamp: now,
+          ordinate: '12',
+          cron: undefined
+        }
       })
     })
 
@@ -187,9 +189,11 @@ describe('ao-process', () => {
 
       const res = await findCheckpointFileBefore({
         processId: 'process-123',
-        timestamp: now,
-        ordinate: '12',
-        cron: undefined
+        before: {
+          timestamp: now,
+          ordinate: '12',
+          cron: undefined
+        }
       })
 
       assert.deepStrictEqual(res, {
@@ -201,7 +205,7 @@ describe('ao-process', () => {
       })
     })
 
-    test('should return the latest checkpoint from a file', async () => {
+    test('should return the latest checkpoint from a file BEFORE the before', async () => {
       const now = new Date()
       const tenSecondsAgo = `${now.getTime() - 10000}`
       const nineSecondsAgo = tenSecondsAgo + 1000
@@ -215,9 +219,37 @@ describe('ao-process', () => {
 
       const res = await findCheckpointFileBefore({
         processId: 'process-123',
-        timestamp: now,
-        ordinate: '12',
+        before: {
+          timestamp: nineSecondsAgo,
+          ordinate: '11',
+          cron: undefined
+        }
+      })
+
+      assert.deepStrictEqual(res, {
+        file: `checkpoint-process-123,${tenSecondsAgo},10.json`,
+        processId: 'process-123',
+        timestamp: tenSecondsAgo,
+        ordinate: '10',
         cron: undefined
+      })
+    })
+
+    test('should return the latest checkpoint file', async () => {
+      const now = new Date()
+      const tenSecondsAgo = `${now.getTime() - 10000}`
+      const nineSecondsAgo = tenSecondsAgo + 1000
+      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+        DIR: '/foobar',
+        glob: async (str) => [
+          `/foobar/checkpoint-process-123,${tenSecondsAgo},10.json`,
+          `/foobar/checkpoint-process-123,${nineSecondsAgo},11.json`
+        ]
+      })
+
+      const res = await findCheckpointFileBefore({
+        processId: 'process-123',
+        before: LATEST
       })
 
       assert.deepStrictEqual(res, {
@@ -241,9 +273,11 @@ describe('ao-process', () => {
 
       const res = await findCheckpointFileBefore({
         processId: 'process-123',
-        timestamp: now,
-        ordinate: '12',
-        cron: undefined
+        before: {
+          timestamp: now,
+          ordinate: '12',
+          cron: undefined
+        }
       })
 
       assert.equal(res, undefined)
@@ -258,12 +292,725 @@ describe('ao-process', () => {
 
       const res = await findCheckpointFileBefore({
         processId: 'process-123',
-        timestamp: now,
-        ordinate: '12',
-        cron: undefined
+        before: {
+          timestamp: now,
+          ordinate: '12',
+          cron: undefined
+        }
       })
 
       assert.equal(res, undefined)
+    })
+  })
+
+  describe('findLatestProcessMemory', () => {
+    const PROCESS = 'process-123'
+    const now = new Date().getTime()
+    const tenSecondsAgo = now - 10000
+    const Memory = Buffer.from('hello world')
+    let zipped
+    const cachedEval = {
+      processId: PROCESS,
+      moduleId: 'module-123',
+      epoch: 0,
+      nonce: 11,
+      timestamp: tenSecondsAgo,
+      blockHeight: 123,
+      ordinate: '11',
+      encoding: 'gzip'
+    }
+
+    const target = {
+      processId: PROCESS,
+      timestamp: now - 1000,
+      ordinate: '13',
+      cron: undefined
+    }
+    const latestTarget = {
+      processId: PROCESS,
+      timestamp: undefined,
+      ordinate: undefined,
+      cron: undefined
+    }
+
+    before(async () => {
+      zipped = await gzipP(Memory)
+    })
+
+    describe('checkpoint cached in LRU In-Memory Cache', () => {
+      const deps = {
+        cache: {
+          get: () => ({
+            Memory: zipped,
+            evaluation: cachedEval
+          })
+        },
+        readProcessMemoryFile: async () => assert.fail('should not call if memory is in cache'),
+        findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
+        readCheckpointFile: async () => assert.fail('should not call if found in cache'),
+        address: async () => assert.fail('should not call if found in cache'),
+        queryGateway: async () => assert.fail('should not call if found in cache'),
+        queryCheckpointGateway: async () => assert.fail('should not call if found in cache'),
+        loadTransactionData: async () => assert.fail('should not call if found in cache'),
+        logger,
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+      }
+      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+      describe('should decode memory', () => {
+        test('hot in a cache', async () => {
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res.Memory, Memory)
+        })
+
+        test('drained to a file', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            cache: {
+              get: () => ({
+                File: 'state-process123.dat',
+                evaluation: cachedEval
+              })
+            },
+            readProcessMemoryFile: async (file) => {
+              assert.equal(file, 'state-process123.dat')
+              return zipped
+            }
+          })
+
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res.Memory, Memory)
+        })
+      })
+
+      describe('should NOT decode the memory', () => {
+        test('drained to a file', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            cache: {
+              get: () => ({
+                File: 'state-process123.dat',
+                evaluation: { ...cachedEval, encoding: undefined }
+              })
+            },
+            readProcessMemoryFile: async (file) => {
+              assert.equal(file, 'state-process123.dat')
+              return Memory
+            }
+          })
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res.Memory, Memory)
+        })
+      })
+
+      describe('should use the memory', () => {
+        test('when targeting a specific message', async () => {
+          const res = await findLatestProcessMemory(target)
+
+          assert.deepStrictEqual(res, {
+            src: 'memory',
+            fromFile: undefined,
+            Memory,
+            moduleId: 'module-123',
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
+        test('when targeting latest', async () => {
+          const res = await findLatestProcessMemory(latestTarget)
+
+          assert.deepStrictEqual(res, {
+            src: 'memory',
+            fromFile: undefined,
+            Memory,
+            moduleId: 'module-123',
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+      })
+
+      test('should reload the memory from a file', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              File: 'state-process123.dat',
+              evaluation: cachedEval
+            })
+          },
+          readProcessMemoryFile: async (file) => {
+            assert.equal(file, 'state-process123.dat')
+            return zipped
+          }
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res, {
+          src: 'memory',
+          fromFile: 'state-process123.dat',
+          Memory,
+          moduleId: 'module-123',
+          epoch: cachedEval.epoch,
+          nonce: cachedEval.nonce,
+          timestamp: cachedEval.timestamp,
+          blockHeight: cachedEval.blockHeight,
+          cron: cachedEval.cron,
+          ordinate: cachedEval.ordinate
+        })
+      })
+
+      test.todo('should omit the memory if omitMemory is received', async () => {})
+    })
+
+    describe('checkpoint cached in a file', () => {
+      const deps = {
+        cache: {
+          get: () => undefined
+        },
+        findCheckpointFileBefore: async ({ processId, before }) => {
+          assert.equal(processId, PROCESS)
+          assert.equal(before, LATEST)
+
+          return {
+            file: 'foobar.json'
+          }
+        },
+        readCheckpointFile: async (file) => {
+          assert.equal(file, 'foobar.json')
+          return {
+            Memory: { id: 'tx-123', encoding: 'gzip' },
+            evaluation: cachedEval
+          }
+        },
+        address: async () => assert.fail('should not call if found in file checkpoint'),
+        queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
+        queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
+        loadTransactionData: async (id) => {
+          assert.equal(id, 'tx-123')
+          return new Response(Readable.toWeb(Readable.from(zipped)))
+        },
+        logger,
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+      }
+      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+      describe('should use if in LRU In-Memory Cache cannot be used', () => {
+        test('no checkpoint in LRU In-Memory cache', async () => {
+          const { Memory, ...res } = await findLatestProcessMemory(target)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'file',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
+        test('when targeting latest', async () => {
+          const { Memory, ...res } = await findLatestProcessMemory(latestTarget)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'file',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+      })
+
+      test('should decode the memory if needed', async () => {
+        const res = await findLatestProcessMemory(target)
+        assert.deepStrictEqual(res.Memory, Memory)
+      })
+
+      test('should NOT decode the memory if not needed', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          readCheckpointFile: async () => ({
+            Memory: { id: 'tx-not-encoded', encoding: undefined },
+            evaluation: {
+              ...cachedEval,
+              encoding: undefined
+            }
+          }),
+          loadTransactionData: async (id) => {
+            assert.equal(id, 'tx-not-encoded')
+            return new Response(Readable.toWeb(Readable.from(Memory)))
+          }
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.Memory, Memory)
+      })
+
+      test.todo('should omit the memory if omitMemory is received', async () => {})
+    })
+
+    describe('checkpoint retrieved from the checkpoint gateway', () => {
+      const edges = [
+        {
+          node: {
+            id: 'tx-123',
+            tags: [
+              { name: 'Module', value: `${cachedEval.moduleId}` },
+              { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+              { name: 'Epoch', value: `${cachedEval.epoch}` },
+              { name: 'Nonce', value: `${cachedEval.nonce}` },
+              { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+              { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+            ]
+          }
+        }
+      ]
+      const deps = {
+        cache: {
+          get: () => undefined
+        },
+        findCheckpointFileBefore: async () => undefined,
+        readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
+        address: async () => 'address-123',
+        queryGateway: async ({ query, variables }) => {
+          assert.ok(query)
+          assert.deepStrictEqual(variables, {
+            owner: 'address-123',
+            processId: PROCESS,
+            limit: 50
+          })
+
+          return { data: { transactions: { edges } } }
+        },
+        queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
+        loadTransactionData: async (id) => {
+          assert.equal(id, 'tx-123')
+          return new Response(Readable.toWeb(Readable.from(zipped)))
+        },
+        logger,
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+      }
+      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+      describe('should use if the LRU In-Memory and File checkpoint cannot be used', async () => {
+        test('no file checkpoint is found', async () => {
+          const { Memory, ...res } = await findLatestProcessMemory(target)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
+        test('when targeting latest', async () => {
+          const { Memory, ...res } = await findLatestProcessMemory(latestTarget)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
+        test('file checkpoint fails to be downloaded', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            findCheckpointFileBefore: async () => ({ file: 'foobar.json' }),
+            readCheckpointFile: async () => ({ Memory: { id: 'fail' }, evaulation: cachedEval }),
+            loadTransactionData: async (id) => {
+              if (id === 'fail') throw new Error('woops')
+              return deps.loadTransactionData(id)
+            }
+          })
+
+          const { Memory, ...res } = await findLatestProcessMemory(target)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+      })
+
+      test('should decode if needed', async () => {
+        const res = await findLatestProcessMemory(target)
+        assert.deepStrictEqual(res.Memory, Memory)
+      })
+
+      test('should NOT decode the memory if not needed', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          queryGateway: async () => ({
+            data: {
+              transactions: {
+                edges: [
+                  {
+                    ...edges[0],
+                    node: {
+                      ...edges[0].node,
+                      id: 'tx-not-encoded',
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: `${cachedEval.nonce}` },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Not-Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }),
+          loadTransactionData: async (id) => {
+            assert.equal(id, 'tx-not-encoded')
+            return new Response(Readable.toWeb(Readable.from(Memory)))
+          }
+        })
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.Memory, Memory)
+      })
+
+      test('should use the latest retrieved checkpoint', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          queryGateway: async () => ({
+            data: {
+              transactions: {
+                edges: [
+                  {
+                    ...edges[0],
+                    node: {
+                      ...edges[0].node,
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: '12' },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          })
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.ordinate, '12')
+      })
+
+      test('should retry querying the gateway', async () => {
+        let count = 1
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          queryGateway: async () => {
+            if (count++ < 2) throw new Error('timeout')
+
+            return {
+              data: {
+                transactions: {
+                  edges: [
+                    {
+                      ...edges[0],
+                      node: {
+                        ...edges[0].node,
+                        tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
+                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
+                          { name: 'Nonce', value: '12' },
+                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.ordinate, '12')
+      })
+
+      test('should fallback to Checkpoint gateway if default gateway reaches max retries', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          queryGateway: async () => { throw new Error('timeout') },
+          queryCheckpointGateway: async ({ query, variables }) => {
+            assert.ok(query)
+            assert.deepStrictEqual(variables, {
+              owner: 'address-123',
+              processId: PROCESS,
+              limit: 50
+            })
+
+            return {
+              data: {
+                transactions: {
+                  edges: [
+                    {
+                      ...edges[0],
+                      node: {
+                        ...edges[0].node,
+                        tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
+                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
+                          { name: 'Nonce', value: '12' },
+                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.ordinate, '12')
+      })
+
+      test.todo('should omit the memory if omitMemory is received', async () => {})
+    })
+
+    describe('cold start', () => {
+      const deps = {
+        cache: {
+          get: () => undefined
+        },
+        findCheckpointFileBefore: async () => undefined,
+        readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
+        address: async () => 'address-123',
+        queryCheckpointGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
+        queryGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
+        loadTransactionData: async (id) => {
+          assert.equal(id, 'tx-123')
+          return new Response(Readable.toWeb(Readable.from(zipped)))
+        },
+        logger,
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+      }
+      const COLDSTART = {
+        src: 'cold_start',
+        Memory: null,
+        moduleId: undefined,
+        timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
+        blockHeight: undefined,
+        cron: undefined,
+        ordinate: '0'
+
+      }
+      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+      describe('should cold start if LRU In-Memory Cache, File Checkpoint, and Gateway Checkpoints all cannot be used', async () => {
+        test('no checkpoint found on gateway', async () => {
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res, COLDSTART)
+        })
+
+        test('gateway query exceeds retries', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            queryGateway: async () => {
+              throw new Error('timeout')
+            }
+          })
+
+          const res = await findLatestProcessMemory(target)
+
+          assert.deepStrictEqual(res, COLDSTART)
+        })
+
+        test('process is configured to ignore gateway checkpoints', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [PROCESS]
+          })
+          const res = await findLatestProcessMemory(target)
+          assert.deepStrictEqual(res, COLDSTART)
+        })
+      })
+    })
+
+    describe('should reject with a 425', () => {
+      const laterCachedEval = {
+        ...cachedEval,
+        timestamp: now,
+        ordinate: '14',
+        nonce: 14
+      }
+
+      test('if LRU In-Memory cache checkpoint is later than the target', async () => {
+        const deps = {
+          cache: {
+            get: () => ({
+              Memory: zipped,
+              evaluation: laterCachedEval
+            })
+          },
+          findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
+          readCheckpointFile: async (file) => assert.fail('should not call if found in cache'),
+          address: async () => assert.fail('should not call if found in file checkpoint'),
+          queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
+          queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
+          loadTransactionData: async (id) => {
+            assert.equal(id, 'tx-123')
+            return new Response(Readable.toWeb(Readable.from(zipped)))
+          },
+          logger,
+          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        }
+
+        const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+        await findLatestProcessMemory(target)
+          .then(() => assert.fail('should reject'))
+          .catch((err) => assert.deepStrictEqual(err, {
+            status: 425,
+            ordinate: laterCachedEval.ordinate,
+            message: 'no cached process memory found'
+          }))
+      })
+
+      test('if nothing in LRU In-Memory Cache and file checkpoint is later than the target', async () => {
+        const deps = {
+          cache: {
+            get: () => undefined
+          },
+          findCheckpointFileBefore: async ({ processId, before }) => ({
+            file: 'foobar.json'
+          }),
+          readCheckpointFile: async (file) => {
+            return {
+              Memory: { id: 'tx-123', encoding: 'gzip' },
+              evaluation: laterCachedEval
+            }
+          },
+          address: async () => assert.fail('should not call if found in file checkpoint'),
+          queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
+          queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
+          loadTransactionData: async (id) => {
+            assert.equal(id, 'tx-123')
+            return new Response(Readable.toWeb(Readable.from(zipped)))
+          },
+          logger,
+          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        }
+
+        const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+        await findLatestProcessMemory(target)
+          .then(() => assert.fail('should reject'))
+          .catch((err) => assert.deepStrictEqual(err, {
+            status: 425,
+            ordinate: laterCachedEval.ordinate,
+            message: 'no cached process memory found'
+          }))
+      })
+
+      test('if nothing in LRU In-Memory Cache, and no file checkpoint, and gateway checkpoint is later than the target', async () => {
+        const deps = {
+          cache: {
+            get: () => undefined
+          },
+          findCheckpointFileBefore: async () => undefined,
+          readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
+          address: async () => 'address-123',
+          queryGateway: async () => ({
+            data: {
+              transactions: {
+                edges: [
+                  {
+                    node: {
+                      id: 'tx-123',
+                      tags: [
+                        { name: 'Module', value: `${laterCachedEval.moduleId}` },
+                        { name: 'Timestamp', value: `${laterCachedEval.timestamp}` },
+                        { name: 'Epoch', value: `${laterCachedEval.epoch}` },
+                        { name: 'Nonce', value: `${laterCachedEval.nonce}` },
+                        { name: 'Block-Height', value: `${laterCachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${laterCachedEval.encoding}` }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }),
+          queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
+          loadTransactionData: async (id) => {
+            assert.equal(id, 'tx-123')
+            return new Response(Readable.toWeb(Readable.from(zipped)))
+          },
+          logger,
+          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        }
+
+        const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+
+        await findLatestProcessMemory(target)
+          .then(() => assert.fail('should reject'))
+          .catch((err) => assert.deepStrictEqual(err, {
+            status: 425,
+            ordinate: laterCachedEval.ordinate,
+            message: 'no cached process memory found'
+          }))
+      })
     })
   })
 
@@ -322,7 +1069,11 @@ describe('ao-process', () => {
         const res = await findProcessMemoryBefore(target)
 
         assert.deepStrictEqual(res, {
+          src: 'memory',
           Memory,
+          moduleId: 'module-123',
+          epoch: cachedEval.epoch,
+          nonce: cachedEval.nonce,
           timestamp: cachedEval.timestamp,
           blockHeight: cachedEval.blockHeight,
           cron: cachedEval.cron,
@@ -369,13 +1120,19 @@ describe('ao-process', () => {
 
       describe('should use if in LRU In-Memory Cache cannot be used', () => {
         test('no checkpoint in LRU In-Memory cache', async () => {
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'file',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
 
         test('later checkpoint in LRU In-Memory cache', async () => {
@@ -392,13 +1149,19 @@ describe('ao-process', () => {
             }
           })
 
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'file',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
       })
 
@@ -437,7 +1200,9 @@ describe('ao-process', () => {
           node: {
             id: 'tx-123',
             tags: [
+              { name: 'Module', value: `${cachedEval.moduleId}` },
               { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+              { name: 'Epoch', value: `${cachedEval.epoch}` },
               { name: 'Nonce', value: `${cachedEval.nonce}` },
               { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
               { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -474,13 +1239,19 @@ describe('ao-process', () => {
 
       describe('should use if the LRU In-Memory and File checkpoint cannot be used', async () => {
         test('no file checkpoint is found or is later than target', async () => {
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
 
         test('file checkpoint fails to be downloaded', async () => {
@@ -494,13 +1265,19 @@ describe('ao-process', () => {
             }
           })
 
-          const res = await findProcessMemoryBefore(target)
+          const { Memory, ...res } = await findProcessMemoryBefore(target)
 
-          assert.ok(res.Memory)
-          assert.equal(res.timestamp, cachedEval.timestamp)
-          assert.equal(res.blockHeight, cachedEval.blockHeight)
-          assert.equal(res.ordinate, cachedEval.ordinate)
-          assert.equal(res.cron, undefined)
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
         })
       })
 
@@ -522,7 +1299,9 @@ describe('ao-process', () => {
                       ...edges[0].node,
                       id: 'tx-not-encoded',
                       tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: `${cachedEval.nonce}` },
                         { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                         { name: 'Not-Content-Encoding', value: `${cachedEval.encoding}` }
@@ -555,7 +1334,9 @@ describe('ao-process', () => {
                     node: {
                       ...edges[0].node,
                       tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: '12' },
                         { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                         { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -589,7 +1370,9 @@ describe('ao-process', () => {
                       node: {
                         ...edges[0].node,
                         tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: '12' },
                           { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                           { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -629,7 +1412,9 @@ describe('ao-process', () => {
                       node: {
                         ...edges[0].node,
                         tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: '12' },
                           { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                           { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
@@ -669,8 +1454,12 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
       }
       const COLDSTART = {
+        src: 'cold_start',
         Memory: null,
+        moduleId: undefined,
         timestamp: undefined,
+        epoch: undefined,
+        nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
         ordinate: '0'
@@ -695,7 +1484,9 @@ describe('ao-process', () => {
                       node: {
                         id: 'tx-123',
                         tags: [
+                          { name: 'Module', value: `${cachedEval.moduleId}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 11000}` },
+                          { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: `${cachedEval.nonce}` },
                           { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
                           { name: 'Content-Encoding', value: `${cachedEval.encoding}` }

@@ -38,7 +38,6 @@ async function evaluateSadMessage ({ moduleId }) {
 describe('evaluate', () => {
   test('adds output and last to context', async () => {
     const evaluate = evaluateWith({
-      saveEvaluation: async (evaluation) => evaluation,
       findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
@@ -137,111 +136,10 @@ describe('evaluate', () => {
     assert.ok(last.ordinate)
   })
 
-  test('save each interaction', async () => {
-    let cacheCount = 0
-    const env = {
-      saveEvaluation: async (evaluation) => {
-        cacheCount++
-        return undefined
-      },
-      findMessageBefore: async () => { throw { status: 404 } },
-      loadEvaluator: evaluateHappyMessage,
-      saveLatestProcessMemory: async () => {},
-      logger
-    }
-
-    const evaluate = evaluateWith(env)
-
-    const ctx = {
-      id: 'ctr-1234',
-      from: 1702846520559,
-      moduleId: 'foo-module',
-      moduleOptions,
-      stats: {
-        messages: {
-          scheduled: 0,
-          cron: 0,
-          error: 0
-        }
-      },
-      result: {
-        Memory: null
-      },
-      messages: toAsyncIterable([
-        // noSave should noop and not call saveInteraction
-        {
-          noSave: true,
-          ordinate: 0,
-          isAssignment: false,
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-123',
-            Tags: [
-              { name: 'function', value: 'hello' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        },
-        {
-          ordinate: 1,
-          isAssignment: false,
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-123',
-            Tags: [
-              { name: 'function', value: 'hello' }
-            ],
-            'Block-Height': 1234
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        },
-        {
-          ordinate: 1,
-          isAssignment: false,
-          message: {
-            Id: 'message-123',
-            Timestamp: 1702846520559,
-            Owner: 'owner-456',
-            Tags: [
-              { name: 'function', value: 'world' }
-            ],
-            'Block-Height': 1235
-          },
-          AoGlobal: {
-            Process: {
-              Id: '1234',
-              Tags: []
-            }
-          }
-        }
-      ])
-    }
-
-    await evaluate(ctx).toPromise()
-    assert.equal(cacheCount, 2)
-  })
-
   test('skip over dupliate messages (dup assignment or dup push (deepHash))', async () => {
-    let cacheCount = 0
+    let evalCount = 0
     let messageCount = 0
     const env = {
-      saveEvaluation: async (evaluation) => {
-        cacheCount++
-        return undefined
-      },
       findMessageBefore: async (args) => {
         // first message
         if (messageCount === 0) {
@@ -262,7 +160,13 @@ describe('evaluate', () => {
         messageCount++
         return { id: 'evaluation-doc-123' }
       },
-      loadEvaluator: evaluateHappyMessage,
+      loadEvaluator: async (...args) => {
+        const e = await evaluateHappyMessage(...args)
+        return (...opts) => {
+          evalCount++
+          return e(...opts)
+        }
+      },
       saveLatestProcessMemory: async () => {},
       logger
     }
@@ -357,18 +261,20 @@ describe('evaluate', () => {
 
     await evaluate(ctx).toPromise()
     assert.equal(messageCount, 2)
-    assert.equal(cacheCount, 2)
+    assert.equal(evalCount, 2)
   })
 
   test('skip over Cron Messages that are already evaluated', async () => {
-    let cacheCount = 0
+    let evalCount = 0
     const env = {
-      saveEvaluation: async (evaluation) => {
-        cacheCount++
-        return undefined
-      },
       findMessageBefore: async () => { throw { status: 404 } },
-      loadEvaluator: evaluateHappyMessage,
+      loadEvaluator: async (...args) => {
+        const e = await evaluateHappyMessage(...args)
+        return (...opts) => {
+          evalCount++
+          return e(...opts)
+        }
+      },
       saveLatestProcessMemory: async () => {},
       logger
     }
@@ -496,19 +402,21 @@ describe('evaluate', () => {
     }
 
     await evaluate(ctx).toPromise()
-    assert.equal(cacheCount, 3)
+    assert.equal(evalCount, 3)
   })
 
   test('continue evaluating, ignoring output of errored message', async () => {
     // eslint-disable-next-line
-    let cacheCount = 0
+    let evalCount = 0
     const env = {
-      saveEvaluation: async (evaluation) => {
-        cacheCount++
-        return undefined
-      },
       findMessageBefore: async () => { throw { status: 404 } },
-      loadEvaluator: evaluateSadMessage,
+      loadEvaluator: async (...args) => {
+        const e = await evaluateSadMessage(...args)
+        return (...opts) => {
+          evalCount++
+          return e(...opts)
+        }
+      },
       saveLatestProcessMemory: async () => {},
       logger
     }
@@ -604,7 +512,6 @@ describe('evaluate', () => {
 
   test('removes invalid tags', async () => {
     const evaluate = evaluateWith({
-      saveEvaluation: async (evaluation) => evaluation,
       findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: () => ({ message }) => {
         assert.deepStrictEqual(

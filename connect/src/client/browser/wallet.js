@@ -4,9 +4,9 @@ import * as WarpArBundles from 'warp-arbundles'
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
 
-const { DataItem } = WarpArBundles
-
 if (!globalThis.Buffer) globalThis.Buffer = Buffer
+
+const { DataItem } = WarpArBundles
 
 /**
  * A function that builds a signer using the global arweaveWallet
@@ -15,7 +15,11 @@ if (!globalThis.Buffer) globalThis.Buffer = Buffer
  * This is provided as a convenience for consumers of the SDK
  * to use, but consumers can also implement their own signer
  *
- * @returns {Types['signer']}
+ * @param {Object} arweaveWallet - The window.arweaveWallet object
+ * @returns {Types['signer']} - The signer function
+ * @example
+ * const signer = createDataItemSigner(window.arweaveWallet)
+ *
  */
 export function createDataItemSigner (arweaveWallet) {
   /**

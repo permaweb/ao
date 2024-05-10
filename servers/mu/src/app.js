@@ -1,12 +1,11 @@
-import { join } from 'node:path'
 import express from 'express'
 import cors from 'cors'
 import { pipe } from 'ramda'
-import heapdump from 'heapdump'
 
 import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
+import { initCronProcs } from './domain/index.js'
 
 export const server = pipe(
   (app) => app.use(cors()),
@@ -23,11 +22,7 @@ export const server = pipe(
       server.close(() => logger('Server Shut Down'))
     })
 
-    process.on('SIGUSR2', () => {
-      const name = `${Date.now()}.heapsnapshot`
-      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
-      console.log(name)
-    })
+    initCronProcs()
 
     return server
   }

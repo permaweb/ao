@@ -3,10 +3,12 @@ import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 
+import pMap from 'p-map'
 import Dataloader from 'dataloader'
 import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+import { fromPromise } from 'hyper-async'
 
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
@@ -56,7 +58,8 @@ export const createApis = async (ctx) => {
     cacheKeyFn: ({ processId }) => processId
   })
 
-  const sqlite = await SqliteClient.createSqliteClient({ url: `${ctx.DB_URL}.sqlite`, bootstrap: true })
+  const DB_URL = `${ctx.DB_URL}.sqlite`
+  const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
   const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
     maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
@@ -71,6 +74,7 @@ export const createApis = async (ctx) => {
             WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
             WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
             ARWEAVE_URL: ctx.ARWEAVE_URL,
+            DB_URL,
             id: workerId
           }
         }
@@ -80,6 +84,11 @@ export const createApis = async (ctx) => {
 
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
+
+  const readProcessMemoryFile = AoProcessClient.readProcessMemoryFileWith({
+    DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
+    readFile
+  })
 
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
@@ -101,6 +110,7 @@ export const createApis = async (ctx) => {
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
+    readProcessMemoryFile,
     queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: ctx.logger }),
     queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger: ctx.logger }),
     hashWasmMemory: WasmClient.hashWasmMemory,
@@ -118,11 +128,16 @@ export const createApis = async (ctx) => {
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
+    DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
+    writeProcessMemoryFile: AoProcessClient.writeProcessMemoryFileWith({
+      DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
+      writeFile
+    }),
     /**
      * Save the evicted process memory as a Checkpoint on Arweave
      */
     onEviction: ({ value }) =>
-      saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
+      saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
         .catch((err) => {
           ctx.logger(
             'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
@@ -130,35 +145,16 @@ export const createApis = async (ctx) => {
             err
           )
         })
-  })
-
-  /**
-   * TODO: determine a way to hoist this event listener to a dirtier level,
-   * then simply call something like a "drainWasmMemoryCache()" api
-   *
-   * For now, just adding another listener
-   */
-  process.on('SIGTERM', () => {
-    ctx.logger('Recevied SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
-    wasmMemoryCache.lru.forEach((value) => {
-      saveCheckpoint({ Memory: value.Memory, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        })
-    })
   })
 
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
     findProcess: AoProcessClient.findProcessWith({ db: sqlite, logger }),
-    findProcessMemoryBefore: AoProcessClient.findProcessMemoryBeforeWith({
+    findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
+      readProcessMemoryFile,
       findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
         glob: fastGlob
@@ -251,7 +247,53 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readResultsLogger })
   })
 
+  let checkpointP
+  const checkpointWasmMemoryCache = fromPromise(async () => {
+    if (checkpointP) {
+      ctx.logger('Checkpointing of WASM Memory Cache already in progress. Nooping...')
+      return checkpointP
+    }
+
+    const pArgs = []
+    wasmMemoryCache.lru.forEach((value) => pArgs.push(value))
+
+    checkpointP = pMap(
+      pArgs,
+      (value) => saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
+        .catch((err) => {
+          ctx.logger(
+            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
+            value.evaluation,
+            err
+          )
+        }),
+      {
+        /**
+         * TODO: allow to be configured on CU
+         *
+         * Helps prevent the gateway from being overwhelmed and then timing out
+         */
+        concurrency: 10,
+        /**
+         * Prevent any one rejected promise from causing other invocations
+         * to not be attempted.
+         *
+         * The overall promise will still reject, which is why we have
+         * an empty catch below, which will allow all Promises to either resolve,
+         * or reject, then the final wrapping promise to always resolve.
+         *
+         * https://github.com/sindresorhus/p-map?tab=readme-ov-file#stoponerror
+         */
+        stopOnError: false
+      }
+    )
+      .catch(() => {})
+
+    await checkpointP
+    checkpointP = undefined
+  })
+
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, healthcheck }
+  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
 }

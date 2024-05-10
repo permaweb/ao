@@ -1,8 +1,7 @@
-
 use std::sync::Arc;
 
 use env_logger::Env;
-use log::{info, error};
+use log::{error, info};
 
 use crate::domain::Log;
 
@@ -11,7 +10,7 @@ pub struct SuLog;
 /*
 Logging instance, using an instance of this
 instead of the env_logger macros throughout
-the code 
+the code
 */
 
 impl SuLog {

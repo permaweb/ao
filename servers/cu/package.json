@@ -6,38 +6,37 @@
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon",
-    "heapdump": "kill -USR2",
     "lint": "standard .",
-    "start": "node -r dotenv/config src/app.js",
-    "test": "node --test ./src"
+    "start": "node --experimental-wasm-memory64 -r dotenv/config src/app.js",
+    "test": "node --experimental-wasm-memory64 --test"
   },
   "dependencies": {
-    "@fastify/middie": "^8.3.0",
-    "@permaweb/ao-loader": "^0.0.26",
-    "@permaweb/ao-scheduler-utils": "^0.0.16",
-    "arweave": "^1.14.4",
-    "better-sqlite3": "^9.4.3",
+    "@fastify/middie": "^8.3.1",
+    "@permaweb/ao-loader": "^0.0.29",
+    "@permaweb/ao-scheduler-utils": "^0.0.19",
+    "arweave": "^1.15.1",
+    "better-sqlite3": "^9.6.0",
     "bytes": "^3.1.2",
     "cors": "^2.8.5",
     "dataloader": "^2.2.2",
     "debug": "^4.3.4",
     "dotenv": "^16.4.5",
     "fast-glob": "^3.3.2",
-    "fastify": "^4.26.2",
-    "heapdump": "^0.3.15",
+    "fastify": "^4.27.0",
     "helmet": "^7.1.0",
     "hyper-async": "^1.1.2",
-    "lru-cache": "^10.2.0",
+    "lru-cache": "^10.2.2",
     "ms": "^2.1.3",
-    "ramda": "^0.29.1",
+    "p-map": "^7.0.2",
+    "ramda": "^0.30.0",
     "warp-arbundles": "^1.0.4",
-    "workerpool": "^9.1.0",
-    "zod": "^3.22.4"
+    "workerpool": "^9.1.1",
+    "zod": "^3.23.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
   },
   "engines": {
-    "node": "18"
+    "node": ">=18"
   }
 }

@@ -15,23 +15,24 @@
     "dev": "nodemon",
     "docker-build": "docker build -t cu-app .",
     "docker-run": "npm run docker-build && docker run -p 3005:3005 cu-app",
-    "heapdump": "kill -USR2",
-    "postinstall": "cd cranker && npm install",
     "start": "node -r dotenv/config src/app.js",
-    "test": "node --test ./src"
+    "test": "node --test"
   },
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "^0.0.17",
-    "arbundles": "^0.11.0",
+    "arbundles": "0.11.0",
     "arweave": "^1.14.4",
+    "async-mutex": "^0.5.0",
     "cors": "^2.8.5",
     "debug": "^4.3.4",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "heapdump": "^0.3.15",
     "hyper-async": "^1.1.2",
     "lru-cache": "^10.2.0",
+    "minimist": "^1.2.8",
+    "node-cron": "^3.0.3",
     "p-map": "^7.0.1",
+    "pubsub-js": "^1.9.4",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
     "zod": "^3.22.4"
@@ -42,6 +43,6 @@
     "supertest": "^6.3.3"
   },
   "engines": {
-    "node": "18"
+    "node": "22"
   }
 }

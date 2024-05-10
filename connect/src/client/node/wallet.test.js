@@ -25,7 +25,7 @@ describe('node - wallet', () => {
   })
 
   describe('createDataItemSigner', () => {
-    test('should create and sign the data item', async () => {
+    test('should create and sign the data item with Arweave signer', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
       const signDataItem = createDataItemSigner(wallet)

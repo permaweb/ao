@@ -4,11 +4,12 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 
 <!-- toc -->
 
+- [Prerequisites](#prerequisites)
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
 - [Tests](#tests)
 - [Debug Logging](#debug-logging)
-- [Heap Snapshot](#heap-snapshot)
+- [Manually Trigger Checkpointing](#manually-trigger-checkpointing)
 - [Project Structure](#project-structure)
   - [Business Logic](#business-logic)
     - [Driven Adapters](#driven-adapters)
@@ -18,6 +19,14 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 - [System Requirements](#system-requirements)
 
 <!-- tocstop -->
+
+## Prerequisites
+
+You will need Node `>=18` installed. If you use `nvm`, then simply run
+`nvm install`, which will install Node `22`
+
+> In order to use wasm 64 with more 4GB of process memory, you will need to use
+> Node `22`
 
 ## Usage
 
@@ -36,20 +45,27 @@ Either command will start a server listening on `PORT` (`6363` by default).
 
 ## Environment Variables
 
-There are a few environment variables that you can set. Besides `WALLET`/`WALLET_FILE`, they
-each have a default:
+There are a few environment variables that you can set. Besides
+`WALLET`/`WALLET_FILE`, they each have a default:
 
-- `GATEWAY_URL`: The url of the Arweave gateway to use. (Defaults to `https://arweave.net`)
+- `GATEWAY_URL`: The url of the Arweave gateway to use. (Defaults to
+  `https://arweave.net`)
 
-> `GATEWAY_URL` is solely used as a fallback for both `ARWEAVE_URL` and `GRAPHQL_URL`, if not provided (see below).
+> `GATEWAY_URL` is solely used as a fallback for both `ARWEAVE_URL` and
+> `GRAPHQL_URL`, if not provided (see below).
 
-- `ARWEAVE_URL`: The url for the Arweave http API server, to be used by the CU to fetch
-transaction data from Arweave, specifically ao `Modules`, and `Message` `Assignment`s. (Defaults to `GATEWAY_URL`)
-- `GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the CU. (Defaults to `${GATEWAY_URL}/graphql`)
-- `CHECKPOINT_GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the CU specifically for querying for Checkpoints, if the default gateway fails. (Defaults to `GRAPHQL_URL`)
+- `ARWEAVE_URL`: The url for the Arweave http API server, to be used by the CU
+  to fetch transaction data from Arweave, specifically ao `Modules`, and
+  `Message` `Assignment`s. (Defaults to `GATEWAY_URL`)
+- `GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by
+  the CU. (Defaults to `${GATEWAY_URL}/graphql`)
+- `CHECKPOINT_GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be
+  used by the CU specifically for querying for Checkpoints, if the default
+  gateway fails. (Defaults to `GRAPHQL_URL`)
 - `UPLOADER_URL`: The url of the uploader to use to upload Process `Checkpoints`
   to Arweave. (Defaults to `up.arweave.net`)
-- `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used by the CU, or a file to load it from
+- `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used
+  by the CU, or a file to load it from
 - `PORT`: Which port the web server should listen on (defaults to port `6363`)
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
@@ -69,28 +85,42 @@ transaction data from Arweave, specifically ao `Modules`, and `Message` `Assignm
   Wasm modules (Defaults to `5` wasm modules)
 - `WASM_INSTANCE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used
   for loaded Wasm instances (defaults to `5` loaded wasm instance)
-- `PROCESS_CHECKPOINT_FILE_DIRECTORY`: the directory to cache created/found Checkpoints, from arweave,
-for quick retrieval later (Defaults to the os temp directory)
+- `PROCESS_CHECKPOINT_FILE_DIRECTORY`: the directory to cache created/found
+  Checkpoints, from arweave, for quick retrieval later (Defaults to the os temp
+  directory)
 - `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU
   In-Memory cache used to cache the latest memory evaluated for ao processes.
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process
   latest memory LRU In-Memory cache. An entries age is reset each time it is
   accessed
+- `PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD`: The time in milliseconds that a process' Memory should kept hot in memory, as part of the cache entry, before being drained into a file. This is useful to free up memory from processes who've been evalated and cached, but have not been accessed recently. Set to zero to always keep process' Memory hot in memory, as the expense of more heap usage (defaults to `1m`)
+- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store cached process memory (Defaults to the os temp directory)
+- `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
+  should Checkpoint all processes stored in it's cache. Set to `0` to disabled
+  (defaults to `4h`)
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds,
-  that the CU should wait before creating a process `Checkpoint` IF it has
-  already created a Checkpoint for that process. This is effectively a throttle
-  on `Checkpoint` creation, for a given process
+  that the CU should wait before creating a process `Checkpoint` IFF it has
+  already created a Checkpoint for that process, since it last started. This is
+  effectively a throttle on `Checkpoint` creation, for a given process (defaults
+  to `30 minutes`)
 - `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint`
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
-- `EAGER_CHECKPOINT_THRESHOLD`: If an evaluation stream evaluates this amount of messages, then it will immediately create a Checkpoint at the end of the evaluation stream.
+- `EAGER_CHECKPOINT_THRESHOLD`: If an evaluation stream evaluates this amount of
+  messages, then it will immediately create a Checkpoint at the end of the
+  evaluation stream.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
-- `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for a process evaluation stream to complete before sending a "busy" respond to the client (defaults to `0s` ie. disabled). If disabled, this could cause the CU to maintain long-open connections with clients until it completes long process evaluation streams.
-- `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a `blacklist`
-- `ALLOW_PROCESSES`: The counterpart to RESTRICT_PROCESSES. When configured the CU will 
-   only execute these processes (`whitelist`)
+- `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for
+  a process evaluation stream to complete before sending a "busy" respond to the
+  client (defaults to `0s` ie. disabled). If disabled, this could cause the CU
+  to maintain long-open connections with clients until it completes long process
+  evaluation streams.
+- `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a
+  `blacklist`
+- `ALLOW_PROCESSES`: The counterpart to RESTRICT_PROCESSES. When configured the
+  CU will only execute these processes (`whitelist`)
 
 ## Tests
 
@@ -104,29 +134,11 @@ environment variable to the scope of logs you're interested in
 All logging is scoped under the name `ao-cu*`. You can use wildcards to enable a
 subset of logs ie. `ao-cu:readState*`
 
-## Heap Snapshot
+## Manually Trigger Checkpointing
 
-The `ao` Compute Unit is a Compute and Memory Intensive application. It must
-continuously:
-
-- Load Web Assembly Modules, alloating spaces for the compiled binaries, as well
-  as Web Assembly Instance Heaps.
-- Cache `ao` Process memory
-- Load arbitrary amounts of Scheduled Messages from `ao` Scheduler Units
-- Generate arbitrary amounts of Cron Messages
-- Evaluate arbitrary length streams of messages flowing into an `ao` Process.
-
-Each of these tasks have a non-trivial memory and compute footprint, and the
-implementation tries its best to predictably utilize resources.
-
-This implementation heavily utilizes `streams` which have a more predictable
-memory footprint, can properly handle backpressure to prevent any one evaluation
-stream from hogging all of the resources (aka noisy neighbor), and handling
-evaluation streams of arbitrary length, without having to load all of the
-messages into memory, at once.
-
-Regardless, you sometimes may need to peer into the memory usage of the Server.
-This Compute Unit supports exporting a snapshot of it's current heap.
+If you'd like to manually trigger the CU to Checkpoint all Processes it has in
+it's in-memory cache, you can do so by sending the node process a `SIGUSR2`
+signal.
 
 First, obtain the process id for the CU:
 
@@ -136,9 +148,7 @@ pgrep node
 lsof -i $PORT
 ```
 
-Once you have the process id, you can initiate a heap dump using
-`npm run heapdump -- <pid>`. This will synchronously place a heap snapshot in
-the `DUMP_PATH` and print the name of the snapshot to the console.
+Then send a `SIGUSR2` signal to that process: `kill -USR2 <process>`
 
 ## Project Structure
 

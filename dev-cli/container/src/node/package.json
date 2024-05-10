@@ -17,11 +17,11 @@
   "dependencies": {
     "@irys/sdk": "^0.1.6",
     "@permaweb/aoconnect": "0.0.42",
+    "@permaweb/wasm-metering": "^0.2.2",
     "arweave": "^1.14.4",
     "mime-types": "^2.1.35",
     "url-join": "^5.0.0",
-    "warp-arbundles": "^1.0.4",
-    "wasm-metering": "^0.2.1"
+    "warp-arbundles": "^1.0.4"
   },
   "engines": {
     "node": ">=18"

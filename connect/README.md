@@ -22,6 +22,7 @@ This module will run in a browser or server environment.
     - [`connect`](#connect)
     - [`monitor`](#monitor)
     - [`dryrun`](#dryrun)
+    - [`assign`](#assign)
     - [Environment Variables](#environment-variables)
     - [`createDataItemSigner`](#createdataitemsigner)
 - [Debug Logging](#debug-logging)
@@ -208,7 +209,20 @@ import { assign } from "@permaweb/aoconnect";
 
 const processId = await assign({
   process: 'process-id',
-  message: 'message-id'
+  message: 'message-id',
+  exclude: ['Data', 'Tags', 'etc.'] // optional list of DataItem fields to exclude
+});
+```
+
+Create a Assignment for an `ao` process with an L1 transaction
+
+```js
+import { assign } from "@permaweb/aoconnect";
+
+const processId = await assign({
+  process: 'process-id',
+  message: 'txid',
+  baseLayer: true
 });
 ```
 

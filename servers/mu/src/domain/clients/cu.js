@@ -24,7 +24,23 @@ function selectNodeWith ({ CU_URL, logger }) {
   }
 }
 
+function fetchCronWith ({ CU_URL, logger }) {
+  return async ({ processId, cursor }) => {
+    let requestUrl = `${CU_URL}/cron/${processId}`
+    if (cursor) {
+      requestUrl = `${CU_URL}/cron/${processId}?from=${cursor}`
+    }
+    logger(`Fetching cron: ${requestUrl}`)
+    return fetch(requestUrl).then(r => r.json()
+      .catch(error => {
+        logger(`Failed to parse cron JSON: ${error.toString()}`)
+        return { edges: [] }
+      }))
+  }
+}
+
 export default {
+  fetchCronWith,
   resultWith,
   selectNodeWith
 }

@@ -11,7 +11,8 @@ describe('query', () => {
           process: 'process-123',
           from: '1',
           to: '2',
-          sort: 'DESC'
+          sort: 'DESC',
+          limit: 1
         })
 
         return {
@@ -33,7 +34,8 @@ describe('query', () => {
       process: 'process-123',
       from: '1',
       to: '2',
-      sort: 'DESC'
+      sort: 'DESC',
+      limit: 1
     }).toPromise()
 
     assert.deepStrictEqual(res, {

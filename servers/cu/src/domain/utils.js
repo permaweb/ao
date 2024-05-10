@@ -347,3 +347,48 @@ export const findPendingForProcessBeforeWith = (map) => ({ processId, timestamp 
 
   if (latestBefore) return [latestBefore, map.get(latestBefore)]
 }
+
+/**
+ * A function that, given a function, will immediately invoke it,
+ * then retry it on errors, using an exponential backoff.
+ *
+ * If the final retry fails, then the overall Promise is rejected
+ * with that error
+ */
+export const backoff = (
+  fn,
+  { maxRetries = 3, delay = 500, log, name }
+) => {
+  /**
+   * Recursive function that recurses with exponential backoff
+   */
+  const action = (retry, delay) => {
+    return Promise.resolve()
+      .then(fn)
+      .catch((err) => {
+        // Reached max number of retries
+        if (retry >= maxRetries) {
+          log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
+          throw err
+        }
+
+        const newRetry = retry + 1
+        const newDelay = delay + delay
+        log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
+        return new Promise((resolve) =>
+          setTimeout(
+          /**
+           * increment the retry count Retry with an exponential backoff
+           */
+            () => resolve(action(newRetry, newDelay)),
+            /**
+             * Retry in {delay} milliseconds
+             */
+            delay
+          )
+        )
+      })
+  }
+
+  return action(0, delay)
+}

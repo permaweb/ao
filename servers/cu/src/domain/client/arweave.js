@@ -54,17 +54,22 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_PROCESSES_QUERY = `
-    query GetProcesses ($processIds: [ID!]!) {
+    query GetProcesses (
+      $processIds: [ID!]!
+      $skipTags: Boolean!
+      $skipSignature: Boolean!
+      $skipAnchor: Boolean!
+    ) {
       transactions(ids: $processIds) {
         edges {
           node {
             id
-            signature
-            anchor
+            signature @skip (if: $skipSignature)
+            anchor @skip (if: $skipAnchor)
             owner {
               address
             }
-            tags {
+            tags @skip (if: $skipTags) {
               name
               value
             }
@@ -83,16 +88,31 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
     })
   })
 
-  return (id) =>
+  /**
+   * Ideally, this would be in the function schema,
+   * but there is a bug with zod and optional function\
+   * args https://github.com/colinhacks/zod/issues/2990
+   *
+   * So we manually run it
+   */
+  const optionsSchema = z.object({
+    skipTags: z.boolean().default(false),
+    skipSignature: z.boolean().default(false),
+    skipAnchor: z.boolean().default(false)
+  }).default({})
+
+  return (id, options) =>
     of(id)
-      .chain(fromPromise((id) =>
+      .map((id) => {
+        const variables = optionsSchema.parse(options)
+        variables.processIds = [id]
+        return variables
+      })
+      .chain(fromPromise((variables) =>
         fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: GET_PROCESSES_QUERY,
-            variables: { processIds: [id] }
-          })
+          body: JSON.stringify({ query: GET_PROCESSES_QUERY, variables })
         })
           .then(async (res) => {
             if (res.ok) return res.json()
@@ -101,6 +121,14 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
           })
           .then(transactionConnectionSchema.parse)
           .then(path(['data', 'transactions', 'edges', '0', 'node']))
+          .then((node) => {
+            if (node) return node
+            logger('Transaction "%s" was not found on gateway', id)
+            // TODO: better error handling
+            const err = new Error(`Transaction '${id}' not found on gateway`)
+            err.status = 404
+            throw err
+          })
       ))
       .toPromise()
 }
@@ -126,7 +154,7 @@ export function loadTransactionDataWith ({ fetch, ARWEAVE_URL, logger }) {
           .then(async (res) => {
             if (res.ok) return res
             logger('Error Encountered when fetching raw data for transaction \'%s\'', id)
-            throw new Error(`${res.status}: ${await res.text()}`)
+            throw new Error(`Error encountered when fetching transaction '${id}' from arweave: ${res.status}: ${await res.text()}`)
           })
       ))
       .toPromise()

@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-loader",
-  "version": "0.0.26",
+  "version": "0.0.29",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -17,8 +17,8 @@
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
-    "test": "npm run build && node --test",
-    "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --test"
+    "test": "npm run build && node --experimental-wasm-memory64 --test",
+    "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --experimental-wasm-memory64 --test"
   },
   "dependencies": {},
   "devDependencies": {

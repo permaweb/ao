@@ -118,32 +118,98 @@ describe('hydrateMessages', () => {
       block: { height: 99 }
     }
 
+    const aoAssignmentWithExclude = {
+      ordinate: 13,
+      isAssignment: true,
+      exclude: ['Tags', 'Anchor', 'Signature'],
+      message: {
+        Id: 'message-tx-789',
+        Epoch: 0,
+        Nonce: 23,
+        'Block-Height': 789,
+        Timestamp: 789
+      },
+      block: { height: 99 }
+    }
+
+    const aoAssignmentWithExcludeData = {
+      ordinate: 13,
+      isAssignment: true,
+      exclude: ['Tags', 'Data'],
+      message: {
+        Id: 'message-tx-989',
+        Epoch: 0,
+        Nonce: 23,
+        'Block-Height': 989,
+        Timestamp: 989
+      },
+      block: { height: 99 }
+    }
+
     async function * messageStream () {
       yield notAssignment
       yield aoAssignment
       yield notAssignment
+      yield aoAssignmentWithExclude
+      yield aoAssignmentWithExcludeData
     }
 
-    const maybeAoAssignment = maybeAoAssignmentWith({
+    const deps = {
       loadTransactionData: async (id) => {
-        assert.equal(id, 'message-tx-123')
-        return new Response('Hello World 🤖❌⚡️')
+        if (id === aoAssignment.message.Id) return new Response('Hello World 🤖❌⚡️')
+        if (id === aoAssignmentWithExclude.message.Id) return new Response('Yay Data')
+        assert.fail(`should not call loadTransactionData for id ${id}`)
       },
-      loadTransactionMeta: async (id) => {
-        assert.equal(id, 'message-tx-123')
-        return {
-          id: 'message-tx-123',
-          signature: 'sig-123',
-          anchor: 'anchor-123',
-          owner: {
-            address: 'owner-123'
-          },
-          tags: [
-            { name: 'foo', value: 'bar' }
-          ]
+      loadTransactionMeta: async (id, options) => {
+        if (id === aoAssignment.message.Id) {
+          return {
+            id,
+            signature: 'sig-123',
+            anchor: 'anchor-123',
+            owner: {
+              address: 'owner-123'
+            },
+            tags: [
+              { name: 'foo', value: 'bar' }
+            ]
+          }
         }
+
+        if (id === aoAssignmentWithExclude.message.Id) {
+          assert.deepStrictEqual(options, {
+            skipTags: true,
+            skipAnchor: true,
+            skipSignature: true
+          })
+
+          return {
+            id,
+            owner: {
+              address: 'owner-123'
+            }
+          }
+        }
+
+        if (id === aoAssignmentWithExcludeData.message.Id) {
+          assert.ok(options.skipTags)
+          assert.ok(!options.skipAnchor)
+          assert.ok(!options.skipSignature)
+
+          return {
+            id,
+            signature: 'sig-123',
+            anchor: 'anchor-123',
+            owner: {
+              address: 'owner-123'
+            }
+          }
+        }
+
+        assert.fail(`should not call loadTransactionMeta for id ${id}`)
       }
-    })
+    }
+
+    const maybeAoAssignment = maybeAoAssignmentWith(deps)
 
     const hydrated = maybeAoAssignment(messageStream())
     const messages = []
@@ -173,6 +239,42 @@ describe('hydrateMessages', () => {
           Owner: 'owner-123',
           From: 'owner-123',
           Data: 'Hello World 🤖❌⚡️'
+        }
+      })
+    })
+
+    test('should not load meta fields if excluded', () => {
+      const [,,, four] = messages
+
+      assert.deepStrictEqual(four, {
+        ...aoAssignmentWithExclude,
+        message: {
+          ...aoAssignmentWithExclude.message,
+          Signature: undefined,
+          Anchor: undefined,
+          Tags: [],
+          Owner: 'owner-123',
+          From: 'owner-123',
+          Data: 'Yay Data'
+        }
+      })
+    })
+
+    test('should not load Data if excluded', () => {
+      const [,,,, five] = messages
+
+      assert.deepStrictEqual(five, {
+        ...aoAssignmentWithExcludeData,
+        message: {
+          ...aoAssignmentWithExcludeData.message,
+          Signature: 'sig-123',
+          Anchor: 'anchor-123',
+          // Tags excluded
+          Tags: [],
+          Owner: 'owner-123',
+          From: 'owner-123',
+          // Data omitted
+          Data: undefined
         }
       })
     })

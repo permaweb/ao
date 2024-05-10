@@ -17,7 +17,6 @@ describe('spawnProcess', () => {
   //   }
   //   const cachedSpawn1 = {
   //     id: Math.floor(Math.random() * 1e18).toString(),
-  //     fromTxId: 'id-1',
   //     spawn: spawn1,
   //     cachedAt: new Date(),
   //     processId: 'pid-1'

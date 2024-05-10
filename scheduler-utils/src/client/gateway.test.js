@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
+import { loadProcessSchedulerSchema, loadSchedulerSchema } from '../dal.js'
 import { InvalidSchedulerLocationError, SchedulerTagNotFoundError } from '../err.js'
 import { loadProcessSchedulerWith, loadSchedulerWith } from './gateway.js'
 
@@ -61,16 +62,18 @@ describe('gateway', () => {
         }
       }
 
-      const loadProcessScheduler = loadProcessSchedulerWith({
-        GRAPHQL_URL,
-        fetch: mockFetch
-      })
+      const loadProcessScheduler = loadProcessSchedulerSchema.implement(
+        loadProcessSchedulerWith({
+          GRAPHQL_URL,
+          fetch: mockFetch
+        })
+      )
 
       await loadProcessScheduler(PROCESS)
         .then((res) => {
           assert.equal(res.url, 'https://foo.bar')
           assert.equal(res.ttl, `${TWO_DAYS}`)
-          assert.equal(res.owner, SCHEDULER)
+          assert.equal(res.address, SCHEDULER)
         })
     })
 
@@ -94,10 +97,12 @@ describe('gateway', () => {
         }
       }
 
-      const loadProcessScheduler = loadProcessSchedulerWith({
-        GRAPHQL_URL,
-        fetch: mockFetch
-      })
+      const loadProcessScheduler = loadProcessSchedulerSchema.implement(
+        loadProcessSchedulerWith({
+          GRAPHQL_URL,
+          fetch: mockFetch
+        })
+      )
 
       await loadProcessScheduler(PROCESS)
         .catch((err) => assert.ok(err instanceof SchedulerTagNotFoundError))
@@ -129,16 +134,18 @@ describe('gateway', () => {
         }
       }
 
-      const loadScheduler = loadSchedulerWith({
-        GRAPHQL_URL,
-        fetch: mockFetch
-      })
+      const loadScheduler = loadSchedulerSchema.implement(
+        loadSchedulerWith({
+          GRAPHQL_URL,
+          fetch: mockFetch
+        })
+      )
 
       await loadScheduler(SCHEDULER)
         .then((res) => {
           assert.equal(res.url, 'https://foo.bar')
           assert.equal(res.ttl, `${TWO_DAYS}`)
-          assert.equal(res.owner, SCHEDULER)
+          assert.equal(res.address, SCHEDULER)
         })
     })
 
@@ -166,10 +173,12 @@ describe('gateway', () => {
         }
       }
 
-      const loadScheduler = loadSchedulerWith({
-        GRAPHQL_URL,
-        fetch: mockFetch
-      })
+      const loadScheduler = loadSchedulerSchema.implement(
+        loadSchedulerWith({
+          GRAPHQL_URL,
+          fetch: mockFetch
+        })
+      )
 
       await loadScheduler(SCHEDULER)
         .catch((err) => {
@@ -202,10 +211,12 @@ describe('gateway', () => {
         }
       }
 
-      const loadScheduler = loadSchedulerWith({
-        GRAPHQL_URL,
-        fetch: mockFetch
-      })
+      const loadScheduler = loadSchedulerSchema.implement(
+        loadSchedulerWith({
+          GRAPHQL_URL,
+          fetch: mockFetch
+        })
+      )
 
       await loadScheduler(SCHEDULER)
         .catch((err) => {

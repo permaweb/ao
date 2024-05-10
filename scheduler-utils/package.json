@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-scheduler-utils",
-  "version": "0.0.17",
+  "version": "0.0.19",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -28,15 +28,16 @@
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
-    "test": "node --test ./src"
+    "test": "node --test"
   },
   "dependencies": {
-    "lru-cache": "^10.2.0",
-    "ramda": "^0.29.1"
+    "lru-cache": "^10.2.2",
+    "ramda": "^0.30.0",
+    "zod": "^3.23.5"
   },
   "devDependencies": {
-    "esbuild": "^0.20.1",
-    "typescript": "^5.4.2"
+    "esbuild": "^0.20.2",
+    "typescript": "^5.4.5"
   },
   "engines": {
     "node": ">=18"

@@ -40,9 +40,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    processes,
-    messages,
-    schedulers,
-    process_schedulers,
-);
+allow_tables_to_appear_in_same_query!(processes, messages, schedulers, process_schedulers,);

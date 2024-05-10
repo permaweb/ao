@@ -2,9 +2,12 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { z } from 'zod'
-
-import { busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor, removeTagsByNameMaybeValue, joinUrl, preprocessUrls } from './utils.js'
 import ms from 'ms'
+
+import {
+  busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor,
+  removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff
+} from './utils.js'
 
 describe('utils', () => {
   describe('joinUrl', () => {
@@ -245,6 +248,88 @@ describe('utils', () => {
       const [key2, value2] = findPendingForProcessBefore({ processId, timestamp: now.getTime() - fifteenMinAgo })
       assert.equal(key2, `${processId},${now.getTime() - thirtyMinAgo},,,true`)
       assert.equal(await value2.pending, thirtyMinAgo)
+    })
+  })
+
+  describe('backoff', () => {
+    function isPromise (obj) {
+      return (
+        !!obj &&
+        (typeof obj === 'object' || typeof obj === 'function') &&
+        typeof obj.then === 'function'
+      )
+    }
+
+    test('should return a promise', () => {
+      assert.ok(isPromise(
+        backoff(() => Promise.resolve(''), {
+          maxRetries: 0,
+          delay: 0,
+          log: () => '',
+          name: ''
+        })
+      ))
+
+      assert.ok(isPromise(
+        backoff(() => '', {
+          maxRetries: 0,
+          delay: 0,
+          log: () => '',
+          name: ''
+        })
+      ))
+    })
+
+    test('should not retry calling the function', async () => {
+      let count = 0
+      const fn = () => count++
+      await backoff(fn, {
+        maxRetries: 0,
+        delay: 0,
+        log: () => '',
+        name: ''
+      })
+
+      assert.equal(count, 1)
+    })
+
+    test('should retry calling the function', async () => {
+      let count = 0
+      const fn = () => {
+        count++
+        return count
+          ? Promise.resolve('foo')
+          // eslint-disable-next-line
+          : Promise.reject('bar')
+      }
+
+      const res = await backoff(fn, {
+        maxRetries: 1,
+        delay: 0,
+        log: () => '',
+        name: ''
+      })
+
+      assert.equal(res, 'foo')
+    })
+
+    test('should bubble the error if all retries are unsuccessful', async () => {
+      let count = 0
+      const fn = () => {
+        count++
+        // eslint-disable-next-line
+        return Promise.reject('bar')
+      }
+
+      await backoff(fn, {
+        maxRetries: 2,
+        delay: 0,
+        log: () => '',
+        name: ''
+      }).catch(err => {
+        assert.equal(err, 'bar')
+        assert.equal(count, 3)
+      })
     })
   })
 })
