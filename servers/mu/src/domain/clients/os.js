@@ -27,7 +27,7 @@ function initProcsWith ({ PROC_FILE_PATH }) {
         the server has either restarted or been redeployed.
       */
     Object.keys(obj).forEach(key => {
-      const child = spawn('node', ['cranker/src/index.js', key], {
+      const child = spawn('node', ['-r', 'dotenv/config', 'src/bg/cron.js', key], {
         stdio: ['ignore']
       })
 
@@ -58,7 +58,7 @@ function startMonitoredProcessWith ({ logger, PROC_FILE_PATH }) {
         throw new Error('Process already being monitored')
       }
 
-      const child = spawn('node', ['cranker/src/index.js', id], {
+      const child = spawn('node', ['-r', 'dotenv/config', 'src/bg/cron.js', id], {
         stdio: ['ignore', out, err]
       })
 
