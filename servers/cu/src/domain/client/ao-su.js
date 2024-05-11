@@ -128,7 +128,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         .then(params => new URLSearchParams(params))
         .then((params) => backoff(
           () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
-          { maxRetries: 3, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
+          { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
         ))
         .catch(async (res) => {
           logger(
@@ -227,7 +227,7 @@ export const loadProcessWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId }) => {
     return backoff(
       () => fetch(`${suUrl}/processes/${processId}`, { method: 'GET' }).then(okRes),
-      { maxRetries: 3, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
+      { maxRetries: 5, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
     )
       .catch(async (res) => {
         logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
@@ -254,7 +254,7 @@ export const loadProcessWith = ({ fetch, logger }) => {
 export const loadTimestampWith = ({ fetch, logger }) => {
   return ({ suUrl, processId }) => backoff(
     () => fetch(`${suUrl}/timestamp?process-id=${processId}`).then(okRes),
-    { maxRetries: 3, delay: 500, log: logger, name: `loadTimestamp(${JSON.stringify({ suUrl, processId })})` }
+    { maxRetries: 5, delay: 500, log: logger, name: `loadTimestamp(${JSON.stringify({ suUrl, processId })})` }
   )
     .catch(async (res) => {
       logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
@@ -299,7 +299,7 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId, messageTxId }) => {
     return backoff(
       () => fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' }).then(okRes),
-      { maxRetries: 3, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageTxId })})` }
+      { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageTxId })})` }
     )
       .catch(async (res) => {
         logger(
