@@ -33,6 +33,7 @@ Create a .env file with the following variables, or set them in the OS:
 
 - `SU_WALLET_PATH` a local filepath to an arweave wallet the SU will use to write tx's
 - `DATABASE_URL` a postgres database url, you must have a postgres database called `su`
+- `DATABASE_READ_URL` an optional separate postgres database url for reads
 - `GATEWAY_URL`an arweave gateway url to write to `https://arweave.net/`
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
