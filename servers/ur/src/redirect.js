@@ -10,7 +10,7 @@ export function redirectWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
   const _logger = logger.child('redirect')
   _logger('Configuring to redirect ao %s units...', aoUnit)
 
-  const bailout = bailoutWith({ fetch, subrouterUrl, surUrl, owners })
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners }) : undefined
   const determineHost = determineHostWith({ hosts, bailout })
 
   /**

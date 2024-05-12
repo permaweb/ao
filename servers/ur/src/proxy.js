@@ -20,7 +20,7 @@ export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
 
   const proxy = httpProxy.createProxyServer({})
 
-  const bailout = bailoutWith({ fetch, subrouterUrl, surUrl, owners })
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners }) : undefined
   const determineHost = determineHostWith({ hosts, bailout })
 
   async function trampoline (init) {
