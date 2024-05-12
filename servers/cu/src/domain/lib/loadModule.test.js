@@ -42,6 +42,7 @@ describe('loadModule', () => {
         assert.equal(format, 'wasm32-unknown-emscripten')
         return true
       },
+      isModuleExtensionSupported: async ({ extension }) => true,
       logger
     })
 
@@ -87,6 +88,7 @@ describe('loadModule', () => {
         return true
       },
       isModuleFormatSupported: async ({ format }) => true,
+      isModuleExtensionSupported: async ({ extension }) => true,
       logger
     })
 
@@ -136,6 +138,7 @@ describe('loadModule', () => {
         assert.equal(format, 'wasm32-unknown-emscripten')
         return true
       },
+      isModuleExtensionSupported: async ({ extension }) => true,
       logger
     })
 
@@ -179,6 +182,7 @@ describe('loadModule', () => {
         isModuleMemoryLimitSupported: async ({ limit }) => true,
         isModuleComputeLimitSupported: async ({ limit }) => true,
         isModuleFormatSupported: async ({ format }) => true,
+        isModuleExtensionSupported: async ({ extension }) => true,
         logger
       })
 
@@ -220,6 +224,7 @@ describe('loadModule', () => {
         isModuleMemoryLimitSupported: async ({ limit }) => true,
         isModuleComputeLimitSupported: async ({ limit }) => true,
         isModuleFormatSupported: async ({ format }) => true,
+        isModuleExtensionSupported: async ({ extension }) => true,
         logger
       })
 
@@ -258,6 +263,7 @@ describe('loadModule', () => {
       isModuleMemoryLimitSupported: async () => true,
       isModuleComputeLimitSupported: async () => true,
       isModuleFormatSupported: async () => true,
+      isModuleExtensionSupported: async ({ extension }) => true,
       logger
     })
 
@@ -267,7 +273,7 @@ describe('loadModule', () => {
     }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
       .catch(err => assert.deepStrictEqual(err, {
-        status: 413,
+        status: 422,
         message: 'Input-Encoding for module "foobar" is not supported'
       }))
   })
@@ -285,6 +291,7 @@ describe('loadModule', () => {
       isModuleMemoryLimitSupported: async () => true,
       isModuleComputeLimitSupported: async () => true,
       isModuleFormatSupported: async () => true,
+      isModuleExtensionSupported: async ({ extension }) => true,
       logger
     })
 
@@ -294,7 +301,7 @@ describe('loadModule', () => {
     }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
       .catch(err => assert.deepStrictEqual(err, {
-        status: 413,
+        status: 422,
         message: 'Output-Encoding for module "foobar" is not supported'
       }))
   })
@@ -316,6 +323,7 @@ describe('loadModule', () => {
       isModuleMemoryLimitSupported: async () => true,
       isModuleComputeLimitSupported: async () => true,
       isModuleFormatSupported: async () => false,
+      isModuleExtensionSupported: async ({ extension }) => true,
       logger
     })
 
@@ -325,8 +333,46 @@ describe('loadModule', () => {
     }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
       .catch(err => assert.deepStrictEqual(err, {
-        status: 413,
+        status: 422,
         message: 'Module-Format for module "foobar" is not supported'
+      }))
+  })
+
+  test('throw if Module Extension is not supported', async () => {
+    const loadModule = loadModuleWith({
+      loadTransactionMeta: async () => ({
+        owner: {
+          address: 'owner-123'
+        },
+        tags: [
+          ...moduleTags,
+          { name: 'Extension', value: 'Foo' },
+          { name: 'Extension', value: 'Bar' },
+          { name: 'Foo-Max', value: '10' },
+          { name: 'Bar-Max', value: '15' },
+          { name: 'Foo-Min', value: '2' },
+          { name: 'Bar-Floor', value: '1' }
+        ]
+      }),
+      findModule: async () => { throw { status: 404 } },
+      saveModule: async () => 'foobar',
+      isModuleMemoryLimitSupported: async ({ limit }) => true,
+      isModuleComputeLimitSupported: async ({ limit }) => true,
+      isModuleFormatSupported: async ({ format }) => true,
+      isModuleExtensionSupported: async ({ extension }) => {
+        return ['Fizz', 'Foo'].includes(extension)
+      },
+      logger
+    })
+
+    await loadModule({
+      id: PROCESS,
+      tags: [{ name: 'Module', value: 'foobar' }]
+    }).toPromise()
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.deepStrictEqual(err, {
+        status: 422,
+        message: 'Module Extensions for module "foobar" are not supported'
       }))
   })
 
@@ -344,6 +390,7 @@ describe('loadModule', () => {
         isModuleMemoryLimitSupported: async () => true,
         isModuleComputeLimitSupported: async () => true,
         isModuleFormatSupported: async () => true,
+        isModuleExtensionSupported: async ({ extension }) => true,
         logger
       })
 
@@ -368,6 +415,7 @@ describe('loadModule', () => {
         isModuleMemoryLimitSupported: async () => true,
         isModuleComputeLimitSupported: async () => false,
         isModuleFormatSupported: async () => true,
+        isModuleExtensionSupported: async ({ extension }) => true,
         logger
       })
 
@@ -394,6 +442,7 @@ describe('loadModule', () => {
         isModuleMemoryLimitSupported: async () => true,
         isModuleComputeLimitSupported: async () => true,
         isModuleFormatSupported: async () => true,
+        isModuleExtensionSupported: async ({ extension }) => true,
         logger
       })
 
@@ -418,6 +467,7 @@ describe('loadModule', () => {
         isModuleMemoryLimitSupported: async () => false,
         isModuleComputeLimitSupported: async () => true,
         isModuleFormatSupported: async () => true,
+        isModuleExtensionSupported: async ({ extension }) => true,
         logger
       })
 

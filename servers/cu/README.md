@@ -77,6 +77,8 @@ There are a few environment variables that you can set. Besides
   supported for `ao` processes (defaults to `1GB`)
 - `PROCESS_WASM_COMPUTE_MAX_LIMIT`: The maximum `Compute-Limit`, in bytes,
   supported for `ao` processes (defaults to `9 billion`)
+- `PROCESS_WASM_SUPPORTED_FORMATS`: the wasm module formats that this CU supports, as a comma-delimited string (defaults to `['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2']`)
+- `PROCESS_WASM_SUPPORTED_EXTENSIONS`: the wasm extensions that this CU supports, as a comma-delimited string (defaults to no extensions)
 - `WASM_EVALUATION_MAX_WORKERS`: The number of workers to use for evaluating
   messages (Defaults to `3`)
 - `WASM_BINARY_FILE_DIRECTORY`: The directory to cache wasm binaries downloaded

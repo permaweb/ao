@@ -27,6 +27,14 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_WASM_COMPUTE_MAX_LIMIT: positiveIntSchema,
   /**
+   * The wasm module formats that this CU supports
+   */
+  PROCESS_WASM_SUPPORTED_FORMATS: commaDelimitedArraySchema,
+  /**
+   * The wasm extensions that this CU supports
+   */
+  PROCESS_WASM_SUPPORTED_EXTENSIONS: commaDelimitedArraySchema,
+  /**
    * The url for the graphql server to be used by the CU
    * to query for metadata from an Arweave Gateway
    *
