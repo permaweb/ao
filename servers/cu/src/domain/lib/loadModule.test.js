@@ -63,7 +63,7 @@ describe('loadModule', () => {
       outputEncoding: 'JSON-1',
       computeLimit: 10000,
       memoryLimit: 11264,
-      extensions: []
+      extensions: {}
     })
     assert.equal(result.id, PROCESS)
   })
@@ -107,7 +107,7 @@ describe('loadModule', () => {
       outputEncoding: 'JSON-1',
       computeLimit: 10000,
       memoryLimit: 15360,
-      extensions: []
+      extensions: {}
     })
     assert.equal(result.id, PROCESS)
   })
@@ -154,10 +154,95 @@ describe('loadModule', () => {
       outputEncoding: 'JSON-1',
       computeLimit: 15000,
       memoryLimit: 15360,
-      extensions: []
+      extensions: {}
     })
     assert.equal(result.moduleOwner, 'owner-123')
     assert.equal(result.id, PROCESS)
+  })
+
+  describe('parse the extensions and extension options', () => {
+    test('a single extension', async () => {
+      const loadModule = loadModuleWith({
+        loadTransactionMeta: async () => ({
+          owner: {
+            address: 'owner-123'
+          },
+          tags: [
+            ...moduleTags,
+            { name: 'Extension', value: 'Foo' },
+            { name: 'Foo-Max', value: '10' },
+            { name: 'Foo-Min', value: '2' }
+          ]
+        }),
+        findModule: async () => { throw { status: 404 } },
+        saveModule: async () => 'foobar',
+        isModuleMemoryLimitSupported: async ({ limit }) => true,
+        isModuleComputeLimitSupported: async ({ limit }) => true,
+        isModuleFormatSupported: async ({ format }) => true,
+        logger
+      })
+
+      const res = await loadModule({
+        id: PROCESS,
+        tags: [
+          { name: 'Module', value: 'foobar' },
+          { name: 'Compute-Limit', value: '10000' },
+          { name: 'Memory-Limit', value: '11-kb' }
+        ]
+      }).toPromise()
+
+      assert.deepStrictEqual(res.moduleOptions.extensions, {
+        Foo: [
+          { name: 'Max', value: '10' },
+          { name: 'Min', value: '2' }
+        ]
+      })
+    })
+
+    test('multiple extensions', async () => {
+      const loadModule = loadModuleWith({
+        loadTransactionMeta: async () => ({
+          owner: {
+            address: 'owner-123'
+          },
+          tags: [
+            ...moduleTags,
+            { name: 'Extension', value: 'Foo' },
+            { name: 'Extension', value: 'Bar' },
+            { name: 'Foo-Max', value: '10' },
+            { name: 'Bar-Max', value: '15' },
+            { name: 'Foo-Min', value: '2' },
+            { name: 'Bar-Floor', value: '1' }
+          ]
+        }),
+        findModule: async () => { throw { status: 404 } },
+        saveModule: async () => 'foobar',
+        isModuleMemoryLimitSupported: async ({ limit }) => true,
+        isModuleComputeLimitSupported: async ({ limit }) => true,
+        isModuleFormatSupported: async ({ format }) => true,
+        logger
+      })
+
+      const res = await loadModule({
+        id: PROCESS,
+        tags: [
+          { name: 'Module', value: 'foobar' },
+          { name: 'Compute-Limit', value: '10000' },
+          { name: 'Memory-Limit', value: '11-kb' }
+        ]
+      }).toPromise()
+
+      assert.deepStrictEqual(res.moduleOptions.extensions, {
+        Foo: [
+          { name: 'Max', value: '10' },
+          { name: 'Min', value: '2' }
+        ],
+        Bar: [
+          { name: 'Max', value: '15' },
+          { name: 'Floor', value: '1' }
+        ]
+      })
+    })
   })
 
   test('throw if "Input-Encoding" is not found', async () => {

@@ -5,7 +5,7 @@ import bytes from 'bytes'
 
 import { findModuleSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
 import { parseTags } from '../utils.js'
-import { commaDelimitedArraySchema, rawTagSchema } from '../model.js'
+import { rawTagSchema } from '../model.js'
 
 /**
  * The result that is produced from this step
@@ -24,7 +24,7 @@ const ctxSchema = z.object({
     outputEncoding: z.string().min(1),
     memoryLimit: z.number().nonnegative(),
     computeLimit: z.number().nonnegative(),
-    extensions: z.array(z.string())
+    extensions: z.record(z.array(rawTagSchema))
   }),
   moduleTags: z.array(rawTagSchema),
   moduleOwner: z.string().min(1)
@@ -120,13 +120,37 @@ function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLi
         }
       ),
       extensions: pipe(
-        path(['moduleTags', 'extensions']),
+        path(['moduleTags', 'Extension']),
         defaultTo([]),
         /**
-         * Spec currently doesn't define the shape of extensions,
-         * so assuming that it is a comma delimited string
+         * Depending on how many extensions there are,
+         * we need to map such that it is always an array
          */
-        (val) => commaDelimitedArraySchema.parse(val)
+        (extensions) => Array.isArray(extensions)
+          ? extensions
+          : [extensions],
+        /**
+         * { [extensionName]: Tag[] }
+         */
+        (extensions) => extensions.reduce(
+          (acc, extension) => {
+            acc[extension] = ctx.moduleTags
+              // { name: 'Foo:bar', value: '...' }[]
+              .filter((t) => t.name.startsWith(extension))
+              /**
+               * Strip the extension namespace off of each tag
+               * in the namespace:
+               *
+               * { name: 'Foo-Max', value: '5' } => { name: 'Max', value: '5' }
+               *
+               * Since we also need to strip the ':', we can simply
+               * omit making the indexStart 0-based (by just omitting subtracting 1)
+               */
+              .map((t) => ({ name: t.name.substring(extension.length + 1), value: t.value }))
+            return acc
+          },
+          {}
+        )
       )
     }))
     .chain(checkModuleOption(
