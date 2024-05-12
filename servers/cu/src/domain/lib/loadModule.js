@@ -82,7 +82,7 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
   }
 }
 
-function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLimitSupported, isModuleFormatSupported }) {
+function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLimitSupported, isModuleFormatSupported, isModuleExtensionSupported }) {
   const checkModuleOption = (name, pred, err) => (options) =>
     of()
       .chain(fromPromise(async () => pred(options[name])))
@@ -156,17 +156,17 @@ function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLi
     .chain(checkModuleOption(
       'inputEncoding',
       isNotNil,
-      { status: 413, message: `Input-Encoding for module "${ctx.moduleId}" is not supported` }
+      { status: 422, message: `Input-Encoding for module "${ctx.moduleId}" is not supported` }
     ))
     .chain(checkModuleOption(
       'outputEncoding',
       isNotNil,
-      { status: 413, message: `Output-Encoding for module "${ctx.moduleId}" is not supported` }
+      { status: 422, message: `Output-Encoding for module "${ctx.moduleId}" is not supported` }
     ))
     .chain(checkModuleOption(
       'format',
       (format) => isModuleFormatSupported({ format }),
-      { status: 413, message: `Module-Format for module "${ctx.moduleId}" is not supported` }
+      { status: 422, message: `Module-Format for module "${ctx.moduleId}" is not supported` }
     ))
     .chain(checkModuleOption(
       'memoryLimit',
@@ -183,6 +183,15 @@ function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLi
         return isModuleComputeLimitSupported({ limit })
       },
       { status: 413, message: `Compute-Limit for process "${ctx.id}" exceeds supported limit` }
+    ))
+    .chain(checkModuleOption(
+      'extensions',
+      (extensions) => Promise.all(
+        Object.keys(extensions).map((extension) => isModuleExtensionSupported({ extension }))
+      )
+        .then((res) => res.filter((isSupported) => !isSupported))
+        .then((unsupported) => !unsupported.length),
+      { status: 422, message: `Module Extensions for module "${ctx.moduleId}" are not supported` }
     ))
     .map(assoc('moduleOptions', __, ctx))
 }
