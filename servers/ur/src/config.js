@@ -33,7 +33,13 @@ const serverConfigSchema = z.object({
   ),
   DUMP_PATH: z.string().min(1),
   aoUnit: z.enum(['cu', 'mu']),
-  strategy: z.enum(['proxy', 'redirect'])
+  strategy: z.enum(['proxy', 'redirect']),
+  subrouterUrl: z.string().nullable().optional(),
+  surUrl: z.string().nullable().optional(),
+  owners: z.preprocess(
+    (arg) => (typeof arg === 'string' ? arg.split(',').map(str => str.trim()) : arg),
+    z.array(z.string())
+  ).nullable().optional()
 })
 
 /**
@@ -54,7 +60,10 @@ const CONFIG_ENVS = {
      * but should consider setting explicitly in your .env
      */
     aoUnit: process.env.AO_UNIT || 'cu',
-    strategy: process.env.STRATEGY || 'proxy'
+    strategy: process.env.STRATEGY || 'proxy',
+    subrouterUrl: process.env.SUBROUTER_URL,
+    surUrl: process.env.SUR_URL,
+    owners: process.env.OWNERS
   },
   production: {
     MODE,
@@ -62,7 +71,10 @@ const CONFIG_ENVS = {
     hosts: process.env.HOSTS,
     DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
     aoUnit: process.env.AO_UNIT,
-    strategy: process.env.STRATEGY || 'proxy'
+    strategy: process.env.STRATEGY || 'proxy',
+    subrouterUrl: process.env.SUBROUTER_URL,
+    surUrl: process.env.SUR_URL,
+    owners: process.env.OWNERS
   }
 }
 

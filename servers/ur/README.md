@@ -32,6 +32,11 @@ There are a few environment variables that you MUST set:
 - `HOSTS`: a comma-delimited string containing all of the underlying hosts that can Reverse Proxied to. If `AO_UNIT` is `cu`, then `HOSTS` should be a series of `ao` Compute Unit Hosts. Similarly if `AO_UNIT` is `mu` then `HOSTS` should be a series of `ao` Messenger Unit Hosts
 - `STRATEGY`: either `redirect` or `proxy` (default). If `STRATEGY` is `redirect`, the service will reply with an [HTTP 307 Temporary Redirect](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307) to the underlying `ao` unit. If `STRATEGY` is `proxy`, the service will act as a reverse proxy to the underlying `ao` unit and forward the HTTP request itself.
 
+The below environment variables are optional. All 3 must be set for subrouting to work.
+- `SUBROUTER_URL` the underlying router to route to
+- `SUR_URL` the SU-R url to use to check process owners for subrouter redirection
+- `OWNERS` a list of owners to redirect to a subrouter
+
 > In order for the Router's Reverse Proxying to be consistent, the ordering of the `HOST` list MUST be consistent.
 
 ## Tests
