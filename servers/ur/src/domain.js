@@ -25,6 +25,8 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners }) {
         .then((res) => res.json())
         .catch((_e) => null)
       if (!suResponse) return
+      if (!suResponse.owner) return
+      if (!suResponse.owner.address) return
       cache.set(processId, suResponse.owner.address)
       owner = suResponse.owner.address
     }
