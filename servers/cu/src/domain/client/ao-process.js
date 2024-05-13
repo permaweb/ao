@@ -134,7 +134,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
       if (value.Memory && DRAIN_TO_FILE_THRESHOLD) {
         clearDrainToFileTimer(key)
         const drainToFile = setTimeout(async () => {
-          const file = await writeProcessMemoryFile(value)
+          const file = await writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
           /**
            * Update the cache entry with the file reference containing the memory
            * and remove the reference to the Memory, so that it can be GC'd.
