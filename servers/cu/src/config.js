@@ -121,7 +121,8 @@ const CONFIG_ENVS = {
     PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: process.env.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL || ms('4h'),
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
-    ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || []
+    ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
+    ALLOW_OWNERS: process.env.ALLOW_OWNERS || []
   },
   production: {
     MODE,
@@ -156,7 +157,8 @@ const CONFIG_ENVS = {
     PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: process.env.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL || ms('4h'),
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
-    ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || []
+    ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
+    ALLOW_OWNERS: process.env.ALLOW_OWNERS || []
   }
 }
 
