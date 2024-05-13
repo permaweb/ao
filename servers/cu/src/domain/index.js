@@ -92,6 +92,7 @@ export const createApis = async (ctx) => {
 
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
+  ctx.logger('Allowing only process owners [ %s ]', ctx.ALLOW_OWNERS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
   ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
@@ -150,6 +151,7 @@ export const createApis = async (ctx) => {
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
+    isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
     findProcess: AoProcessClient.findProcessWith({ db: sqlite, logger }),
     findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
       cache: wasmMemoryCache,

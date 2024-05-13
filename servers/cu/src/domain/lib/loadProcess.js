@@ -86,15 +86,24 @@ const ctxSchema = z.object({
   exact: z.boolean().default(false)
 }).passthrough()
 
-function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProcess, logger }) {
+function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProcess, isProcessOwnerSupported, logger }) {
   locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
   loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
+  // TODO: wrap in a schema
+  isProcessOwnerSupported = fromPromise(isProcessOwnerSupported)
 
   const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
     : Rejected(`Tag '${name}': ${err}`)
+
+  const checkProcessOwner = (process) => of(process.owner)
+    .chain(isProcessOwnerSupported)
+    .chain((isSupported) => isSupported
+      ? Resolved(process)
+      : Rejected({ status: 403, message: `Access denied for process owner ${process.owner}` })
+    )
 
   function maybeCached (processId) {
     return findProcess({ processId })
@@ -175,6 +184,7 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
         tags: process.tags,
         block: process.block
       }))
+      .chain(checkProcessOwner)
 }
 
 function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, loadLatestSnapshot, saveLatestProcessMemory, logger }) {

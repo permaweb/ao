@@ -19,6 +19,10 @@ describe('loadProcess', () => {
       { name: 'balances', value: JSON.stringify({ 'myOVEwyX7QKFaPkXo3Wlib-Q80MOf5xyjL9ZyvYSVYc': 1000 }) }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (owner) => {
+        assert.equal(owner, 'woohoo')
+        return true
+      },
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -80,6 +84,7 @@ describe('loadProcess', () => {
       { name: 'Scheduler', value: 'scheduler-123' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => ({
         id: PROCESS,
         owner: 'woohoo',
@@ -153,6 +158,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => cachedEvaluation,
@@ -198,6 +204,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -239,6 +246,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -292,6 +300,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -332,6 +341,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async (process) => {
         assert.deepStrictEqual(process, {
@@ -375,6 +385,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
       findEvaluation: async () => { throw { status: 404 } },
@@ -414,6 +425,7 @@ describe('loadProcess', () => {
       { name: 'Foo', value: 'Bar' }
     ]
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -451,6 +463,7 @@ describe('loadProcess', () => {
 
   test('throw if the Module tag is not provided', async () => {
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -486,6 +499,7 @@ describe('loadProcess', () => {
 
   test('throw if the Data-Protocol tag is not "ao"', async () => {
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -521,6 +535,7 @@ describe('loadProcess', () => {
 
   test('throw if the Type tag is not "Process"', async () => {
     const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => true,
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       findEvaluation: async () => { throw { status: 404 } },
@@ -552,5 +567,38 @@ describe('loadProcess', () => {
     await loadProcess({ id: PROCESS }).toPromise()
       .then(() => assert.fail('unreachable. Should have thrown'))
       .catch(err => assert.equal(err, "Tag 'Type': value 'Process' was not found on process"))
+  })
+
+  test('throw if the process owner is not allowed', async () => {
+    const tags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Type', value: 'Process' },
+      { name: 'Foo', value: 'Bar' },
+      { name: 'Scheduler', value: 'scheduler-123' }
+    ]
+    const loadProcess = loadProcessWith({
+      isProcessOwnerSupported: async (process) => false,
+      findProcess: async () => ({
+        id: PROCESS,
+        owner: 'woohoo',
+        signature: 'sig-123',
+        anchor: null,
+        data: 'data-123',
+        tags,
+        block: { height: 123, timestamp: 1697574792 }
+      }),
+      saveProcess: async () => assert.fail('should not save if found in db'),
+      findEvaluation: async () => assert.fail('should not get to the point of checking memory'),
+      findLatestProcessMemory: async () => assert.fail('should not get to the point of checking memory'),
+      saveLatestProcessMemory: async () => assert.fail('should not get to the point of checking memory'),
+      locateProcess: async ({ processId, schedulerHint }) => ({ url: 'https://from.cache' }),
+      loadProcess: async (_id) => assert.fail('should not load process block if found in db'),
+      logger
+    })
+
+    await loadProcess({ id: PROCESS }).toPromise()
+      .then(() => assert.fail('unreachable. Should have thrown'))
+      .catch(err => assert.deepStrictEqual(err, { status: 403, message: 'Access denied for process owner woohoo' }))
   })
 })

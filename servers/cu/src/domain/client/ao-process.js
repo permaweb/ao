@@ -171,6 +171,12 @@ export function loadProcessCacheUsage () {
   }
 }
 
+export function isProcessOwnerSupportedWith ({ ALLOW_OWNERS }) {
+  const allowed = new Set(ALLOW_OWNERS)
+
+  return async (id) => !allowed.size || allowed.has(id)
+}
+
 const processDocSchema = z.object({
   id: z.string().min(1),
   signature: processSchema.shape.signature,
