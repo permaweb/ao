@@ -258,7 +258,10 @@ export const createApis = async (ctx) => {
     }
 
     const pArgs = []
-    wasmMemoryCache.lru.forEach((value) => pArgs.push(value))
+    /**
+     * push a new object to keep references to original data intact
+     */
+    wasmMemoryCache.lru.forEach((value) => pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation }))
 
     checkpointP = pMap(
       pArgs,
