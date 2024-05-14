@@ -11,7 +11,7 @@ on:
       - main
     paths:
       - "loader/**"
-  
+
   # Perform a release using a workflow dispatch
   workflow_dispatch:
     inputs:
@@ -24,7 +24,6 @@ defaults:
     shell: bash
 
 jobs:
-
   test:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -35,7 +34,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: 📥 Download deps
         working-directory: loader
@@ -122,7 +121,7 @@ jobs:
         working-directory: loader
         run: |
           npm i
-      
+
       - name: 🦠 Publish to NPM
         working-directory: loader
         run: |
