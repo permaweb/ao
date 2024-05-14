@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.30](https://github.com/permaweb/ao/compare/loader@v0.0.29...loader@v0.0.30) (2024-05-14)
+
+
+### Features
+
+* all tests passing for ao-loader ([70bbc85](https://github.com/permaweb/ao/commit/70bbc85d6c0da7a1fa24781b9ed5999c94e09626))
+* ao loader support of aos64 a ([be9ff8e](https://github.com/permaweb/ao/commit/be9ff8e29c08a8334479cc64f50eb9d5f4843188))
+* ao-loader working with llm ([6191434](https://github.com/permaweb/ao/commit/6191434b984ea44a2987f559803c8be25f834daa))
+* got llm test working with ao-loader wip ([0dab485](https://github.com/permaweb/ao/commit/0dab485f64a027b9befe335580590d0192dda9c0))
+* got test running via aoloader ([edcabec](https://github.com/permaweb/ao/commit/edcabeccf9db1aa16a4ba7810614880241546c2e))
+* skip llm test ([867f4cf](https://github.com/permaweb/ao/commit/867f4cfcba3c37b1d70cde15203c9434bc626989))
+* skip llm test ([fae3359](https://github.com/permaweb/ao/commit/fae33594506ddbfb82a73347300153c3d121c2ee))
+
 ## [0.0.29](https://github.com/permaweb/ao/compare/loader@v0.0.28...loader@v0.0.29) (2024-04-30)
 
 
