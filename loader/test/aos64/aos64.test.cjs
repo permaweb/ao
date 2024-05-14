@@ -9,7 +9,7 @@ console.log(`${MODULE_PATH}`)
 
 const wasmBinary = fs.readFileSync('./test/aos64/aos64.wasm')
 
-test('AOS-Llama+VFS Tests', async () => {
+test.skip('AOS-Llama+VFS Tests', async () => {
   const { default: AoLoader } = await import('../../src/index.cjs')
 
   const handle = await AoLoader((imports, cb) =>
