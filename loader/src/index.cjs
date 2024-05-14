@@ -97,7 +97,6 @@ module.exports = async function (binary, options) {
   } else if (options.format === "wasm32-unknown-emscripten3") {
     instance = await Emscripten3(binary, options)
   } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
-    // instance = await Wasm64Emscripten(binary, options)
     if (typeof binary === "function") {
       options.instantiateWasm = binary
     } else {
@@ -127,7 +126,7 @@ module.exports = async function (binary, options) {
   if (instance.cleanupListeners) {
     instance.cleanupListeners()
   }
-  if (!options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
+  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15") {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }
 
@@ -142,7 +141,7 @@ module.exports = async function (binary, options) {
       /** end mock Math.random */
 
       /** start mock console.log */
-      //console.log = function () { return null }
+      console.log = function () { return null }
       /** end mock console.log */
 
       if (buffer) {
