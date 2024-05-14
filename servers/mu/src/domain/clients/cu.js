@@ -28,7 +28,7 @@ function fetchCronWith ({ CU_URL, logger }) {
   return async ({ processId, cursor }) => {
     let requestUrl = `${CU_URL}/cron/${processId}`
     if (cursor) {
-      requestUrl = `${CU_URL}/cron/${processId}?from=${cursor}`
+      requestUrl = `${CU_URL}/cron/${processId}?from=${cursor}&limit=50`
     }
     logger(`Fetching cron: ${requestUrl}`)
     return fetch(requestUrl).then(r => r.json()
