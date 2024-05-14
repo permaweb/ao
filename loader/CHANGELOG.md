@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.31](https://github.com/permaweb/ao/compare/loader@v0.0.30...loader@v0.0.31) (2024-05-14)
+
+
+### Features
+
+* add resizeHeap to Module ([3b3eeda](https://github.com/permaweb/ao/commit/3b3eeda1bced62585f75f3a7bdead544e5b5fff2))
+* add resizeHeap to Module ([10130d3](https://github.com/permaweb/ao/commit/10130d3071b6b280be35f04b4f2481add630e264))
+
 ## [0.0.30](https://github.com/permaweb/ao/compare/loader@v0.0.29...loader@v0.0.30) (2024-05-14)
 
 
