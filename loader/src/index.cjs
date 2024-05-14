@@ -1,7 +1,7 @@
 const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
-const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
+const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 
 /* eslint-enable */
 
@@ -86,6 +86,7 @@ const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
  */
 module.exports = async function (binary, options) {
   let instance = null
+  let doHandle = null
   if (options === null) {
     options = { format: 'wasm32-unknown-emscripten' }
   }
@@ -96,7 +97,41 @@ module.exports = async function (binary, options) {
   } else if (options.format === "wasm32-unknown-emscripten3") {
     instance = await Emscripten3(binary, options)
   } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
-    instance = await Wasm64Emscripten(binary, options)
+    // instance = await Wasm64Emscripten(binary, options)
+    if (typeof binary === "function") {
+      options.instantiateWasm = binary;
+    } else {
+      options.wasmBinary = binary;
+    }
+    options.AdmissableList = [
+      "dx3GrOQPV5Mwc1c-4HTsyq0s1TNugMf7XfIKJkyVQt8", // Random NFT metadata (1.7kb of JSON)
+      "XOJ8FBxa6sGLwChnxhF2L71WkKLSKq1aU5Yn5WnFLrY", // GPT-2 117M model.
+      "M-OzkyjxWhSvWYF87p0kvmkuAEEkvOzIj4nMNoSIydc", // GPT-2-XL 4-bit quantized model.
+      "kd34P4974oqZf2Db-hFTUiCipsU6CzbR6t-iJoQhKIo", // Phi-2 
+      "ISrbGzQot05rs_HKC08O_SmkipYQnqgB1yC3mjZZeEo", // Phi-3 Mini 4k Instruct
+      "sKqjvBbhqKvgzZT4ojP1FNvt4r_30cqjuIIQIr-3088", // CodeQwen 1.5 7B Chat q3
+      "Pr2YVrxd7VwNdg6ekC0NXWNKXxJbfTlHhhlrKbAd1dA", // Llama3 8B Instruct q4
+      "jbx-H6aq7b3BbNCHlK50Jz9L-6pz9qmldrYXMwjqQVI"  // Llama3 8B Instruct q8
+    ]
+
+    // options.WeaveDrive
+    options.ARWEAVE = 'https://arweave.net'
+    options.mode = "test"
+    options.blockHeight = 100
+    options.spawn = {
+      "Scheduler": "TEST_SCHED_ADDR"
+    }
+    options.process = {
+      id: "TEST_PROCESS_ID",
+      owner: "TEST_PROCESS_OWNER",
+      tags: [
+        { name: "Extension", value: "Weave-Drive" }
+      ]
+    }
+
+    instance = await Wasm64(options)
+
+    doHandle = instance.cwrap('handle', 'string', ['string', 'string'], { async: true })
   }
 
   /**
@@ -112,10 +147,15 @@ module.exports = async function (binary, options) {
    * So we immediately remove any listeners added by Module,
    * in order to prevent memory leaks
    */
-  instance.cleanupListeners()
-  const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
+  if (instance.cleanupListeners) {
+    instance.cleanupListeners()
+  }
+  if (!options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
+    doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
+  }
 
-  return (buffer, msg, env) => {
+
+  return async (buffer, msg, env) => {
     const originalRandom = Math.random
     // const OriginalDate = Date
     const originalLog = console.log
@@ -125,7 +165,7 @@ module.exports = async function (binary, options) {
       /** end mock Math.random */
 
       /** start mock console.log */
-      console.log = function () { return null }
+      //console.log = function () { return null }
       /** end mock console.log */
 
       if (buffer) {
@@ -152,8 +192,8 @@ module.exports = async function (binary, options) {
         }
         msg.Data = uint8ArrayToBase64(msg.Data)
       }
-
-      const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
+      const res = await doHandle(JSON.stringify(msg), JSON.stringify(env))
+      const { ok, response } = JSON.parse(res)
       if (!ok) throw response
 
       /** unmock functions */
