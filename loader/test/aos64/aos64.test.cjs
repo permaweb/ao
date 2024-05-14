@@ -18,11 +18,21 @@ describe('AOS-Llama+VFS Tests', async () => {
       {
         Id: 'FOO',
         Owner: 'tom',
-        Target: 'FOO',
+        Target: 'AOS',
         Tags: [
           { name: 'Action', value: 'Eval' }
         ],
-        Data: '1 + 1',
+        Data: `
+  local result = ""
+  local Llama = require('llama')
+  Llama.load('/data/ISrbGzQot05rs_HKC08O_SmkipYQnqgB1yC3mjZZeEo')
+  Llama.setPrompt([[<|user|>Tell me a great story<|assistant|>]])
+  for i = 0, 10, 1 do
+    local token = Llama.next()
+    result = result .. token
+  end
+  return result
+        `,
         Module: '1234',
         ['Block-Height']: '1000'
       },
@@ -30,54 +40,7 @@ describe('AOS-Llama+VFS Tests', async () => {
         Process: { Id: 'ctr-id-456', Tags: [] }
       }
     )
-    console.log(result)
+    console.log(result.Output)
     assert.ok(true)
   })
 })
-
-function getLua(model, len, prompt) {
-  if (!prompt) {
-    prompt = "Tell me a story."
-  }
-  return getEval(`
-  local Llama = require("llama")
-  io.stderr:write([[Loading model...\n]])
-  Llama.load('/data/${model}')
-  io.stderr:write([[Loaded! Setting prompt...\n]])
-  Llama.setPrompt([[${prompt}]])
-  local result = ""
-  io.stderr:write([[Running...\n]])
-  for i = 0, ${len.toString()}, 1 do
-    local token = Llama.next()
-    result = result .. token
-    io.stderr:write([[Got token: ]] .. token .. [[\n\n]])
-  end
-  return result`);
-}
-
-function getEval(expr) {
-  return {
-    Id: '1',
-    Owner: 'TOM',
-    Module: 'FOO',
-    From: 'foo',
-    'Block-Height': '1000',
-    Timestamp: Date.now(),
-    Tags: [
-      { name: 'Action', value: 'Eval' }
-    ],
-    Data: expr
-  }
-}
-
-function getEnv() {
-  return {
-    Process: {
-      Id: 'AOS',
-      Owner: 'TOM',
-      Tags: [
-        { name: 'Name', value: 'Thomas' }
-      ]
-    }
-  }
-}

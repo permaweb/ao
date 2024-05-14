@@ -28,6 +28,8 @@ var Module = (() => {
         },
         isEmpty: () => Module.gas.used > Module.gas.limit,
       };
+
+      console.log('Module: ', JSON.stringify(Module.process))
       var readyPromiseResolve, readyPromiseReject;
 
       var readyPromise = new Promise((resolve, reject) => {

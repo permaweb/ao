@@ -103,7 +103,7 @@ module.exports = async function (binary, options) {
     } else {
       options.wasmBinary = binary;
     }
-    options.AdmissableList = [
+    options.admissableList = [
       "dx3GrOQPV5Mwc1c-4HTsyq0s1TNugMf7XfIKJkyVQt8", // Random NFT metadata (1.7kb of JSON)
       "XOJ8FBxa6sGLwChnxhF2L71WkKLSKq1aU5Yn5WnFLrY", // GPT-2 117M model.
       "M-OzkyjxWhSvWYF87p0kvmkuAEEkvOzIj4nMNoSIydc", // GPT-2-XL 4-bit quantized model.
@@ -130,6 +130,9 @@ module.exports = async function (binary, options) {
     }
 
     instance = await Wasm64(options)
+
+    await instance['FS_createPath']('/', 'data')
+    await instance['FS_createDataFile']('/', 'data/1', Buffer.from('HELLO WORLD'), true, false, false)
 
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'], { async: true })
   }
@@ -177,22 +180,8 @@ module.exports = async function (binary, options) {
        */
       instance.gas.refill()
 
-      // Sending binary data to AOS is best done with base64
-      // You do have to decode it from base64 in lua, but that can
-      // be done with require('.base64').decode(msg.Data)
-      //
-      // if application/octet-stream convert to base64
-      if (msg.Tags.find(t => t.name == 'Content-Type')?.value == 'application/octet-stream') {
-        function uint8ArrayToBase64(uint8Array) {
-          // Convert Uint8Array to a binary string. Each byte is converted to a char.
-          const binaryString = new Uint8Array(uint8Array).reduce((acc, byte) => acc + String.fromCharCode(byte), '');
-
-          // Encode the binary string to Base64 using btoa
-          return btoa(binaryString);
-        }
-        msg.Data = uint8ArrayToBase64(msg.Data)
-      }
       const res = await doHandle(JSON.stringify(msg), JSON.stringify(env))
+
       const { ok, response } = JSON.parse(res)
       if (!ok) throw response
 
