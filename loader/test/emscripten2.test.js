@@ -140,7 +140,7 @@ describe('loader', async () => {
     const wasmBinary = fs.readFileSync('./test/aos/process.wasm')
 
     const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten2', computeLimit: 9_000_000_000_000 })
-    const mainResult = handle(null,
+    const mainResult = await handle(null,
       {
         Owner: 'tom',
         Target: 'FOO',
@@ -171,7 +171,7 @@ describe('loader', async () => {
     assert.ok(true)
 
     const nextHandle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten2' })
-    const nextResult = nextHandle(mainResult.Memory,
+    const nextResult = await nextHandle(mainResult.Memory,
       {
         Owner: 'tom',
         Target: 'FOO',
