@@ -97,7 +97,7 @@ module.exports = function weaveDrive(mod, FS) {
         //console.log("WeaveDrive: Satisfied request with cache. Returning...")
         return bytes_read
       }
-      console.log("WeaveDrive: Read from cache: ", bytes_read, " Remaining to read: ", to_read)
+      //console.log("WeaveDrive: Read from cache: ", bytes_read, " Remaining to read: ", to_read)
 
       const chunk_download_sz = Math.max(to_read, CACHE_SZ)
       const to = Math.min(stream.node.total_size, stream.position + chunk_download_sz);

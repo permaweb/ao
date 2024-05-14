@@ -25,7 +25,7 @@ describe('AOS-Llama+VFS Tests', async () => {
         Data: `
   local result = ""
   local Llama = require('llama')
-  Llama.load('/data/ISrbGzQot05rs_HKC08O_SmkipYQnqgB1yC3mjZZeEo')
+  Llama.load('/data/kd34P4974oqZf2Db-hFTUiCipsU6CzbR6t-iJoQhKIo')
   Llama.setPrompt([[<|user|>Tell me a great story<|assistant|>]])
   for i = 0, 10, 1 do
     local token = Llama.next()
