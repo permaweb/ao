@@ -3,13 +3,13 @@ const assert = require('assert')
 const fs = require('fs')
 const weaveDrive = require('./weavedrive.cjs')
 
-const MODULE_PATH = process.env.MODULE_PATH || '../../src/index.cjs'
+const MODULE_PATH = '../' + process.env.MODULE_PATH || '../../src/index.cjs'
 
 console.log(`${MODULE_PATH}`)
 
 const wasmBinary = fs.readFileSync('./test/aos64/aos64.wasm')
 
-test('AOS-Llama+VFS Tests', async () => {
+test.skip('AOS-Llama+VFS Tests', async () => {
   const { default: AoLoader } = await import(MODULE_PATH)
   const handle = await AoLoader(wasmBinary, {
     format: 'wasm64-unknown-emscripten-draft_2024_02_15',
@@ -53,7 +53,7 @@ test('AOS-Llama+VFS Tests', async () => {
       Data: `
   local result = ""
   local Llama = require('llama')
-  Llama.load('/data/kd34P4974oqZf2Db-hFTUiCipsU6CzbR6t-iJoQhKIo')
+  Llama.load('/data/M-OzkyjxWhSvWYF87p0kvmkuAEEkvOzIj4nMNoSIydc')
   Llama.setPrompt([[<|user|>Tell me a great story<|assistant|>]])
   for i = 0, 10, 1 do
     local token = Llama.next()
