@@ -145,7 +145,10 @@ module.exports = async function (binary, options) {
       /** end mock console.log */
 
       if (buffer) {
-        if (instance.HEAPU8.byteLength < buffer.byteLength) instance.resizeHeap(buffer.byteLength)
+        if (instance.HEAPU8.byteLength < buffer.byteLength) {
+          console.log("RESIZE HEAP")
+          instance.resizeHeap(buffer.byteLength)
+        }
         instance.HEAPU8.set(buffer)
       }
       /**

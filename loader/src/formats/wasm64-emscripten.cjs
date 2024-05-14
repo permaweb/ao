@@ -5422,7 +5422,11 @@ var Module = (() => {
 
       run();
 
+
+
       moduleRtn = readyPromise;
+
+      Module.resizeHeap = _emscripten_resize_heap;
 
       for (const prop of Object.keys(Module)) {
         if (!(prop in moduleArg)) {
@@ -5434,8 +5438,6 @@ var Module = (() => {
           });
         }
       }
-
-      moduleRtn.resizeHeap = _emscripten_resize_heap;
 
       return moduleRtn;
     }
