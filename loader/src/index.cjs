@@ -99,40 +99,14 @@ module.exports = async function (binary, options) {
   } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
     // instance = await Wasm64Emscripten(binary, options)
     if (typeof binary === "function") {
-      options.instantiateWasm = binary;
+      options.instantiateWasm = binary
     } else {
-      options.wasmBinary = binary;
-    }
-    options.admissableList = [
-      "dx3GrOQPV5Mwc1c-4HTsyq0s1TNugMf7XfIKJkyVQt8", // Random NFT metadata (1.7kb of JSON)
-      "XOJ8FBxa6sGLwChnxhF2L71WkKLSKq1aU5Yn5WnFLrY", // GPT-2 117M model.
-      "M-OzkyjxWhSvWYF87p0kvmkuAEEkvOzIj4nMNoSIydc", // GPT-2-XL 4-bit quantized model.
-      "kd34P4974oqZf2Db-hFTUiCipsU6CzbR6t-iJoQhKIo", // Phi-2 
-      "ISrbGzQot05rs_HKC08O_SmkipYQnqgB1yC3mjZZeEo", // Phi-3 Mini 4k Instruct
-      "sKqjvBbhqKvgzZT4ojP1FNvt4r_30cqjuIIQIr-3088", // CodeQwen 1.5 7B Chat q3
-      "Pr2YVrxd7VwNdg6ekC0NXWNKXxJbfTlHhhlrKbAd1dA", // Llama3 8B Instruct q4
-      "jbx-H6aq7b3BbNCHlK50Jz9L-6pz9qmldrYXMwjqQVI"  // Llama3 8B Instruct q8
-    ]
-
-    // options.WeaveDrive
-    options.ARWEAVE = 'https://arweave.net'
-    options.mode = "test"
-    options.blockHeight = 100
-    options.spawn = {
-      "Scheduler": "TEST_SCHED_ADDR"
-    }
-    options.process = {
-      id: "TEST_PROCESS_ID",
-      owner: "TEST_PROCESS_OWNER",
-      tags: [
-        { name: "Extension", value: "Weave-Drive" }
-      ]
+      options.wasmBinary = binary
     }
 
     instance = await Wasm64(options)
 
     await instance['FS_createPath']('/', 'data')
-    await instance['FS_createDataFile']('/', 'data/1', Buffer.from('HELLO WORLD'), true, false, false)
 
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'], { async: true })
   }
