@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, defaultTo, evolve, head, identity, map, omit, path, prop, transduce } from 'ramda'
+import { always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
@@ -467,6 +467,7 @@ export function findLatestProcessMemoryWith ({
   queryCheckpointGateway,
   loadTransactionData,
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+  IGNORE_ARWEAVE_CHECKPOINTS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -475,6 +476,9 @@ export function findLatestProcessMemoryWith ({
   findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
   readCheckpointFile = fromPromise(readCheckpointFile)
   loadTransactionData = fromPromise(loadTransactionData)
+
+  const IGNORED_CHECKPOINTS = new Set(IGNORE_ARWEAVE_CHECKPOINTS)
+  const isCheckpointIgnored = (id) => !!IGNORED_CHECKPOINTS.size && IGNORED_CHECKPOINTS.has(id)
 
   const queryCheckpoints = queryCheckpointsWith({ queryGateway, queryCheckpointGateway, logger })
 
@@ -517,6 +521,11 @@ export function findLatestProcessMemoryWith ({
     return transduce(
       compose(
         map(prop('node')),
+        filter((node) => {
+          const isIgnored = isCheckpointIgnored(node.id)
+          if (isIgnored) logger('Encountered Ignored Checkpoint "%s" from Arweave. Skipping...', node.id)
+          return !isIgnored
+        }),
         map((node) => {
           const tags = parseTags(node.tags)
           return {
@@ -655,11 +664,16 @@ export function findLatestProcessMemoryWith ({
         return of(latest.file)
           // { Memory: { id, encoding }, evaluation }
           .chain(readCheckpointFile)
+          .chain((checkpoint) => {
+            if (!isCheckpointIgnored(checkpoint.Memory.id)) return Resolved(checkpoint)
+            logger('Encountered Ignored Checkpoint "%s" from file. Skipping...', checkpoint.Memory.id)
+            return Rejected(args)
+          })
           .chain((checkpoint) =>
             of(checkpoint.Memory)
-              .chain((id) => {
+              .chain((onArweave) => {
                 if (omitMemory) return Resolved(null)
-                return downloadCheckpointFromArweave(id)
+                return downloadCheckpointFromArweave(onArweave)
               })
               /**
                * Finally map the Checkpoint to the expected shape

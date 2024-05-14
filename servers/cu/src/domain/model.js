@@ -110,12 +110,11 @@ export const domainConfigSchema = z.object({
    * An array of process ids that should not use Checkpoints
    * on Arweave.
    */
-  PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: z.preprocess((val) => {
-    if (Array.isArray(val)) return val
-    // ',' delimited string
-    if (typeof val === 'string') return val.split(',').map((s) => s.trim())
-    return val
-  }, z.array(z.string())),
+  PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
+  /**
+   * An array of checkpoint ids that should not be used
+   */
+  IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
   /**
    * The directory to cache Checkpoints created on Arweave
    */

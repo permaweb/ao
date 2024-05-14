@@ -92,6 +92,7 @@ export const createApis = async (ctx) => {
 
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
+  ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Allowing only process owners [ %s ]', ctx.ALLOW_OWNERS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
@@ -169,6 +170,7 @@ export const createApis = async (ctx) => {
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+      IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
       logger
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
