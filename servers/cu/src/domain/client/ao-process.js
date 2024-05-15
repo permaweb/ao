@@ -642,6 +642,11 @@ export function findLatestProcessMemoryWith ({
   function maybeFile (args) {
     const { processId, omitMemory } = args
 
+    if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
+      logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query file checkpoints...', processId)
+      return Rejected(args)
+    }
+
     /**
      * Attempt to find the latest checkpoint in a file
      */
