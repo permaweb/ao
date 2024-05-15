@@ -7,6 +7,7 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
+import AsyncLock from 'async-lock'
 
 import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
@@ -110,6 +111,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
     },
     set: (key, value) => {
       clearTtlTimer(key)
+      clearDrainToFileTimer(key)
       /**
        * Calling delete will trigger the disposeAfter callback on the cache
        * to be called
@@ -117,6 +119,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
       const ttl = setTimeout(() => {
         data.delete(key)
         ttlTimers.delete(key)
+        clearDrainToFileTimer(key)
       }, TTL).unref()
 
       ttlTimers.set(key, ttl)
@@ -132,7 +135,6 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
        * a file
        */
       if (value.Memory && DRAIN_TO_FILE_THRESHOLD) {
-        clearDrainToFileTimer(key)
         const drainToFile = setTimeout(async () => {
           const file = await writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
           /**
@@ -364,38 +366,32 @@ export function writeCheckpointFileWith ({ DIR, writeFile }) {
   }
 }
 
+/**
+ * TODO: should we inject this lock?
+ */
+const lock = new AsyncLock()
 export function readProcessMemoryFileWith ({ DIR, readFile }) {
   return (name) => {
-    const { stop: stopTimer } = timer('readProcessMemoryFile', { name })
-    return readFile(join(DIR, name))
-      .finally(stopTimer)
+    return lock.acquire(name, () => {
+      const { stop: stopTimer } = timer('readProcessMemoryFile', { name })
+      return readFile(join(DIR, name))
+        .finally(stopTimer)
+    })
   }
 }
 
 export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
-  const pendingWrites = new Map()
-
   return ({ Memory, evaluation }) => {
     const file = `state-${evaluation.processId}.dat`
 
-    /**
-     * Wait on the current write to resolve, before beginning to write.
-     * This prevent multiple concurrent writes to the same state file,
-     * and corrupting the state.
-     */
-    return (pendingWrites.get(file) || Promise.resolve())
-      .then(() => {
-        const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
-        const path = join(DIR, file)
+    return lock.acquire(file, () => {
+      const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
+      const path = join(DIR, file)
 
-        const pending = writeFile(path, Memory)
-          .then(() => file)
-          .finally(stopTimer)
-        pendingWrites.set(file, pending)
-
-        return pending
-      })
-      .finally(() => pendingWrites.delete(file))
+      return writeFile(path, Memory)
+        .then(() => file)
+        .finally(stopTimer)
+    })
   }
 }
 

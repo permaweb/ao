@@ -90,6 +90,11 @@ export const createApis = async (ctx) => {
     readFile
   })
 
+  const writeProcessMemoryFile = AoProcessClient.writeProcessMemoryFileWith({
+    DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
+    writeFile
+  })
+
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
@@ -131,10 +136,7 @@ export const createApis = async (ctx) => {
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
     DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
-    writeProcessMemoryFile: AoProcessClient.writeProcessMemoryFileWith({
-      DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
-      writeFile
-    }),
+    writeProcessMemoryFile,
     /**
      * Save the evicted process memory as a Checkpoint on Arweave
      */
