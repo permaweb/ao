@@ -1,7 +1,7 @@
 const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
-const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
+const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 
 /* eslint-enable */
 
@@ -86,6 +86,7 @@ const Wasm64Emscripten = require('./formats/wasm64-unknown-emscripten.cjs')
  */
 module.exports = async function (binary, options) {
   let instance = null
+  let doHandle = null
   if (options === null) {
     options = { format: 'wasm32-unknown-emscripten' }
   }
@@ -96,7 +97,17 @@ module.exports = async function (binary, options) {
   } else if (options.format === "wasm32-unknown-emscripten3") {
     instance = await Emscripten3(binary, options)
   } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
-    instance = await Wasm64Emscripten(binary, options)
+    if (typeof binary === "function") {
+      options.instantiateWasm = binary
+    } else {
+      options.wasmBinary = binary
+    }
+
+    instance = await Wasm64(options)
+
+    await instance['FS_createPath']('/', 'data')
+
+    doHandle = instance.cwrap('handle', 'string', ['string', 'string'], { async: true })
   }
 
   /**
@@ -112,10 +123,15 @@ module.exports = async function (binary, options) {
    * So we immediately remove any listeners added by Module,
    * in order to prevent memory leaks
    */
-  instance.cleanupListeners()
-  const doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
+  if (instance.cleanupListeners) {
+    instance.cleanupListeners()
+  }
+  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15") {
+    doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
+  }
 
-  return (buffer, msg, env) => {
+
+  return async (buffer, msg, env) => {
     const originalRandom = Math.random
     // const OriginalDate = Date
     const originalLog = console.log
@@ -129,7 +145,10 @@ module.exports = async function (binary, options) {
       /** end mock console.log */
 
       if (buffer) {
-        if (instance.HEAPU8.byteLength < buffer.byteLength) instance.resizeHeap(buffer.byteLength)
+        if (instance.HEAPU8.byteLength < buffer.byteLength) {
+          console.log("RESIZE HEAP")
+          instance.resizeHeap(buffer.byteLength)
+        }
         instance.HEAPU8.set(buffer)
       }
       /**
@@ -137,23 +156,9 @@ module.exports = async function (binary, options) {
        */
       instance.gas.refill()
 
-      // Sending binary data to AOS is best done with base64
-      // You do have to decode it from base64 in lua, but that can
-      // be done with require('.base64').decode(msg.Data)
-      //
-      // if application/octet-stream convert to base64
-      if (msg.Tags.find(t => t.name == 'Content-Type')?.value == 'application/octet-stream') {
-        function uint8ArrayToBase64(uint8Array) {
-          // Convert Uint8Array to a binary string. Each byte is converted to a char.
-          const binaryString = new Uint8Array(uint8Array).reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+      const res = await doHandle(JSON.stringify(msg), JSON.stringify(env))
 
-          // Encode the binary string to Base64 using btoa
-          return btoa(binaryString);
-        }
-        msg.Data = uint8ArrayToBase64(msg.Data)
-      }
-
-      const { ok, response } = JSON.parse(doHandle(JSON.stringify(msg), JSON.stringify(env)))
+      const { ok, response } = JSON.parse(res)
       if (!ok) throw response
 
       /** unmock functions */

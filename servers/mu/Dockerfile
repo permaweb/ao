@@ -8,7 +8,6 @@ COPY ./package.json .
 COPY ./package-lock.json .
 COPY ./src ./src
 COPY ./entrypoint.sh ./entrypoint.sh
-COPY ./cranker ./cranker
 
 RUN chmod +x /usr/app/entrypoint.sh
 

@@ -60,13 +60,19 @@ impl From<std::num::ParseIntError> for StoreErrorType {
 
 pub struct StoreClient {
     pool: Pool<ConnectionManager<PgConnection>>,
+    read_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
 impl StoreClient {
     pub fn new() -> Result<Self, StoreErrorType> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let database_url = config.database_url;
+        let database_read_url = match config.database_read_url {
+            Some(u) => u,
+            None => database_url.clone()
+        };
         let manager = ConnectionManager::<PgConnection>::new(database_url);
+        let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
         let pool = Pool::builder()
             .test_on_check_out(true)
             .build(manager)
@@ -74,7 +80,15 @@ impl StoreClient {
                 StoreErrorType::DatabaseError("Failed to initialize connection pool.".to_string())
             })?;
 
-        Ok(StoreClient { pool })
+        let read_pool = Pool::builder()
+            .test_on_check_out(true)
+            .build(read_manager)
+            .map_err(|_| {
+                StoreErrorType::DatabaseError("Failed to initialize read connection pool.".to_string())
+            })?;
+        
+
+        Ok(StoreClient { pool, read_pool })
     }
 
     pub fn get_conn(
@@ -82,6 +96,15 @@ impl StoreClient {
     ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType>
     {
         self.pool.get().map_err(|_| {
+            StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string())
+        })
+    }
+
+    pub fn get_read_conn(
+        &self,
+    ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType>
+    {
+        self.read_pool.get().map_err(|_| {
             StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string())
         })
     }
@@ -125,7 +148,7 @@ impl DataStore for StoreClient {
 
     fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType> {
         use super::schema::processes::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         let db_process_result: Result<Option<DbProcess>, DieselError> = processes
             .filter(process_id.eq(process_id_in))
@@ -220,7 +243,7 @@ impl DataStore for StoreClient {
         limit: &Option<i32>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
         let mut query = messages.filter(process_id.eq(process_id_in)).into_boxed();
 
         // Apply 'from' timestamp filtering if 'from' is provided
@@ -273,7 +296,7 @@ impl DataStore for StoreClient {
 
     fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         /*
             get the oldest match. in the case of a message that has
@@ -299,7 +322,7 @@ impl DataStore for StoreClient {
 
     fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         // Get the latest DbMessage
         let latest_db_message_result = messages
@@ -351,7 +374,7 @@ impl DataStore for StoreClient {
         process_id_in: &str,
     ) -> Result<ProcessScheduler, StoreErrorType> {
         use super::schema::process_schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         let db_process_result: Result<Option<DbProcessScheduler>, DieselError> = process_schedulers
             .filter(process_id.eq(process_id_in))
@@ -413,7 +436,7 @@ impl DataStore for StoreClient {
 
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         let db_scheduler_result: Result<Option<DbScheduler>, DieselError> = schedulers
             .filter(row_id.eq(row_id_in))
@@ -436,7 +459,7 @@ impl DataStore for StoreClient {
 
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         let db_scheduler_result: Result<Option<DbScheduler>, DieselError> =
             schedulers.filter(url.eq(url_in)).first(conn).optional();
@@ -457,7 +480,7 @@ impl DataStore for StoreClient {
 
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_read_conn()?;
 
         match schedulers.order(row_id.asc()).load::<DbScheduler>(conn) {
             Ok(db_schedulers) => {

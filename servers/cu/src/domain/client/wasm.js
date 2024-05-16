@@ -45,17 +45,10 @@ export function isModuleComputeLimitSupportedWith ({ PROCESS_WASM_COMPUTE_MAX_LI
   }
 }
 
-export function isModuleFormatSupportedWith () {
-  /**
-   * TODO: should this be configurable?
-   * Or maybe exposed on AoLoader and injected here?
-   *
-   * For now, just hardcoding
-   */
-  const supportedFormats = [
-    'wasm32-unknown-emscripten',
-    'wasm32-unknown-emscripten2'
-  ]
+export function isModuleFormatSupportedWith ({ PROCESS_WASM_SUPPORTED_FORMATS }) {
+  return async ({ format }) => PROCESS_WASM_SUPPORTED_FORMATS.includes(format.trim())
+}
 
-  return async ({ format }) => supportedFormats.includes(format.trim())
+export function isModuleExtensionSupportedWith ({ PROCESS_WASM_SUPPORTED_EXTENSIONS }) {
+  return async ({ extension }) => PROCESS_WASM_SUPPORTED_EXTENSIONS.includes(extension.trim())
 }

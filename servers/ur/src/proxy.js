@@ -9,18 +9,19 @@ import httpProxy from 'http-proxy-node16'
 /**
  * TODO: we could inject these, but just keeping simple for now
  */
-import { determineHostWith } from './domain.js'
+import { determineHostWith, bailoutWith } from './domain.js'
 import { logger } from './logger.js'
 
 import { mountRoutesWithByAoUnit } from './routes/byAoUnit.js'
 
-export function proxyWith ({ aoUnit, hosts }) {
+export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
   const _logger = logger.child('proxy')
   _logger('Configuring to reverse proxy ao %s units...', aoUnit)
 
   const proxy = httpProxy.createProxyServer({})
 
-  const determineHost = determineHostWith({ hosts })
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners }) : undefined
+  const determineHost = determineHostWith({ hosts, bailout })
 
   async function trampoline (init) {
     let result = init
@@ -78,9 +79,9 @@ export function proxyWith ({ aoUnit, hosts }) {
            */
           const buffer = restreamBody ? await restreamBody(req) : undefined
 
-          return new Promise((resolve, reject) => {
-            const host = determineHost({ processId, failoverAttempt })
+          const host = await determineHost({ processId, failoverAttempt })
 
+          return new Promise((resolve, reject) => {
             /**
              * There are no more hosts to failover to -- we've tried them all
              */

@@ -4,9 +4,10 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, defaultTo, evolve, head, identity, map, omit, path, prop, transduce } from 'ramda'
+import { always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
+import AsyncLock from 'async-lock'
 
 import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
@@ -110,6 +111,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
     },
     set: (key, value) => {
       clearTtlTimer(key)
+      clearDrainToFileTimer(key)
       /**
        * Calling delete will trigger the disposeAfter callback on the cache
        * to be called
@@ -117,6 +119,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
       const ttl = setTimeout(() => {
         data.delete(key)
         ttlTimers.delete(key)
+        clearDrainToFileTimer(key)
       }, TTL).unref()
 
       ttlTimers.set(key, ttl)
@@ -132,9 +135,8 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
        * a file
        */
       if (value.Memory && DRAIN_TO_FILE_THRESHOLD) {
-        clearDrainToFileTimer(key)
         const drainToFile = setTimeout(async () => {
-          const file = await writeProcessMemoryFile(value)
+          const file = await writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
           /**
            * Update the cache entry with the file reference containing the memory
            * and remove the reference to the Memory, so that it can be GC'd.
@@ -169,6 +171,12 @@ export function loadProcessCacheUsage () {
     processes: processMemoryCache.lru.dump()
       .map(([key, entry]) => ({ process: key, size: entry.size }))
   }
+}
+
+export function isProcessOwnerSupportedWith ({ ALLOW_OWNERS }) {
+  const allowed = new Set(ALLOW_OWNERS)
+
+  return async (id) => !allowed.size || allowed.has(id)
 }
 
 const processDocSchema = z.object({
@@ -358,23 +366,32 @@ export function writeCheckpointFileWith ({ DIR, writeFile }) {
   }
 }
 
+/**
+ * TODO: should we inject this lock?
+ */
+const lock = new AsyncLock()
 export function readProcessMemoryFileWith ({ DIR, readFile }) {
   return (name) => {
-    const { stop: stopTimer } = timer('readProcessMemoryFile', { name })
-    return readFile(join(DIR, name))
-      .finally(stopTimer)
+    return lock.acquire(name, () => {
+      const { stop: stopTimer } = timer('readProcessMemoryFile', { name })
+      return readFile(join(DIR, name))
+        .finally(stopTimer)
+    })
   }
 }
 
 export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
   return ({ Memory, evaluation }) => {
     const file = `state-${evaluation.processId}.dat`
-    const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
-    const path = join(DIR, file)
 
-    return writeFile(path, Memory)
-      .then(() => file)
-      .finally(stopTimer)
+    return lock.acquire(file, () => {
+      const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
+      const path = join(DIR, file)
+
+      return writeFile(path, Memory)
+        .then(() => file)
+        .finally(stopTimer)
+    })
   }
 }
 
@@ -446,6 +463,7 @@ export function findLatestProcessMemoryWith ({
   queryCheckpointGateway,
   loadTransactionData,
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+  IGNORE_ARWEAVE_CHECKPOINTS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -454,6 +472,9 @@ export function findLatestProcessMemoryWith ({
   findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
   readCheckpointFile = fromPromise(readCheckpointFile)
   loadTransactionData = fromPromise(loadTransactionData)
+
+  const IGNORED_CHECKPOINTS = new Set(IGNORE_ARWEAVE_CHECKPOINTS)
+  const isCheckpointIgnored = (id) => !!IGNORED_CHECKPOINTS.size && IGNORED_CHECKPOINTS.has(id)
 
   const queryCheckpoints = queryCheckpointsWith({ queryGateway, queryCheckpointGateway, logger })
 
@@ -496,6 +517,11 @@ export function findLatestProcessMemoryWith ({
     return transduce(
       compose(
         map(prop('node')),
+        filter((node) => {
+          const isIgnored = isCheckpointIgnored(node.id)
+          if (isIgnored) logger('Encountered Ignored Checkpoint "%s" from Arweave. Skipping...', node.id)
+          return !isIgnored
+        }),
         map((node) => {
           const tags = parseTags(node.tags)
           return {
@@ -612,6 +638,11 @@ export function findLatestProcessMemoryWith ({
   function maybeFile (args) {
     const { processId, omitMemory } = args
 
+    if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
+      logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query file checkpoints...', processId)
+      return Rejected(args)
+    }
+
     /**
      * Attempt to find the latest checkpoint in a file
      */
@@ -634,11 +665,16 @@ export function findLatestProcessMemoryWith ({
         return of(latest.file)
           // { Memory: { id, encoding }, evaluation }
           .chain(readCheckpointFile)
+          .chain((checkpoint) => {
+            if (!isCheckpointIgnored(checkpoint.Memory.id)) return Resolved(checkpoint)
+            logger('Encountered Ignored Checkpoint "%s" from file. Skipping...', checkpoint.Memory.id)
+            return Rejected(args)
+          })
           .chain((checkpoint) =>
             of(checkpoint.Memory)
-              .chain((id) => {
+              .chain((onArweave) => {
                 if (omitMemory) return Resolved(null)
-                return downloadCheckpointFromArweave(id)
+                return downloadCheckpointFromArweave(onArweave)
               })
               /**
                * Finally map the Checkpoint to the expected shape
@@ -1477,7 +1513,7 @@ export function saveCheckpointWith ({
 
         logger(
           'Creating Checkpoint for evaluation: %j',
-          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding: 'gzip' }
         )
         /**
          * Construct and sign an ao Checkpoint data item
@@ -1491,7 +1527,7 @@ export function saveCheckpointWith ({
               logger(
                 'Successfully uploaded Checkpoint DataItem for process "%s" on evaluation "%j"',
                 processId,
-                { checkpointTxId: res.id, processId, nonce, timestamp, cron }
+                { checkpointTxId: res.id, processId, nonce, timestamp, cron, encoding: 'gzip' }
               )
               /**
                * Track that we've recently created a checkpoint for this

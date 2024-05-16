@@ -353,7 +353,8 @@ describe('ao-process', () => {
         queryCheckpointGateway: async () => assert.fail('should not call if found in cache'),
         loadTransactionData: async () => assert.fail('should not call if found in cache'),
         logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+        IGNORE_ARWEAVE_CHECKPOINTS: []
       }
       const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
 
@@ -501,7 +502,8 @@ describe('ao-process', () => {
           return new Response(Readable.toWeb(Readable.from(zipped)))
         },
         logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+        IGNORE_ARWEAVE_CHECKPOINTS: []
       }
       const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
 
@@ -607,7 +609,8 @@ describe('ao-process', () => {
           return new Response(Readable.toWeb(Readable.from(zipped)))
         },
         logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+        IGNORE_ARWEAVE_CHECKPOINTS: []
       }
       const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
 
@@ -630,6 +633,29 @@ describe('ao-process', () => {
 
         test('when targeting latest', async () => {
           const { Memory, ...res } = await findLatestProcessMemory(latestTarget)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'arweave',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
+        test('file checkpoint points to ignored checkpoint on arweave', async () => {
+          const findLatestProcessMemory = findLatestProcessMemoryWith({
+            ...deps,
+            findCheckpointFileBefore: async () => ({ file: 'foobar.json' }),
+            readCheckpointFile: async () => ({ Memory: { id: 'file_ignored' }, evaulation: cachedEval }),
+            IGNORE_ARWEAVE_CHECKPOINTS: ['file_ignored']
+          })
+
+          const { Memory, ...res } = await findLatestProcessMemory(target)
 
           assert.ok(Memory)
           assert.deepStrictEqual(res, {
@@ -719,6 +745,7 @@ describe('ao-process', () => {
             data: {
               transactions: {
                 edges: [
+                  edges[0],
                   {
                     ...edges[0],
                     node: {
@@ -742,6 +769,41 @@ describe('ao-process', () => {
         const res = await findLatestProcessMemory(target)
 
         assert.deepStrictEqual(res.ordinate, '12')
+      })
+
+      test('should use the latest retrieved checkpoint that is NOT ignored', async () => {
+        const findLatestProcessMemory = findLatestProcessMemoryWith({
+          ...deps,
+          queryGateway: async () => ({
+            data: {
+              transactions: {
+                edges: [
+                  edges[0],
+                  {
+                    node: {
+                      ...edges[0].node,
+                      // latest is ignored, so use earlier found checkpoint
+                      id: 'ignored',
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: '12' },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }),
+          IGNORE_ARWEAVE_CHECKPOINTS: ['ignored']
+        })
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.ordinate, '11')
       })
 
       test('should retry querying the gateway', async () => {
@@ -841,7 +903,8 @@ describe('ao-process', () => {
           return new Response(Readable.toWeb(Readable.from(zipped)))
         },
         logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+        IGNORE_ARWEAVE_CHECKPOINTS: []
       }
       const COLDSTART = {
         src: 'cold_start',
@@ -913,7 +976,8 @@ describe('ao-process', () => {
             return new Response(Readable.toWeb(Readable.from(zipped)))
           },
           logger,
-          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+          IGNORE_ARWEAVE_CHECKPOINTS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
@@ -949,7 +1013,8 @@ describe('ao-process', () => {
             return new Response(Readable.toWeb(Readable.from(zipped)))
           },
           logger,
-          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+          IGNORE_ARWEAVE_CHECKPOINTS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemoryWith(deps)

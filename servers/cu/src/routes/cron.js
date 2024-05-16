@@ -24,11 +24,7 @@ const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
   from: z.coerce.string().optional(),
   to: z.coerce.string().optional(),
-  /**
-   * Default to just a large number, which will effectively
-   * fetch all evaluations in the range within a single page
-   */
-  limit: z.coerce.number().default(Number.MAX_SAFE_INTEGER - 10)
+  limit: z.coerce.number().default(500)
 })
 
 export const withCronRoutes = app => {
@@ -50,6 +46,20 @@ export const withCronRoutes = app => {
         } = req
 
         const input = inputSchema.parse({ processId, from, to, limit })
+
+        /**
+         * The absolute max page size is 1000
+         *
+         * The CRON may perform much more work than 1000,
+         * but then will only gather the results up to the page
+         * size, allowing the monitor to paginate over the previously
+         * computed results, while then incrementally moving forward.
+         *
+         * This helps prevent a long-unmonitored cron from attempting
+         * to respond with massive pages, which can cause performance
+         * issues for server, as well as client (typically a MU)
+         */
+        input.limit = Math.min(input.limit, 1000)
 
         await readCronResults(input)
           .map(({ evaluations }) => res.send(cronConnection({

@@ -1,5 +1,6 @@
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+import { fromPromise } from 'hyper-async'
 
 import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
@@ -131,5 +132,18 @@ export const createApis = (ctx) => {
     logger: monitorProcessLogger
   })
 
-  return { sendDataItem, crankMsgs, monitorProcess, stopMonitorProcess, sendAssign }
+  const cronLogger = logger.child('fetchCron')
+  const fetchCron = fromPromise(cuClient.fetchCronWith({ CU_URL, logger: cronLogger }))
+
+  return {
+    sendDataItem,
+    crankMsgs,
+    monitorProcess,
+    stopMonitorProcess,
+    sendAssign,
+    fetchCron,
+    processMsg,
+    processAssign,
+    processSpawn
+  }
 }

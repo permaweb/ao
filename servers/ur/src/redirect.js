@@ -1,16 +1,17 @@
 /**
  * TODO: we could inject these, but just keeping simple for now
  */
-import { determineHostWith } from './domain.js'
+import { determineHostWith, bailoutWith } from './domain.js'
 import { logger } from './logger.js'
 
 import { mountRoutesWithByAoUnit } from './routes/byAoUnit.js'
 
-export function redirectWith ({ aoUnit, hosts }) {
+export function redirectWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
   const _logger = logger.child('redirect')
   _logger('Configuring to redirect ao %s units...', aoUnit)
 
-  const determineHost = determineHostWith({ hosts })
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners }) : undefined
+  const determineHost = determineHostWith({ hosts, bailout })
 
   /**
    * A middleware that will redirect the request to the host determined
@@ -19,7 +20,7 @@ export function redirectWith ({ aoUnit, hosts }) {
   const redirectHandler = ({ processIdFromRequest }) => {
     return async (req, res) => {
       const processId = await processIdFromRequest(req)
-      const host = determineHost({ processId })
+      const host = await determineHost({ processId })
 
       _logger('Redirecting process %s to host %s', processId, host)
 
