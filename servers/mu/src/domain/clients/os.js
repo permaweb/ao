@@ -11,6 +11,8 @@ const mutex = new Mutex()
 */
 const procs = {}
 
+let isInit = false
+
 /*
   When the server starts we initialize the processes
   that were being monitored before from a file. If the
@@ -18,10 +20,16 @@ const procs = {}
   will start up again after deployment.
 */
 function initProcsWith ({ PROC_FILE_PATH }) {
-  return () => {
+  return async () => {
+    if (isInit) return
     if (!fs.existsSync(PROC_FILE_PATH)) return
     const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
-    const obj = JSON.parse(data)
+    /**
+     * This .replace is used to fix corrupted json files
+     * it should be removed later now that the corruption
+     * issue is solved
+     */
+    const obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
     /*
         start new os procs when the server starts because
         the server has either restarted or been redeployed.
@@ -33,11 +41,20 @@ function initProcsWith ({ PROC_FILE_PATH }) {
 
       if (child && child.pid) {
         procs[key] = child.pid
-        saveProcs(PROC_FILE_PATH).then(() => console.log(`Cron process started ${key} ${child.pid}`))
+        console.log(`Initializing cron for ${key}`)
       } else {
         throw new Error('Failed to execute command')
       }
     })
+
+    const release = await mutex.acquire()
+    try {
+      await saveProcs(PROC_FILE_PATH)
+    } finally {
+      release()
+    }
+
+    isInit = true
   }
 }
 

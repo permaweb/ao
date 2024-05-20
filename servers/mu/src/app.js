@@ -22,7 +22,9 @@ export const server = pipe(
       server.close(() => logger('Server Shut Down'))
     })
 
-    initCronProcs()
+    initCronProcs().then(() => {
+      logger('Crons initialized')
+    })
 
     return server
   }
