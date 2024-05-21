@@ -19,7 +19,7 @@ import { queryWith } from './query.js'
  * @property {Result} node
  * @property {string} cursor
  *
- * @typedef Response
+ * @typedef ResultsResponse
  * @property {PageInfo} pageInfo
  * @property {Edge[]} edges
  *
@@ -32,7 +32,7 @@ import { queryWith } from './query.js'
  *
  * @callback ReadResults
  * @param {ReadResultsArgs} args
- * @returns {Promise<MessageResult>} result
+ * @returns {Promise<ResultsResponse>} result
  *
  * @returns {ReadResults}
  */
