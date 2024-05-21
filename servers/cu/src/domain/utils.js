@@ -368,7 +368,7 @@ export const backoff = (
       .catch((err) => {
         // Reached max number of retries
         if (retry >= maxRetries) {
-          log(`(${name}) Reached max number of retries: ${delay}. Bubbling err`)
+          log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
           throw err
         }
 
