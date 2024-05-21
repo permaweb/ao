@@ -70,6 +70,9 @@ impl<'a> Builder<'a> {
             Tag::new(&"Hash-Chain".to_string(), &schedule_info.hash_chain()),
             Tag::new(&"Block-Height".to_string(), &height.to_string()),
             Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
+            Tag::new(&"Data-Protocol".to_string(), &"ao".to_string()),
+            Tag::new(&"Type".to_string(), &"Assignment".to_string()),
+            Tag::new(&"Variant".to_string(), &"ao.TN.1".to_string()),
         ];
 
         /*
