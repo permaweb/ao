@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.54](https://github.com/permaweb/ao/compare/connect@v0.0.53...connect@v0.0.54) (2024-05-21)
+
+
+### Features
+
+* **ethereum signer:** added ethereum data item node signer ([36cb926](https://github.com/permaweb/ao/commit/36cb92634dc187594618418c22dd736839da8415))
+
+
+### Bug Fixes
+
+* **arbundles:** pin arbunles at 0.11.0 ([d2cdc44](https://github.com/permaweb/ao/commit/d2cdc444e46c27add1caaa04af74cd1626a6a90e))
+* **connect:** use correct type in results JSDoc [#714](https://github.com/permaweb/ao/issues/714) ([6a9d14f](https://github.com/permaweb/ao/commit/6a9d14f7ae158c5d6b24f37dae2d53d3941898f4))
+* **connect:** warp arbundles - clean out unused exports - remove polyfills from build ([695eba1](https://github.com/permaweb/ao/commit/695eba16570b3974ec2aa6109dca7bede35d5632))
+* **signers:** remove eth and sol signers and deps ([dd94480](https://github.com/permaweb/ao/commit/dd9448098ff49a8bf3d41965db9dbe5dffc09a75))
+* **tests:** hard code private keys in tests to remove randomness ([1fc954e](https://github.com/permaweb/ao/commit/1fc954eeb47b26f02139f858f1424ce7e86c7c35))
+* **wallets:** add wallet signers for solana and ethereum in node env ([25cd44e](https://github.com/permaweb/ao/commit/25cd44ef7beb920c9685dc1c0b9806690f83b1f0))
+
 ## [0.0.53](https://github.com/permaweb/ao/compare/connect@v0.0.52...connect@v0.0.53) (2024-04-26)
 
 
