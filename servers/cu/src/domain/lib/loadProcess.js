@@ -187,11 +187,10 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
       .chain(checkProcessOwner)
 }
 
-function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, loadLatestSnapshot, saveLatestProcessMemory, logger }) {
+function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, saveLatestProcessMemory, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   // TODO: wrap in zod schemas to enforce contract
   findLatestProcessMemory = fromPromise(findLatestProcessMemory)
-  loadLatestSnapshot = fromPromise(loadLatestSnapshot)
   saveLatestProcessMemory = fromPromise(saveLatestProcessMemory)
 
   function maybeExactEvaluation (ctx) {
