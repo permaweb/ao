@@ -21,11 +21,17 @@ pub struct TxStatus {
     pub number_of_confirmations: i32,
 }
 
+#[derive(Deserialize)]
+pub struct GatewayTx {
+    pub id: String,
+}
+
 #[async_trait]
 pub trait Gateway: Send + Sync {
     async fn check_head(&self, tx_id: String) -> Result<bool, String>;
     async fn network_info(&self) -> Result<NetworkInfo, String>;
     async fn status(&self, tx_id: &String) -> Result<TxStatus, String>;
+    async fn gql_tx(&self, tx_id: &String) -> Result<GatewayTx, String>;
 }
 
 pub trait Wallet: Send + Sync {

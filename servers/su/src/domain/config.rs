@@ -24,9 +24,7 @@ impl AoConfig {
         };
         let database_read_url = match env::var("DATABASE_READ_URL") {
             Ok(val) => Some(val),
-            Err(_e) => {
-                None
-            }
+            Err(_e) => None,
         };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
