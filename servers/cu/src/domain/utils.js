@@ -392,3 +392,12 @@ export const backoff = (
 
   return action(0, delay)
 }
+
+/**
+ * TODO: this could probably be cleaner
+ */
+export async function strFromFetchError (err) {
+  if (err instanceof TypeError) return (err.cause ? err.cause.message : err.message) || 'Unknown TypeError'
+  if (err instanceof Response) return `${err.status}: ${await err.text()}`
+  return err.message || 'Unknown Error'
+}
