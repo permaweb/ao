@@ -268,7 +268,14 @@ impl<'a> Builder<'a> {
                     )),
                 }
             }
-            None => Ok(()),
+            None => {
+                /*
+                    If this throws an error then the tx
+                    is not available on the gateway
+                */
+                self.gateway.gql_tx(&tx_id).await?;
+                Ok(())
+            }
         }
     }
 }
@@ -276,7 +283,7 @@ impl<'a> Builder<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::core::dal::NetworkInfo;
+    use crate::domain::core::dal::{GatewayTx, NetworkInfo};
     use async_trait::async_trait;
     use std::sync::Arc;
 
@@ -298,6 +305,12 @@ mod tests {
             Ok(TxStatus {
                 block_height: 0,
                 number_of_confirmations: 0,
+            })
+        }
+
+        async fn gql_tx(&self, _tx_id: &String) -> Result<GatewayTx, String> {
+            Ok(GatewayTx {
+                id: "id".to_string(),
             })
         }
     }

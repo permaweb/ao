@@ -1,8 +1,9 @@
 use crate::domain::config::AoConfig;
-use crate::domain::core::dal::{Gateway, NetworkInfo, TxStatus};
+use crate::domain::core::dal::{Gateway, GatewayTx, NetworkInfo, TxStatus};
 use arweave_rs::network::NetworkInfoClient;
 use async_trait::async_trait;
 use reqwest::{Client, Url};
+use serde_derive::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
@@ -17,12 +18,44 @@ pub struct ArweaveGateway {
 pub enum GatewayErrorType {
     CheckHeadError(String),
     StatusError(String),
+    GraphQLError(String),
+    JsonParseError(String),
 }
 
 impl From<GatewayErrorType> for String {
     fn from(error: GatewayErrorType) -> Self {
         format!("{:?}", error)
     }
+}
+
+/*
+  Right now we dont need all the fields
+  but later we can add to these types to
+  pull more data from gql responses
+*/
+#[derive(Deserialize, Debug, Clone)]
+struct Node {
+    id: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct Edge {
+    node: Node,
+}
+
+#[derive(Deserialize, Debug)]
+struct Transactions {
+    edges: Vec<Edge>,
+}
+
+#[derive(Deserialize, Debug)]
+struct Data {
+    transactions: Transactions,
+}
+
+#[derive(Deserialize, Debug)]
+struct GraphQLResponse {
+    data: Data,
 }
 
 impl ArweaveGateway {
@@ -167,6 +200,48 @@ impl Gateway for ArweaveGateway {
                 "Failed to get status. Status code: {}",
                 response.status()
             ))
+        }
+    }
+
+    async fn gql_tx(&self, tx_id: &String) -> Result<GatewayTx, String> {
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+        let gateway_url = config.gateway_url;
+        let client = Client::new();
+
+        let query = serde_json::json!({
+            "query": format!(
+                "query {{ transactions (ids: [\"{}\"]){{ edges {{ node {{ id }} }} }} }}",
+                tx_id
+            ),
+            "variables": {}
+        });
+
+        let query_string = serde_json::to_string(&query)
+            .map_err(|e| GatewayErrorType::GraphQLError(e.to_string()))?;
+
+        let response = client
+            .post(format!("{}/graphql", gateway_url))
+            .header("Content-Type", "application/json")
+            .body(query_string)
+            .send()
+            .await
+            .map_err(|e| GatewayErrorType::GraphQLError(e.to_string()))?;
+
+        if response.status().is_success() {
+            let body: GraphQLResponse = response
+                .json()
+                .await
+                .map_err(|e| GatewayErrorType::JsonParseError(e.to_string()))?;
+
+            if let Some(edge) = body.data.transactions.edges.get(0) {
+                Ok(GatewayTx {
+                    id: edge.node.clone().id,
+                })
+            } else {
+                Err("Transaction not found".to_string())
+            }
+        } else {
+            Err(format!("Failed to fetch transaction: {}", response.status()).to_string())
         }
     }
 }

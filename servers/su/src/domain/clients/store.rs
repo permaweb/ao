@@ -69,7 +69,7 @@ impl StoreClient {
         let database_url = config.database_url;
         let database_read_url = match config.database_read_url {
             Some(u) => u,
-            None => database_url.clone()
+            None => database_url.clone(),
         };
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
@@ -84,9 +84,10 @@ impl StoreClient {
             .test_on_check_out(true)
             .build(read_manager)
             .map_err(|_| {
-                StoreErrorType::DatabaseError("Failed to initialize read connection pool.".to_string())
+                StoreErrorType::DatabaseError(
+                    "Failed to initialize read connection pool.".to_string(),
+                )
             })?;
-        
 
         Ok(StoreClient { pool, read_pool })
     }
