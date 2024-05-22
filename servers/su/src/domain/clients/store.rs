@@ -323,7 +323,13 @@ impl DataStore for StoreClient {
 
     fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        /*
+            This must use get_conn because it needs 
+            an up to date record from the writer instance
+            it cannot be behind at all as it is used
+            in the scheduling process.
+        */
+        let conn = &mut self.get_conn()?;
 
         // Get the latest DbMessage
         let latest_db_message_result = messages
