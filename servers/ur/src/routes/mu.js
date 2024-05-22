@@ -1,4 +1,4 @@
-import { Readable } from 'node:stream'
+import { PassThrough, Readable } from 'node:stream'
 
 import express from 'express'
 import { DataItem } from 'warp-arbundles'
@@ -74,7 +74,7 @@ export function mountMuRoutesWith ({ app, middleware }) {
        * determine the processId, we must provide a new request stream, to be sent
        * as the body on proxied request
        */
-      restreamBody: (req) => Readable.from(req.body)
+      restreamBody: (req) => req.isAssignment ? new PassThrough().end() : Readable.from(req.body)
     }))
 
   app.post('/monitor/:processId', middleware({ processIdFromRequest: (req) => req.params.processId }))
