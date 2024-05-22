@@ -231,9 +231,14 @@ describe('utils', () => {
 
     const findPendingForProcessBefore = findPendingForProcessBeforeWith(pendingMap)
 
-    test('should return undefined if no timestamp', () => {
-      assert.equal(findPendingForProcessBefore({ processId }), undefined)
-      assert.equal(findPendingForProcessBefore({ processId, timestamp: '' }), undefined)
+    test('should return latest if no timestamp', async () => {
+      const [key, value] = findPendingForProcessBefore({ processId })
+      assert.equal(key, `${processId},${now.getTime() - fifteenMinAgo},,,true`)
+      assert.equal(await value.pending, fifteenMinAgo)
+
+      const [key2, value2] = findPendingForProcessBefore({ processId, timestamp: '' })
+      assert.equal(key2, `${processId},${now.getTime() - fifteenMinAgo},,,true`)
+      assert.equal(await value2.pending, fifteenMinAgo)
     })
 
     test('should return undefined if no entry found before timestamp', () => {
