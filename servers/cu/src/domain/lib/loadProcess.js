@@ -2,7 +2,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { always, identity, isNotNil, mergeRight, omit, pick } from 'ramda'
 import { z } from 'zod'
 
-import { findEvaluationSchema, findProcessSchema, loadProcessSchema, locateProcessSchema, saveProcessSchema } from '../dal.js'
+import { findEvaluationSchema, findLatestProcessMemorySchema, findProcessSchema, isProcessOwnerSupportedSchema, loadProcessSchema, locateProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
 import { blockSchema, rawTagSchema } from '../model.js'
 import { eqOrIncludes, findRawTag, parseTags, trimSlash } from '../utils.js'
 
@@ -91,8 +91,7 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
   findProcess = fromPromise(findProcessSchema.implement(findProcess))
   saveProcess = fromPromise(saveProcessSchema.implement(saveProcess))
   loadProcess = fromPromise(loadProcessSchema.implement(loadProcess))
-  // TODO: wrap in a schema
-  isProcessOwnerSupported = fromPromise(isProcessOwnerSupported)
+  isProcessOwnerSupported = fromPromise(isProcessOwnerSupportedSchema.implement(isProcessOwnerSupported))
 
   const checkTag = (name, pred, err) => tags => pred(tags[name])
     ? Resolved(tags)
@@ -189,9 +188,8 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
 
 function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, saveLatestProcessMemory, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
-  // TODO: wrap in zod schemas to enforce contract
-  findLatestProcessMemory = fromPromise(findLatestProcessMemory)
-  saveLatestProcessMemory = fromPromise(saveLatestProcessMemory)
+  findLatestProcessMemory = fromPromise(findLatestProcessMemorySchema.implement(findLatestProcessMemory))
+  saveLatestProcessMemory = fromPromise(saveLatestProcessMemorySchema.implement(saveLatestProcessMemory))
 
   function maybeExactEvaluation (ctx) {
     /**

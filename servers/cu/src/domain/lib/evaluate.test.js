@@ -520,6 +520,7 @@ describe('evaluate', () => {
             { name: 'function', value: 'hello' }
           ]
         )
+        return { Memory: Buffer.from('Hello world') }
       },
       saveLatestProcessMemory: async () => {},
       logger
@@ -538,7 +539,7 @@ describe('evaluate', () => {
         }
       },
       result: {
-        Memory: null
+        Memory: Buffer.from('Hello world')
       },
       messages: toAsyncIterable([
         {
