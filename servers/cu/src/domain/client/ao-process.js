@@ -1242,7 +1242,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
      * Having updateAgeOnGet to true also renews the cache value's TTL,
      * which is what we want
      */
-    if (cached && isLaterThan(cached, { timestamp, ordinate, cron })) return
+    if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) return
 
     logger(
       'Caching latest memory for process "%s" with parameters "%j"',
