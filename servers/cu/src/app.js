@@ -69,7 +69,6 @@ export const server = pipeP(
 
     process.on('uncaughtException', (err) => {
       console.trace('Uncaught Exception:', err)
-      process.exit(1)
     })
 
     process.on('unhandledRejection', (reason, promise) => {
