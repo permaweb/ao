@@ -6,7 +6,9 @@ import ms from 'ms'
 
 import {
   busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor,
-  removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff
+  removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff,
+  isLaterThan,
+  isEarlierThan
 } from './utils.js'
 
 describe('utils', () => {
@@ -214,6 +216,48 @@ describe('utils', () => {
     test('return the promise if time is set to 0', async () => {
       const res = await busyIn(0, new Promise(resolve => setTimeout(() => resolve(true), 100)), () => Promise.resolve(false))
       assert.ok(res)
+    })
+  })
+
+  describe('isLaterThan', () => {
+    const now = new Date()
+    const tenSecondsAgo = now - 10000
+
+    test('should return whether the right is later than the left', () => {
+      // later timestamp
+      assert.ok(isLaterThan({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // later cron (when left has no cron)
+      assert.ok(isLaterThan({ timestamp: tenSecondsAgo }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+      // later cron
+      assert.ok(isLaterThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo, cron: '1-1-minute' }))
+
+      // earlier timestamp
+      assert.ok(!isLaterThan({ timestamp: now }, { timestamp: tenSecondsAgo }))
+      // earlier cron (when right has no cron)
+      assert.ok(!isLaterThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo }))
+      // earlier cron
+      assert.ok(!isLaterThan({ timestamp: tenSecondsAgo, cron: '1-1-minute' }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+    })
+  })
+
+  describe('isEarlierThan', () => {
+    const now = new Date()
+    const tenSecondsAgo = now - 10000
+
+    test('should return whether the right is later than the left', () => {
+      // later timestamp
+      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // later cron (when left has no cron)
+      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+      // later cron
+      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo, cron: '1-1-minute' }))
+
+      // earlier timestamp
+      assert.ok(isEarlierThan({ timestamp: now }, { timestamp: tenSecondsAgo }))
+      // earlier cron (when right has no cron)
+      assert.ok(isEarlierThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo }))
+      // earlier cron
+      assert.ok(isEarlierThan({ timestamp: tenSecondsAgo, cron: '1-1-minute' }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
     })
   })
 

@@ -279,8 +279,8 @@ export async function busyIn (millis, p, busyFn) {
 }
 
 export function isLaterThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
+  const t1 = `${eval1.timestamp || 0}`
+  const t2 = `${eval2.timestamp || 0}`
   /**
    * timestamps are equal some might be two crons on overlapping interval,
    * so compare the crons
@@ -291,8 +291,8 @@ export function isLaterThan (eval1, eval2) {
 }
 
 export function isEarlierThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
+  const t1 = `${eval1.timestamp || 0}`
+  const t2 = `${eval2.timestamp || 0}`
   /**
    * timestamps are equal some might be two crons on overlapping interval,
    * so compare the crons
