@@ -311,7 +311,17 @@ export function isEqualTo (eval1, eval2) {
 }
 
 export const findPendingForProcessBeforeWith = (map) => ({ processId, timestamp }) => {
-  if (!timestamp) return // latest
+  /**
+   * In the case of no timestamp, we need to chain to the
+   * latest pending eval stream, and so set timestamp (used as right-most boundary)
+   * to Infinity
+   *
+   * The implication is that any request for 'latest' will be chained
+   * to ANY pending evaluation stream, instead of starting a second one
+   * and subsequently duplicating work. This is safe to do now that the CU only will
+   * evaluate messages it has not evaluated before (see https://github.com/permaweb/ao/issues/667)
+   */
+  if (!timestamp) timestamp = Infinity
 
   timestamp = parseInt(timestamp)
   let latestBefore // string | undefined
