@@ -5400,7 +5400,7 @@ const Module = (() => {
     }
 
     function _system(command) {
-      if (ENVIRONMENT_IS_NODE) {
+      if (false) {
         if (!command) return 1; // shell is available
 
         var cmdstr = UTF8ToString(command);
