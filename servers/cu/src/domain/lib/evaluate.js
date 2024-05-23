@@ -5,7 +5,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
-import { evaluatorSchema, findMessageBeforeSchema } from '../dal.js'
+import { evaluatorSchema, findMessageBeforeSchema, saveLatestProcessMemorySchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
 import { removeTagsByNameMaybeValue } from '../utils.js'
 
@@ -81,7 +81,7 @@ export function evaluateWith (env) {
   const doesMessageExist = doesMessageExistWith(env)
   const loadEvaluator = evaluatorWith(env)
 
-  const saveLatestProcessMemory = env.saveLatestProcessMemory
+  const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(env.saveLatestProcessMemory)
 
   return (ctx) =>
     of(ctx)

@@ -170,6 +170,10 @@ export const domainConfigSchema = z.object({
   ALLOW_OWNERS: commaDelimitedArraySchema
 })
 
+export const bufferSchema = z.any().refine(buffer => {
+  return ArrayBuffer.isView(buffer) || Buffer.isBuffer(buffer)
+}, { message: 'Value must implement the buffer protocol' })
+
 export const streamSchema = z.any().refine(stream => {
   return stream !== null &&
     typeof stream === 'object' &&
@@ -197,6 +201,19 @@ export const processSchema = z.object({
   owner: z.string().min(1),
   tags: z.array(rawTagSchema),
   block: blockSchema
+})
+
+export const processCheckpointSchema = z.object({
+  src: z.enum(['memory', 'file', 'arweave', 'cold_start']),
+  fromFile: z.string().nullish(),
+  Memory: bufferSchema.nullish(),
+  moduleId: z.string().nullish(),
+  timestamp: z.coerce.number().nullish(),
+  epoch: z.coerce.number().nullish(),
+  nonce: z.number().nullish(),
+  blockHeight: z.coerce.number().nullish(),
+  cron: z.string().nullish(),
+  ordinate: z.string()
 })
 
 export const moduleSchema = z.object({
