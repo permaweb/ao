@@ -379,18 +379,18 @@ export const backoff = (
         // Reached max number of retries
         if (retry >= maxRetries) {
           log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
-          throw err
+          return Promise.reject(err)
         }
 
         const newRetry = retry + 1
         const newDelay = delay + delay
         log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
-        return new Promise((resolve) =>
+        return new Promise((resolve, reject) =>
           setTimeout(
           /**
            * increment the retry count Retry with an exponential backoff
            */
-            () => resolve(action(newRetry, newDelay)),
+            () => action(newRetry, newDelay).then(resolve).catch(reject),
             /**
              * Retry in {delay} milliseconds
              */
