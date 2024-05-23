@@ -3891,7 +3891,7 @@ var Module = (() => {
 
       function __emscripten_system(command) {
         command = bigintToI53Checked(command);
-        if (ENVIRONMENT_IS_NODE) {
+        if (false) {
           if (!command) return 1;
           var cmdstr = UTF8ToString(command);
           if (!cmdstr.length) return 0;
