@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.32](https://github.com/permaweb/ao/compare/loader@v0.0.31...loader@v0.0.32) (2024-05-23)
+
+
+### Bug Fixes
+
+* **loader:** added test file ([5cc3506](https://github.com/permaweb/ao/commit/5cc3506161cef295c61d6f72cf1adf0bc2096c83))
+* update glue code with setting  system flag to false ([eb92015](https://github.com/permaweb/ao/commit/eb920154d9ce0d4431f17062854eef28d04995f6))
+
 ## [0.0.31](https://github.com/permaweb/ao/compare/loader@v0.0.30...loader@v0.0.31) (2024-05-14)
 
 
