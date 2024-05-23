@@ -28,7 +28,8 @@ export const domainConfigSchema = z.object({
   GRAPHQL_URL: z.string(),
   UPLOADER_URL: z.string(),
   PROC_FILE_PATH: z.string(),
-  CRON_CURSOR_DIR: z.string()
+  CRON_CURSOR_DIR: z.string(),
+  MAX_WORKERS: z.number()
 })
 
 /**
@@ -62,7 +63,8 @@ const CONFIG_ENVS = {
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
-    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt'
+    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt',
+    MAX_WORKERS: process.env.MAX_WORKERS || 2
   },
   production: {
     MODE,
@@ -74,7 +76,8 @@ const CONFIG_ENVS = {
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
-    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt'
+    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt',
+    MAX_WORKERS: process.env.MAX_WORKERS || 2
   }
 }
 

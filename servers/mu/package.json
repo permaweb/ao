@@ -35,6 +35,7 @@
     "pubsub-js": "^1.9.4",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
+    "workerpool": "^9.1.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
