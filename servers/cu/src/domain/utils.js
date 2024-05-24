@@ -411,3 +411,17 @@ export async function strFromFetchError (err) {
   if (err instanceof Response) return `${err.status}: ${await err.text()}`
   return err.message || 'Unknown Error'
 }
+
+/**
+   * TODO: clean this up
+   */
+const mapBadData = (val) => {
+  if (val === 'undefined') return undefined
+  if (isNaN(val)) return undefined
+  return val
+}
+
+export const maybeParseInt = pipe(
+  mapBadData,
+  (val) => val ? parseInt(val) : undefined
+)
