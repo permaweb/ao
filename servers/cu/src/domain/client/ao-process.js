@@ -527,8 +527,13 @@ export function findLatestProcessMemoryWith ({
           return {
             id: node.id,
             timestamp: parseInt(tags.Timestamp),
-            epoch: parseInt(tags.Epoch),
-            nonce: parseInt(tags.Nonce),
+            /**
+             * Due to a previous bug, these tags may sometimes
+             * be invalid values, so we've added a utility
+             * to map those invalid values to a valid value
+             */
+            epoch: maybeParseInt(tags.Epoch),
+            nonce: maybeParseInt(tags.Nonce),
             ordinate: tags.Nonce,
             module: tags.Module,
             blockHeight: parseInt(tags['Block-Height']),
