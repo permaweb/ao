@@ -210,7 +210,7 @@ export const processCheckpointSchema = z.object({
   moduleId: z.string().nullish(),
   timestamp: z.coerce.number().nullish(),
   epoch: z.coerce.number().nullish(),
-  nonce: z.number().nullish(),
+  nonce: z.coerce.number().nullish(),
   blockHeight: z.coerce.number().nullish(),
   cron: z.string().nullish(),
   ordinate: z.string()

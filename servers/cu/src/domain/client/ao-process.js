@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
 
-import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
+import { isEarlierThan, isEqualTo, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
@@ -949,8 +949,13 @@ export function findProcessMemoryBeforeWith ({
           return {
             id: node.id,
             timestamp: parseInt(tags.Timestamp),
-            epoch: parseInt(tags.Epoch),
-            nonce: parseInt(tags.Nonce),
+            /**
+             * Due to a previous bug, these tags may sometimes
+             * be invalid values, so we've added a utility
+             * to map those invalid values to a valid value
+             */
+            epoch: maybeParseInt(tags.Epoch),
+            nonce: maybeParseInt(tags.Nonce),
             ordinate: tags.Nonce,
             module: tags.Module,
             blockHeight: parseInt(tags['Block-Height']),
@@ -1377,7 +1382,7 @@ export function saveCheckpointWith ({
   `
 
   function createCheckpointDataItem (args) {
-    const { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory, File } = args
+    const { moduleId, processId, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory, File } = args
     return of()
       .chain(() => {
         if (Memory) return of(Memory)
@@ -1403,8 +1408,12 @@ export function saveCheckpointWith ({
                 { name: 'Type', value: 'Checkpoint' },
                 { name: 'Module', value: moduleId.trim() },
                 { name: 'Process', value: processId.trim() },
-                { name: 'Epoch', value: `${epoch}`.trim() },
-                { name: 'Nonce', value: `${nonce}`.trim() },
+                /**
+                 * Cron messages will not have a nonce but WILL
+                 * have an ordinate equal to the most recent nonce
+                 * (which is to say the nonce of the most recent Scheduled message)
+                 */
+                { name: 'Nonce', value: `${nonce || ordinate}`.trim() },
                 { name: 'Timestamp', value: `${timestamp}`.trim() },
                 { name: 'Block-Height', value: `${blockHeight}`.trim() },
                 { name: 'Content-Type', value: 'application/octet-stream' },
@@ -1416,6 +1425,12 @@ export function saveCheckpointWith ({
                 { name: 'Content-Encoding', value: 'gzip' }
               ]
             }
+
+            /**
+             * Cron messages do not have an Epoch,
+             * so only add the tag if the value is present
+             */
+            if (epoch) dataItem.tags.push({ name: 'Epoch', value: `${epoch}`.trim() })
 
             if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
 

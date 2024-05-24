@@ -8,7 +8,8 @@ import {
   busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor,
   removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff,
   isLaterThan,
-  isEarlierThan
+  isEarlierThan,
+  maybeParseInt
 } from './utils.js'
 
 describe('utils', () => {
@@ -379,6 +380,22 @@ describe('utils', () => {
         assert.equal(err, 'bar')
         assert.equal(count, 3)
       })
+    })
+  })
+
+  describe('maybeParseInt', () => {
+    test('should parse the int', () => {
+      assert.equal(maybeParseInt('12'), 12)
+      assert.equal(maybeParseInt(12), 12)
+    })
+
+    test('should map "undefined" to undefined', () => {
+      assert.ok(maybeParseInt('undefined') === undefined)
+    })
+
+    test('should map NaN to undefined', () => {
+      console.log(maybeParseInt(NaN))
+      assert.ok(maybeParseInt(NaN) === undefined)
     })
   })
 })
