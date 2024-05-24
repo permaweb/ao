@@ -1,7 +1,6 @@
-import { connect } from './index.common.js'
+import { connect, serializeCron } from './index.common.js'
 
 import { WalletClient } from './client/node/index.js'
-
 const GATEWAY_URL = process.env.GATEWAY_URL || undefined
 const MU_URL = process.env.MU_URL || undefined
 const CU_URL = process.env.CU_URL || undefined
@@ -11,7 +10,7 @@ const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = 
 
 export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
 export { connect }
-
+export { serializeCron }
 /**
  * A function that builds a signer using a wallet jwk interface
  * commonly used in node-based dApps

@@ -1,4 +1,4 @@
-import { connect } from './index.common.js'
+import { connect, serializeCron } from './index.common.js'
 
 import { WalletClient } from './client/browser/index.js'
 
@@ -11,7 +11,7 @@ const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = 
 
 export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
 export { connect }
-
+export { serializeCron }
 /**
  * A function that builds a signer using the global arweaveWallet
  * commonly used in browser-based dApps
