@@ -8,9 +8,9 @@ import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
 import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
-import osClient from './clients/os.js'
 import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
+import cronClient from './clients/cron.js'
 
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
@@ -22,16 +22,12 @@ import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
 
-import { config } from '../config.js'
-
 export { errFrom } from './utils.js'
 
 const { DataItem } = warpArBundles
 
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
-
-const initCronProcs = osClient.initProcsWith({ PROC_FILE_PATH: config.PROC_FILE_PATH })
 
 /**
  * A set of apis used by the express server
@@ -42,6 +38,7 @@ export const createApis = async (ctx) => {
   const CU_URL = ctx.CU_URL
   const UPLOADER_URL = ctx.UPLOADER_URL
   const PROC_FILE_PATH = ctx.PROC_FILE_PATH
+  const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -73,6 +70,8 @@ export const createApis = async (ctx) => {
     return workerPool.exec('enqueueResults', results)
   }
 
+  const crank = fromPromise(enqueueResults)
+
   const sendDataItemLogger = logger.child('sendDataItem')
   const sendDataItem = sendDataItemWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
@@ -82,7 +81,7 @@ export const createApis = async (ctx) => {
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: sendDataItemLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: sendDataItemLogger }),
-    crank: fromPromise(enqueueResults),
+    crank,
     isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch })
@@ -94,26 +93,36 @@ export const createApis = async (ctx) => {
     locateProcess: locate,
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: sendAssignLogger }),
     fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
-    crank: fromPromise(enqueueResults),
+    crank,
     logger: sendAssignLogger
   })
 
   const monitorProcessLogger = logger.child('monitorProcess')
+  const fetchCron = fromPromise(cuClient.fetchCronWith({ CU_URL, logger: monitorProcessLogger }))
+  const startProcessMonitor = cronClient.startMonitoredProcessWith({
+    logger: monitorProcessLogger,
+    PROC_FILE_PATH,
+    CRON_CURSOR_DIR,
+    CU_URL,
+    fetchCron,
+    crank
+  })
+
   const monitorProcess = monitorProcessWith({
-    startProcessMonitor: osClient.startMonitoredProcessWith({ logger: monitorProcessLogger, PROC_FILE_PATH }),
+    startProcessMonitor,
     createDataItem,
     logger: monitorProcessLogger
   })
 
   const stopMonitorProcessLogger = logger.child('stopMonitorProcess')
   const stopMonitorProcess = stopMonitorProcessWith({
-    stopProcessMonitor: osClient.killMonitoredProcessWith({ logger: stopMonitorProcessLogger, PROC_FILE_PATH }),
+    stopProcessMonitor: cronClient.killMonitoredProcessWith({
+      logger: stopMonitorProcessLogger,
+      PROC_FILE_PATH
+    }),
     createDataItem,
     logger: monitorProcessLogger
   })
-
-  const cronLogger = logger.child('fetchCron')
-  const fetchCron = fromPromise(cuClient.fetchCronWith({ CU_URL, logger: cronLogger }))
 
   return {
     sendDataItem,
@@ -121,7 +130,10 @@ export const createApis = async (ctx) => {
     stopMonitorProcess,
     sendAssign,
     fetchCron,
-    initCronProcs
+    initCronProcs: cronClient.initCronProcsWith({
+      PROC_FILE_PATH,
+      startMonitoredProcess: startProcessMonitor
+    })
   }
 }
 

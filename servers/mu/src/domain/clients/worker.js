@@ -153,13 +153,12 @@ const processResults = processResultsWith({
 })
 
 /**
- * Start the processing of results from the queue
+ * Start the processing of results from
+ * the queue and expose the worker api
  */
+
 processResults()
 
-/**
- * Expose the worker api
- */
 worker({
   enqueueResults
 })
