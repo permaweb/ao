@@ -16,6 +16,9 @@
     "sort-package-json": "^2.10.0",
     "standard": "^17.1.0"
   },
+  "engines": {
+    "yarn": "please-use-npm"
+  },
   "standard": {
     "ignore": [
       "dist",
