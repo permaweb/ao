@@ -1,7 +1,7 @@
 import { PassThrough, Readable } from 'node:stream'
 
 import express from 'express'
-import { DataItem } from 'warp-arbundles'
+import { DataItem } from 'arbundles'
 
 /**
  * The Reverse Proxy Configuration for an ao Messenger Unit Router
