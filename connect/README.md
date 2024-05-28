@@ -25,6 +25,7 @@ This module will run in a browser or server environment.
     - [`assign`](#assign)
     - [Environment Variables](#environment-variables)
     - [`createDataItemSigner`](#createdataitemsigner)
+    - [`serializeCron`](#serializecron)
 - [Debug Logging](#debug-logging)
 - [Testing](#testing)
 - [Project Structure](#project-structure)
@@ -277,6 +278,33 @@ type CreateDataItemSigner = (wallet: any):
   (args: { data: any, tags?: { name: string, value: string}[], target?: string, anchor?: string }):
     Promise<{ id: string, raw: ArrayBuffer }>
 ```
+
+#### `serializeCron`
+
+Serialize a Cron Object into Cron Tags.
+
+```js
+import { serializeCron } from "@permaweb/aoconnect";
+
+const cron = {
+  interval: "10-minutes",
+  tags: [
+    { name: "Foo", value: "bar" },
+    { name: "Bar", value: "foo" }
+  ]
+}
+
+const tags = serializeCron(cron)
+/* 
+  tags = [
+    { name: "Cron-Interval", value: "10-minutes" },
+    { name: "Cron-Tag-Foo", value: "bar" },
+    { name: "Cron-Tag-Bar", value: "foo" },
+  ]
+*/
+```
+
+> Cron Interval must adhere to the AO Data Protocol
 
 ## Debug Logging
 
