@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.55](https://github.com/permaweb/ao/compare/connect@v0.0.54...connect@v0.0.55) (2024-05-28)
+
+
+### Features
+
+* **connect:** add serializeCron util function to connect ([51552fc](https://github.com/permaweb/ao/commit/51552fccb64cd6caddffc51c3bd8b7ef3c8aba1d))
+
 ## [0.0.54](https://github.com/permaweb/ao/compare/connect@v0.0.53...connect@v0.0.54) (2024-05-21)
 
 
