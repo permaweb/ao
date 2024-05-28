@@ -43,6 +43,7 @@
     "supertest": "^6.3.3"
   },
   "engines": {
-    "node": "22"
+    "node": "22",
+    "yarn": "please-use-npm"
   }
 }
