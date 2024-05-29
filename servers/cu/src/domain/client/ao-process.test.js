@@ -1232,10 +1232,19 @@ describe('ao-process', () => {
         assert.equal(res, undefined)
       })
 
-      test('should create checkpoint if gas used greater than threshold', async () => {
+      test('should create checkpoint if gas used greater than threshold, reset gas to 0', async () => {
         let checkpointSaved = false
         const saveLatestProcessMemoryWithNoThreshold = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
           ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: (_, { evaluation }) => {
+              assert.equal(evaluation.gasUsed, 0)
+            }
+          },
           saveCheckpoint: async () => {
             checkpointSaved = true
           }
