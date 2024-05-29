@@ -99,7 +99,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store cached process memory (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
-  (defaults to `4h`)
+  (defaults to `0`)
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds,
   that the CU should wait before creating a process `Checkpoint` IFF it has
   already created a Checkpoint for that process, since it last started. This is

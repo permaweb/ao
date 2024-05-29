@@ -85,7 +85,7 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
-   * DEPRECATED
+   * @deprecated
    * If an evaluation stream evaluates this amount of messages,
    * then it will immediately create a Checkpoint at the end of the
    * evaluation stream

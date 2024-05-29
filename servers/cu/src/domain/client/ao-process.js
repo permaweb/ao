@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, prop, transduce } from 'ramda'
+import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
@@ -1267,7 +1267,11 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     // const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
     // stopTimer()
 
-    const incrementedGasUsed = (cached?.evaluation?.gasUsed ?? BigInt(0)) + (gasUsed ?? BigInt(0))
+    const incrementedGasUsed = pipe(
+      pathOr(BigInt(0), ['evaluation', 'gasUsed']),
+      add(gasUsed || BigInt(0))
+    )(cached)
+
     const evaluation = {
       processId,
       moduleId,
@@ -1291,7 +1295,8 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     cache.set(processId, { Memory, evaluation })
 
     /**
-     *  Deprecated - we are no longer creating checkpoints based on eval counts. Rather, we use a gas-based checkpoint system
+     *  @deprecated
+     *  We are no longer creating checkpoints based on eval counts. Rather, we use a gas-based checkpoint system
     **/
     // if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
 
