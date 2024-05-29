@@ -29,18 +29,17 @@
     "express": "^4.18.2",
     "hyper-async": "^1.1.2",
     "lru-cache": "^10.2.0",
-    "minimist": "^1.2.8",
     "node-cron": "^3.0.3",
     "p-map": "^7.0.1",
     "pubsub-js": "^1.9.4",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
+    "workerpool": "^9.1.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
-    "nodemon": "^3.0.1",
-    "supertest": "^6.3.3"
+    "nodemon": "^3.0.1"
   },
   "engines": {
     "node": "22",

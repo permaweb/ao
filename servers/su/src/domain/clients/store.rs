@@ -75,6 +75,7 @@ impl StoreClient {
         let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
         let pool = Pool::builder()
             .test_on_check_out(true)
+            .max_size(1)
             .build(manager)
             .map_err(|_| {
                 StoreErrorType::DatabaseError("Failed to initialize connection pool.".to_string())
@@ -82,6 +83,7 @@ impl StoreClient {
 
         let read_pool = Pool::builder()
             .test_on_check_out(true)
+            .max_size(1)
             .build(read_manager)
             .map_err(|_| {
                 StoreErrorType::DatabaseError(

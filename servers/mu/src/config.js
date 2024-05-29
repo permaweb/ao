@@ -2,6 +2,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 
 import { z } from 'zod'
+import { cpus, tmpdir } from 'node:os'
 
 const walletPath = process.env.PATH_TO_WALLET
 const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
@@ -28,7 +29,8 @@ export const domainConfigSchema = z.object({
   GRAPHQL_URL: z.string(),
   UPLOADER_URL: z.string(),
   PROC_FILE_PATH: z.string(),
-  CRON_CURSOR_DIR: z.string()
+  CRON_CURSOR_DIR: z.string(),
+  MAX_WORKERS: z.number()
 })
 
 /**
@@ -62,7 +64,8 @@ const CONFIG_ENVS = {
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
-    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt'
+    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
+    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1)
   },
   production: {
     MODE,
@@ -74,7 +77,8 @@ const CONFIG_ENVS = {
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
-    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || 'cursor.txt'
+    CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
+    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1)
   }
 }
 
