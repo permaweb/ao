@@ -78,7 +78,7 @@ This will create a new directory, if needed, named `{myproject}`
 This gives you a Lua interpeter
 
 ```sh
-ao repl
+ao lua
 ```
 
 ### Execute a Lua file
@@ -104,7 +104,7 @@ ao publish [file.wasm] -w [wallet] -t [name:value] -t [name:value]
 ### Help
 
 ```sh
-ao help
+ao --help
 ```
 
 You can also run `ao [command] --help` for command-lvl help.
