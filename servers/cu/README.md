@@ -109,8 +109,8 @@ There are a few environment variables that you can set. Besides
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
-- `EAGER_CHECKPOINT_THRESHOLD`: If an evaluation stream evaluates this amount of
-  messages, then it will immediately create a Checkpoint at the end of the
+- `EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD`: If a process uses this amount of
+  gas, then it will immediately create a Checkpoint at the end of the
   evaluation stream.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.

@@ -83,6 +83,7 @@ export function evaluateWith (env) {
 
   const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(env.saveLatestProcessMemory)
 
+  let totalGasUsed = BigInt(0)
   return (ctx) =>
     of(ctx)
       .chain(loadEvaluator)
@@ -214,6 +215,8 @@ export function evaluateWith (env) {
                          */
                         .then(mergeLeft({ noSave, message, cron, ordinate }))
                         .then(async (output) => {
+                          if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
+
                           if (cron) ctx.stats.messages.cron++
                           else ctx.stats.messages.scheduled++
 
@@ -269,7 +272,8 @@ export function evaluateWith (env) {
             ordinate,
             cron,
             Memory: prev.Memory,
-            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron
+            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron,
+            gasUsed: totalGasUsed
           })
         }
 
