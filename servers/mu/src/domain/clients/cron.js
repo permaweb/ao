@@ -1,6 +1,5 @@
 import fs from 'fs'
 import path from 'path'
-
 import cron from 'node-cron'
 import { Mutex } from 'async-mutex'
 
@@ -47,8 +46,8 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
      * start new os procs when the server starts because
      * the server has either restarted or been redeployed.
      */
-    for (const key of Object.keys(obj)) {
-      await startMonitoredProcess(key)
+    for (const processId of Object.keys(obj)) {
+      await startMonitoredProcess({ processId })
     }
 
     await saveProcs(PROC_FILE_PATH)
@@ -59,7 +58,7 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
 
 function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
   return async ({ processId }) => {
-    const cursorFilePath = path.join(`${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
+    const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
 
     let ct = null
     let isJobRunning = false
@@ -108,7 +107,7 @@ function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron
             initialTxId: null,
             fromProcessId: processId
           })),
-          spawns: edge.node?.Spawns?.forEach(spawn => ({
+          spawns: edge.node?.Spawns?.map(spawn => ({
             spawn,
             processId,
             initialTxId: null
@@ -146,7 +145,7 @@ function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron
     }
 
     function setCursor (result) {
-      const cursor = result.edges[result.edges.length - 1]?.cursor
+      const cursor = result.edges[result.edges?.length - 1]?.cursor
       if (cursor) {
         fs.writeFileSync(cursorFilePath, cursor, 'utf8')
       }
