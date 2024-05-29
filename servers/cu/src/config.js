@@ -33,6 +33,7 @@ const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm3
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean()),
   DUMP_PATH: z.string().min(1)
 })
 
@@ -91,6 +92,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 6363,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
@@ -128,6 +130,7 @@ const CONFIG_ENVS = {
   production: {
     MODE,
     port: process.env.PORT || 6363,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,

@@ -6,6 +6,7 @@ import { withDryRunRoutes } from './dryRun.js'
 import { withResultsRoutes } from './results.js'
 import { withCronRoutes } from './cron.js'
 import { withHealthcheckRoutes } from './healthcheck.js'
+import { withMetricRoutes } from './metrics.js'
 
 export const withRoutes = pipe(
   withHealthcheckRoutes,
@@ -13,5 +14,6 @@ export const withRoutes = pipe(
   withResultRoutes,
   withDryRunRoutes,
   withResultsRoutes,
-  withCronRoutes
+  withCronRoutes,
+  withMetricRoutes
 )
