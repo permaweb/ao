@@ -67,6 +67,7 @@ There are a few environment variables that you can set. Besides
 - `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used
   by the CU, or a file to load it from
 - `PORT`: Which port the web server should listen on (defaults to port `6363`)
+- `ENABLE_METRICS_ENDPOINT`: Whether the OpenTelemetry endpoint `/metrics` should be enabled. Set to any value to enable. (defaults to disabled)
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
   `embedded`)

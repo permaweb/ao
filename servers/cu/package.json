@@ -29,6 +29,7 @@
     "lru-cache": "^10.2.2",
     "ms": "^2.1.3",
     "p-map": "^7.0.2",
+    "prom-client": "^15.1.2",
     "ramda": "^0.30.0",
     "warp-arbundles": "^1.0.4",
     "workerpool": "^9.1.1",

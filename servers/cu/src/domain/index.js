@@ -19,6 +19,7 @@ import * as AoProcessClient from './client/ao-process.js'
 import * as AoModuleClient from './client/ao-module.js'
 import * as AoEvaluationClient from './client/ao-evaluation.js'
 import * as AoBlockClient from './client/ao-block.js'
+import * as MetricsClient from './client/metrics.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith, pendingReadStates } from './api/readState.js'
@@ -85,6 +86,14 @@ export const createApis = async (ctx) => {
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
 
+  /**
+   * TODO: I don't really like implictly doing this,
+   * but works for now.
+   */
+  const _metrics = MetricsClient.initializeRuntimeMetricsWith({})()
+
+  const gauge = MetricsClient.gaugeWith({})
+
   const readProcessMemoryFile = AoProcessClient.readProcessMemoryFileWith({
     DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
     readFile
@@ -114,6 +123,10 @@ export const createApis = async (ctx) => {
     loadMemoryUsage: () => process.memoryUsage(),
     loadProcessCacheUsage: () => AoProcessClient.loadProcessCacheUsage()
   })
+  const metrics = {
+    contentType: _metrics.contentType,
+    compute: fromPromise(() => _metrics.metrics())
+  }
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
@@ -133,6 +146,7 @@ export const createApis = async (ctx) => {
   })
 
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
+    gauge,
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
     DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
@@ -305,5 +319,5 @@ export const createApis = async (ctx) => {
 
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
+  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
 }

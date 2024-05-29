@@ -47,7 +47,7 @@ export const LATEST = 'LATEST'
  * @prop {string} [cron]
  */
 let processMemoryCache
-export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, onEviction, writeProcessMemoryFile }) {
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, gauge, onEviction, writeProcessMemoryFile }) {
   if (processMemoryCache) return processMemoryCache
 
   const clearTimerWith = (map) => (key) => {
@@ -69,6 +69,18 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
 
   const drainToFileTimers = new Map()
   const clearDrainToFileTimer = clearTimerWith(drainToFileTimers)
+
+  /**
+   * Expose the total count of processes cached on this unit,
+   * on the CU's application level metrics
+   */
+  gauge({
+    name: 'ao_process_total',
+    description: 'The total amount of ao Processes cached on the Compute Unit',
+    collect: function () {
+      this.set(data.size)
+    }
+  })
 
   /**
    * @type {LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }}
