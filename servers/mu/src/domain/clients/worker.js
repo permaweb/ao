@@ -115,12 +115,10 @@ function processResultsWith ({ dequeue, processResult, logger }) {
       const result = dequeue()
       if (result) {
         logger(`Processing task of type ${result.type}`)
-        try {
-          processResult(result)
-        } catch (e) {
+        processResult(result).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
-        }
+        })
       } else {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
