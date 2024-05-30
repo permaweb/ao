@@ -18,7 +18,6 @@ to make it as easy as possible to contribute to this project.
   - [Automated Tests](#automated-tests)
   - [Pull Requests](#pull-requests)
     - [A note on Code Reviews](#a-note-on-code-reviews)
-    - [A note on Merging](#a-note-on-merging)
 - [No Estimates, No SCRUM, No Meetings](#no-estimates-no-scrum-no-meetings)
 - [Have fun](#have-fun)
 - [Proposals](#proposals)
@@ -29,8 +28,8 @@ to make it as easy as possible to contribute to this project.
 
 The `ao` Project is a monorepo that contains multiple packages. Depending on the
 package, you'll need to be the familiar with the tech therein. Generally
-speaking, you'll need to be familiar with JavaScript, Node, and in specific
-instances, tools like Deno, Lua, and Docker.
+speaking, you'll need to be familiar with `JavaScript`, `NodeJS`, `Rust` and in specific
+instances, tools like `Deno`, `Lua`, and `Docker`.
 
 Here are some topics and resources you should consider reviewing before
 contributing.
@@ -116,6 +115,8 @@ each commit. Follow these guidelines to write effective commit messages:
    like "Add", "Fix", "Update", etc., as if you are giving an order. This helps
    keep the subject line short and consistent while also making it easier to
    understand the changelog in the future.
+
+> A git hook will automatically lint your commit messages. See [Getting Started](#getting-started)
 
 ## Grab an Issue and Do the Work
 
@@ -258,36 +259,6 @@ Here are some Rules of Thumb for when you might want to request a review:
 5. If you've made a change in a legacy part of the code base
 6. If you're **removing** code or functionality, especially if it publicly
    exposed ie. an endpoint on a server
-
-If you open a PR, **it is your responsibility to request reviews from the team,
-if you need a review.**. Inversely, as the developer being requested to provide
-a review, **it is your responsibility to review the code in a timely manner, or
-to let the other developer know if you can't review it right away**. In the
-latter case, the developer requesting the review should speak LOUDLY that they
-are BLOCKED until they get a review on their code.
-
-#### A note on Merging
-
-When merging into trunk branch, prefer "Rebase and Merge" over "Merge with Merge
-Commit". This creates a more linear history on trunk, which is much easier to
-read, and to understand how the codebase has evolved over time.
-
-> **Merge commits should be _rare_**, and should only be needed when two
-> developers edit the same lines, in the same file, from the same common
-> ancestor. If this is the case, then a merge commit is appropriate. Otherwise,
-> **prefer rebasing your feature branch onto trunk** rather than a merge commit.
-> This produces more useful, and less cluttered, Git history.
-
-> **NEVER** rebase a public branch ie. `main`
-
-You own your code, and are responsible for getting it merged. Once the checks
-pass, and you've received any reviews you solicited, you should merge your code
-into trunk.
-
-> If you are nervous about merging your code, then there is a good chance that
-> too many things are happening in your PR. Try to break your PR into smaller,
-> more bite sized pieces, and get those merged into trunk. Remember, you can
-> always ask for help from your team mates
 
 ## No Estimates, No SCRUM, No Meetings
 
