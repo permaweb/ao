@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, prop, transduce } from 'ramda'
+import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
@@ -1243,8 +1243,8 @@ export function findProcessMemoryBeforeWith ({
       .toPromise()
 }
 
-export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_THRESHOLD }) {
-  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount }) => {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD }) {
+  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
     const cached = cache.get(processId)
 
     /**
@@ -1279,6 +1279,11 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     // const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
     // stopTimer()
 
+    const incrementedGasUsed = pipe(
+      pathOr(BigInt(0), ['evaluation', 'gasUsed']),
+      add(gasUsed || BigInt(0))
+    )(cached)
+
     const evaluation = {
       processId,
       moduleId,
@@ -1295,26 +1300,31 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
        * NOTE: this consumes more memory in the LRU In-Memory Cache
        */
       encoding: undefined,
-      cron
+      cron,
+      gasUsed: incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? incrementedGasUsed : 0
     }
     // cache.set(processId, { Memory: zipped, evaluation })
     cache.set(processId, { Memory, evaluation })
 
-    if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
+    /**
+     *  @deprecated
+     *  We are no longer creating checkpoints based on eval counts. Rather, we use a gas-based checkpoint system
+    **/
+    // if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
 
+    if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
     /**
      * Eagerly create the Checkpoint on the next event queue drain
      */
     setImmediate(() => {
       logger(
-        'Eager Checkpoint Threshold of "%d" messages met when evaluating process "%s" up to "%j" -- "%d" evaluations peformed. Eagerly creating a Checkpoint...',
-        EAGER_CHECKPOINT_THRESHOLD,
+        'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met when evaluating process "%s" up to "%j" -- "%d" gas used. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
         processId,
         { messageId, timestamp, ordinate, cron, blockHeight },
-        evalCount
+        incrementedGasUsed
       )
 
-      // return saveCheckpoint({ Memory: zipped, ...evaluation })
       /**
        * Memory will always be defined at this point, so no reason
        * to pass File

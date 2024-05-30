@@ -87,6 +87,8 @@ export function evaluateWith (env) {
     of(ctx)
       .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
+        // A running tally of gas used in the eval stream
+        let totalGasUsed = BigInt(0)
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -214,6 +216,8 @@ export function evaluateWith (env) {
                          */
                         .then(mergeLeft({ noSave, message, cron, ordinate }))
                         .then(async (output) => {
+                          if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
+
                           if (cron) ctx.stats.messages.cron++
                           else ctx.stats.messages.scheduled++
 
@@ -269,7 +273,8 @@ export function evaluateWith (env) {
             ordinate,
             cron,
             Memory: prev.Memory,
-            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron
+            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron,
+            gasUsed: totalGasUsed
           })
         }
 

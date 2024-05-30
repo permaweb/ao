@@ -73,7 +73,8 @@ export const saveLatestProcessMemorySchema = z.function()
     cron: z.string().nullish(),
     blockHeight: z.coerce.number().nullish(),
     Memory: bufferSchema,
-    evalCount: z.number().nullish()
+    evalCount: z.number().nullish(),
+    gasUsed: z.bigint().nullish()
   }))
   .returns(z.promise(z.any()))
 
