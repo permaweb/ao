@@ -83,11 +83,12 @@ export function evaluateWith (env) {
 
   const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(env.saveLatestProcessMemory)
 
-  let totalGasUsed = BigInt(0)
   return (ctx) =>
     of(ctx)
       .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
+        // A running tally of gas used in the eval stream
+        let totalGasUsed = BigInt(0)
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
