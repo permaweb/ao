@@ -670,6 +670,9 @@ var Module = (() => {
       function __asyncjs__weavedrive_open(c_filename, mode) {
         return Asyncify.handleAsync(async () => {
           const filename = UTF8ToString(Number(c_filename));
+          if (!Module.WeaveDrive) {
+            return Promise.resolve(null);
+          }
           const drive = Module.WeaveDrive(Module, FS);
           return await drive.open(filename);
         });
