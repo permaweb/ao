@@ -102,6 +102,15 @@ export const domainConfigSchema = z.object({
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
   /**
+   * The percentage of worker threads to allocate to primary tasks
+   * such as evaluations from "/result" or "/cron"
+   *
+   * Evaluations for "non-primary" workloads ie. "/dry-run" will
+   * be performed using 1 - WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE
+   * of the max worker threads
+   */
+  WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE: positiveIntSchema,
+  /**
    * The maximum size of the in-memory cache used for wasm instances
    */
   WASM_INSTANCE_CACHE_MAX_SIZE: positiveIntSchema,
