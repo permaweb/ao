@@ -265,7 +265,7 @@ export const createApis = async (ctx) => {
      * Dry-runs use a separate worker thread pool, so as to not block
      * primary evaluations
      */
-    loadEvaluator: AoModuleClient.evaluatorWith({
+    loadDryRunEvaluator: AoModuleClient.evaluatorWith({
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
