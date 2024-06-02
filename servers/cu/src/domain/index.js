@@ -80,22 +80,21 @@ export const createApis = async (ctx) => {
     }
   }
 
-  /**
-   * Each worker pool will have WASM_EVALUATION_MAX_WORKERS max workers.
-   * This will create 2x the number of workers, thus splitting CPU time between them,
-   * but will effectively allow dry-runs to not block "primary" evaluations
-   *
-   * TODO: should we "shard" the thread pool instead of doubling the size?
-   * See https://github.com/permaweb/ao/issues/753
-   */
-
+  const maxPrimaryWorkerThreads = Math.min(
+    Math.max(1, ctx.WASM_EVALUATION_MAX_WORKERS - 1),
+    Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
+  )
   const primaryWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
-    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
+    maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
   })
 
+  const maxDryRunWorkerTheads = Math.max(
+    1,
+    Math.floor(ctx.WASM_EVALUATION_MAX_WORKERS * (1 - (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100)))
+  )
   const dryRunWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
-    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
+    maxWorkers: maxDryRunWorkerTheads,
     onCreateWorker: onCreateWorker('dry-run')
   })
 
@@ -127,6 +126,8 @@ export const createApis = async (ctx) => {
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
   ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
+  ctx.logger('Max primary worker threads set to %s', maxPrimaryWorkerThreads)
+  ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
 
   const stats = statsWith({
     loadWorkerStats: () => ({
