@@ -62,25 +62,41 @@ export const createApis = async (ctx) => {
   const DB_URL = `${ctx.DB_URL}.sqlite`
   const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
-  const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
-    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
-    onCreateWorker: () => {
-      const workerId = randomBytes(8).toString('hex')
-      ctx.logger('Spinning up worker with id "%s"...', workerId)
+  const onCreateWorker = (type) => () => {
+    const workerId = randomBytes(8).toString('hex')
+    ctx.logger('Spinning up "%s" pool worker with id "%s"...', type, workerId)
 
-      return {
-        workerThreadOpts: {
-          workerData: {
-            WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
-            WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
-            WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
-            ARWEAVE_URL: ctx.ARWEAVE_URL,
-            DB_URL,
-            id: workerId
-          }
+    return {
+      workerThreadOpts: {
+        workerData: {
+          WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
+          WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
+          WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
+          ARWEAVE_URL: ctx.ARWEAVE_URL,
+          DB_URL,
+          id: workerId
         }
       }
     }
+  }
+
+  /**
+   * Each worker pool will have WASM_EVALUATION_MAX_WORKERS max workers.
+   * This will create 2x the number of workers, thus splitting CPU time between them,
+   * but will effectively allow dry-runs to not block "primary" evaluations
+   *
+   * TODO: should we "shard" the thread pool instead of doubling the size?
+   * See https://github.com/permaweb/ao/issues/753
+   */
+
+  const primaryWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
+    onCreateWorker: onCreateWorker('primary')
+  })
+
+  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
+    onCreateWorker: onCreateWorker('dry-run')
   })
 
   const arweave = ArweaveClient.createWalletClient()
@@ -113,7 +129,10 @@ export const createApis = async (ctx) => {
   ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
 
   const stats = statsWith({
-    loadWorkerStats: () => workerPool.stats(),
+    loadWorkerStats: () => ({
+      primary: primaryWorkerPool.stats(),
+      dryRun: dryRunWorkerPool.stats()
+    }),
     /**
      * https://nodejs.org/api/process.html#processmemoryusage
      *
@@ -207,7 +226,7 @@ export const createApis = async (ctx) => {
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => workerPool.exec('evaluate', args),
+      evaluate: (...args) => primaryWorkerPool.exec('evaluate', args),
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
@@ -241,7 +260,18 @@ export const createApis = async (ctx) => {
   const dryRunLogger = ctx.logger.child('dryRun')
   const dryRun = dryRunWith({
     ...sharedDeps(dryRunLogger),
-    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger })
+    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger }),
+    /**
+     * Dry-runs use a separate worker thread pool, so as to not block
+     * primary evaluations
+     */
+    loadEvaluator: AoModuleClient.evaluatorWith({
+      /**
+       * Evaluation will invoke a worker available in the worker pool
+       */
+      evaluate: (...args) => dryRunWorkerPool.exec('evaluate', args),
+      logger: dryRunLogger
+    })
   })
 
   /**
