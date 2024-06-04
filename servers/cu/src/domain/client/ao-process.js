@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
+import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
@@ -476,6 +476,7 @@ export function findLatestProcessMemoryWith ({
   loadTransactionData,
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
+  PROCESS_CHECKPOINT_TRUSTED_OWNERS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -492,7 +493,7 @@ export function findLatestProcessMemoryWith ({
 
   const GET_AO_PROCESS_CHECKPOINTS = `
     query GetAoProcessCheckpoints(
-      $owner: String!
+      $owners: [String!]!
       $processId: String!
       $limit: Int!
     ) {
@@ -502,7 +503,7 @@ export function findLatestProcessMemoryWith ({
           { name: "Type", values: ["Checkpoint"] }
           { name: "Data-Protocol", values: ["ao"] }
         ],
-        owners: [$owner]
+        owners: $owners,
         first: $limit,
         sort: HEIGHT_DESC
       ) {
@@ -732,12 +733,15 @@ export function findLatestProcessMemoryWith ({
     }
 
     return address()
-      .chain((owner) => queryCheckpoints({
-        query: GET_AO_PROCESS_CHECKPOINTS,
-        variables: { owner, processId, limit: 50 },
-        processId,
-        before: LATEST
-      }))
+      .chain((owner) => {
+        const owners = ifElse(isEmpty, always([owner]), always(PROCESS_CHECKPOINT_TRUSTED_OWNERS))(PROCESS_CHECKPOINT_TRUSTED_OWNERS)
+        return queryCheckpoints({
+          query: GET_AO_PROCESS_CHECKPOINTS,
+          variables: { owners, processId, limit: 50 },
+          processId,
+          before: LATEST
+        })
+      })
       .map(path(['data', 'transactions', 'edges']))
       .map(determineLatestCheckpoint)
       .chain((latestCheckpoint) => {

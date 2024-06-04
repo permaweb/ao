@@ -123,9 +123,10 @@ There are a few environment variables that you can set. Besides
 - `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a
   `blacklist` (defaults to none)
 - `ALLOW_PROCESSES`: The counterpart to RESTRICT_PROCESSES. When configured the
-  CU will only execute these processes aka. a `whitelist` (defaults to allow all processes) 
+  CU will only execute these processes aka. a `whitelist` (defaults to allow all processes)
 - `ALLOW_OWNERS`: A list of process owners, whose processes are allowed to execute
 on the CU aka. an owner `whitelist` (defaults to allow all owners)
+- `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are trusted and the CU can start from
 
 ## Tests
 
