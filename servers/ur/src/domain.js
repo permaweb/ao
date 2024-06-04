@@ -1,6 +1,6 @@
 import { LRUCache } from 'lru-cache'
 
-export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners }) {
+export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHost }) {
   const cache = new LRUCache({
     /**
        * 10MB
@@ -13,6 +13,12 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners }) {
   })
 
   return async (processId) => {
+    /**
+     * If a process has a specific mapping configured,
+     * then immediately return it's mapping
+     */
+    if (processToHost && processToHost[processId]) return processToHost[processId]
+
     /**
      * All three of these must be set for the
      * subrouter logic to work so if any are

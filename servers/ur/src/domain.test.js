@@ -79,5 +79,12 @@ describe('domain', () => {
       assert(await determineHost({ processId: 'process-123', failoverAttempt: 0 }))
       assert.equal(await determineHost({ processId: 'process-123', failoverAttempt: 0 }), 'http://foo.bar')
     })
+
+    test('should redirect to the specific host for the process', async () => {
+      const bailout = bailoutWith({ processToHost: { 'process-123': 'https://specific.host' } })
+
+      const determineHost = determineHostWith({ hosts: HOSTS, cache, bailout })
+      assert.equal(await determineHost({ processId: 'process-123', failoverAttempt: 0 }), 'https://specific.host')
+    })
   })
 })

@@ -6,11 +6,11 @@ import { logger } from './logger.js'
 
 import { mountRoutesWithByAoUnit } from './routes/byAoUnit.js'
 
-export function redirectWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
+export function redirectWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners, processToHost }) {
   const _logger = logger.child('redirect')
   _logger('Configuring to redirect ao %s units...', aoUnit)
 
-  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners }) : undefined
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners, processToHost }) : undefined
   const determineHost = determineHostWith({ hosts, bailout })
 
   /**
