@@ -58,6 +58,9 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
 
 function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
   return async ({ processId }) => {
+    if (cronsRunning[processId]) {
+      throw new Error('Process already being monitored')
+    }
     const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
 
     let ct = null
