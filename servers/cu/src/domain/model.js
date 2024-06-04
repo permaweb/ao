@@ -102,6 +102,12 @@ export const domainConfigSchema = z.object({
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
   /**
+   * The max size of the dry run worker thread pool queue
+   * of work. If the queue size hits this value,
+   * then subsequent enqueues are rejected.
+   */
+  WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE: positiveIntSchema,
+  /**
    * The percentage of worker threads to allocate to primary tasks
    * such as evaluations from "/result" or "/cron"
    *
