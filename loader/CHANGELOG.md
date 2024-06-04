@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.33](https://github.com/permaweb/ao/compare/loader@v0.0.32...loader@v0.0.33) (2024-06-04)
+
+
+### Features
+
+* **loader:** weavedrive should be optional for wasm64 ([0a35880](https://github.com/permaweb/ao/commit/0a3588059d0d03ebd5df014287c4c4f6d6d2c5de))
+
 ## [0.0.32](https://github.com/permaweb/ao/compare/loader@v0.0.31...loader@v0.0.32) (2024-05-23)
 
 
