@@ -181,6 +181,7 @@ def main():
       '--pre-js', '/opt/pre.js'
     ]
     cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
+    cmd.extend(['-s', 'ASSERTIONS=1'])
     cmd.extend(definition.get_extra_args())
     cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
     cmd.extend(['/tmp/compile.c', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
