@@ -95,7 +95,8 @@ export const createApis = async (ctx) => {
   )
   const dryRunWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
     maxWorkers: maxDryRunWorkerTheads,
-    onCreateWorker: onCreateWorker('dry-run')
+    onCreateWorker: onCreateWorker('dry-run'),
+    maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE
   })
 
   const arweave = ArweaveClient.createWalletClient()
@@ -128,6 +129,7 @@ export const createApis = async (ctx) => {
   ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
   ctx.logger('Max primary worker threads set to %s', maxPrimaryWorkerThreads)
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
+  ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
   const stats = statsWith({
     loadWorkerStats: () => ({
@@ -270,7 +272,22 @@ export const createApis = async (ctx) => {
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => dryRunWorkerPool.exec('evaluate', args),
+      evaluate: (...args) => Promise.resolve()
+        .then(() => dryRunWorkerPool.exec('evaluate', args))
+        .catch((err) => {
+          /**
+           * Hack to detect when the max queue size is being exceeded and to reject
+           * with a more informative error
+           */
+          if (err.message.startsWith('Max queue size of')) {
+            const dryRunLimitErr = new Error('Dry-Run enqueue limit exceeded')
+            dryRunLimitErr.status = 429
+            return Promise.reject(dryRunLimitErr)
+          }
+
+          // Bubble as normal
+          return Promise.reject(err)
+        }),
       logger: dryRunLogger
     })
   })
