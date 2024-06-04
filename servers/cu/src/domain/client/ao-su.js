@@ -3,7 +3,7 @@ import { Transform, compose as composeStreams } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 
-import { backoff, mapForwardedBy, mapFrom, parseTags } from '../utils.js'
+import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../utils.js'
 
 const okRes = (res) => {
   if (res.ok) return res
@@ -130,7 +130,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
           { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
         ))
-        .catch(async (res) => {
+        .catch(async (err) => {
           logger(
             'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
             suUrl,
@@ -138,7 +138,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             from,
             to
           )
-          throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${res.status}: ${await res.text()}`)
+          throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${await strFromFetchError(err)}`)
         })
         .then(resToJson)
     }
@@ -229,9 +229,9 @@ export const loadProcessWith = ({ fetch, logger }) => {
       () => fetch(`${suUrl}/processes/${processId}`, { method: 'GET' }).then(okRes),
       { maxRetries: 5, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
     )
-      .catch(async (res) => {
+      .catch(async (err) => {
         logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
-        throw new Error(`${res.status}: ${await res.text()}`)
+        throw new Error(await strFromFetchError(err))
       })
       .then(resToJson)
       .then(applySpec({
@@ -256,9 +256,9 @@ export const loadTimestampWith = ({ fetch, logger }) => {
     () => fetch(`${suUrl}/timestamp?process-id=${processId}`).then(okRes),
     { maxRetries: 5, delay: 500, log: logger, name: `loadTimestamp(${JSON.stringify({ suUrl, processId })})` }
   )
-    .catch(async (res) => {
+    .catch(async (err) => {
       logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
-      throw new Error(`${res.status}: ${await res.text()}`)
+      throw new Error(await strFromFetchError(err))
     })
     .then(resToJson)
     .then((res) => ({
@@ -301,12 +301,12 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
       () => fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' }).then(okRes),
       { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageTxId })})` }
     )
-      .catch(async (res) => {
+      .catch(async (err) => {
         logger(
           'Error Encountered when loading message meta for message "%s" to process "%s" from SU "%s"',
           messageTxId, processId, suUrl
         )
-        throw new Error(`${res.status}: ${await res.text()}`)
+        throw new Error(await strFromFetchError(err))
       })
       .then(resToJson)
       /**

@@ -33,6 +33,7 @@ const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm3
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean()),
   DUMP_PATH: z.string().min(1)
 })
 
@@ -91,6 +92,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 6363,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
@@ -104,11 +106,19 @@ const CONFIG_ENVS = {
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('30m'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     EAGER_CHECKPOINT_THRESHOLD: process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
+    /**
+     *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
+     *  This was calculated by creating a process built to do continuous compute. After 2 hours, this process used
+     *  300 trillion gas. This is the baseline for checkpointing as no process should need to spend more than two hours
+     *  catching up to a previous checkpoint.
+     */
+    EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: process.env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000,
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
     PROCESS_WASM_SUPPORTED_EXTENSIONS: process.env.PROCESS_WASM_SUPPORTED_EXTENSIONS || [],
     WASM_EVALUATION_MAX_WORKERS: process.env.WASM_EVALUATION_MAX_WORKERS || Math.max(cpus().length - 1, 1),
+    WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE: process.env.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE || 70, // 70% of worker threads allocated to primary workloads
     WASM_INSTANCE_CACHE_MAX_SIZE: process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
     WASM_BINARY_FILE_DIRECTORY: process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
@@ -119,7 +129,7 @@ const CONFIG_ENVS = {
     PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
     PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: process.env.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD || ms('5m'),
     PROCESS_MEMORY_CACHE_FILE_DIR: process.env.PROCESS_MEMORY_CACHE_FILE_DIR || tmpdir(),
-    PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: process.env.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL || ms('8h'),
+    PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: process.env.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL || 0,
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
     ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
@@ -128,6 +138,7 @@ const CONFIG_ENVS = {
   production: {
     MODE,
     port: process.env.PORT || 6363,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
@@ -141,11 +152,19 @@ const CONFIG_ENVS = {
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('30m'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false', // TODO: disabled by default for now. Enable by default later
     EAGER_CHECKPOINT_THRESHOLD: process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
+    /**
+     *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
+     *  This was calculated by creating a process built to do continuous compute by adding and clearing a table.
+     *  After 2 hours of nonstop compute, this process used 300 trillion gas.
+     *  This is the baseline for checkpointing as no process should need to spend more than two hours catching up to a previous checkpoint.
+     */
+    EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: process.env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000,
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
     PROCESS_WASM_SUPPORTED_EXTENSIONS: process.env.PROCESS_WASM_SUPPORTED_EXTENSIONS || [],
     WASM_EVALUATION_MAX_WORKERS: process.env.WASM_EVALUATION_MAX_WORKERS || Math.max(cpus().length - 1, 1),
+    WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE: process.env.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE || 70, // 70% of worker threads allocated to primary workloads
     WASM_INSTANCE_CACHE_MAX_SIZE: process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
     WASM_BINARY_FILE_DIRECTORY: process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
@@ -156,7 +175,7 @@ const CONFIG_ENVS = {
     PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
     PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: process.env.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD || ms('5m'),
     PROCESS_MEMORY_CACHE_FILE_DIR: process.env.PROCESS_MEMORY_CACHE_FILE_DIR || tmpdir(),
-    PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: process.env.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL || ms('8h'),
+    PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: process.env.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL || 0,
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
     ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],

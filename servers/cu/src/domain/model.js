@@ -85,15 +85,31 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
+   * @deprecated
    * If an evaluation stream evaluates this amount of messages,
    * then it will immediately create a Checkpoint at the end of the
    * evaluation stream
    */
   EAGER_CHECKPOINT_THRESHOLD: positiveIntSchema,
   /**
+   * If a process uses this amount of
+   * gas, then it will immediately create a Checkpoint at the end of the
+   * evaluation stream.
+   */
+  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: positiveIntSchema,
+  /**
    * The number of workers to use for evaluating messages
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
+  /**
+   * The percentage of worker threads to allocate to primary tasks
+   * such as evaluations from "/result" or "/cron"
+   *
+   * Evaluations for "non-primary" workloads ie. "/dry-run" will
+   * be performed using 1 - WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE
+   * of the max worker threads
+   */
+  WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE: positiveIntSchema,
   /**
    * The maximum size of the in-memory cache used for wasm instances
    */
@@ -170,6 +186,10 @@ export const domainConfigSchema = z.object({
   ALLOW_OWNERS: commaDelimitedArraySchema
 })
 
+export const bufferSchema = z.any().refine(buffer => {
+  return ArrayBuffer.isView(buffer) || Buffer.isBuffer(buffer)
+}, { message: 'Value must implement the buffer protocol' })
+
 export const streamSchema = z.any().refine(stream => {
   return stream !== null &&
     typeof stream === 'object' &&
@@ -197,6 +217,19 @@ export const processSchema = z.object({
   owner: z.string().min(1),
   tags: z.array(rawTagSchema),
   block: blockSchema
+})
+
+export const processCheckpointSchema = z.object({
+  src: z.enum(['memory', 'file', 'arweave', 'cold_start']),
+  fromFile: z.string().nullish(),
+  Memory: bufferSchema.nullish(),
+  moduleId: z.string().nullish(),
+  timestamp: z.coerce.number().nullish(),
+  epoch: z.coerce.number().nullish(),
+  nonce: z.coerce.number().nullish(),
+  blockHeight: z.coerce.number().nullish(),
+  cron: z.string().nullish(),
+  ordinate: z.string()
 })
 
 export const moduleSchema = z.object({

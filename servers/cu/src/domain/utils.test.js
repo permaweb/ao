@@ -6,7 +6,10 @@ import ms from 'ms'
 
 import {
   busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor,
-  removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff
+  removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff,
+  isLaterThan,
+  isEarlierThan,
+  maybeParseInt
 } from './utils.js'
 
 describe('utils', () => {
@@ -217,6 +220,48 @@ describe('utils', () => {
     })
   })
 
+  describe('isLaterThan', () => {
+    const now = new Date()
+    const tenSecondsAgo = now - 10000
+
+    test('should return whether the right is later than the left', () => {
+      // later timestamp
+      assert.ok(isLaterThan({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // later cron (when left has no cron)
+      assert.ok(isLaterThan({ timestamp: tenSecondsAgo }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+      // later cron
+      assert.ok(isLaterThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo, cron: '1-1-minute' }))
+
+      // earlier timestamp
+      assert.ok(!isLaterThan({ timestamp: now }, { timestamp: tenSecondsAgo }))
+      // earlier cron (when right has no cron)
+      assert.ok(!isLaterThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo }))
+      // earlier cron
+      assert.ok(!isLaterThan({ timestamp: tenSecondsAgo, cron: '1-1-minute' }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+    })
+  })
+
+  describe('isEarlierThan', () => {
+    const now = new Date()
+    const tenSecondsAgo = now - 10000
+
+    test('should return whether the right is later than the left', () => {
+      // later timestamp
+      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // later cron (when left has no cron)
+      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+      // later cron
+      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo, cron: '1-1-minute' }))
+
+      // earlier timestamp
+      assert.ok(isEarlierThan({ timestamp: now }, { timestamp: tenSecondsAgo }))
+      // earlier cron (when right has no cron)
+      assert.ok(isEarlierThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo }))
+      // earlier cron
+      assert.ok(isEarlierThan({ timestamp: tenSecondsAgo, cron: '1-1-minute' }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
+    })
+  })
+
   describe('findPendingForProcessBefore', () => {
     const pendingMap = new Map()
     const processId = 'process-123'
@@ -231,9 +276,14 @@ describe('utils', () => {
 
     const findPendingForProcessBefore = findPendingForProcessBeforeWith(pendingMap)
 
-    test('should return undefined if no timestamp', () => {
-      assert.equal(findPendingForProcessBefore({ processId }), undefined)
-      assert.equal(findPendingForProcessBefore({ processId, timestamp: '' }), undefined)
+    test('should return latest if no timestamp', async () => {
+      const [key, value] = findPendingForProcessBefore({ processId })
+      assert.equal(key, `${processId},${now.getTime() - fifteenMinAgo},,,true`)
+      assert.equal(await value.pending, fifteenMinAgo)
+
+      const [key2, value2] = findPendingForProcessBefore({ processId, timestamp: '' })
+      assert.equal(key2, `${processId},${now.getTime() - fifteenMinAgo},,,true`)
+      assert.equal(await value2.pending, fifteenMinAgo)
     })
 
     test('should return undefined if no entry found before timestamp', () => {
@@ -330,6 +380,22 @@ describe('utils', () => {
         assert.equal(err, 'bar')
         assert.equal(count, 3)
       })
+    })
+  })
+
+  describe('maybeParseInt', () => {
+    test('should parse the int', () => {
+      assert.equal(maybeParseInt('12'), 12)
+      assert.equal(maybeParseInt(12), 12)
+    })
+
+    test('should map "undefined" to undefined', () => {
+      assert.ok(maybeParseInt('undefined') === undefined)
+    })
+
+    test('should map NaN to undefined', () => {
+      console.log(maybeParseInt(NaN))
+      assert.ok(maybeParseInt(NaN) === undefined)
     })
   })
 })

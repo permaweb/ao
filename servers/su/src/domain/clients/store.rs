@@ -69,7 +69,7 @@ impl StoreClient {
         let database_url = config.database_url;
         let database_read_url = match config.database_read_url {
             Some(u) => u,
-            None => database_url.clone()
+            None => database_url.clone(),
         };
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
@@ -84,9 +84,10 @@ impl StoreClient {
             .test_on_check_out(true)
             .build(read_manager)
             .map_err(|_| {
-                StoreErrorType::DatabaseError("Failed to initialize read connection pool.".to_string())
+                StoreErrorType::DatabaseError(
+                    "Failed to initialize read connection pool.".to_string(),
+                )
             })?;
-        
 
         Ok(StoreClient { pool, read_pool })
     }
@@ -322,7 +323,13 @@ impl DataStore for StoreClient {
 
     fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        /*
+            This must use get_conn because it needs 
+            an up to date record from the writer instance
+            it cannot be behind at all as it is used
+            in the scheduling process.
+        */
+        let conn = &mut self.get_conn()?;
 
         // Get the latest DbMessage
         let latest_db_message_result = messages

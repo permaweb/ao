@@ -279,8 +279,8 @@ export async function busyIn (millis, p, busyFn) {
 }
 
 export function isLaterThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
+  const t1 = `${eval1.timestamp || 0}`
+  const t2 = `${eval2.timestamp || 0}`
   /**
    * timestamps are equal some might be two crons on overlapping interval,
    * so compare the crons
@@ -291,8 +291,8 @@ export function isLaterThan (eval1, eval2) {
 }
 
 export function isEarlierThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
+  const t1 = `${eval1.timestamp || 0}`
+  const t2 = `${eval2.timestamp || 0}`
   /**
    * timestamps are equal some might be two crons on overlapping interval,
    * so compare the crons
@@ -311,7 +311,17 @@ export function isEqualTo (eval1, eval2) {
 }
 
 export const findPendingForProcessBeforeWith = (map) => ({ processId, timestamp }) => {
-  if (!timestamp) return // latest
+  /**
+   * In the case of no timestamp, we need to chain to the
+   * latest pending eval stream, and so set timestamp (used as right-most boundary)
+   * to Infinity
+   *
+   * The implication is that any request for 'latest' will be chained
+   * to ANY pending evaluation stream, instead of starting a second one
+   * and subsequently duplicating work. This is safe to do now that the CU only will
+   * evaluate messages it has not evaluated before (see https://github.com/permaweb/ao/issues/667)
+   */
+  if (!timestamp) timestamp = Infinity
 
   timestamp = parseInt(timestamp)
   let latestBefore // string | undefined
@@ -368,19 +378,19 @@ export const backoff = (
       .catch((err) => {
         // Reached max number of retries
         if (retry >= maxRetries) {
-          log(`(${name}) Reached max number of retries: ${delay}. Bubbling err`)
-          throw err
+          log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
+          return Promise.reject(err)
         }
 
         const newRetry = retry + 1
         const newDelay = delay + delay
         log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
-        return new Promise((resolve) =>
+        return new Promise((resolve, reject) =>
           setTimeout(
           /**
            * increment the retry count Retry with an exponential backoff
            */
-            () => resolve(action(newRetry, newDelay)),
+            () => action(newRetry, newDelay).then(resolve).catch(reject),
             /**
              * Retry in {delay} milliseconds
              */
@@ -392,3 +402,26 @@ export const backoff = (
 
   return action(0, delay)
 }
+
+/**
+ * TODO: this could probably be cleaner
+ */
+export async function strFromFetchError (err) {
+  if (err instanceof TypeError) return (err.cause ? err.cause.message : err.message) || 'Unknown TypeError'
+  if (err instanceof Response) return `${err.status}: ${await err.text()}`
+  return err.message || 'Unknown Error'
+}
+
+/**
+   * TODO: clean this up
+   */
+const mapBadData = (val) => {
+  if (val === 'undefined') return undefined
+  if (isNaN(val)) return undefined
+  return val
+}
+
+export const maybeParseInt = pipe(
+  mapBadData,
+  (val) => val ? parseInt(val) : undefined
+)

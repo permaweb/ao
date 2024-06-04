@@ -28,7 +28,14 @@ export function dryRunWith (env) {
   const loadMessageMeta = loadMessageMetaWith(env)
   const loadModule = loadModuleWith(env)
   const readState = readStateWith(env)
-  const evaluate = evaluateWith(env)
+  /**
+   * Evaluate performing the dry-run will utilize a separate
+   * evaluator using a separate worker thread pool
+   */
+  const evaluate = evaluateWith({
+    ...env,
+    loadEvaluator: env.loadDryRunEvaluator
+  })
 
   return ({ processId, messageTxId, dryRun }) => {
     return of({ messageTxId })

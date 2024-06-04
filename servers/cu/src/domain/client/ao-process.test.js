@@ -5,8 +5,8 @@ import { gzip } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import { createLogger } from '../logger.js'
-import { findProcessSchema, saveProcessSchema } from '../dal.js'
-import { LATEST, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessMemoryBeforeWith, findProcessWith, saveProcessWith } from './ao-process.js'
+import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
+import { LATEST, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
 import { Readable } from 'node:stream'
 
 const gzipP = promisify(gzip)
@@ -356,7 +356,7 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: []
       }
-      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+      const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should decode memory', () => {
         test('hot in a cache', async () => {
@@ -365,7 +365,7 @@ describe('ao-process', () => {
         })
 
         test('drained to a file', async () => {
-          const findLatestProcessMemory = findLatestProcessMemoryWith({
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             cache: {
               get: () => ({
@@ -377,7 +377,7 @@ describe('ao-process', () => {
               assert.equal(file, 'state-process123.dat')
               return zipped
             }
-          })
+          }))
 
           const res = await findLatestProcessMemory(target)
           assert.deepStrictEqual(res.Memory, Memory)
@@ -386,7 +386,7 @@ describe('ao-process', () => {
 
       describe('should NOT decode the memory', () => {
         test('drained to a file', async () => {
-          const findLatestProcessMemory = findLatestProcessMemoryWith({
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             cache: {
               get: () => ({
@@ -398,7 +398,7 @@ describe('ao-process', () => {
               assert.equal(file, 'state-process123.dat')
               return Memory
             }
-          })
+          }))
           const res = await findLatestProcessMemory(target)
           assert.deepStrictEqual(res.Memory, Memory)
         })
@@ -441,7 +441,7 @@ describe('ao-process', () => {
       })
 
       test('should reload the memory from a file', async () => {
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           cache: {
             get: () => ({
@@ -453,7 +453,7 @@ describe('ao-process', () => {
             assert.equal(file, 'state-process123.dat')
             return zipped
           }
-        })
+        }))
 
         const res = await findLatestProcessMemory(target)
 
@@ -505,7 +505,7 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: []
       }
-      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+      const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should use if in LRU In-Memory Cache cannot be used', () => {
         test('no checkpoint in LRU In-Memory cache', async () => {
@@ -547,7 +547,7 @@ describe('ao-process', () => {
       })
 
       test('should NOT decode the memory if not needed', async () => {
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           readCheckpointFile: async () => ({
             Memory: { id: 'tx-not-encoded', encoding: undefined },
@@ -560,7 +560,7 @@ describe('ao-process', () => {
             assert.equal(id, 'tx-not-encoded')
             return new Response(Readable.toWeb(Readable.from(Memory)))
           }
-        })
+        }))
 
         const res = await findLatestProcessMemory(target)
 
@@ -612,7 +612,7 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: []
       }
-      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+      const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should use if the LRU In-Memory and File checkpoint cannot be used', async () => {
         test('no file checkpoint is found', async () => {
@@ -648,12 +648,12 @@ describe('ao-process', () => {
         })
 
         test('file checkpoint points to ignored checkpoint on arweave', async () => {
-          const findLatestProcessMemory = findLatestProcessMemoryWith({
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             findCheckpointFileBefore: async () => ({ file: 'foobar.json' }),
             readCheckpointFile: async () => ({ Memory: { id: 'file_ignored' }, evaulation: cachedEval }),
             IGNORE_ARWEAVE_CHECKPOINTS: ['file_ignored']
-          })
+          }))
 
           const { Memory, ...res } = await findLatestProcessMemory(target)
 
@@ -671,7 +671,7 @@ describe('ao-process', () => {
         })
 
         test('file checkpoint fails to be downloaded', async () => {
-          const findLatestProcessMemory = findLatestProcessMemoryWith({
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             findCheckpointFileBefore: async () => ({ file: 'foobar.json' }),
             readCheckpointFile: async () => ({ Memory: { id: 'fail' }, evaulation: cachedEval }),
@@ -679,7 +679,7 @@ describe('ao-process', () => {
               if (id === 'fail') throw new Error('woops')
               return deps.loadTransactionData(id)
             }
-          })
+          }))
 
           const { Memory, ...res } = await findLatestProcessMemory(target)
 
@@ -703,7 +703,7 @@ describe('ao-process', () => {
       })
 
       test('should NOT decode the memory if not needed', async () => {
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           queryGateway: async () => ({
             data: {
@@ -732,14 +732,14 @@ describe('ao-process', () => {
             assert.equal(id, 'tx-not-encoded')
             return new Response(Readable.toWeb(Readable.from(Memory)))
           }
-        })
+        }))
         const res = await findLatestProcessMemory(target)
 
         assert.deepStrictEqual(res.Memory, Memory)
       })
 
       test('should use the latest retrieved checkpoint', async () => {
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           queryGateway: async () => ({
             data: {
@@ -764,7 +764,7 @@ describe('ao-process', () => {
               }
             }
           })
-        })
+        }))
 
         const res = await findLatestProcessMemory(target)
 
@@ -772,7 +772,7 @@ describe('ao-process', () => {
       })
 
       test('should use the latest retrieved checkpoint that is NOT ignored', async () => {
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           queryGateway: async () => ({
             data: {
@@ -799,7 +799,7 @@ describe('ao-process', () => {
             }
           }),
           IGNORE_ARWEAVE_CHECKPOINTS: ['ignored']
-        })
+        }))
 
         const res = await findLatestProcessMemory(target)
 
@@ -808,7 +808,7 @@ describe('ao-process', () => {
 
       test('should retry querying the gateway', async () => {
         let count = 1
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           queryGateway: async () => {
             if (count++ < 2) throw new Error('timeout')
@@ -836,7 +836,7 @@ describe('ao-process', () => {
               }
             }
           }
-        })
+        }))
 
         const res = await findLatestProcessMemory(target)
 
@@ -844,7 +844,7 @@ describe('ao-process', () => {
       })
 
       test('should fallback to Checkpoint gateway if default gateway reaches max retries', async () => {
-        const findLatestProcessMemory = findLatestProcessMemoryWith({
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           queryGateway: async () => { throw new Error('timeout') },
           queryCheckpointGateway: async ({ query, variables }) => {
@@ -878,7 +878,7 @@ describe('ao-process', () => {
               }
             }
           }
-        })
+        }))
 
         const res = await findLatestProcessMemory(target)
 
@@ -918,7 +918,7 @@ describe('ao-process', () => {
         ordinate: '0'
 
       }
-      const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+      const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should cold start if LRU In-Memory Cache, File Checkpoint, and Gateway Checkpoints all cannot be used', async () => {
         test('no checkpoint found on gateway', async () => {
@@ -927,12 +927,12 @@ describe('ao-process', () => {
         })
 
         test('gateway query exceeds retries', async () => {
-          const findLatestProcessMemory = findLatestProcessMemoryWith({
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             queryGateway: async () => {
               throw new Error('timeout')
             }
-          })
+          }))
 
           const res = await findLatestProcessMemory(target)
 
@@ -940,10 +940,10 @@ describe('ao-process', () => {
         })
 
         test('process is configured to ignore gateway checkpoints', async () => {
-          const findLatestProcessMemory = findLatestProcessMemoryWith({
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [PROCESS]
-          })
+          }))
           const res = await findLatestProcessMemory(target)
           assert.deepStrictEqual(res, COLDSTART)
         })
@@ -980,7 +980,7 @@ describe('ao-process', () => {
           IGNORE_ARWEAVE_CHECKPOINTS: []
         }
 
-        const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
         await findLatestProcessMemory(target)
           .then(() => assert.fail('should reject'))
@@ -1017,7 +1017,7 @@ describe('ao-process', () => {
           IGNORE_ARWEAVE_CHECKPOINTS: []
         }
 
-        const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
         await findLatestProcessMemory(target)
           .then(() => assert.fail('should reject'))
@@ -1066,7 +1066,7 @@ describe('ao-process', () => {
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
         }
 
-        const findLatestProcessMemory = findLatestProcessMemoryWith(deps)
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
         await findLatestProcessMemory(target)
           .then(() => assert.fail('should reject'))
@@ -1079,12 +1079,11 @@ describe('ao-process', () => {
     })
   })
 
-  describe('findProcessMemoryBeforeWith', () => {
+  describe('saveLatestProcessMemory', () => {
     const PROCESS = 'process-123'
     const now = new Date().getTime()
     const tenSecondsAgo = now - 10000
     const Memory = Buffer.from('hello world')
-    let zipped
     const cachedEval = {
       processId: PROCESS,
       moduleId: 'module-123',
@@ -1093,507 +1092,170 @@ describe('ao-process', () => {
       timestamp: tenSecondsAgo,
       blockHeight: 123,
       ordinate: '11',
-      encoding: 'gzip'
+      encoding: 'gzip',
+      gasUsed: BigInt(100)
     }
-
-    const target = {
+    const cachedEvalFuture = {
       processId: PROCESS,
-      timestamp: now,
+      moduleId: 'module-123',
+      epoch: 0,
+      nonce: 11,
+      timestamp: now + 1000,
+      blockHeight: 123,
+      ordinate: '11',
+      encoding: 'gzip',
+      gasUsed: BigInt(100)
+    }
+    const targetWithNoGasUsed = {
+      processId: PROCESS,
+      Memory: Buffer.from('Hello World'),
+      timestamp: now - 1000,
       ordinate: '13',
       cron: undefined
     }
+    const targetWithLessGasUsed = {
+      processId: PROCESS,
+      Memory: Buffer.from('Hello World'),
+      timestamp: now - 1000,
+      ordinate: '13',
+      cron: undefined,
+      evalCount: 5,
+      gasUsed: BigInt(50)
+    }
+    const targetWithGasUsed = {
+      processId: PROCESS,
+      Memory: Buffer.from('Hello World'),
+      timestamp: now - 1000,
+      ordinate: '13',
+      cron: undefined,
+      evalCount: 15,
+      gasUsed: BigInt(50)
+    }
 
-    before(async () => {
-      zipped = await gzipP(Memory)
-    })
-
-    describe('checkpoint cached in LRU In-Memory Cache', () => {
-      const findProcessMemoryBefore = findProcessMemoryBeforeWith({
+    describe('updating the cache', () => {
+      const deps = {
         cache: {
           get: () => ({
-            Memory: zipped,
-            evaluation: cachedEval
-          })
-        },
-        findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
-        readCheckpointFile: async () => assert.fail('should not call if found in cache'),
-        address: async () => assert.fail('should not call if found in cache'),
-        queryGateway: async () => assert.fail('should not call if found in cache'),
-        queryCheckpointGateway: async () => assert.fail('should not call if found in cache'),
-        loadTransactionData: async () => assert.fail('should not call if found in cache'),
-        logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
-      })
-
-      test('should decode the memory', async () => {
-        const res = await findProcessMemoryBefore(target)
-        assert.deepStrictEqual(res.Memory, Memory)
-      })
-
-      test('should use if earlier than target', async () => {
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res, {
-          src: 'memory',
-          Memory,
-          moduleId: 'module-123',
-          epoch: cachedEval.epoch,
-          nonce: cachedEval.nonce,
-          timestamp: cachedEval.timestamp,
-          blockHeight: cachedEval.blockHeight,
-          cron: cachedEval.cron,
-          ordinate: cachedEval.ordinate
-        })
-      })
-
-      test.todo('should omit the memory if omitMemory is received', async () => {})
-    })
-
-    describe('checkpoint cached in a file', () => {
-      const deps = {
-        cache: {
-          get: () => undefined
-        },
-        findCheckpointFileBefore: async ({ processId, timestamp, ordinate, cron }) => {
-          assert.equal(processId, PROCESS)
-          assert.equal(timestamp, now)
-          assert.equal(ordinate, '13')
-          assert.equal(cron, undefined)
-
-          return {
-            file: 'foobar.json'
-          }
-        },
-        readCheckpointFile: async (file) => {
-          assert.equal(file, 'foobar.json')
-          return {
-            Memory: { id: 'tx-123', encoding: 'gzip' },
-            evaluation: cachedEval
-          }
-        },
-        address: async () => assert.fail('should not call if found in file checkpoint'),
-        queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
-        queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
-        loadTransactionData: async (id) => {
-          assert.equal(id, 'tx-123')
-          return new Response(Readable.toWeb(Readable.from(zipped)))
-        },
-        logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
-      }
-      const findProcessMemoryBefore = findProcessMemoryBeforeWith(deps)
-
-      describe('should use if in LRU In-Memory Cache cannot be used', () => {
-        test('no checkpoint in LRU In-Memory cache', async () => {
-          const { Memory, ...res } = await findProcessMemoryBefore(target)
-
-          assert.ok(Memory)
-          assert.deepStrictEqual(res, {
-            src: 'file',
-            moduleId: cachedEval.moduleId,
-            epoch: cachedEval.epoch,
-            nonce: cachedEval.nonce,
-            timestamp: cachedEval.timestamp,
-            blockHeight: cachedEval.blockHeight,
-            cron: cachedEval.cron,
-            ordinate: cachedEval.ordinate
-          })
-        })
-
-        test('later checkpoint in LRU In-Memory cache', async () => {
-          const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-            ...deps,
-            cache: {
-              get: () => ({
-                Memory: zipped,
-                evaluation: {
-                  ...cachedEval,
-                  timestamp: cachedEval.timestamp + 11000
-                }
-              })
-            }
-          })
-
-          const { Memory, ...res } = await findProcessMemoryBefore(target)
-
-          assert.ok(Memory)
-          assert.deepStrictEqual(res, {
-            src: 'file',
-            moduleId: cachedEval.moduleId,
-            epoch: cachedEval.epoch,
-            nonce: cachedEval.nonce,
-            timestamp: cachedEval.timestamp,
-            blockHeight: cachedEval.blockHeight,
-            cron: cachedEval.cron,
-            ordinate: cachedEval.ordinate
-          })
-        })
-      })
-
-      test('should decode the memory if needed', async () => {
-        const res = await findProcessMemoryBefore(target)
-        assert.deepStrictEqual(res.Memory, Memory)
-      })
-
-      test('should NOT decode the memory if not needed', async () => {
-        const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-          ...deps,
-          readCheckpointFile: async () => ({
-            Memory: { id: 'tx-not-encoded', encoding: undefined },
-            evaluation: {
-              ...cachedEval,
-              encoding: undefined
-            }
+            Memory,
+            evaluation: cachedEvalFuture
           }),
-          loadTransactionData: async (id) => {
-            assert.equal(id, 'tx-not-encoded')
-            return new Response(Readable.toWeb(Readable.from(Memory)))
-          }
-        })
-
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res.Memory, Memory)
-      })
-
-      test.todo('should omit the memory if omitMemory is received', async () => {})
-    })
-
-    describe('checkpoint retrieved from the checkpoint gateway', () => {
-      const edges = [
-        {
-          node: {
-            id: 'tx-123',
-            tags: [
-              { name: 'Module', value: `${cachedEval.moduleId}` },
-              { name: 'Timestamp', value: `${cachedEval.timestamp}` },
-              { name: 'Epoch', value: `${cachedEval.epoch}` },
-              { name: 'Nonce', value: `${cachedEval.nonce}` },
-              { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-              { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-            ]
-          }
-        }
-      ]
-      const deps = {
-        cache: {
-          get: () => undefined
-        },
-        findCheckpointFileBefore: async () => undefined,
-        readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
-        address: async () => 'address-123',
-        queryGateway: async ({ query, variables }) => {
-          assert.ok(query)
-          assert.deepStrictEqual(variables, {
-            owner: 'address-123',
-            processId: PROCESS,
-            limit: 50
-          })
-
-          return { data: { transactions: { edges } } }
-        },
-        queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
-        loadTransactionData: async (id) => {
-          assert.equal(id, 'tx-123')
-          return new Response(Readable.toWeb(Readable.from(zipped)))
+          set: () => assert.fail('should not call if found in cache')
         },
         logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        saveCheckpoint: () => assert.fail('should not call if found in cache'),
+        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: BigInt(200)
       }
-      const findProcessMemoryBefore = findProcessMemoryBeforeWith(deps)
 
-      describe('should use if the LRU In-Memory and File checkpoint cannot be used', async () => {
-        test('no file checkpoint is found or is later than target', async () => {
-          const { Memory, ...res } = await findProcessMemoryBefore(target)
-
-          assert.ok(Memory)
-          assert.deepStrictEqual(res, {
-            src: 'arweave',
-            moduleId: cachedEval.moduleId,
-            epoch: cachedEval.epoch,
-            nonce: cachedEval.nonce,
-            timestamp: cachedEval.timestamp,
-            blockHeight: cachedEval.blockHeight,
-            cron: cachedEval.cron,
-            ordinate: cachedEval.ordinate
-          })
-        })
-
-        test('file checkpoint fails to be downloaded', async () => {
-          const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-            ...deps,
-            findCheckpointFileBefore: async () => ({ file: 'foobar.json' }),
-            readCheckpointFile: async () => ({ Memory: { id: 'fail' }, evaulation: cachedEval }),
-            loadTransactionData: async (id) => {
-              if (id === 'fail') throw new Error('woops')
-              return deps.loadTransactionData(id)
-            }
-          })
-
-          const { Memory, ...res } = await findProcessMemoryBefore(target)
-
-          assert.ok(Memory)
-          assert.deepStrictEqual(res, {
-            src: 'arweave',
-            moduleId: cachedEval.moduleId,
-            epoch: cachedEval.epoch,
-            nonce: cachedEval.nonce,
-            timestamp: cachedEval.timestamp,
-            blockHeight: cachedEval.blockHeight,
-            cron: cachedEval.cron,
-            ordinate: cachedEval.ordinate
-          })
-        })
+      test('should not update if the cache entry is ahead of provided save', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith(deps))
+        const res = await saveLatestProcessMemory(targetWithGasUsed)
+        assert.equal(res, undefined)
       })
 
-      test('should decode if needed', async () => {
-        const res = await findProcessMemoryBefore(target)
-        assert.deepStrictEqual(res.Memory, Memory)
-      })
-
-      test('should NOT decode the memory if not needed', async () => {
-        const findProcessMemoryBefore = findProcessMemoryBeforeWith({
+      test('should update if the cache entry is ahead of provided save', async () => {
+        let cacheUpdated = false
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
           ...deps,
-          queryGateway: async () => ({
-            data: {
-              transactions: {
-                edges: [
-                  {
-                    ...edges[0],
-                    node: {
-                      ...edges[0].node,
-                      id: 'tx-not-encoded',
-                      tags: [
-                        { name: 'Module', value: `${cachedEval.moduleId}` },
-                        { name: 'Timestamp', value: `${cachedEval.timestamp}` },
-                        { name: 'Epoch', value: `${cachedEval.epoch}` },
-                        { name: 'Nonce', value: `${cachedEval.nonce}` },
-                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                        { name: 'Not-Content-Encoding', value: `${cachedEval.encoding}` }
-                      ]
-                    }
-                  }
-                ]
-              }
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: () => { cacheUpdated = true }
+          }
+        }))
+        await saveLatestProcessMemory(targetWithGasUsed)
+        assert.ok(cacheUpdated)
+      })
+
+      test('should update if there is no cache entry', async () => {
+        let cacheUpdated = false
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => null,
+            set: () => { cacheUpdated = true }
+          }
+        }))
+        await saveLatestProcessMemory(targetWithGasUsed)
+        assert.ok(cacheUpdated)
+      })
+
+      test('should increment gasUsed when updating cache', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: (processId, { evaluation }) => {
+              assert.equal(processId, 'process-123')
+              assert.equal(evaluation.gasUsed, BigInt(150))
             }
+          },
+          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: BigInt(200)
+        }))
+        await saveLatestProcessMemory(targetWithGasUsed)
+      })
+    })
+
+    describe('creating a checkpoint', () => {
+      const deps = {
+        cache: {
+          get: () => ({
+            Memory,
+            evaluation: cachedEval
           }),
-          loadTransactionData: async (id) => {
-            assert.equal(id, 'tx-not-encoded')
-            return new Response(Readable.toWeb(Readable.from(Memory)))
-          }
-        })
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res.Memory, Memory)
-      })
-
-      test('should use the latest retrieved checkpoint', async () => {
-        const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-          ...deps,
-          queryGateway: async () => ({
-            data: {
-              transactions: {
-                edges: [
-                  {
-                    ...edges[0],
-                    node: {
-                      ...edges[0].node,
-                      tags: [
-                        { name: 'Module', value: `${cachedEval.moduleId}` },
-                        { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                        { name: 'Epoch', value: `${cachedEval.epoch}` },
-                        { name: 'Nonce', value: '12' },
-                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          })
-        })
-
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res.ordinate, '12')
-      })
-
-      test('should retry querying the gateway', async () => {
-        let count = 1
-        const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-          ...deps,
-          queryGateway: async () => {
-            if (count++ < 2) throw new Error('timeout')
-
-            return {
-              data: {
-                transactions: {
-                  edges: [
-                    {
-                      ...edges[0],
-                      node: {
-                        ...edges[0].node,
-                        tags: [
-                          { name: 'Module', value: `${cachedEval.moduleId}` },
-                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                          { name: 'Epoch', value: `${cachedEval.epoch}` },
-                          { name: 'Nonce', value: '12' },
-                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        })
-
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res.ordinate, '12')
-      })
-
-      test('should fallback to Checkpoint gateway if default gateway reaches max retries', async () => {
-        const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-          ...deps,
-          queryGateway: async () => { throw new Error('timeout') },
-          queryCheckpointGateway: async ({ query, variables }) => {
-            assert.ok(query)
-            assert.deepStrictEqual(variables, {
-              owner: 'address-123',
-              processId: PROCESS,
-              limit: 50
-            })
-
-            return {
-              data: {
-                transactions: {
-                  edges: [
-                    {
-                      ...edges[0],
-                      node: {
-                        ...edges[0].node,
-                        tags: [
-                          { name: 'Module', value: `${cachedEval.moduleId}` },
-                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                          { name: 'Epoch', value: `${cachedEval.epoch}` },
-                          { name: 'Nonce', value: '12' },
-                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        })
-
-        const res = await findProcessMemoryBefore(target)
-
-        assert.deepStrictEqual(res.ordinate, '12')
-      })
-
-      test.todo('should omit the memory if omitMemory is received', async () => {})
-    })
-
-    describe('cold start', () => {
-      const deps = {
-        cache: {
-          get: () => undefined
-        },
-        findCheckpointFileBefore: async () => undefined,
-        readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
-        address: async () => 'address-123',
-        queryCheckpointGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
-        queryGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
-        loadTransactionData: async (id) => {
-          assert.equal(id, 'tx-123')
-          return new Response(Readable.toWeb(Readable.from(zipped)))
+          set: () => null
         },
         logger,
-        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+        saveCheckpoint: () => assert.fail('should not call if found in cache'),
+        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: BigInt(200)
       }
-      const COLDSTART = {
-        src: 'cold_start',
-        Memory: null,
-        moduleId: undefined,
-        timestamp: undefined,
-        epoch: undefined,
-        nonce: undefined,
-        blockHeight: undefined,
-        cron: undefined,
-        ordinate: '0'
 
-      }
-      const findProcessMemoryBefore = findProcessMemoryBeforeWith(deps)
+      test('should not create checkpoint if gasUsed less than checkpoint threshold', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({ ...deps }))
+        const res = await saveLatestProcessMemory(targetWithLessGasUsed)
+        assert.equal(res, undefined)
+      })
 
-      describe('should cold start if LRU In-Memory Cache, File Checkpoint, and Gateway Checkpoints all cannot be used', async () => {
-        test('no checkpoint found on gateway', async () => {
-          const res = await findProcessMemoryBefore(target)
-          assert.deepStrictEqual(res, COLDSTART)
-        })
+      test('should not create checkpoint if no gasUsed', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith(deps))
+        const res = await saveLatestProcessMemory(targetWithNoGasUsed)
+        assert.equal(res, undefined)
+      })
 
-        test('gateway checkpoint is later than the target', async () => {
-          const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-            ...deps,
-            queryGateway: async () => ({
-              data: {
-                transactions: {
-                  edges: [
-                    {
-                      node: {
-                        id: 'tx-123',
-                        tags: [
-                          { name: 'Module', value: `${cachedEval.moduleId}` },
-                          { name: 'Timestamp', value: `${cachedEval.timestamp + 11000}` },
-                          { name: 'Epoch', value: `${cachedEval.epoch}` },
-                          { name: 'Nonce', value: `${cachedEval.nonce}` },
-                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            })
-          })
+      test('should not create checkpoint if no checkpoint threshold', async () => {
+        const saveLatestProcessMemoryWithNoThreshold = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({ ...deps, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: 0 }))
+        const res = await saveLatestProcessMemoryWithNoThreshold(targetWithGasUsed)
+        assert.equal(res, undefined)
+      })
 
-          const res = await findProcessMemoryBefore(target)
-
-          assert.deepStrictEqual(res, COLDSTART)
-        })
-
-        test('gateway query exceeds retries', async () => {
-          const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-            ...deps,
-            queryGateway: async () => {
-              throw new Error('timeout')
+      test('should create checkpoint if gas used greater than threshold, reset gas to 0', async () => {
+        let checkpointSaved = false
+        const saveLatestProcessMemoryWithNoThreshold = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: (_, { evaluation }) => {
+              assert.equal(evaluation.gasUsed, 0)
             }
-          })
+          },
+          saveCheckpoint: async () => {
+            checkpointSaved = true
+          }
+        }))
+        await saveLatestProcessMemoryWithNoThreshold({ ...targetWithGasUsed, gasUsed: BigInt(150) })
+        await new Promise(resolve => setTimeout(resolve, 100))
 
-          const res = await findProcessMemoryBefore(target)
-
-          assert.deepStrictEqual(res, COLDSTART)
-        })
-
-        test('process is configured to ignore gateway checkpoints', async () => {
-          const findProcessMemoryBefore = findProcessMemoryBeforeWith({
-            ...deps,
-            PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [PROCESS]
-          })
-          const res = await findProcessMemoryBefore(target)
-          assert.deepStrictEqual(res, COLDSTART)
-        })
+        assert.ok(checkpointSaved)
       })
     })
   })
 
-  describe.todo('saveLatestProcessMemoryWith')
   describe.todo('saveCheckpointWith')
 })

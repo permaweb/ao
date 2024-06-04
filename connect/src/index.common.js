@@ -20,6 +20,8 @@ const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
 const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
 
+export { serializeCron } from './lib/serializeCron/index.js'
+
 /**
  * Build the sdk apis using the provided ao component urls. You can currently specify
  *

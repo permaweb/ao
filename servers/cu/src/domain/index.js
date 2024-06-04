@@ -19,6 +19,7 @@ import * as AoProcessClient from './client/ao-process.js'
 import * as AoModuleClient from './client/ao-module.js'
 import * as AoEvaluationClient from './client/ao-evaluation.js'
 import * as AoBlockClient from './client/ao-block.js'
+import * as MetricsClient from './client/metrics.js'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith, pendingReadStates } from './api/readState.js'
@@ -61,29 +62,52 @@ export const createApis = async (ctx) => {
   const DB_URL = `${ctx.DB_URL}.sqlite`
   const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
-  const workerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
-    maxWorkers: ctx.WASM_EVALUATION_MAX_WORKERS,
-    onCreateWorker: () => {
-      const workerId = randomBytes(8).toString('hex')
-      ctx.logger('Spinning up worker with id "%s"...', workerId)
+  const onCreateWorker = (type) => () => {
+    const workerId = randomBytes(8).toString('hex')
+    ctx.logger('Spinning up "%s" pool worker with id "%s"...', type, workerId)
 
-      return {
-        workerThreadOpts: {
-          workerData: {
-            WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
-            WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
-            WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
-            ARWEAVE_URL: ctx.ARWEAVE_URL,
-            DB_URL,
-            id: workerId
-          }
+    return {
+      workerThreadOpts: {
+        workerData: {
+          WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
+          WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
+          WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
+          ARWEAVE_URL: ctx.ARWEAVE_URL,
+          DB_URL,
+          id: workerId
         }
       }
     }
+  }
+
+  const maxPrimaryWorkerThreads = Math.min(
+    Math.max(1, ctx.WASM_EVALUATION_MAX_WORKERS - 1),
+    Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
+  )
+  const primaryWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+    maxWorkers: maxPrimaryWorkerThreads,
+    onCreateWorker: onCreateWorker('primary')
+  })
+
+  const maxDryRunWorkerTheads = Math.max(
+    1,
+    Math.floor(ctx.WASM_EVALUATION_MAX_WORKERS * (1 - (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100)))
+  )
+  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+    maxWorkers: maxDryRunWorkerTheads,
+    onCreateWorker: onCreateWorker('dry-run')
   })
 
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
+
+  /**
+   * TODO: I don't really like implictly doing this,
+   * but works for now.
+   */
+  const _metrics = MetricsClient.initializeRuntimeMetricsWith({})()
+
+  const gauge = MetricsClient.gaugeWith({})
 
   const readProcessMemoryFile = AoProcessClient.readProcessMemoryFileWith({
     DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
@@ -102,9 +126,14 @@ export const createApis = async (ctx) => {
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
   ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
+  ctx.logger('Max primary worker threads set to %s', maxPrimaryWorkerThreads)
+  ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
 
   const stats = statsWith({
-    loadWorkerStats: () => workerPool.stats(),
+    loadWorkerStats: () => ({
+      primary: primaryWorkerPool.stats(),
+      dryRun: dryRunWorkerPool.stats()
+    }),
     /**
      * https://nodejs.org/api/process.html#processmemoryusage
      *
@@ -114,6 +143,10 @@ export const createApis = async (ctx) => {
     loadMemoryUsage: () => process.memoryUsage(),
     loadProcessCacheUsage: () => AoProcessClient.loadProcessCacheUsage()
   })
+  const metrics = {
+    contentType: _metrics.contentType,
+    compute: fromPromise(() => _metrics.metrics())
+  }
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
@@ -133,6 +166,7 @@ export const createApis = async (ctx) => {
   })
 
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
+    gauge,
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
     DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
@@ -177,7 +211,7 @@ export const createApis = async (ctx) => {
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
-      EAGER_CHECKPOINT_THRESHOLD: ctx.EAGER_CHECKPOINT_THRESHOLD,
+      EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
       saveCheckpoint,
       logger
     }),
@@ -193,7 +227,7 @@ export const createApis = async (ctx) => {
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => workerPool.exec('evaluate', args),
+      evaluate: (...args) => primaryWorkerPool.exec('evaluate', args),
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
@@ -227,7 +261,18 @@ export const createApis = async (ctx) => {
   const dryRunLogger = ctx.logger.child('dryRun')
   const dryRun = dryRunWith({
     ...sharedDeps(dryRunLogger),
-    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger })
+    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger }),
+    /**
+     * Dry-runs use a separate worker thread pool, so as to not block
+     * primary evaluations
+     */
+    loadDryRunEvaluator: AoModuleClient.evaluatorWith({
+      /**
+       * Evaluation will invoke a worker available in the worker pool
+       */
+      evaluate: (...args) => dryRunWorkerPool.exec('evaluate', args),
+      logger: dryRunLogger
+    })
   })
 
   /**
@@ -305,5 +350,5 @@ export const createApis = async (ctx) => {
 
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
+  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
 }

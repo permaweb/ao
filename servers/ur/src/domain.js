@@ -79,6 +79,6 @@ export function determineHostWith ({ hosts = [], bailout }) {
   }
 }
 
-function computeHashSumFromProcessId (processId) {
+export function computeHashSumFromProcessId (processId) {
   return processId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
 }

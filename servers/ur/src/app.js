@@ -1,8 +1,5 @@
-import { join } from 'node:path'
-
 import cors from 'cors'
 import express from 'express'
-import heapdump from 'heapdump'
 import { pipe } from 'ramda'
 
 import { config } from './config.js'
@@ -31,12 +28,6 @@ pipe(
     process.on('SIGTERM', () => {
       logger('Recevied SIGTERM. Gracefully shutting down server...')
       server.close(() => logger('Server Shut Down'))
-    })
-
-    process.on('SIGUSR2', () => {
-      const name = `${Date.now()}.heapsnapshot`
-      heapdump.writeSnapshot(join(config.DUMP_PATH, name))
-      console.log(name)
     })
 
     return server

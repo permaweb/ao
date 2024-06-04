@@ -4,12 +4,12 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, prop, transduce } from 'ramda'
+import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
 
-import { isEarlierThan, isEqualTo, isLaterThan, parseTags } from '../utils.js'
+import { isEarlierThan, isEqualTo, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
@@ -47,7 +47,7 @@ export const LATEST = 'LATEST'
  * @prop {string} [cron]
  */
 let processMemoryCache
-export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, onEviction, writeProcessMemoryFile }) {
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, gauge, onEviction, writeProcessMemoryFile }) {
   if (processMemoryCache) return processMemoryCache
 
   const clearTimerWith = (map) => (key) => {
@@ -69,6 +69,18 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
 
   const drainToFileTimers = new Map()
   const clearDrainToFileTimer = clearTimerWith(drainToFileTimers)
+
+  /**
+   * Expose the total count of processes cached on this unit,
+   * on the CU's application level metrics
+   */
+  gauge({
+    name: 'ao_process_total',
+    description: 'The total amount of ao Processes cached on the Compute Unit',
+    collect: function () {
+      this.set(data.size)
+    }
+  })
 
   /**
    * @type {LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }}
@@ -527,8 +539,13 @@ export function findLatestProcessMemoryWith ({
           return {
             id: node.id,
             timestamp: parseInt(tags.Timestamp),
-            epoch: parseInt(tags.Epoch),
-            nonce: parseInt(tags.Nonce),
+            /**
+             * Due to a previous bug, these tags may sometimes
+             * be invalid values, so we've added a utility
+             * to map those invalid values to a valid value
+             */
+            epoch: maybeParseInt(tags.Epoch),
+            nonce: maybeParseInt(tags.Nonce),
             ordinate: tags.Nonce,
             module: tags.Module,
             blockHeight: parseInt(tags['Block-Height']),
@@ -876,353 +893,8 @@ export function findLatestProcessMemoryWith ({
   }
 }
 
-/**
- * @deprecated - we no longer need to find the latest memory
- * before a certain evaluation, since the CU will simply not evaluate an old message.
- *
- * Instead findLatestProcessMemory is used.
- *
- * See https://github.com/permaweb/ao/issues/667
- *
- * TODO: eventually remove when we know we won't need this anymore
- */
-export function findProcessMemoryBeforeWith ({
-  cache,
-  findCheckpointFileBefore,
-  readCheckpointFile,
-  address,
-  queryGateway,
-  queryCheckpointGateway,
-  loadTransactionData,
-  PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
-  logger: _logger
-}) {
-  const logger = _logger.child('ao-process:findProcessMemoryBefore')
-  address = fromPromise(address)
-  findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
-  readCheckpointFile = fromPromise(readCheckpointFile)
-  loadTransactionData = fromPromise(loadTransactionData)
-
-  const queryCheckpoints = queryCheckpointsWith({ queryGateway, queryCheckpointGateway, logger })
-
-  const GET_AO_PROCESS_CHECKPOINTS = `
-    query GetAoProcessCheckpoints(
-      $owner: String!
-      $processId: String!
-      $limit: Int!
-    ) {
-      transactions(
-        tags: [
-          { name: "Process", values: [$processId] }
-          { name: "Type", values: ["Checkpoint"] }
-          { name: "Data-Protocol", values: ["ao"] }
-        ],
-        owners: [$owner]
-        first: $limit,
-        sort: HEIGHT_DESC
-      ) {
-        edges {
-          node {
-            id
-            owner {
-              address
-            }
-            tags {
-              name
-              value
-            }
-          }
-        }
-      }
-    }
-  `
-
-  /**
-   * TODO: lots of room for optimization here
-   */
-  function determineLatestCheckpointBefore ({ timestamp, ordinate, cron }) {
-    return (edges) => transduce(
-      compose(
-        map(prop('node')),
-        map((node) => {
-          const tags = parseTags(node.tags)
-          return {
-            id: node.id,
-            timestamp: parseInt(tags.Timestamp),
-            epoch: parseInt(tags.Epoch),
-            nonce: parseInt(tags.Nonce),
-            ordinate: tags.Nonce,
-            module: tags.Module,
-            blockHeight: parseInt(tags['Block-Height']),
-            cron: tags['Cron-Interval'],
-            encoding: tags['Content-Encoding']
-          }
-        })
-      ),
-      latestCheckpointBefore({ timestamp, ordinate, cron }),
-      undefined,
-      edges
-    )
-  }
-
-  function decodeData (encoding) {
-    /**
-     * TODO: add more encoding options
-     */
-    if (encoding && encoding !== 'gzip') {
-      throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
-    }
-
-    return async (data) => {
-      if (!encoding) return data
-
-      return gunzipP(data)
-    }
-  }
-
-  /**
-   * @param {{ id, encoding }} checkpoint
-   */
-  function downloadCheckpointFromArweave (checkpoint) {
-    const { stop: stopTimer } = timer('downloadCheckpointFromArweave', { id: checkpoint.id })
-
-    return loadTransactionData(checkpoint.id)
-      .map((res) => {
-        stopTimer()
-        return res
-      })
-      .chain(fromPromise((res) => res.arrayBuffer()))
-      .map((arrayBuffer) => Buffer.from(arrayBuffer))
-      /**
-       * If the buffer is encoded, we need to decode it before continuing
-       */
-      .chain(fromPromise(decodeData(checkpoint.encoding)))
-  }
-
-  function maybeCached (args) {
-    const { processId, timestamp, ordinate, cron, omitMemory } = args
-
-    return of(processId)
-      .chain((processId) => {
-        const cached = cache.get(processId)
-
-        /**
-         * There is no cached memory, or the cached memory is later
-         * than the timestamp we're interested in
-         */
-        if (
-          !cached ||
-          (timestamp && isLaterThan({ timestamp, ordinate, cron }, cached.evaluation))
-        ) return Rejected(args)
-
-        logger(
-          'MEMORY CHECKPOINT: Found Checkpoint in in-memory cache for process "%s" before message with parameters "%j": "%j"',
-          processId,
-          { timestamp, ordinate, cron },
-          cached.evaluation
-        )
-
-        return of(cached)
-          .chain((cached) => {
-            if (omitMemory) return Resolved(null)
-            return of(cached).chain(fromPromise((cached) => gunzipP(cached.Memory)))
-          })
-          /**
-           * Finally map the Checkpoint to the expected shape
-           */
-          .map((Memory) => ({
-            src: 'memory',
-            Memory,
-            moduleId: cached.evaluation.moduleId,
-            timestamp: cached.evaluation.timestamp,
-            blockHeight: cached.evaluation.blockHeight,
-            epoch: cached.evaluation.epoch,
-            nonce: cached.evaluation.nonce,
-            ordinate: cached.evaluation.ordinate,
-            cron: cached.evaluation.cron
-          }))
-      })
-  }
-
-  function maybeFile (args) {
-    const { processId, timestamp, ordinate, cron, omitMemory } = args
-
-    /**
-     * Attempt to find the lastest checkpoint in a file before the parameters
-     */
-    return findCheckpointFileBefore({ processId, timestamp, ordinate, cron })
-      .chain((latest) => {
-        if (!latest) return Rejected(args)
-
-        logger(
-          'FILE CHECKPOINT: Found Checkpoint for process "%s", before "%j", on Filesystem, with parameters "%j"',
-          processId,
-          { timestamp, ordinate, cron },
-          latest
-        )
-
-        /**
-         * We have found a Checkpoint that we can use, so
-         * now let's load the snapshotted Memory from arweave
-         */
-        return of(latest.file)
-          // { Memory: { id, encoding }, evaluation }
-          .chain(readCheckpointFile)
-          .chain((checkpoint) =>
-            of(checkpoint.Memory)
-              .chain((id) => {
-                if (omitMemory) return Resolved(null)
-                return downloadCheckpointFromArweave(id)
-              })
-              /**
-               * Finally map the Checkpoint to the expected shape
-               */
-              .map((Memory) => ({
-                src: 'file',
-                Memory,
-                moduleId: checkpoint.evaluation.moduleId,
-                timestamp: checkpoint.evaluation.timestamp,
-                epoch: checkpoint.evaluation.epoch,
-                nonce: checkpoint.evaluation.nonce,
-                ordinate: checkpoint.evaluation.ordinate,
-                blockHeight: checkpoint.evaluation.blockHeight,
-                cron: checkpoint.evaluation.cron
-              }))
-              .bimap(
-                (err) => {
-                  logger(
-                    'Error encountered when downloading Checkpoint using cached file for process "%s", before "%j", from Arweave, with parameters "%j"',
-                    processId,
-                    { timestamp, ordinate, cron },
-                    { checkpointTxId: checkpoint.id, ...checkpoint },
-                    err
-                  )
-                  return args
-                },
-                identity
-              )
-          )
-      })
-  }
-
-  function maybeCheckpointFromArweave (args) {
-    const { processId, timestamp, ordinate, cron, omitMemory } = args
-
-    if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
-      logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query gateway...', processId)
-      return Rejected(args)
-    }
-
-    return address()
-      .chain((owner) => queryCheckpoints({
-        query: GET_AO_PROCESS_CHECKPOINTS,
-        variables: { owner, processId, limit: 50 },
-        processId,
-        timestamp,
-        ordinate,
-        cron
-      }))
-      .map(path(['data', 'transactions', 'edges']))
-      .map(determineLatestCheckpointBefore({ timestamp, ordinate, cron }))
-      .chain((latestCheckpoint) => {
-        if (!latestCheckpoint) return Rejected(args)
-
-        logger(
-          'ARWEAVE CHECKPOINT: Found Checkpoint for process "%s", before "%j", on Arweave, with parameters "%j"',
-          processId,
-          { timestamp, ordinate, cron },
-          { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint }
-        )
-
-        /**
-         * We have found a Checkpoint that we can use, so
-         * now let's load the snapshotted Memory from arweave
-         */
-        return of()
-          .chain(() => {
-            if (omitMemory) return Resolved(null)
-            return downloadCheckpointFromArweave(latestCheckpoint)
-          })
-          /**
-           * Finally map the Checkpoint to the expected shape
-           *
-           * (see determineLatestCheckpointBefore)
-           */
-          .map((Memory) => ({
-            src: 'arweave',
-            Memory,
-            moduleId: latestCheckpoint.module,
-            timestamp: latestCheckpoint.timestamp,
-            epoch: latestCheckpoint.epoch,
-            nonce: latestCheckpoint.nonce,
-            /**
-             * Derived from Nonce on Checkpoint
-             * (see determineLatestCheckpointBefore)
-             */
-            ordinate: latestCheckpoint.ordinate,
-            blockHeight: latestCheckpoint.blockHeight,
-            cron: latestCheckpoint.cron
-          }))
-          .bimap(
-            (err) => {
-              logger(
-                'Error encountered when downloading Checkpoint found for process "%s", before "%j", from Arweave, with parameters "%j"',
-                processId,
-                { timestamp, ordinate, cron },
-                { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint },
-                err
-              )
-              return args
-            },
-            identity
-          )
-      })
-  }
-
-  function coldStart ({ processId, timestamp, ordinate, cron }) {
-    if (ordinate > 0) {
-      logger(
-        '**COLD START**: Could not find a Checkpoint for process "%s" before message with parameters "%j". Initializing Cold Start...',
-        processId,
-        { timestamp, ordinate, cron }
-      )
-    }
-
-    return Resolved({
-      src: 'cold_start',
-      Memory: null,
-      moduleId: undefined,
-      timestamp: undefined,
-      epoch: undefined,
-      nonce: undefined,
-      blockHeight: undefined,
-      cron: undefined,
-      /**
-       * No cached evaluation was found, but we still need an ordinate,
-       * in case there are Cron messages to generate prior to any scheduled
-       * messages existing in the sequence.
-       *
-       * The important attribute we need is for the ordinate to be lexicographically
-       * sortable.
-       *
-       * So we use a very small unicode character, as a pseudo-ordinate, which gets
-       * us exactly what we need
-       */
-      ordinate: COLLATION_SEQUENCE_MIN_CHAR
-    })
-  }
-
-  return ({ processId, timestamp, ordinate, cron, omitMemory = false }) =>
-    of({ processId, timestamp, ordinate, cron, omitMemory })
-      .chain(maybeCached)
-      .bichain(maybeFile, Resolved)
-      .bichain(maybeCheckpointFromArweave, Resolved)
-      .bichain(coldStart, Resolved)
-      .toPromise()
-}
-
-export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_THRESHOLD }) {
-  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount }) => {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD }) {
+  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
     const cached = cache.get(processId)
 
     /**
@@ -1242,7 +914,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
      * Having updateAgeOnGet to true also renews the cache value's TTL,
      * which is what we want
      */
-    if (cached && isLaterThan(cached, { timestamp, ordinate, cron })) return
+    if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) return
 
     logger(
       'Caching latest memory for process "%s" with parameters "%j"',
@@ -1256,6 +928,11 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     // const { stop: stopTimer } = timer('saveLatestProcessMemory:gzip', { processId, timestamp, ordinate, cron, size: Memory.byteLength })
     // const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
     // stopTimer()
+
+    const incrementedGasUsed = pipe(
+      pathOr(BigInt(0), ['evaluation', 'gasUsed']),
+      add(gasUsed || BigInt(0))
+    )(cached)
 
     const evaluation = {
       processId,
@@ -1273,26 +950,31 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
        * NOTE: this consumes more memory in the LRU In-Memory Cache
        */
       encoding: undefined,
-      cron
+      cron,
+      gasUsed: incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? incrementedGasUsed : 0
     }
     // cache.set(processId, { Memory: zipped, evaluation })
     cache.set(processId, { Memory, evaluation })
 
-    if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
+    /**
+     *  @deprecated
+     *  We are no longer creating checkpoints based on eval counts. Rather, we use a gas-based checkpoint system
+    **/
+    // if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
 
+    if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
     /**
      * Eagerly create the Checkpoint on the next event queue drain
      */
     setImmediate(() => {
       logger(
-        'Eager Checkpoint Threshold of "%d" messages met when evaluating process "%s" up to "%j" -- "%d" evaluations peformed. Eagerly creating a Checkpoint...',
-        EAGER_CHECKPOINT_THRESHOLD,
+        'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met when evaluating process "%s" up to "%j" -- "%d" gas used. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
         processId,
         { messageId, timestamp, ordinate, cron, blockHeight },
-        evalCount
+        incrementedGasUsed
       )
 
-      // return saveCheckpoint({ Memory: zipped, ...evaluation })
       /**
        * Memory will always be defined at this point, so no reason
        * to pass File
@@ -1377,7 +1059,7 @@ export function saveCheckpointWith ({
   `
 
   function createCheckpointDataItem (args) {
-    const { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory, File } = args
+    const { moduleId, processId, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory, File } = args
     return of()
       .chain(() => {
         if (Memory) return of(Memory)
@@ -1403,8 +1085,12 @@ export function saveCheckpointWith ({
                 { name: 'Type', value: 'Checkpoint' },
                 { name: 'Module', value: moduleId.trim() },
                 { name: 'Process', value: processId.trim() },
-                { name: 'Epoch', value: `${epoch}`.trim() },
-                { name: 'Nonce', value: `${nonce}`.trim() },
+                /**
+                 * Cron messages will not have a nonce but WILL
+                 * have an ordinate equal to the most recent nonce
+                 * (which is to say the nonce of the most recent Scheduled message)
+                 */
+                { name: 'Nonce', value: `${nonce || ordinate}`.trim() },
                 { name: 'Timestamp', value: `${timestamp}`.trim() },
                 { name: 'Block-Height', value: `${blockHeight}`.trim() },
                 { name: 'Content-Type', value: 'application/octet-stream' },
@@ -1416,6 +1102,12 @@ export function saveCheckpointWith ({
                 { name: 'Content-Encoding', value: 'gzip' }
               ]
             }
+
+            /**
+             * Cron messages do not have an Epoch,
+             * so only add the tag if the value is present
+             */
+            if (epoch) dataItem.tags.push({ name: 'Epoch', value: `${epoch}`.trim() })
 
             if (cron) dataItem.tags.push({ name: 'Cron-Interval', value: cron })
 

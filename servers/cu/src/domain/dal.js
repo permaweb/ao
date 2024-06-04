@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchema, streamSchema } from './model.js'
+import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchema, streamSchema, processCheckpointSchema, bufferSchema } from './model.js'
 
 // Arweave
 
@@ -45,6 +45,37 @@ export const findProcessSchema = z.function()
 
 export const saveProcessSchema = z.function()
   .args(processSchema)
+  .returns(z.promise(z.any()))
+
+export const isProcessOwnerSupportedSchema = z.function()
+  .args(z.string())
+  .returns(z.promise(z.boolean()))
+
+// Process Memory
+export const findLatestProcessMemorySchema = z.function()
+  .args(z.object({
+    processId: z.string(),
+    timestamp: z.coerce.number().nullish(),
+    ordinate: z.coerce.string().nullish(),
+    cron: z.string().nullish(),
+    omitMemory: z.boolean().nullish()
+  })).returns(z.promise(processCheckpointSchema))
+
+export const saveLatestProcessMemorySchema = z.function()
+  .args(z.object({
+    processId: z.string(),
+    moduleId: z.string().nullish(),
+    messageId: z.string().nullish(),
+    timestamp: z.coerce.number().nullish(),
+    epoch: z.coerce.number().nullish(),
+    nonce: z.coerce.number().nullish(),
+    ordinate: z.coerce.string().nullish(),
+    cron: z.string().nullish(),
+    blockHeight: z.coerce.number().nullish(),
+    Memory: bufferSchema,
+    evalCount: z.number().nullish(),
+    gasUsed: z.bigint().nullish()
+  }))
   .returns(z.promise(z.any()))
 
 // Module

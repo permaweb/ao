@@ -67,6 +67,7 @@ There are a few environment variables that you can set. Besides
 - `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used
   by the CU, or a file to load it from
 - `PORT`: Which port the web server should listen on (defaults to port `6363`)
+- `ENABLE_METRICS_ENDPOINT`: Whether the OpenTelemetry endpoint `/metrics` should be enabled. Set to any value to enable. (defaults to disabled)
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
   `embedded`)
@@ -99,7 +100,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store cached process memory (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
-  (defaults to `4h`)
+  (defaults to `0`)
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds,
   that the CU should wait before creating a process `Checkpoint` IFF it has
   already created a Checkpoint for that process, since it last started. This is
@@ -109,8 +110,8 @@ There are a few environment variables that you can set. Besides
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
-- `EAGER_CHECKPOINT_THRESHOLD`: If an evaluation stream evaluates this amount of
-  messages, then it will immediately create a Checkpoint at the end of the
+- `EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD`: If a process uses this amount of
+  gas, then it will immediately create a Checkpoint at the end of the
   evaluation stream.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.

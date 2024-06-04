@@ -206,11 +206,17 @@ pub async fn read_message_data(
     limit: Option<i32>,
 ) -> Result<String, String> {
     if let Ok(message) = deps.data_store.get_message(&tx_id) {
-        let result = match serde_json::to_string(&message) {
-            Ok(r) => r,
-            Err(e) => return Err(format!("{:?}", e)),
-        };
-        return Ok(result);
+        if message.message.is_some() 
+            /*
+              Im not exactly sure of the use cases for these edge cases
+              but they are ones that have popped up that cause the message
+              list to not be able to be returned.
+            */
+            || ((message.message_id()? != message.process_id()?) && (message.assignment_id()? == tx_id) )
+        {
+            return serde_json::to_string(&message)
+                .map_err(|e| format!("{:?}", e));
+        }
     }
 
     if let Ok(_) = deps.data_store.get_process(&tx_id) {

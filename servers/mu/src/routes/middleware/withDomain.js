@@ -15,7 +15,7 @@ export const domain = {
   logger
 }
 
-domain.apis = createApis(domain)
+domain.apis = await createApis(domain)
 
 export const withDomain = (handler) => (req, res) => {
   req.logger = logger
