@@ -3,12 +3,13 @@ import { LRUCache } from 'lru-cache'
 /**
  * @type {LRUCache}
  */
-export function createLruCache ({ size }) {
+export function createLruCache ({ size, ttl }) {
   const cache = new LRUCache({
     /**
      * number of entries
      */
     max: size,
+    ttl,
     /**
      * max size of cache, as a scalar.
      *

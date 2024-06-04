@@ -22,6 +22,7 @@ import { sendAssignWith } from './api/sendAssign.js'
 import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
+import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
 
 export { errFrom } from './utils.js'
 
@@ -29,6 +30,8 @@ const { DataItem } = warpArBundles
 
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
+
+const muRedirectCache = InMemoryClient.createLruCache({ size: 500 })
 
 /**
  * A set of apis used by the express server
@@ -43,6 +46,12 @@ export const createApis = async (ctx) => {
 
   const logger = ctx.logger
   const fetch = ctx.fetch
+
+  const fetchWithCache = cuFetchWithCache({
+    fetch,
+    cache: muRedirectCache,
+    logger
+  })
 
   const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: true })
 
@@ -91,7 +100,7 @@ export const createApis = async (ctx) => {
     locateScheduler: raw,
     locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: sendDataItemLogger }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: sendDataItemLogger }),
     crank,
     isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
@@ -104,7 +113,7 @@ export const createApis = async (ctx) => {
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
     locateProcess: locate,
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: sendAssignLogger }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: sendDataItemLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: sendAssignLogger
   })
@@ -164,6 +173,12 @@ export const createResultApis = async (ctx) => {
   const logger = ctx.logger
   const fetch = ctx.fetch
 
+  const fetchWithCache = cuFetchWithCache({
+    fetch,
+    cache: muRedirectCache,
+    logger
+  })
+
   const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: true })
   const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: false })
 
@@ -184,7 +199,7 @@ export const createResultApis = async (ctx) => {
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processMsgLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processMsgLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: processMsgLogger }),
     logger,
     isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
@@ -204,7 +219,7 @@ export const createResultApis = async (ctx) => {
   const processAssign = processAssignWith({
     logger: processSpawnLogger,
     locateProcess: locate,
-    fetchResult: cuClient.resultWith({ fetch, CU_URL, logger: processAssignLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: processAssignLogger }),
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: processAssignLogger })
   })
   return {
