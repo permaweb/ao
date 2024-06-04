@@ -1,7 +1,7 @@
 import { Transform, compose as composeStreams } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, identity, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
+import { T, always, cond, equals, identity, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -211,126 +211,6 @@ export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
   return (timestamp - originTimestamp) % cron.value === 0
 }
 
-export function cronMessagesBetweenWith ({
-  processId,
-  owner: processOwner,
-  tags: processTags,
-  moduleId,
-  moduleOwner,
-  moduleTags,
-  originBlock,
-  crons,
-  blocksMeta
-}) {
-  const blockBased = crons.filter(s => s.unit === 'block' || s.unit === 'blocks')
-  /**
-   * sort time based crons from most granualar to least granular. This will ensure
-   * time based messages are ordered consistently w.r.t each other.
-   */
-  const timeBased = crons.filter(s => s.unit === 'seconds')
-    .sort(ascend(prop('value')))
-
-  /**
-   * An async iterable whiose results are each a cron message
-   * between the left and right boundaries
-   */
-  return async function * cronMessages (left, right) {
-    /**
-     * { height, timestamp }
-     */
-    const leftBlock = left.block
-    const rightBlock = right.block
-    const leftOrdinate = left.ordinate
-
-    /**
-     * Grab the blocks that are between the left and right boundary,
-     * according to their timestamp
-     */
-    const blocksInRange = blocksMeta.filter((b) =>
-      b.timestamp > leftBlock.timestamp &&
-      b.timestamp < rightBlock.timestamp
-    )
-
-    /**
-     * Start at the left block timestamp, incrementing one second per iteration.
-     * - if our current time gets up to the next block, then check for any block-based cron messages to generate
-     * - Check for any timebased crons to generate on each tick
-     *
-     * The curBlock always starts at the leftBlock, then increments as we tick
-     */
-    let curBlock = leftBlock
-    for (let curTimestamp = leftBlock.timestamp; curTimestamp < rightBlock.timestamp; curTimestamp += 1000) {
-      /**
-       * We've ticked up to our next block
-       * so check if it's on a Cron Interval
-       *
-       * This way, Block-based messages will always be pushed onto the stream of messages
-       * before time-based messages
-       */
-      const nextBlock = blocksInRange[0]
-      if (nextBlock && toSeconds(curTimestamp) >= toSeconds(nextBlock.timestamp)) {
-        /**
-         * Make sure to remove the block from our range,
-         * since we've ticked past it,
-         *
-         * and save it as the new current block
-         */
-        curBlock = blocksInRange.shift()
-
-        for (let i = 0; i < blockBased.length; i++) {
-          const cron = blockBased[i]
-
-          if (isBlockOnCron({ height: curBlock.height, originHeight: originBlock.height, cron })) {
-            yield {
-              cron: `${i}-${cron.interval}`,
-              ordinate: leftOrdinate,
-              name: `Cron Message ${curBlock.timestamp},${leftOrdinate},${i}-${cron.interval}`,
-              message: {
-                Owner: processOwner,
-                Target: processId,
-                From: processOwner,
-                Tags: cron.message.tags,
-                Timestamp: curBlock.timestamp,
-                'Block-Height': curBlock.height,
-                Cron: true
-              },
-              AoGlobal: {
-                Process: { Id: processId, Owner: processOwner, Tags: processTags },
-                Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
-              }
-            }
-          }
-        }
-      }
-
-      for (let i = 0; i < timeBased.length; i++) {
-        const cron = timeBased[i]
-
-        if (isTimestampOnCron({ timestamp: curTimestamp, originTimestamp: originBlock.timestamp, cron })) {
-          yield {
-            cron: `${i}-${cron.interval}`,
-            ordinate: leftOrdinate,
-            name: `Cron Message ${curTimestamp},${leftOrdinate},${i}-${cron.interval}`,
-            message: {
-              Owner: processOwner,
-              Target: processId,
-              From: processOwner,
-              Tags: cron.message.tags,
-              Timestamp: curTimestamp,
-              'Block-Height': curBlock.height,
-              Cron: true
-            },
-            AoGlobal: {
-              Process: { Id: processId, Owner: processOwner, Tags: processTags },
-              Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   findBlocks = fromPromise(findBlocksSchema.implement(findBlocks))
   saveBlocks = fromPromise(saveBlocksSchema.implement(saveBlocks))
@@ -393,11 +273,12 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
+export function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, saveBlocks, logger, genCronMessages }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
 
   const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
 
+  console.log('Starting...')
   return (ctx) => of(ctx)
     .chain(parseCrons)
     .bimap(
@@ -435,7 +316,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
            * a. when cold starting: is the origin block of the process -- the current block at the the time the process was sent to a SU
            * b. when hot-starting: the block height and timestamp of the most recently evaluated message
            *
-           * We also initilize the ordinate here, which will be used to "generate" an orderable
+           * We also initialize the ordinate here, which will be used to "generate" an orderable
            * ordinate for generated Cron messages. This value is usually the nonce of the most recent
            * schedule message. So in sense, Cron message exists "between" scheduled message nonces
            */
@@ -468,7 +349,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
                  * and returns an async iterable that emits cron messages
                  * that are between those boundaries
                  */
-                genCronMessages: cronMessagesBetweenWith({
+                genCronMessages: genCronMessages({
                   logger,
                   processId: ctx.id,
                   owner: ctx.owner,
@@ -591,7 +472,16 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
                  * messages between them, and so emitting them one at a time will respect
                  * backpressure.
                  */
-                for await (const message of genCronMessages(left, right)) yield message
+                const cronStream = await genCronMessages(left, right)
+                console.log('Logging cronstream...', { cronStream })
+                cronStream.on('data', (chunk) => {
+                  console.log('Reading from cron stream...', { chunk })
+                })
+                // while ((chunk = cronStream._read()) !== null) {
+                //   console.log(17, { chunk })
+                //   yield chunk
+                // }
+                // console.log(15, { messages })
 
                 if (doEmitRight) yield right
               }
@@ -719,6 +609,9 @@ export function loadMessagesWith (env) {
   return (ctx) =>
     of(ctx)
       .chain(loadScheduledMessages)
+      .map(($scheduled) => {
+        return $scheduled
+      })
       .chain($scheduled => loadCronMessages({ ...ctx, $scheduled }))
       // { messages }
       .map(mergeRight(ctx))

@@ -1,9 +1,13 @@
+import { Duplex } from 'node:stream'
+
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head, defaultTo, evolve, pipe } from 'ramda'
 import { z } from 'zod'
-
 import { evaluationSchema } from '../model.js'
 import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { closeSync, createReadStream, createWriteStream, openSync } from 'node:fs'
 
 const evaluationDocSchema = z.object({
   id: z.string().min(1),
@@ -272,4 +276,166 @@ export function findMessageBeforeWith ({ db }) {
       .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Message Not Found' }))
       .map((row) => ({ id: row.id }))
       .toPromise()
+}
+
+// Cron Messages Between
+
+export const toSeconds = (millis) => Math.floor(millis / 1000)
+
+/**
+ * Whether the block height, relative to the origin block height,
+ * matches the provided cron
+ */
+export function isBlockOnCron ({ height, originHeight, cron }) {
+  /**
+   * Don't count the origin height as a match
+   */
+  if (height === originHeight) return false
+
+  return (height - originHeight) % cron.value === 0
+}
+
+/**
+ * Whether the timstamp, relative to the origin timestamp,
+ * matches the provided cron
+ */
+export function isTimestampOnCron ({ timestamp, originTimestamp, cron }) {
+  /**
+   * The smallest unit of time a cron can be placed is in seconds,
+   * and if we modulo milliseconds, it can return 0 for fractional overlaps
+   * of the scedule
+   *
+   * So convert the times to seconds perform applying modulo
+   */
+  timestamp = toSeconds(timestamp)
+  originTimestamp = toSeconds(originTimestamp)
+  /**
+   * don't count the origin timestamp as a match
+   */
+  if (timestamp === originTimestamp) return false
+  return (timestamp - originTimestamp) % cron.value === 0
+}
+
+export function cronMessagesBetweenWith ({ generateCronMessagesBetween }) {
+  return ({
+    processId,
+    owner: processOwner,
+    tags: processTags,
+    moduleId,
+    moduleOwner,
+    moduleTags,
+    originBlock,
+    crons,
+    blocksMeta
+  }) => {
+    // Instantiate Duplex
+    const cronStream = new (class extends Duplex {
+      constructor (options) {
+        super({ objectMode: true, allowHalfOpen: true, emitClose: false, ...options })
+        this.fileBuffer = join(tmpdir(), `cronMessages-${Date.now()}.txt`)
+        closeSync(openSync(this.fileBuffer, 'w'))
+        this.readStream = createReadStream(this.fileBuffer)
+        this.writeStream = createWriteStream(this.fileBuffer)
+        // this.writePromise = new Promise.resolve()
+        // this.rl = null
+      }
+
+      async _write (cronMessage, encoding, callback) {
+        this.push(cronMessage)
+        callback()
+        // console.log('Writing...', { cronMessage, encoding, callback, ws: this.writeStream })
+        // // either buffer into memory up to x objects
+        // // OR write to a file
+        // // if (!this.writeStream) {
+        // //   console.log('Creating write stream...')
+        // //   this.writeStream = createWriteStream(this.fileBuffer)
+        // // }
+
+        // if (this.writeStream) {
+        //   console.log('Writing to write stream...', { cronMessage })
+        //   const res = this.writeStream.write(JSON.stringify(cronMessage) + '\n', encoding, callback)
+        //   console.log('Wrote...', { res })
+        //   console.log('promise', { p: this.writePromise })
+        //   Promise.resolve(this.writePromise)
+        // } else {
+        //   console.log('No write stream!')
+        // }
+      }
+
+      async _read () {
+        // console.log('Reading...', { readable: this.readStream.readable, rb: this.readable })
+        // await this.writePromise.then(() => {
+        //   console.log("Promise resolved...")
+        //   this.readStream.on('data', (chunk) => {
+        //     console.log('LINE: ', { chunk })
+        //     this.push(chunk)
+        //   })
+
+        //   this.readStream.on('end', () => {
+        //     setTimeout(() => {
+        //       console.log('ending...')
+        //       this.read()
+        //     }, 1000)
+        //   })
+        // })
+        // if (!this.rl) {
+        //   console.log('Creating rl interface...')
+        //   this.rl = readline.createInterface({
+        //     input: this.readStream,
+        //     output: stdout,
+        //     terminal: false
+        //   })
+        // }
+
+        // this.rl.on('close', () => {
+        //   console.log('On close...', { wf: this.writableFinished })
+        //   if (!this.writableFinished) {
+        //     setTimeout(() => {
+        //       this.read()
+        //     }, 1000)
+        //   } else {
+        //     console.log('Here4')
+        //     this.push(null)
+        //   }
+        // })
+      }
+
+      _final () {
+        console.log('Final')
+        // if (this.writableFinished) {
+        //   this.readStream.close()
+        //   this.rl.close()
+        //   this.writeStream.close()
+        // }
+      }
+    })()
+
+    return (left, right) => {
+      generateCronMessagesBetween([{
+        processId,
+        owner: processOwner,
+        tags: processTags,
+        moduleId,
+        moduleOwner,
+        moduleTags,
+        originBlock,
+        crons,
+        blocksMeta,
+        left,
+        right
+        // maybe respect backpressure here
+        // On: (payload) => write to stream
+      }], async (cronMessage) => {
+        console.log('Writing to cronstream...', { cronMessage })
+        return cronStream.write(cronMessage, 'utf8', (err) => console.log('err: ', err))
+      })
+      // .then(() => {
+      // console.log('Ending cronstream...')
+      // cronStream.end()
+      // })
+
+      // Ideally return just the Readable from the Duplex
+      return cronStream
+    }
+  }
 }

@@ -207,8 +207,20 @@ export const createApis = async (ctx) => {
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => workerPool.exec('evaluate', args),
+      evaluate: (...args) => {
+        return workerPool.exec('evaluate', args)
+      },
       logger
+    }),
+    genCronMessages: AoEvaluationClient.cronMessagesBetweenWith({
+      generateCronMessagesBetween: (args, on) => {
+        // Ensure args is an array
+        if (!Array.isArray(args)) {
+          args = [args]
+        }
+
+        return workerPool.exec('generateCronMessagesBetween', args, { on })
+      }
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),

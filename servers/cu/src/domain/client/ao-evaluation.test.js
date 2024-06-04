@@ -1,11 +1,13 @@
 /* eslint-disable no-throw-literal */
-import { describe, test } from 'node:test'
+import { describe, test, before } from 'node:test'
 import assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { findEvaluationSchema, findEvaluationsSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../dal.js'
-import { findMessageBeforeWith, findEvaluationWith, findEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
+import { findMessageBeforeWith, findEvaluationWith, findEvaluationsWith, saveEvaluationWith, cronMessagesBetweenWith } from './ao-evaluation.js'
 import { COLLATION_SEQUENCE_MAX_CHAR, EVALUATIONS_TABLE, MESSAGES_TABLE } from './sqlite.js'
+import ms from 'ms'
+import { readFileSync } from 'node:fs'
 
 const logger = createLogger('ao-cu:readState')
 
@@ -473,6 +475,516 @@ describe('ao-evaluation', () => {
         })
 
       assert(res.ok)
+    })
+  })
+
+  describe('cronMessagesBetweenWith', () => {
+    const nowSecond = Math.floor(new Date().getTime() / 1000) * 1000
+
+    const originHeight = 125000
+    const originTime = nowSecond - ms('30d')
+    const mockCronMessage = {
+      tags: [
+        { name: 'Type', value: 'Message' },
+        { name: 'function', value: 'notify' },
+        { name: 'from', value: 'SIGNERS_WALLET_ADRESS' },
+        { name: 'qty', value: '1000' }
+      ]
+    }
+
+    const processId = 'process-123'
+    const owner = 'owner-123'
+    const originBlock = {
+      height: originHeight,
+      timestamp: originTime
+    }
+    const crons = [
+      {
+        interval: '10-minutes',
+        unit: 'seconds',
+        value: ms('10m') / 1000,
+        message: mockCronMessage
+      },
+      {
+        interval: '2-blocks',
+        unit: 'blocks',
+        value: 2,
+        message: mockCronMessage
+      },
+      {
+        interval: '15-minutes',
+        unit: 'seconds',
+        value: ms('15m') / 1000,
+        message: mockCronMessage
+      },
+      {
+        interval: '2-blocks',
+        unit: 'blocks',
+        value: 2,
+        message: mockCronMessage
+      }
+    ]
+    const scheduledMessagesStartTime = originTime + ms('20m')
+    const blocksMeta = [
+      // {
+      //   height: originHeight + 10,
+      //   timestamp: scheduledMessagesStartTime - ms('10m') - ms('10m') // 15m
+      // },
+      // {
+      //   height: originHeight + 11,
+      //   timestamp: scheduledMessagesStartTime - ms('10m') // 25m
+      // },
+      // The first scheduled message is on this block
+      {
+        height: originHeight + 12,
+        timestamp: scheduledMessagesStartTime + ms('15m') // 35m
+      },
+      /**
+       * 2 block-based:
+       * - 2 @ root
+       *
+       * 3 time-based:
+       * - 0 @ 35m
+       * - 1 10_minute @ 40m
+       * - 1 15_minute @ 45m
+       * - 1 10_minute @ 50m
+       */
+      {
+        height: originHeight + 13,
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') // 51m
+      },
+      /**
+       * 0 block-based
+       *
+       * 4 time-based:
+       * - 0 @ 51m
+       * - 1 10_minute @ 60m
+       * - 1 15_minute @ 60m
+       * - 1 10_minute @ 70m
+       * - 1 15_minute @ 75m
+       */
+      {
+        height: originHeight + 14,
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') + ms('29m') // 80m
+      },
+      /**
+       * 2 block-based
+       * - 2 @ root
+       *
+       * 3 time-based:
+       * - 1 10_minute @ 80m
+       * - 1 15_minute @ 90m
+       * - 1 10_minute @ 90m
+       */
+      {
+        height: originHeight + 15,
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') + ms('29m') + ms('15m') // 95m
+      },
+      /**
+       * 0 block-based
+       *
+       * 1 time-based:
+       * - 0 @ 95m
+       * - 1 10_minute @ 100m
+       */
+      {
+        height: originHeight + 16,
+        timestamp: scheduledMessagesStartTime + ms('15m') + ms('16m') + ms('29m') + ms('15m') + ms('10m') // 105m
+      }
+      /**
+       * NOT SCHEDULED BECAUSE OUTSIDE BLOCK RANGE
+       * 2 block-based:
+       * - 2 @ root
+       *
+       * X time-based:
+       * - 1 15_minute @ 105m
+       * ....
+       */
+    ]
+
+    const cronMessagesBetween = cronMessagesBetweenWith({ generateCronMessagesBetween: () => null })
+
+    // 15 Cron Messages to write to the duplex
+    // Object and Array constructors are replaced with empty object/array as the messages are stringified and then parsed when adding to file.
+    const cronMessages = [
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714580554000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714580554000,
+          'Block-Height': 125011,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714581154000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714581154000,
+          'Block-Height': 125011,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '1-15-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714581154000,1,1-15-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714581154000,
+          'Block-Height': 125011,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-2-blocks',
+        ordinate: 1,
+        name: 'Cron Message 1714581454000,1,0-2-blocks',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714581454000,
+          'Block-Height': 125012,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '1-2-blocks',
+        ordinate: 1,
+        name: 'Cron Message 1714581454000,1,1-2-blocks',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714581454000,
+          'Block-Height': 125012,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714581754000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714581754000,
+          'Block-Height': 125012,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '1-15-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714582054000,1,1-15-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714582054000,
+          'Block-Height': 125012,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714582354000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714582354000,
+          'Block-Height': 125012,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714582954000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714582954000,
+          'Block-Height': 125013,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '1-15-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714582954000,1,1-15-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714582954000,
+          'Block-Height': 125013,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714583554000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714583554000,
+          'Block-Height': 125013,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '1-15-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714583854000,1,1-15-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714583854000,
+          'Block-Height': 125013,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-2-blocks',
+        ordinate: 1,
+        name: 'Cron Message 1714584154000,1,0-2-blocks',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714584154000,
+          'Block-Height': 125014,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '1-2-blocks',
+        ordinate: 1,
+        name: 'Cron Message 1714584154000,1,1-2-blocks',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714584154000,
+          'Block-Height': 125014,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      },
+      {
+        cron: '0-10-minutes',
+        ordinate: 1,
+        name: 'Cron Message 1714584154000,1,0-10-minutes',
+        message: {
+          Owner: 'owner-123',
+          Target: 'process-123',
+          From: 'owner-123',
+          Tags: [],
+          Timestamp: 1714584154000,
+          'Block-Height': 125014,
+          Cron: true
+        },
+        AoGlobal: { Process: {}, Module: {} }
+      }
+    ]
+
+    describe('write', () => {
+      describe('write ten or less cron messages', () => {
+        const cronStream = cronMessagesBetween({
+          logger,
+          processId,
+          owner,
+          originBlock,
+          crons,
+          blocksMeta
+        })({
+          left: {
+            block: {
+              height: originHeight + 11,
+              timestamp: scheduledMessagesStartTime
+            },
+            ordinate: 1
+          },
+          right: {
+            block: {
+              height: originHeight + 16,
+              timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+            }
+          }
+        })
+        // Write 10 messages to the duplex. The first 10 should enter the memory buffer
+        before(() => {
+          cronMessages.slice(0, 10).forEach((msg) => {
+            cronStream._write(msg)
+          })
+        })
+
+        test('first 10 cron messages should load into memory', () => {
+          assert.deepStrictEqual(cronStream.memoryBuffer, cronMessages.slice(0, 10))
+        })
+
+        test('file buffer should be empty', () => {
+          let errorCaught = false
+          try {
+            readFileSync(cronStream.fileBuffer)
+          } catch (_e) {
+            errorCaught = true
+          }
+          assert.deepStrictEqual(errorCaught, true)
+        })
+      })
+
+      describe('write more than ten cron messages', () => {
+        const cronStream = cronMessagesBetween({
+          logger,
+          processId,
+          owner,
+          originBlock,
+          crons,
+          blocksMeta
+        })({
+          left: {
+            block: {
+              height: originHeight + 11,
+              timestamp: scheduledMessagesStartTime
+            },
+            ordinate: 1
+          },
+          right: {
+            block: {
+              height: originHeight + 16,
+              timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+            }
+          }
+        })
+        // Write all 15 messages to duplex. The first 10 should load into the memory buffer, but once it exceeds than it should all dump into a file
+        before(() => {
+          cronMessages.forEach((msg) => {
+            cronStream._write(msg)
+          })
+        })
+
+        test('all 15 crons should load into file', () => {
+          // const file = readFileSync(cronStream.fileBuffer).toString()
+          // const msgs = file.trim().split('\n').map(JSON.parse)
+          // assert.deepStrictEqual(msgs, cronMessages)
+        })
+
+        test('memory buffer should be empty', () => {
+          assert.deepStrictEqual(cronStream.memoryBuffer, [])
+        })
+      })
+    })
+
+    describe('read', () => {
+      const cronStream = cronMessagesBetween({
+        logger,
+        processId,
+        owner,
+        originBlock,
+        crons,
+        blocksMeta
+      })({
+        left: {
+          block: {
+            height: originHeight + 11,
+            timestamp: scheduledMessagesStartTime
+          },
+          ordinate: 1
+        },
+        right: {
+          block: {
+            height: originHeight + 16,
+            timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+          }
+        }
+      })
+
+      // Write 10 messages to the duplex. The first 10 should enter the memory buffer
+      before(() => {
+        cronMessages.forEach((msg) => {
+          cronStream._write(msg)
+        })
+      })
+
+      test('last read should be last cron message', () => {
+        let firstMsg, lastMsg
+        cronStream.on('readable', () => {
+          let msg
+          while ((msg = cronStream.read()) !== null) {
+            if (!firstMsg) firstMsg = msg
+            lastMsg = msg
+          }
+        })
+
+        cronStream.on('end', () => {
+          assert.deepStrictEqual(firstMsg, cronMessages[0])
+          assert.deepStrictEqual(lastMsg, cronMessages[cronMessages.length - 1])
+        })
+      })
+    })
+
+    describe('test', async () => {
+      console.log('Here')
+      const genCron = cronMessagesBetween({
+        logger,
+        processId,
+        owner,
+        originBlock,
+        crons,
+        blocksMeta
+      })
+      console.log(genCron(1000, 2000)._read())
+
+      for await (const message of genCron(1000, 1200)) {
+        console.log({ message })
+      }
     })
   })
 })
