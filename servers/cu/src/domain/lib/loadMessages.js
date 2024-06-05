@@ -455,7 +455,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
            */
           rightMostTimestamp: ctx.to || currentBlock.timestamp
         }))
-        .map(logger.tap('reconciling blocks meta for scheduled messages in range of %o'))
+        // .map(logger.tap('reconciling blocks meta for scheduled messages in range of %o'))
         .chain(({ leftMost, rightMostTimestamp }) =>
           reconcileBlocks({ min: leftMost.block.height, maxTimestamp: rightMostTimestamp })
             .map(blocksMeta => {
@@ -483,10 +483,6 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
               }
             })
         )
-        .map(ctx => {
-          logger('Merging Streams of Scheduled and Cron Messages...')
-          return ctx
-        })
         .map(({ leftMost, rightMostTimestamp, $scheduled, genCronMessages }) => {
           return composeStreams(
             $scheduled,

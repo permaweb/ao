@@ -214,7 +214,7 @@ export function loadBlocksMetaWith ({ fetch, GRAPHQL_URL, pageSize, logger }) {
                */
             timestamp: block.timestamp * 1000
           })))
-          .then(logger.tap('Loaded blocks meta after height %s up to timestamp %s', min, maxTimestamp))
+          // .then(logger.tap('Loaded blocks meta after height %s up to timestamp %s', min, maxTimestamp))
       ))
       .toPromise()
 }

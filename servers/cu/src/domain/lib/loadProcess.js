@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { always, identity, isNotNil, mergeRight, omit, pick } from 'ramda'
+import { always, identity, isNotNil, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
 import { findEvaluationSchema, findLatestProcessMemorySchema, findProcessSchema, isProcessOwnerSupportedSchema, loadProcessSchema, locateProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
@@ -113,7 +113,8 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
        */
       .bimap(
         logger.tap('Could not find process in db. Loading from chain...'),
-        logger.tap('found process in db %j')
+        identity
+        // logger.tap('found process in db %j')
       )
       /**
        * Locate the scheduler for the process and attach to context
@@ -224,7 +225,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
   }
 
   function maybeCachedMemory (ctx) {
-    logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
+    // logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
 
     return findLatestProcessMemory({
       processId: ctx.id,
@@ -262,10 +263,10 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
             if (['cold_start'].includes(found.src)) return Resolved(found)
             if (['memory'].includes(found.src) && !found.fromFile) return Resolved(found)
 
-            logger(
-              'Seeding cache with latest checkpoint found with parameters "%j"',
-              omit(['Memory'], found)
-            )
+            // logger(
+            //   'Seeding cache with latest checkpoint found with parameters "%j"',
+            //   omit(['Memory'], found)
+            // )
             /**
              * Immediatley attempt to save the memory loaded from a checkpoint
              * into the LRU In-memory cache, which will cut
