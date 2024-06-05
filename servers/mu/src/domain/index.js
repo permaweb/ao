@@ -31,8 +31,8 @@ const { DataItem } = warpArBundles
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
 
-const muRedirectCache = InMemoryClient.createLruCache({ size: 500 })
-
+const FIVE_MINUTES_IN_MS = 1000 * 60 * 5
+const muRedirectCache = InMemoryClient.createLruCache({ size: 500, ttl: FIVE_MINUTES_IN_MS })
 /**
  * A set of apis used by the express server
  * to send initial items and start the message
