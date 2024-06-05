@@ -1,7 +1,7 @@
 import { always, compose, identity } from 'ramda'
 import { z } from 'zod'
 
-import { withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
+import { withMetrics, withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
 
 /**
  * TODO: could be moved into a route utils or middleware
@@ -37,6 +37,7 @@ export const withCronRoutes = app => {
     '/cron/:processId',
     compose(
       withMiddleware,
+      withMetrics({ tracesFrom: (req) => ({ process_id: req.params.processId }) }),
       withProcessRestrictionFromPath,
       always(async (req, res) => {
         const {
