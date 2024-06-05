@@ -164,6 +164,9 @@ export const createApis = async (ctx) => {
       DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
       writeFile
     }),
+    writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({
+      db: sqlite
+    }),
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
@@ -207,6 +210,9 @@ export const createApis = async (ctx) => {
       readCheckpointFile: AoProcessClient.readCheckpointFileWith({
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
         readFile
+      }),
+      findCheckpointRecordBefore: AoProcessClient.findCheckpointRecordBeforeWith({
+        db: sqlite
       }),
       address,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),

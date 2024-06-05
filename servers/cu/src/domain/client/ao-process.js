@@ -11,7 +11,7 @@ import AsyncLock from 'async-lock'
 
 import { isEarlierThan, isEqualTo, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
-import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
+import { PROCESSES_TABLE, CHECKPOINTS_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
 
 const gunzipP = promisify(gunzip)
@@ -416,6 +416,90 @@ export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
 
 /**
  * ################################
+ * #########  sqlite utils ##########
+ * ################################
+ */
+
+export function findCheckpointRecordBeforeWith ({ db }) {
+  function createQuery ({ processId, before }) {
+    // TODO: Handle 'before'
+    return {
+      sql: `
+        SELECT *
+        FROM ${CHECKPOINTS_TABLE}
+        WHERE
+          processId = ? 
+        ORDER BY timestamp DESC
+        LIMIT 1;
+      `,
+      parameters: [processId]
+    }
+  }
+
+  return ({ processId, before }) => {
+    /**
+     * Find all the Checkpoint records for this process
+     */
+    return of({ processId, before })
+      .chain((doc) => {
+        return of(doc)
+          .map(createQuery)
+          .chain(fromPromise((query) => db.query(query)))
+      })
+      .map((result) => {
+        return { ...result[0], Memory: JSON.parse(path(['0', 'memory'])(result)), evaluation: JSON.parse(path(['0', 'evaluation'])(result)) }
+      })
+      .toPromise()
+  }
+}
+
+export function writeCheckpointRecordWith ({ db }) {
+  const checkpointDocSchema = z.object({
+    Memory: z.object({
+      id: z.string().min(1),
+      encoding: z.string().min(1)
+    }),
+    evaluation: z.object({
+      processId: z.string().min(1),
+      timestamp: z.coerce.number(),
+      ordinate: z.coerce.string(),
+      cron: z.string().nullish()
+    })
+  })
+
+  function createQuery ({ Memory, evaluation }) {
+    return {
+      sql: `
+        INSERT OR IGNORE INTO ${CHECKPOINTS_TABLE}
+        (processId, timestamp, ordinate, cron, memory, evaluation)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      parameters: [
+        evaluation.processId,
+        evaluation.timestamp,
+        evaluation.ordinate,
+        evaluation.cron,
+        JSON.stringify(Memory),
+        JSON.stringify(evaluation)
+      ]
+    }
+  }
+
+  return ({ Memory, evaluation }) => {
+    return of({ Memory, evaluation })
+      .map(checkpointDocSchema.parse)
+      .chain((doc) =>
+        of(doc)
+          .map(createQuery)
+          .chain(fromPromise((query) => db.run(query)))
+          .map(always(doc.id))
+      )
+      .toPromise()
+  }
+}
+
+/**
+ * ################################
  * ##### Checkpoint query utils ###
  * ################################
  */
@@ -477,6 +561,7 @@ export function findLatestProcessMemoryWith ({
   readProcessMemoryFile,
   findCheckpointFileBefore,
   readCheckpointFile,
+  findCheckpointRecordBefore,
   address,
   queryGateway,
   queryCheckpointGateway,
@@ -492,6 +577,7 @@ export function findLatestProcessMemoryWith ({
   findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
   readCheckpointFile = fromPromise(readCheckpointFile)
   loadTransactionData = fromPromise(loadTransactionData)
+  findCheckpointRecordBefore = fromPromise(findCheckpointRecordBefore)
 
   const IGNORED_CHECKPOINTS = new Set(IGNORE_ARWEAVE_CHECKPOINTS)
   const isCheckpointIgnored = (id) => !!IGNORED_CHECKPOINTS.size && IGNORED_CHECKPOINTS.has(id)
@@ -660,7 +746,7 @@ export function findLatestProcessMemoryWith ({
       })
   }
 
-  function maybeFile (args) {
+  function maybeRecord (args) {
     const { processId, omitMemory } = args
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
@@ -671,7 +757,7 @@ export function findLatestProcessMemoryWith ({
     /**
      * Attempt to find the latest checkpoint in a file
      */
-    return findCheckpointFileBefore({ processId, before: LATEST })
+    return findCheckpointRecordBefore({ processId, before: LATEST })
       .chain((latest) => {
         /**
          * No previously created checkpoint is cached in a file,
@@ -687,9 +773,8 @@ export function findLatestProcessMemoryWith ({
          * The "file" checkpoint already contains all the metadata we would
          * otherwise have to pull from the gateway
          */
-        return of(latest.file)
+        return of(latest)
           // { Memory: { id, encoding }, evaluation }
-          .chain(readCheckpointFile)
           .chain((checkpoint) => {
             if (!isCheckpointIgnored(checkpoint.Memory.id)) return Resolved(checkpoint)
             logger('Encountered Ignored Checkpoint "%s" from file. Skipping...', checkpoint.Memory.id)
@@ -705,7 +790,7 @@ export function findLatestProcessMemoryWith ({
                * Finally map the Checkpoint to the expected shape
                */
               .map((Memory) => ({
-                src: 'file',
+                src: 'record',
                 Memory,
                 moduleId: checkpoint.evaluation.moduleId,
                 timestamp: checkpoint.evaluation.timestamp,
@@ -900,7 +985,7 @@ export function findLatestProcessMemoryWith ({
 
     return of({ processId, before, omitMemory })
       .chain(maybeCached)
-      .bichain(maybeFile, Resolved)
+      .bichain(maybeRecord, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
       .chain(maybeOld({ processId, before }))
@@ -1015,6 +1100,7 @@ export function saveCheckpointWith ({
   uploadDataItem,
   address,
   writeCheckpointFile,
+  writeCheckpointRecord,
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
   DISABLE_PROCESS_CHECKPOINT_CREATION
@@ -1025,6 +1111,7 @@ export function saveCheckpointWith ({
   buildAndSignDataItem = fromPromise(buildAndSignDataItem)
   uploadDataItem = fromPromise(uploadDataItem)
   writeCheckpointFile = fromPromise(writeCheckpointFile)
+  writeCheckpointRecord = fromPromise(writeCheckpointRecord)
 
   const logger = _logger.child('ao-process:saveCheckpoint')
 
@@ -1256,7 +1343,7 @@ export function saveCheckpointWith ({
           )
       })
       .chain((onArweave) => {
-        return writeCheckpointFile({
+        return writeCheckpointRecord({
           Memory: onArweave,
           evaluation: {
             processId,

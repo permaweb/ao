@@ -476,10 +476,19 @@ describe('ao-process', () => {
       test.todo('should omit the memory if omitMemory is received', async () => {})
     })
 
-    describe('checkpoint cached in a file', () => {
+    describe('checkpoint cached in a record', () => {
       const deps = {
         cache: {
           get: () => undefined
+        },
+        findCheckpointRecordBefore: async ({ processId, before }) => {
+          assert.equal(processId, PROCESS)
+          assert.equal(before, LATEST)
+
+          return {
+            Memory: { id: 'tx-123', encoding: 'gzip' },
+            evaluation: cachedEval
+          }
         },
         findCheckpointFileBefore: async ({ processId, before }) => {
           assert.equal(processId, PROCESS)
@@ -516,7 +525,7 @@ describe('ao-process', () => {
 
           assert.ok(Memory)
           assert.deepStrictEqual(res, {
-            src: 'file',
+            src: 'record',
             moduleId: cachedEval.moduleId,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
@@ -532,7 +541,7 @@ describe('ao-process', () => {
 
           assert.ok(Memory)
           assert.deepStrictEqual(res, {
-            src: 'file',
+            src: 'record',
             moduleId: cachedEval.moduleId,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
@@ -552,7 +561,7 @@ describe('ao-process', () => {
       test('should NOT decode the memory if not needed', async () => {
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
-          readCheckpointFile: async () => ({
+          findCheckpointRecordBefore: async () => ({
             Memory: { id: 'tx-not-encoded', encoding: undefined },
             evaluation: {
               ...cachedEval,
@@ -593,8 +602,7 @@ describe('ao-process', () => {
         cache: {
           get: () => undefined
         },
-        findCheckpointFileBefore: async () => undefined,
-        readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
+        findCheckpointRecordBefore: async () => undefined,
         address: async () => 'address-123',
         queryGateway: async ({ query, variables }) => {
           assert.ok(query)
@@ -920,8 +928,7 @@ describe('ao-process', () => {
         cache: {
           get: () => undefined
         },
-        findCheckpointFileBefore: async () => undefined,
-        readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
+        findCheckpointRecordBefore: async () => undefined,
         address: async () => 'address-123',
         queryCheckpointGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
         queryGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
@@ -994,8 +1001,7 @@ describe('ao-process', () => {
               evaluation: laterCachedEval
             })
           },
-          findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
-          readCheckpointFile: async (file) => assert.fail('should not call if found in cache'),
+          findCheckpointRecordBefore: async () => assert.fail('should not call if found in cache'),
           address: async () => assert.fail('should not call if found in file checkpoint'),
           queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
           queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
@@ -1020,15 +1026,15 @@ describe('ao-process', () => {
           }))
       })
 
-      test('if nothing in LRU In-Memory Cache and file checkpoint is later than the target', async () => {
+      test('if nothing in LRU In-Memory Cache and record checkpoint is later than the target', async () => {
         const deps = {
           cache: {
             get: () => undefined
           },
-          findCheckpointFileBefore: async ({ processId, before }) => ({
-            file: 'foobar.json'
-          }),
-          readCheckpointFile: async (file) => {
+          findCheckpointRecordBefore: async ({ processId, before }) => {
+            assert.equal(processId, PROCESS)
+            assert.equal(before, LATEST)
+
             return {
               Memory: { id: 'tx-123', encoding: 'gzip' },
               evaluation: laterCachedEval
@@ -1058,13 +1064,12 @@ describe('ao-process', () => {
           }))
       })
 
-      test('if nothing in LRU In-Memory Cache, and no file checkpoint, and gateway checkpoint is later than the target', async () => {
+      test('if nothing in LRU In-Memory Cache, and no record checkpoint, and gateway checkpoint is later than the target', async () => {
         const deps = {
           cache: {
             get: () => undefined
           },
-          findCheckpointFileBefore: async () => undefined,
-          readCheckpointFile: async () => assert.fail('should not call if no file checkpoint is found'),
+          findCheckpointRecordBefore: async () => undefined,
           address: async () => 'address-123',
           queryGateway: async () => ({
             data: {
