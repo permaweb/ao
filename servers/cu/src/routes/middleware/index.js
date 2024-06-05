@@ -4,6 +4,7 @@ import { withErrorHandler } from './withErrorHandler.js'
 import { withDomain } from './withDomain.js'
 
 export * from './withProcessRestriction.js'
+export * from './withMetrics.js'
 
 /**
  * A convenience method that composes common middleware needed on most routes,

@@ -1,13 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import PromClient from 'prom-client'
 
-export const initializeRuntimeMetricsWith = ({ prefix = 'ao_cu' }) => {
+export const initializeRuntimeMetricsWith = ({ prefix = 'ao_cu' } = {}) => {
   let initialized = false
 
   return () => {
     if (initialized) return PromClient.register
 
-    PromClient.register.setContentType(PromClient.Registry.OPENMETRICS_CONTENT_TYPE)
     PromClient.collectDefaultMetrics({ prefix })
     initialized = true
     return PromClient.register
@@ -30,9 +29,9 @@ export const timer = (label, ctx) => {
   }
 }
 
-export const gaugeWith = ({ prefix = 'ao_cu' }) => {
+export const gaugeWith = ({ prefix = 'ao_cu' } = {}) => {
   return ({ name, description, collect }) => {
-    const g = new PromClient.Gauge({ name: `${prefix}_${name}`, help: description, collect })
+    const g = new PromClient.Gauge({ name: `${prefix}_${name}`, help: description, collect, enableExemplars: true })
 
     return {
       inc: (n) => g.inc(n),
@@ -42,12 +41,13 @@ export const gaugeWith = ({ prefix = 'ao_cu' }) => {
   }
 }
 
-export const histogramWith = ({ prefix = 'ao_cu' }) => {
-  return ({ name, description }) => {
-    const h = new PromClient.Histogram({ name: `${prefix}_${name}`, help: description })
+export const histogramWith = ({ prefix = 'ao_cu' } = {}) => {
+  return ({ name, description, buckets, labelNames = [] }) => {
+    const h = new PromClient.Histogram({ name: `${prefix}_${name}`, help: description, buckets, labelNames, enableExemplars: true })
 
     return {
-      observe: (v) => h.observe(v)
+      observe: (v) => h.observe(v),
+      startTimer: (labels, exemplars) => h.startTimer(labels, exemplars)
     }
   }
 }
