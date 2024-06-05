@@ -732,9 +732,13 @@ export function findLatestProcessMemoryWith ({
       return Rejected(args)
     }
 
-    return address()
-      .chain((owner) => {
-        const owners = ifElse(isEmpty, always([owner]), always(PROCESS_CHECKPOINT_TRUSTED_OWNERS))(PROCESS_CHECKPOINT_TRUSTED_OWNERS)
+    return of({ PROCESS_CHECKPOINT_TRUSTED_OWNERS })
+      .chain(({ PROCESS_CHECKPOINT_TRUSTED_OWNERS }) => {
+        if (isEmpty(PROCESS_CHECKPOINT_TRUSTED_OWNERS)) return address()
+        return Resolved(PROCESS_CHECKPOINT_TRUSTED_OWNERS)
+      })
+      .map((owners) => ifElse(Array.isArray, always(owners), always([owners]))(owners))
+      .chain((owners) => {
         return queryCheckpoints({
           query: GET_AO_PROCESS_CHECKPOINTS,
           variables: { owners, processId, limit: 50 },

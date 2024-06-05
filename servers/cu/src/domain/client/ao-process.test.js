@@ -701,6 +701,7 @@ describe('ao-process', () => {
 
         test('should query all trusted owners if not empty', async () => {
           let assertionFailed = false
+          let addressCalled = false
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             PROCESS_CHECKPOINT_TRUSTED_OWNERS: ['wallet-123', 'wallet-456'],
@@ -712,11 +713,13 @@ describe('ao-process', () => {
                 assertionFailed = true
               }
               return { data: { transactions: { edges: [] } } }
-            }
+            },
+            address: async () => { addressCalled = true }
           }))
           await findLatestProcessMemory(target)
 
           assert.ok(!assertionFailed)
+          assert.ok(!addressCalled)
         })
       })
 
