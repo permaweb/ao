@@ -72,8 +72,6 @@ There are a few environment variables that you can set. Besides
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
   `embedded`)
 - `DB_URL`: the name of the embdeeded database (defaults to `ao-cache`)
-- `DUMP_PATH`: the path to send `heap` snapshots to. (See
-  [Heap Snapshots](#heap-snapshot))
 - `PROCESS_WASM_MEMORY_MAX_LIMIT`: The maximum `Memory-Limit`, in bytes,
   supported for `ao` processes (defaults to `1GB`)
 - `PROCESS_WASM_COMPUTE_MAX_LIMIT`: The maximum `Compute-Limit`, in bytes,

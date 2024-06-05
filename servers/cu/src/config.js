@@ -34,8 +34,7 @@ const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm3
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
-  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean()),
-  DUMP_PATH: z.string().min(1)
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
 })
 
 /**
