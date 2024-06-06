@@ -134,6 +134,10 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
   /**
+   * An array of trusted owner wallets that Arweave checkpoints can be queried from.
+   */
+  PROCESS_CHECKPOINT_TRUSTED_OWNERS: commaDelimitedArraySchema,
+  /**
    * An array of checkpoint ids that should not be used
    */
   IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,

@@ -354,7 +354,8 @@ describe('ao-process', () => {
         loadTransactionData: async () => assert.fail('should not call if found in cache'),
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-        IGNORE_ARWEAVE_CHECKPOINTS: []
+        IGNORE_ARWEAVE_CHECKPOINTS: [],
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -503,7 +504,8 @@ describe('ao-process', () => {
         },
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-        IGNORE_ARWEAVE_CHECKPOINTS: []
+        IGNORE_ARWEAVE_CHECKPOINTS: [],
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -596,7 +598,7 @@ describe('ao-process', () => {
         queryGateway: async ({ query, variables }) => {
           assert.ok(query)
           assert.deepStrictEqual(variables, {
-            owner: 'address-123',
+            owners: ['address-123'],
             processId: PROCESS,
             limit: 50
           })
@@ -610,7 +612,8 @@ describe('ao-process', () => {
         },
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-        IGNORE_ARWEAVE_CHECKPOINTS: []
+        IGNORE_ARWEAVE_CHECKPOINTS: [],
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -694,6 +697,29 @@ describe('ao-process', () => {
             cron: cachedEval.cron,
             ordinate: cachedEval.ordinate
           })
+        })
+
+        test('should query all trusted owners if not empty', async () => {
+          let assertionFailed = false
+          let addressCalled = false
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
+            ...deps,
+            PROCESS_CHECKPOINT_TRUSTED_OWNERS: ['wallet-123', 'wallet-456'],
+            queryGateway: async ({ query, variables }) => {
+              try {
+                assert.deepStrictEqual(variables, { owners: ['wallet-123', 'wallet-456'], processId: 'process-123', limit: 50 })
+                assert.ok(query)
+              } catch (e) {
+                assertionFailed = true
+              }
+              return { data: { transactions: { edges: [] } } }
+            },
+            address: async () => { addressCalled = true }
+          }))
+          await findLatestProcessMemory(target)
+
+          assert.ok(!assertionFailed)
+          assert.ok(!addressCalled)
         })
       })
 
@@ -850,7 +876,7 @@ describe('ao-process', () => {
           queryCheckpointGateway: async ({ query, variables }) => {
             assert.ok(query)
             assert.deepStrictEqual(variables, {
-              owner: 'address-123',
+              owners: ['address-123'],
               processId: PROCESS,
               limit: 50
             })
@@ -904,7 +930,8 @@ describe('ao-process', () => {
         },
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-        IGNORE_ARWEAVE_CHECKPOINTS: []
+        IGNORE_ARWEAVE_CHECKPOINTS: [],
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
       }
       const COLDSTART = {
         src: 'cold_start',
@@ -977,7 +1004,8 @@ describe('ao-process', () => {
           },
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-          IGNORE_ARWEAVE_CHECKPOINTS: []
+          IGNORE_ARWEAVE_CHECKPOINTS: [],
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1014,7 +1042,8 @@ describe('ao-process', () => {
           },
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-          IGNORE_ARWEAVE_CHECKPOINTS: []
+          IGNORE_ARWEAVE_CHECKPOINTS: [],
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1063,7 +1092,8 @@ describe('ao-process', () => {
             return new Response(Readable.toWeb(Readable.from(zipped)))
           },
           logger,
-          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: []
+          PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
