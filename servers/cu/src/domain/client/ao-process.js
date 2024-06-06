@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
+import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, isNotNil, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
@@ -22,6 +22,9 @@ function pluckTagValue (name, tags) {
   return tag ? tag.value : undefined
 }
 
+function createCheckpointId ({ processId, timestamp, ordinate, cron }) {
+  return `${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
+}
 /**
  * Used to indicate we are interested in the latest cached
  * memory for the given process
@@ -421,16 +424,26 @@ export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
  */
 
 export function findCheckpointRecordBeforeWith ({ db }) {
-  function createQuery ({ processId }) {
+  function createQuery ({ processId, before }) {
+    const timestamp = before === 'LATEST' ? new Date().getTime() : before.timestamp
+    /** We are grabbing the most recent 5 checkpoints that occur after the before timestamp.
+     * Generally, the most recent timestamp will be the best option (LIMIT 1).
+     * However, in some cases, many checkpoints can share the same timestamps. If this is the case, we will have
+     * to compare their crons, ordinates, etc (subsequent latestCheckpointBefore).
+     * We choose 5 because we believe that it is a sufficiently
+     * large enough set to ensure we include the correct checkpoint.
+     */
+
     return {
       sql: `
         SELECT *
         FROM ${CHECKPOINTS_TABLE}
         WHERE
-          processId = ? 
-        ORDER BY timestamp DESC;
+          processId = ? AND timestamp < ?
+        ORDER BY timestamp DESC
+        LIMIT 5;
       `,
-      parameters: [processId]
+      parameters: [processId, timestamp]
     }
   }
 
@@ -461,12 +474,17 @@ export function writeCheckpointRecordWith ({ db }) {
   const checkpointDocSchema = z.object({
     Memory: z.object({
       id: z.string().min(1),
-      encoding: z.string().min(1)
+      encoding: z.coerce.string().nullish()
     }),
     evaluation: z.object({
       processId: z.string().min(1),
+      moduleId: z.string().min(1),
       timestamp: z.coerce.number(),
+      epoch: z.coerce.number().nullish(),
+      nonce: z.coerce.number().nullish(),
+      blockHeight: z.coerce.number(),
       ordinate: z.coerce.string(),
+      encoding: z.coerce.string().nullish(),
       cron: z.string().nullish()
     })
   })
@@ -475,10 +493,11 @@ export function writeCheckpointRecordWith ({ db }) {
     return {
       sql: `
         INSERT OR IGNORE INTO ${CHECKPOINTS_TABLE}
-        (processId, timestamp, ordinate, cron, memory, evaluation)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (id, processId, timestamp, ordinate, cron, memory, evaluation)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       parameters: [
+        createCheckpointId(evaluation),
         evaluation.processId,
         evaluation.timestamp,
         evaluation.ordinate,
@@ -770,11 +789,11 @@ export function findLatestProcessMemoryWith ({
         if (!latest) return Rejected(args)
 
         /**
-         * We have found a previously created checkpoint, cached in a file, so
+         * We have found a previously created checkpoint, cached in a record, so
          * we can skip querying the gateway for it, and instead download the
          * checkpointed Memory directly, from arweave.
          *
-         * The "file" checkpoint already contains all the metadata we would
+         * The "record" checkpoint already contains all the metadata we would
          * otherwise have to pull from the gateway
          */
         return of(latest)
@@ -1269,7 +1288,7 @@ export function saveCheckpointWith ({
     if (!recentCheckpoints.has(processId)) return Rejected(args)
 
     logger('Checkpoint was recently created for process "%s", and so not creating another one.', processId)
-    return Resolved()
+    return Rejected(args)
   }
 
   function createCheckpoint (args) {

@@ -68,13 +68,13 @@ const createMessages = async (db) => db.prepare(
 
 const createCheckpoints = async (db) => db.prepare(
   `CREATE TABLE IF NOT EXISTS ${CHECKPOINTS_TABLE}(
+    id TEXT PRIMARY KEY,
     processId TEXT,
     timestamp INTEGER,
     ordinate TEXT,
     cron TEXT,
     memory TEXT,
-    evaluation TEXT,
-    PRIMARY KEY (processId, timestamp)
+    evaluation TEXT
   ) WITHOUT ROWID;`
 ).run()
 
@@ -89,6 +89,12 @@ const createMessagesIndexes = async (db) => db.prepare(
     ON ${MESSAGES_TABLE}
     (id, processId, seq);
   `
+).run()
+
+const createCheckpointIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${CHECKPOINTS_TABLE}_processId_timestamp
+    ON ${CHECKPOINTS_TABLE}
+    (processId, timestamp);`
 ).run()
 
 let internalSqliteDb
@@ -117,6 +123,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       .then(() => createCheckpoints(db))
       .then(() => createBlocksIndexes(db))
       .then(() => createMessagesIndexes(db))
+      .then(() => createCheckpointIndexes(db))
   }
 
   return {

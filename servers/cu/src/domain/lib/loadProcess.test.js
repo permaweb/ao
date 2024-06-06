@@ -274,7 +274,7 @@ describe('loadProcess', () => {
       logger
     })
 
-    cached.src = 'file'
+    cached.src = 'record'
     await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
 
     cached.src = 'arweave'
