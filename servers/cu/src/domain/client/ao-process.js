@@ -421,16 +421,14 @@ export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
  */
 
 export function findCheckpointRecordBeforeWith ({ db }) {
-  function createQuery ({ processId, before }) {
-    // TODO: Handle 'before'
+  function createQuery ({ processId }) {
     return {
       sql: `
         SELECT *
         FROM ${CHECKPOINTS_TABLE}
         WHERE
           processId = ? 
-        ORDER BY timestamp DESC
-        LIMIT 1;
+        ORDER BY timestamp DESC;
       `,
       parameters: [processId]
     }
@@ -446,8 +444,14 @@ export function findCheckpointRecordBeforeWith ({ db }) {
           .map(createQuery)
           .chain(fromPromise((query) => db.query(query)))
       })
-      .map((result) => {
-        return { ...result[0], Memory: JSON.parse(path(['0', 'memory'])(result)), evaluation: JSON.parse(path(['0', 'evaluation'])(result)) }
+      .map((results) => {
+        return results.map((result) => ({ ...result, Memory: JSON.parse(pathOr({}, ['memory'])(result)), evaluation: JSON.parse(pathOr({}, ['evaluation'])(result)) }))
+      })
+      .map((parsed) => {
+        return parsed.reduce(
+          latestCheckpointBefore(before),
+          undefined
+        )
       })
       .toPromise()
   }
