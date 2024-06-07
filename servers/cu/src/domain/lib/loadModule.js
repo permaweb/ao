@@ -25,7 +25,13 @@ const ctxSchema = z.object({
     memoryLimit: z.number().nonnegative(),
     computeLimit: z.number().nonnegative(),
     extensions: z.record(z.array(rawTagSchema))
-  }),
+    /**
+     * passthrough so other options required by extensions
+     * can flow through
+     *
+     * TODO: maybe type?
+     */
+  }).passthrough(),
   moduleTags: z.array(rawTagSchema),
   moduleOwner: z.string().min(1)
 }).passthrough()
@@ -151,7 +157,19 @@ function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLi
           },
           {}
         )
-      )
+      ),
+      mode: (args) => pathOr(
+        pathOr('Assignments', ['moduleTags', 'Availability-Type'], args),
+        ['processTags', 'Availability-Type'],
+        args
+      ),
+      spawn: () => ({ id: ctx.id, owner: ctx.owner, tags: ctx.tags }),
+      module: () => ({ id: ctx.moduleId, owner: ctx.moduleOwner, tags: ctx.moduleTags }),
+      /**
+       * TODO: this will need to be set per message at some point,
+       * probably will need to do in the worker
+       */
+      blockHeight: () => 100
     }))
     .chain(checkModuleOption(
       'inputEncoding',

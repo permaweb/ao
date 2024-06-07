@@ -7,10 +7,11 @@ import { promisify } from 'node:util'
 import { hostname } from 'node:os'
 
 import { worker } from 'workerpool'
-import { T, always, applySpec, assocPath, cond, defaultTo, identity, ifElse, is, pathOr, pipe, propOr } from 'ramda'
+import { T, always, applySpec, assocPath, cond, defaultTo, identity, ifElse, is, mergeAll, pathOr, pipe, propOr } from 'ramda'
 import { LRUCache } from 'lru-cache'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
+import WeaveDrive from '@permaweb/weavedrive'
 
 import { saveEvaluationSchema } from '../dal.js'
 import { createLogger } from '../logger.js'
@@ -19,6 +20,8 @@ import { saveEvaluationWith } from './ao-evaluation.js'
 import { createSqliteClient } from './sqlite.js'
 
 const pipelineP = promisify(pipeline)
+
+const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
 function wasmResponse (stream) {
   return new Response(stream, { headers: { 'Content-Type': 'application/wasm' } })
@@ -117,6 +120,23 @@ function createWasmInstanceCache ({ MAX_SIZE }) {
   })
 }
 
+/**
+ * ##############################
+ * ###### Extension utils #######
+ * ##############################
+ */
+
+function addExtensionWith ({ ARWEAVE_URL }) {
+  return async ({ extension }) => {
+    /**
+     * TODO: make this cleaner. Should we attach only api impls
+     * or other options (ie. ARWEAVE) as well here?
+     */
+    if (extension === 'WeaveDrive') return { WeaveDrive, ARWEAVE: ARWEAVE_URL }
+    throw new Error(`Extension ${extension} api not found`)
+  }
+}
+
 export function evaluateWith ({
   wasmInstanceCache,
   wasmModuleCache,
@@ -125,6 +145,8 @@ export function evaluateWith ({
   streamTransactionData,
   bootstrapWasmInstance,
   saveEvaluation,
+  addExtension,
+  ARWEAVE_URL,
   logger
 }) {
   streamTransactionData = fromPromise(streamTransactionData)
@@ -198,7 +220,31 @@ export function evaluateWith ({
          */
         Resolved
       )
-      .chain((wasmModule) => bootstrapWasmInstance(wasmModule, moduleOptions))
+      /**
+       * Map extension apis to moduleOptions
+       * TODO: cleanup
+       */
+      .chain((wasmModule) =>
+        of(moduleOptions)
+          .chain(fromPromise((moduleOptions) => {
+            return Promise.all(Object.keys(moduleOptions.extensions)
+              .map((extension) => addExtension({ extension })))
+              /**
+               * Always add the WeaveDrive extension if the module
+               * format is wasm 64
+               */
+              .then((apis) => {
+                if (moduleOptions.format === WASM_64_FORMAT) { apis.push({ WeaveDrive, ARWEAVE: ARWEAVE_URL }) }
+                return apis
+              })
+              /**
+               * Expose all Extension apis on the moduleOptions
+               */
+              .then((apis) => mergeAll([moduleOptions, ...apis]))
+          }))
+          .map((moduleOptions) => [wasmModule, moduleOptions])
+      )
+      .chain(([wasmModule, moduleOptions]) => bootstrapWasmInstance(wasmModule, moduleOptions))
       /**
        * Cache the wasm module for this particular stream,
        * in memory, for quick retrieval next time
@@ -378,6 +424,7 @@ if (!process.env.NO_WORKER) {
       readWasmFile: readWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY }),
       writeWasmFile: writeWasmFileWith({ DIR: workerData.WASM_BINARY_FILE_DIRECTORY, logger }),
       streamTransactionData: streamTransactionDataWith({ fetch, ARWEAVE_URL: workerData.ARWEAVE_URL, logger }),
+      addExtension: addExtensionWith({ ARWEAVE_URL: workerData.ARWEAVE_URL }),
       bootstrapWasmInstance: (wasmModule, moduleOptions) => {
         return AoLoader(
           (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
@@ -385,6 +432,7 @@ if (!process.env.NO_WORKER) {
         )
       },
       saveEvaluation: saveEvaluationWith({ db: sqlite, logger }),
+      ARWEAVE_URL: workerData.ARWEAVE_URL,
       logger
     })
   })
