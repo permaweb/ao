@@ -59,7 +59,8 @@ Read the result of the message evaluation from an `ao` Compute Unit `cu`
 ```js
 import { result } from "@permaweb/aoconnect";
 
-let { messages, spawns, output, error } = await result({
+
+let { Messages, Spawns, Output, Error } = await result({
   message: "l3hbt-rIJ_dr9at-eQ3EVajHWMnxPNm9eBtXpzsFWZc",
   process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg",
 });
