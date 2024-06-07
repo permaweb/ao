@@ -10,6 +10,8 @@ import { createLogger } from '../logger.js'
 
 const logger = createLogger('ao-cu:worker')
 
+const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
+
 describe('worker', async () => {
   process.env.NO_WORKER = '1'
 
@@ -19,7 +21,7 @@ describe('worker', async () => {
     outputEncoding: 'JSON-1',
     memoryLimit: 524_288_000, // in bytes
     computeLimit: 9_000_000_000_000,
-    extensions: []
+    extensions: {}
   }
 
   describe('evaluateWith', async () => {
@@ -169,6 +171,58 @@ describe('worker', async () => {
           }
         )
       })
+    })
+
+    test('always add WeaveDrive is the module is wasm 64', async () => {
+      const evaluate = (await import('./worker.js')).evaluateWith({
+        saveEvaluation: async (evaluation) => evaluation,
+        wasmInstanceCache: new LRUCache({ max: 1 }),
+        wasmModuleCache: new LRUCache({ max: 1 }),
+        readWasmFile: async () => createReadStream('./test/processes/sad/process.wasm'),
+        writeWasmFile: async () => true,
+        streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
+        bootstrapWasmInstance: async (_wasmModule, moduleOptions) => {
+          assert.equal(moduleOptions.ARWEAVE, 'https://foo.bar')
+          assert.ok(moduleOptions.WeaveDrive)
+          return true
+        },
+        ARWEAVE_URL: 'https://foo.bar',
+        logger
+      })
+
+      const args = {
+        streamId: 'stream-123',
+        moduleId: 'module-123',
+        moduleOptions: {
+          ...moduleOptions,
+          format: WASM_64_FORMAT
+        },
+        processId: 'process-123',
+        noSave: false,
+        name: 'message 123',
+        deepHash: undefined,
+        cron: undefined,
+        ordinate: '1',
+        isAssignment: false,
+        Memory: null,
+        message: {
+          Id: 'message-123',
+          Timestamp: 1702846520559,
+          Owner: 'owner-123',
+          Tags: [
+            { name: 'function', value: 'hello' }
+          ],
+          'Block-Height': 1234
+        },
+        AoGlobal: {
+          Process: {
+            Id: '1234',
+            Tags: []
+          }
+        }
+      }
+
+      await evaluate(args)
     })
 
     describe('save the evaluation', () => {
