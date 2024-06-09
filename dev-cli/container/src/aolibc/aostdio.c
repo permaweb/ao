@@ -28,6 +28,11 @@ EM_ASYNC_JS(int, weavedrive_read, (int fd, int *dst_ptr, size_t length), {
     return Promise.resolve(await drive.read(fd, dst_ptr, length));
 });
 
+EM_ASYNC_JS(int, weavedrive_close, (int fd), {
+  const drive = Module.WeaveDrive(Module, FS);
+  return drive.close(fd);
+});
+
 FILE* fopen(const char* filename, const char* mode) {
     AO_LOG( "AO: Called fopen: %s, %s\n", filename, mode);
     int fd = weavedrive_open(filename, mode);
@@ -47,6 +52,8 @@ size_t fread(void* ptr, size_t size, size_t nmemb, FILE* stream) {
 
 int fclose(FILE* stream) {
      AO_LOG( "AO: fclose called\n");
+     int fd = fileno(stream);
+     weavedrive_close(fd);
      return 0;  // Returning success, adjust as necessary
 }
 
