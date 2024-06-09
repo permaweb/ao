@@ -36,7 +36,7 @@ var Module = (() => {
         readyPromiseReject = reject;
       });
 
-      ["_malloc", "_memory", "___asyncjs__weavedrive_open", "___asyncjs__weavedrive_read", "_handle", "___indirect_function_table", "onRuntimeInitialized"].forEach(prop => {
+      ["_malloc", "_memory", "___asyncjs__weavedrive_open", "___asyncjs__weavedrive_read", "___asyncjs__weavedrive_close", "_handle", "___indirect_function_table", "onRuntimeInitialized"].forEach(prop => {
         if (!Object.getOwnPropertyDescriptor(readyPromise, prop)) {
           Object.defineProperty(readyPromise, prop, {
             get: () => abort("You are getting " + prop + " on the Promise object, instead of the instance. Use .then() to get called back with the instance, see the MODULARIZE docs in src/settings.js"),
