@@ -254,8 +254,10 @@ describe('loadMessages', () => {
      *
      * SO in order for the test to be accurate, we truncate to floor second,
      * then convert back to milliseconds, so that we can compare on the second.
+     *
+     * Switched to a default value so that actual results can be compared
      */
-    const nowSecond = Math.floor(new Date().getTime() / 1000) * 1000
+    const nowSecond = 1718033463000
 
     const originHeight = 125000
     const originTime = nowSecond - ms('30d')
@@ -297,6 +299,34 @@ describe('loadMessages', () => {
         interval: '2-blocks',
         unit: 'blocks',
         value: 2,
+        message: mockCronMessage
+      }
+    ]
+    const blockCrons = [
+      {
+        interval: '2-blocks',
+        unit: 'blocks',
+        value: 2,
+        message: mockCronMessage
+      },
+      {
+        interval: '2-blocks',
+        unit: 'blocks',
+        value: 2,
+        message: mockCronMessage
+      }
+    ]
+    const timeCrons = [
+      {
+        interval: '10-minutes',
+        unit: 'seconds',
+        value: ms('10m') / 1000,
+        message: mockCronMessage
+      },
+      {
+        interval: '15-minutes',
+        unit: 'seconds',
+        value: ms('15m') / 1000,
         message: mockCronMessage
       }
     ]
@@ -386,7 +416,8 @@ describe('loadMessages', () => {
     ]
 
     const cronMessagesBetween = cronMessagesBetweenWith({ logger: () => {}, processId, owner, originBlock, crons, blocksMeta })
-
+    const cronMessagesBetweenBlockCrons = cronMessagesBetweenWith({ logger: () => {}, processId, owner, originBlock, crons: blockCrons, blocksMeta })
+    const cronMessagesBetweenTimeCrons = cronMessagesBetweenWith({ logger: () => {}, processId, owner, originBlock, crons: timeCrons, blocksMeta })
     const genCronMessages = cronMessagesBetween(
       // left
       {
@@ -408,23 +439,151 @@ describe('loadMessages', () => {
         // message
       }
     )
+    const genCronMessagesBlockCrons = cronMessagesBetweenBlockCrons(
+      // left
+      {
+        block: {
+          height: originHeight + 11,
+          timestamp: scheduledMessagesStartTime
+        },
+        ordinate: 1
+        // AoGlobal,
+        // message
+      },
+      // right
+      {
+        block: {
+          height: originHeight + 16,
+          timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+        }
+        // AoGlobal,
+        // message
+      }
+    )
+    const genCronMessagesTimeCrons = cronMessagesBetweenTimeCrons(
+      // left
+      {
+        block: {
+          height: originHeight + 11,
+          timestamp: scheduledMessagesStartTime
+        },
+        ordinate: 1
+        // AoGlobal,
+        // message
+      },
+      // right
+      {
+        block: {
+          height: originHeight + 16,
+          timestamp: scheduledMessagesStartTime + ms('16m') + ms('29m') + ms('15m') + ms('10m')
+        }
+        // AoGlobal,
+        // message
+      }
+    )
 
-    const cronMessages = []
-    before(async () => {
-      for await (const cron of genCronMessages) cronMessages.push(cron)
+    // These expected cron messages reflect the order the crons should be yielded in.
+    // They are checked to ensure that the algorithm is yielding crons chronologically.
+    const expectedCronMessages = {
+      '1715442663000,0-10-minutes': 1,
+      '1715443263000,0-10-minutes': 1,
+      '1715443263000,1-15-minutes': 1,
+      '1715443563000,0-2-blocks': 1,
+      '1715443563000,1-2-blocks': 1,
+      '1715443863000,0-10-minutes': 1,
+      '1715444163000,1-15-minutes': 1,
+      '1715444463000,0-10-minutes': 1,
+      '1715445063000,0-10-minutes': 1,
+      '1715445063000,1-15-minutes': 1,
+      '1715445663000,0-10-minutes': 1,
+      '1715445963000,1-15-minutes': 1,
+      '1715446263000,0-2-blocks': 1,
+      '1715446263000,1-2-blocks': 1,
+      '1715446263000,0-10-minutes': 1
+    }
+
+    const expectedBlockCronMessages = {
+      '1715443563000,0-2-blocks': 1,
+      '1715443563000,1-2-blocks': 1,
+      '1715446263000,0-2-blocks': 1,
+      '1715446263000,1-2-blocks': 1
+    }
+
+    const expectedTimeCronMessages = {
+      '1715442663000,0-10-minutes': 1,
+      '1715443263000,0-10-minutes': 1,
+      '1715443263000,1-15-minutes': 1,
+      '1715443863000,0-10-minutes': 1,
+      '1715444163000,1-15-minutes': 1,
+      '1715444463000,0-10-minutes': 1,
+      '1715445063000,0-10-minutes': 1,
+      '1715445063000,1-15-minutes': 1,
+      '1715445663000,0-10-minutes': 1,
+      '1715445963000,1-15-minutes': 1,
+      '1715446263000,0-10-minutes': 1
+    }
+
+    describe('block and time crons', () => {
+      const cronMessages = []
+      before(async () => {
+        for await (const cron of genCronMessages) cronMessages.push(cron)
+      })
+
+      test('should create cron message according to the crons', async () => {
+        console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
+        // Two actual messages + 15 cron messages between them
+        assert.equal(cronMessages.length + 2, 17)
+        assert.deepStrictEqual(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages), expectedCronMessages)
+      })
+
+      test('should create a unique cron identifier for each generated message', async () => {
+        assert.equal(
+          cronMessages.length,
+          uniqBy((node) => `${node.message.Timestamp},${node.ordinate},${node.cron}`, cronMessages).length
+        )
+      })
     })
 
-    test('should create cron message according to the crons', async () => {
-      console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
-      // Two actual messages + 15 cron messages between them
-      assert.equal(cronMessages.length + 2, 17)
+    describe('block crons only', () => {
+      const cronMessages = []
+      before(async () => {
+        for await (const cron of genCronMessagesBlockCrons) cronMessages.push(cron)
+      })
+
+      test('should create cron message according to the crons', async () => {
+        console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
+        // Two actual messages + 15 cron messages between them
+        assert.equal(cronMessages.length + 2, 6)
+        assert.deepStrictEqual(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages), expectedBlockCronMessages)
+      })
+
+      test('should create a unique cron identifier for each generated message', async () => {
+        assert.equal(
+          cronMessages.length,
+          uniqBy((node) => `${node.message.Timestamp},${node.ordinate},${node.cron}`, cronMessages).length
+        )
+      })
     })
 
-    test('should create a unique cron identifier for each generated message', async () => {
-      assert.equal(
-        cronMessages.length,
-        uniqBy((node) => `${node.message.Timestamp},${node.ordinate},${node.cron}`, cronMessages).length
-      )
+    describe('time crons only', () => {
+      const cronMessages = []
+      before(async () => {
+        for await (const cron of genCronMessagesTimeCrons) cronMessages.push(cron)
+      })
+
+      test('should create cron message according to the crons', async () => {
+        console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
+        // Two actual messages + 15 cron messages between them
+        assert.equal(cronMessages.length + 2, 13)
+        assert.deepStrictEqual(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages), expectedTimeCronMessages)
+      })
+
+      test('should create a unique cron identifier for each generated message', async () => {
+        assert.equal(
+          cronMessages.length,
+          uniqBy((node) => `${node.message.Timestamp},${node.ordinate},${node.cron}`, cronMessages).length
+        )
+      })
     })
   })
 
