@@ -20,6 +20,7 @@ import * as AoModuleClient from './client/ao-module.js'
 import * as AoEvaluationClient from './client/ao-evaluation.js'
 import * as AoBlockClient from './client/ao-block.js'
 import * as MetricsClient from './client/metrics.js'
+import lt from 'long-timeout'
 
 import { readResultWith } from './api/readResult.js'
 import { readStateWith, pendingReadStates } from './api/readState.js'
@@ -185,7 +186,9 @@ export const createApis = async (ctx) => {
             value.evaluation,
             err
           )
-        })
+        }),
+    setTimeout: (...args) => lt.setTimeout(...args),
+    clearTimeout: (...args) => lt.clearTimeout(...args)
   })
 
   const sharedDeps = (logger) => ({

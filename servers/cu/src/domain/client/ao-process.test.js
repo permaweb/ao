@@ -6,8 +6,9 @@ import { promisify } from 'node:util'
 
 import { createLogger } from '../logger.js'
 import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
-import { LATEST, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
+import { LATEST, createProcessMemoryCache, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
 import { Readable } from 'node:stream'
+import bytes from 'bytes'
 
 const gzipP = promisify(gzip)
 const logger = createLogger('ao-cu:ao-process')
@@ -1284,6 +1285,42 @@ describe('ao-process', () => {
 
         assert.ok(checkpointSaved)
       })
+    })
+  })
+
+  describe('createProcessMemoryCache', () => {
+    const THIRTY_TWO_DAYS = 1000 * 60 * 60 * 24 * 30
+    test('can set cache TTL greater than int32 max value without overflowing', async () => {
+      const lt = (await import('long-timeout')).default
+      let setTimeoutCalled = false
+      let ttlRan = false
+      let timeoutRef
+      const cache = await createProcessMemoryCache({
+        TTL: THIRTY_TWO_DAYS,
+        MAX_SIZE: bytes('500mb'),
+        setTimeout: (cb, time) => {
+          setTimeoutCalled = true
+          timeoutRef = lt.setTimeout(() => {
+            ttlRan = true
+            cb()
+          }, time)
+          return timeoutRef
+        },
+        clearTimeout: lt.clearTimeout,
+        gauge: () => false
+      })
+      // call something on the cache
+      cache.set('foo', {
+        File: new File([], 'hello world'),
+        Memory: Buffer.from('hello world')
+      })
+      // wait to see that this implementation does not overflow
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      assert.ok(setTimeoutCalled)
+      assert.ok(!ttlRan)
+
+      timeoutRef.unref()
     })
   })
 
