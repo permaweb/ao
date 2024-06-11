@@ -47,7 +47,14 @@ export const LATEST = 'LATEST'
  * @prop {string} [cron]
  */
 let processMemoryCache
-export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, gauge, onEviction, writeProcessMemoryFile }) {
+
+/**
+ * setTimeout is passed in as a dependency here because in a few instances such as TTL timeout, a value greater than the safe integer limit is used
+ * which causes setTimeout to overflow and return immediately. Allowing the caller to pass in their own setTimeout function allows them to handle this
+ * via passing in a new implementation such as using the 'long-timeout' library
+ * This resolves issue #666
+ */
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, gauge, onEviction, writeProcessMemoryFile, setTimeout, clearTimeout }) {
   if (processMemoryCache) return processMemoryCache
 
   const clearTimerWith = (map) => (key) => {
