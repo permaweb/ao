@@ -18,8 +18,13 @@ export function redirectWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners, pro
    * by the injected business logic.
    */
   const redirectHandler = ({ processIdFromRequest }) => {
+    // TODO: should we compose an error handler, similar to proxy.js?
+    // for now, just keeping as is.
     return async (req, res) => {
       const processId = await processIdFromRequest(req)
+
+      if (!processId) return res.status(404).send({ error: 'Process id not found on request' })
+
       const host = await determineHost({ processId })
 
       _logger('Redirecting process %s to host %s', processId, host)
