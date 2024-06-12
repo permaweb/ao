@@ -267,13 +267,11 @@ export function cronMessagesBetweenWith ({
      * and the left block timestamp is 1050, we will start from 1100 as it is
      * "in sync with" or "on the interval of" the origin timestamp (1000).
      */
-    console.log({ timeInterval, max: Number.MAX_SAFE_INTEGER })
     const initialOffset = timeGCD === Number.MAX_SAFE_INTEGER ? 0 : (timeInterval - ((leftBlock.timestamp - originBlock.timestamp) % timeInterval)) % timeInterval
     /**
      * Iterate through time. Use our GCD as the interval.
      * If a cron message is found at the time, yield it
      */
-    console.log({ timeInterval, initialOffset, l: leftBlock.timestamp })
     for (let t = leftBlock.timestamp + initialOffset; t < rightBlock.timestamp; t += timeInterval) {
       /**
        * Check if we need to "resync" with the origin timestamp.
