@@ -66,6 +66,8 @@ export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners, proces
       always(async (req, res) => {
         const processId = await processIdFromRequest(req)
 
+        if (!processId) return res.status(404).send({ error: 'Process id not found on request' })
+
         async function revProxy ({ failoverAttempt, err }) {
           /**
            * In cases where we have to consume the request stream before proxying
