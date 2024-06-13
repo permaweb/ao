@@ -1311,7 +1311,7 @@ describe('ao-process', () => {
       })
       // call something on the cache
       cache.set('foo', {
-        File: new File([], 'hello world'),
+        File: 'foo.dat',
         Memory: Buffer.from('hello world')
       })
       // wait to see that this implementation does not overflow

@@ -139,7 +139,8 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
         data.delete(key)
         ttlTimers.delete(key)
         clearDrainToFileTimer(key)
-      }, TTL).unref()
+      }, TTL)
+      ttl.unref()
 
       ttlTimers.set(key, ttl)
 
@@ -168,7 +169,8 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
            */
           data.set(key, { evaluation: value.evaluation, File: file, Memory: undefined })
           drainToFileTimers.delete(key)
-        }, DRAIN_TO_FILE_THRESHOLD).unref()
+        }, DRAIN_TO_FILE_THRESHOLD)
+        drainToFile.unref()
 
         drainToFileTimers.set(key, drainToFile)
       }
