@@ -3,7 +3,7 @@ import { describe, test, before } from 'node:test'
 import * as assert from 'node:assert'
 
 import ms from 'ms'
-import { countBy, uniqBy } from 'ramda'
+import { countBy, uniq, uniqBy } from 'ramda'
 
 import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith, mergeBlocks } from './loadMessages.js'
 
@@ -484,44 +484,44 @@ describe('loadMessages', () => {
 
     // These expected cron messages reflect the order the crons should be yielded in.
     // They are checked to ensure that the algorithm is yielding crons chronologically.
-    const expectedCronMessages = {
-      '1715442663000,0-10-minutes': 1,
-      '1715443263000,0-10-minutes': 1,
-      '1715443263000,1-15-minutes': 1,
-      '1715443563000,0-2-blocks': 1,
-      '1715443563000,1-2-blocks': 1,
-      '1715443863000,0-10-minutes': 1,
-      '1715444163000,1-15-minutes': 1,
-      '1715444463000,0-10-minutes': 1,
-      '1715445063000,0-10-minutes': 1,
-      '1715445063000,1-15-minutes': 1,
-      '1715445663000,0-10-minutes': 1,
-      '1715445963000,1-15-minutes': 1,
-      '1715446263000,0-2-blocks': 1,
-      '1715446263000,1-2-blocks': 1,
-      '1715446263000,0-10-minutes': 1
-    }
+    const expectedCronMessages = [
+      'Cron Message 1715442663000,1,0-10-minutes',
+      'Cron Message 1715443263000,1,0-10-minutes',
+      'Cron Message 1715443263000,1,1-15-minutes',
+      'Cron Message 1715443563000,1,0-2-blocks',
+      'Cron Message 1715443563000,1,1-2-blocks',
+      'Cron Message 1715443863000,1,0-10-minutes',
+      'Cron Message 1715444163000,1,1-15-minutes',
+      'Cron Message 1715444463000,1,0-10-minutes',
+      'Cron Message 1715445063000,1,0-10-minutes',
+      'Cron Message 1715445063000,1,1-15-minutes',
+      'Cron Message 1715445663000,1,0-10-minutes',
+      'Cron Message 1715445963000,1,1-15-minutes',
+      'Cron Message 1715446263000,1,0-2-blocks',
+      'Cron Message 1715446263000,1,1-2-blocks',
+      'Cron Message 1715446263000,1,0-10-minutes'
+    ]
 
-    const expectedBlockCronMessages = {
-      '1715443563000,0-2-blocks': 1,
-      '1715443563000,1-2-blocks': 1,
-      '1715446263000,0-2-blocks': 1,
-      '1715446263000,1-2-blocks': 1
-    }
+    const expectedBlockCronMessages = [
+      'Cron Message 1715443563000,1,0-2-blocks',
+      'Cron Message 1715443563000,1,1-2-blocks',
+      'Cron Message 1715446263000,1,0-2-blocks',
+      'Cron Message 1715446263000,1,1-2-blocks'
+    ]
 
-    const expectedTimeCronMessages = {
-      '1715442663000,0-10-minutes': 1,
-      '1715443263000,0-10-minutes': 1,
-      '1715443263000,1-15-minutes': 1,
-      '1715443863000,0-10-minutes': 1,
-      '1715444163000,1-15-minutes': 1,
-      '1715444463000,0-10-minutes': 1,
-      '1715445063000,0-10-minutes': 1,
-      '1715445063000,1-15-minutes': 1,
-      '1715445663000,0-10-minutes': 1,
-      '1715445963000,1-15-minutes': 1,
-      '1715446263000,0-10-minutes': 1
-    }
+    const expectedTimeCronMessages = [
+      'Cron Message 1715442663000,1,0-10-minutes',
+      'Cron Message 1715443263000,1,0-10-minutes',
+      'Cron Message 1715443263000,1,1-15-minutes',
+      'Cron Message 1715443863000,1,0-10-minutes',
+      'Cron Message 1715444163000,1,1-15-minutes',
+      'Cron Message 1715444463000,1,0-10-minutes',
+      'Cron Message 1715445063000,1,0-10-minutes',
+      'Cron Message 1715445063000,1,1-15-minutes',
+      'Cron Message 1715445663000,1,0-10-minutes',
+      'Cron Message 1715445963000,1,1-15-minutes',
+      'Cron Message 1715446263000,1,0-10-minutes'
+    ]
 
     describe('block and time crons', () => {
       const cronMessages = []
@@ -533,7 +533,10 @@ describe('loadMessages', () => {
         console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
         // Two actual messages + 15 cron messages between them
         assert.equal(cronMessages.length + 2, 17)
-        assert.deepStrictEqual(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages), expectedCronMessages)
+        // Asserts uniqueness
+        assert.deepStrictEqual(uniq(expectedCronMessages).length, uniq(cronMessages).length)
+        // Asserts order
+        assert.deepStrictEqual(cronMessages.map((msg) => msg.name), expectedCronMessages)
       })
 
       test('should create a unique cron identifier for each generated message', async () => {
@@ -554,7 +557,11 @@ describe('loadMessages', () => {
         console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
         // Two actual messages + 15 cron messages between them
         assert.equal(cronMessages.length + 2, 6)
-        assert.deepStrictEqual(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages), expectedBlockCronMessages)
+
+        // Asserts uniqueness
+        assert.deepStrictEqual(uniq(expectedBlockCronMessages).length, uniq(cronMessages).length)
+        // Asserts order
+        assert.deepStrictEqual(cronMessages.map((msg) => msg.name), expectedBlockCronMessages)
       })
 
       test('should create a unique cron identifier for each generated message', async () => {
@@ -575,7 +582,10 @@ describe('loadMessages', () => {
         console.log(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages))
         // Two actual messages + 15 cron messages between them
         assert.equal(cronMessages.length + 2, 13)
-        assert.deepStrictEqual(countBy((node) => `${node.message.Timestamp},${node.cron}`, cronMessages), expectedTimeCronMessages)
+        // Asserts uniqueness
+        assert.deepStrictEqual(uniq(expectedTimeCronMessages).length, uniq(cronMessages).length)
+        // Asserts order
+        assert.deepStrictEqual(cronMessages.map((msg) => msg.name), expectedTimeCronMessages)
       })
 
       test('should create a unique cron identifier for each generated message', async () => {
