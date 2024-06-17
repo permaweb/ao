@@ -123,6 +123,58 @@ impl StoreClient {
             ))),
         }
     }
+
+    pub fn get_message_count(&self) -> Result<i64, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+    
+        let count_result: Result<i64, DieselError> = messages.count().get_result(conn);
+    
+        match count_result {
+            Ok(count) => Ok(count),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    pub fn get_all_messages(
+      &self,
+      number: i64,
+      offset: i64,
+    ) -> Result<Vec<(Message, Vec<u8>, String)>, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = messages.into_boxed();
+    
+        query = query.offset(offset);
+    
+        let db_messages_result: Result<Vec<DbMessage>, DieselError> = query
+            .order(timestamp.asc())
+            .limit(number + 1) // Fetch one extra record to determine if a next page exists
+            .load(conn);
+    
+        match db_messages_result {
+            Ok(db_messages) => {
+                let has_next_page = db_messages.len() as i64 > number;
+                // Take only up to the limit if there's an extra indicating a next page
+                let messages_o = if has_next_page {
+                    &db_messages[..(number as usize)]
+                } else {
+                    &db_messages[..]
+                };
+    
+                let mut messages_mapped: Vec<(Message, Vec<u8>, String)> = vec![];
+                for db_message in messages_o.iter() {
+                    let json = serde_json::from_value(db_message.message_data.clone())?;
+                    let bytes: Vec<u8> = db_message.bundle.clone();
+                    let mapped = Message::from_val(&json, bytes)?;
+                    messages_mapped.push((mapped, db_message.bundle.clone(), db_message.process_id.clone()));
+                }
+    
+                Ok(messages_mapped)
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
 }
 
 impl DataStore for StoreClient {

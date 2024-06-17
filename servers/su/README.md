@@ -48,7 +48,7 @@ Create a .env file with the following variables, or set them in the OS:
 ### Setup and run local development server with hot reloading
 ```sh
 cargo install systemfd cargo-watch
-systemfd --no-pid -s http::8999 -- cargo watch -x 'run su 9000'
+systemfd --no-pid -s http::8999 -- cargo watch -x 'run --bin su su 9000'
 ```
 
 or
