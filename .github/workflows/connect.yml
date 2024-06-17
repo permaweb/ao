@@ -49,29 +49,29 @@ jobs:
         env:
           CI: true
   
-  # test-integration:
-  #   if: github.event_name != 'workflow_dispatch'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: ⬇️ Checkout repo
-  #       uses: actions/checkout@v4
+  test-integration:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: ⎔ Setup node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 18
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-  #     - name: 📥 Download deps
-  #       uses: bahmutov/npm-install@v1
-  #       with:
-  #         working-directory: connect
+      - name: 📥 Download deps
+        working-directory: connect
+        run: |
+          npm i
 
-  #     - name: ⚡ Run Tests
-  #       working-directory: connect
-  #       run: |
-  #         npm run test:integration
-  #       env:
-  #         CI: true
+      - name: ⚡ Run Tests
+        working-directory: connect
+        run: |
+          npm run test:integration
+        env:
+          CI: true
 
   release:
     # Releases are performed via a workflow dispatch
