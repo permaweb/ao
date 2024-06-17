@@ -27,6 +27,7 @@ There are a few environment variables that you can set:
 - `CU_URL`: Which `ao` Compute Unit to use (defaults to
   `http://localhost:6363` in development mode)
 - `PORT`: Which port the web server should listen on (defaults to port `3005`)
+- `ENABLE_METRICS_ENDPOINT`: Whether the OpenTelemetry endpoint `/metrics` should be enabled. Set to any value to enable. (defaults to disabled)
 - `GRAPHQL_URL`: The url for the Arweave Gateway GraphQL server to be used by the MU. (defaults to https://arweave.net/graphql)
 - `PATH_TO_WALLET`: the path to the wallet JWK interface you would like the `mu`
   to use to sign messages that it is pushing

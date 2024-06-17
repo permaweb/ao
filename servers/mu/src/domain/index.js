@@ -10,6 +10,7 @@ import signerClient from './clients/signer.js'
 import uploaderClient from './clients/uploader.js'
 import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
+import * as MetricsClient from './clients/metrics.js'
 import cronClient from './clients/cron.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -48,6 +49,17 @@ export const createApis = async (ctx) => {
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
+
+  /**
+   * TODO: I don't really like implictly doing this,
+   * but works for now.
+   */
+  const _metrics = MetricsClient.initializeRuntimeMetricsWith({})()
+
+  const metrics = {
+    contentType: _metrics.contentType,
+    compute: fromPromise(() => _metrics.metrics())
+  }
 
   const workerPool = workerpool.pool('./src/domain/clients/worker.js', {
     maxWorkers: ctx.MAX_WORKERS,
@@ -125,6 +137,7 @@ export const createApis = async (ctx) => {
   })
 
   return {
+    metrics,
     sendDataItem,
     monitorProcess,
     stopMonitorProcess,

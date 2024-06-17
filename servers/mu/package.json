@@ -31,6 +31,7 @@
     "lru-cache": "^10.2.0",
     "node-cron": "^3.0.3",
     "p-map": "^7.0.1",
+    "prom-client": "^15.1.2",
     "pubsub-js": "^1.9.4",
     "ramda": "^0.29.1",
     "warp-arbundles": "^1.0.4",
