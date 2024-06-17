@@ -4,19 +4,19 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "postinstall": "npm link @permaweb/ao-sdk",
+    "postinstall": "npm link @permaweb/aoconnect",
     "preview": "vite preview",
-    "start": "vitest && echo '\nBrowser ESM Integration ✅'"
+    "start": "CI=true vitest && echo '\nBrowser ESM Integration ✅'"
   },
   "dependencies": {
-    "@permaweb/ao-sdk": "*"
+    "@permaweb/aoconnect": "*"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^2.4.2",
-    "@testing-library/svelte": "^4.0.3",
-    "jsdom": "^22.1.0",
-    "svelte": "^4.0.5",
-    "vite": "^4.4.5",
-    "vitest": "^0.34.6"
+    "@sveltejs/vite-plugin-svelte": "^3.1.1",
+    "@testing-library/svelte": "^5.1.0",
+    "jsdom": "^24.1.0",
+    "svelte": "^4.2.18",
+    "vite": "^5.3.1",
+    "vitest": "^1.6.0"
   }
 }

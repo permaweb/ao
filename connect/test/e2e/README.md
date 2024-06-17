@@ -1,6 +1,6 @@
 # `ao` SDK Test Harnesses
 
-Some tests for verifying `@permaweb/ao-sdk` works in various environments
+Some tests for verifying `@permaweb/aoconnect` works in various environments
 
 <!-- toc -->
 
@@ -35,19 +35,19 @@ friendly `window.arweaveWallet`
 
 There are a lot of moving parts, so we have a couple things to test:
 
-- Integration test to ensure `@permaweb/ao-sdk` can be used in a Node ESM
+- Integration test to ensure `@permaweb/aoconnect` can be used in a Node ESM
   project (`type: "module"`)
-- Integration test to ensure `@permaweb/ao-sdk` can be used in a Node CJS
+- Integration test to ensure `@permaweb/aoconnect` can be used in a Node CJS
   project (`type: "commonjs"`)
-- Integration test to ensure `@permaweb/ao-sdk` can be used in a Browser ESM
+- Integration test to ensure `@permaweb/aoconnect` can be used in a Browser ESM
   project (ie. Svelte + Vite)
 
 ### Relevant Code
 
-Each environment is a Node project that includes the `@permaweb/ao-sdk` as a
+Each environment is a Node project that includes the `@permaweb/aoconnect` as a
 dependency. This is to ensure the build output targets are working as expected.
 
-All of the harnesses use `npm link` to link their `@permaweb/ao-sdk` dependency
-to the built output (`dist`) at the root of the `@permaweb/ao-sdk` module. This
+All of the harnesses use `npm link` to link their `@permaweb/aoconnect` dependency
+to the built output (`dist`) at the root of the `@permaweb/aoconnect` module. This
 is to help ensure module loading is working correctly for each respective
 harness.
