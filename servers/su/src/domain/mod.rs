@@ -6,8 +6,8 @@ mod core;
 mod logger;
 
 use clients::{
-    gateway::ArweaveGateway, signer::ArweaveSigner, store::StoreClient, uploader::UploaderClient,
-    wallet::FileWallet,
+    gateway::ArweaveGateway, signer::ArweaveSigner, uploader::UploaderClient,
+    wallet::FileWallet, store
 };
 use config::AoConfig;
 use core::dal::{Config, Gateway, Log};
@@ -16,6 +16,7 @@ use logger::SuLog;
 pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
+pub use store::StoreClient;
 
 pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();

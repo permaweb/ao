@@ -2,6 +2,7 @@
 name = "su"
 version = "0.1.0"
 edition = "2021"
+default-run = "su"
 
 [dependencies]
 actix-web = "4"
