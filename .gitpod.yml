@@ -5,6 +5,9 @@ tasks:
   - name: Init Repo Tooling
     init: nvm i && npm i
 
+  - name: Init Node
+    command: nvm i
+
 vscode:
   extensions:
     - "standard.vscode-standard"
