@@ -158,17 +158,23 @@ function setModuleOptionsWith ({ isModuleMemoryLimitSupported, isModuleComputeLi
           {}
         )
       ),
-      mode: (args) => pathOr(
-        pathOr('Assignments', ['moduleTags', 'Availability-Type'], args),
-        ['processTags', 'Availability-Type'],
-        args
-      ),
       spawn: () => ({ id: ctx.id, owner: ctx.owner, tags: ctx.tags }),
       module: () => ({ id: ctx.moduleId, owner: ctx.moduleOwner, tags: ctx.moduleTags }),
       /**
-       * TODO: this will need to be set per message at some point,
-       * probably will need to do in the worker
+       * Hardcoding mode, admissableList and blockHeight for
+       * llama
        */
+      mode: (args) => 'test',
+      admissableList: () => [
+        'dx3GrOQPV5Mwc1c-4HTsyq0s1TNugMf7XfIKJkyVQt8', // Random NFT metadata (1.7kb of JSON)
+        'XOJ8FBxa6sGLwChnxhF2L71WkKLSKq1aU5Yn5WnFLrY', // GPT-2 117M model.
+        'M-OzkyjxWhSvWYF87p0kvmkuAEEkvOzIj4nMNoSIydc', // GPT-2-XL 4-bit quantized model.
+        'kd34P4974oqZf2Db-hFTUiCipsU6CzbR6t-iJoQhKIo', // Phi-2
+        'ISrbGzQot05rs_HKC08O_SmkipYQnqgB1yC3mjZZeEo', // Phi-3 Mini 4k Instruct
+        'sKqjvBbhqKvgzZT4ojP1FNvt4r_30cqjuIIQIr-3088', // CodeQwen 1.5 7B Chat q3
+        'Pr2YVrxd7VwNdg6ekC0NXWNKXxJbfTlHhhlrKbAd1dA', // Llama3 8B Instruct q4
+        'jbx-H6aq7b3BbNCHlK50Jz9L-6pz9qmldrYXMwjqQVI' // Llama3 8B Instruct q8
+      ],
       blockHeight: () => 100
     }))
     .chain(checkModuleOption(
