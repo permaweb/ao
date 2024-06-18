@@ -1288,7 +1288,7 @@ export function saveCheckpointWith ({
     if (!recentCheckpoints.has(processId)) return Rejected(args)
 
     logger('Checkpoint was recently created for process "%s", and so not creating another one.', processId)
-    return Rejected(args)
+    return Resolved()
   }
 
   function createCheckpoint (args) {

@@ -91,7 +91,7 @@ const createMessagesIndexes = async (db) => db.prepare(
   `
 ).run()
 
-const createCheckpointIndexes = async (db) => db.prepare(
+const createCheckpointsIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${CHECKPOINTS_TABLE}_processId_timestamp
     ON ${CHECKPOINTS_TABLE}
     (processId, timestamp);`
@@ -123,7 +123,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       .then(() => createCheckpoints(db))
       .then(() => createBlocksIndexes(db))
       .then(() => createMessagesIndexes(db))
-      .then(() => createCheckpointIndexes(db))
+      .then(() => createCheckpointsIndexes(db))
   }
 
   return {
