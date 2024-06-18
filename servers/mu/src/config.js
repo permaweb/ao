@@ -44,7 +44,8 @@ const serverConfigSchema = domainConfigSchema.extend({
     if (!val) return -1
     if (typeof val === 'number') return val
     return typeof val === 'string' ? parseInt(val) : -1
-  }, z.number().positive())
+  }, z.number().positive()),
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
 })
 
 /**
@@ -57,6 +58,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'http://localhost:6363',
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://goldsky.arweave.net/graphql',
@@ -70,6 +72,7 @@ const CONFIG_ENVS = {
   production: {
     MODE,
     port: process.env.PORT || 3005,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://goldsky.arweave.net/graphql',
