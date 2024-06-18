@@ -134,6 +134,7 @@ export const createApis = async (ctx) => {
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
   const stats = statsWith({
+    gauge,
     loadWorkerStats: () => ({
       primary: primaryWorkerPool.stats(),
       dryRun: dryRunWorkerPool.stats()
