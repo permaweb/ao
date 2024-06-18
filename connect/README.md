@@ -14,7 +14,7 @@ This module will run in a browser or server environment.
 - [Usage](#usage)
     - [ESM (Node & Browser) aka type: `module`](#esm-node--browser-aka-type-module)
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
-    - [Usage with NextJS App Router](#usage-with-nextjs-app-router)
+    - [Usage with Webpack](#usage-with-webpack)
   - [API](#api)
     - [`result`](#result)
     - [`results`](#results)
@@ -51,27 +51,12 @@ const { spawn, message, result } = require("@permaweb/aoconnect");
 
 The duration of this document will use `ESM` for examples
 
-#### Usage with NextJS App Router
+#### Usage with Webpack
 
-If you're using AO Connect with the NextJS App Router, there is additional setup required to circumvent a known issue. See the NextJS Issue [here](https://github.com/vercel/next.js/discussions/49120) and [here](https://github.com/vercel/next.js/issues/32714) and Webpack issue [here](https://github.com/webpack/webpack/issues/4674)
+AOConnect by default exposes a file designed to be used in the browser. If you're using Webpack to bundle an app for the server and are having issues, you may need to update import statements to point at an implementation for node like so.
 
-```
-// next.config.mjs
-import path from "path";
-...
-const nextConfig = {
-  webpack: (config, { isServer }) => {
-    // Add the alias to the webpack configuration
-    config.resolve.alias["@permaweb/aoconnect"] = path.resolve(
-      process.cwd(),
-      "node_modules/@permaweb/aoconnect/dist/browser"
-    );
-
-    // Return the modified config
-    return config;
-  },
-};
-...
+```js
+import { createDataItemSigner, message } from "@permaweb/aoconnect/node";
 ```
 
 ### API

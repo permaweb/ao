@@ -10,12 +10,14 @@
   "type": "module",
   "exports": {
     ".": {
+      "webpack": "./dist/browser.js",
       "browser": "./dist/browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "default": "./dist/index.js"
     },
-    "./browser": "./dist/browser.js"
+    "./browser": "./dist/browser.js",
+    "./node": "./dist/index.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
