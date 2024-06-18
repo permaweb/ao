@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import PromClient from 'prom-client'
 
+PromClient.register.setContentType(PromClient.Registry.OPENMETRICS_CONTENT_TYPE)
+
 export const initializeRuntimeMetricsWith = ({ prefix = 'ao_cu' } = {}) => {
   let initialized = false
 

@@ -1,9 +1,6 @@
 import { always } from 'ramda'
-import PromClient from 'prom-client'
 
 import { histogramWith } from '../../domain/client/metrics.js'
-
-PromClient.register.setContentType(PromClient.Registry.OPENMETRICS_CONTENT_TYPE)
 
 const histogram = histogramWith()({
   name: 'http_request_duration_seconds',
