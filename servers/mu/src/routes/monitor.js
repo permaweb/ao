@@ -3,7 +3,7 @@ import { of } from 'hyper-async'
 // import { z } from 'zod'
 // import WarpArBundles from 'warp-arbundles'
 
-import { withMiddleware } from './middleware/index.js'
+import { withMetrics, withMiddleware } from './middleware/index.js'
 
 // const { DataItem } = WarpArBundles
 
@@ -20,6 +20,7 @@ export const withMonitorRoutes = (app) => {
     '/monitor/:processId',
     compose(
       withMiddleware,
+      withMetrics({ tracesFrom: (req) => ({ process_id: req.params['process-id'] }) }),
       always(async (req, res) => {
         const {
           body,
