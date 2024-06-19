@@ -7,6 +7,12 @@ import { cpus, tmpdir } from 'node:os'
 const walletPath = process.env.PATH_TO_WALLET
 const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
 
+const positiveIntSchema = z.preprocess((val) => {
+  if (val == null) return -1
+  if (typeof val === 'number') return val
+  return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
+}, z.number().nonnegative())
+
 /**
  * Some frameworks will implicitly override NODE_ENV
  *
@@ -30,7 +36,7 @@ export const domainConfigSchema = z.object({
   UPLOADER_URL: z.string(),
   PROC_FILE_PATH: z.string(),
   CRON_CURSOR_DIR: z.string(),
-  MAX_WORKERS: z.number()
+  MAX_WORKERS: positiveIntSchema
 })
 
 /**
