@@ -1,8 +1,10 @@
 use std::sync::Arc;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
+use std::time::Instant;
 
 use dotenv::dotenv;
 use serde_json::json;
+use simd_json::to_string as simd_to_string;
 
 use super::builder::Builder;
 use super::json::{Message, Process};
@@ -76,7 +78,7 @@ async fn assignment_only(
 
     let message = Message::from_bundle(&build_result.bundle)?;
     deps.data_store
-        .save_message(&message, &build_result.binary)?;
+        .save_message(&message, &build_result.binary).await?;
     deps.logger.log(format!("saved message - {:?}", &message));
     upload(&deps, build_result.binary.to_vec()).await?;
     drop(schedule_info);
@@ -178,7 +180,7 @@ pub async fn write_item(
             let build_result = builder.build_message(input, &*updated_info).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store
-                .save_message(&message, &build_result.binary)?;
+                .save_message(&message, &build_result.binary).await?;
             deps.logger.log(format!("saved message - {:?}", &message));
             upload(&deps, build_result.binary.to_vec()).await?;
             drop(schedule_info);
@@ -199,36 +201,36 @@ pub async fn write_item(
 }
 
 pub async fn read_message_data(
-    deps: Arc<Deps>,
-    tx_id: String,
-    from: Option<String>,
-    to: Option<String>,
-    limit: Option<i32>,
+  deps: Arc<Deps>,
+  tx_id: String,
+  from: Option<String>,
+  to: Option<String>,
+  limit: Option<i32>,
 ) -> Result<String, String> {
-    if let Ok(message) = deps.data_store.get_message(&tx_id) {
-        if message.message.is_some() 
-            /*
-              Im not exactly sure of the use cases for these edge cases
-              but they are ones that have popped up that cause the message
-              list to not be able to be returned.
-            */
-            || ((message.message_id()? != message.process_id()?) && (message.assignment_id()? == tx_id) )
-        {
-            return serde_json::to_string(&message)
-                .map_err(|e| format!("{:?}", e));
-        }
-    }
+  if let Ok(message) = deps.data_store.get_message(&tx_id) {
+      if message.message.is_some() 
+          || ((message.message_id()? != message.process_id()?) && (message.assignment_id()? == tx_id) )
+      {
+          return serde_json::to_string(&message)
+              .map_err(|e| format!("{:?}", e));
+      }
+  }
 
-    if let Ok(_) = deps.data_store.get_process(&tx_id) {
-        let messages = deps.data_store.get_messages(&tx_id, &from, &to, &limit)?;
-        let result = match serde_json::to_string(&messages) {
-            Ok(r) => r,
-            Err(e) => return Err(format!("{:?}", e)),
-        };
-        return Ok(result);
-    }
+  if let Ok(_) = deps.data_store.get_process(&tx_id) {
+      let start = Instant::now();
+      let messages = deps.data_store.get_messages(&tx_id, &from, &to, &limit).await?;
+      let duration = start.elapsed();
+      deps.logger.log(format!("Time elapsed in get_messages() is: {:?}", duration));
 
-    Err("Message or Process not found".to_string())
+      let startj = Instant::now();
+      let result = simd_to_string(&messages).map_err(|e| format!("{:?}", e))?;
+      let durationj = startj.elapsed();
+      deps.logger.log(format!("Time elapsed in json mapping is: {:?}", durationj));
+
+      return Ok(result);
+  }
+
+  Err("Message or Process not found".to_string())
 }
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {

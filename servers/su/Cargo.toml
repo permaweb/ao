@@ -29,6 +29,7 @@ rsa = "0.6.1"
 dashmap = "5.5.3"
 base64 = "0.21.5"
 actix-cors = "0.6.0"
+simd-json = "0.13.10"
 
 [[bin]]
 name = "su"
