@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 mod clients;
-mod config;
+pub mod config;
 mod core;
-mod logger;
+pub mod logger;
 
 use clients::{
     gateway::ArweaveGateway, signer::ArweaveSigner, uploader::UploaderClient,
@@ -17,6 +17,7 @@ pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
 pub use store::StoreClient;
+pub use clients::bytestore;
 
 pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();

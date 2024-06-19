@@ -1,16 +1,15 @@
 use std::io;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
-use std::fs::{File, create_dir_all};
-use std::io::prelude::*;
-use std::path::Path;
 use std::env;
 use dotenv::dotenv;
 
-use su::domain::{StoreClient};
+use su::domain::{StoreClient, bytestore, config};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    use std::time::Instant;
+    let start = Instant::now();
     dotenv().ok();
 
     let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
@@ -28,23 +27,16 @@ async fn main() -> io::Result<()> {
         let data_store = Arc::clone(&data_store);
 
         let handle = tokio::spawn(async move {
-            let su_data_dir = env::var("SU_DATA_DIR").expect("SU_DATA_DIR not set");
             let result = data_store.get_all_messages(number, offset);
+            let config = config::AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
             match result {
                 Ok(messages) => {
                     for message in messages {
-                        let msg = message.0;
-                        let bundle = message.1;
-                        let process_id_path = format!("{}/{}", su_data_dir, message.2);
-
-                        let dir_path = Path::new(&process_id_path);
-                        if !dir_path.exists() {
-                            create_dir_all(&dir_path).expect("Failed to create directory");
-                        }
-
-                        let filename = format!("{}/msg__{}__assign__{}", process_id_path, msg.message_id().unwrap(), msg.assignment_id().unwrap());
-                        let mut file = File::create(&filename).expect("Failed to create file");
-                        file.write_all(&bundle).expect("Failed to write to file");
+                        let msg_id = message.0;
+                        let assignment_id = message.1;
+                        let bundle = message.2;
+                        let process_id = message.3;
+                        bytestore::save_msg_binary(msg_id.clone(), assignment_id.clone(), process_id.clone(), &config, bundle).await.expect("Failed to save message binary");
                     }
                 }
                 Err(e) => {
@@ -59,6 +51,9 @@ async fn main() -> io::Result<()> {
     for handle in handles {
         handle.await.unwrap();
     }
+
+    let duration = start.elapsed();
+    println!("Time elapsed in data migration is: {:?}", duration);
 
     Ok(())
 }

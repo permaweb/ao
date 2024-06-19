@@ -4,7 +4,7 @@ use dotenv::dotenv;
 
 use crate::domain::Config;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AoConfig {
     pub database_url: String,
     pub database_read_url: Option<String>,
@@ -13,6 +13,9 @@ pub struct AoConfig {
     pub upload_node_url: String,
     pub mode: String,
     pub scheduler_list_path: String,
+    pub use_disk: bool,
+    pub su_data_dir: String,
+    pub max_read_tasks: usize,
 }
 
 impl AoConfig {
@@ -26,6 +29,10 @@ impl AoConfig {
             Ok(val) => Some(val),
             Err(_e) => None,
         };
+        let use_disk = match env::var("USE_DISK") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -34,6 +41,9 @@ impl AoConfig {
             upload_node_url: env::var("UPLOAD_NODE_URL")?,
             mode: mode_out,
             scheduler_list_path: env::var("SCHEDULER_LIST_PATH")?,
+            use_disk,
+            su_data_dir: env::var("SU_DATA_DIR")?,
+            max_read_tasks: env::var("MAX_READ_TASKS")?.parse().unwrap(),
         })
     }
 }

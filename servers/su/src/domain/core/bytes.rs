@@ -26,6 +26,18 @@ impl From<&str> for ByteErrorType {
     }
 }
 
+impl From<std::io::Error> for ByteErrorType {
+  fn from(error: std::io::Error) -> Self {
+      ByteErrorType::ByteError(format!("Byte error: {}", error))
+  }
+}
+
+impl From<String> for ByteErrorType {
+  fn from(error: String) -> Self {
+      ByteErrorType::ByteError(format!("Byte error: {}", error))
+  }
+}
+
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
@@ -33,56 +45,113 @@ pub struct DataBundle {
 }
 
 impl DataBundle {
-    pub fn new(tags: Vec<Tag>) -> Self {
-        DataBundle {
-            items: Vec::new(),
-            tags: tags,
-        }
-    }
+  pub fn new(tags: Vec<Tag>) -> Self {
+      DataBundle {
+          items: Vec::new(),
+          tags: tags,
+      }
+  }
 
-    pub fn add_item(&mut self, item: DataItem) {
-        self.items.push(item);
-    }
+  pub fn add_item(&mut self, item: DataItem) {
+      self.items.push(item);
+  }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, ByteErrorType> {
-        let mut headers = vec![0u8; 64 * self.items.len()];
-        let mut binaries = Vec::new();
+  pub fn to_bytes(&self) -> Result<Vec<u8>, ByteErrorType> {
+      let mut headers = vec![0u8; 64 * self.items.len()];
+      let mut binaries = Vec::new();
 
-        for (index, item) in self.items.iter().enumerate() {
-            let id = item.raw_id();
+      for (index, item) in self.items.iter().enumerate() {
+          let id = item.raw_id();
+          let mut header = Vec::with_capacity(64);
 
-            let mut header = Vec::with_capacity(64);
-            header.extend_from_slice(&long_to_32_byte_array(item.as_bytes()?.len() as u64)?);
-            header.extend_from_slice(&id);
+          header.extend_from_slice(&long_to_32_byte_array(item.as_bytes()?.len() as u64)?);
+          header.extend_from_slice(&id);
+          headers.splice(64 * index..64 * (index + 1), header.iter().cloned());
+          binaries.extend_from_slice(&item.as_bytes()?);
+      }
 
-            headers.splice(64 * index..64 * (index + 1), header.iter().cloned());
-            binaries.extend_from_slice(&item.as_bytes()?);
-        }
+      let mut buffer = Vec::new();
+      buffer.extend_from_slice(&long_to_32_byte_array(self.items.len() as u64)?);
+      buffer.extend_from_slice(&headers);
+      buffer.extend_from_slice(&binaries);
 
-        let mut buffer = Vec::new();
-        buffer.extend_from_slice(&long_to_32_byte_array(self.items.len() as u64)?);
-        buffer.extend_from_slice(&headers);
-        buffer.extend_from_slice(&binaries);
+      Ok(buffer)
+  }
 
-        Ok(buffer)
-    }
+  pub fn from_bytes(bytes: &[u8]) -> Result<Self, ByteErrorType> {
+      let mut offset = 0;
+
+      // Read the first 32 bytes to get the length of items
+      let first_32_bytes = &bytes[offset..offset + 32];
+      offset += 32;
+
+      let items_len = _32_byte_array_to_long(first_32_bytes)? as usize;
+
+      let mut items = Vec::with_capacity(items_len);
+
+      // Read headers
+      let header_size = 64 * items_len;
+      let headers = &bytes[offset..offset + header_size];
+      offset += header_size;
+
+      for i in 0..items_len {
+          // Read the next 32 bytes to get the length of the item
+          let item_len_bytes = &headers[64 * i..64 * i + 32];
+          let item_len = _32_byte_array_to_long(item_len_bytes)? as usize;
+
+          // Read the item bytes
+          let item_bytes = &bytes[offset..offset + item_len];
+          offset += item_len;
+
+          // Create the DataItem from the item bytes
+          let item = DataItem::from_bytes(item_bytes.to_vec())?;
+          items.push(item);
+      }
+
+      Ok(Self {
+          items,
+          tags: Vec::new(), // Assuming tags are not used in to_bytes
+      })
+  }
 }
 
 fn long_to_n_byte_array(n: usize, long: u64) -> Result<Vec<u8>, ByteErrorType> {
-    let mut byte_array = vec![0u8; n];
-    let mut value = long;
+  let mut byte_array = vec![0u8; n];
+  let mut value = long;
 
-    for index in 0..n {
-        let byte = (value & 0xFF) as u8;
-        byte_array[index] = byte;
-        value >>= 8;
-    }
+  for index in 0..n {
+      let byte = (value & 0xFF) as u8;
+      byte_array[index] = byte;
+      value >>= 8;
+  }
 
-    Ok(byte_array)
+  Ok(byte_array)
 }
 
 fn long_to_32_byte_array(value: u64) -> Result<Vec<u8>, ByteErrorType> {
-    long_to_n_byte_array(32, value)
+  long_to_n_byte_array(32, value)
+}
+
+fn _32_byte_array_to_long(bytes: &[u8]) -> Result<u64, ByteErrorType> {
+  if bytes.len() != 32 {
+      return Err(ByteErrorType::ByteError("Array length is not 32 bytes".to_string()));
+  }
+
+  // Assuming the value is stored in the first 8 bytes
+  n_byte_array_to_long(&bytes[0..8])
+}
+
+fn n_byte_array_to_long(bytes: &[u8]) -> Result<u64, ByteErrorType> {
+  if bytes.len() > 8 {
+      return Err(ByteErrorType::ByteError("Array length exceeds 8 bytes".to_string()));
+  }
+
+  let mut value = 0u64;
+  for (i, &byte) in bytes.iter().enumerate() {
+      value |= (byte as u64) << (i * 8);
+  }
+
+  Ok(value)
 }
 
 #[derive(Clone)]
@@ -494,6 +563,13 @@ impl DataItem {
                 Ok(s) => Some(s),
                 Err(_) => None,
             },
+            Data::None => None,
+        }
+    }
+
+    pub fn data_bytes(&self) -> Option<Vec<u8>> {
+        match &self.data {
+            Data::Bytes(d) => Some(d.clone()),
             Data::None => None,
         }
     }
