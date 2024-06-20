@@ -172,21 +172,17 @@ export const backoff = (
           return Promise.reject(err)
         }
 
+        /**
+         * increment the retry count Retry with an exponential backoff
+         */
         const newRetry = retry + 1
         const newDelay = delay + delay
         log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
-        return new Promise((resolve, reject) =>
-          setTimeout(
-          /**
-           * increment the retry count Retry with an exponential backoff
-           */
-            () => action(newRetry, newDelay).then(resolve).catch(reject),
-            /**
-             * Retry in {delay} milliseconds
-             */
-            delay
-          )
-        )
+        /**
+         * Retry in {delay} milliseconds
+         */
+        return new Promise((resolve) => setTimeout(resolve, delay))
+          .then(() => action(newRetry, newDelay))
       })
   }
 
