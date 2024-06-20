@@ -14,6 +14,7 @@ function fetchResultWith ({ fetchResult }) {
   return (ctx) =>
     fetchResultAsync(ctx.tx.id, ctx.tx.processId)
       .chain(fetchedResult => {
+        console.log('Jack3', { fetchedResult })
         const msgs = fetchedResult.Messages.map(msg => {
           return {
             msg,
@@ -52,6 +53,7 @@ export function pullResultWith (env) {
   const fetchResult = fetchResultWith(env)
 
   return (ctx) => {
+    console.log('Jack2', { ctx })
     return of(ctx)
       .chain(fetchResult)
       .bichain(Resolved, Resolved)

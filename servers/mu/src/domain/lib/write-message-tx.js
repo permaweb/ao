@@ -30,6 +30,10 @@ export function writeMessageTxWith (env) {
     if (ctx.schedLocation) {
       return writeDataItem({ suUrl: ctx.schedLocation.url, data: ctx.tx.data.toString('base64') })
         .map(assoc('schedulerTx', __, ctx))
+        .map((ctx) => {
+          // ctx.schedLocation.url = 'http://localhost:9000'
+          return ctx
+        })
         .map(ctxSchema.parse)
         .map(logger.tap('Added "schedulerTx" to ctx'))
     } else {

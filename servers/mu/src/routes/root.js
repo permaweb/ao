@@ -29,6 +29,7 @@ const withMessageRoutes = (app) => {
 
         const logger = _logger.child('POST_root')
 
+        console.log({ processId, assign, body })
         if ((processId && !assign) || (!processId && assign)) {
           res.status(400).send({ error: 'You must set both process-id and assign to send an assignment, not just one' })
         } else if (processId && assign) {
@@ -70,6 +71,7 @@ const withMessageRoutes = (app) => {
 
           const input = await inputSchema.parseAsync({ body })
 
+          console.log({ input })
           /**
            * Forward the DataItem
            */

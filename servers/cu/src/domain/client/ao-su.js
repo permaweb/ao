@@ -127,7 +127,10 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         .then(filter(isNotNil))
         .then(params => new URLSearchParams(params))
         .then((params) => backoff(
-          () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
+          () => fetch(`${suUrl}/${processId}?${params.toString()}`).then((res) => {
+            console.log({ res, params })
+            return okRes(res)
+          }),
           { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
         ))
         .catch(async (err) => {

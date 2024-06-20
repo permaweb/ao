@@ -38,12 +38,15 @@ export function sendAssignWith ({
       crank: () => of({ ...res, initialTxId: res.tx.id })
         .chain(getCuAddress)
         .chain(pullResult)
-        .chain(({ msgs, spawns, assigns, initialTxId }) => crank({
-          msgs,
-          spawns,
-          assigns,
-          initialTxId
-        }))
+        .chain(({ msgs, spawns, assigns, initialTxId }) => {
+          console.log({ msgs, spawns, assigns, initialTxId })
+          return crank({
+            msgs,
+            spawns,
+            assigns,
+            initialTxId
+          })
+        })
         .bimap(
           logger.tap('Failed to crank messages from assignment'),
           logger.tap('Cranking complete')

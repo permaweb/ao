@@ -38,7 +38,7 @@ struct ProcessIdRequired {
     process_id: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OptionalAssign {
     #[serde(rename = "process-id")]
     process_id: Option<String>,
@@ -132,6 +132,7 @@ async fn main_post_route(
         Err(err) => return err_response(err.to_string()),
     }
 
+    println!("0 {:?}", query_params);
     match flows::write_item(
         deps.get_ref().clone(),
         req_body.to_vec(),

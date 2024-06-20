@@ -173,6 +173,8 @@ impl Gateway for ArweaveGateway {
             Err(e) => return Err(format!("{}", e)),
         };
 
+        println!("5a {} {} {}", url, gateway_url, tx_id);
+
         let client = Client::new();
 
         let response = client
@@ -184,6 +186,7 @@ impl Gateway for ArweaveGateway {
             .await
             .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?;
 
+        println!("5b {:?}", response.status());
         if response.status().is_success() {
             let body: serde_json::Value = response
                 .json()
@@ -219,6 +222,7 @@ impl Gateway for ArweaveGateway {
         let query_string = serde_json::to_string(&query)
             .map_err(|e| GatewayErrorType::GraphQLError(e.to_string()))?;
 
+        println!("5a {} {}", query_string, gateway_url);
         let response = client
             .post(format!("{}/graphql", gateway_url))
             .header("Content-Type", "application/json")
@@ -227,6 +231,7 @@ impl Gateway for ArweaveGateway {
             .await
             .map_err(|e| GatewayErrorType::GraphQLError(e.to_string()))?;
 
+        println!("5b {}", response.status());
         if response.status().is_success() {
             let body: GraphQLResponse = response
                 .json()
@@ -241,6 +246,7 @@ impl Gateway for ArweaveGateway {
                 Err("Transaction not found".to_string())
             }
         } else {
+            println!("Err: {}", format!("Failed to fetch transaction: {}", response.status()).to_string());
             Err(format!("Failed to fetch transaction: {}", response.status()).to_string())
         }
     }

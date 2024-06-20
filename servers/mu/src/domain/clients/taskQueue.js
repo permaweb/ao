@@ -6,6 +6,7 @@ export function createTaskQueue ({ queueId, logger }) {
 
 export function enqueueWith ({ queue }) {
   return (task) => {
+    console.log({ queue, task })
     queue.push(task)
   }
 }

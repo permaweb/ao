@@ -1,0 +1,82 @@
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "x-powered-by" to true
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "x-powered-by" to true
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "etag" to 'weak'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "etag" to 'weak'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "etag fn" to [Function: generateETag]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "etag fn" to [Function: generateETag]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "env" to 'development'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "env" to 'development'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "query parser" to 'extended'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "query parser" to 'extended'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "subdomain offset" to 2
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "subdomain offset" to 2
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "trust proxy" to false
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "trust proxy" to false
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Wed, 19 Jun 2024 20:39:32 GMT express:application booting in development mode
+Wed, 19 Jun 2024 20:39:32 GMT express:application booting in development mode
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "view" to [Function: View]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "view" to [Function: View]
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "jsonp callback name" to 'callback'
+Wed, 19 Jun 2024 20:39:32 GMT express:application set "jsonp callback name" to 'callback'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' query
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' query
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' expressInit
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' expressInit
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' corsMiddleware
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' corsMiddleware
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' jsonParser
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' jsonParser
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' rawParser
+Wed, 19 Jun 2024 20:39:32 GMT express:router use '/' rawParser
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route post '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route post '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route delete '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route delete '/monitor/:processId'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route post '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route post '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route get '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:route get '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+Wed, 19 Jun 2024 20:39:32 GMT express:router:layer new '/'
+2024-06-19T20:39:32.477Z ao-mu Server is running on http://localhost:3004
+2024-06-19T20:39:32.477Z ao-mu Server is running on http://localhost:3004
+2024-06-19T20:39:32.481Z ao-mu Crons initialized
+2024-06-19T20:39:32.481Z ao-mu Crons initialized

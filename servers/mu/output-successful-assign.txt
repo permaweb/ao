@@ -1,0 +1,911 @@
+
+> @permaweb/ao-mu@1.0.0 start
+> node -r dotenv/config src/app.js
+
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "x-powered-by" to true
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "etag" to 'weak'
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "etag fn" to [Function: generateETag]
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "env" to 'development'
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "query parser" to 'extended'
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "subdomain offset" to 2
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "trust proxy" to false
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Thu, 20 Jun 2024 12:32:25 GMT express:application booting in development mode
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "view" to [Function: View]
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Thu, 20 Jun 2024 12:32:25 GMT express:application set "jsonp callback name" to 'callback'
+Thu, 20 Jun 2024 12:32:25 GMT express:router use '/' query
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router use '/' expressInit
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router use '/' corsMiddleware
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router use '/' jsonParser
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router use '/' rawParser
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route new '/monitor/:processId'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/monitor/:processId'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route post '/monitor/:processId'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route new '/monitor/:processId'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/monitor/:processId'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route delete '/monitor/:processId'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route post '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:route get '/'
+Thu, 20 Jun 2024 12:32:25 GMT express:router:layer new '/'
+2024-06-20T12:32:25.947Z ao-mu Server is running on http://localhost:3004
+2024-06-20T12:32:25.948Z ao-mu Crons initialized
+Thu, 20 Jun 2024 12:33:04 GMT express:router dispatching POST /
+Thu, 20 Jun 2024 12:33:04 GMT express:router query  : /
+Thu, 20 Jun 2024 12:33:04 GMT express:router expressInit  : /
+Thu, 20 Jun 2024 12:33:04 GMT express:router corsMiddleware  : /
+Thu, 20 Jun 2024 12:33:04 GMT express:router jsonParser  : /
+Thu, 20 Jun 2024 12:33:04 GMT body-parser:json content-type "application/octet-stream"
+Thu, 20 Jun 2024 12:33:04 GMT body-parser:json skip parsing
+Thu, 20 Jun 2024 12:33:04 GMT express:router rawParser  : /
+Thu, 20 Jun 2024 12:33:04 GMT body-parser:raw content-type "application/octet-stream"
+Thu, 20 Jun 2024 12:33:04 GMT body-parser:raw content-encoding "identity"
+Thu, 20 Jun 2024 12:33:04 GMT body-parser:raw read body
+Thu, 20 Jun 2024 12:33:04 GMT body-parser:raw parse body
+{
+  processId: undefined,
+  assign: undefined,
+  body: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+}
+{
+  input: {
+    body: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+  }
+}
+2024-06-20T12:33:04.990Z ao-mu:sendDataItem Successfully parsed data item and added as "tx" to ctx {
+  raw: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>,
+  tx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    data: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+  },
+  dataItem: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+    owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+    target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    tags: [ [Object], [Object], [Object], [Object], [Object] ],
+    anchor: ''
+  }
+}
+{
+  id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+  signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+  owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+  target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+  tags: [
+    { name: 'Action', value: 'Eval' },
+    { name: 'Data-Protocol', value: 'ao' },
+    { name: 'Variant', value: 'ao.TN.1' },
+    { name: 'Type', value: 'Message' },
+    { name: 'SDK', value: 'aoconnect' }
+  ],
+  anchor: ''
+}
+2024-06-20T12:33:06.903Z ao-mu:sendDataItem Forwarding message to SU https://su-router.ao-testnet.xyz <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+{
+  input: 'https://su-router.ao-testnet.xyz',
+  res: Response {
+    status: 307,
+    statusText: 'Temporary Redirect',
+    headers: Headers {
+      'content-length': '0',
+      vary: 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers',
+      location: 'http://localhost:9000/',
+      date: 'Thu, 20 Jun 2024 12:33:06 GMT'
+    },
+    body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
+    bodyUsed: false,
+    ok: false,
+    redirected: false,
+    type: 'basic',
+    url: 'http://localhost:9001/'
+  }
+}
+{
+  input: 'http://localhost:9000/',
+  res: Response {
+    status: 200,
+    statusText: 'OK',
+    headers: Headers {
+      'content-length': '78',
+      vary: 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers',
+      'content-type': 'application/json',
+      date: 'Thu, 20 Jun 2024 12:33:06 GMT'
+    },
+    body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
+    bodyUsed: false,
+    ok: true,
+    redirected: false,
+    type: 'basic',
+    url: 'http://localhost:9000/'
+  }
+}
+2024-06-20T12:33:07.717Z ao-mu:sendDataItem Successfully forwarded DataItem to SU {
+  id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+  timestamp: 1718886787715
+}
+2024-06-20T12:33:07.718Z ao-mu:sendDataItem Added "schedulerTx" to ctx {
+  schedulerTx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    timestamp: 1718886787715
+  },
+  raw: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>,
+  tx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    data: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+  },
+  dataItem: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+    owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+    target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    tags: [ [Object], [Object], [Object], [Object], [Object] ],
+    anchor: ''
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  }
+}
+2024-06-20T12:33:07.718Z ao-mu:POST_root Successfully sent DataItem. Beginning to crank... {
+  schedulerTx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    timestamp: 1718886787715
+  },
+  raw: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>,
+  tx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    data: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+  },
+  dataItem: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+    owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+    target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    tags: [ [Object], [Object], [Object], [Object], [Object] ],
+    anchor: ''
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  },
+  crank: [Function: crank]
+}
+2024-06-20T12:33:07.720Z ao-mu:sendDataItem Selecting cu for process 5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI
+2024-06-20T12:33:07.720Z ao-mu:sendDataItem Added "cuAddress" to ctx {
+  cuAddress: 'http://localhost:6363',
+  schedulerTx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    timestamp: 1718886787715
+  },
+  raw: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>,
+  tx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    data: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+  },
+  dataItem: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+    owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+    target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    tags: [ [Object], [Object], [Object], [Object], [Object] ],
+    anchor: ''
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  },
+  initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+}
+Jack2 {
+  ctx: {
+    cuAddress: 'http://localhost:6363',
+    schedulerTx: {
+      id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      timestamp: 1718886787715
+    },
+    raw: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>,
+    tx: {
+      id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      data: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+    },
+    dataItem: {
+      id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+      owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+      target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      tags: [Array],
+      anchor: ''
+    },
+    schedLocation: {
+      url: 'http://localhost:9000',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+  }
+}
+2024-06-20T12:33:07.721Z ao-mu:sendDataItem http://localhost:6363/result/JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg?process-id=5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI&no-busy=1
+Jack2.5 {
+  url: 'http://localhost:6363/result/JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg?process-id=5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI&no-busy=1'
+}
+{
+  input: 'http://localhost:6363/result/JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg?process-id=5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI&no-busy=1',
+  res: Response {
+    status: 200,
+    statusText: 'OK',
+    headers: Headers {
+      'content-security-policy': "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
+      'cross-origin-opener-policy': 'same-origin',
+      'cross-origin-resource-policy': 'same-origin',
+      'origin-agent-cluster': '?1',
+      'referrer-policy': 'no-referrer',
+      'strict-transport-security': 'max-age=15552000; includeSubDomains',
+      'x-content-type-options': 'nosniff',
+      'x-dns-prefetch-control': 'off',
+      'x-download-options': 'noopen',
+      'x-frame-options': 'SAMEORIGIN',
+      'x-permitted-cross-domain-policies': 'none',
+      'x-xss-protection': '0',
+      'access-control-allow-origin': '*',
+      'content-type': 'application/json; charset=utf-8',
+      'content-length': '650',
+      date: 'Thu, 20 Jun 2024 12:33:07 GMT',
+      connection: 'keep-alive',
+      'keep-alive': 'timeout=72'
+    },
+    body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
+    bodyUsed: false,
+    ok: true,
+    redirected: false,
+    type: 'basic',
+    url: 'http://localhost:6363/result/JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg?process-id=5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI&no-busy=1'
+  }
+}
+Jack3 {
+  fetchedResult: {
+    Messages: [ [Object] ],
+    Assignments: [],
+    Spawns: [],
+    Output: { data: [Object] },
+    GasUsed: 618705447
+  }
+}
+2024-06-20T12:33:07.896Z ao-mu:sendDataItem Added "msgs, spawns, and assigns" to ctx {
+  msgs: [
+    {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    }
+  ],
+  spawns: [],
+  assigns: [],
+  initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+  cuAddress: 'http://localhost:6363',
+  schedulerTx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    timestamp: 1718886787715
+  },
+  raw: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>,
+  tx: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    data: <Buffer 01 00 54 6c 27 f3 6f 8e 62 b2 bf 20 1f 39 b2 82 3b 25 00 ff 72 69 ac 6b 48 3d 6a cd c0 b1 bd b1 0f b5 12 03 4e 83 ab 78 f2 b8 f8 69 f7 f4 97 12 d0 f1 ... 1204 more bytes>
+  },
+  dataItem: {
+    id: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    signature: 'VGwn82-OYrK_IB85soI7JQD_cmmsa0g9as3Asb2xD7USA06Dq3jyuPhp9_SXEtDxuJUfSuMt9hOqvE3nLxwATTbmZN3uqlIIgCZXZ7FB5XdODRJ0jMDfI1HTvDgnHFlFUyzJ_IgGfHdr1C8CtXxCa4mjMa2TsPUXEKTOF7GOGiHkD6DhPhX_-Pk3nEElMOPBlr-jptfvPUA9UI7y0kB9uixsKJvmk1uzB8r7mZFiqxno8yAYYl_wwYhbsi9OcqbAFnqQ5q2zkQY1WidiwWPG2ycTEftIRuNaSUGqCA5wnmeJb6eJsh2VeW6sf9uVhTZapG38TjLGVfU0MM9hfBOMhPTbJ7irKFA7YG0uOD_MA54rArpJ_mFSq9jkSTJwA45lTbQC7M6wutyS_UFZ2k4tw4pLlPfyXZsY5BQXE1fGf3b-Sf5nhICsQptB4L2jaR44-vd7fZeA5O0jtrRYcJTK-ilW3dDkblzosSpWPg3Wwj1zZOFQccP4930wj0Z6CSGNBlcb5HyzpYJ8If1HLOj3b2GY9b2H0qzavHK2ubhKeUTREEH3hW2ENtgNlGXbywGPu4VCjHTNcBfYWxnaXGrjTHpNE6gA6ZKfM5TTKV32TV-nDRiNzyxopmiugBYVLCJWE-8ch9K5m3ntoRsmKDG2UmdYJQRca6ys0rLEkQenPjA',
+    owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+    target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    tags: [ [Object], [Object], [Object], [Object], [Object] ],
+    anchor: ''
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  }
+}
+2024-06-20T12:33:07.897Z ao-mu Starting worker with id "b85f42bc509ae7e8"...
+2024-06-20T12:33:08.377Z ao-mu Initializing queue for queue index 1
+{
+  msgs: [
+    {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    }
+  ],
+  spawns: [],
+  assigns: []
+}
+2024-06-20T12:33:08.380Z ao-mu:sendDataItem Cranking complete undefined
+{
+  queue: [],
+  task: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    },
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+  }
+}
+2024-06-20T12:33:08.479Z ao-mu Processing task of type MESSAGE
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    },
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+  }
+}
+2024-06-20T12:33:08.480Z ao-mu:processMsg Checking if id is a wallet 5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI
+2024-06-20T12:33:08.480Z ao-mu:processMsg id: 5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI not cached checking gateway for tx
+abc2 {
+  processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+  suUrl: 'https://su-router.ao-testnet.xyz',
+  fetch: 'function value(input, init = undefined) {\n' +
+    '    if (!fetchImpl) { // Implement lazy loading of undici module for fetch function\n' +
+    "      const undiciModule = require('internal/deps/undici/undici');\n" +
+    '      fetchImpl = undiciModule.fetch;\n' +
+    '    }\n' +
+    '    return fetchImpl(input, init);\n' +
+    '  }'
+}
+2024-06-20T12:33:09.883Z ao-mu:processMsg https://su-router.ao-testnet.xyz/processes/5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI
+abc3 { cached: undefined }
+abc4 {
+  res: {
+    process_id: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    block: '000001448359',
+    owner: {
+      address: 'DgMBhff3Hl5l5zIi2GafUWxfomGq1hIt94VN2ZeuMkM',
+      key: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE'
+    },
+    tags: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object]
+    ],
+    timestamp: 1718836094234,
+    data: '1984',
+    anchor: null,
+    signature: 'qj1kTwCZcFKbXL3tKSSaD1P8RR7gIeTUnRm19Oi24c3DfpnBMuUh1ipvM_uZlfNXLPY2VowSXtSvFtQC3gBjma_jtZYtbNjiLNsXSsjU8lqatyRY8rEYeRSovqXDkv2_2PdmsuZkjKQ4kOK-BVOZj5zcJ4GILqmeZKHm68suOFFRLJxMNF49Of00FyTf1CH6DF79L75nYEaH5ilcCBc7deWRnNxngPd_n_8ejZ-oMGGwAmzuzSzGMt-FyHORuHvgeoMV1Yrp-OFyZutLIBH07-VRJGLNyXrlj0MfX3XcJTkQWt1Ji9A1VVP9J56L1ZMqoT9vIk9Neq3lHRA4OzU-qMa43Z-Ugp6DgGZa8GxmsLBByJXQupZTfoQlRYm7PVJPIwvnx-SEY1kPFm4nOCUZhwRYhBhlzgBA6DtiIkNML31wKpFrfg9B6RI9iJlVJ6KqRBteuP1pskbs2Qebobwm5qU37vQ_mDwGT6MB3HeHOvbdSTWBPrPffi0VkfAUJPH6p9KMLkuFpY1Tk7bpI8BJHOBxy47WCsJPzkX2cTtOaUIATPBLMjItKAa-hbbs8t2LPGe2HxVmDFW_Wj-G3gLDX02-JS6ATFzRTqIx7sB7Z0Nib_UzTOlCnDxbH89kwFAuuOyBhAF0MK-_3w5rYykE1PJVcfzUHejuaEgtXCY798c'
+  }
+}
+abc1 {
+  res: {
+    schedLocation: {
+      url: 'https://su-router.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    fromProcessSchedData: {
+      process_id: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      block: '000001448359',
+      owner: [Object],
+      tags: [Array],
+      timestamp: 1718836094234,
+      data: '1984',
+      anchor: null,
+      signature: 'qj1kTwCZcFKbXL3tKSSaD1P8RR7gIeTUnRm19Oi24c3DfpnBMuUh1ipvM_uZlfNXLPY2VowSXtSvFtQC3gBjma_jtZYtbNjiLNsXSsjU8lqatyRY8rEYeRSovqXDkv2_2PdmsuZkjKQ4kOK-BVOZj5zcJ4GILqmeZKHm68suOFFRLJxMNF49Of00FyTf1CH6DF79L75nYEaH5ilcCBc7deWRnNxngPd_n_8ejZ-oMGGwAmzuzSzGMt-FyHORuHvgeoMV1Yrp-OFyZutLIBH07-VRJGLNyXrlj0MfX3XcJTkQWt1Ji9A1VVP9J56L1ZMqoT9vIk9Neq3lHRA4OzU-qMa43Z-Ugp6DgGZa8GxmsLBByJXQupZTfoQlRYm7PVJPIwvnx-SEY1kPFm4nOCUZhwRYhBhlzgBA6DtiIkNML31wKpFrfg9B6RI9iJlVJ6KqRBteuP1pskbs2Qebobwm5qU37vQ_mDwGT6MB3HeHOvbdSTWBPrPffi0VkfAUJPH6p9KMLkuFpY1Tk7bpI8BJHOBxy47WCsJPzkX2cTtOaUIATPBLMjItKAa-hbbs8t2LPGe2HxVmDFW_Wj-G3gLDX02-JS6ATFzRTqIx7sB7Z0Nib_UzTOlCnDxbH89kwFAuuOyBhAF0MK-_3w5rYykE1PJVcfzUHejuaEgtXCY798c'
+    }
+  }
+}
+2024-06-20T12:33:09.913Z ao-mu Added tx and schedLocation to ctx {
+  tx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    data: <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>,
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  schedLocation: {
+    url: 'http://localhost:9001',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  },
+  tagAssignments: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ],
+  type: 'MESSAGE',
+  cachedMsg: {
+    msg: {
+      Target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      Data: 'msg1',
+      Tags: [Array],
+      Anchor: '00000000000000000000000000000024'
+    },
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+}
+2024-06-20T12:33:09.914Z ao-mu:processMsg Forwarding message to SU http://localhost:9001 <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>
+2024-06-20T12:33:10.707Z ao-mu:processMsg Successfully forwarded DataItem to SU {
+  id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+  timestamp: 1718886790706
+}
+Jack2 {
+  ctx: {
+    cuAddress: 'http://localhost:6363',
+    schedulerTx: {
+      id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      timestamp: 1718886790706
+    },
+    tx: {
+      id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      data: <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>,
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    },
+    schedLocation: {
+      url: 'http://localhost:9000',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [ [Object] ],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    },
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+  }
+}
+2024-06-20T12:33:10.707Z ao-mu Added "schedulerTx" to ctx {
+  schedulerTx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    timestamp: 1718886790706
+  },
+  tx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    data: <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>,
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  },
+  tagAssignments: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ],
+  type: 'MESSAGE',
+  cachedMsg: {
+    msg: {
+      Target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      Data: 'msg1',
+      Tags: [Array],
+      Anchor: '00000000000000000000000000000024'
+    },
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+}
+2024-06-20T12:33:10.708Z ao-mu:processMsg Selecting cu for process 5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI
+2024-06-20T12:33:10.708Z ao-mu Added "cuAddress" to ctx {
+  cuAddress: 'http://localhost:6363',
+  schedulerTx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    timestamp: 1718886790706
+  },
+  tx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    data: <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>,
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  },
+  tagAssignments: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ],
+  type: 'MESSAGE',
+  cachedMsg: {
+    msg: {
+      Target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      Data: 'msg1',
+      Tags: [Array],
+      Anchor: '00000000000000000000000000000024'
+    },
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+}
+2024-06-20T12:33:10.708Z ao-mu:processMsg http://localhost:6363/result/_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE?process-id=5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI&no-busy=1
+Jack2.5 {
+  url: 'http://localhost:6363/result/_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE?process-id=5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI&no-busy=1'
+}
+Jack3 {
+  fetchedResult: {
+    Messages: [],
+    Assignments: [],
+    Spawns: [],
+    Output: {
+      prompt: 'aos> ',
+      data: '\x1B[90mNew Message From \x1B[32m5bD...6iI\x1B[90m: \x1B[90mData = \x1B[34mmsg1\x1B[0m',
+      print: true
+    },
+    GasUsed: 588341527
+  }
+}
+2024-06-20T12:33:10.858Z ao-mu Added "msgs, spawns, and assigns" to ctx {
+  msgs: [],
+  spawns: [],
+  assigns: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ],
+  initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+  cuAddress: 'http://localhost:6363',
+  schedulerTx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    timestamp: 1718886790706
+  },
+  tx: {
+    id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    data: <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>,
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  },
+  schedLocation: {
+    url: 'http://localhost:9000',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  },
+  tagAssignments: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ],
+  type: 'MESSAGE',
+  cachedMsg: {
+    msg: {
+      Target: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      Data: 'msg1',
+      Tags: [Array],
+      Anchor: '00000000000000000000000000000024'
+    },
+    processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+  }
+}
+Here {
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    },
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg'
+  },
+  res: {
+    msgs: [],
+    spawns: [],
+    assigns: [ [Object] ],
+    initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+    cuAddress: 'http://localhost:6363',
+    schedulerTx: {
+      id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      timestamp: 1718886790706
+    },
+    tx: {
+      id: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      data: <Buffer 01 00 9c ad 77 06 33 84 80 a6 a7 47 6f 30 2e e5 e2 37 4e 16 9c e2 51 06 47 8f 5f c7 18 c6 aa d5 92 11 2f 04 f3 29 26 07 53 9c b4 2e eb f3 64 75 11 5d ... 1286 more bytes>,
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    },
+    schedLocation: {
+      url: 'http://localhost:9000',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [ [Object] ],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI',
+      initialTxId: 'JfQQMS6yO9Hlm3wZ_ZVClPbsGxwNr1-FtS-RWXZh_qg',
+      fromProcessId: '5bD_uX3aibVHmsxMtDFXS1uxOdipiCmmj-enQwkN6iI'
+    }
+  },
+  assigns: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ]
+}
+{
+  msgs: [],
+  spawns: [],
+  assigns: [
+    {
+      Processes: [Array],
+      Message: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+    }
+  ]
+}
+{
+  queue: [],
+  task: {
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    }
+  }
+}
+2024-06-20T12:33:10.894Z ao-mu Processing task of type ASSIGN
+{
+  result: {
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    }
+  }
+}
+{
+  ctx: {
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    }
+  }
+}
+{
+  schedLocation: {
+    url: 'https://su6.ao-testnet.xyz',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  }
+}
+2024-06-20T12:33:11.405Z ao-mu:processAssign Forwarding Assignment to SU https://su6.ao-testnet.xyz {
+  txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+  processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+  baseLayer: null,
+  exclude: null,
+  suUrl: 'https://su6.ao-testnet.xyz'
+}
+{
+  url: 'https://su6.ao-testnet.xyz/?process-id=tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA&assign=_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+}
+{
+  response: Response {
+    status: 200,
+    statusText: 'OK',
+    headers: Headers {
+      server: 'nginx/1.18.0 (Ubuntu)',
+      date: 'Thu, 20 Jun 2024 12:33:12 GMT',
+      'content-type': 'application/json',
+      'content-length': '78',
+      connection: 'keep-alive',
+      vary: 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
+    },
+    body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
+    bodyUsed: false,
+    ok: true,
+    redirected: false,
+    type: 'basic',
+    url: 'https://su6.ao-testnet.xyz/?process-id=tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA&assign=_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+  }
+}
+2024-06-20T12:33:12.375Z ao-mu:processAssign Successfully forwarded Assignment to SU {
+  id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+  timestamp: 1718886792231
+}
+{
+  suRes: Response {
+    status: 200,
+    statusText: 'OK',
+    headers: Headers {
+      server: 'nginx/1.18.0 (Ubuntu)',
+      date: 'Thu, 20 Jun 2024 12:33:12 GMT',
+      'content-type': 'application/json',
+      'content-length': '78',
+      connection: 'keep-alive',
+      vary: 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
+    },
+    body: ReadableStream { locked: false, state: 'readable', supportsBYOB: true },
+    bodyUsed: false,
+    ok: true,
+    redirected: false,
+    type: 'basic',
+    url: 'https://su6.ao-testnet.xyz/?process-id=tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA&assign=_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE'
+  }
+}
+Jack1 {
+  res: {
+    tx: {
+      id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA'
+    },
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    },
+    schedLocation: {
+      url: 'https://su6.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    }
+  }
+}
+Jack2 {
+  ctx: {
+    tx: {
+      id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA'
+    },
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    },
+    schedLocation: {
+      url: 'https://su6.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    }
+  }
+}
+Jack2.5 {
+  url: 'http://localhost:6363/result/lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18?process-id=tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA&no-busy=1'
+}
+2024-06-20T12:33:12.375Z ao-mu:processSpawn Added "tx" to ctx {
+  tx: {
+    id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+    processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA'
+  },
+  type: 'ASSIGN',
+  assign: {
+    txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+    baseLayer: null,
+    exclude: null
+  },
+  schedLocation: {
+    url: 'https://su6.ao-testnet.xyz',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  }
+}
+2024-06-20T12:33:12.375Z ao-mu:processAssign http://localhost:6363/result/lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18?process-id=tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA&no-busy=1
+Jack3 {
+  fetchedResult: {
+    Messages: [],
+    Assignments: [],
+    Spawns: [],
+    Output: {
+      prompt: 'aos> ',
+      data: '\x1B[90mNew Message From \x1B[32m5bD...6iI\x1B[90m: \x1B[90mData = \x1B[34mmsg1\x1B[0m',
+      print: true
+    },
+    GasUsed: 573055050
+  }
+}
+2024-06-20T12:33:14.037Z ao-mu:processSpawn Added "msgs, spawns, and assigns" to ctx {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  tx: {
+    id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+    processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA'
+  },
+  type: 'ASSIGN',
+  assign: {
+    txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+    processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+    baseLayer: null,
+    exclude: null
+  },
+  schedLocation: {
+    url: 'https://su6.ao-testnet.xyz',
+    address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+  }
+}
+Jack4 {
+  res: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    tx: {
+      id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA'
+    },
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    },
+    schedLocation: {
+      url: 'https://su6.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    }
+  }
+}
+Here {
+  result: {
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    }
+  },
+  res: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    tx: {
+      id: 'lOWeTUUFX22sjY-36wOCwpGv1v8Ylp8ICtIJVF2Fz18',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA'
+    },
+    type: 'ASSIGN',
+    assign: {
+      txId: '_VROBVFKWfvBrk6obMSTKhupHbClYfzxONinFGw5UbE',
+      processId: 'tE37PhVJ7d7wv2dqUqBZ3YpmWkWmBk2PYXkN39WdmcA',
+      baseLayer: null,
+      exclude: null
+    },
+    schedLocation: {
+      url: 'https://su6.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    }
+  },
+  assigns: []
+}
+{ msgs: [], spawns: [], assigns: [] }

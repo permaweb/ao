@@ -365,6 +365,7 @@ impl DataStore for StoreClient {
             scheduler_row_id: &process_scheduler.scheduler_row_id,
         };
 
+        println!("Inserting into...");
         match diesel::insert_into(process_schedulers)
             .values(&new_process_scheduler)
             .on_conflict(process_id)
@@ -388,6 +389,7 @@ impl DataStore for StoreClient {
             .first(conn)
             .optional();
 
+        println!("{:?}", db_process_result);
         match db_process_result {
             Ok(Some(db_process_scheduler)) => {
                 let process_scheduler: ProcessScheduler = ProcessScheduler {
@@ -570,7 +572,7 @@ pub struct NewScheduler<'a> {
     pub process_count: &'a i32,
 }
 
-#[derive(Queryable, Selectable)]
+#[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = super::schema::process_schedulers)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct DbProcessScheduler {

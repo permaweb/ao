@@ -40,6 +40,7 @@ export function processResultWith ({
   processAssign
 }) {
   return async (result) => {
+    console.log({ result })
     return of(result)
       /**
        * Choose the correct business logic based
@@ -57,6 +58,7 @@ export function processResultWith ({
        * processing functions above
        */
       .chain((res) => {
+        console.log('Here', { result, res, assigns: res.assigns })
         enqueueResults({
           msgs: propOr([], 'msgs', res),
           spawns: propOr([], 'spawns', res),
@@ -76,18 +78,20 @@ export function processResultWith ({
  */
 export function enqueueResultsWith ({ enqueue }) {
   return ({ msgs, spawns, assigns }) => {
+    console.log({ msgs, spawns, assigns })
+    // assigns.forEach((assign) => console.log({ assign }))
     const results = [
-      ...msgs.map(msg => ({
+      ...(msgs ?? []).map(msg => ({
         type: 'MESSAGE',
         cachedMsg: msg,
         initialTxId: msg.initialTxId
       })),
-      ...spawns.map(spawn => ({
+      ...(spawns ?? []).map(spawn => ({
         type: 'SPAWN',
         cachedSpawn: spawn,
         initialTxId: spawn.initialTxId
       })),
-      ...assigns.flatMap(assign => assign.Processes.map(
+      ...(assigns ?? []).flatMap(assign => assign.Processes.map(
         (pid) => ({
           type: 'ASSIGN',
           assign: {
@@ -99,6 +103,7 @@ export function enqueueResultsWith ({ enqueue }) {
         })
       ))
     ]
+    // results.forEach((res) => console.log({ assign2: res.assign }))
     results.forEach(enqueue)
   }
 }
