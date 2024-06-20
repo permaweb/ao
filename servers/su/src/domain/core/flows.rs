@@ -63,10 +63,7 @@ async fn assignment_only(
         .update_schedule_info(&mut *schedule_info, process_id.clone())
         .await?;
 
-    println!("2");
-
     let process = deps.data_store.get_process(&process_id)?;
-    println!("2.5");
     let build_result = builder
         .build_assignment(
             assign.clone(),
@@ -109,7 +106,6 @@ pub async fn write_item(
     base_layer: Option<String>,
     exclude: Option<String>,
 ) -> Result<String, String> {
-    println!("1 {:?}", base_layer);
     // XOR, if we have one of these, we must have both.
     if process_id.is_some() ^ assign.is_some() {
         return Err("If sending assign or process-id, you must send both.".to_string());
@@ -183,7 +179,7 @@ pub async fn write_item(
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store
                 .save_message(&message, &build_result.binary)?;
-            // deps.logger.log(format!("saved message - {:?}", &message));
+            deps.logger.log(format!("saved message - {:?}", &message));
             upload(&deps, build_result.binary.to_vec()).await?;
             drop(schedule_info);
             match system_time_u64() {

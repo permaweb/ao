@@ -51,7 +51,6 @@ export function buildTxWith (env) {
         }
       )
       .map((res) => {
-        console.log('abc1', { res })
         const tagsIn = [
           ...ctx.cachedMsg.msg.Tags?.filter((tag) => {
             return ![
@@ -104,7 +103,6 @@ export function buildTxWith (env) {
       .map((res) => {
         // add tx and schedLocation to the result
         return { ...ctx, ...res }
-        // return { ...ctx, ...res, schedLocation: { ...res.schedLocation, url: 'http://localhost:9001' } }
       })
       .map(ctxSchema.parse)
       .map(logger.tap('Added tx and schedLocation to ctx'))

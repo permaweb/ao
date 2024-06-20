@@ -21,23 +21,13 @@ export function processAssignWith ({
   const locateProcessLocal = fromPromise(locateProcess)
 
   return (ctx) => {
-    console.log({ ctx })
     return of(ctx)
       .chain((ctx) => locateProcessLocal(ctx.assign.processId)
         .map((schedLocation) => {
-          console.log({ schedLocation })
           return { ...ctx, schedLocation }
         })
       )
       .chain(writeAssign)
-      .map((res) => {
-        console.log('Jack1', { res })
-        return res
-      })
       .chain(pullResult)
-      .map((res) => {
-        console.log('Jack4', { res })
-        return res
-      })
   }
 }

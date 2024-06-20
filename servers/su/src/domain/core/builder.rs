@@ -144,7 +144,6 @@ impl<'a> Builder<'a> {
             .await
         {
             Ok(_) => {
-                println!("6 Ok");
                 match self
                     .gen_assignment(
                         message_id.clone(),
@@ -244,14 +243,9 @@ impl<'a> Builder<'a> {
         process: &Process,
         base_layer: &Option<String>,
     ) -> Result<(), BuilderErrorType> {
-        println!("3");
-        // println!("{} {} {:?}", tx_id, process.process_id, &base_layer);
         match base_layer {
             Some(_) => {
-                println!("4a {:?}", base_layer);
                 let status: TxStatus = self.gateway.status(&tx_id).await?;
-
-                println!("4aa {:?}", status.number_of_confirmations);
 
                 /*
                     If there is not a Settlement-Depth tag on the Process
@@ -270,7 +264,6 @@ impl<'a> Builder<'a> {
                     None => 20,
                 };
 
-                println!("4ab {}", threshold);
                 match status.number_of_confirmations {
                     n if n >= threshold => Ok(()),
                     _ => Err(BuilderErrorType::BuilderError(
@@ -279,7 +272,6 @@ impl<'a> Builder<'a> {
                 }
             }
             None => {
-                println!("4b {:?}", base_layer);
                 /*
                     If this throws an error then the tx
                     is not available on the gateway
