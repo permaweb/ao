@@ -1,4 +1,4 @@
-import { backoff, okRes } from '../utils'
+import { backoff, okRes } from '../utils.js'
 
 function resultWith ({ fetch, CU_URL, logger }) {
   return async (txId, processId) => {

@@ -1,6 +1,6 @@
 import { identity } from 'ramda'
 import { of, fromPromise, Rejected } from 'hyper-async'
-import { backoff, okRes } from '../utils'
+import { backoff, okRes } from '../utils.js'
 
 function writeDataItemWith ({ fetch, logger }) {
   return async ({ data, suUrl }) => {
