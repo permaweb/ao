@@ -1,11 +1,17 @@
 import { always } from 'ramda'
 
-import { histogramWith } from '../../domain/client/metrics.js'
+import { histogramWith, summaryWith } from '../../domain/client/metrics.js'
 
 const histogram = histogramWith()({
   name: 'http_request_duration_seconds',
   description: 'Request duration in seconds',
   buckets: [0.5, 1, 3, 5, 10, 30],
+  labelNames: ['method', 'route', 'status', 'statusGroup']
+})
+
+const summary = summaryWith()({
+  name: 'http_request_summary_seconds',
+  description: 'Request duration in seconds summary',
   labelNames: ['method', 'route', 'status', 'statusGroup']
 })
 
@@ -37,12 +43,18 @@ export const withMetrics = ({ labelsFrom = always({}), tracesFrom = always({}) }
   }
 
   return (handler) => (req, res) => {
-    const reqLabels = labelsFromReq(req)
+    const labels = labelsFromReq(req)
     const traces = tracesFrom(req)
-    const stop = histogram.startTimer(reqLabels, traces)
+
+    const stop = histogram.startTimer(labels, traces)
+    const stopSummary = summary.startTimer(labels, traces)
 
     return Promise.resolve()
       .then(() => handler(req, res))
-      .finally(() => stop(labelsFromRes(res), traces))
+      .finally(() => {
+        const labels = labelsFromRes(res)
+        stop(labels, traces)
+        stopSummary(labels, traces)
+      })
   }
 }
