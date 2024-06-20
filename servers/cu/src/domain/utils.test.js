@@ -394,7 +394,6 @@ describe('utils', () => {
     })
 
     test('should map NaN to undefined', () => {
-      console.log(maybeParseInt(NaN))
       assert.ok(maybeParseInt(NaN) === undefined)
     })
   })
