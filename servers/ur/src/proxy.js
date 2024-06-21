@@ -14,13 +14,13 @@ import { logger } from './logger.js'
 
 import { mountRoutesWithByAoUnit } from './routes/byAoUnit.js'
 
-export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners, processToHost }) {
+export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners, processToHost, ownerToHost }) {
   const _logger = logger.child('proxy')
   _logger('Configuring to reverse proxy ao %s units...', aoUnit)
 
   const proxy = httpProxy.createProxyServer({})
 
-  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners, processToHost }) : undefined
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners, processToHost, ownerToHost }) : undefined
   const determineHost = determineHostWith({ hosts, bailout })
 
   async function trampoline (init) {
