@@ -1,7 +1,10 @@
+import { defaultTo, isEmpty, complement, path } from 'ramda'
 import { LRUCache } from 'lru-cache'
 
-export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHost }) {
-  const cache = new LRUCache({
+const isNotEmpty = complement(isEmpty)
+
+export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHost, ownerToHost }) {
+  const processToOwnerCache = new LRUCache({
     /**
        * 10MB
        */
@@ -12,34 +15,49 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
     sizeCalculation: () => 8
   })
 
+  async function findProcessOwner (processId) {
+    const owner = processToOwnerCache.get(processId)
+    if (owner) return owner
+
+    return fetch(`${surUrl}/processes/${processId}`)
+      .then((res) => res.json())
+      .then(defaultTo({}))
+      .then(path(['owner', 'address']))
+      .then((owner) => {
+        if (!owner) return null
+
+        processToOwnerCache.set(processId, owner)
+        return owner
+      })
+      .catch((_e) => null)
+  }
+
   return async (processId) => {
     /**
      * If a process has a specific mapping configured,
      * then immediately return it's mapping
      */
     if (processToHost && processToHost[processId]) return processToHost[processId]
+    /**
+     * If there are owner -> host configured, then we lookup the process
+     * owner and return the specific host if found
+     */
+    if (ownerToHost && isNotEmpty(ownerToHost)) {
+      const owner = await findProcessOwner(processId)
+      if (ownerToHost[owner]) return ownerToHost[owner]
+    }
 
     /**
+     * @deprecated - this functionality is subsumed by ownerToHost
+     * and will eventually be removed
+     *
      * All three of these must be set for the
      * subrouter logic to work so if any are
      * not set just return.
      */
     if (!subrouterUrl || !surUrl || !owners) return
-    let owner = cache.get(processId)
-    if (!owner) {
-      const suResponse = await fetch(`${surUrl}/processes/${processId}`)
-        .then((res) => res.json())
-        .catch((_e) => null)
-      if (!suResponse) return
-      if (!suResponse.owner) return
-      if (!suResponse.owner.address) return
-      cache.set(processId, suResponse.owner.address)
-      owner = suResponse.owner.address
-    }
-
-    if (owners.includes(owner)) {
-      return subrouterUrl
-    }
+    const owner = await findProcessOwner(processId)
+    if (owners.includes(owner)) return subrouterUrl
   }
 }
 
@@ -53,7 +71,10 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
  * been attempted, and so return undefined, to be handled upstream
  */
 export function determineHostWith ({ hosts = [], bailout }) {
-  const cache = new LRUCache({
+  /**
+   * TODO: should we inject this cache?
+   */
+  const processToHostCache = new LRUCache({
     /**
        * 10MB
        */
@@ -75,13 +96,13 @@ export function determineHostWith ({ hosts = [], bailout }) {
     /**
      * Check cache, and hydrate if necessary
      */
-    let hashSum = cache.get(processId)
+    let hashSum = processToHostCache.get(processId)
     if (!hashSum) {
       /**
        * Only perform the expensive computation of hash -> idx once and cache
        */
       hashSum = computeHashSumFromProcessId({ processId, length: hosts.length })
-      cache.set(processId, hashSum)
+      processToHostCache.set(processId, hashSum)
     }
 
     return hosts[(hashSum + failoverAttempt) % hosts.length]
