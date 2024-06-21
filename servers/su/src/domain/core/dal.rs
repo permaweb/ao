@@ -94,7 +94,11 @@ pub enum StoreErrorType {
 pub trait DataStore: Send + Sync {
     fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType>;
     fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType>;
-    async fn save_message(&self, message: &Message, bundle_in: &[u8]) -> Result<String, StoreErrorType>;
+    async fn save_message(
+        &self,
+        message: &Message,
+        bundle_in: &[u8],
+    ) -> Result<String, StoreErrorType>;
     async fn get_messages(
         &self,
         process_id_in: &str,

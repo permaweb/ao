@@ -15,6 +15,7 @@ This is an spec compliant `ao` Scheduler Unit, implemented as a Rust actix web s
   - [Running the binary, su MODE](#running-the-binary-su-mode)
   - [Running a router in front of multiple scheduler units](#running-a-router-in-front-of-multiple-scheduler-units)
   - [Running the binary, router MODE](#running-the-binary-router-mode)
+  - [Migrating data to disk for an existing su instance](#migrating-data-to-disk-for-an-existing-su-instance)
 
 <!-- tocstop -->
 
@@ -104,6 +105,9 @@ in the container.
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
 - `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore in `su` mode just set it to `""`.
+- `USE_DISK` whether or not to read binary files from the disk instead of from the db. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
+- `SU_DATA_DIR` MANDATORY, the data directory on disk where the su will write binaries to, it will only be read from if `USE_DISK` is `true` however
+- `MAX_READ_TASKS` the maximum number of file reading tasks to allow on the machine
 
 
 ### Running a router in front of multiple scheduler units
@@ -144,6 +148,38 @@ docker build -t su-runner .
 docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-runner router 9000
 ```
 
+
+### Migrating data to disk for an existing su instance
+If a su has been running using postgres for sometime there may be performance issues. Writing to  and reading files from disk has been added. In order to switch this on set the environment variables
+
+- `USE_DISK` whether or not to read binary files from the disk instead of from the db. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
+- `SU_DATA_DIR` the data directory on disk where the su will read from and write binaries to
+- `MAX_READ_TASKS` the maximum number of file reading tasks to allow on the machine
+
+Then the `mig` binary can be used to migrate data in segments from the existing db. It will currently only migrate the message files to the disk. It takes a range which represents a range in the messages table. So 0-500 would grab the first 500 messages from the messages table and write them to disk and so on. Just 0 as an argument would read the whole table, the range is so you can run multiple instances of the program on different segments of data for faster migration. To read from record 1000 to the end of the table you would just send 1000 as an argument.
+
+Migrate the entire messages table to disk
+```sh
+./mig 0
+```
+
+Migrate the first 1000 messages
+```sh
+./mig 0-1000
+```
+
+Migrate from 1000 to the end of the table
+```sh
+./mig 1000
+```
+
+Building the mig binary, delete all su images and containers if you have previously run this, then run
+```sh
+docker system prune -a
+docker build --target mig-builder -t mig-binary -f DockerfileMig .
+docker create --name temp-container-mig mig-binary
+docker cp temp-container-mig:/usr/src/mig/target/x86_64-unknown-linux-musl/release/mig .
+```
 
 # System Requirements for SU + SU-R cluster
 

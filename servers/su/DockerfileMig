@@ -4,6 +4,15 @@ FROM clux/muslrust:1.75.0 as mig-builder
 # Set the working directory in the container
 WORKDIR /usr/src/mig
 
+# simd compatability
+RUN rustup target add x86_64-unknown-linux-musl
+RUN apt-get update && apt-get install -y \
+    llvm-dev \
+    libclang-dev \
+    clang
+
+ENV RUSTFLAGS "-C target-cpu=native"
+
 # Copy the manifests
 COPY Cargo.toml Cargo.lock ./
 
