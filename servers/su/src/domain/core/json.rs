@@ -172,102 +172,100 @@ impl Message {
         let top_level_tags = data_item.tags();
 
         /*
-          using arbitrary tag at the top level to check if 
+          using arbitrary tag at the top level to check if
           old structure, old structure had protocol tags on
           the top level DataItem
         */
-        let epoch_tag = top_level_tags
-            .iter()
-            .find(|tag| tag.name == "Epoch");
+        let epoch_tag = top_level_tags.iter().find(|tag| tag.name == "Epoch");
 
         match epoch_tag {
             None => {
-              /*
-                Current message structure, because the tags are 
-                not present at the top level data item.
-              */
-              let bundle_data = DataBundle::from_bytes(
-                &data_item
-                  .data_bytes()
-                  .ok_or("Bundle data not present in DataItem")?
-              )?;
-              Ok(Message::from_bundle(&bundle_data)?)
-            },
+                /*
+                  Current message structure, because the tags are
+                  not present at the top level data item.
+                */
+                let bundle_data = DataBundle::from_bytes(
+                    &data_item
+                        .data_bytes()
+                        .ok_or("Bundle data not present in DataItem")?,
+                )?;
+                Ok(Message::from_bundle(&bundle_data)?)
+            }
             Some(_) => {
-              /*
-                This is an old message structure so we have to 
-                parse it differently.
-              */ 
-              let owner = data_item.owner();
-              let owner_bytes = base64_url::decode(&owner)?;
-              let address_hash = hash(&owner_bytes);
-              let address = base64_url::encode(&address_hash);
+                /*
+                  This is an old message structure so we have to
+                  parse it differently.
+                */
+                let owner = data_item.owner();
+                let owner_bytes = base64_url::decode(&owner)?;
+                let address_hash = hash(&owner_bytes);
+                let address = base64_url::encode(&address_hash);
 
-              let anchor = match data_item.anchor().is_empty() {
-                  true => None,
-                  false => Some(data_item.anchor()),
-              };
+                let anchor = match data_item.anchor().is_empty() {
+                    true => None,
+                    false => Some(data_item.anchor()),
+                };
 
-              let target = match data_item.target().is_empty() {
-                  true => None,
-                  false => Some(data_item.target()),
-              };
+                let target = match data_item.target().is_empty() {
+                    true => None,
+                    false => Some(data_item.target()),
+                };
 
-              let assignment: AssignmentInner = AssignmentInner {
-                  id: data_item.id(),
-                  owner: Owner {
-                      address: address,
-                      key: owner,
-                  },
-                  tags: data_item.tags(),
-                  signature: data_item.signature(),
-                  anchor,
-                  target,
-              };
+                let assignment: AssignmentInner = AssignmentInner {
+                    id: data_item.id(),
+                    owner: Owner {
+                        address: address,
+                        key: owner,
+                    },
+                    tags: data_item.tags(),
+                    signature: data_item.signature(),
+                    anchor,
+                    target,
+                };
 
-              let bundle_data = DataBundle::from_bytes(
-                &data_item
-                  .data_bytes()
-                  .ok_or("Bundle data not present in DataItem")?
-              )?;
+                let bundle_data = DataBundle::from_bytes(
+                    &data_item
+                        .data_bytes()
+                        .ok_or("Bundle data not present in DataItem")?,
+                )?;
 
-              let m_id = bundle_data.items[0].id();
-              let m_tags = bundle_data.items[0].tags();
-              let m_owner = bundle_data.items[0].owner();
-              let m_target = bundle_data.items[0].target();
-              let m_signature = bundle_data.items[0].signature();
-              let m_data = bundle_data.items[0].data();
-              let m_anchor = bundle_data.items[0].anchor();
+                let m_id = bundle_data.items[0].id();
+                let m_tags = bundle_data.items[0].tags();
+                let m_owner = bundle_data.items[0].owner();
+                let m_target = bundle_data.items[0].target();
+                let m_signature = bundle_data.items[0].signature();
+                let m_data = bundle_data.items[0].data();
+                let m_anchor = bundle_data.items[0].anchor();
 
-              let ac = m_anchor.clone();
-              let m_anchor_r = match &*m_anchor {
-                  "" => None,
-                  _ => Some(ac),
-              };
+                let ac = m_anchor.clone();
+                let m_anchor_r = match &*m_anchor {
+                    "" => None,
+                    _ => Some(ac),
+                };
 
-              let m_owner_bytes = base64_url::decode(&m_owner)?;
-              let m_address_hash = hash(&m_owner_bytes);
-              let m_address = base64_url::encode(&m_address_hash);
+                let m_owner_bytes = base64_url::decode(&m_owner)?;
+                let m_address_hash = hash(&m_owner_bytes);
+                let m_address = base64_url::encode(&m_address_hash);
 
-              let m_owner = Owner {
-                  address: m_address,
-                  key: m_owner,
-              };
+                let m_owner = Owner {
+                    address: m_address,
+                    key: m_owner,
+                };
 
-              let message_inner = Some(MessageInner {
-                  id: m_id,
-                  data: m_data,
-                  owner: m_owner,
-                  tags: m_tags,
-                  signature: m_signature,
-                  anchor: m_anchor_r,
-                  target: Some(m_target),
-              });
+                let message_inner = Some(MessageInner {
+                    id: m_id,
+                    data: m_data,
+                    owner: m_owner,
+                    tags: m_tags,
+                    signature: m_signature,
+                    anchor: m_anchor_r,
+                    target: Some(m_target),
+                });
 
-              Ok(Message {
-                  message: message_inner,
-                  assignment,
-              })
+                Ok(Message {
+                    message: message_inner,
+                    assignment,
+                })
             }
         }
     }

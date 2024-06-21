@@ -6,18 +6,18 @@ mod core;
 pub mod logger;
 
 use clients::{
-    gateway::ArweaveGateway, signer::ArweaveSigner, uploader::UploaderClient,
-    wallet::FileWallet, store
+    gateway::ArweaveGateway, signer::ArweaveSigner, store, uploader::UploaderClient,
+    wallet::FileWallet,
 };
 use config::AoConfig;
 use core::dal::{Config, Gateway, Log};
 use logger::SuLog;
 
+pub use clients::bytestore;
 pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
 pub use store::StoreClient;
-pub use clients::bytestore;
 
 pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
