@@ -4,14 +4,15 @@ FROM clux/muslrust:1.75.0 as builder
 # Set the working directory in the container
 WORKDIR /usr/src/su
 
-# simd compatability
+# simd compatibility
 RUN rustup target add x86_64-unknown-linux-musl
 RUN apt-get update && apt-get install -y \
     llvm-dev \
     libclang-dev \
     clang
 
-ENV RUSTFLAGS "-C target-cpu=native"
+# Use a more generic CPU target
+ENV RUSTFLAGS "-C target-cpu=x86-64"
 
 # Copy the manifests
 COPY Cargo.toml Cargo.lock ./
