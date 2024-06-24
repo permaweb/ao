@@ -3,26 +3,25 @@ use std::sync::Arc;
 mod clients;
 pub mod config;
 mod core;
-pub mod logger;
+mod logger;
 
 use clients::{
-    gateway::ArweaveGateway, signer::ArweaveSigner, store, uploader::UploaderClient,
-    wallet::FileWallet,
+    gateway::ArweaveGateway, signer::ArweaveSigner, uploader::UploaderClient,
+    wallet::FileWallet, store
 };
 use config::AoConfig;
 use core::dal::{Config, Gateway, Log};
 use logger::SuLog;
 
-pub use clients::bytestore;
 pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
-pub use store::StoreClient;
+pub use store::migrate_to_disk;
 
 pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
 
-    let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
+    let data_store = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
 
     match data_store.run_migrations() {
         Ok(m) => logger.log(m),

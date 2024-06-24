@@ -1,5 +1,13 @@
 use std::env::VarError;
 
+use dotenv::dotenv;
+use futures::future::join_all;
+use indicatif::ProgressBar;
+use std::env;
+use std::io;
+use std::sync::Arc;
+use tokio::task::{spawn_blocking, JoinHandle};
+
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
@@ -12,7 +20,7 @@ use super::super::core::dal::{
     DataStore, JsonErrorType, Message, PaginatedMessages, Process, ProcessScheduler, Scheduler,
     StoreErrorType,
 };
-use super::bytestore::ByteStore;
+
 use crate::domain::config::AoConfig;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -71,13 +79,13 @@ pub struct StoreClient {
     pool: Pool<ConnectionManager<PgConnection>>,
     read_pool: Pool<ConnectionManager<PgConnection>>,
     use_disk: bool,
-    bytestore: ByteStore,
+    bytestore: bytestore::ByteStore,
 }
 
 impl StoreClient {
     pub fn new() -> Result<Self, StoreErrorType> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let bytestore = ByteStore::new(config.clone());
+        let bytestore_i = bytestore::ByteStore::new(config.clone());
         let database_url = config.database_url;
         let database_read_url = match config.database_read_url {
             Some(u) => u,
@@ -106,7 +114,7 @@ impl StoreClient {
             pool,
             read_pool,
             use_disk,
-            bytestore,
+            bytestore: bytestore_i,
         })
     }
 
@@ -804,4 +812,242 @@ pub struct DbProcessScheduler {
 pub struct NewProcessScheduler<'a> {
     pub process_id: &'a str,
     pub scheduler_row_id: &'a i32,
+}
+
+/*
+  A simple module for storing and retrieving files using
+  the disk. 
+*/
+mod bytestore {
+  use dashmap::DashMap;
+  use std::fs::{create_dir_all, File};
+  use std::io::Write;
+  use std::path::Path;
+  use std::sync::Arc;
+  use tokio::sync::Semaphore;
+  use tokio::task;
+
+  use super::super::super::config::AoConfig;
+
+  /*
+    An implementation of byte storage for bundles. This
+    module is used to store and retrieve the bundles built
+    by the su. Right now it is implemented using the disk.
+  */
+
+  #[derive(Clone)]
+  pub struct ByteStore {
+      config: AoConfig,
+      semaphore: Arc<Semaphore>,
+  }
+
+  impl ByteStore {
+      pub fn new(config: AoConfig) -> Self {
+          let semaphore = Arc::new(Semaphore::new(config.max_read_tasks));
+          ByteStore { config, semaphore }
+      }
+
+      pub async fn read_binaries(
+          &self,
+          ids: Vec<(String, Option<String>, String)>,
+      ) -> Result<DashMap<(String, Option<String>, String), Vec<u8>>, String> {
+          let mut tasks = Vec::new();
+          let binaries = Arc::new(DashMap::new());
+
+          for id in ids {
+              let permit = self.semaphore.clone().acquire_owned().await.unwrap();
+              let config_clone = self.config.clone();
+              let binaries_clone = Arc::clone(&binaries);
+              /*
+                spawn_blocking runs tasks in a thread pool dedicated to blocking
+                tasks. this allows the blocking operation of reading the files
+                to run without blocking the main tokio runtime.
+              */
+              let task = task::spawn_blocking(move || {
+                  let id_clone = id.clone();
+                  let filename = ByteStore::create_filepath(id.0, id.1, id.2, &config_clone);
+                  let binary = ByteStore::read_binary_blocking(&filename);
+                  match binary {
+                      Ok(binary) => {
+                          binaries_clone.insert(id_clone, binary);
+                      }
+                      Err(_) => (),
+                  };
+                  drop(permit);
+              });
+              tasks.push(task);
+          }
+
+          for task in tasks {
+              task.await.map_err(|e| format!("Task failed: {:?}", e))?;
+          }
+
+          Ok(Arc::try_unwrap(binaries).map_err(|_| "Failed to unwrap Arc")?)
+      }
+
+      fn create_filepath(
+          message_id: String,
+          assignment_id: Option<String>,
+          process_id: String,
+          config: &AoConfig,
+      ) -> String {
+          match assignment_id {
+              Some(assignment_id) => format!(
+                  "{}/{}/msg___{}___assign___{}",
+                  config.su_data_dir, process_id, message_id, assignment_id
+              ),
+              None => format!("{}/{}/msg___{}", config.su_data_dir, process_id, message_id),
+          }
+      }
+
+      fn read_binary_blocking(filepath: &str) -> Result<Vec<u8>, String> {
+          let mut file =
+              std::fs::File::open(filepath).map_err(|e| format!("Failed to open file: {:?}", e))?;
+          let mut buffer = Vec::new();
+          use std::io::Read;
+          file.read_to_end(&mut buffer)
+              .map_err(|e| format!("Failed to read file: {:?}", e))?;
+          Ok(buffer)
+      }
+
+      pub fn save_binary(
+          &self,
+          message_id: String,
+          assignment_id: Option<String>,
+          process_id: String,
+          binary: Vec<u8>,
+      ) -> Result<(), String> {
+          let process_id_path = format!("{}/{}", self.config.su_data_dir, process_id);
+          let dir_path = Path::new(&process_id_path);
+          if !dir_path.exists() {
+              create_dir_all(&dir_path)
+                  .map_err(|e| format!("Failed to create directory: {:?}", e))?;
+          }
+          let filepath =
+              ByteStore::create_filepath(message_id, assignment_id, process_id, &self.config);
+          let file_path = Path::new(&filepath);
+
+          // Check if the file already exists
+          if file_path.exists() {
+              return Ok(());
+          }
+
+          let mut file =
+              File::create(filepath).map_err(|e| format!("Failed to create file: {:?}", e))?;
+          file.write_all(&binary)
+              .map_err(|e| format!("Failed to write to file: {:?}", e))?;
+          Ok(())
+      }
+  }
+
+}
+
+
+/*
+  This function is used by the migration binary
+  to move all data from the database to the disk.
+  It is not meant to be run anywhere within the su
+  server itself.
+*/
+pub async fn migrate_to_disk() -> io::Result<()> {
+  use std::time::Instant;
+  let start = Instant::now();
+  dotenv().ok();
+
+  let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
+
+  let args: Vec<String> = env::args().collect();
+  let range: &String = args.get(1).expect("Range argument not provided");
+
+  let (from, to) = parse_range(range);
+
+  let total_count = match to {
+      Some(t) => {
+        let total = data_store
+          .get_message_count()
+          .expect("Failed to get message count");
+        if t > total {
+          total - from
+        } else {
+          t - from
+        }
+      },
+      None => {
+          data_store
+              .get_message_count()
+              .expect("Failed to get message count")
+              - from
+      }
+  };
+
+  let progress_bar = Arc::new(ProgressBar::new(total_count as u64));
+
+  let data_store = Arc::clone(&data_store);
+  let progress_bar = Arc::clone(&progress_bar);
+
+  let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+  let batch_size = config.migration_batch_size.clone() as usize;
+  let bytestore = bytestore::ByteStore::new(config);
+
+  let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
+
+  for batch_start in (from..from + total_count).step_by(batch_size) {
+      let batch_end = if let Some(t) = to {
+          std::cmp::min(batch_start + batch_size as i64, t)
+      } else {
+          batch_start + batch_size as i64
+      };
+
+      let result = data_store.get_all_messages(batch_start, Some(batch_end));
+
+      match result {
+          Ok(messages) => {
+              for message in messages {
+                  let msg_id = message.0;
+                  let assignment_id = message.1;
+                  let bundle = message.2;
+                  let process_id = message.3;
+                  let bytestore = bytestore.clone();
+                  let progress_bar = Arc::clone(&progress_bar);
+
+                  let handle = spawn_blocking(move || {
+                      bytestore
+                          .save_binary(
+                              msg_id.clone(),
+                              assignment_id.clone(),
+                              process_id.clone(),
+                              bundle,
+                          )
+                          .expect("Failed to save message binary");
+                      progress_bar.inc(1);
+                  });
+
+                  save_handles.push(handle);
+              }
+          }
+          Err(e) => {
+              eprintln!("Error fetching messages: {:?}", e);
+          }
+      }
+  }
+
+  join_all(save_handles).await;
+
+  progress_bar.finish_with_message("All messages processed");
+
+  let duration = start.elapsed();
+  println!("Time elapsed in data migration is: {:?}", duration);
+
+  Ok(())
+}
+
+fn parse_range(range: &str) -> (i64, Option<i64>) {
+  let parts: Vec<&str> = range.split('-').collect();
+  let from = parts[0].parse().expect("Invalid starting offset");
+  let to = if parts.len() > 1 {
+      Some(parts[1].parse().expect("Invalid records to pull"))
+  } else {
+      None
+  };
+  (from, to)
 }
