@@ -1,3 +1,5 @@
+import { backoff, okRes } from '../utils.js'
+
 function resultWith ({ fetch, CU_URL, logger }) {
   return async (txId, processId) => {
     logger(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`)
@@ -6,7 +8,10 @@ function resultWith ({ fetch, CU_URL, logger }) {
       timeout: 0
     }
 
-    return fetch(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, requestOptions)
+    return backoff(
+      () => fetch(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, requestOptions).then(okRes),
+      { maxRetries: 5, delay: 500, log: logger, name: `forwardAssignment(${JSON.stringify({ CU_URL, processId, txId })})` }
+    )
       .then(res => res.json())
       .then(res => res || {
         Messages: [],

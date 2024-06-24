@@ -144,3 +144,58 @@ export function eqOrIncludes (val) {
     [T, F]
   ])
 }
+
+/**
+ * A function that, given a function, will immediately invoke it,
+ * then retry it on errors, using an exponential backoff.
+ *
+ * If the final retry fails, then the overall Promise is rejected
+ * with that error
+ *
+ * @param {function} fn - the function to be called
+ * @param {{ maxRetries: number, delay: number, log: Logger, name: string }} param1 - the number of total retries and increased delay for each try
+ */
+export const backoff = (
+  fn,
+  { maxRetries = 3, delay = 500, log, name }
+) => {
+  /**
+   * Recursive function that recurses with exponential backoff
+   */
+  const action = (retry, delay) => {
+    return Promise.resolve()
+      .then(fn)
+      .catch((err) => {
+        // Reached max number of retries
+        if (retry >= maxRetries) {
+          log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
+          return Promise.reject(err)
+        }
+
+        /**
+         * increment the retry count Retry with an exponential backoff
+         */
+        const newRetry = retry + 1
+        const newDelay = delay + delay
+        log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
+        /**
+         * Retry in {delay} milliseconds
+         */
+        return new Promise((resolve) => setTimeout(resolve, delay))
+          .then(() => action(newRetry, newDelay))
+      })
+  }
+
+  return action(0, delay)
+}
+
+/**
+ * Checks if a response is OK. Otherwise, throw response.
+ *
+ * @param {Respones} res - The response to check
+ * @returns
+ */
+export const okRes = (res) => {
+  if (res.ok) return res
+  throw res
+}

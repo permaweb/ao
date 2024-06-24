@@ -1,5 +1,6 @@
 import { identity } from 'ramda'
 import { of, fromPromise, Rejected } from 'hyper-async'
+import { backoff, okRes } from '../utils.js'
 
 function writeDataItemWith ({ fetch, logger }) {
   return async ({ data, suUrl }) => {
@@ -67,14 +68,20 @@ function writeAssignmentWith ({ fetch, logger }) {
         if (exclude) {
           url += `&exclude=${exclude}`
         }
-        return fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            Accept: 'application/json'
-          },
-          redirect: 'manual'
-        }).then(response => {
+
+        return backoff(
+          () => fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              Accept: 'application/json'
+            },
+            redirect: 'manual'
+          }).then((res) => {
+            return okRes(res)
+          }),
+          { maxRetries: 5, delay: 500, log: logger, name: `forwardAssignment(${JSON.stringify({ suUrl, processId, txId })})` }
+        ).then(response => {
           if ([307, 308].includes(response.status)) {
             const newUrl = response.headers.get('Location')
             return fetch(newUrl, {
@@ -118,7 +125,6 @@ function fetchSchedulerProcessWith ({ fetch, logger, setByProcess, getByProcess 
         }
 
         logger(`${suUrl}/processes/${processId}`)
-
         return fetch(`${suUrl}/processes/${processId}`)
           .then(res => res.json())
           .then(res => {
