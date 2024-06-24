@@ -4,8 +4,10 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, defaultTo, evolve, head, prop } from 'ramda'
 import { z } from 'zod'
 
+import { ARR_BUFFER_MAX_SIZE, concatArrayBuffers, splitArrayBuffer } from '../utils.js'
 import { moduleSchema } from '../model.js'
 import { MODULES_TABLE } from './sqlite.js'
+import { timer } from './metrics.js'
 
 const moduleDocSchema = z.object({
   id: z.string().min(1),
@@ -80,8 +82,10 @@ export function findModuleWith ({ db }) {
     .toPromise()
 }
 
-export function evaluatorWith ({ evaluate }) {
+export function evaluatorWith ({ evaluate, logger }) {
+  logger = logger.child('evaluator')
   const EVAL_DEFER_BACKPRESSURE = 10
+
   return ({ moduleId, moduleOptions }) =>
     of(moduleOptions)
     /**
@@ -95,6 +99,29 @@ export function evaluatorWith ({ evaluate }) {
 
         let backpressure = 0
 
+        function maybeSplitMemory (args) {
+          if (args.Memory && args.Memory.byteLength > ARR_BUFFER_MAX_SIZE) {
+            logger('Splitting Large process memory into chunks...')
+            const { stop: stopTimer } = timer('splitArrayBuffer', { streamId, byteLength: args.Memory.byteLength })
+            args.Memory = splitArrayBuffer(args.Memory, ARR_BUFFER_MAX_SIZE)
+            stopTimer()
+            args.isSplitMemory = true
+          }
+
+          return args
+        }
+
+        function maybeConcatMemory (output) {
+          if (!output.isSplitMemory) return output
+
+          logger('Concatenating Large process memory from chunks...')
+          const { stop: stopTimer } = timer('concatArrayBuffers', { streamId })
+          output.Memory = concatArrayBuffers(output.Memory)
+          stopTimer()
+
+          return output
+        }
+
         return (args) =>
           Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
             .then(async (defer) => {
@@ -106,11 +133,40 @@ export function evaluatorWith ({ evaluate }) {
                */
               if (defer) await new Promise(resolve => setImmediate(resolve))
 
+              /**
+               * TODO: maybe use to pass options into worker ie.
+               * transferList
+               */
+              const options = undefined
+
               args.streamId = streamId
               args.moduleId = moduleId
               args.moduleOptions = moduleOptions
 
-              return evaluate(args)
+              /**
+               * TOTAL HACK to get large process memory working.
+               *
+               * There is a bug in NodeJS that prevents structured cloning of
+               * an ArrayBuffer larger than 4GB. So in cases where the process Memory
+               * is >4GB we split it into multiple ArrayBuffers when passing into the worker
+               * (see maybeSplitMemory)
+               *
+               * and then concetenate it again when we receive it (see maybeConcatMemory)
+               */
+              args = maybeSplitMemory(args)
+
+              return evaluate(args, options)
+                /**
+                 * TOTAL HACK to get large process memory working.
+                 *
+                 * There is a bug in NodeJS that prevents structured cloning of
+                 * an ArrayBuffer larger than 4GB. So in cases where the process Memory
+                 * is >4GB we split it into multiple ArrayBuffers when passing into the worker
+                 * (see maybeSplitMemory)
+                 *
+                 * and then concetenate it again when we receive it (see maybeConcatMemory)
+                 */
+                .then(maybeConcatMemory)
             })
       }))
       .toPromise()

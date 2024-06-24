@@ -425,3 +425,47 @@ export const maybeParseInt = pipe(
   mapBadData,
   (val) => val ? parseInt(val) : undefined
 )
+
+export function copyArrayBuffer (src, dest) {
+  const view = new Uint8Array(dest)
+  view.set(new Uint8Array(src))
+  return dest
+}
+
+export function splitArrayBuffer (ab, chunkSize) {
+  const chunks = []
+  const totalBytes = ab.byteLength
+
+  for (let i = 0; i < totalBytes; i += chunkSize) {
+    const end = Math.min(i + chunkSize, totalBytes)
+    chunks.push(ab.slice(i, end))
+  }
+
+  return chunks
+}
+
+export function concatArrayBuffers (abs) {
+  const totalLength = abs.reduce((sum, ab) => sum + ab.byteLength, 0)
+
+  const combined = new ArrayBuffer(totalLength)
+  const view = new Uint8Array(combined)
+
+  let offset = 0
+  abs.forEach((cur) => {
+    view.set(new Uint8Array(cur), offset)
+    offset += cur.byteLength
+  })
+
+  return combined
+}
+
+export function ArrayBufferToBuffer (viewOrAb) {
+  return ArrayBuffer.isView(viewOrAb)
+    ? Buffer.from(viewOrAb.buffer, viewOrAb.byteOffset, viewOrAb.byteLength)
+    : Buffer.from(viewOrAb)
+}
+
+/**
+ * TODO: should this be in models instead?
+ */
+export const ARR_BUFFER_MAX_SIZE = (4 * 1024 * 1024 * 1024) - 1024 // 4GB - 1024 bytes

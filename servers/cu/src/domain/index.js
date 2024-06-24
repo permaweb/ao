@@ -234,7 +234,7 @@ export const createApis = async (ctx) => {
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => primaryWorkerPool.exec('evaluate', args),
+      evaluate: (args, options) => primaryWorkerPool.exec('evaluate', [args], options),
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),

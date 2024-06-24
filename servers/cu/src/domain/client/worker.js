@@ -15,7 +15,7 @@ import WeaveDrive from '@permaweb/weavedrive'
 
 import { saveEvaluationSchema } from '../dal.js'
 import { createLogger } from '../logger.js'
-import { joinUrl } from '../utils.js'
+import { ARR_BUFFER_MAX_SIZE, concatArrayBuffers, joinUrl, splitArrayBuffer } from '../utils.js'
 import { saveEvaluationWith } from './ao-evaluation.js'
 import { createSqliteClient } from './sqlite.js'
 
@@ -346,66 +346,101 @@ export function evaluateWith ({
    *
    * Finally, evaluates the message and returns the result of the evaluation.
    */
-  return ({ streamId, moduleId, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) =>
+  return ({ streamId, moduleId, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, isSplitMemory, message, AoGlobal }) =>
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
-    maybeCachedInstance({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal })
-      .bichain(loadInstance, Resolved)
-      /**
-       * Perform the evaluation
-       */
-      .chain((wasmInstance) =>
-        of(wasmInstance)
-          .map((wasmInstance) => {
-            logger('Evaluating message "%s" to process "%s"', name, processId)
-            return wasmInstance
-          })
-          .chain(fromPromise(async (wasmInstance) => wasmInstance(Memory, message, AoGlobal)))
-          .bichain(
-            /**
-             * Map thrown error to a result.error. In this way, the Worker should _never_
-             * throw due to evaluation
-             *
-             * TODO: should we also evict the wasmInstance from cache, so it's reinstantaited
-             * with the new memory for next time?
-             */
-            (err) => Resolved(assocPath(['Error'], err, {})),
-            Resolved
-          )
-          .map(mergeOutput(Memory, name, processId))
-          .chain((output) => {
-            /**
-             * Noop saving the evaluation is noSave flag is set
-             */
-            if (noSave) return Resolved(output)
+    of()
+      .chain(fromPromise(async () => {
+        if (!isSplitMemory) return Memory
 
-            return saveEvaluation({
-              deepHash,
-              cron,
-              ordinate,
-              isAssignment,
-              processId,
-              messageId: message.Id,
-              timestamp: message.Timestamp,
-              nonce: message.Nonce,
-              epoch: message.Epoch,
-              blockHeight: message['Block-Height'],
-              evaluatedAt: new Date(),
-              output
-            })
-              .bimap(
-                logger.tap('Failed to save evaluation'),
-                identity
-              )
+        const combined = concatArrayBuffers(Memory)
+        return new Uint8Array(combined)
+      }))
+      .chain((Memory) =>
+        maybeCachedInstance({
+          streamId,
+          moduleId,
+          moduleOptions,
+          name,
+          processId,
+          Memory,
+          message,
+          AoGlobal
+        })
+          .bichain(loadInstance, Resolved)
+        /**
+         * Perform the evaluation
+         */
+          .chain((wasmInstance) =>
+            of(wasmInstance)
+              .map((wasmInstance) => {
+                logger('Evaluating message "%s" to process "%s"', name, processId)
+                return wasmInstance
+              })
+              .chain(fromPromise(async (wasmInstance) => wasmInstance(Memory, message, AoGlobal)))
+              .bichain(
               /**
-               * Always ensure this Async resolves
+               * Map thrown error to a result.error. In this way, the Worker should _never_
+               * throw due to evaluation
+               *
+               * TODO: should we also evict the wasmInstance from cache, so it's reinstantaited
+               * with the new memory for next time?
                */
-              .bichain(Resolved, Resolved)
-              .map(() => output)
-          })
-      )
+                (err) => Resolved(assocPath(['Error'], err, {})),
+                Resolved
+              )
+              .map(mergeOutput(Memory, name, processId))
+              .chain((output) => {
+              /**
+               * Noop saving the evaluation is noSave flag is set
+               */
+                if (noSave) return Resolved(output)
+
+                return saveEvaluation({
+                  deepHash,
+                  cron,
+                  ordinate,
+                  isAssignment,
+                  processId,
+                  messageId: message.Id,
+                  timestamp: message.Timestamp,
+                  nonce: message.Nonce,
+                  epoch: message.Epoch,
+                  blockHeight: message['Block-Height'],
+                  evaluatedAt: new Date(),
+                  output
+                })
+                  .bimap(
+                    logger.tap('Failed to save evaluation'),
+                    identity
+                  )
+                /**
+                 * Always ensure this Async resolves
+                 */
+                  .bichain(Resolved, Resolved)
+                  .map(() => output)
+              })
+              .chain(fromPromise(async (output) => {
+              /**
+               * TOTAL HACK: due to a Node bug, if the process memory is larger
+               * than the max size that can be structured cloned, split the memory
+               * into multiple ArrayBuffers before returning to the main thread
+               */
+                if (output.Memory.byteLength > ARR_BUFFER_MAX_SIZE) {
+                  output.Memory = splitArrayBuffer(
+                    ArrayBuffer.isView(output.Memory)
+                      ? output.Memory.buffer
+                      : output.Memory,
+                    ARR_BUFFER_MAX_SIZE
+                  )
+                  output.isSplitMemory = true
+                }
+
+                return output
+              }))
+          ))
       .toPromise()
 }
 
