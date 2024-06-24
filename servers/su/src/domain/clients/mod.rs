@@ -22,8 +22,3 @@ used to sign transactions, required here because
 the arweave sdk reads a wallet from the file system
 */
 pub mod signer;
-
-/*
-store binary files for message retrieval
-*/
-pub mod bytestore;
