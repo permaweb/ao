@@ -1,3 +1,5 @@
+import { backoff, okRes } from '../utils.js'
+
 function isWalletWith ({ fetch, GRAPHQL_URL, logger, setById, getById }) {
   return async (id) => {
     logger(`Checking if id is a wallet ${id}`)
@@ -16,7 +18,10 @@ function isWalletWith ({ fetch, GRAPHQL_URL, logger, setById, getById }) {
       return true. That means if it doesnt its
       either a wallet or something else.
     */
-    return fetch(`${GRAPHQL_URL.replace('/graphql', '')}/${id}`, { method: 'HEAD' })
+    return backoff(
+      () => fetch(`${GRAPHQL_URL.replace('/graphql', '')}/${id}`, { method: 'HEAD' }).then(okRes),
+      { maxRetries: 3, delay: 500, log: logger, name: `isWalletOnGateway(${id})` }
+    )
       .then((res) => {
         return setById(id, { isWallet: !res.ok }).then(() => {
           return !res.ok

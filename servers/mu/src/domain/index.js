@@ -32,6 +32,7 @@ const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
 
 const FIVE_MINUTES_IN_MS = 1000 * 60 * 5
+const SIXTY_MINUTES_IN_MS = 1000 * 60 * 60
 const muRedirectCache = InMemoryClient.createLruCache({ size: 500, ttl: FIVE_MINUTES_IN_MS })
 /**
  * A set of apis used by the express server
@@ -186,7 +187,7 @@ export const createResultApis = async (ctx) => {
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
 
-  const isWalletCache = InMemoryClient.createLruCache({ size: 1000 })
+  const isWalletCache = InMemoryClient.createLruCache({ size: 1000, ttl: SIXTY_MINUTES_IN_MS })
   const getById = InMemoryClient.getByIdWith({ cache: isWalletCache })
   const setById = InMemoryClient.setByIdWith({ cache: isWalletCache })
 
