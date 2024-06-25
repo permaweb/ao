@@ -3,7 +3,7 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 
-import { errFrom, removeTagsByNameMaybeValue } from './utils.js'
+import { errFrom, removeTagsByNameMaybeValue, swallow } from './utils.js'
 
 describe('utils', () => {
   describe('errFrom', () => {
@@ -82,6 +82,37 @@ describe('utils', () => {
           { name: 'SDK', value: 'aoconnect' }
         ]
       )
+    })
+  })
+
+  describe('swallow', () => {
+    test('should resolve the original promise', async () => {
+      const safeFunction = swallow(() => Promise.resolve('hello world'))
+      const result = await safeFunction()
+
+      assert.strictEqual(result, 'hello world')
+    })
+
+    test('should resolve undefined for a rejected promise', async () => {
+      const safeFunction = swallow(() => Promise.reject(new Error('This error should be swallowed')))
+      const result = await safeFunction()
+
+      assert.strictEqual(result, undefined)
+    })
+
+    test('should return the result of the function', () => {
+      const safeFunction = swallow(() => 'hello world')
+
+      const result = safeFunction()
+      assert.equal(result, 'hello world')
+    })
+
+    test('should return undefined for a thrown error', () => {
+      const safeFunction = swallow(() => { throw new Error('This error should be swallowed') })
+
+      const result = safeFunction()
+
+      assert.strictEqual(result, undefined)
     })
   })
 })

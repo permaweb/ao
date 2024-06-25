@@ -199,3 +199,33 @@ export const okRes = (res) => {
   if (res.ok) return res
   throw res
 }
+
+// from https://github.com/then/is-promise/blob/master/index.js
+export function isPromise (obj) {
+  return (
+    !!obj &&
+    (typeof obj === 'object' || typeof obj === 'function') &&
+    typeof obj.then === 'function'
+  )
+}
+
+/**
+ * Given a function, it will return a function that swallows any errors. If an error is encountered,
+ * undefined is returned, otherwise the result of the function is returned.
+ *
+ * In other words, a function wrapped with swallow will never throw an error.
+ *
+ * @param {Function} fn - The function to be wrapped.
+ * @returns {Function} A new function that wraps the original function in a try-catch block.
+ *
+ * @example
+ * const safeFunction = swallow(riskyFunction);
+ * safeFunction(args); // Executes riskyFunction with args, but swallows any errors.
+ */
+export const swallow = (fn) => (...args) => {
+  try {
+    const res = fn(...args)
+    if (isPromise(res)) return res.catch(() => {})
+    return res
+  } catch {}
+}
