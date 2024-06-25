@@ -824,7 +824,6 @@ mod bytestore {
   use std::io::Write;
   use std::path::Path;
   use std::sync::Arc;
-  use tokio::sync::Semaphore;
   use tokio::task;
 
   use super::super::super::config::AoConfig;
@@ -838,13 +837,11 @@ mod bytestore {
   #[derive(Clone)]
   pub struct ByteStore {
       config: AoConfig,
-      semaphore: Arc<Semaphore>,
   }
 
   impl ByteStore {
       pub fn new(config: AoConfig) -> Self {
-          let semaphore = Arc::new(Semaphore::new(config.max_read_tasks));
-          ByteStore { config, semaphore }
+          ByteStore { config }
       }
 
       pub async fn read_binaries(
@@ -855,7 +852,6 @@ mod bytestore {
           let binaries = Arc::new(DashMap::new());
 
           for id in ids {
-              let permit = self.semaphore.clone().acquire_owned().await.unwrap();
               let config_clone = self.config.clone();
               let binaries_clone = Arc::clone(&binaries);
               /*
@@ -873,7 +869,6 @@ mod bytestore {
                       }
                       Err(_) => (),
                   };
-                  drop(permit);
               });
               tasks.push(task);
           }
