@@ -102,14 +102,13 @@ describe('utils', () => {
 
     test('should return the result of the function', () => {
       const safeFunction = swallow(() => 'hello world')
-
       const result = safeFunction()
+
       assert.equal(result, 'hello world')
     })
 
     test('should return undefined for a thrown error', () => {
       const safeFunction = swallow(() => { throw new Error('This error should be swallowed') })
-
       const result = safeFunction()
 
       assert.strictEqual(result, undefined)

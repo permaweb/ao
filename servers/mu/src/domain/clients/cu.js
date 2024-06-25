@@ -1,6 +1,15 @@
 import { backoff, okRes } from '../utils.js'
+import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
-function resultWith ({ fetch, CU_URL, logger }) {
+function resultWith ({ fetch, histogram, CU_URL, logger }) {
+  const resultFetch = withTimerMetricsFetch({
+    fetch,
+    histogram,
+    startLabelsFrom: () => ({
+      operation: 'result'
+    })
+  })
+
   return async (txId, processId) => {
     logger(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`)
 
@@ -9,16 +18,32 @@ function resultWith ({ fetch, CU_URL, logger }) {
     }
 
     return backoff(
-      () => fetch(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, requestOptions).then(okRes),
-      { maxRetries: 5, delay: 500, log: logger, name: `forwardAssignment(${JSON.stringify({ CU_URL, processId, txId })})` }
+      () =>
+        resultFetch(
+          `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`,
+          requestOptions
+        ).then(okRes),
+      {
+        maxRetries: 5,
+        delay: 500,
+        log: logger,
+        name: `forwardAssignment(${JSON.stringify({
+          CU_URL,
+          processId,
+          txId
+        })})`
+      }
     )
-      .then(res => res.json())
-      .then(res => res || {
-        Messages: [],
-        Spawns: [],
-        Assignments: [],
-        Output: ''
-      })
+      .then((res) => res.json())
+      .then(
+        (res) =>
+          res || {
+            Messages: [],
+            Spawns: [],
+            Assignments: [],
+            Output: ''
+          }
+      )
   }
 }
 
@@ -29,18 +54,26 @@ function selectNodeWith ({ CU_URL, logger }) {
   }
 }
 
-function fetchCronWith ({ CU_URL, logger }) {
+function fetchCronWith ({ fetch, histogram, CU_URL, logger }) {
+  const cronFetch = withTimerMetricsFetch({
+    fetch,
+    histogram,
+    startLabelsFrom: () => ({
+      operation: 'fetchCron'
+    })
+  })
   return async ({ processId, cursor }) => {
     let requestUrl = `${CU_URL}/cron/${processId}`
     if (cursor) {
       requestUrl = `${CU_URL}/cron/${processId}?from=${cursor}&limit=50`
     }
     logger(`Fetching cron: ${requestUrl}`)
-    return fetch(requestUrl).then(r => r.json()
-      .catch(error => {
+    return cronFetch(requestUrl).then((r) =>
+      r.json().catch((error) => {
         logger(`Failed to parse cron JSON: ${error.toString()}`)
         return { edges: [] }
-      }))
+      })
+    )
   }
 }
 
