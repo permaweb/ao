@@ -2,6 +2,7 @@
 import { Transform, compose as composeStreams } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
+import DataLoader from 'dataloader'
 
 import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../utils.js'
 
@@ -111,6 +112,36 @@ export const mapNode = pipe(
 export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
 
+  const fetchPageDataloader = new DataLoader(async (args) => {
+    fetchPageDataloader.clearAll()
+
+    return Promise.allSettled(
+      args.map(({ suUrl, processId, from, to, pageSize }) => {
+        return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
+          .then(filter(isNotNil))
+          .then(params => new URLSearchParams(params))
+          .then((params) => backoff(
+            () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
+            { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
+          ))
+          .catch(async (err) => {
+            logger(
+              'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
+              suUrl,
+              processId,
+              from,
+              to
+            )
+            throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${await strFromFetchError(err)}`)
+          })
+          .then(resToJson)
+      })
+    ).then((values) => values.map(v => v.value))
+  }, {
+    cacheKeyFn: ({ suUrl, processId, from, to, pageSize }) => `${suUrl},${processId},${from},${to},${pageSize}`,
+    batchScheduleFn: (cb) => setTimeout(cb, 20)
+  })
+
   /**
    * Returns an async generator that emits scheduled messages,
    * one at a time
@@ -123,24 +154,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
    */
   function fetchAllPages ({ suUrl, processId, from, to }) {
     async function fetchPage ({ from }) {
-      return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
-        .then(filter(isNotNil))
-        .then(params => new URLSearchParams(params))
-        .then((params) => backoff(
-          () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
-          { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
-        ))
-        .catch(async (err) => {
-          logger(
-            'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
-            suUrl,
-            processId,
-            from,
-            to
-          )
-          throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${await strFromFetchError(err)}`)
-        })
-        .then(resToJson)
+      return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
     }
 
     return async function * scheduled () {
