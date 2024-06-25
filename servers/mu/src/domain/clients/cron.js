@@ -35,12 +35,17 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
     if (!fs.existsSync(PROC_FILE_PATH)) return
     const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
 
-    /**
-     * This .replace is used to fix corrupted json files
-     * it should be removed later now that the corruption
-     * issue is solved
-     */
-    const obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+    let obj
+    try {
+      /**
+       * This .replace is used to fix corrupted json files
+       * it should be removed later now that the corruption
+       * issue is solved
+       */
+      obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+    } catch (_e) {
+      obj = {}
+    }
 
     /*
      * start new os procs when the server starts because
