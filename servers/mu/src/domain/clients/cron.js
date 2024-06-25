@@ -165,6 +165,10 @@ function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron
 function killMonitoredProcessWith ({ logger, PROC_FILE_PATH }) {
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
+    if (!ct) {
+      logger(`Cron process not found: ${processId}`)
+      throw new Error('Process monitor not found')
+    }
     ct.stop()
     delete cronsRunning[processId]
     delete procsToSave[processId]
