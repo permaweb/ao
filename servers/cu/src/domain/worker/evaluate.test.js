@@ -7,14 +7,15 @@ import { LRUCache } from 'lru-cache'
 import AoLoader from '@permaweb/ao-loader'
 
 import { createLogger } from '../logger.js'
+import { evaluateWith } from './evaluate.js'
+import { Readable } from 'node:stream'
+import { wasmResponse } from '../client/wasm.js'
 
 const logger = createLogger('ao-cu:worker')
 
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
-describe('worker', async () => {
-  process.env.NO_WORKER = '1'
-
+describe('evaluate', async () => {
   const moduleOptions = {
     format: 'wasm32-unknown-emscripten',
     inputEncoding: 'JSON-1',
@@ -29,13 +30,12 @@ describe('worker', async () => {
       let evaluate
       const wasmInstanceCache = new LRUCache({ max: 1 })
       before(async () => {
-        evaluate = (await import('./worker.js')).evaluateWith({
+        evaluate = evaluateWith({
+          loadWasmModule: () => WebAssembly.compileStreaming(
+            wasmResponse(Readable.toWeb(createReadStream('./test/processes/happy/process.wasm')))
+          ),
           saveEvaluation: async (evaluation) => evaluation,
           wasmInstanceCache,
-          wasmModuleCache: new LRUCache({ max: 1 }),
-          readWasmFile: async () => createReadStream('./test/processes/happy/process.wasm'),
-          writeWasmFile: async () => true,
-          streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
           bootstrapWasmInstance: (wasmModule, _moduleOptions) => {
             assert.deepStrictEqual(_moduleOptions, moduleOptions)
             return AoLoader(
@@ -174,13 +174,12 @@ describe('worker', async () => {
     })
 
     test('always add WeaveDrive is the module is wasm 64', async () => {
-      const evaluate = (await import('./worker.js')).evaluateWith({
+      const evaluate = evaluateWith({
         saveEvaluation: async (evaluation) => evaluation,
         wasmInstanceCache: new LRUCache({ max: 1 }),
-        wasmModuleCache: new LRUCache({ max: 1 }),
-        readWasmFile: async () => createReadStream('./test/processes/sad/process.wasm'),
-        writeWasmFile: async () => true,
-        streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
+        loadWasmModule: () => WebAssembly.compileStreaming(
+          wasmResponse(Readable.toWeb(createReadStream('./test/processes/happy/process.wasm')))
+        ),
         bootstrapWasmInstance: async (_wasmModule, moduleOptions) => {
           assert.equal(moduleOptions.ARWEAVE, 'https://foo.bar')
           assert.ok(moduleOptions.WeaveDrive)
@@ -229,10 +228,9 @@ describe('worker', async () => {
       const deps = {
         saveEvaluation: async (evaluation) => evaluation,
         wasmInstanceCache: new LRUCache({ max: 1 }),
-        wasmModuleCache: new LRUCache({ max: 1 }),
-        readWasmFile: async () => createReadStream('./test/processes/sad/process.wasm'),
-        writeWasmFile: async () => true,
-        streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
+        loadWasmModule: () => WebAssembly.compileStreaming(
+          wasmResponse(Readable.toWeb(createReadStream('./test/processes/sad/process.wasm')))
+        ),
         bootstrapWasmInstance: (wasmModule, _moduleOptions) => {
           assert.deepStrictEqual(_moduleOptions, moduleOptions)
           return AoLoader(
@@ -274,7 +272,7 @@ describe('worker', async () => {
 
       test('if noSave is falsey', async () => {
         let called = false
-        const evaluate = (await import('./worker.js')).evaluateWith({
+        const evaluate = evaluateWith({
           ...deps,
           saveEvaluation: () => { called = true }
         })
@@ -285,7 +283,7 @@ describe('worker', async () => {
 
       test('noop if noSave is true', async () => {
         let called = false
-        const evaluate = (await import('./worker.js')).evaluateWith({
+        const evaluate = evaluateWith({
           ...deps,
           saveEvaluation: () => { called = true }
         })
@@ -298,13 +296,12 @@ describe('worker', async () => {
     describe('errors', async () => {
       let evaluate
       before(async () => {
-        evaluate = (await import('./worker.js')).evaluateWith({
+        evaluate = evaluateWith({
           saveEvaluation: async (evaluation) => evaluation,
           wasmInstanceCache: new LRUCache({ max: 1 }),
-          wasmModuleCache: new LRUCache({ max: 1 }),
-          readWasmFile: async () => createReadStream('./test/processes/sad/process.wasm'),
-          writeWasmFile: async () => true,
-          streamTransactionData: async () => assert.fail('should not call if readWasmFile'),
+          loadWasmModule: () => WebAssembly.compileStreaming(
+            wasmResponse(Readable.toWeb(createReadStream('./test/processes/sad/process.wasm')))
+          ),
           bootstrapWasmInstance: (wasmModule, _moduleOptions) => {
             assert.deepStrictEqual(_moduleOptions, moduleOptions)
             return AoLoader(
