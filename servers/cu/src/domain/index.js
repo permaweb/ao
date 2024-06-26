@@ -85,7 +85,8 @@ export const createApis = async (ctx) => {
     Math.max(1, ctx.WASM_EVALUATION_MAX_WORKERS - 1),
     Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
   )
-  const primaryWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+
+  const primaryWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
     maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
   })
@@ -94,7 +95,7 @@ export const createApis = async (ctx) => {
     1,
     Math.floor(ctx.WASM_EVALUATION_MAX_WORKERS * (1 - (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100)))
   )
-  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
     maxWorkers: maxDryRunWorkerTheads,
     onCreateWorker: onCreateWorker('dry-run'),
     maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE
