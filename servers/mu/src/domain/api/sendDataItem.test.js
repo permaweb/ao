@@ -3,6 +3,7 @@ import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
 import { sendDataItemWith } from './sendDataItem.js'
+import { Resolved } from 'hyper-async'
 
 const logger = createLogger('ao-mu:sendDataItem')
 
@@ -31,6 +32,7 @@ describe('sendDataItemWith', () => {
           fetchResult: (res) => res,
           crank: () => {
             cranked = true
+            return Resolved()
           },
           logger,
           fetchSchedulerProcess: (res) => res,
@@ -44,11 +46,8 @@ describe('sendDataItemWith', () => {
 
         assert.equal(result.schedulerTx.id, 'scheduler-id')
         assert.equal(result.schedulerTx.suUrl, 'url-123')
-        // TODO: Why is this erroring?
-        try {
-          await crank().toPromise()
-        } catch (_e) {}
 
+        await crank().toPromise()
         assert.ok(!cranked)
       })
 
@@ -77,6 +76,7 @@ describe('sendDataItemWith', () => {
             cranked = true
             assert.deepStrictEqual(assigns, [{ Message: 'process-id', Processes: ['target-process-id'] }])
             assert.equal(initialTxId, 'process-id')
+            return Resolved()
           },
           logger,
           fetchSchedulerProcess: (res) => res,
@@ -88,10 +88,7 @@ describe('sendDataItemWith', () => {
           tx: { id: 'process-id' }
         }).toPromise()
 
-        // TODO: Why is this erroring?
-        try {
-          await crank().toPromise()
-        } catch (_e) {}
+        await crank().toPromise()
 
         assert.ok(cranked)
         assert.equal(result.schedulerTx.id, 'scheduler-id')
