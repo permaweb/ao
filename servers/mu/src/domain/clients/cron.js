@@ -65,7 +65,7 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
 function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'getCursor'
     })

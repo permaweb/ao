@@ -5,7 +5,7 @@ import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
   const dataItemFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'uploadDataItem'
     })

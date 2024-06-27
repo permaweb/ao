@@ -11,7 +11,7 @@ function isWalletWith ({
 }) {
   const walletFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'isWallet'
     })
