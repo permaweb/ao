@@ -32,7 +32,8 @@ There are a few environment variables that you can set:
 - `PATH_TO_WALLET`: the path to the wallet JWK interface you would like the `mu`
   to use to sign messages that it is pushing
 - `DEBUG`: if DEBUG=* or DEBUG=ao-mu* then verbose debug logs will be provided in the console.
-- `UPLOADER_URL`: URL to upload service (defualts to https://up.arweave.net)
+- `UPLOADER_URL`: URL to upload service (defaults to https://up.arweave.net)
+- `DB_URL`: URL to local sqlite database.
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
