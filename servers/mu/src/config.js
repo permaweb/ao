@@ -36,7 +36,8 @@ export const domainConfigSchema = z.object({
   UPLOADER_URL: z.string(),
   PROC_FILE_PATH: z.string(),
   CRON_CURSOR_DIR: z.string(),
-  MAX_WORKERS: positiveIntSchema
+  MAX_WORKERS: positiveIntSchema,
+  DB_URL: z.string()
 })
 
 /**
@@ -73,7 +74,8 @@ const CONFIG_ENVS = {
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
-    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1)
+    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
+    DB_URL: process.env.DB_URL || 'ao-cache'
   },
   production: {
     MODE,
@@ -87,7 +89,8 @@ const CONFIG_ENVS = {
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
-    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1)
+    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
+    DB_URL: process.env.DB_URL || 'ao-cache'
   }
 }
 

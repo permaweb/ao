@@ -11,6 +11,7 @@ import uploaderClient from './clients/uploader.js'
 import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
+import * as SqliteClient from './clients/sqlite.js'
 import cronClient from './clients/cron.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -78,17 +79,43 @@ export const createApis = async (ctx) => {
     compute: fromPromise(() => _metrics.metrics())
   }
 
+  // Create database client
+  const DB_URL = `${ctx.DB_URL}.sqlite`
+  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
+
+  /**
+   * Select queue ids from database on startup.
+   * This will allow us to "pick up" persisted tasks
+   * from the last lifecycle. Create an array of
+   * queue Ids that we will initialize worker threads with.
+   */
+  const createGetQueuesQuery = () => ({
+    sql: `
+      SELECT queueId FROM ${SqliteClient.TASKS_TABLE} 
+      GROUP BY queueID
+      `,
+    parameters: []
+  })
+  const queueIds = (await db.query(createGetQueuesQuery())).map((queue) => queue.queueId)
+
   const workerPool = workerpool.pool('./src/domain/clients/worker.js', {
+    minWorkers: queueIds.length, // We must have as many workers as there are queues to persist
     maxWorkers: ctx.MAX_WORKERS,
     onCreateWorker: () => {
-      const workerId = randomBytes(8).toString('hex')
-      ctx.logger('Starting worker with id "%s"...', workerId)
+      let queueId = randomBytes(8).toString('hex')
 
+      // If we have queue ids in the database, initialize worker with that id
+      if (queueIds.length > 0) {
+        queueId = queueIds.shift()
+      }
+      const workerId = randomBytes(8).toString('hex')
+      ctx.logger('Starting worker with id "%s", queue id "%s"...', workerId, queueId)
       return {
         workerThreadOpts: {
           workerData: {
             id: workerId,
-            queueId: 1
+            queueId,
+            DB_URL
           }
         }
       }

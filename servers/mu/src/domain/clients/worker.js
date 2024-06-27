@@ -2,11 +2,13 @@ import { worker } from 'workerpool'
 import { workerData } from 'node:worker_threads'
 import { of } from 'hyper-async'
 import { cond, equals, propOr } from 'ramda'
+import cron from 'node-cron'
 
-import { createTaskQueue, enqueueWith, dequeueWith } from './taskQueue.js'
+import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
 import { domainConfigSchema, config } from '../../config.js'
 import { logger } from '../../logger.js'
 import { createResultApis } from '../../domain/index.js'
+import { createSqliteClient } from './sqlite.js'
 
 export const domain = {
   ...(domainConfigSchema.parse(config)),
@@ -126,13 +128,23 @@ function processResultsWith ({ dequeue, processResult, logger }) {
   }
 }
 
-const queue = createTaskQueue({
+const db = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false })
+const queue = await createTaskQueue({
   queueId: workerData.queueId,
+  db,
   logger
 })
 
-const enqueue = enqueueWith({ queue, logger })
-const dequeue = dequeueWith({ queue, logger })
+/**
+ * Initialize a set of task ids.
+ * These task ids represent database ids
+ * to be remove on the next cron cycle.
+ */
+const dequeuedTasks = new Set()
+
+const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger, db })
+const dequeue = dequeueWith({ queue, logger, dequeuedTasks })
+const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
 
 const enqueueResults = enqueueResultsWith({
   enqueue
@@ -150,6 +162,23 @@ const processResults = processResultsWith({
   dequeue,
   processResult,
   logger
+})
+
+/** Set up a cron to clear out old tasks from the
+  * sqlite database. Every two seconds, all of the
+  * tasks in the database that have been dequeued
+  * (dequeuedTasks) are deleted.
+  */
+let ct = null
+let isJobRunning = false
+ct = cron.schedule('*/2 * * * * *', async () => {
+  if (!isJobRunning) {
+    isJobRunning = true
+    ct.stop() // pause cron while dequeueing
+    removeDequeuedTasks()
+    ct.start() // resume cron when done dequeueing
+    isJobRunning = false
+  }
 })
 
 /**
