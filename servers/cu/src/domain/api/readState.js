@@ -7,6 +7,7 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
 import { evaluateWith } from '../lib/evaluate.js'
 import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
+import { loadProcessMetaWith } from '../lib/loadProcessMeta.js'
 
 export { pendingReadStates } from '../lib/chainEvaluation.js'
 
@@ -27,6 +28,7 @@ export { pendingReadStates } from '../lib/chainEvaluation.js'
  */
 export function readStateWith (env) {
   const chainEvaluation = chainEvaluationWith(env)
+  const loadProcessMeta = loadProcessMetaWith(env)
   const loadProcess = loadProcessWith(env)
   const loadMessages = loadMessagesWith(env)
   const hydrateMessages = hydrateMessagesWith(env)
@@ -74,6 +76,7 @@ export function readStateWith (env) {
        * thus never performing the work
        */
       next: of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
+        .chain(loadProcessMeta)
         .chain(loadProcess)
         .chain(loadModule)
         .chain(loadMessages)
