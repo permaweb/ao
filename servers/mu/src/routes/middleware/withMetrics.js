@@ -1,6 +1,7 @@
 import { always } from 'ramda'
 
 import { histogramWith } from '../../domain/clients/metrics.js'
+import { withTimerMetrics } from '../../domain/lib/with-timer-metrics.js'
 
 const histogram = histogramWith()({
   name: 'http_request_duration_seconds',
@@ -9,14 +10,6 @@ const histogram = histogramWith()({
   labelNames: ['method', 'route', 'status', 'statusGroup']
 })
 
-/**
- * A middleware that, given functions to generate custom labels and traces,
- * returns a function that, given the next handler in the chain, will
- * observe the request time, and adds it to the histogram.
- *
- * This can be composed onto any route, to gather http duration metrics, along
- * with tracesFrom to add per-request traces ie. process id
- */
 export const withMetrics = ({ labelsFrom = always({}), tracesFrom = always({}) } = {}) => {
   function labelsFromReq (req) {
     return {
@@ -30,19 +23,33 @@ export const withMetrics = ({ labelsFrom = always({}), tracesFrom = always({}) }
   }
 
   function labelsFromRes (res) {
-    return {
-      status: res.statusCode,
-      statusGroup: `${Math.floor(res.statusCode / 100)}xx`
-    }
+    /**
+     * res could be a Response object, or anything else.
+     *
+     * So we derive status and statusGroup labels likely
+     * to contain the value and default to 500 (which is what withErrorHandler
+     * will default the response status to on a thrown/rejected error that bubbles)
+     * See ./withErrorhandler.js
+     */
+    const status = res.statusCode || 500
+    const statusGroup = status
+      ? `${Math.floor(status / 100)}xx`
+      : undefined
+
+    const labels = {}
+    if (status) labels.status = status
+    if (statusGroup) labels.statusGroup = statusGroup
+
+    return labels
   }
 
-  return (handler) => (req, res) => {
-    const reqLabels = labelsFromReq(req)
-    const traces = tracesFrom(req)
-    const stop = histogram.startTimer(reqLabels, traces)
-
-    return Promise.resolve()
-      .then(() => handler(req, res))
-      .finally(() => stop(labelsFromRes(res), traces))
-  }
+  return (handler) => withTimerMetrics({
+    timer: histogram,
+    startLabelsFrom: labelsFromReq,
+    stopLabelsFrom: labelsFromRes,
+    tracesFrom
+  })((req, res) => Promise.resolve()
+    .then(() => handler(req, res))
+    .then(() => res)
+  )
 }
