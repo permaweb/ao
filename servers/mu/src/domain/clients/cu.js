@@ -4,7 +4,7 @@ import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 function resultWith ({ fetch, histogram, CU_URL, logger }) {
   const resultFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'result'
     })
@@ -57,7 +57,7 @@ function selectNodeWith ({ CU_URL, logger }) {
 function fetchCronWith ({ fetch, histogram, CU_URL, logger }) {
   const cronFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'fetchCron'
     })

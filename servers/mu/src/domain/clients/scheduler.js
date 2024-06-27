@@ -6,14 +6,14 @@ import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 function writeDataItemWith ({ fetch, histogram, logger }) {
   const suFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeDataItem'
     })
   })
   const suRedirectFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeDataItemWithRedirect'
     })
@@ -71,14 +71,14 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
 function writeAssignmentWith ({ fetch, histogram, logger }) {
   const suFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignment'
     })
   })
   const suRedirectFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignmentWithRedirect'
     })
@@ -160,7 +160,7 @@ function fetchSchedulerProcessWith ({
 }) {
   const suFetch = withTimerMetricsFetch({
     fetch,
-    histogram,
+    timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignmentWithRedirect'
     })
