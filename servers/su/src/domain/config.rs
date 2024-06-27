@@ -15,7 +15,6 @@ pub struct AoConfig {
     pub scheduler_list_path: String,
     pub use_disk: bool,
     pub su_data_dir: String,
-    pub max_read_tasks: usize,
     pub migration_batch_size: i64,
 }
 
@@ -34,10 +33,6 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
-        let max_read_tasks = match env::var("MAX_READ_TASKS") {
-            Ok(val) => val.parse().unwrap(),
-            Err(_e) => 100000,
-        };
         let migration_batch_size = match env::var("MIGRATION_BATCH_SIZE") {
             Ok(val) => val.parse().unwrap(),
             Err(_e) => 1000,
@@ -52,7 +47,6 @@ impl AoConfig {
             scheduler_list_path: env::var("SCHEDULER_LIST_PATH")?,
             use_disk,
             su_data_dir: env::var("SU_DATA_DIR")?,
-            max_read_tasks,
             migration_batch_size,
         })
     }
