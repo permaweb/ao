@@ -138,3 +138,39 @@ EMSCRIPTEN_KEEPALIVE
 
         return '\n'.join(wasm_functions)
 
+
+
+    def make_c_function_delarations(self):
+        template = '''
+EMSCRIPTEN_KEEPALIVE
+{} {}({}) {{
+    Process process;
+    return process.handle({});
+    {}
+}}
+'''
+        wasm_functions = []
+        for name, config in self.functions.items():
+            arguments = []
+            arguments_names = []
+            return_type = config.get('return', '')
+            for i, arg in enumerate(config.get('args', [])):
+                arguments_names.append('arg_{}'.format(i))
+                if arg == 'int':
+                    arguments.append('int arg_{}'.format(i))
+                elif arg == 'string':
+                    arguments.append('const char* arg_{}'.format(i))
+
+        
+            return_type = 'const char* '
+
+            function = template.format(
+                    return_type,
+                    name,
+                    ', '.join(arguments),
+                    ', '.join(arguments_names),
+                    'return "";')
+            debug_print(function)
+            wasm_functions.append(function)
+
+        return '\n'.join(wasm_functions)

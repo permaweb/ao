@@ -1,37 +1,30 @@
 /* global Deno */
 
 import { Command } from '../deps.js'
+import * as path from 'https://deno.land/std@0.138.0/path/mod.ts'
+import { copy } from 'https://deno.land/std@0.224.0/fs/copy.ts'
 
-const LUA = `
-local process = { _version = "0.0.1" }
+const STARTERS = path.resolve(path.dirname(path.fromFileUrl(import.meta.url)) + '/../starters')
+const CPP = path.resolve(STARTERS + '/cpp')
+const LUA = path.resolve(STARTERS + '/lua')
 
-function process.handle(msg, ao) 
-  assert(ao.isTrusted(msg), 'ao Message is not trusted')
-  
-  if (msg.Data == "ping") then
-    ao.send({ Target = msg.From, Data = "pong" })
-  end
-  
-  return ao.result({
-    Output = 'sent pong reply'
-  })
-
-end
-
-return process
-`
-
-export function init (_, name) {
+export async function init ({ lang = 'lua' }, name) {
   // const config = {
   //   name,
   //   entry: 'src/main.lua',
   //   output: `${name}.lua`
   // }
-  return Deno.mkdir(`./${name}`, { recursive: true })
-    .then((_) => Deno.writeTextFile(`./${name}/process.lua`, LUA))
+  Deno.mkdir(`./${name}`, { recursive: true })
+  const dir = (lang === 'cpp') ? CPP : LUA
+  return await copy(dir, `./${name}`, { overwrite: true })
 }
 
 export const command = new Command()
   .description('Create an ao Process Source Project')
+  .usage('-l cpp <my-project-name>')
+  .option(
+    '-l, --lang <language:string>',
+    'The starter to use. Defaults to Lua. Options are "lua" and "cpp"'
+  )
   .arguments('<name:string>')
   .action(init)

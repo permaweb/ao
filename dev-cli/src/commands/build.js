@@ -3,7 +3,7 @@
 import { Command } from '../deps.js'
 import { VERSION } from '../versions.js'
 
-export async function build () {
+export async function build ({ lang = 'lua' }) {
   const pwd = Deno.cwd()
   const p = Deno.run({
     cmd: [
@@ -14,7 +14,8 @@ export async function build () {
       '-v',
       `${pwd}:/src`,
       `p3rmaw3b/ao:${VERSION.IMAGE}`,
-      'emcc-lua'
+      'emcc-ao',
+      `${lang === 'cpp' ? '-c' : ''}`
     ]
   })
   await p.status()
@@ -22,4 +23,9 @@ export async function build () {
 
 export const command = new Command()
   .description('Build the Lua Project into WASM')
+  .usage('-l cpp')
+  .option(
+    '-l, --lang <language:string>',
+    'The starter to use. Defaults to Lua. Options are "lua" and "cpp"'
+  )
   .action(build)

@@ -12,13 +12,20 @@ sys.path.append('/usr/local/emcc-lua')
 
 from emcc_lua_lib.definition import Definition
 from emcc_lua_lib.file import LuaFile, ModuleFile, BundleFile
-from emcc_lua_lib.helper import is_lua_source_file, is_binary_library, encode_hex_literals, shell_exec, debug_print
+from emcc_lua_lib.helper import is_lua_source_file, is_c_source_file, is_c_header_file, is_binary_library, encode_hex_literals, shell_exec, debug_print
 
-
+LANG = sys.argv[1]
 CC = os.environ.get('CC', 'cc')
 NM = os.environ.get('NM', 'nm')
 LUAROCKS_LOCAL_MODULE_DIR = '/src/modules' # os.path.abspath('/src/modules')
 LUAROCKS_LOCAL_MODULE_PREFIX_RE = re.compile(re.escape(LUAROCKS_LOCAL_MODULE_DIR) + '\/share\/lua\/\d+.\d+/')
+
+c_program = ''
+c_source_files = []
+
+definition = Definition('/opt/definition.yml')
+link_libraries = []
+
 
 def __get_uname():
     uname = ''
@@ -40,19 +47,31 @@ def __get_output(output, entry_file):
 
     return '{}.{}'.format(tpl[0], tpl[1])
 
-def main():
+def inject_c_files():
+    global c_program
+    global c_source_files
+
+    c_header_files = []
+    c_source_files += glob.glob('/src/**/*.c', recursive=True)
+    c_source_files += glob.glob('/src/**/*.cpp', recursive=True)
+    c_header_files += glob.glob('/src/**/*.h', recursive=True)    
+    c_header_files += glob.glob('/src/**/*.hpp', recursive=True)
+
+    for header in c_header_files:
+        c_program = '#include "{}"\n'.format(header) + c_program
+
+    c_program = c_program.replace('__FUNCTION_DECLARATIONS__', definition.make_c_function_delarations())
+
+
+def inject_lua_files():
+    global c_program
+
     uname = __get_uname()
 
     lua_files = []
     library_files = []
-    link_libraries = []
     dependency_libraries = []
-    #libdl_option = ''
 
-    # To absolute
-    # Module, function setting file must exist at same directory
-    # definition = Definition(os.path.join(os.getcwd(), 'definition.yml'))
-    definition = Definition('/opt/definition.yml')
     #entry_file = definition.get_entry_file()
     entry_file = '/opt/loader.lua'
 
@@ -64,7 +83,7 @@ def main():
 
     local_include_dir = os.path.join(os.path.dirname(entry_file), 'src')
     local_include_prefix_re = re.compile(re.escape(local_include_dir + '/'))
-
+    
     # Detect bundles
     bundle_files = glob.glob('/src/**/*.lua', recursive=True)
     
@@ -106,7 +125,7 @@ def main():
             except(subprocess.CalledProcessError):
                 print(NM + ' command failed')
                 return
-
+            
     debug_print('===== Bundle Lua files ======')
     debug_print('\n'.join([v.filepath for v in lua_files]))
     debug_print('===== Library files =====')
@@ -116,51 +135,61 @@ def main():
     debug_print('===== Dependency libraries =====')
     debug_print('\n'.join([v.filepath for v in dependency_libraries]))
 
+    with open('/opt/main.lua', mode='r') as lua:
+        lua_program = lua.read()
+
+    c_program = c_program.replace('__LUA_BASE__', encode_hex_literals(lua_program))
+    with open(entry_file, mode='r') as main_file:
+        p = main_file.read()
+        c_program = c_program.replace('__LUA_MAIN__', encode_hex_literals(p))
+
+    inject_lua_files = []
+    for i, f in enumerate(lua_files):
+        with open(f.filepath, mode='r') as l:
+            lines = l.readlines()
+            # check first line has control command
+            if lines[0].find("\xef\xbb\xbf") != -1:
+                # UTF-8 byte order mark
+                lines[0] = lines[0][4:]
+            elif lines[0][0] == '#':
+                # shebang
+                lines = lines[1:]
+
+            inject_lua_files.extend([
+                '  static const unsigned char lua_require_{}[] = {{{}}};'.format(i, encode_hex_literals('\n'.join(lines))),
+                '  lua_pushlstring(L, (const char*)lua_require_{}, sizeof(lua_require_{}));'.format(i, i),
+                '  lua_setfield(L, -2, "{}");\n'.format(f.module_name)
+            ])
+
+    
+    for f in library_files:
+        inject_lua_files.extend([
+            '  int luaopen_{}(lua_State* L);'.format(f.module_name),
+            '  lua_pushcfunction(L, luaopen_{});'.format(f.module_name),
+            '  lua_setfield(L, -2, "{}");'.format(f.basename)
+        ])
+    c_program = c_program.replace('__FUNCTION_DECLARATIONS__', definition.make_function_delarations())
+    c_program = c_program.replace('__INJECT_LUA_FILES__', '\n'.join(inject_lua_files))
+
+def main():
+
+    global c_program
+    global c_source_files
+
+    with open('/opt/main.c', mode='r') as c:
+        c_program = c.read()
+
+    if(LANG == '-c'):
+        inject_c_files()
+
+    inject_lua_files()
     
     #Generate compile target file
     debug_print('Start to generate complie.c')
 
-    with open('/opt/main.lua', mode='r') as lua:
-        lua_program = lua.read()
 
-        with open('/opt/main.c', mode='r') as c:
-            c_program = c.read()
-            c_program = c_program.replace('__LUA_BASE__', encode_hex_literals(lua_program))
-            with open(entry_file, mode='r') as main_file:
-                p = main_file.read()
-                c_program = c_program.replace('__LUA_MAIN__', encode_hex_literals(p))
-
-            inject_lua_files = []
-            for i, f in enumerate(lua_files):
-                with open(f.filepath, mode='r') as l:
-                    lines = l.readlines()
-                    # check first line has control command
-                    if lines[0].find("\xef\xbb\xbf") != -1:
-                        # UTF-8 byte order mark
-                        lines[0] = lines[0][4:]
-                    elif lines[0][0] == '#':
-                        # shebang
-                        lines = lines[1:]
-
-                    inject_lua_files.extend([
-                        '  static const unsigned char lua_require_{}[] = {{{}}};'.format(i, encode_hex_literals('\n'.join(lines))),
-                        '  lua_pushlstring(L, (const char*)lua_require_{}, sizeof(lua_require_{}));'.format(i, i),
-                        '  lua_setfield(L, -2, "{}");\n'.format(f.module_name)
-                    ])
-
-            
-            for f in library_files:
-                inject_lua_files.extend([
-                    '  int luaopen_{}(lua_State* L);'.format(f.module_name),
-                    '  lua_pushcfunction(L, luaopen_{});'.format(f.module_name),
-                    '  lua_setfield(L, -2, "{}");'.format(f.basename)
-                ])
-
-            c_program = c_program.replace('__LUA_FUNCTION_DECLARATIONS__', definition.make_function_delarations())
-            c_program = c_program.replace('__INJECT_LUA_FILES__', '\n'.join(inject_lua_files))
-
-            with open('/tmp/compile.c', mode='w') as build:
-                build.write(c_program)
+    with open('/tmp/compile.cpp', mode='w') as build:
+        build.write(c_program)
 
     # Finally, compile to wasm
     debug_print('Start to compile as WASM')
@@ -186,7 +215,9 @@ def main():
     cmd.extend(['-s', 'ASSERTIONS=1'])
     cmd.extend(definition.get_extra_args())
     cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
-    cmd.extend(['/tmp/compile.c', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
+    for f in c_source_files:
+        cmd.append(quote(f))
+    cmd.extend(['/tmp/compile.cpp', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
     cmd.extend([quote(v.filepath) for v in link_libraries])
     cmd.extend([quote(v.filepath) for v in link_libraries])
 
@@ -199,7 +230,7 @@ def main():
     # add metering library
     # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
     # shell_exec(*meter_cmd)
-    shell_exec(*['rm', '/src/process.js'])
+    shell_exec(*['rm', os.path.join(os.getcwd(), 'process.js')])
 
 if __name__ == '__main__':
     main()
