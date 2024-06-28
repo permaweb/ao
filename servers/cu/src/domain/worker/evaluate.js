@@ -7,6 +7,10 @@ import { saveEvaluationSchema } from '../dal.js'
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
 export function evaluateWith ({
+  /**
+   * TODO: no longer needed since the wasmModule
+   * is passed in. Eventually remove usage and injection
+   */
   loadWasmModule,
   wasmInstanceCache,
   bootstrapWasmInstance,
@@ -165,7 +169,7 @@ export function evaluateWith ({
      */
     if (close) {
       wasmInstanceCache.delete(streamId)
-      return
+      return Promise.resolve()
     }
     /**
      * Dynamically load the module, either from cache,
