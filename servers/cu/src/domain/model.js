@@ -197,7 +197,9 @@ export const domainConfigSchema = z.object({
 })
 
 export const bufferSchema = z.any().refine(buffer => {
-  return ArrayBuffer.isView(buffer) || Buffer.isBuffer(buffer)
+  return buffer instanceof ArrayBuffer ||
+    ArrayBuffer.isView(buffer) ||
+    Buffer.isBuffer(buffer)
 }, { message: 'Value must implement the buffer protocol' })
 
 export const streamSchema = z.any().refine(stream => {

@@ -13,6 +13,7 @@ import AoLoader from '@permaweb/ao-loader'
 import WeaveDrive from '@permaweb/weavedrive'
 
 import { joinUrl } from '../utils.js'
+import AsyncLock from 'async-lock'
 
 const pipelineP = promisify(pipeline)
 
@@ -174,31 +175,39 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
       .map(([, res]) => res)
   }
 
-  return ({ moduleId }) =>
-    maybeCachedModule({ moduleId })
-      .bichain(
-        /**
-         * Potentially Compile the Wasm Module, cache it for next time,
-         *
-         * then create the Wasm instance
-         */
-        () => of({ moduleId })
-          .chain(maybeStoredBinary)
-          .bichain(loadTransaction, Resolved)
+  const lock = new AsyncLock()
+
+  return ({ moduleId }) => {
+    /**
+     * Prevent multiple eval streams close together
+     * from compiling the wasm module multiple times
+     */
+    return lock.acquire(moduleId, () =>
+      maybeCachedModule({ moduleId })
+        .bichain(
           /**
-           * Cache the wasm Module in memory for quick access next time
+           * Potentially Compile the Wasm Module, cache it for next time,
+           *
+           * then create the Wasm instance
            */
-          .map((wasmModule) => {
-            logger('Caching compiled WebAssembly.Module for module "%s" in memory, for next time...', moduleId)
-            cache.set(moduleId, wasmModule)
-            return wasmModule
-          }),
-        /**
-         * Cached instance, so just reuse
-         */
-        Resolved
-      )
-      .toPromise()
+          () => of({ moduleId })
+            .chain(maybeStoredBinary)
+            .bichain(loadTransaction, Resolved)
+            /**
+             * Cache the wasm Module in memory for quick access next time
+             */
+            .map((wasmModule) => {
+              logger('Caching compiled WebAssembly.Module for module "%s" in memory, for next time...', moduleId)
+              cache.set(moduleId, wasmModule)
+              return wasmModule
+            }),
+          /**
+           * Cached instance, so just reuse
+           */
+          Resolved
+        )
+        .toPromise())
+  }
 }
 
 /**
