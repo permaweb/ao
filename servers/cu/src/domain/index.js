@@ -196,6 +196,14 @@ export const createApis = async (ctx) => {
     clearTimeout: (...args) => lt.clearTimeout(...args)
   })
 
+  const loadWasmModule = WasmClient.loadWasmModuleWith({
+    fetch: ctx.fetch,
+    ARWEAVE_URL: ctx.ARWEAVE_URL,
+    WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
+    logger: ctx.logger,
+    cache: WasmClient.createWasmModuleCache({ MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE })
+  })
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -239,10 +247,11 @@ export const createApis = async (ctx) => {
     findModule: AoModuleClient.findModuleWith({ db: sqlite, logger }),
     saveModule: AoModuleClient.saveModuleWith({ db: sqlite, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
+      loadWasmModule,
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => primaryWorkerPool.exec('evaluate', args),
+      evaluate: (args, options) => primaryWorkerPool.exec('evaluate', [args], options),
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
@@ -282,11 +291,12 @@ export const createApis = async (ctx) => {
      * primary evaluations
      */
     loadDryRunEvaluator: AoModuleClient.evaluatorWith({
+      loadWasmModule,
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => Promise.resolve()
-        .then(() => dryRunWorkerPool.exec('evaluate', args))
+      evaluate: (args, options) => Promise.resolve()
+        .then(() => dryRunWorkerPool.exec('evaluate', [args], options))
         .catch((err) => {
           /**
            * Hack to detect when the max queue size is being exceeded and to reject

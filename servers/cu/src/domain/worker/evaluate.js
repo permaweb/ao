@@ -19,8 +19,17 @@ export function evaluateWith ({
   bootstrapWasmInstance = fromPromise(bootstrapWasmInstance)
   saveEvaluation = fromPromise(saveEvaluationSchema.implement(saveEvaluation))
 
-  function loadInstance ({ streamId, moduleId, moduleOptions }) {
-    return loadWasmModule({ moduleId })
+  function loadInstance ({ streamId, moduleId, wasmModule, moduleOptions }) {
+    return of(wasmModule)
+      .chain((wasmModule) => {
+        /**
+         * If the wasmModule is provided, then no need
+         * to load it.
+         */
+        if (wasmModule) return Resolved(wasmModule)
+
+        return loadWasmModule({ moduleId })
+      })
       /**
        * Map extension apis to moduleOptions
        * TODO: cleanup
@@ -149,12 +158,12 @@ export function evaluateWith ({
    *
    * Finally, evaluates the message and returns the result of the evaluation.
    */
-  return ({ streamId, moduleId, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) =>
+  return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) =>
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
-    maybeCachedInstance({ streamId, moduleId, moduleOptions, name, processId, Memory, message, AoGlobal })
+    maybeCachedInstance({ streamId, moduleId, wasmModule, moduleOptions, name, processId, Memory, message, AoGlobal })
       .bichain(loadInstance, Resolved)
       /**
        * Perform the evaluation

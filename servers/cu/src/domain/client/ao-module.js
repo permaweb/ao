@@ -80,7 +80,7 @@ export function findModuleWith ({ db }) {
     .toPromise()
 }
 
-export function evaluatorWith ({ evaluate }) {
+export function evaluatorWith ({ evaluate, loadWasmModule }) {
   const EVAL_DEFER_BACKPRESSURE = 10
   return ({ moduleId, moduleOptions }) =>
     of(moduleOptions)
@@ -95,9 +95,19 @@ export function evaluatorWith ({ evaluate }) {
 
         let backpressure = 0
 
+        /**
+         * TODO: should this be moved to lib/loadModule?
+         */
+        let wasmModule
+
         return (args) =>
           Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
             .then(async (defer) => {
+              if (!wasmModule) wasmModule = await loadWasmModule({ moduleId })
+              return defer
+            })
+            .then(async (defer) => {
+              let options
               /**
                * defer the next wasm module invocation to the
                * end of the current event queue.
@@ -109,8 +119,9 @@ export function evaluatorWith ({ evaluate }) {
               args.streamId = streamId
               args.moduleId = moduleId
               args.moduleOptions = moduleOptions
+              args.wasmModule = wasmModule
 
-              return evaluate(args)
+              return evaluate(args, options)
             })
       }))
       .toPromise()
