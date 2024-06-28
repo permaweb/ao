@@ -113,6 +113,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
       if (reason === 'set') return
 
       clearTtlTimer(key)
+      clearDrainToFileTimer(key)
       onEviction({ key, value })
     }
   })
