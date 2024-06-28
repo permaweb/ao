@@ -8,6 +8,10 @@ export const createApis = async (ctx) => {
   const sqlite = await SqliteClient.createSqliteClient({ url: ctx.DB_URL, bootstrap: false })
 
   const evaluate = evaluateWith({
+    /**
+     * TODO: no longer needed since the wasmModule
+     * is passed in. Eventually remove
+     */
     loadWasmModule: WasmClient.loadWasmModuleWith({
       fetch,
       ARWEAVE_URL: ctx.ARWEAVE_URL,
