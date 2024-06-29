@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use tokio::task::spawn_blocking;
+
 mod clients;
 pub mod config;
 mod core;
@@ -22,6 +24,7 @@ pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
 
     let data_store = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
+    let d_clone = data_store.clone();
 
     match data_store.run_migrations() {
         Ok(m) => logger.log(m),
@@ -29,6 +32,24 @@ pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     }
 
     let config = Arc::new(AoConfig::new(mode).expect("Failed to read configuration"));
+
+    if config.use_disk {
+        let logger_clone = logger.clone();
+        /*
+          sync_bytestore is a blocking routine so we must
+          call spawn_blocking or the server wont start until 
+          its complete and we want to do it in the background
+        */
+        spawn_blocking(move || {
+            if let Err(e) = d_clone.sync_bytestore() {
+                logger_clone.log(format!("Failed to migrate tail messages: {:?}", e));
+            } else {
+                logger_clone.log("Successfully migrated tail messages".to_string());
+            }
+        });
+    }
+
+    println!("ccc: {:?}", config);
 
     let scheduler_deps = Arc::new(core::scheduler::SchedulerDeps {
         data_store: data_store.clone(),
