@@ -2,11 +2,11 @@ use std::env::VarError;
 
 use dotenv::dotenv;
 use futures::future::join_all;
-use indicatif::ProgressBar;
-use std::env;
-use std::io;
+use std::{env, io};
 use std::sync::Arc;
 use tokio::task::JoinHandle;
+use tokio::time::interval;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -256,6 +256,96 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+  
+  pub fn get_message_by_offset_from_end(&self, offset: i64) -> Result<Option<(String, Option<String>, Vec<u8>, String, serde_json::Value, String)>, StoreErrorType> {
+      use super::schema::messages::dsl::*;
+      let conn = &mut self.get_read_conn()?;
+  
+      let db_message_result: Result<Option<DbMessage>, DieselError> = messages
+          .order(timestamp.desc())
+          .offset(offset)
+          .first(conn)
+          .optional();
+  
+      match db_message_result {
+          Ok(Some(db_message)) => {
+              let bytes: Vec<u8> = db_message.bundle.clone();
+              Ok(Some((
+                  db_message.message_id.clone(),
+                  db_message.assignment_id.clone(),
+                  bytes,
+                  db_message.process_id.clone(),
+                  db_message.message_data.clone(),
+                  db_message.timestamp.to_string().clone(),
+              )))
+          }
+          Ok(None) => Ok(None),
+          Err(e) => Err(StoreErrorType::from(e)),
+      }
+  }
+  
+  /*
+    Start at the end of the messages table, scan
+    backwards and insert messages into the bytestore
+    if they dont exist.
+  */
+  pub fn sync_bytestore(&self) -> Result<(), ()> {
+      println!("Syncing the tail of the messages table");
+      use std::time::Instant;
+      let start = Instant::now();
+
+      let total_count = self.get_message_count().expect("Failed to get message count");
+      let mut synced_count = 0;
+
+      for offset in 0..total_count {
+          let result = self.get_message_by_offset_from_end(offset);
+
+          match result {
+              Ok(Some(message)) => {
+                  let msg_id = message.0;
+                  let assignment_id = message.1;
+                  let bundle = message.2;
+                  let process_id = message.3;
+                  let timestamp = message.5;
+
+                  if self.bytestore.clone().unwrap()
+                      .exists(&msg_id, &assignment_id, &process_id, &timestamp) {
+                          // Stop the migration if message is already in byte store
+                          let duration = start.elapsed();
+                          println!("Time elapsed in sync is: {:?}", duration);
+                          println!("Number of messages synced: {}", synced_count);
+                          return Ok(());
+                  }
+
+                  self.bytestore.clone().unwrap()
+                      .save_binary(
+                          msg_id.clone(),
+                          assignment_id.clone(),
+                          process_id.clone(),
+                          timestamp.clone(),
+                          bundle,
+                      )
+                      .expect("Failed to save message binary");
+
+                  synced_count += 1;
+              }
+              Ok(None) => {
+                  println!("No more messages to process.");
+                  break;
+              }
+              Err(e) => {
+                  eprintln!("Error fetching messages: {:?}", e);
+              }
+          }
+      }
+
+      let duration = start.elapsed();
+      println!("Time elapsed in sync is: {:?}", duration);
+      println!("Number of messages synced: {}", synced_count);
+
+      Ok(())
+  }
+
 }
 
 #[async_trait]
@@ -912,6 +1002,20 @@ mod bytestore {
               None => format!("message___{}___{}___{}", process_id, timestamp, message_id).into_bytes(),
           }
       }
+
+      pub fn exists(
+          &self,
+          message_id: &str,
+          assignment_id: &Option<String>,
+          process_id: &str,
+          timestamp: &str,
+      ) -> bool {
+          let key = ByteStore::create_key(message_id, assignment_id, process_id, timestamp);
+          match self.db.get(&key) {
+              Ok(Some(_)) => true,
+              _ => false,
+          }
+      }
   }
 }
 
@@ -925,7 +1029,7 @@ mod bytestore {
   server itself.
 */
 pub async fn migrate_to_disk() -> io::Result<()> {
-  use std::time::Instant;
+  use std::time::{Instant, Duration};
   let start = Instant::now();
   dotenv().ok();
 
@@ -955,12 +1059,25 @@ pub async fn migrate_to_disk() -> io::Result<()> {
       }
   };
 
-  let progress_bar = Arc::new(ProgressBar::new(total_count as u64));
+  println!("Total messages to process: {}", total_count);
 
   let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
   let batch_size = config.migration_batch_size.clone() as usize;
 
-  let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
+  let processed_count = Arc::new(AtomicUsize::new(0));
+
+  // Spawn a task to log progress every minute
+  let processed_count_clone = Arc::clone(&processed_count);
+  tokio::spawn(async move {
+      let mut interval = interval(Duration::from_secs(10));
+      loop {
+          interval.tick().await;
+          println!("Messages processed update: {}", processed_count_clone.load(Ordering::SeqCst));
+          if processed_count_clone.load(Ordering::SeqCst) >= total_count as usize {
+              break;
+          }
+      }
+  });
 
   for batch_start in (from..from + total_count).step_by(batch_size) {
       let batch_end = if let Some(t) = to {
@@ -969,21 +1086,22 @@ pub async fn migrate_to_disk() -> io::Result<()> {
           batch_start + batch_size as i64
       };
 
-      let data_store = Arc::clone(&data_store); // Move inside the loop to clone it for each iteration
-      let progress_bar = Arc::clone(&progress_bar);
+      let data_store = Arc::clone(&data_store);
+      let processed_count = Arc::clone(&processed_count);
 
       let result = data_store.get_all_messages(batch_start, Some(batch_end));
 
       match result {
           Ok(messages) => {
+              let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
               for message in messages {
                   let msg_id = message.0;
                   let assignment_id = message.1;
                   let bundle = message.2;
                   let process_id = message.3;
                   let timestamp = message.5;
-                  let data_store = Arc::clone(&data_store); 
-                  let progress_bar = Arc::clone(&progress_bar);
+                  let data_store = Arc::clone(&data_store);
+                  let processed_count = Arc::clone(&processed_count);
 
                   let handle = tokio::spawn(async move {
                       data_store.bytestore.clone().expect("Bytestore is None")
@@ -995,21 +1113,18 @@ pub async fn migrate_to_disk() -> io::Result<()> {
                               bundle,
                           )
                           .expect("Failed to save message binary");
-                      progress_bar.inc(1);
+                      processed_count.fetch_add(1, Ordering::SeqCst);
                   });
 
                   save_handles.push(handle);
               }
+              join_all(save_handles).await;
           }
           Err(e) => {
               eprintln!("Error fetching messages: {:?}", e);
           }
       }
   }
-
-  join_all(save_handles).await;
-
-  progress_bar.finish_with_message("All messages processed");
 
   let duration = start.elapsed();
   println!("Time elapsed in data migration is: {:?}", duration);
