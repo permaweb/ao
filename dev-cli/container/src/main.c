@@ -1,12 +1,22 @@
-#include <lauxlib.h>
-#include <lua.h>
-#include <lualib.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 
 #include <emscripten.h>
+
+#ifdef __cplusplus
+  #include "lua.hpp"
+#else
+  #include "lua.h"
+  #include "lualib.h"
+  #include "lauxlib.h"
+#endif
+
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 
 int boot_lua(lua_State* L);
 static lua_State *wasm_lua_state = NULL;
@@ -17,7 +27,7 @@ static const unsigned char program[] = {__LUA_BASE__};
 static const unsigned char lua_main_program[] = {__LUA_MAIN__};
 
 // This line will be injected by emcc-lua as export functions to WASM declaration
-__LUA_FUNCTION_DECLARATIONS__
+__FUNCTION_DECLARATIONS__
 
 // This function is for debug to see an C <-> Lua stack values
 // void dumpStack(lua_State *L) {
@@ -144,3 +154,7 @@ int boot_lua(lua_State* L) {
   }
   return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif

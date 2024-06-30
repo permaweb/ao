@@ -16,6 +16,14 @@ def is_lua_source_file(file):
     ext = get_extention(file)
     return ext == 'lua' or ext == 'luac'
 
+def is_c_source_file(file):
+    ext = get_extention(file)
+    return ext == 'c' or ext == 'cpp' or ext == 'cc' or ext == 'cxx'
+
+def is_c_header_file(file):
+    ext = get_extention(file)
+    return ext == 'h' or ext == 'hpp'
+
 
 def is_binary_library(file):
     ext = get_extention(file)
