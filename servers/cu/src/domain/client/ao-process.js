@@ -33,9 +33,9 @@ export const LATEST = 'LATEST'
 
 /**
  * @type {{
- *  get: LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }>['get']
- *  set: LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }>['set']
- *  lru: LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }>
+ *  get: LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }>['get']
+ *  set: LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }>['set']
+ *  lru: LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }>
  * }}
  *
  * @typedef Evaluation
@@ -57,7 +57,7 @@ let processMemoryCache
  * via passing in a new implementation such as using the 'long-timeout' library
  * This resolves issue #666
  */
-export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, gauge, onEviction, writeProcessMemoryFile, setTimeout, clearTimeout }) {
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, writeProcessMemoryFile, setTimeout, clearTimeout }) {
   if (processMemoryCache) return processMemoryCache
 
   const clearTimerWith = (map) => (key) => {
@@ -77,8 +77,22 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
   const ttlTimers = new Map()
   const clearTtlTimer = clearTimerWith(ttlTimers)
 
-  const drainToFileTimers = new Map()
-  const clearDrainToFileTimer = clearTimerWith(drainToFileTimers)
+  function setTtl (key) {
+    clearTtlTimer(key)
+
+    const ttl = setTimeout(() => {
+      /**
+       * Calling delete on the LRUCache
+       * will trigger the disposeAfter callback on the cache
+       * to be called
+       */
+      data.delete(key)
+      ttlTimers.delete(key)
+    }, TTL)
+    ttl.unref()
+
+    ttlTimers.set(key, ttl)
+  }
 
   /**
    * Expose the total count of processes cached on this unit,
@@ -90,8 +104,9 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
     collect: () => data.size
   })
 
+  let prevDisposed
   /**
-   * @type {LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }}
+   * @type {LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }}
    */
   const data = new LRUCache({
     /**
@@ -104,17 +119,97 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
      * Size is calculated using the Memory Array Buffer
      * or just the name of the file (negligible in the File case)
      */
-    sizeCalculation: ({ Memory, File }) => {
+    sizeCalculation: ({ Memory }) => {
       if (Memory) return Memory.byteLength
-      return File.length
+      /**
+       * File will be a string like 'state-${processId}'
+       * so approximately 50 bytes
+       */
+      return 50
     },
-    noDisposeOnSet: true,
-    disposeAfter: (value, key, reason) => {
-      if (reason === 'set') return
+    // noDisposeOnSet: true,
+    /**
+     * The process has either lived out its ttl, or has been evicted
+     * from the cache.
+     *
+     * So we drain Process memory to a file, udpating the cache entry
+     * in the LRU In-Memory cache, but removing the process Memory from the heap,
+     * clearing up space
+     *
+     * On subsequent read, client may need to read the memory back in from
+     * a file
+     */
+    disposeAfter: async (value, key, reason) => {
+      if (reason === 'delete' || reason === 'evict') {
+        if (!value.File) {
+          /**
+           * In some way the Memory was removed or zeroed out
+           * so we cannot use the entry, so do nothing
+           */
+          if (!value.Memory || !value.Memory.byteLength) return
+        } else if (!(await value.File)) {
+          /**
+           * The Memory failed to drain to a file
+           * so we cannot use the entry, so do nothing
+           */
+          return
+        }
 
-      clearTtlTimer(key)
-      clearDrainToFileTimer(key)
-      onEviction({ key, value })
+        /**
+         * If the key was the most recent previously disposed key,
+         * then we do not add back to the cache.
+         *
+         * This could only happen in situations where the cache is
+         * _very_ full that even a drainedToFile entry (~50 bytes total)
+         * won't fit, or if an entry is too large to fit into the cache at all.
+         *
+         * This ultimately is meant to hedge against an infinite recursion
+         */
+        if (prevDisposed === key) {
+          logger(
+            'WARNING: Cached process "%s" most recently removed. Skipping adding drained entry back to the cache',
+            key
+          )
+          return
+        }
+
+        prevDisposed = key
+        /**
+         * Update the cache entry to instead be a file reference containing the process memory
+         * and remove the reference to the actual Memory, so that it can be GC'd.
+         *
+         * Since we are setting on the underlying data store directly,
+         * this won't have a ttl associated with it and also won't trigger
+         * the clearance of prevDisposed, which is what we want
+         *
+         * Note we do not mutate the old object, and instead cache a new one,
+         * in case the old object containing the memory is in use elsewhere
+         *
+         * Unlike 'dispose', It's safe to add back to the cache here. From lru-cache docs:
+         * """
+         *  It is safe to add an item right back into the cache at this point.
+         * However, note that it is *very* easy to inadvertently create infinite
+         * recursion this way.
+         * """
+         */
+        logger('Draining memory of size %d for process "%s" to file...', value.Memory.byteLength, key)
+        data.set(
+          key,
+          {
+            evaluation: value.evaluation,
+            File: writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
+              .catch((err) => {
+                logger(
+                  'Error occurred when draining Memory for evaluation "%j" to a file. Skipping adding back to the cache...',
+                  value.evaluation,
+                  err
+                )
+                data.delete(key)
+                return undefined
+              }),
+            Memory: undefined
+          })
+      }
     }
   })
   processMemoryCache = {
@@ -122,61 +217,39 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
       if (!data.has(key)) return undefined
 
       /**
+       * Make sure to clear out prevDisposed
+       * if the key is accessed in the cache,
+       *
+       * This way, if it get's LRU evicted or ttl expired
+       * again, before anything else, it isn't inadvertantly
+       * lost for good.
+       */
+      if (prevDisposed === key) prevDisposed = undefined
+
+      const value = data.get(key)
+
+      /**
+       * Somehow the Memory buffer was zeroed out,
+       * perhaps from a transfer to a worker thread gone wrong.
+       *
+       * Regardless, we cannot use the entry, so clear it's ttl timer
+       * and implicitly delete the defunct entry
+       */
+      if (value.Memory && !value.Memory.byteLength) {
+        clearTtlTimer(key)
+        data.delete(key)
+        return
+      }
+
+      /**
        * Will subsequently renew the age
        * and recency of the cached value
        */
-      const value = data.get(key)
-      processMemoryCache.set(key, value)
-
+      setTtl(key)
       return value
     },
     set: (key, value) => {
-      clearTtlTimer(key)
-      clearDrainToFileTimer(key)
-      /**
-       * Calling delete will trigger the disposeAfter callback on the cache
-       * to be called
-       */
-      const ttl = setTimeout(() => {
-        data.delete(key)
-        ttlTimers.delete(key)
-        clearDrainToFileTimer(key)
-      }, TTL)
-      ttl.unref()
-
-      ttlTimers.set(key, ttl)
-
-      /**
-       * Set up timer to drain Process memory to a file, if not accessed
-       * within the DRAIN_TO_FILE period ie. 30 seconds
-       *
-       * This keeps the cache entry in the LRU In-Memory cache, but removes
-       * the process Memory from the heap, clearing up space
-       *
-       * On subsequent read, client may need to read the memory back in from
-       * a file
-       */
-      if (value.Memory && DRAIN_TO_FILE_THRESHOLD) {
-        const drainToFile = setTimeout(async () => {
-          const file = await writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
-          /**
-           * Update the cache entry with the file reference containing the memory
-           * and remove the reference to the Memory, so that it can be GC'd.
-           *
-           * Since we are setting on the underlying data store directly,
-           * this won't reset the ttl
-           *
-           * Note we do not mutate the old object, and instead cache a new one,
-           * in case the old object containing the memory is in use elsewhere
-           */
-          data.set(key, { evaluation: value.evaluation, File: file, Memory: undefined })
-          drainToFileTimers.delete(key)
-        }, DRAIN_TO_FILE_THRESHOLD)
-        drainToFile.unref()
-
-        drainToFileTimers.set(key, drainToFile)
-      }
-
+      setTtl(key)
       return data.set(key, value)
     },
     lru: data
@@ -729,6 +802,7 @@ export function findLatestProcessMemoryWith ({
          */
         if (!cached) return Rejected(args)
 
+        let file
         return of(cached)
           .chain((cached) => {
             if (omitMemory) return Resolved(null)
@@ -741,11 +815,22 @@ export function findLatestProcessMemoryWith ({
                  * so we need to read it back in from the file
                  */
                 if (cached.File) {
-                  logger('Reloading cached process memory from file "%s"', cached.File)
-                  return readProcessMemoryFile(cached.File)
+                  return of()
+                    .chain(fromPromise(async () => cached.File))
+                    .chain((maybeFile) => {
+                      if (!maybeFile) return Rejected(args)
+
+                      file = maybeFile
+                      logger('Reloading cached process memory from file "%s"', file)
+                      return readProcessMemoryFile(file)
+                    })
                 }
 
-                return Rejected('either Memory or File required')
+                logger(
+                  'Process cache entry error for process "%s". Entry contains neither Memory or File. Falling back to checkpoint record...',
+                  processId
+                )
+                return Rejected(args)
               })
               /**
                * decode according to whatever encoding is being used to cache
@@ -757,7 +842,7 @@ export function findLatestProcessMemoryWith ({
            */
           .map((Memory) => ({
             src: 'memory',
-            fromFile: cached.File,
+            fromFile: file,
             Memory,
             moduleId: cached.evaluation.moduleId,
             timestamp: cached.evaluation.timestamp,
@@ -1032,31 +1117,37 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       : Buffer.from(Memory)
 
     /**
-     * The provided value is not later than the currently cached value,
-     * so simply ignore it and return, keeping the current value in cache
-     *
-     * Having updateAgeOnGet to true also renews the cache value's TTL,
-     * which is what we want
-     */
-    if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) return
-
-    logger(
-      'Caching latest memory for process "%s" with parameters "%j"',
-      processId,
-      { messageId, timestamp, ordinate, cron, blockHeight }
-    )
-    /**
      * Either no value was cached or the provided evaluation is later than
      * the value currently cached, so overwrite it
      */
-    // const { stop: stopTimer } = timer('saveLatestProcessMemory:gzip', { processId, timestamp, ordinate, cron, size: Memory.byteLength })
-    // const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
-    // stopTimer()
 
-    const incrementedGasUsed = pipe(
-      pathOr(BigInt(0), ['evaluation', 'gasUsed']),
-      add(gasUsed || BigInt(0))
-    )(cached)
+    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
+    /**
+     * The cache is being reseeded ie. Memory was reloaded from a file
+     */
+    if (cached && isEqualTo(cached.evaluation, { timestamp, ordinate, cron })) {
+      /**
+       * If Memory exists on the cache entry, then there is nothing to "reseed"
+       * so do nothing
+       */
+      if (cached.Memory) return
+    /**
+     * The provided value is not later than the currently cached value,
+     * so simply ignore it and return, keeping the current value in cache
+     */
+    } else if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) {
+      return
+    } else {
+      logger(
+        'Caching latest memory for process "%s" with parameters "%j"',
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight }
+      )
+      incrementedGasUsed = pipe(
+        pathOr(BigInt(0), ['evaluation', 'gasUsed']),
+        add(gasUsed || BigInt(0))
+      )(cached)
+    }
 
     const evaluation = {
       processId,
@@ -1190,10 +1281,21 @@ export function saveCheckpointWith ({
       .chain(() => {
         if (Memory) return of(Memory)
         if (File) {
-          logger('Reloading cached process memory from file "%s"', File)
-          return readProcessMemoryFile(File)
+          return of()
+            .chain(fromPromise(async () => File))
+            .chain((maybeFile) => {
+              if (!maybeFile) return Rejected('either Memory or File required')
+
+              const file = maybeFile
+              logger('Reloading cached process memory from file "%s"', file)
+              return readProcessMemoryFile(file)
+            })
         }
 
+        logger(
+          'Process cache entry error for evaluation "%j". Entry contains neither Memory or File. Skipping saving of checkpoint...',
+          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+        )
         return Rejected('either File or Memory required')
       })
       .chain((buffer) =>

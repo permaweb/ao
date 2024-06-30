@@ -178,20 +178,8 @@ export const createApis = async (ctx) => {
     gauge,
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
-    DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
     writeProcessMemoryFile,
-    /**
-     * Save the evicted process memory as a Checkpoint on Arweave
-     */
-    onEviction: ({ value }) =>
-      saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        }),
+    logger: ctx.logger,
     setTimeout: (...args) => lt.setTimeout(...args),
     clearTimeout: (...args) => lt.clearTimeout(...args)
   })

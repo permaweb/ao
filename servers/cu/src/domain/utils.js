@@ -307,6 +307,7 @@ export function isEqualTo (eval1, eval2) {
   const t2 = `${eval2.timestamp}`
 
   return t2 === t1 &&
+    (eval1.ordinate === eval2.ordinate) &&
     (eval2.cron || '') === (eval1.cron || '')
 }
 

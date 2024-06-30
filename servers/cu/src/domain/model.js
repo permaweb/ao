@@ -156,14 +156,6 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
   /**
-   * The time in milliseconds that a process' Memory should remain in the heap,
-   * as part of the cache entry, before being drained to a file.
-   *
-   * This helps free up memory from processes who've been evalated and cached,
-   * but have not been accessed recently
-   */
-  PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: positiveIntSchema,
-  /**
    * The directory to store drained process memory files
    */
   PROCESS_MEMORY_CACHE_FILE_DIR: z.string().min(1),
