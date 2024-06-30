@@ -371,7 +371,7 @@ describe('ao-process', () => {
             ...deps,
             cache: {
               get: () => ({
-                File: 'state-process123.dat',
+                File: Promise.resolve('state-process123.dat'),
                 evaluation: cachedEval
               })
             },
@@ -392,7 +392,7 @@ describe('ao-process', () => {
             ...deps,
             cache: {
               get: () => ({
-                File: 'state-process123.dat',
+                File: Promise.resolve('state-process123.dat'),
                 evaluation: { ...cachedEval, encoding: undefined }
               })
             },
@@ -447,7 +447,7 @@ describe('ao-process', () => {
           ...deps,
           cache: {
             get: () => ({
-              File: 'state-process123.dat',
+              File: Promise.resolve('state-process123.dat'),
               evaluation: cachedEval
             })
           },
@@ -520,6 +520,33 @@ describe('ao-process', () => {
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should use if in LRU In-Memory Cache cannot be used', () => {
+        test('Memory failed to drain to a file', async () => {
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
+            ...deps,
+            readCheckpointFile: async (file) => assert.fail('should not read memory file if failed to drain'),
+            cache: {
+              get: () => ({
+                File: Promise.resolve(undefined),
+                evaluation: cachedEval
+              })
+            }
+          }))
+
+          const { Memory, ...res } = await findLatestProcessMemory(target)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'record',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
         test('no checkpoint in LRU In-Memory cache', async () => {
           const { Memory, ...res } = await findLatestProcessMemory(target)
 
@@ -1315,10 +1342,7 @@ describe('ao-process', () => {
         gauge: () => false
       })
       // call something on the cache
-      cache.set('foo', {
-        File: 'foo.dat',
-        Memory: Buffer.from('hello world')
-      })
+      cache.set('foo', { Memory: Buffer.from('hello world') })
       // wait to see that this implementation does not overflow
       await new Promise((resolve) => setTimeout(resolve, 50))
 
