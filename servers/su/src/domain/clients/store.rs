@@ -95,6 +95,7 @@ impl StoreClient {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
         let pool = Pool::builder()
+            .max_size(config.db_write_connections)
             .test_on_check_out(true)
             .build(manager)
             .map_err(|_| {
@@ -102,6 +103,7 @@ impl StoreClient {
             })?;
 
         let read_pool = Pool::builder()
+            .max_size(config.db_read_connections)
             .test_on_check_out(true)
             .build(read_manager)
             .map_err(|_| {
