@@ -1,6 +1,6 @@
 import { promisify } from 'node:util'
 import { gunzip, gzip, constants as zlibConstants } from 'node:zlib'
-import { Readable } from 'node:stream'
+// import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
@@ -1300,7 +1300,7 @@ export function saveCheckpointWith ({
       })
       .chain((buffer) =>
         of(buffer)
-          .chain((buffer) => hashWasmMemory(Readable.from(buffer), encoding))
+          // .chain((buffer) => hashWasmMemory(Readable.from(buffer), encoding))
           .chain(fromPromise(async (sha) => {
             /**
              * TODO: what should we set anchor to?
@@ -1322,7 +1322,7 @@ export function saveCheckpointWith ({
                 { name: 'Timestamp', value: `${timestamp}`.trim() },
                 { name: 'Block-Height', value: `${blockHeight}`.trim() },
                 { name: 'Content-Type', value: 'application/octet-stream' },
-                { name: 'SHA-256', value: sha },
+                // { name: 'SHA-256', value: sha },
                 /**
                  * We will always upload Checkpoints to Arweave as
                  * gzipped encoded (see below)
