@@ -16,6 +16,8 @@ pub struct AoConfig {
     pub use_disk: bool,
     pub su_data_dir: String,
     pub migration_batch_size: i64,
+    pub db_write_connections: u32,
+    pub db_read_connections: u32,
 }
 
 impl AoConfig {
@@ -37,6 +39,14 @@ impl AoConfig {
             Ok(val) => val.parse().unwrap(),
             Err(_e) => 1000,
         };
+        let db_write_connections = match env::var("DB_WRITE_CONNECTIONS") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 10,
+        };
+        let db_read_connections = match env::var("DB_READ_CONNECTIONS") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 10,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -48,6 +58,8 @@ impl AoConfig {
             use_disk,
             su_data_dir: env::var("SU_DATA_DIR")?,
             migration_batch_size,
+            db_write_connections,
+            db_read_connections,
         })
     }
 }
