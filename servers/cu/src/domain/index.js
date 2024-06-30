@@ -178,7 +178,6 @@ export const createApis = async (ctx) => {
     gauge,
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
-    DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
     writeProcessMemoryFile,
     logger: ctx.logger,
     setTimeout: (...args) => lt.setTimeout(...args),

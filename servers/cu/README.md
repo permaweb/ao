@@ -94,8 +94,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process
   latest memory LRU In-Memory cache. An entries age is reset each time it is
   accessed
-- `PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD`: The time in milliseconds that a process' Memory should kept hot in memory, as part of the cache entry, before being drained into a file. This is useful to free up memory from processes who've been evalated and cached, but have not been accessed recently. Set to zero to always keep process' Memory hot in memory, as the expense of more heap usage (defaults to `1m`)
-- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store cached process memory (Defaults to the os temp directory)
+- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store drained process memory (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
   (defaults to `0`)
