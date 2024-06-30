@@ -141,20 +141,6 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
      */
     disposeAfter: async (value, key, reason) => {
       if (reason === 'delete' || reason === 'evict') {
-        if (!value.File) {
-          /**
-           * In some way the Memory was removed or zeroed out
-           * so we cannot use the entry, so do nothing
-           */
-          if (!value.Memory || !value.Memory.byteLength) return
-        } else if (!(await value.File)) {
-          /**
-           * The Memory failed to drain to a file
-           * so we cannot use the entry, so do nothing
-           */
-          return
-        }
-
         /**
          * If the key was the most recent previously disposed key,
          * then we do not add back to the cache.
@@ -172,6 +158,21 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
           )
           return
         }
+
+        /**
+         * In some way the Memory was removed or zeroed out
+         *
+         * There is no Memory, so nothing to preserve by writing
+         * to a file, so simply noop, letting the cache entry
+         * naturally be evicted (gone forever)
+         */
+        if (!value.Memory || !value.Memory.byteLength) return
+
+        /**
+         * The Memory failed to drain to a file
+         * so we cannot use the entry, so do nothing
+         */
+        if (value.File && !(await value.File)) return
 
         prevDisposed = key
         /**
