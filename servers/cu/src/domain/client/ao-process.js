@@ -1117,31 +1117,37 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       : Buffer.from(Memory)
 
     /**
-     * The provided value is not later than the currently cached value,
-     * so simply ignore it and return, keeping the current value in cache
-     *
-     * Having updateAgeOnGet to true also renews the cache value's TTL,
-     * which is what we want
-     */
-    if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) return
-
-    logger(
-      'Caching latest memory for process "%s" with parameters "%j"',
-      processId,
-      { messageId, timestamp, ordinate, cron, blockHeight }
-    )
-    /**
      * Either no value was cached or the provided evaluation is later than
      * the value currently cached, so overwrite it
      */
-    // const { stop: stopTimer } = timer('saveLatestProcessMemory:gzip', { processId, timestamp, ordinate, cron, size: Memory.byteLength })
-    // const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
-    // stopTimer()
 
-    const incrementedGasUsed = pipe(
-      pathOr(BigInt(0), ['evaluation', 'gasUsed']),
-      add(gasUsed || BigInt(0))
-    )(cached)
+    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
+    /**
+     * The cache is being reseeded ie. Memory was reloaded from a file
+     */
+    if (cached && isEqualTo(cached.evaluation, { timestamp, ordinate, cron })) {
+      /**
+       * If Memory exists on the cache entry, then there is nothing to "reseed"
+       * so do nothing
+       */
+      if (cached.Memory) return
+    /**
+     * The provided value is not later than the currently cached value,
+     * so simply ignore it and return, keeping the current value in cache
+     */
+    } else if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) {
+      return
+    } else {
+      logger(
+        'Caching latest memory for process "%s" with parameters "%j"',
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight }
+      )
+      incrementedGasUsed = pipe(
+        pathOr(BigInt(0), ['evaluation', 'gasUsed']),
+        add(gasUsed || BigInt(0))
+      )(cached)
+    }
 
     const evaluation = {
       processId,

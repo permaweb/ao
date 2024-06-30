@@ -1231,6 +1231,48 @@ describe('ao-process', () => {
         assert.ok(cacheUpdated)
       })
 
+      test('should update if the cache entry is equal to provided save, AND cache does not contain the Memory', async () => {
+        let cacheUpdated = false
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory: undefined,
+              evaluation: cachedEval
+            }),
+            set: () => { cacheUpdated = true }
+          }
+        }))
+        await saveLatestProcessMemory({
+          ...targetWithGasUsed,
+          timestamp: cachedEval.timestamp,
+          oridnate: cachedEval.oridnate,
+          cron: cachedEval.cron
+        })
+        assert.ok(cacheUpdated)
+      })
+
+      test('should NOT update if the cache entry is equal to provided save, AND contains the Memory', async () => {
+        let cacheUpdated = false
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: () => { cacheUpdated = true }
+          }
+        }))
+        await saveLatestProcessMemory({
+          ...targetWithGasUsed,
+          timestamp: cachedEval.timestamp,
+          oridnate: cachedEval.oridnate,
+          cron: cachedEval.cron
+        })
+        assert.ok(!cacheUpdated)
+      })
+
       test('should update if there is no cache entry', async () => {
         let cacheUpdated = false
         const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
