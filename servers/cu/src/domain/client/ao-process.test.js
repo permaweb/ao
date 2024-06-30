@@ -264,18 +264,19 @@ describe('ao-process', () => {
 
     test('should return undefined if no checkpoint is earlier than target', async () => {
       const now = new Date()
+      const tenSecondsAgo = `${now.getTime() - 10000}`
       const findCheckpointFileBefore = findCheckpointFileBeforeWith({
         DIR: '/foobar',
         glob: async (str) => [
-          `/foobar/checkpoint-process-123,${now},10.json`,
-          `/foobar/checkpoint-process-123,${now},11.json`
+          `/foobar/checkpoint-process-123,${now.getTime()},13.json`,
+          `/foobar/checkpoint-process-123,${now.getTime() + 1000},14.json`
         ]
       })
 
       const res = await findCheckpointFileBefore({
         processId: 'process-123',
         before: {
-          timestamp: now,
+          timestamp: tenSecondsAgo,
           ordinate: '12',
           cron: undefined
         }
@@ -1246,7 +1247,7 @@ describe('ao-process', () => {
         await saveLatestProcessMemory({
           ...targetWithGasUsed,
           timestamp: cachedEval.timestamp,
-          oridnate: cachedEval.oridnate,
+          ordinate: cachedEval.ordinate,
           cron: cachedEval.cron
         })
         assert.ok(cacheUpdated)
