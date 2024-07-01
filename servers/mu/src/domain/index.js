@@ -147,7 +147,7 @@ export const createApis = async (ctx) => {
   const sendAssign = sendAssignWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
     locateProcess: locate,
-    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: sendAssignLogger }),
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: sendAssignLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: sendAssignLogger
@@ -257,7 +257,7 @@ export const createResultApis = async (ctx) => {
     logger: processSpawnLogger,
     locateProcess: locate,
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processAssignLogger }),
-    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: processAssignLogger })
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: processAssignLogger })
   })
   return {
     processMsg,
