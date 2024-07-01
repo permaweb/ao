@@ -3,6 +3,23 @@ import { withTimerMetrics } from './with-timer-metrics.js'
 import assert from 'node:assert'
 
 describe('withTimerMetrics', () => {
+  test('should throw an error if the timer dependency is invalid', () => {
+    assert.throws(() => withTimerMetrics({ timer: {} }), {
+      name: 'Error',
+      message: 'Timer must implement a startTimer function'
+    }, 'Timer must implement a startTimer function')
+
+    assert.throws(() => withTimerMetrics({ timer: { startTimer: 'not a function' } }), {
+      name: 'Error',
+      message: 'Timer must implement a startTimer function'
+    }, 'Timer startTimer property must be a function')
+
+    assert.throws(() => withTimerMetrics({}), {
+      name: 'Error',
+      message: 'Timer must implement a startTimer function'
+    }, 'Timer dependency is required')
+  })
+
   test('should return the original function result', async () => {
     const metricsFunction = withTimerMetrics({
       timer: {
