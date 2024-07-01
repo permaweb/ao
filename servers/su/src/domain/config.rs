@@ -7,7 +7,7 @@ use crate::domain::Config;
 #[derive(Debug, Clone)]
 pub struct AoConfig {
     pub database_url: String,
-    pub database_read_url: Option<String>,
+    pub database_read_url: String,
     pub su_wallet_path: String,
     pub gateway_url: String,
     pub upload_node_url: String,
@@ -28,8 +28,8 @@ impl AoConfig {
             None => env::var("MODE")?,
         };
         let database_read_url = match env::var("DATABASE_READ_URL") {
-            Ok(val) => Some(val),
-            Err(_e) => None,
+            Ok(val) => val,
+            Err(_e) => env::var("DATABASE_URL")?,
         };
         let use_disk = match env::var("USE_DISK") {
             Ok(val) => val == "true",

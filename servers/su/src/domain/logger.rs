@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 use env_logger::Env;
 use log::{error, info};
@@ -7,15 +7,13 @@ use crate::domain::Log;
 
 pub struct SuLog;
 
-/*
-Logging instance, using an instance of this
-instead of the env_logger macros throughout
-the code
-*/
+static INIT: Once = Once::new();
 
 impl SuLog {
     pub fn init() -> Arc<dyn Log> {
-        env_logger::init_from_env(Env::default().default_filter_or("info"));
+        INIT.call_once(|| {
+            env_logger::init_from_env(Env::default().default_filter_or("info"));
+        });
         Arc::new(SuLog {})
     }
 }

@@ -8,8 +8,8 @@ mod core;
 mod logger;
 
 use clients::{
-    gateway::ArweaveGateway, signer::ArweaveSigner, uploader::UploaderClient,
-    wallet::FileWallet, store
+    gateway::ArweaveGateway, signer::ArweaveSigner, store, uploader::UploaderClient,
+    wallet::FileWallet,
 };
 use config::AoConfig;
 use core::dal::{Config, Gateway, Log};
@@ -37,7 +37,7 @@ pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
         let logger_clone = logger.clone();
         /*
           sync_bytestore is a blocking routine so we must
-          call spawn_blocking or the server wont start until 
+          call spawn_blocking or the server wont start until
           its complete and we want to do it in the background
         */
         spawn_blocking(move || {
@@ -48,8 +48,6 @@ pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
             }
         });
     }
-
-    println!("ccc: {:?}", config);
 
     let scheduler_deps = Arc::new(core::scheduler::SchedulerDeps {
         data_store: data_store.clone(),
