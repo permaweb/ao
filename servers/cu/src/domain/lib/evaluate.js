@@ -157,6 +157,7 @@ export function evaluateWith (env) {
                  * Iterate over the async iterable of messages,
                  * and evaluate each one
                  */
+                let first = true
                 for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, AoGlobal } of messages) {
                   if (cron) {
                     const key = toEvaledCron({ timestamp: message.Timestamp, cron })
@@ -208,7 +209,7 @@ export function evaluateWith (env) {
                         /**
                          * Where the actual evaluation is performed
                          */
-                        .then((Memory) => ctx.evaluator({ noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
+                        .then((Memory) => ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
                         /**
                          * These values are folded,
                          * so that we can potentially update the process memory cache
@@ -216,6 +217,11 @@ export function evaluateWith (env) {
                          */
                         .then(mergeLeft({ noSave, message, cron, ordinate }))
                         .then(async (output) => {
+                          /**
+                           * Make sure to set first to false
+                           * for all subsequent evaluations for this evaluation stream
+                           */
+                          if (first) first = false
                           if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
 
                           if (cron) ctx.stats.messages.cron++

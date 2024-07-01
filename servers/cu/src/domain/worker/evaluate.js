@@ -7,6 +7,10 @@ import { saveEvaluationSchema } from '../dal.js'
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
 export function evaluateWith ({
+  /**
+   * TODO: no longer needed since the wasmModule
+   * is passed in. Eventually remove usage and injection
+   */
   loadWasmModule,
   wasmInstanceCache,
   bootstrapWasmInstance,
