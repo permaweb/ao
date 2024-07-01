@@ -42,7 +42,7 @@ function ao.normalize(msg)
     for _, o in ipairs(msg.Tags) do
         if not _includes({
             'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
-            'Ref_', 'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
+            'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
         })(o.name) then msg[o.name] = o.value end
     end
     return msg
