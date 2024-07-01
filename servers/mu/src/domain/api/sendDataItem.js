@@ -90,8 +90,26 @@ export function sendDataItemWith ({
          * so the crank method will simply noop, keeping the behavior
          * a black box
          */
-      crank: () => of()
-        .map(logger.tap('No cranking for a Process DataItem required. Nooping...'))
+      crank: () => of({ res })
+        .chain(({ res }) => {
+          const hasTargetTag = res.dataItem.tags.find((tag) => tag.name === 'Target')
+          if (hasTargetTag) {
+            return Rejected({ res })
+          }
+          return Resolved()
+        })
+        .bichain(({ res }) => {
+          const assigns = [{ Message: res.dataItem.id, Processes: res.dataItem.tags.filter((tag) => tag.name === 'Target').map((tag) => tag.value) }]
+          return crank({
+            msgs: [],
+            spawns: [],
+            assigns,
+            initialTxId: res.tx.id
+          })
+        }, Resolved)
+        .bimap(
+          logger.tap('Assignments cranked for Process DataItem.'),
+          logger.tap('No cranking for a Process DataItem without target required. Nooping...'))
     }))
 
   return (ctx) => {
