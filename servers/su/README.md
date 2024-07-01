@@ -40,6 +40,11 @@ Create a .env file with the following variables, or set them in the OS:
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
 - `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore when in `su` MODE, just set it to `""`.
+- `DB_WRITE_CONNECTIONS` how many db connections in the writer pool,defaults to 10
+- `DB_READ_CONNECTIONS` how many db connections in the reader pool, default to 10
+- `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
+- `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
+- `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
@@ -106,8 +111,12 @@ in the container.
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
 - `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore in `su` mode just set it to `""`.
-- `USE_DISK` whether or not to read and write message files from/to the disk/rocksdb. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on. This enhances the performance if the data is properly migrated to using the migration binary first.
-- `SU_DATA_DIR` The data directory on disk where the su will create a rocksdb key value store, it will only be used from if `USE_DISK` is `true`
+- `DB_WRITE_CONNECTIONS` how many db connections in the writer pool,defaults to 10
+- `DB_READ_CONNECTIONS` how many db connections in the reader pool, default to 10
+- `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
+- `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
+- `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
+
 
 
 ### Running a router in front of multiple scheduler units
