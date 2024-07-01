@@ -124,8 +124,8 @@ function ao.send(msg)
 end
 
 function ao.spawn(module, msg)
-    assert(type(module) == "string", "module source id is required!")
-    assert(type(msg) == 'table', 'msg should be a table')
+    assert(type(module) == "string", "Module source id is required!")
+    assert(type(msg) == 'table', 'Message must be a table')
     -- inc spawn reference
     ao._ref = ao._ref + 1
 
