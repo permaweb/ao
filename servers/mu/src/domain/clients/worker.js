@@ -43,6 +43,7 @@ export function processResultWith ({
 }) {
   return async (result) => {
     return of(result)
+      .map((result) => ({ ...result, stage: 'start' }))
       /**
        * Choose the correct business logic based
        * on the type of the individual Result
@@ -120,6 +121,8 @@ function processResultsWith ({ dequeue, processResult, logger }) {
         processResult(result).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
+          const ctx = e.cause ?? {}
+          console.log('Eres: ', { result, ctx })
         })
       } else {
         await new Promise(resolve => setTimeout(resolve, 100))

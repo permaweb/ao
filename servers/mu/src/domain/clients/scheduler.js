@@ -40,7 +40,7 @@ function writeDataItemWith ({ fetch, logger }) {
         identity
       )
       .bichain(
-        (err) => Rejected(JSON.stringify(err)),
+        (err) => Rejected(err),
         fromPromise(async (res) => {
           if (!res?.ok) {
             const text = await res.text()
