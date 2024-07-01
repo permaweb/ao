@@ -7,6 +7,9 @@ import { swallow } from '../utils.js'
  * need to be referenced as labels passed to the histogram itself. Any additional checks in this way are up to the implementation and are details of the specific implementation.
  */
 export function withTimerMetrics ({ timer, startLabelsFrom = always({}), stopLabelsFrom = always({}), tracesFrom = always({}), logger = console.warn.bind(console) } = {}) {
+  if (!timer || !timer.startTimer || typeof timer.startTimer !== 'function') {
+    throw new Error('Timer must implement a startTimer function')
+  }
   return (func) => (...funcArgs) => {
     const startLabels = startLabelsFrom(...funcArgs)
     const traces = tracesFrom(...funcArgs)
