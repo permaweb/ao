@@ -42,7 +42,7 @@ function ao.normalize(msg)
     for _, o in ipairs(msg.Tags) do
         if not _includes({
             'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
-            'Ref_', 'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
+            'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
         })(o.name) then msg[o.name] = o.value end
     end
     return msg
@@ -124,10 +124,11 @@ function ao.send(msg)
 end
 
 function ao.spawn(module, msg)
-    assert(type(module) == "string", "module source id is required!")
-    assert(type(msg) == 'table', 'msg should be a table')
+    assert(type(module) == "string", "Module source id is required!")
+    assert(type(msg) == 'table', 'Message must be a table')
     -- inc spawn reference
     ao._ref = ao._ref + 1
+    local spawnRef = tostring(ao._ref)
 
     local spawn = {
         Data = msg.Data or "NODATA",
@@ -139,7 +140,7 @@ function ao.spawn(module, msg)
             {name = "From-Process", value = ao.id},
             {name = "From-Module", value = ao._module},
             {name = "Module", value = module},
-            {name = "Ref_", value = tostring(ao._ref)}
+            {name = "Ref_", value = spawnRef}
         }
     }
 
@@ -165,7 +166,17 @@ function ao.spawn(module, msg)
     -- add spawn to outbox
     table.insert(ao.outbox.Spawns, spawn)
 
-    return spawn
+    -- add 'after' callback to returned table
+    local result = {}
+    result.after =
+        function(newCallback)
+            Handlers.once(
+                { Action = "Spawned", From = ao.id, Ref_ = spawnRef },
+                newCallback
+            )
+        end
+    
+    return result
 end
 
 function ao.assign(assignment)
