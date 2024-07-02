@@ -33,9 +33,12 @@ export const LATEST = 'LATEST'
 
 /**
  * @type {{
- *  get: LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }>['get']
- *  set: LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }>['set']
- *  lru: LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }>
+ *  get: (processId: string) => { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }
+ *  set: (processId: string, value: { evaluation: Evaluation, Memory: ArrayBuffer }) => void
+ *  data: {
+ *    loadProcessCacheUsage: () => { size: number, calculatedSize: number, processes: { process: string, size: number }[]}
+ *    forEach: (fn: (value: { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }) => unknown) => void
+ *  }
  * }}
  *
  * @typedef Evaluation
@@ -86,7 +89,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
        * will trigger the disposeAfter callback on the cache
        * to be called
        */
-      data.delete(key)
+      lru.delete(key)
       ttlTimers.delete(key)
     }, TTL)
     ttl.unref()
@@ -95,20 +98,32 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
   }
 
   /**
+   * @type {Map<string, DrainedCacheValue>}
+   *
+   * @typedef DrainedCacheValue
+   * @property {Evaluation} evaluation
+   * @property {Promise<string | undefined>} File
+   */
+  const drainedToFile = new Map()
+
+  /**
    * Expose the total count of processes cached on this unit,
    * on the CU's application level metrics
    */
   gauge({
     name: 'ao_process_total',
     description: 'The total amount of ao Processes cached on the Compute Unit',
-    collect: () => data.size
+    collect: () => lru.size
   })
 
-  let prevDisposed
   /**
-   * @type {LRUCache<string, { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }}
+   * @type {LRUCache<string, LRUCacheValue}
+   *
+   * @typedef LRUCacheValue
+   * @property {Evaluation} evaluation
+   * @property {ArrayBuffer} Memory
    */
-  const data = new LRUCache({
+  const lru = new LRUCache({
     /**
      * #######################
      * Capacity Configuration
@@ -117,76 +132,45 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
     maxSize: MAX_SIZE,
     /**
      * Size is calculated using the Memory Array Buffer
-     * or just the name of the file (negligible in the File case)
      */
-    sizeCalculation: ({ Memory }) => {
-      if (Memory) return Memory.byteLength
-      /**
-       * File will be a string like 'state-${processId}'
-       * so approximately 50 bytes
-       */
-      return 50
-    },
-    // noDisposeOnSet: true,
+    sizeCalculation: ({ Memory }) => Memory.byteLength,
     /**
      * The process has either lived out its ttl, or has been evicted
      * from the cache.
      *
-     * So we drain Process memory to a file, udpating the cache entry
+     * So we drain Process memory to a file, updating the cache entry
      * in the LRU In-Memory cache, but removing the process Memory from the heap,
      * clearing up space
      *
-     * On subsequent read, client may need to read the memory back in from
+     * On a subsequent read, client may need to read the process memory back in from
      * a file
      */
     disposeAfter: async (value, key, reason) => {
       if (reason === 'delete' || reason === 'evict') {
-        /**
-         * If the key was the most recent previously disposed key,
-         * then we do not add back to the cache.
-         *
-         * This could only happen in situations where the cache is
-         * _very_ full that even a drainedToFile entry (~50 bytes total)
-         * won't fit, or if an entry is too large to fit into the cache at all.
-         *
-         * This ultimately is meant to hedge against an infinite recursion
-         */
-        if (prevDisposed === key) {
-          logger(
-            'WARNING: Cached process "%s" most recently removed. Skipping adding drained entry back to the cache',
-            key
-          )
-          return
-        }
-
         /**
          * In some way the Memory was removed or zeroed out
          *
          * There is no Memory, so nothing to preserve by writing
          * to a file, so simply noop, letting the cache entry
          * naturally be evicted (gone forever)
+         *
+         * This is basically a hedge against a defunct entry
          */
         if (!value.Memory || !value.Memory.byteLength) return
 
         /**
-         * The Memory failed to drain to a file
-         * so we cannot use the entry, so do nothing
-         */
-        if (value.File && !(await value.File)) return
-
-        prevDisposed = key
-        /**
-         * Update the cache entry to instead be a file reference containing the process memory
-         * and remove the reference to the actual Memory, so that it can be GC'd.
+         * Add a cache entry to the drainedToFile cache with an entry containing a
+         * file reference containing the process memory
+         * and remove the reference to the actual Memory, so that it can be GC'd,
+         * and freed up in the LRU Cache
          *
-         * Since we are setting on the underlying data store directly,
-         * this won't have a ttl associated with it and also won't trigger
-         * the clearance of prevDisposed, which is what we want
+         * Since we are storing in an internal separate data store,
+         * this won't have a ttl associated with it.
          *
          * Note we do not mutate the old object, and instead cache a new one,
          * in case the old object containing the memory is in use elsewhere
          *
-         * Unlike 'dispose', It's safe to add back to the cache here. From lru-cache docs:
+         * Unlike 'dispose', It's safe to add back to the LRU Cache here (if needed). From lru-cache docs:
          * """
          *  It is safe to add an item right back into the cache at this point.
          * However, note that it is *very* easy to inadvertently create infinite
@@ -194,7 +178,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
          * """
          */
         logger('Draining memory of size %d for process "%s" to file...', value.Memory.byteLength, key)
-        data.set(
+        drainedToFile.set(
           key,
           {
             evaluation: value.evaluation,
@@ -205,7 +189,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
                   value.evaluation,
                   err
                 )
-                data.delete(key)
+                lru.delete(key)
                 return undefined
               }),
             Memory: undefined
@@ -215,59 +199,73 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
   })
   processMemoryCache = {
     get: (key) => {
-      if (!data.has(key)) return undefined
-
       /**
-       * Make sure to clear out prevDisposed
-       * if the key is accessed in the cache,
-       *
-       * This way, if it get's LRU evicted or ttl expired
-       * again, before anything else, it isn't inadvertantly
-       * lost for good.
+       * A value was in the LRU In-Memory Cache
        */
-      if (prevDisposed === key) prevDisposed = undefined
+      if (lru.has(key)) {
+        const value = lru.get(key)
 
-      const value = data.get(key)
+        /**
+         * Somehow the Memory buffer was zeroed out,
+         * perhaps from a transfer to a worker thread gone wrong.
+         *
+         * Regardless, we cannot use the entry, so clear it's ttl timer
+         * and implicitly delete the defunct entry from all caches,
+         * internally
+         *
+         * This is basically a hedge against a defunct entry
+         */
+        if (value.Memory && !value.Memory.byteLength) {
+          clearTtlTimer(key)
+          lru.delete(key)
+          drainedToFile.delete(key)
+          return
+        }
 
-      /**
-       * Somehow the Memory buffer was zeroed out,
-       * perhaps from a transfer to a worker thread gone wrong.
-       *
-       * Regardless, we cannot use the entry, so clear it's ttl timer
-       * and implicitly delete the defunct entry
-       */
-      if (value.Memory && !value.Memory.byteLength) {
-        clearTtlTimer(key)
-        data.delete(key)
-        return
+        /**
+         * Will subsequently renew the age
+         * and recency of the cached value
+         */
+        setTtl(key)
+        return value
       }
 
-      /**
-       * Will subsequently renew the age
-       * and recency of the cached value
-       */
-      setTtl(key)
-      return value
+      if (drainedToFile.has(key)) return drainedToFile.get(key)
     },
     set: (key, value) => {
+      /**
+       * The Memory is being added back to the LRU Cache,
+       * so the drainedToFile entry needs to be removed
+       */
+      drainedToFile.delete(key)
       setTtl(key)
-      return data.set(key, value)
+      return lru.set(key, value)
     },
-    lru: data
+    data: {
+      loadProcessCacheUsage: () => {
+        const lruSize = lru.size
+        const drainedSize = drainedToFile.size
+        const size = lruSize + drainedSize
+
+        const lruCalcSize = lru.calculatedSize
+        const drainedCalcSize = drainedToFile.size * 50
+        const calculatedSize = lruCalcSize + drainedCalcSize
+
+        const lruProcesses = lru.dump()
+          .map(([key, entry]) => ({ process: key, size: entry.size }))
+        const drainedProcesses = Array.from(drainedToFile.keys()).map((key) => ({ process: key, size: 50 }))
+        const processes = lruProcesses.concat(drainedProcesses)
+
+        return { size, calculatedSize, processes }
+      },
+      forEach: (fn) => {
+        Array.from(lru.values()).forEach(fn)
+        Array.from(drainedToFile.values()).forEach(fn)
+      }
+    }
   }
 
   return processMemoryCache
-}
-
-export function loadProcessCacheUsage () {
-  if (!processMemoryCache) return
-
-  return {
-    size: processMemoryCache.lru.size,
-    calculatedSize: processMemoryCache.lru.calculatedSize,
-    processes: processMemoryCache.lru.dump()
-      .map(([key, entry]) => ({ process: key, size: entry.size }))
-  }
 }
 
 export function isProcessOwnerSupportedWith ({ ALLOW_OWNERS }) {
