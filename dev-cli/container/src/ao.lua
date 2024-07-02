@@ -1,9 +1,9 @@
 local ao = {
-    _version = "0.0.4",
+    _version = "0.0.5",
     id = "",
     _module = "",
     authorities = {},
-    _ref = 0,
+    Reference = 0,
     outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
 }
 
@@ -82,19 +82,17 @@ function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}, 
 
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
-    ao._ref = ao._ref + 1
+    ao.Reference = ao.Reference + 1
 
     local message = {
         Target = msg.Target,
         Data = msg.Data,
-        Anchor = padZero32(ao._ref),
+        Anchor = padZero32(ao.Reference),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
             {name = "Type", value = "Message"},
-            {name = "From-Process", value = ao.id},
-            {name = "From-Module", value = ao._module},
-            {name = "Ref_", value = tostring(ao._ref)}
+            {name = "X-Reference", value = tostring(ao.Reference)}
         }
     }
 
@@ -127,12 +125,12 @@ function ao.spawn(module, msg)
     assert(type(module) == "string", "Module source id is required!")
     assert(type(msg) == 'table', 'Message must be a table')
     -- inc spawn reference
-    ao._ref = ao._ref + 1
-    local spawnRef = tostring(ao._ref)
+    ao.Reference = ao.Reference + 1
+    local spawnRef = tostring(ao.Reference)
 
     local spawn = {
         Data = msg.Data or "NODATA",
-        Anchor = padZero32(ao._ref),
+        Anchor = padZero32(ao.Reference),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
@@ -140,7 +138,7 @@ function ao.spawn(module, msg)
             {name = "From-Process", value = ao.id},
             {name = "From-Module", value = ao._module},
             {name = "Module", value = module},
-            {name = "Ref_", value = spawnRef}
+            {name = "X-Reference", value = spawnRef}
         }
     }
 
@@ -163,20 +161,25 @@ function ao.spawn(module, msg)
         end
     end
 
-    -- add spawn to outbox
-    table.insert(ao.outbox.Spawns, spawn)
+    -- clone spawn info and add to outbox
+    local extSpawn = {}
+    for k, v in pairs(spawn) do
+        extSpawn[k] = v
+    end
+
+    table.insert(ao.outbox.Spawns, extSpawn)
 
     -- add 'after' callback to returned table
-    local result = {}
-    result.after =
-        function(newCallback)
+    --local result = {}
+    spawn.after =
+        function(callback)
             Handlers.once(
-                { Action = "Spawned", From = ao.id, Ref_ = spawnRef },
-                newCallback
+                { Action = "Spawned", From = ao.id, ["X-Reference"] = spawnRef },
+                callback
             )
         end
     
-    return result
+    return spawn
 end
 
 function ao.assign(assignment)
