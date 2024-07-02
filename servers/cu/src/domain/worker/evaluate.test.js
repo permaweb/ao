@@ -401,7 +401,7 @@ describe('evaluate', async () => {
         const cache = new LRUCache({ max: 10 })
         const evaluate = evaluateWith({
           saveEvaluation: async (evaluation) => evaluation,
-          wasmInstanceCache: new LRUCache({ max: 1 }),
+          wasmInstanceCache: cache,
           loadWasmModule: () => WebAssembly.compileStreaming(
             wasmResponse(Readable.toWeb(createReadStream('./test/processes/sad/process.wasm')))
           ),
