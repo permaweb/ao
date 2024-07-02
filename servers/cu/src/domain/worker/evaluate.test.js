@@ -171,6 +171,11 @@ describe('evaluate', async () => {
           }
         )
       })
+
+      test('cache WebAssembly.Instance, to be used on subsequent evaluations in the eval stream', async () => {
+        await evaluate(args)
+        assert.equal(wasmInstanceCache.size, 1)
+      })
     })
 
     test('always add WeaveDrive is the module is wasm 64', async () => {
@@ -390,6 +395,37 @@ describe('evaluate', async () => {
         assert.ok(output.Error)
         assert(output.Error.endsWith("attempt to index a nil value (field 'field')"))
         assert.deepStrictEqual(output.Memory, Buffer.from('Hello', 'utf-8'))
+      })
+
+      test('should delete the WebAssembly.Instance from the cache, to be reinstantiated on subsequent evaluations', async () => {
+        const cache = new LRUCache({ max: 10 })
+        const evaluate = evaluateWith({
+          saveEvaluation: async (evaluation) => evaluation,
+          wasmInstanceCache: new LRUCache({ max: 1 }),
+          loadWasmModule: () => WebAssembly.compileStreaming(
+            wasmResponse(Readable.toWeb(createReadStream('./test/processes/sad/process.wasm')))
+          ),
+          bootstrapWasmInstance: (wasmModule, _moduleOptions) => AoLoader(
+            (info, receiveInstance) => WebAssembly.instantiate(wasmModule, info).then(receiveInstance),
+            _moduleOptions
+          ),
+          logger
+        })
+
+        await evaluate({
+          ...args,
+          message: {
+            Id: 'message-123',
+            Timestamp: 1702846520559,
+            Owner: 'owner-456',
+            Tags: [
+              { name: 'function', value: 'errorResult' }
+            ],
+            'Block-Height': 1234
+          }
+        })
+
+        assert.equal(cache.size, 0)
       })
     })
   })
