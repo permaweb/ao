@@ -1,6 +1,5 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
-import { identity } from 'ramda'
 import { checkStage } from '../utils.js'
 
 const ctxSchema = z.object({
@@ -105,15 +104,14 @@ export function buildTxWith (env) {
       )
       .map((res) => {
         // add tx and schedLocation to the result
-        return { ...ctx, ...res, buildTx: 'success' }
+        return { ...ctx, ...res }
       })
       .map(ctxSchema.parse)
-      .map(logger.tap('Added tx and schedLocation to ctx'))
       .bimap(
         (e) => {
-          return new Error(e, { cause: { ...ctx, stage: 'start' } })
+          return new Error(e, { cause: ctx })
         },
-        identity
+        logger.tap('Added tx and schedLocation to ctx')
       )
   }
 }

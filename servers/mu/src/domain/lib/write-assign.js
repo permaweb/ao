@@ -35,6 +35,11 @@ export function writeAssignWith (env) {
         }
       })
       .map(ctxSchema.parse)
-      .map(logger.tap('Added "tx" to ctx'))
+      .bimap(
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
+        logger.tap('Added "tx" to ctx')
+      )
   }
 }

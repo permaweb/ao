@@ -42,8 +42,9 @@ export function processResultWith ({
   processAssign
 }) {
   return async (result) => {
+    console.log('Processing result...', { result })
     return of(result)
-      .map((result) => ({ ...result, stage: 'start' }))
+      .map((result) => ({ ...result, stage: result.stage ?? 'start' }))
       /**
        * Choose the correct business logic based
        * on the type of the individual Result
@@ -112,7 +113,7 @@ export function enqueueResultsWith ({ enqueue }) {
  * do not need to wait for other results to finish
  * so we can do this async
  */
-function processResultsWith ({ dequeue, processResult, logger }) {
+function processResultsWith ({ enqueue, dequeue, processResult, logger }) {
   return async () => {
     while (true) {
       const result = dequeue()
@@ -122,7 +123,13 @@ function processResultsWith ({ dequeue, processResult, logger }) {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
           const ctx = e.cause ?? {}
-          console.log('Eres: ', { result, ctx })
+          const retries = ctx.retries ?? 0
+          const stage = ctx.stage
+          setTimeout(() => {
+            if (retries < 5 && stage !== 'end') {
+              enqueue({ ...ctx, retries: retries + 1 })
+            }
+          }, 1000)
         })
       } else {
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -162,6 +169,7 @@ const processResult = processResultWith({
 })
 
 const processResults = processResultsWith({
+  enqueue,
   dequeue,
   processResult,
   logger

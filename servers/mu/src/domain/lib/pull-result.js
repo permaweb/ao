@@ -1,6 +1,6 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
-import { setStage } from '../utils.js'
+import { checkStage } from '../utils.js'
 
 const ctxSchema = z.object({
   msgs: z.any(),
@@ -13,7 +13,7 @@ function fetchResultWith ({ fetchResult }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
   return (ctx) =>
-    fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+    fetchResultAsync(ctx.stage === 'pull-result' ? ctx.tx.id + 'abc' : ctx.tx.id, ctx.tx.processId)
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
           return {
@@ -53,15 +53,15 @@ export function pullResultWith (env) {
   const fetchResult = fetchResultWith(env)
 
   return (ctx) => {
-    if (ctx.stage === 'pull-result') {
-      console.log(30, { ctx })
-      throw new Error('Error test 123', { cause: ctx })
-    }
+    if (!checkStage('pull-result')(ctx)) return Resolved(ctx)
     return of(ctx)
       .chain(fetchResult)
-      .bichain(Resolved, Resolved)
       .map(ctxSchema.parse)
-      .map(setStage('pull-result', 'end'))
-      .map(logger.tap('Added "msgs, spawns, and assigns" to ctx'))
+      .bimap(
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
+        logger.tap('Added "msgs, spawns, and assigns" to ctx')
+      )
   }
 }

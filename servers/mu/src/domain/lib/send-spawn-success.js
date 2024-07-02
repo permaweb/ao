@@ -19,13 +19,18 @@ export function sendSpawnSuccessWith (env) {
       .bichain(
         (error) => {
           console.error('writeDataItem failed. Recovering and returning original ctx.', error)
-          return of(ctx)
+          return new Error(error, { cause: ctx })
         },
         (result) => {
           return of(result)
             .map(assoc('spawnSuccessSequencerTx', __, ctx))
             .map(ctxSchema.parse)
-            .map(logger.tap('Added "spawnSuccessSequencerTx" to ctx'))
+            .bimap(
+              (e) => {
+                return new Error(e, { cause: ctx })
+              },
+              logger.tap('Added "spawnSuccessSequencerTx" to ctx')
+            )
         }
       )
   }

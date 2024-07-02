@@ -72,12 +72,6 @@ export function sendDataItemWith ({
             .bimap(
               logger.tap('Failed to crank messages'),
               logger.tap('Cranking complete')
-            ).bimap(
-              (e) => {
-                console.log(1289, { ctx, e })
-                return new Error(e, { cause: ctx })
-              },
-              (d) => console.log(1288, { ctx, d })
             )
         }))
     )

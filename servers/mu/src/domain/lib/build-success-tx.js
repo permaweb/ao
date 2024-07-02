@@ -52,6 +52,11 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
       })))
       .map(assoc('spawnSuccessTx', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap('Added spawnSuccessTx to ctx'))
+      .bimap(
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
+        logger.tap('Added spawnSuccessTx to ctx')
+      )
   }
 }

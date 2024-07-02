@@ -27,11 +27,7 @@ export function processMsgWith ({
   const pullResult = pullResultWith({ fetchResult, logger })
 
   return (ctx) => {
-    console.log(20, { ctx })
     return of(ctx)
-      .map((ctx) => {
-        return { ...ctx, foo: 'bar' }
-      })
       .map(setStage('start', 'build-tx'))
       .chain(buildTx)
       .map(setStage('build-tx', 'write-message'))
@@ -41,30 +37,26 @@ export function processMsgWith ({
         the rest of the message passing process we just return
         ctx.
       */
-      .map((ctx) => {
-        console.log(22, { ctx })
-        return ctx
-      })
       .chain((ctx) => {
-        console.log(22.5, { ctx })
         return writeMessage(ctx)
           .chain((ctx) => {
-            console.log(26, { ctx })
             return ctx.arweaveTx
               ? of(ctx)
+                .map(setStage('write-message-arweave', 'end'))
               : of(ctx)
                 .map(setStage('write-message-su', 'get-cu-address'))
                 .chain(getCuAddress)
                 .map(setStage('get-cu-address', 'pull-result'))
                 .chain(pullResult)
+                .map(setStage('pull-result', 'end'))
           })
       })
       .bimap(
-        (e, v) => {
-          console.log('abc1err', { ctx, e, v })
+        (e) => {
+          console.log('processMsgErr:', { ctx, e })
           return new Error(e, { cause: e.cause })
         },
-        logger.tap('abc1Success')
+        logger.tap('processMsgSuccess')
       )
   }
 }
