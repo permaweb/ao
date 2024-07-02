@@ -1,24 +1,31 @@
 import { identity } from 'ramda'
 import { of, fromPromise, Rejected } from 'hyper-async'
+import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
-function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
+function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
+  const dataItemFetch = withTimerMetricsFetch({
+    fetch,
+    timer: histogram,
+    startLabelsFrom: () => ({
+      operation: 'uploadDataItem'
+    })
+  })
   return async (data) => {
     return of(data)
       .map(logger.tap(`Forwarding message to uploader ${UPLOADER_URL}`))
-      .chain(fromPromise((body) =>
-        fetch(`${UPLOADER_URL}/tx/arweave`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            Accept: 'application/json'
-          },
-          body
-        })
-      ))
-      .bimap(
-        logger.tap('Error while communicating with uploader:'),
-        identity
+      .chain(
+        fromPromise((body) =>
+          dataItemFetch(`${UPLOADER_URL}/tx/arweave`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              Accept: 'application/json'
+            },
+            body
+          })
+        )
       )
+      .bimap(logger.tap('Error while communicating with uploader:'), identity)
       .bichain(
         (err) => Rejected(JSON.stringify(err)),
         fromPromise(async (res) => {

@@ -57,6 +57,12 @@ CLI version, simply run:
 curl -L https://arweave.net/{txId} | bash
 ```
 
+To install the latest version of the `ao` CLI, run:
+
+```sh
+curl -L https://install_ao.g8way.io | bash
+```
+
 Then follow the instructions for adding the `ao` binary to your `PATH`. Use
 `ao --help` to confirm the CLI is installed
 

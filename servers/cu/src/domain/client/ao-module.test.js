@@ -163,8 +163,10 @@ describe('ao-module', () => {
 
     test('should eval the message', async () => {
       const evaluator = evaluatorWith({
-        evaluate: ({ streamId, moduleId: mId, moduleOptions: mOptions, Memory, message, AoGlobal, ...rest }) => {
+        loadWasmModule: async () => WebAssembly.compile(readFileSync('./test/processes/happy/process.wasm')),
+        evaluate: ({ streamId, wasmModule, moduleId: mId, moduleOptions: mOptions, Memory, message, AoGlobal, ...rest }) => {
           assert.ok(streamId)
+          assert.ok(wasmModule)
           assert.equal(mId, moduleId)
           assert.deepStrictEqual(mOptions, moduleOptions)
 

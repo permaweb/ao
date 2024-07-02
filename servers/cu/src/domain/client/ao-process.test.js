@@ -264,18 +264,19 @@ describe('ao-process', () => {
 
     test('should return undefined if no checkpoint is earlier than target', async () => {
       const now = new Date()
+      const tenSecondsAgo = `${now.getTime() - 10000}`
       const findCheckpointFileBefore = findCheckpointFileBeforeWith({
         DIR: '/foobar',
         glob: async (str) => [
-          `/foobar/checkpoint-process-123,${now},10.json`,
-          `/foobar/checkpoint-process-123,${now},11.json`
+          `/foobar/checkpoint-process-123,${now.getTime()},13.json`,
+          `/foobar/checkpoint-process-123,${now.getTime() + 1000},14.json`
         ]
       })
 
       const res = await findCheckpointFileBefore({
         processId: 'process-123',
         before: {
-          timestamp: now,
+          timestamp: tenSecondsAgo,
           ordinate: '12',
           cron: undefined
         }
@@ -371,7 +372,7 @@ describe('ao-process', () => {
             ...deps,
             cache: {
               get: () => ({
-                File: 'state-process123.dat',
+                File: Promise.resolve('state-process123.dat'),
                 evaluation: cachedEval
               })
             },
@@ -392,7 +393,7 @@ describe('ao-process', () => {
             ...deps,
             cache: {
               get: () => ({
-                File: 'state-process123.dat',
+                File: Promise.resolve('state-process123.dat'),
                 evaluation: { ...cachedEval, encoding: undefined }
               })
             },
@@ -447,7 +448,7 @@ describe('ao-process', () => {
           ...deps,
           cache: {
             get: () => ({
-              File: 'state-process123.dat',
+              File: Promise.resolve('state-process123.dat'),
               evaluation: cachedEval
             })
           },
@@ -520,6 +521,33 @@ describe('ao-process', () => {
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should use if in LRU In-Memory Cache cannot be used', () => {
+        test('Memory failed to drain to a file', async () => {
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
+            ...deps,
+            readCheckpointFile: async (file) => assert.fail('should not read memory file if failed to drain'),
+            cache: {
+              get: () => ({
+                File: Promise.resolve(undefined),
+                evaluation: cachedEval
+              })
+            }
+          }))
+
+          const { Memory, ...res } = await findLatestProcessMemory(target)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'record',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
         test('no checkpoint in LRU In-Memory cache', async () => {
           const { Memory, ...res } = await findLatestProcessMemory(target)
 
@@ -1204,6 +1232,48 @@ describe('ao-process', () => {
         assert.ok(cacheUpdated)
       })
 
+      test('should update if the cache entry is equal to provided save, AND cache does not contain the Memory', async () => {
+        let cacheUpdated = false
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory: undefined,
+              evaluation: cachedEval
+            }),
+            set: () => { cacheUpdated = true }
+          }
+        }))
+        await saveLatestProcessMemory({
+          ...targetWithGasUsed,
+          timestamp: cachedEval.timestamp,
+          ordinate: cachedEval.ordinate,
+          cron: cachedEval.cron
+        })
+        assert.ok(cacheUpdated)
+      })
+
+      test('should NOT update if the cache entry is equal to provided save, AND contains the Memory', async () => {
+        let cacheUpdated = false
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: () => { cacheUpdated = true }
+          }
+        }))
+        await saveLatestProcessMemory({
+          ...targetWithGasUsed,
+          timestamp: cachedEval.timestamp,
+          oridnate: cachedEval.oridnate,
+          cron: cachedEval.cron
+        })
+        assert.ok(!cacheUpdated)
+      })
+
       test('should update if there is no cache entry', async () => {
         let cacheUpdated = false
         const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
@@ -1315,10 +1385,7 @@ describe('ao-process', () => {
         gauge: () => false
       })
       // call something on the cache
-      cache.set('foo', {
-        File: 'foo.dat',
-        Memory: Buffer.from('hello world')
-      })
+      cache.set('foo', { Memory: Buffer.from('hello world') })
       // wait to see that this implementation does not overflow
       await new Promise((resolve) => setTimeout(resolve, 50))
 

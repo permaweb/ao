@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import cron from 'node-cron'
 import { Mutex } from 'async-mutex'
+import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
 const mutex = new Mutex()
 /**
@@ -61,7 +62,14 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
   }
 }
 
-function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
+function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
+  const getCursorFetch = withTimerMetricsFetch({
+    fetch,
+    timer: histogram,
+    startLabelsFrom: () => ({
+      operation: 'getCursor'
+    })
+  })
   return async ({ processId }) => {
     if (cronsRunning[processId]) {
       throw new Error('Process already being monitored')
@@ -137,7 +145,7 @@ function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron
         return fs.readFileSync(cursorFilePath, 'utf8')
       }
 
-      const latestResults = await fetch(`${CU_URL}/results/${processId}?sort=DESC&limit=1&processId=${processId}`)
+      const latestResults = await getCursorFetch(`${CU_URL}/results/${processId}?sort=DESC&limit=1&processId=${processId}`)
 
       const latestJson = await latestResults.json()
         .catch(error => {

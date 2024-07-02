@@ -1,24 +1,24 @@
 use std::env::VarError;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::{env, io};
 
 use dotenv::dotenv;
 use futures::future::join_all;
-use indicatif::ProgressBar;
-use std::env;
-use std::io;
-use std::sync::Arc;
-use tokio::task::{spawn_blocking, JoinHandle};
-
+use tokio::task::JoinHandle;
+use tokio::time::interval;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-
 use async_trait::async_trait;
+
+use super::super::SuLog;
 
 use super::super::core::dal::{
     DataStore, JsonErrorType, Message, PaginatedMessages, Process, ProcessScheduler, Scheduler,
-    StoreErrorType,
+    StoreErrorType, Log
 };
 
 use crate::domain::config::AoConfig;
@@ -79,22 +79,41 @@ pub struct StoreClient {
     pool: Pool<ConnectionManager<PgConnection>>,
     read_pool: Pool<ConnectionManager<PgConnection>>,
     use_disk: bool,
-    bytestore: bytestore::ByteStore,
+
+    /*
+      These are only public for the purposes of
+      the migration program.
+    */
+    pub logger: Arc<dyn Log>,
+    pub bytestore: Option<bytestore::ByteStore>,
 }
 
+/*
+  This is the data storage layer of the su.
+  It currently uses postgresql, and if the environmnent
+  variable USE_DISK is set to true, it will initialize
+  (if not already initialized) a rocksdb instance in
+  SU_DATA_DIR to store the message binary data for 
+  performance. 
+
+  USE_DISK should be set after the migration function 
+  migrate_to_disk is run, which is built into its own
+  binary in the build process. Things will not speed
+  up unless the data is already migrated.
+*/
 impl StoreClient {
     pub fn new() -> Result<Self, StoreErrorType> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let bytestore_i = bytestore::ByteStore::new(config.clone());
+        let c_clone = config.clone();
         let database_url = config.database_url;
-        let database_read_url = match config.database_read_url {
-            Some(u) => u,
-            None => database_url.clone(),
-        };
+        let database_read_url = config.database_read_url;
         let use_disk = config.use_disk;
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
+        let logger = SuLog::init();
+
         let pool = Pool::builder()
+            .max_size(config.db_write_connections)
             .test_on_check_out(true)
             .build(manager)
             .map_err(|_| {
@@ -102,6 +121,7 @@ impl StoreClient {
             })?;
 
         let read_pool = Pool::builder()
+            .max_size(config.db_read_connections)
             .test_on_check_out(true)
             .build(read_manager)
             .map_err(|_| {
@@ -114,10 +134,21 @@ impl StoreClient {
             pool,
             read_pool,
             use_disk,
-            bytestore: bytestore_i,
+            logger,
+            bytestore: if use_disk {
+                Some(bytestore::ByteStore::new(c_clone))
+            } else {
+                None
+            },
         })
     }
 
+    /*
+      Get a connection to the writer database using
+      the connection pool initialized in r2d2. This 
+      should be used in functions that write data 
+      or critically require the most up to date data.
+    */
     pub fn get_conn(
         &self,
     ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType>
@@ -127,6 +158,12 @@ impl StoreClient {
         })
     }
 
+    /*
+      Get a connection to the reader instance. If 
+      no DATABASE_READ_URL is set, this will default
+      to the DATABASE_URL. This should be used in
+      functions that only read data.
+    */
     pub fn get_read_conn(
         &self,
     ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType>
@@ -137,7 +174,9 @@ impl StoreClient {
     }
 
     /*
-        run at server startup to modify the database as needed
+        Run at server startup to modify the database as needed.
+        Migrations are embedded directly into the binary that 
+        get built.
     */
     pub fn run_migrations(&self) -> Result<String, StoreErrorType> {
         let conn = &mut self.get_conn()?;
@@ -150,6 +189,11 @@ impl StoreClient {
         }
     }
 
+    /*
+      Method to get the total number of messages
+      in the database, this is important for the migration
+      and sync functions.
+    */  
     pub fn get_message_count(&self) -> Result<i64, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn()?;
@@ -162,12 +206,25 @@ impl StoreClient {
         }
     }
 
+    /*
+      Get all messages in the database, within a
+      certain range. This is used for the migration.
+    */
     pub fn get_all_messages(
         &self,
         from: i64,
         to: Option<i64>,
-    ) -> Result<Vec<(String, Option<String>, Vec<u8>, String, serde_json::Value)>, StoreErrorType>
-    {
+    ) -> Result<
+        Vec<(
+            String,
+            Option<String>,
+            Vec<u8>,
+            String,
+            serde_json::Value,
+            String,
+        )>,
+        StoreErrorType,
+    > {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn()?;
         let mut query = messages.into_boxed();
@@ -192,6 +249,7 @@ impl StoreClient {
                     Vec<u8>,
                     String,
                     serde_json::Value,
+                    String,
                 )> = vec![];
                 for db_message in db_messages.iter() {
                     let bytes: Vec<u8> = db_message.bundle.clone();
@@ -201,6 +259,7 @@ impl StoreClient {
                         bytes,
                         db_message.process_id.clone(),
                         db_message.message_data.clone(),
+                        db_message.timestamp.to_string().clone(),
                     ));
                 }
 
@@ -210,6 +269,11 @@ impl StoreClient {
         }
     }
 
+    /*
+      Used as a fallback when USE_DISK is true. If the
+      Message cannot be found in the bytestore it will
+      fall back to this.
+    */
     fn get_message_internal(
         &self,
         message_id_in: &String,
@@ -250,8 +314,133 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+
+    /*
+      Used in the sync_bytestore function to iterate
+      over the message table starting at the end.
+    */
+    pub fn get_message_by_offset_from_end(
+        &self,
+        offset: i64,
+    ) -> Result<
+        Option<(
+            String,
+            Option<String>,
+            Vec<u8>,
+            String,
+            serde_json::Value,
+            String,
+        )>,
+        StoreErrorType,
+    > {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+
+        let db_message_result: Result<Option<DbMessage>, DieselError> = messages
+            .order(timestamp.desc())
+            .offset(offset)
+            .first(conn)
+            .optional();
+
+        match db_message_result {
+            Ok(Some(db_message)) => {
+                let bytes: Vec<u8> = db_message.bundle.clone();
+                Ok(Some((
+                    db_message.message_id.clone(),
+                    db_message.assignment_id.clone(),
+                    bytes,
+                    db_message.process_id.clone(),
+                    db_message.message_data.clone(),
+                    db_message.timestamp.to_string().clone(),
+                )))
+            }
+            Ok(None) => Ok(None),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    /*
+      Start at the end of the messages table, scan
+      backwards and insert messages into the bytestore
+      if they dont exist. Run at server startup to
+      sync the bytestore if USE_DISK is true.
+    */
+    pub fn sync_bytestore(&self) -> Result<(), ()> {
+        self.logger.log("Syncing the tail of the messages table".to_string());
+        use std::time::Instant;
+        let start = Instant::now();
+
+        let total_count = self
+            .get_message_count()
+            .expect("Failed to get message count");
+        let mut synced_count = 0;
+
+        for offset in 0..total_count {
+            let result = self.get_message_by_offset_from_end(offset);
+
+            match result {
+                Ok(Some(message)) => {
+                    let msg_id = message.0;
+                    let assignment_id = message.1;
+                    let bundle = message.2;
+                    let process_id = message.3;
+                    let timestamp = message.5;
+
+                    /*
+                      we would want to panic here if trying to
+                      call this without initializing the bytestore
+                    */
+                    if self.bytestore.clone().unwrap().exists(
+                        &msg_id,
+                        &assignment_id,
+                        &process_id,
+                        &timestamp,
+                    ) {
+                        // Stop the migration if message is already in byte store
+                        let duration = start.elapsed();
+                        self.logger.log(format!("Time elapsed in sync is: {:?}", duration));
+                        self.logger.log(format!("Number of messages synced: {}", synced_count));
+                        return Ok(());
+                    }
+
+                    self.bytestore
+                        .clone()
+                        .unwrap()
+                        .save_binary(
+                            msg_id.clone(),
+                            assignment_id.clone(),
+                            process_id.clone(),
+                            timestamp.clone(),
+                            bundle,
+                        )
+                        .expect("Failed to save message binary");
+
+                    synced_count += 1;
+                }
+                Ok(None) => {
+                    self.logger.log(format!("No more messages to process."));
+                    break;
+                }
+                Err(e) => {
+                    self.logger.error(format!("Error fetching messages: {:?}", e));
+                }
+            }
+        }
+
+        let duration = start.elapsed();
+        self.logger.log(format!("Time elapsed in sync is: {:?}", duration));
+        self.logger.log(format!("Number of messages synced: {}", synced_count));
+
+        Ok(())
+    }
 }
 
+/*
+  The DataStore trait is what the business logic uses 
+  to interact with the data storage layer. The implementations
+  can change here but the function definitions cannot unless
+  the business logic needs them to.
+*/
 #[async_trait]
 impl DataStore for StoreClient {
     fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
@@ -361,12 +550,18 @@ impl DataStore for StoreClient {
                         "Error saving message".to_string(),
                     )) // Return a custom error for duplicates
                 } else {
-                    self.bytestore.save_binary(
-                        message.message_id()?,
-                        Some(message.assignment_id()?),
-                        message.process_id()?,
-                        bundle_in.to_vec(),
-                    )?;
+                    if self.use_disk {
+                        self.bytestore
+                            .clone()
+                            .ok_or("Error: bytestore is None".to_string())?
+                            .save_binary(
+                                message.message_id()?,
+                                Some(message.assignment_id()?),
+                                message.process_id()?,
+                                message.timestamp()?.to_string(),
+                                bundle_in.to_vec(),
+                            )?;
+                    }
                     Ok("saved".to_string())
                 }
             }
@@ -430,28 +625,36 @@ impl DataStore for StoreClient {
                         &db_messages[..]
                     };
 
-                    let message_ids: Vec<(String, Option<String>, String)> = messages_o
+                    let message_ids: Vec<(String, Option<String>, String, String)> = messages_o
                         .iter()
                         .map(|msg| {
                             (
                                 msg.message_id.clone(),
                                 msg.assignment_id.clone(),
                                 msg.process_id.clone(),
+                                msg.timestamp.to_string().clone(),
                             )
                         })
                         .collect();
 
-                    let binaries = self.bytestore.read_binaries(message_ids).await?;
+                    let binaries = self
+                        .bytestore
+                        .clone()
+                        .ok_or("Bytestore is empty".to_string())?
+                        .read_binaries(message_ids)
+                        .await?;
+
                     let mut messages_mapped: Vec<Message> = vec![];
 
                     for db_message in messages_o.iter() {
                         /*
-                          binaries is keyed by the tuple (message_id, assignment_id, process_id)
+                          binaries is keyed by the tuple (message_id, assignment_id, process_id, timestamp)
                         */
                         match binaries.get(&(
                             db_message.message_id.clone(),
                             db_message.assignment_id.clone(),
                             db_message.process_id.clone(),
+                            db_message.timestamp.to_string().clone(),
                         )) {
                             Some(bytes_result) => {
                                 let mapped = Message::from_bytes(bytes_result.clone())?;
@@ -815,220 +1018,224 @@ pub struct NewProcessScheduler<'a> {
 }
 
 /*
-  A simple module for storing and retrieving files using
-  the disk. 
+  bytestore is a performance enhancement implemented within
+  the data store. This is implemented using RocksDB in BlobDB mode.
+  It is used for fast retrieval of messages.
+
+  See https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
 */
 mod bytestore {
-  use dashmap::DashMap;
-  use tokio::fs::{File};
-  use tokio::io::AsyncReadExt;
-  use tokio::task;
-  use std::fs::{create_dir_all, OpenOptions};
-  use std::io::Write;
-  use std::path::Path;
-  use std::sync::Arc;
+    use super::super::super::config::AoConfig;
+    use dashmap::DashMap;
+    use rocksdb::{Options, DB};
+    use std::sync::Arc;
 
-  use super::super::super::config::AoConfig;
+    #[derive(Clone)]
+    pub struct ByteStore {
+        db: Arc<DB>,
+    }
 
-  #[derive(Clone)]
-  pub struct ByteStore {
-      config: AoConfig,
-  }
+    impl ByteStore {
+        pub fn new(config: AoConfig) -> Self {
+            let mut opts = Options::default();
+            opts.create_if_missing(true);
+            opts.set_enable_blob_files(true); // Enable blob files
+            opts.set_blob_file_size(5 * 1024 * 1024 * 1024); // 5GB max for now
+            opts.set_min_blob_size(1024); // low value ensures it is used
 
-  impl ByteStore {
-      pub fn new(config: AoConfig) -> Self {
-          ByteStore { config }
-      }
+            let db = DB::open(&opts, &config.su_data_dir).expect("Failed to open RocksDB");
 
-      pub async fn read_binaries(
-          &self,
-          ids: Vec<(String, Option<String>, String)>,
-      ) -> Result<DashMap<(String, Option<String>, String), Vec<u8>>, String> {
-          let binaries = Arc::new(DashMap::new());
-          let mut tasks = Vec::new();
+            ByteStore { db: Arc::new(db) }
+        }
 
-          for id in ids {
-              let config_clone = self.config.clone();
-              let binaries_clone = Arc::clone(&binaries);
-              let id_clone = id.clone();
-              let id_clone_w = id.clone();
+        pub async fn read_binaries(
+            &self,
+            ids: Vec<(String, Option<String>, String, String)>,
+        ) -> Result<DashMap<(String, Option<String>, String, String), Vec<u8>>, String> {
+            let binaries = Arc::new(DashMap::new());
+            let db = self.db.clone();
 
-              let task = task::spawn(async move {
-                  let filename = ByteStore::create_filepath(id_clone.0, id_clone.1, id_clone.2, &config_clone);
-                  match ByteStore::read_binary(&filename).await {
-                      Ok(binary) => {
-                          binaries_clone.insert(id_clone_w, binary);
-                      }
-                      Err(_) => (),
-                  };
-              });
-              tasks.push(task);
-          }
+            for id in ids {
+                let db = db.clone();
+                let binaries = binaries.clone();
 
-          for task in tasks {
-              task.await.map_err(|e| format!("Task failed: {:?}", e))?;
-          }
+                let key = ByteStore::create_key(&id.0, &id.1, &id.2, &id.3);
+                if let Ok(Some(value)) = db.get(&key) {
+                    binaries.insert(id.clone(), value);
+                }
+            }
 
-          Ok(Arc::try_unwrap(binaries).map_err(|_| "Failed to unwrap Arc")?)
-      }
+            Ok(Arc::try_unwrap(binaries).map_err(|_| "Failed to unwrap Arc")?)
+        }
 
-      fn create_filepath(
-          message_id: String,
-          assignment_id: Option<String>,
-          process_id: String,
-          config: &AoConfig,
-      ) -> String {
-          match assignment_id {
-              Some(assignment_id) => format!(
-                  "{}/{}/msg___{}___assign___{}",
-                  config.su_data_dir, process_id, message_id, assignment_id
-              ),
-              None => format!("{}/{}/msg___{}", config.su_data_dir, process_id, message_id),
-          }
-      }
+        pub fn save_binary(
+            &self,
+            message_id: String,
+            assignment_id: Option<String>,
+            process_id: String,
+            timestamp: String,
+            binary: Vec<u8>,
+        ) -> Result<(), String> {
+            let key = ByteStore::create_key(&message_id, &assignment_id, &process_id, &timestamp);
+            self.db
+                .put(key, binary)
+                .map_err(|e| format!("Failed to write to RocksDB: {:?}", e))?;
+            Ok(())
+        }
 
-      async fn read_binary(filepath: &str) -> Result<Vec<u8>, String> {
-          let mut file = File::open(filepath).await.map_err(|e| format!("Failed to open file: {:?}", e))?;
-          let mut buffer = Vec::new();
-          file.read_to_end(&mut buffer).await.map_err(|e| format!("Failed to read file: {:?}", e))?;
-          Ok(buffer)
-      }
+        fn create_key(
+            message_id: &str,
+            assignment_id: &Option<String>,
+            process_id: &str,
+            timestamp: &str,
+        ) -> Vec<u8> {
+            match assignment_id {
+                Some(assignment_id) => format!(
+                    "message___{}___{}___{}___{}",
+                    process_id, timestamp, message_id, assignment_id
+                )
+                .into_bytes(),
+                None => format!("message___{}___{}___{}", process_id, timestamp, message_id)
+                    .into_bytes(),
+            }
+        }
 
-      pub fn save_binary(
-          &self,
-          message_id: String,
-          assignment_id: Option<String>,
-          process_id: String,
-          binary: Vec<u8>,
-      ) -> Result<(), String> {
-          let process_id_path = format!("{}/{}", self.config.su_data_dir, process_id);
-          let dir_path = Path::new(&process_id_path);
-          if !dir_path.exists() {
-              create_dir_all(&dir_path).map_err(|e| format!("Failed to create directory: {:?}", e))?;
-          }
-          let filepath = ByteStore::create_filepath(message_id, assignment_id, process_id, &self.config);
-          let file_path = Path::new(&filepath);
-
-          // Check if the file already exists
-          if file_path.exists() {
-              return Ok(());
-          }
-
-          let mut file = OpenOptions::new().create(true).write(true).open(filepath)
-              .map_err(|e| format!("Failed to create file: {:?}", e))?;
-          file.write_all(&binary).map_err(|e| format!("Failed to write to file: {:?}", e))?;
-          Ok(())
-      }
-  }
-
+        pub fn exists(
+            &self,
+            message_id: &str,
+            assignment_id: &Option<String>,
+            process_id: &str,
+            timestamp: &str,
+        ) -> bool {
+            let key = ByteStore::create_key(message_id, assignment_id, process_id, timestamp);
+            match self.db.get(&key) {
+                Ok(Some(_)) => true,
+                _ => false,
+            }
+        }
+    }
 }
-
 
 /*
-  This function is used by the migration binary
-  to move all data from the database to the disk.
+  This function is the migation program will
+  copy all the message data from the database to rocksdb.
   It is not meant to be run anywhere within the su
-  server itself.
+  server itself but is built into its own binary.
 */
 pub async fn migrate_to_disk() -> io::Result<()> {
-  use std::time::Instant;
-  let start = Instant::now();
-  dotenv().ok();
+    use std::time::{Duration, Instant};
+    let start = Instant::now();
+    dotenv().ok();
 
-  let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
+    let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
 
-  let args: Vec<String> = env::args().collect();
-  let range: &String = args.get(1).expect("Range argument not provided");
+    let args: Vec<String> = env::args().collect();
+    let range: &String = args.get(1).expect("Range argument not provided");
+    let parts: Vec<&str> = range.split('-').collect();
+    let from = parts[0].parse().expect("Invalid starting offset");
+    let to = if parts.len() > 1 {
+        Some(parts[1].parse().expect("Invalid records to pull"))
+    } else {
+        None
+    };
 
-  let (from, to) = parse_range(range);
-
-  let total_count = match to {
-      Some(t) => {
-        let total = data_store
-          .get_message_count()
-          .expect("Failed to get message count");
-        if t > total {
-          total - from
-        } else {
-          t - from
+    let total_count = match to {
+        Some(t) => {
+            let total = data_store
+                .get_message_count()
+                .expect("Failed to get message count");
+            if t > total {
+                total - from
+            } else {
+                t - from
+            }
         }
-      },
-      None => {
-          data_store
-              .get_message_count()
-              .expect("Failed to get message count")
-              - from
-      }
-  };
+        None => {
+            data_store
+                .get_message_count()
+                .expect("Failed to get message count")
+                - from
+        }
+    };
 
-  let progress_bar = Arc::new(ProgressBar::new(total_count as u64));
+    format!("Total messages to process: {}", total_count);
 
-  let data_store = Arc::clone(&data_store);
-  let progress_bar = Arc::clone(&progress_bar);
+    let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+    let batch_size = config.migration_batch_size.clone() as usize;
 
-  let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-  let batch_size = config.migration_batch_size.clone() as usize;
-  let bytestore = bytestore::ByteStore::new(config);
+    let processed_count = Arc::new(AtomicUsize::new(0));
 
-  let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
+    // Spawn a task to log progress every minute
+    let processed_count_clone = Arc::clone(&processed_count);
+    let data_store_c = Arc::clone(&data_store);
+    tokio::spawn(async move {
+        let mut interval = interval(Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            data_store_c.logger.log(
+              format!(
+                "Messages processed update: {}",
+                processed_count_clone.load(Ordering::SeqCst)
+              )
+            );
+            if processed_count_clone.load(Ordering::SeqCst) >= total_count as usize {
+                break;
+            }
+        }
+    });
 
-  for batch_start in (from..from + total_count).step_by(batch_size) {
-      let batch_end = if let Some(t) = to {
-          std::cmp::min(batch_start + batch_size as i64, t)
-      } else {
-          batch_start + batch_size as i64
-      };
+    for batch_start in (from..from + total_count).step_by(batch_size) {
+        let batch_end = if let Some(t) = to {
+            std::cmp::min(batch_start + batch_size as i64, t)
+        } else {
+            batch_start + batch_size as i64
+        };
 
-      let result = data_store.get_all_messages(batch_start, Some(batch_end));
+        let data_store = Arc::clone(&data_store);
+        let processed_count = Arc::clone(&processed_count);
 
-      match result {
-          Ok(messages) => {
-              for message in messages {
-                  let msg_id = message.0;
-                  let assignment_id = message.1;
-                  let bundle = message.2;
-                  let process_id = message.3;
-                  let bytestore = bytestore.clone();
-                  let progress_bar = Arc::clone(&progress_bar);
+        let result = data_store.get_all_messages(batch_start, Some(batch_end));
 
-                  let handle = spawn_blocking(move || {
-                      bytestore
-                          .save_binary(
-                              msg_id.clone(),
-                              assignment_id.clone(),
-                              process_id.clone(),
-                              bundle,
-                          )
-                          .expect("Failed to save message binary");
-                      progress_bar.inc(1);
-                  });
+        match result {
+            Ok(messages) => {
+                let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
+                for message in messages {
+                    let msg_id = message.0;
+                    let assignment_id = message.1;
+                    let bundle = message.2;
+                    let process_id = message.3;
+                    let timestamp = message.5;
+                    let data_store = Arc::clone(&data_store);
+                    let processed_count = Arc::clone(&processed_count);
 
-                  save_handles.push(handle);
-              }
-          }
-          Err(e) => {
-              eprintln!("Error fetching messages: {:?}", e);
-          }
-      }
-  }
+                    let handle = tokio::spawn(async move {
+                        data_store
+                            .bytestore
+                            .clone()
+                            .expect("Bytestore is None")
+                            .save_binary(
+                                msg_id.clone(),
+                                assignment_id.clone(),
+                                process_id.clone(),
+                                timestamp.clone(),
+                                bundle,
+                            )
+                            .expect("Failed to save message binary");
+                        processed_count.fetch_add(1, Ordering::SeqCst);
+                    });
 
-  join_all(save_handles).await;
+                    save_handles.push(handle);
+                }
+                join_all(save_handles).await;
+            }
+            Err(e) => {
+                data_store.logger.error(format!("Error fetching messages: {:?}", e));
+            }
+        }
+    }
 
-  progress_bar.finish_with_message("All messages processed");
+    let duration = start.elapsed();
+    data_store.logger.log(format!("Time elapsed in data migration is: {:?}", duration));
 
-  let duration = start.elapsed();
-  println!("Time elapsed in data migration is: {:?}", duration);
-
-  Ok(())
-}
-
-fn parse_range(range: &str) -> (i64, Option<i64>) {
-  let parts: Vec<&str> = range.split('-').collect();
-  let from = parts[0].parse().expect("Invalid starting offset");
-  let to = if parts.len() > 1 {
-      Some(parts[1].parse().expect("Invalid records to pull"))
-  } else {
-      None
-  };
-  (from, to)
+    Ok(())
 }

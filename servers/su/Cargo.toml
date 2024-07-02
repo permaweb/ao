@@ -30,8 +30,8 @@ dashmap = "5.5.3"
 base64 = "0.21.5"
 actix-cors = "0.6.0"
 simd-json = "0.13.10"
-indicatif = "0.17.8"
 futures = "0.3.30"
+rocksdb = "0.22.0"
 
 [[bin]]
 name = "su"

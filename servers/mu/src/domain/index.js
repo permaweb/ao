@@ -35,6 +35,13 @@ export { createLogger }
 const FIVE_MINUTES_IN_MS = 1000 * 60 * 5
 const SIXTY_MINUTES_IN_MS = 1000 * 60 * 60
 const muRedirectCache = InMemoryClient.createLruCache({ size: 500, ttl: FIVE_MINUTES_IN_MS })
+const histogram = MetricsClient.histogramWith()({
+  name: 'outgoing_http_request_duration_seconds',
+  description: 'Outgoing request duration in seconds',
+  buckets: [0.5, 1, 3, 5, 10, 30],
+  labelNames: ['method', 'operation', 'errorType', 'status', 'statusGroup']
+})
+
 /**
  * A set of apis used by the express server
  * to send initial items and start the message
@@ -127,28 +134,30 @@ export const createApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: sendDataItemLogger }),
-    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: sendDataItemLogger }),
-    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: sendDataItemLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
-    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch })
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram })
   })
 
   const sendAssignLogger = logger.child('sendAssign')
   const sendAssign = sendAssignWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
     locateProcess: locate,
-    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: sendAssignLogger }),
-    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: sendDataItemLogger }),
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: sendAssignLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: sendAssignLogger
   })
 
   const monitorProcessLogger = logger.child('monitorProcess')
-  const fetchCron = fromPromise(cuClient.fetchCronWith({ CU_URL, logger: monitorProcessLogger }))
+  const fetchCron = fromPromise(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger }))
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
+    fetch,
+    histogram,
     logger: monitorProcessLogger,
     PROC_FILE_PATH,
     CRON_CURSOR_DIR,
@@ -224,13 +233,13 @@ export const createResultApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processMsgLogger }),
-    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, logger: processMsgLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processMsgLogger }),
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: processMsgLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     logger,
-    isWallet: gatewayClient.isWalletWith({ fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch })
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
@@ -240,15 +249,15 @@ export const createResultApis = async (ctx) => {
     locateProcess: locate,
     locateNoRedirect,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, logger: processSpawnLogger })
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger })
   })
 
   const processAssignLogger = logger.child('processAssign')
   const processAssign = processAssignWith({
     logger: processSpawnLogger,
     locateProcess: locate,
-    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, CU_URL, logger: processAssignLogger }),
-    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: processAssignLogger })
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processAssignLogger }),
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: processAssignLogger })
   })
   return {
     processMsg,

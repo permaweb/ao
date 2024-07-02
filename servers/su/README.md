@@ -22,6 +22,7 @@ This is an spec compliant `ao` Scheduler Unit, implemented as a Rust actix web s
 ## Prerequisites
 - PostgreSQL 14 or higher, and a database called `su`
 - Rust and Cargo version 1.75.0 https://www.rust-lang.org/tools/install (unless you are just planning to run the binary)
+- Clang and LLVM
 
 
 ## Database setup
@@ -39,6 +40,11 @@ Create a .env file with the following variables, or set them in the OS:
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
 - `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore when in `su` MODE, just set it to `""`.
+- `DB_WRITE_CONNECTIONS` how many db connections in the writer pool,defaults to 10
+- `DB_READ_CONNECTIONS` how many db connections in the reader pool, default to 10
+- `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
+- `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
+- `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
@@ -56,7 +62,7 @@ or
 
 ### Run the binary already in this repo
 
-You can run the binary that is already in the repository if your machine is compatible. It is built for the x86_64 architecture and runs on Linux. This requires no rust environment only the database and environment variables.
+You can run the binary that is already in the repository if your machine is compatible. It is built for the x86_64 architecture and runs on Linux. You must have Clang and LLVM on the machine
 ```sh
 ./su su 9000
 ```
@@ -74,10 +80,10 @@ To build with docker on your local machine delete all su images and containers i
 docker system prune -a
 docker build --target builder -t su-binary .
 docker create --name temp-container su-binary
-docker cp temp-container:/usr/src/su/target/x86_64-unknown-linux-musl/release/su .
+docker cp temp-container:/usr/src/su/target/release/su .
 ```
 
-This will create the static binary called su which can be pushed to the repo for deployment or used directly.
+This will create the binary called su which can be pushed to the repo for deployment or used directly. This is no longer a static binary and requires external libraries like Clang and LLVM.
 
 
 ### Running the binary, su MODE
@@ -94,7 +100,7 @@ docker build -t su-runner .
 docker run --env-file .env.su -v ./.wallet.json:/app/.wallet.json su-runner su 9000
 ```
 
-When running the static binary in docker you will need to make sure the environment
+When running the binary in docker you will need to make sure the environment
 variables are set in the container. If not see a NotPresent error you are missing the 
 environment variables. You will also need to make sure the database url is accessible 
 in the container. 
@@ -105,9 +111,12 @@ in the container.
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
 - `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore in `su` mode just set it to `""`.
-- `USE_DISK` whether or not to read binary files from the disk instead of from the db. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
-- `SU_DATA_DIR` MANDATORY, the data directory on disk where the su will write binaries to, it will only be read from if `USE_DISK` is `true` however
-- `MAX_READ_TASKS` the maximum number of file reading tasks to allow on the machine
+- `DB_WRITE_CONNECTIONS` how many db connections in the writer pool,defaults to 10
+- `DB_READ_CONNECTIONS` how many db connections in the reader pool, default to 10
+- `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
+- `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
+- `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
+
 
 
 ### Running a router in front of multiple scheduler units
@@ -131,7 +140,7 @@ Also set the `MODE` environment variable to `router`
 
 Now the url for the router can be used as a single entry point to all the sus. In this configuration all sus and the router should share the same wallet configured in the environment variable `SU_WALLET_PATH`
 
-When running the static binary in docker you will need to make sure the environment
+When running the binary in docker you will need to make sure the environment
 variables are set in the container as well.
 
 ### Running the binary, router MODE
@@ -152,11 +161,10 @@ docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./sched
 ### Migrating data to disk for an existing su instance
 If a su has been running using postgres for sometime there may be performance issues. Writing to  and reading files from disk has been added. In order to switch this on set the environment variables
 
-- `USE_DISK` whether or not to read binary files from the disk instead of from the db. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
+- `USE_DISK` whether or not to read and write binary files from/to the disk/rocksdb. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
 - `SU_DATA_DIR` the data directory on disk where the su will read from and write binaries to
-- `MAX_READ_TASKS` the maximum number of file reading tasks to allow on the machine
 
-Then the `mig` binary can be used to migrate data in segments from the existing db. It will currently only migrate the message files to the disk. It takes a range which represents a range in the messages table. So 0-500 would grab the first 500 messages from the messages table and write them to disk and so on. Just 0 as an argument would read the whole table, the range is so you can run multiple instances of the program on different segments of data for faster migration. To read from record 1000 to the end of the table you would just send 1000 as an argument.
+Then the `mig` binary can be used to migrate data in segments from the existing db. It will currently only migrate the message files to the disk. It takes a range which represents a range in the messages table. So 0-500 would grab the first 500 messages from the messages table and write them to rocksdb on the disk and so on. Just 0 as an argument would read the whole table, the range is so you can run multiple instances of the program on different segments of data for faster migration. To read from record 1000 to the end of the table you would just send 1000 as an argument.
 
 Migrate the entire messages table to disk
 ```sh
@@ -178,7 +186,7 @@ Building the mig binary, delete all su images and containers if you have previou
 docker system prune -a
 docker build --target mig-builder -t mig-binary -f DockerfileMig .
 docker create --name temp-container-mig mig-binary
-docker cp temp-container-mig:/usr/src/mig/target/x86_64-unknown-linux-musl/release/mig .
+docker cp temp-container-mig:/usr/src/mig/target/release/mig .
 ```
 
 # System Requirements for SU + SU-R cluster

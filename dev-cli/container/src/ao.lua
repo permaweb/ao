@@ -175,9 +175,9 @@ function ao.assign(assignment)
     table.insert(ao.outbox.Assignments, assignment)
 end
 
+-- The default security model of AOS processes: Trust all and *only* those
+-- on the ao.authorities list.
 function ao.isTrusted(msg)
-    if #ao.authorities == 0 then return true end
-
     for _, authority in ipairs(ao.authorities) do
         if msg.From == authority then return true end
         if msg.Owner == authority then return true end
