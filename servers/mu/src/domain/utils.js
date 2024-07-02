@@ -216,7 +216,8 @@ export const setStage = (prevStage, nextStage) => {
     }
     return ctx
   }
-  
+}
+
 // from https://github.com/then/is-promise/blob/master/index.js
 export function isPromise (obj) {
   return (

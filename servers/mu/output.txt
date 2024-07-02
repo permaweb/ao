@@ -8476,3 +8476,77 @@ success {
   ]
 }
 2024-07-02T16:54:52.821Z ao-mu:monitorProcess Cron results sent to worker: undefined
+2024-07-02T16:55:00.059Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/ezoN0wLAaJC4dObIf4PcVq7IBg6cwIzGrbASkrW7Eus?from=eyJ0aW1lc3RhbXAiOjE3MTk5MzkyODkyODIsIm9yZGluYXRlIjoiNzA3OCIsImNyb24iOiIwLTEwLXNlY29uZHMiLCJzb3J0IjoiQVNDIn0=&limit=50
+2024-07-02T16:55:00.070Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/8E2K3T1uNBRAXQV3Y0d_OblFXi-TVu37JcsNGTVEBTQ?from=eyJ0aW1lc3RhbXAiOjE3MTk5MzkyODcyOTIsIm9yZGluYXRlIjoiNCIsImNyb24iOiIwLTUtc2Vjb25kcyIsInNvcnQiOiJBU0MifQ==&limit=50
+2024-07-02T16:55:01.055Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/jYhNd2XdD02Du2K-x8qhdUMhoRDjqE5K2d0yw5Cjut4
+2024-07-02T16:55:01.206Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/zeRN2h38gBU6sBtSjVo_S-V9xQTF7tsr6EN-9PrvyyE
+2024-07-02T16:55:01.215Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/h42zHNrVepE6eDhT7w95SwoNyzKw72HwANNO1FhtzqU
+2024-07-02T16:55:01.224Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/WT-h1YHEPVzNshBR-MOTroweUd7mOcVp6f7bURUn4Rc
+success {
+  pageInfo: { hasNextPage: false },
+  edges: [
+    {
+      node: [Object],
+      cursor: 'eyJ0aW1lc3RhbXAiOjE3MTk5MzkyOTIyOTIsIm9yZGluYXRlIjoiNCIsImNyb24iOiIwLTUtc2Vjb25kcyIsInNvcnQiOiJBU0MifQ=='
+    },
+    {
+      node: [Object],
+      cursor: 'eyJ0aW1lc3RhbXAiOjE3MTk5MzkyOTcyOTIsIm9yZGluYXRlIjoiNCIsImNyb24iOiIwLTUtc2Vjb25kcyIsInNvcnQiOiJBU0MifQ=='
+    }
+  ]
+}
+2024-07-02T16:55:01.442Z ao-mu:monitorProcess Cron results sent to worker: undefined
+2024-07-02T16:55:01.442Z ao-mu:monitorProcess Cron results sent to worker: undefined
+2024-07-02T16:55:01.484Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/buz9Hi1AthZfB6oZ0-ZGu_l_fXi_Xg5dmMSb0X1ufuk
+success {
+  pageInfo: { hasNextPage: false },
+  edges: [
+    {
+      node: [Object],
+      cursor: 'eyJ0aW1lc3RhbXAiOjE3MTk5MzkyOTkyODIsIm9yZGluYXRlIjoiNzA3OCIsImNyb24iOiIwLTEwLXNlY29uZHMiLCJzb3J0IjoiQVNDIn0='
+    }
+  ]
+}
+2024-07-02T16:55:01.850Z ao-mu:monitorProcess Cron results sent to worker: undefined
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+2024-07-02T16:55:10.066Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/ezoN0wLAaJC4dObIf4PcVq7IBg6cwIzGrbASkrW7Eus?from=eyJ0aW1lc3RhbXAiOjE3MTk5MzkyOTkyODIsIm9yZGluYXRlIjoiNzA3OCIsImNyb24iOiIwLTEwLXNlY29uZHMiLCJzb3J0IjoiQVNDIn0=&limit=50
+2024-07-02T16:55:10.104Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/8E2K3T1uNBRAXQV3Y0d_OblFXi-TVu37JcsNGTVEBTQ?from=eyJ0aW1lc3RhbXAiOjE3MTk5MzkyOTcyOTIsIm9yZGluYXRlIjoiNCIsImNyb24iOiIwLTUtc2Vjb25kcyIsInNvcnQiOiJBU0MifQ==&limit=50
+2024-07-02T16:55:11.024Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/jYhNd2XdD02Du2K-x8qhdUMhoRDjqE5K2d0yw5Cjut4
+2024-07-02T16:55:11.210Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/zeRN2h38gBU6sBtSjVo_S-V9xQTF7tsr6EN-9PrvyyE
+2024-07-02T16:55:11.261Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/WT-h1YHEPVzNshBR-MOTroweUd7mOcVp6f7bURUn4Rc
+2024-07-02T16:55:11.286Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/h42zHNrVepE6eDhT7w95SwoNyzKw72HwANNO1FhtzqU
+success {
+  pageInfo: { hasNextPage: false },
+  edges: [
+    {
+      node: [Object],
+      cursor: 'eyJ0aW1lc3RhbXAiOjE3MTk5MzkzMDIyOTIsIm9yZGluYXRlIjoiNCIsImNyb24iOiIwLTUtc2Vjb25kcyIsInNvcnQiOiJBU0MifQ=='
+    },
+    {
+      node: [Object],
+      cursor: 'eyJ0aW1lc3RhbXAiOjE3MTk5MzkzMDcyOTIsIm9yZGluYXRlIjoiNCIsImNyb24iOiIwLTUtc2Vjb25kcyIsInNvcnQiOiJBU0MifQ=='
+    }
+  ]
+}
+2024-07-02T16:55:11.426Z ao-mu:monitorProcess Cron results sent to worker: undefined
+2024-07-02T16:55:11.426Z ao-mu:monitorProcess Cron results sent to worker: undefined
+2024-07-02T16:55:11.503Z ao-mu:monitorProcess Fetching cron: https://cu.ao-testnet.xyz/cron/buz9Hi1AthZfB6oZ0-ZGu_l_fXi_Xg5dmMSb0X1ufuk
+success {
+  pageInfo: { hasNextPage: false },
+  edges: [
+    {
+      node: [Object],
+      cursor: 'eyJ0aW1lc3RhbXAiOjE3MTk5MzkzMDkyODIsIm9yZGluYXRlIjoiNzA3OCIsImNyb24iOiIwLTEwLXNlY29uZHMiLCJzb3J0IjoiQVNDIn0='
+    }
+  ]
+}
+2024-07-02T16:55:11.815Z ao-mu:monitorProcess Cron results sent to worker: undefined
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
+success { pageInfo: { hasNextPage: false }, edges: [] }
