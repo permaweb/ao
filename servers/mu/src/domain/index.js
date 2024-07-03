@@ -24,6 +24,8 @@ import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
+import { handleWorkerQueueMessage } from './lib/handle-worker-queue-message.js'
+import { BroadcastChannel } from 'node:worker_threads'
 
 export { errFrom } from './utils.js'
 
@@ -40,6 +42,10 @@ const histogram = MetricsClient.histogramWith()({
   description: 'Outgoing request duration in seconds',
   buckets: [0.5, 1, 3, 5, 10, 30],
   labelNames: ['method', 'operation', 'errorType', 'status', 'statusGroup']
+})
+const workerQueueGauge = MetricsClient.gaugeWith({})({
+  name: 'queue_size',
+  description: 'The size of the queue'
 })
 
 /**
@@ -121,6 +127,9 @@ export const createApis = async (ctx) => {
       }
     }
   })
+
+  const broadcastChannel = new BroadcastChannel('mu-worker')
+  broadcastChannel.onmessage = (event) => handleWorkerQueueMessage({ queueGauge: workerQueueGauge })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
     return workerPool.exec('enqueueResults', results)
