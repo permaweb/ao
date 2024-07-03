@@ -115,7 +115,9 @@ export const createApis = async (ctx) => {
           workerData: {
             id: workerId,
             queueId,
-            DB_URL
+            DB_URL,
+            TASK_QUEUE_MAX_RETRIES: ctx.TASK_QUEUE_MAX_RETRIES,
+            TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY
           }
         }
       }

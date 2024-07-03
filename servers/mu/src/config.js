@@ -37,7 +37,9 @@ export const domainConfigSchema = z.object({
   PROC_FILE_PATH: z.string(),
   CRON_CURSOR_DIR: z.string(),
   MAX_WORKERS: positiveIntSchema,
-  DB_URL: z.string()
+  DB_URL: z.string(),
+  TASK_QUEUE_MAX_RETRIES: z.number(),
+  TASK_QUEUE_RETRY_DELAY: z.number()
 })
 
 /**
@@ -75,7 +77,9 @@ const CONFIG_ENVS = {
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
-    DB_URL: process.env.DB_URL || 'ao-cache'
+    DB_URL: process.env.DB_URL || 'ao-cache',
+    TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
+    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
   },
   production: {
     MODE,
@@ -90,7 +94,9 @@ const CONFIG_ENVS = {
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
-    DB_URL: process.env.DB_URL || 'ao-cache'
+    DB_URL: process.env.DB_URL || 'ao-cache',
+    TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
+    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
   }
 }
 
