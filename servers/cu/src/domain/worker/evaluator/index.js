@@ -5,6 +5,7 @@ import { fetch, setGlobalDispatcher, Agent } from 'undici'
 import { worker, Transfer } from 'workerpool'
 
 import { createLogger } from '../../logger.js'
+import { arrayBufferFromMaybeView } from '../../utils.js'
 
 import { createApis } from './main.js'
 
@@ -50,12 +51,18 @@ worker({
       if (!output.Memory) return output
 
       /**
-       * We make sure to only transfer the underlying ArrayBuffer
-       * back to the main thread.
+       * If Memory is sufficiently large, transferring the View somehow
+       * causes the underlying ArrayBuffer to be truncated. This truncation
+       * does not occur when instead the underlying ArrayBuffer is transferred,
+       * directly.
+       *
+       * So we always ensure the Memory transferred back to the main thread
+       * is the actual ArrayBuffer, and not a View.
+       *
+       * TODO: maybe AoLoader should be made to return the underlying ArrayBuffer
+       * as Memory, instead of a View?
        */
-      output.Memory = ArrayBuffer.isView(output.Memory)
-        ? output.Memory.buffer
-        : output.Memory
+      output.Memory = arrayBufferFromMaybeView(output.Memory)
 
       return new Transfer(output, [output.Memory])
     })
