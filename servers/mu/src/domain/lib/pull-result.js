@@ -13,7 +13,7 @@ function fetchResultWith ({ fetchResult }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
   return (ctx) =>
-    fetchResultAsync(ctx.stage === 'pull-result' ? ctx.tx.id + 'abc' : ctx.tx.id, ctx.tx.processId)
+    fetchResultAsync(ctx.tx.id, ctx.tx.processId)
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
           return {

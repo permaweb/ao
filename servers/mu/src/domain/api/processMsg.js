@@ -53,7 +53,6 @@ export function processMsgWith ({
       })
       .bimap(
         (e) => {
-          console.log('processMsgErr:', { ctx, e })
           return new Error(e, { cause: e.cause })
         },
         logger.tap('processMsgSuccess')

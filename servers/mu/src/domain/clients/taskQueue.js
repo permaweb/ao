@@ -57,7 +57,6 @@ export function enqueueWith ({ queue, queueId, db }) {
     const timestamp = new Date().getTime()
     const randomByteString = randomBytes(8).toString('hex')
     const dbId = `${queueId}-${timestamp}-${randomByteString}`
-    console.log('Enqueuing task...', { task })
     queue.push({ ...task, dbId })
     db.run(createQuery(task, dbId, timestamp))
   }

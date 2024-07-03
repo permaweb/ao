@@ -1,5 +1,6 @@
-import { fromPromise } from 'hyper-async'
+import { Resolved, fromPromise } from 'hyper-async'
 import z from 'zod'
+import { checkStage } from '../utils.js'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -14,6 +15,7 @@ export function writeAssignWith (env) {
   writeAssignment = fromPromise(writeAssignment)
 
   return (ctx) => {
+    if (!checkStage('write-assign')(ctx)) return Resolved(ctx)
     return writeAssignment({
       suUrl: ctx.schedLocation.url,
       txId: ctx.assign.txId,

@@ -42,7 +42,6 @@ export function processResultWith ({
   processAssign
 }) {
   return async (result) => {
-    console.log('Processing result...', { result })
     return of(result)
       .map((result) => ({ ...result, stage: result.stage ?? 'start' }))
       /**

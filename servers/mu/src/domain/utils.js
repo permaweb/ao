@@ -202,14 +202,12 @@ export const okRes = (res) => {
 
 export const checkStage = (stage) => {
   return (ctx) => {
-    console.log(`Checking stage... Current: ${ctx.stage} Desired: ${stage}`)
     return !ctx.stage || ctx.stage === stage
   }
 }
 
 export const setStage = (prevStage, nextStage) => {
   return (ctx) => {
-    console.log(`Setting stage from ${prevStage} to ${nextStage}. Current stage: ${ctx.stage}`)
     if (Array.isArray(prevStage) && prevStage.includes(ctx.stage)) return { ...ctx, stage: nextStage }
     if (ctx.stage === prevStage) {
       return { ...ctx, stage: nextStage }

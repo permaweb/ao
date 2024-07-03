@@ -26,12 +26,11 @@ export function processSpawnWith ({
       .chain(spawnProcess)
       .map(setStage('spawn-process', 'build-success-tx'))
       .chain(buildSuccessTx)
-      .map(setStage('start', 'send-spawn-success'))
+      .map(setStage('build-success-tx', 'send-spawn-success'))
       .chain(sendSpawnSuccess)
       .map(setStage('send-spawn-success', 'end'))
       .bimap(
         (e) => {
-          console.log('processSpawnErr:', { ctx, e })
           return new Error(e, { cause: e.cause })
         },
         logger.tap('processSpawnSuccess')

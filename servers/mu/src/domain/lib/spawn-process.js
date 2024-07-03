@@ -2,7 +2,7 @@ import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
 import { assoc, identity, is } from 'ramda'
 // import z from 'zod'
 
-import { parseTags } from '../utils.js'
+import { checkStage, parseTags } from '../utils.js'
 
 // const ctxSchema = z.object({
 //   processTx: z.any()
@@ -36,6 +36,7 @@ export function spawnProcessWith (env) {
   }
 
   return (ctx) => {
+    if (!checkStage('spawn-process')(ctx)) return Resolved(ctx)
     const { Tags, Data } = ctx.cachedSpawn.spawn
 
     const tagsIn = Tags.filter(tag => ![
