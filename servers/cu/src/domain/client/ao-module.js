@@ -4,6 +4,7 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, defaultTo, evolve, head, prop } from 'ramda'
 import { z } from 'zod'
 
+import { arrayBufferFromMaybeView } from '../utils.js'
 import { moduleSchema } from '../model.js'
 import { MODULES_TABLE } from './sqlite.js'
 import { timer } from './metrics.js'
@@ -163,7 +164,23 @@ export function evaluatorWith ({ evaluate, loadWasmModule }) {
                   stopTimer()
                 }
 
-                options = { transfer: [ArrayBuffer.isView(args.Memory) ? args.Memory.buffer : args.Memory] }
+                /**
+                 * If Memory is sufficiently large, transferring the View somehow
+                 * causes the underlying ArrayBuffer to be truncated. This truncation
+                 * does not occur when instead the underlying ArrayBuffer is transferred,
+                 * directly.
+                 *
+                 * So we always ensure the Memory transferred to the worker thread
+                 * is the actual ArrayBuffer, and not a View.
+                 *
+                 * (the same is done in the opposite direction in the worker thread)
+                 *
+                 * TODO: maybe AoLoader should be made to return the underlying ArrayBuffer
+                 * as Memory, instead of a View?
+                 */
+                args.Memory = arrayBufferFromMaybeView(args.Memory)
+
+                options = { transfer: [args.Memory] }
               }
 
               args.streamId = streamId
