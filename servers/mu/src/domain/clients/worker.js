@@ -1,5 +1,5 @@
 import { worker } from 'workerpool'
-import { workerData } from 'node:worker_threads'
+import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { of } from 'hyper-async'
 import { cond, equals, propOr } from 'ramda'
 import cron from 'node-cron'
@@ -9,6 +9,8 @@ import { domainConfigSchema, config } from '../../config.js'
 import { logger } from '../../logger.js'
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
+
+const broadcastChannel = new BroadcastChannel('mu-worker')
 
 export const domain = {
   ...(domainConfigSchema.parse(config)),
@@ -146,6 +148,29 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
   }
 }
 
+function broadcastEnqueueWith ({ enqueue }) {
+  return (...args) => {
+    broadcastChannel.postMessage({
+      purpose: 'metrics',
+      action: 'enqueue'
+    })
+    return enqueue(...args)
+  }
+}
+
+function broadcastDequeueWith ({ dequeue }) {
+  return (...args) => {
+    const dequeuedResult = dequeue(...args)
+    if (dequeuedResult) {
+      broadcastChannel.postMessage({
+        purpose: 'metrics',
+        action: 'dequeue'
+      })
+    }
+    return dequeuedResult
+  }
+}
+
 const db = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false })
 const queue = await createTaskQueue({
   queueId: workerData.queueId,
@@ -161,11 +186,13 @@ const queue = await createTaskQueue({
 const dequeuedTasks = new Set()
 
 const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger, db })
+const broadcastEnqueue = broadcastEnqueueWith({ enqueue })
 const dequeue = dequeueWith({ queue, logger, dequeuedTasks })
+const broadcastDequeue = broadcastDequeueWith({ dequeue })
 const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
 
 const enqueueResults = enqueueResultsWith({
-  enqueue
+  enqueue: broadcastEnqueue
 })
 
 const processResult = processResultWith({
@@ -177,8 +204,8 @@ const processResult = processResultWith({
 })
 
 const processResults = processResultsWith({
-  enqueue,
-  dequeue,
+  enqueue: broadcastEnqueue,
+  dequeue: broadcastDequeue,
   processResult,
   logger,
   TASK_QUEUE_MAX_RETRIES: workerData.TASK_QUEUE_MAX_RETRIES,

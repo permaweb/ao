@@ -179,14 +179,20 @@ export function evaluateWith ({
             /**
              * Map thrown error to a result.error. In this way, the Worker should _never_
              * throw due to evaluation
-             *
-             * TODO: should we also evict the wasmInstance from cache, so it's reinstantaited
-             * with the new memory for next time?
              */
             (err) => Resolved(assocPath(['Error'], err, {})),
             Resolved
           )
           .map(mergeOutput(Memory, name, processId))
+          .map((output) => {
+            /**
+             * An error occurred, so delete the WebAssembly.Instance,
+             * forcing a new WebAssembly.Instance to be instantiated
+             * to perform subsequent evaluations in the evaluation stream
+             */
+            if (output.Error) wasmInstanceCache.delete(streamId)
+            return output
+          })
           .chain((output) => {
             /**
              * Noop saving the evaluation is noSave flag is set
