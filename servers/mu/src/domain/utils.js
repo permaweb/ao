@@ -192,12 +192,61 @@ export const backoff = (
 /**
  * Checks if a response is OK. Otherwise, throw response.
  *
- * @param {Respones} res - The response to check
+ * @param {Response} res - The response to check
  * @returns
  */
 export const okRes = (res) => {
   if (res.ok) return res
   throw res
+}
+
+/**
+ * Checks if we are at a provided stage
+ *
+ * @param {String} stage - The stage to check against
+ * @returns {Boolean} - Whether we are at the stage
+ *
+ * We also return true if ctx.stage is undefined.
+ * This is to guard against functions accessing this util
+ * from outside the task queue pipeline. If there is no stage,
+ * we are outside the process pipeline, and this check should be ignored.
+ */
+export const checkStage = (stage) => {
+  return (ctx) => {
+    return !ctx.stage || ctx.stage === stage
+  }
+}
+
+/**
+ * Sets stage from prev stage to next stage
+ *
+ * @param {String | Array} prevStage
+ * @param {String} nextStage
+ * @returns {Object} - the mutated context object
+ *
+ * Sets the object's 'stage' value to nextStage.
+ * Before we do this, we make sure we are at the expected
+ * previous stage. This is to prevent overwriting stages
+ * where we do not want to - when we are 'behind'.
+ *
+ * When recovering, we will 'skip over' all the stages that have
+ * been previously completed. We want to avoid overwriting our stage
+ * when we are in the catching up process.
+ *
+ * In some cases, there are multiple acceptable previous stages.
+ * In these cases, we can pass in an array as prevStage, and check
+ * against all of these stages.
+ *
+ */
+
+export const setStage = (prevStage, nextStage) => {
+  return (ctx) => {
+    if (Array.isArray(prevStage) && prevStage.includes(ctx.stage)) return { ...ctx, stage: nextStage }
+    if (ctx.stage === prevStage) {
+      return { ...ctx, stage: nextStage }
+    }
+    return ctx
+  }
 }
 
 // from https://github.com/then/is-promise/blob/master/index.js

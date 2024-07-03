@@ -1,6 +1,7 @@
-import { of, fromPromise } from 'hyper-async'
-import { __, assoc } from 'ramda'
+import { of, fromPromise, Resolved } from 'hyper-async'
+import { __, assoc, identity } from 'ramda'
 import z from 'zod'
+import { checkStage } from '../utils.js'
 
 const ctxSchema = z.object({
   spawnSuccessSequencerTx: z.any()
@@ -12,21 +13,25 @@ export function sendSpawnSuccessWith (env) {
   locateProcess = fromPromise(locateProcess)
 
   return (ctx) => {
+    if (!checkStage('send-spawn-success')(ctx)) return Resolved(ctx)
     return of(ctx.cachedSpawn.processId)
       .chain(locateProcess)
       .map((schedulerResult) => { return { suUrl: schedulerResult.url, data: ctx.spawnSuccessTx.data.toString('base64') } })
       .chain(fromPromise(writeDataItem))
-      .bichain(
-        (error) => {
-          console.error('writeDataItem failed. Recovering and returning original ctx.', error)
-          return of(ctx)
-        },
+      .chain(
         (result) => {
           return of(result)
             .map(assoc('spawnSuccessSequencerTx', __, ctx))
             .map(ctxSchema.parse)
             .map(logger.tap('Added "spawnSuccessSequencerTx" to ctx'))
         }
+      )
+      .bimap(
+        (error) => {
+          console.error('writeDataItem failed. Recovering and returning original ctx.', error)
+          return new Error(error, { cause: ctx })
+        },
+        identity
       )
   }
 }

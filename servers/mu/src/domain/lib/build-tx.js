@@ -1,5 +1,6 @@
-import { fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
+import { checkStage } from '../utils.js'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -19,6 +20,7 @@ export function buildTxWith (env) {
   isWallet = fromPromise(isWallet)
 
   return (ctx) => {
+    if (!checkStage('build-tx')(ctx)) return Resolved(ctx)
     return isWallet(ctx.cachedMsg.processId)
       .chain(
         (isWalletId) => {
@@ -105,6 +107,11 @@ export function buildTxWith (env) {
         return { ...ctx, ...res }
       })
       .map(ctxSchema.parse)
-      .map(logger.tap('Added tx and schedLocation to ctx'))
+      .bimap(
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
+        logger.tap('Added tx and schedLocation to ctx')
+      )
   }
 }

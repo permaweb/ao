@@ -45,6 +45,7 @@ export function processResultWith ({
 }) {
   return async (result) => {
     return of(result)
+      .map((result) => ({ ...result, stage: result.stage ?? 'start' }))
       /**
        * Choose the correct business logic based
        * on the type of the individual Result
@@ -73,9 +74,9 @@ export function processResultWith ({
 }
 
 /**
- * Push results onto the queue and seperate
+ * Push results onto the queue and separate
  * them out by type so they can be individually
- * operated on by the worker. Also stucture them
+ * operated on by the worker. Also structure them
  * correctly for input into the business logic
  */
 export function enqueueResultsWith ({ enqueue }) {
@@ -113,15 +114,32 @@ export function enqueueResultsWith ({ enqueue }) {
  * do not need to wait for other results to finish
  * so we can do this async
  */
-function processResultsWith ({ dequeue, processResult, logger }) {
+function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUEUE_MAX_RETRIES, TASK_QUEUE_RETRY_DELAY }) {
   return async () => {
     while (true) {
       const result = dequeue()
       if (result) {
+        console.log({ TASK_QUEUE_MAX_RETRIES, TASK_QUEUE_RETRY_DELAY })
         logger(`Processing task of type ${result.type}`)
         processResult(result).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
+          /**
+           * Upon failure, we want to add back to the task queue
+           * our task with its progress (ctx). This progress is passed
+           * down in the cause object of the error.
+           *
+           * After some time, enqueue the task again and increment retries.
+           * Upon maximum retries, finish.
+           */
+          const ctx = e.cause ?? {}
+          const retries = ctx.retries ?? 0
+          const stage = ctx.stage
+          setTimeout(() => {
+            if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end') {
+              enqueue({ ...ctx, retries: retries + 1 })
+            }
+          }, TASK_QUEUE_RETRY_DELAY)
         })
       } else {
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -186,9 +204,12 @@ const processResult = processResultWith({
 })
 
 const processResults = processResultsWith({
+  enqueue: broadcastEnqueue,
   dequeue: broadcastDequeue,
   processResult,
-  logger
+  logger,
+  TASK_QUEUE_MAX_RETRIES: workerData.TASK_QUEUE_MAX_RETRIES,
+  TASK_QUEUE_RETRY_DELAY: workerData.TASK_QUEUE_RETRY_DELAY
 })
 
 /** Set up a cron to clear out old tasks from the

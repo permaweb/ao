@@ -8,8 +8,8 @@ import { mergeRight } from 'ramda'
  * This is how we will access metadata from the dataitem itself
  */
 export function parseDataItemWith ({ createDataItem, logger }) {
-  return (ctx) =>
-    of(ctx.raw)
+  return (ctx) => {
+    return of(ctx.raw)
       .map(createDataItem)
       /**
        * Everything downstream expects a tx field, so construct it and add to context
@@ -34,4 +34,5 @@ export function parseDataItemWith ({ createDataItem, logger }) {
       ))
       .map(mergeRight(ctx))
       .map(logger.tap('Successfully parsed data item and added as "tx" to ctx'))
+  }
 }
