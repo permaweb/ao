@@ -119,7 +119,6 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
     while (true) {
       const result = dequeue()
       if (result) {
-        console.log({ TASK_QUEUE_MAX_RETRIES, TASK_QUEUE_RETRY_DELAY })
         logger(`Processing task of type ${result.type}`)
         processResult(result).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
