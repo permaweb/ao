@@ -47,6 +47,10 @@ const workerQueueGauge = MetricsClient.gaugeWith({})({
   name: 'queue_size',
   description: 'The size of the queue'
 })
+const cronMonitorGauge = MetricsClient.gaugeWith({})({
+  name: 'running_cron_monitor',
+  description: 'The number of cron monitors running'
+})
 
 /**
  * A set of apis used by the express server
@@ -174,7 +178,8 @@ export const createApis = async (ctx) => {
     CRON_CURSOR_DIR,
     CU_URL,
     fetchCron,
-    crank
+    crank,
+    monitorGauge: cronMonitorGauge
   })
 
   const monitorProcess = monitorProcessWith({
@@ -187,7 +192,8 @@ export const createApis = async (ctx) => {
   const stopMonitorProcess = stopMonitorProcessWith({
     stopProcessMonitor: cronClient.killMonitoredProcessWith({
       logger: stopMonitorProcessLogger,
-      PROC_FILE_PATH
+      PROC_FILE_PATH,
+      monitorGauge: cronMonitorGauge
     }),
     createDataItem,
     logger: monitorProcessLogger
