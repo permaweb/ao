@@ -68,6 +68,7 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
             anchor @skip (if: $skipAnchor)
             owner {
               address
+              key
             }
             tags @skip (if: $skipTags) {
               name

@@ -72,6 +72,7 @@ describe('ao-su', () => {
           data: 'su-data-123'
         }
       })
+
       assert.deepStrictEqual(
         withoutAoGlobal.parse(res),
         withoutAoGlobal.parse(expected)
