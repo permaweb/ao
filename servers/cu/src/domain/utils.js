@@ -1,3 +1,5 @@
+import { LRUCache } from 'lru-cache'
+import createKeccakHash from 'keccak'
 import { Rejected, Resolved } from 'hyper-async'
 import {
   F, T, __, allPass, always, append, assoc, chain, concat, cond, defaultTo, equals,
@@ -430,3 +432,91 @@ export const maybeParseInt = pipe(
 export const arrayBufferFromMaybeView = (maybeView) => ArrayBuffer.isView(maybeView)
   ? maybeView.buffer
   : maybeView // assumes an ArrayBuffer. TODO: maybe an additional check
+
+/**
+ * #################################
+ * #### Signature/Address Utils ####
+ * #################################
+ */
+
+const SIG_CONFIG = {
+  ARWEAVE: {
+    sigLength: 512,
+    pubLength: 512,
+    sigName: 'arweave'
+  },
+  ETHEREUM: {
+    sigLength: 65,
+    pubLength: 65,
+    sigName: 'ethereum'
+  }
+}
+
+/**
+ * From ethereum docs: https://ethereum.org/en/developers/docs/accounts/#account-creation
+ *
+ * You get a public address by taking the last 20 bytes of
+ * the Keccak-256 hash of the public key and adding 0x to the beginning.
+ * A checksum must also be applied.
+ */
+function keyToEthereumAddress (key) {
+  /**
+   * We need to decode, then remove the first byte denoting compression in secp256k1
+   */
+  const noCompressionByte = Buffer.from(key, 'base64url').subarray(1)
+
+  /**
+   * the un-prefixed address is the last 20 bytes of the hashed
+   * public key
+   */
+  const noPrefix = createKeccakHash('keccak256')
+    .update(noCompressionByte)
+    .digest('hex')
+    .slice(-40)
+
+  /**
+   * Apply the checksum see https://eips.ethereum.org/EIPS/eip-55
+   */
+  const hash = createKeccakHash('keccak256')
+    .update(noPrefix)
+    .digest('hex')
+
+  let checksumAddress = '0x'
+  for (let i = 0; i < noPrefix.length; i++) {
+    checksumAddress += parseInt(hash[i], 16) >= 8
+      ? noPrefix[i].toUpperCase()
+      : noPrefix[i]
+  }
+
+  return checksumAddress
+}
+
+const cache = new LRUCache({ max: 1000 })
+/**
+ * Given the address and public key, generate the owner.
+ * This function is memoized, and deduped, for performance, caching the most recent
+ * 1000 computed owners
+ *
+ * @param {{ address: string, key: string }} arg
+ * @returns {string}
+ */
+export const addressFrom = ({ address, key }) => {
+  const cKey = `${address}-${key}`
+  if (cache.has(cKey)) return cache.get(cKey)
+
+  const pubKeyLength = Buffer.from(key, 'base64url').length
+  let _address
+
+  if (pubKeyLength === SIG_CONFIG.ETHEREUM.pubLength) _address = keyToEthereumAddress(key)
+  else if (pubKeyLength === SIG_CONFIG.ARWEAVE.pubLength) _address = address
+  /**
+   * Assume the address is the owner
+   *
+   * TODO: implement bonafide logic for other signers
+   */
+  else _address = address
+
+  cache.set(cKey, _address)
+
+  return _address
+}
