@@ -7,7 +7,7 @@ import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
 import { messageSchema, streamSchema } from '../model.js'
-import { mapFrom } from '../utils.js'
+import { mapFrom, addressFrom } from '../utils.js'
 
 const { createData } = WarpArBundles
 
@@ -61,16 +61,20 @@ function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
        * raw transaction data, and metadata about the
        * transactions (in the shape of a GQL Gateway Transaction)
        */
-      .then(async ([meta, Data]) => ({
-        Id: meta.id,
-        Signature: meta.signature,
-        Owner: meta.owner.address,
-        From: mapFrom({ tags: meta.tags, owner: meta.owner.address }),
-        Target: meta.recipient || '',
-        Tags: meta.tags,
-        Anchor: meta.anchor,
-        Data
-      }))
+      .then(async ([meta, Data]) => {
+        const address = addressFrom(meta.owner)
+
+        return {
+          Id: meta.id,
+          Signature: meta.signature,
+          Owner: address,
+          From: mapFrom({ tags: meta.tags, owner: address }),
+          Target: meta.recipient || '',
+          Tags: meta.tags,
+          Anchor: meta.anchor,
+          Data
+        }
+      })
   }
 }
 
