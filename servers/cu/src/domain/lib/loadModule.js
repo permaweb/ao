@@ -4,7 +4,7 @@ import { z } from 'zod'
 import bytes from 'bytes'
 
 import { findModuleSchema, loadTransactionMetaSchema, saveModuleSchema } from '../dal.js'
-import { parseTags } from '../utils.js'
+import { addressFrom, parseTags } from '../utils.js'
 import { rawTagSchema } from '../model.js'
 
 /**
@@ -49,7 +49,7 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
       .map((meta) => ({
         id: moduleId,
         tags: meta.tags,
-        owner: meta.owner.address
+        owner: meta.owner
       }))
       .chain((module) =>
         saveModule(module)
@@ -82,7 +82,7 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
         of(moduleId)
           .chain(maybeFindModule)
           .bichain(loadFromGateway, Resolved)
-          .map((module) => ({ moduleId: module.id, moduleTags: module.tags, moduleOwner: module.owner }))
+          .map((module) => ({ moduleId: module.id, moduleTags: module.tags, moduleOwner: addressFrom(module.owner) }))
           .map(mergeRight(ctx))
       )
   }

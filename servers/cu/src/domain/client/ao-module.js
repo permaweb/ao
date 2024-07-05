@@ -4,7 +4,7 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, defaultTo, evolve, head, prop } from 'ramda'
 import { z } from 'zod'
 
-import { arrayBufferFromMaybeView } from '../utils.js'
+import { arrayBufferFromMaybeView, isJsonString } from '../utils.js'
 import { moduleSchema } from '../model.js'
 import { MODULES_TABLE } from './sqlite.js'
 import { timer } from './metrics.js'
@@ -30,7 +30,7 @@ export function saveModuleWith ({ db, logger: _logger }) {
       parameters: [
         module.id,
         JSON.stringify(module.tags),
-        module.owner
+        JSON.stringify(module.owner)
       ]
     }
   }
@@ -72,8 +72,29 @@ export function findModuleWith ({ db }) {
     .map(defaultTo([]))
     .map(head)
     .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Module not found' }))
+    .chain((row) => {
+      if (isJsonString(row.owner)) return Resolved(row)
+
+      /**
+       * owner contains the deprecated, pre-parsed value, so we need to self cleanup.
+       * So implictly delete the defunct record and Reject as if it was not found.
+       *
+       * It will then be up the client (in this case the business logic) to re-insert
+       * the record with the proper format
+       */
+      return of({
+        sql: `
+          DELETE FROM ${MODULES_TABLE}
+          WHERE
+            id = ?;
+        `,
+        parameters: [moduleId]
+      }).chain(fromPromise((query) => db.run(query)))
+        .chain(() => Rejected({ status: 404, message: 'Module record invalid' }))
+    })
     .map(evolve({
-      tags: JSON.parse
+      tags: JSON.parse,
+      owner: JSON.parse
     }))
     .map(moduleDocSchema.parse)
     .map(applySpec({

@@ -3,12 +3,14 @@ import { describe, test, before } from 'node:test'
 import assert from 'node:assert'
 import { gzip } from 'node:zlib'
 import { promisify } from 'node:util'
+import { Readable } from 'node:stream'
+
+import bytes from 'bytes'
 
 import { createLogger } from '../logger.js'
 import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
+import { PROCESSES_TABLE } from './sqlite.js'
 import { LATEST, createProcessMemoryCache, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveCheckpointWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
-import { Readable } from 'node:stream'
-import bytes from 'bytes'
 
 const gzipP = promisify(gzip)
 const logger = createLogger('ao-cu:ao-process')
@@ -22,7 +24,7 @@ describe('ao-process', () => {
           db: {
             query: async () => [{
               id: 'process-123',
-              owner: 'woohoo',
+              owner: JSON.stringify({ address: 'owner-123', key: 'key-123' }),
               tags: JSON.stringify([{ name: 'foo', value: 'bar' }]),
               signature: 'sig-123',
               anchor: null,
@@ -40,7 +42,7 @@ describe('ao-process', () => {
       const res = await findProcess({ processId: 'process-123' })
       assert.deepStrictEqual(res, {
         id: 'process-123',
-        owner: 'woohoo',
+        owner: { address: 'owner-123', key: 'key-123' },
         tags: [{ name: 'foo', value: 'bar' }],
         signature: 'sig-123',
         anchor: null,
@@ -65,6 +67,41 @@ describe('ao-process', () => {
       const res = await findProcess({ processId: 'process-123' })
         .catch(err => {
           assert.equal(err.status, 404)
+          return { ok: true }
+        })
+
+      assert(res.ok)
+    })
+
+    test('passively delete record and return 404 status if record has invalid owner', async () => {
+      const findProcess = findProcessSchema.implement(
+        findProcessWith({
+          db: {
+            query: async () => [{
+              id: 'process-123',
+              owner: 'owner-123', // old preparsed value for owner
+              tags: JSON.stringify([{ name: 'foo', value: 'bar' }]),
+              signature: 'sig-123',
+              anchor: null,
+              data: 'data-123',
+              block: JSON.stringify({
+                height: 123,
+                timestamp: new Date()
+              })
+            }],
+            run: async ({ sql, parameters }) => {
+              assert.ok(sql.trim().startsWith(`DELETE FROM ${PROCESSES_TABLE}`))
+              assert.deepStrictEqual(parameters, ['process-123'])
+            }
+          },
+          logger
+        })
+      )
+
+      const res = await findProcess({ processId: 'process-123' })
+        .catch(err => {
+          assert.equal(err.status, 404)
+          assert.equal(err.message, 'Process record invalid')
           return { ok: true }
         })
 
@@ -99,12 +136,9 @@ describe('ao-process', () => {
                 'sig-123',
                 'data-123',
                 null,
-                'woohoo',
+                JSON.stringify({ address: 'owner-123', key: 'key-123' }),
                 JSON.stringify([{ name: 'foo', value: 'bar' }]),
-                JSON.stringify({
-                  height: 123,
-                  timestamp: now
-                })
+                JSON.stringify({ height: 123, timestamp: now })
               ])
               return Promise.resolve(true)
             }
@@ -115,7 +149,7 @@ describe('ao-process', () => {
 
       await saveProcess({
         id: 'process-123',
-        owner: 'woohoo',
+        owner: { address: 'owner-123', key: 'key-123' },
         signature: 'sig-123',
         anchor: null,
         data: 'data-123',
@@ -141,7 +175,7 @@ describe('ao-process', () => {
 
       await saveProcess({
         id: 'process-123',
-        owner: 'woohoo',
+        owner: { address: 'owner-123', key: 'key-123' },
         tags: [{ name: 'foo', value: 'bar' }],
         signature: 'sig-123',
         anchor: null,

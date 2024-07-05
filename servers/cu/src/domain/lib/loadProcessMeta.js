@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { findProcessSchema, isProcessOwnerSupportedSchema, loadProcessSchema, locateProcessSchema, saveProcessSchema } from '../dal.js'
 import { blockSchema, rawTagSchema } from '../model.js'
-import { eqOrIncludes, findRawTag, parseTags, trimSlash } from '../utils.js'
+import { eqOrIncludes, findRawTag, parseTags, trimSlash, addressFrom } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -143,7 +143,7 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
         signature: process.signature,
         data: process.data,
         anchor: process.anchor,
-        owner: process.owner,
+        owner: addressFrom(process.owner),
         tags: process.tags,
         block: process.block
       }))

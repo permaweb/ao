@@ -433,6 +433,15 @@ export const arrayBufferFromMaybeView = (maybeView) => ArrayBuffer.isView(maybeV
   ? maybeView.buffer
   : maybeView // assumes an ArrayBuffer. TODO: maybe an additional check
 
+export function isJsonString (str) {
+  try {
+    JSON.parse(str)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 /**
  * #################################
  * #### Signature/Address Utils ####
