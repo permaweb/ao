@@ -38,7 +38,7 @@ describe('loadMessageMeta', () => {
     const loadMessageMeta = loadMessageMetaWith({
       findProcess: async () => ({
         id: 'process-123',
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         signature: 'sig-123',
         anchor: null,
         data: 'data-123',

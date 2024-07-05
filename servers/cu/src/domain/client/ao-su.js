@@ -282,7 +282,7 @@ export const loadProcessWith = ({ fetch, logger }) => {
       })
       .then(resToJson)
       .then(applySpec({
-        owner: (res) => addressFrom(res.owner),
+        owner: path(['owner']),
         tags: path(['tags']),
         block: applySpec({
           height: pipe(

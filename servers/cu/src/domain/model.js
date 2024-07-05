@@ -210,6 +210,11 @@ export const blockSchema = z.object({
   timestamp: z.coerce.number()
 })
 
+export const ownerSchema = z.object({
+  address: z.string(),
+  key: z.string()
+})
+
 export const processSchema = z.object({
   id: z.string().min(1),
   /**
@@ -218,7 +223,7 @@ export const processSchema = z.object({
   signature: z.string().nullish(),
   data: z.any().nullish(),
   anchor: z.string().nullish(),
-  owner: z.string().min(1),
+  owner: ownerSchema,
   tags: z.array(rawTagSchema),
   block: blockSchema
 })
@@ -239,7 +244,7 @@ export const processCheckpointSchema = z.object({
 export const moduleSchema = z.object({
   id: z.string().min(1),
   tags: z.array(rawTagSchema),
-  owner: z.string().min(1)
+  owner: ownerSchema
 })
 
 export const messageSchema = z.object({

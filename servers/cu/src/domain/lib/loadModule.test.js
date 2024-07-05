@@ -11,6 +11,10 @@ const PROCESS = 'contract-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
 
 describe('loadModule', () => {
+  const moduleOwner = {
+    address: 'owner-123',
+    key: 'key-123'
+  }
   const moduleTags = [
     { name: 'Data-Protocol', value: 'ao' },
     { name: 'Type', value: 'Module' },
@@ -24,9 +28,7 @@ describe('loadModule', () => {
   test('append moduleId, moduleOwner, moduleTags, and moduleOptions', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
+        owner: moduleOwner,
         tags: moduleTags
       }),
       findModule: async () => { throw { status: 404 } },
@@ -80,9 +82,7 @@ describe('loadModule', () => {
   test('should fallback to Module tags for Compute-Limit and Module-Limit if not on Process', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
+        owner: moduleOwner,
         tags: moduleTags
       }),
       findModule: async () => { throw { status: 404 } },
@@ -137,7 +137,7 @@ describe('loadModule', () => {
         return {
           id: 'foobar',
           tags: moduleTags,
-          owner: 'owner-123'
+          owner: moduleOwner
         }
       },
       saveModule: async () => assert.fail('should not save if found in db'),
@@ -189,9 +189,7 @@ describe('loadModule', () => {
     test('a single extension', async () => {
       const loadModule = loadModuleWith({
         loadTransactionMeta: async () => ({
-          owner: {
-            address: 'owner-123'
-          },
+          owner: moduleOwner,
           tags: [
             ...moduleTags,
             { name: 'Extension', value: 'Foo' },
@@ -228,9 +226,7 @@ describe('loadModule', () => {
     test('multiple extensions', async () => {
       const loadModule = loadModuleWith({
         loadTransactionMeta: async () => ({
-          owner: {
-            address: 'owner-123'
-          },
+          owner: moduleOwner,
           tags: [
             ...moduleTags,
             { name: 'Extension', value: 'Foo' },
@@ -275,9 +271,7 @@ describe('loadModule', () => {
   test('throw if "Input-Encoding" is not found', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
+        owner: moduleOwner,
         tags: remove(3, 1, moduleTags)
       }),
       findModule: async () => { throw { status: 404 } },
@@ -303,9 +297,7 @@ describe('loadModule', () => {
   test('throw if "Output-Encoding" is not found', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
+        owner: moduleOwner,
         tags: remove(4, 1, moduleTags)
       }),
       findModule: async () => { throw { status: 404 } },
@@ -331,9 +323,7 @@ describe('loadModule', () => {
   test('throw if "Module-Format" is not supported', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
+        owner: moduleOwner,
         tags: set(
           lensIndex(2),
           { name: 'Module-Format', value: 'wasm64-unknown-emscripten' },
@@ -363,9 +353,7 @@ describe('loadModule', () => {
   test('throw if Module Extension is not supported', async () => {
     const loadModule = loadModuleWith({
       loadTransactionMeta: async () => ({
-        owner: {
-          address: 'owner-123'
-        },
+        owner: moduleOwner,
         tags: [
           ...moduleTags,
           { name: 'Extension', value: 'Foo' },
@@ -402,9 +390,7 @@ describe('loadModule', () => {
     test('throw if not found', async () => {
       const loadModule = loadModuleWith({
         loadTransactionMeta: async () => ({
-          owner: {
-            address: 'owner-123'
-          },
+          owner: moduleOwner,
           tags: remove(5, 1, moduleTags)
         }),
         findModule: async () => { throw { status: 404 } },
@@ -427,9 +413,7 @@ describe('loadModule', () => {
     test('throw if exceeds max allowed', async () => {
       const loadModule = loadModuleWith({
         loadTransactionMeta: async () => ({
-          owner: {
-            address: 'owner-123'
-          },
+          owner: moduleOwner,
           tags: moduleTags
         }),
         findModule: async () => { throw { status: 404 } },
@@ -454,9 +438,7 @@ describe('loadModule', () => {
     test('throw if is not found', async () => {
       const loadModule = loadModuleWith({
         loadTransactionMeta: async () => ({
-          owner: {
-            address: 'owner-123'
-          },
+          owner: moduleOwner,
           tags: remove(6, 1, moduleTags)
         }),
         findModule: async () => { throw { status: 404 } },
@@ -479,9 +461,7 @@ describe('loadModule', () => {
     test('throw if exceeds max allowed', async () => {
       const loadModule = loadModuleWith({
         loadTransactionMeta: async () => ({
-          owner: {
-            address: 'owner-123'
-          },
+          owner: moduleOwner,
           tags: moduleTags
         }),
         findModule: async () => { throw { status: 404 } },
