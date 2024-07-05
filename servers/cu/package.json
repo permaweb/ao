@@ -27,6 +27,7 @@
     "fastify": "^4.28.1",
     "helmet": "^7.1.0",
     "hyper-async": "^1.1.2",
+    "keccak": "^3.0.4",
     "long-timeout": "^0.1.1",
     "lru-cache": "^10.3.0",
     "ms": "^2.1.3",
