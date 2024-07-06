@@ -4,7 +4,18 @@ local ao = {
     _module = "",
     authorities = {},
     Reference = 0,
-    outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
+    outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
+    nonExtractableTags = {
+        'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
+        'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
+    },
+    nonForwardableTags = {
+        'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
+        'From', 'Owner', 'Anchor', 'Target', 'Tags',
+        'TagArray', 'Hash-Chain', 'Timestamp', 'Nonce', 'Epoch', 'Signature',
+        'Forwarded-By', 'Pushed-For', 'Read-Only', 'Cron', 'Block-Height',
+        'Reference', 'Id', 'Reply-To'
+    }
 }
 
 local function _includes(list)
@@ -38,14 +49,38 @@ end
 
 local function padZero32(num) return string.format("%032d", num) end
 
+function ao.clone(obj, seen)
+    -- Handle non-tables and previously-seen tables.
+    if type(obj) ~= 'table' then return obj end
+    if seen and seen[obj] then return seen[obj] end
+  
+    -- New table; mark it as seen and copy recursively.
+    local s = seen or {}
+    local res = {}
+    s[obj] = res
+    for k, v in pairs(obj) do res[ao.clone(k, s)] = ao.clone(v, s) end
+    return setmetatable(res, getmetatable(obj))
+end
+
 function ao.normalize(msg)
     for _, o in ipairs(msg.Tags) do
-        if not _includes({
-            'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
-            'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
-        })(o.name) then msg[o.name] = o.value end
+        if not _includes(ao.nonExtractableTags)(o.name) then
+            msg[o.name] = o.value
+        end
     end
     return msg
+end
+
+function ao.sanitize(msg)
+    local newMsg = ao.clone(msg)
+
+    for k,_ in pairs(newMsg) do
+        if _includes(ao.nonForwardableTags)(k) then
+            newMsg[k] = nil
+        end
+    end
+
+    return newMsg
 end
 
 function ao.init(env)
@@ -92,7 +127,7 @@ function ao.send(msg)
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
             {name = "Type", value = "Message"},
-            {name = "X-Reference", value = tostring(ao.Reference)}
+            {name = "Reference", value = tostring(ao.Reference)}
         }
     }
 
@@ -115,8 +150,33 @@ function ao.send(msg)
         end
     end
 
+    -- clone spawn info and add to outbox
+    local extMessage = {}
+    for k, v in pairs(message) do
+        extMessage[k] = v
+    end
+
     -- add message to outbox
-    table.insert(ao.outbox.Messages, message)
+    table.insert(ao.outbox.Messages, extMessage)
+
+    -- add callback for onReply handler(s)
+    message.onReply =
+        function(...) -- Takes either (AddressThatWillReply, handler(s)) or (handler(s))
+            local from, resolver
+            if select("#", ...) == 2 then
+                from = select(1, ...)
+                resolver = select(2, ...)
+            else
+                from = message.Target
+                resolver = select(1, ...)
+            end
+
+            -- Add a one-time callback that runs the user's (matching) resolver on reply
+            Handlers.once(
+                { From = from, ["X-Reference"] = message.Reference },
+                resolver
+            )
+        end
 
     return message
 end
@@ -138,7 +198,7 @@ function ao.spawn(module, msg)
             {name = "From-Process", value = ao.id},
             {name = "From-Module", value = ao._module},
             {name = "Module", value = module},
-            {name = "X-Reference", value = spawnRef}
+            {name = "Reference", value = spawnRef}
         }
     }
 
@@ -174,7 +234,7 @@ function ao.spawn(module, msg)
     spawn.after =
         function(callback)
             Handlers.once(
-                { Action = "Spawned", From = ao.id, ["X-Reference"] = spawnRef },
+                { Action = "Spawned", From = ao.id, ["Reference"] = spawnRef },
                 callback
             )
         end
