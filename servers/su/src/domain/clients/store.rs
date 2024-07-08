@@ -78,14 +78,13 @@ impl From<std::num::ParseIntError> for StoreErrorType {
 pub struct StoreClient {
     pool: Pool<ConnectionManager<PgConnection>>,
     read_pool: Pool<ConnectionManager<PgConnection>>,
-    use_disk: bool,
 
     /*
       These are only public for the purposes of
       the migration program.
     */
     pub logger: Arc<dyn Log>,
-    pub bytestore: Option<bytestore::ByteStore>,
+    pub bytestore: Arc<bytestore::ByteStore>,
 }
 
 /*
@@ -107,7 +106,6 @@ impl StoreClient {
         let c_clone = config.clone();
         let database_url = config.database_url;
         let database_read_url = config.database_read_url;
-        let use_disk = config.use_disk;
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
         let logger = SuLog::init();
@@ -133,13 +131,8 @@ impl StoreClient {
         Ok(StoreClient {
             pool,
             read_pool,
-            use_disk,
             logger,
-            bytestore: if use_disk {
-                Some(bytestore::ByteStore::new(c_clone))
-            } else {
-                None
-            },
+            bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
         })
     }
 
@@ -366,6 +359,29 @@ impl StoreClient {
       sync the bytestore if USE_DISK is true.
     */
     pub fn sync_bytestore(&self) -> Result<(), ()> {
+
+        /*
+          if self.bytestore.clone().try_connect() is never 
+          called, the is_ready method on the byte store will
+          never return true, and the rest of the StoreClient
+          will not read or write bytestore. 
+
+          We call it here because this runs the in background.
+          So the server can operate normally without bytestore
+          until bytestore can be initialized. This is in case 
+          another program is still using the same embedded db.
+        */
+        loop {
+            match self.bytestore.clone().try_connect() {
+                Ok(_) => {
+                    break;
+                }
+                Err(_) => {
+                    self.logger.log("Bytestore not ready, waiting...".to_string());
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                }
+            }
+        }
         self.logger.log("Syncing the tail of the messages table".to_string());
         use std::time::Instant;
         let start = Instant::now();
@@ -390,7 +406,7 @@ impl StoreClient {
                       we would want to panic here if trying to
                       call this without initializing the bytestore
                     */
-                    if self.bytestore.clone().unwrap().exists(
+                    if self.bytestore.clone().exists(
                         &msg_id,
                         &assignment_id,
                         &process_id,
@@ -405,7 +421,6 @@ impl StoreClient {
 
                     self.bytestore
                         .clone()
-                        .unwrap()
                         .save_binary(
                             msg_id.clone(),
                             assignment_id.clone(),
@@ -550,17 +565,16 @@ impl DataStore for StoreClient {
                         "Error saving message".to_string(),
                     )) // Return a custom error for duplicates
                 } else {
-                    if self.use_disk {
-                        self.bytestore
-                            .clone()
-                            .ok_or("Error: bytestore is None".to_string())?
-                            .save_binary(
-                                message.message_id()?,
-                                Some(message.assignment_id()?),
-                                message.process_id()?,
-                                message.timestamp()?.to_string(),
-                                bundle_in.to_vec(),
-                            )?;
+                    let bytestore = self.bytestore.clone();
+                    if bytestore.is_ready() {
+                      bytestore
+                          .save_binary(
+                              message.message_id()?,
+                              Some(message.assignment_id()?),
+                              message.process_id()?,
+                              message.timestamp()?.to_string(),
+                              bundle_in.to_vec(),
+                          )?;
                     }
                     Ok("saved".to_string())
                 }
@@ -599,7 +613,7 @@ impl DataStore for StoreClient {
         // Apply limit, converting Option<i32> to i64 and adding 1 to check for the next page
         let limit_val = limit.unwrap_or(5000) as i64; // Default limit if none is provided
 
-        if self.use_disk {
+        if self.bytestore.clone().is_ready() {
             let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
                 .select((
                     row_id,
@@ -640,7 +654,6 @@ impl DataStore for StoreClient {
                     let binaries = self
                         .bytestore
                         .clone()
-                        .ok_or("Bytestore is empty".to_string())?
                         .read_binaries(message_ids)
                         .await?;
 
@@ -1025,96 +1038,134 @@ pub struct NewProcessScheduler<'a> {
   See https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
 */
 mod bytestore {
-    use super::super::super::config::AoConfig;
-    use dashmap::DashMap;
-    use rocksdb::{Options, DB};
-    use std::sync::Arc;
+  use super::super::super::config::AoConfig;
+  use dashmap::DashMap;
+  use rocksdb::{Options, DB};
+  use std::sync::Arc;
+  use std::sync::RwLock;
 
-    #[derive(Clone)]
-    pub struct ByteStore {
-        db: Arc<DB>,
-    }
+  pub struct ByteStore {
+      db: RwLock<Option<DB>>,
+      config: AoConfig,
+  }
 
-    impl ByteStore {
-        pub fn new(config: AoConfig) -> Self {
-            let mut opts = Options::default();
-            opts.create_if_missing(true);
-            opts.set_enable_blob_files(true); // Enable blob files
-            opts.set_blob_file_size(5 * 1024 * 1024 * 1024); // 5GB max for now
-            opts.set_min_blob_size(1024); // low value ensures it is used
+  impl ByteStore {
+      pub fn new(config: AoConfig) -> Self {
+          ByteStore { db: RwLock::new(None), config }
+      }
 
-            let db = DB::open(&opts, &config.su_data_dir).expect("Failed to open RocksDB");
+      pub fn try_connect(&self) -> Result<(), String> {
+          let mut opts = Options::default();
+          opts.create_if_missing(true);
+          opts.set_enable_blob_files(true); // Enable blob files
+          opts.set_blob_file_size(5 * 1024 * 1024 * 1024); // 5GB max for now
+          opts.set_min_blob_size(1024); // low value ensures it is used
 
-            ByteStore { db: Arc::new(db) }
+          let new_db = DB::open(&opts, &self.config.su_data_dir).map_err(|e| format!("Failed to open RocksDB: {:?}", e))?;
+
+          let mut db_write = self.db.write().unwrap();
+          *db_write = Some(new_db);
+
+          Ok(())
+      }
+
+      pub fn is_ready(&self) -> bool {
+        match self.db.read() {
+          Ok(r) => r.is_some(),
+          Err(_) => false,
         }
+      }
 
-        pub async fn read_binaries(
-            &self,
-            ids: Vec<(String, Option<String>, String, String)>,
-        ) -> Result<DashMap<(String, Option<String>, String, String), Vec<u8>>, String> {
-            let binaries = Arc::new(DashMap::new());
-            let db = self.db.clone();
+      pub async fn read_binaries(
+          &self,
+          ids: Vec<(String, Option<String>, String, String)>,
+      ) -> Result<DashMap<(String, Option<String>, String, String), Vec<u8>>, String> {
+          let binaries = Arc::new(DashMap::new());
+          let db = match self.db.read() {
+            Ok(r) => r,
+            Err(_) => return Err("Failed to acquire read lock".into()),
+          };
 
-            for id in ids {
-                let db = db.clone();
-                let binaries = binaries.clone();
+          if let Some(ref db) = *db {
+              for id in ids {
+                  let binaries = binaries.clone();
 
-                let key = ByteStore::create_key(&id.0, &id.1, &id.2, &id.3);
-                if let Ok(Some(value)) = db.get(&key) {
-                    binaries.insert(id.clone(), value);
-                }
-            }
+                  let key = ByteStore::create_key(&id.0, &id.1, &id.2, &id.3);
+                  if let Ok(Some(value)) = db.get(&key) {
+                      binaries.insert(id.clone(), value);
+                  }
+              }
+              Ok(Arc::try_unwrap(binaries).map_err(|_| "Failed to unwrap Arc")?)
+          } else {
+              Err("Database is not initialized".into())
+          }
+      }
 
-            Ok(Arc::try_unwrap(binaries).map_err(|_| "Failed to unwrap Arc")?)
-        }
+      pub fn save_binary(
+          &self,
+          message_id: String,
+          assignment_id: Option<String>,
+          process_id: String,
+          timestamp: String,
+          binary: Vec<u8>,
+      ) -> Result<(), String> {
+          let key = ByteStore::create_key(&message_id, &assignment_id, &process_id, &timestamp);
+          let db = match self.db.read() {
+            Ok(r) => r,
+            Err(_) => return Err("Failed to acquire read lock".into()),
+          };
 
-        pub fn save_binary(
-            &self,
-            message_id: String,
-            assignment_id: Option<String>,
-            process_id: String,
-            timestamp: String,
-            binary: Vec<u8>,
-        ) -> Result<(), String> {
-            let key = ByteStore::create_key(&message_id, &assignment_id, &process_id, &timestamp);
-            self.db
-                .put(key, binary)
-                .map_err(|e| format!("Failed to write to RocksDB: {:?}", e))?;
-            Ok(())
-        }
+          if let Some(ref db) = *db {
+              db.put(key, binary)
+                  .map_err(|e| format!("Failed to write to RocksDB: {:?}", e))?;
+              Ok(())
+          } else {
+              Err("Database is not initialized".into())
+          }
+      }
 
-        fn create_key(
-            message_id: &str,
-            assignment_id: &Option<String>,
-            process_id: &str,
-            timestamp: &str,
-        ) -> Vec<u8> {
-            match assignment_id {
-                Some(assignment_id) => format!(
-                    "message___{}___{}___{}___{}",
-                    process_id, timestamp, message_id, assignment_id
-                )
-                .into_bytes(),
-                None => format!("message___{}___{}___{}", process_id, timestamp, message_id)
-                    .into_bytes(),
-            }
-        }
+      fn create_key(
+          message_id: &str,
+          assignment_id: &Option<String>,
+          process_id: &str,
+          timestamp: &str,
+      ) -> Vec<u8> {
+          match assignment_id {
+              Some(assignment_id) => format!(
+                  "message___{}___{}___{}___{}",
+                  process_id, timestamp, message_id, assignment_id
+              )
+              .into_bytes(),
+              None => format!("message___{}___{}___{}", process_id, timestamp, message_id)
+                  .into_bytes(),
+          }
+      }
 
-        pub fn exists(
-            &self,
-            message_id: &str,
-            assignment_id: &Option<String>,
-            process_id: &str,
-            timestamp: &str,
-        ) -> bool {
-            let key = ByteStore::create_key(message_id, assignment_id, process_id, timestamp);
-            match self.db.get(&key) {
-                Ok(Some(_)) => true,
-                _ => false,
-            }
-        }
-    }
+      pub fn exists(
+          &self,
+          message_id: &str,
+          assignment_id: &Option<String>,
+          process_id: &str,
+          timestamp: &str,
+      ) -> bool {
+          let key = ByteStore::create_key(message_id, assignment_id, process_id, timestamp);
+          let db = match self.db.read() {
+            Ok(r) => r,
+            Err(_) => return false,
+          };
+
+          if let Some(ref db) = *db {
+              match db.get(&key) {
+                  Ok(Some(_)) => true,
+                  _ => false,
+              }
+          } else {
+              false
+          }
+      }
+  }
 }
+
 
 /*
   This function is the migation program will
@@ -1128,6 +1179,7 @@ pub async fn migrate_to_disk() -> io::Result<()> {
     dotenv().ok();
 
     let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
+    data_store.bytestore.try_connect().expect("Failed to connect to bytestore");
 
     let args: Vec<String> = env::args().collect();
     let range: &String = args.get(1).expect("Range argument not provided");
@@ -1212,15 +1264,13 @@ pub async fn migrate_to_disk() -> io::Result<()> {
                         data_store
                             .bytestore
                             .clone()
-                            .expect("Bytestore is None")
                             .save_binary(
                                 msg_id.clone(),
                                 assignment_id.clone(),
                                 process_id.clone(),
                                 timestamp.clone(),
                                 bundle,
-                            )
-                            .expect("Failed to save message binary");
+                            ).unwrap();
                         processed_count.fetch_add(1, Ordering::SeqCst);
                     });
 
