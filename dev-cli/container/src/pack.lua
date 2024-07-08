@@ -1,6 +1,6 @@
 -- pack.lua
 -- released under the Romantic WTF Public License
--- http://getmoai.com/wiki/index.php?title=User:Pygy/Romantic_WTF_Public_License
+-- http://getmoai.com/wiki/index.php?title=User:Pygy/Roma   ntic_WTF_Public_License
 
 args = {...}
 --require"luarocks.loader"

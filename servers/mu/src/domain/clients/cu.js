@@ -1,6 +1,14 @@
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
+const AO_TESTNET_PROCESS = [
+  'AiMTGB8qLZUo3Do9x4vJCCWa-APVxBBoI2KX1jwYQH0',
+  'rH_-7vT_IgfFWiDsrcTghIhb9aRclz7lXcK7RCOV2h8',
+  'Us4BVLXDjtRz7Qzf7osnNcxTsi4vEjfMWo1RRTzhigQ',
+  'KvQhYDJTQwpS3huPUJy5xybUDN3L8SE1mhLOBAt5l6Y',
+  'fev8nSrdplynxom78XaQ65jSo7-88RxVVVPwHG8ffZk'
+]
+
 function resultWith ({ fetch, histogram, CU_URL, logger }) {
   const resultFetch = withTimerMetricsFetch({
     fetch,
@@ -11,7 +19,11 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
   })
 
   return async (txId, processId) => {
-    logger(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`)
+    const cuUrl = AO_TESTNET_PROCESS.includes(processId)
+      ? 'https://cu.ao-testnet.xyz'
+      : CU_URL
+
+    logger(`${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`)
 
     const requestOptions = {
       timeout: 0
@@ -20,7 +32,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
     return backoff(
       () =>
         resultFetch(
-          `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`,
+          `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`,
           requestOptions
         ).then(okRes),
       {
@@ -47,9 +59,13 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
   }
 }
 
+// TODO: doesn't seem to be used
 function selectNodeWith ({ CU_URL, logger }) {
   return async (processId) => {
     logger(`Selecting cu for process ${processId}`)
+    if (AO_TESTNET_PROCESS.includes(processId)) {
+      return 'https://cu.ao-testnet.xyz'
+    }
     return CU_URL
   }
 }
