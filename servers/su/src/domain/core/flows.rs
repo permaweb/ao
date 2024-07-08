@@ -155,7 +155,7 @@ pub async fn write_item(
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store
                 .save_process(&process, &build_result.binary)?;
-            deps.logger.log(format!("saved process - {:?}", &process));
+            deps.logger.log(format!("saved process"));
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
@@ -171,25 +171,44 @@ pub async fn write_item(
                 process we are writing a message to. this ensures
                 no conflicts in the schedule
             */
+            let start_total = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
+            let end_acquire_lock = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            deps.logger.log(format!("=== ACQUIRE LOCK - {:?}", (end_acquire_lock - start_total)));
+
             let updated_info = deps
                 .scheduler
                 .update_schedule_info(&mut *schedule_info, data_item.target())
                 .await?;
+            let end_update_schedule_info = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            deps.logger.log(format!("=== UPDATE SCHEDULE INFO - {:?}", (end_update_schedule_info - end_acquire_lock)));
 
             let build_result = builder.build_message(input, &*updated_info).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
+            let end_create_msg = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            deps.logger.log(format!("=== CREATING MESSAGE - {:?}", (end_create_msg - end_update_schedule_info)));
+
             deps.data_store
                 .save_message(&message, &build_result.binary)
                 .await?;
-            deps.logger.log(format!("saved message - {:?}", &message));
+            deps.logger.log(format!("saved message"));
+            let end_save_msg = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            deps.logger.log(format!("=== SAVING MESSAGE - {:?}", (end_save_msg - end_create_msg)));
+
+
             upload(&deps, build_result.binary.to_vec()).await?;
+            let end_upload_turbo = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            deps.logger.log(format!("=== UPLOAD TURBO - {:?}", (end_upload_turbo - end_save_msg)));
+
+
             drop(schedule_info);
             match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json =
-                        json!({ "timestamp": timestamp, "id": message.message_id()? });
+                        json!({ "timestamp": timestamp, "id": message.message_id()?, "message": message });
+                    let end_total = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                    deps.logger.log(format!("=== TOTAL MSG - {:?}", (end_total - start_total)));
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e)),

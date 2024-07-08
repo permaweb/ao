@@ -2,7 +2,7 @@ use std::env::VarError;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::{env, io};
-
+use std::time::{SystemTime, UNIX_EPOCH};
 use dotenv::dotenv;
 use futures::future::join_all;
 use tokio::task::JoinHandle;
@@ -541,7 +541,7 @@ impl DataStore for StoreClient {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
 
-        self.check_existing_message(message)?;
+        // self.check_existing_message(message)?;
 
         let new_message = NewMessage {
             process_id: &message.process_id()?,
@@ -565,6 +565,7 @@ impl DataStore for StoreClient {
                         "Error saving message".to_string(),
                     )) // Return a custom error for duplicates
                 } else {
+                    /*let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
                     let bytestore = self.bytestore.clone();
                     if bytestore.is_ready() {
                       bytestore
@@ -576,6 +577,8 @@ impl DataStore for StoreClient {
                               bundle_in.to_vec(),
                           )?;
                     }
+                    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                    self.logger.log(format!("=== BINARY STORAGE - {:?}", (end - start)));*/
                     Ok("saved".to_string())
                 }
             }

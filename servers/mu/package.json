@@ -42,9 +42,5 @@
   "devDependencies": {
     "@types/node": "^20.12.7",
     "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": "22",
-    "yarn": "please-use-npm"
   }
 }

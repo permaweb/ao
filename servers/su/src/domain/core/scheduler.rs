@@ -155,10 +155,15 @@ async fn fetch_values(
     };
     let millis: i64 = duration.as_secs() as i64 * 1000 + i64::from(duration.subsec_millis());
 
+
+    let start_total = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let latest_message = match deps.data_store.get_latest_message(process_id) {
         Ok(m) => m,
         Err(e) => return Err(format!("{:?}", e)),
     };
+    let end_get_latest_message = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    deps.logger.log(format!("=== get_latest_message - {:?}", (end_get_latest_message - start_total)));
+
 
     match latest_message {
         Some(previous_message) => {
@@ -168,6 +173,8 @@ async fn fetch_values(
                 &previous_message.hash_chain().unwrap(),
                 Some(&previous_message.assignment_id().unwrap()),
             )?;
+            let end_hash_chain = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            deps.logger.log(format!("=== end_hash_chain - {:?}", (end_hash_chain - end_get_latest_message)));
             Ok((epoch, nonce, hash_chain, millis))
         }
         None => {

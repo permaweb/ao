@@ -1,5 +1,5 @@
 use std::sync::Arc;
-
+use std::time::{SystemTime, UNIX_EPOCH};
 use bundlr_sdk::tags::Tag;
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
@@ -60,7 +60,11 @@ impl<'a> Builder<'a> {
         schedule_info: &dyn ScheduleProvider,
         exclude: &Option<String>,
     ) -> Result<DataItem, BuilderErrorType> {
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let network_info = self.gateway.network_info().await?;
+        let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        self.logger.log(format!("=== CHECKING NETWORK INFO - {:?}", (end - start)));
+
         let height = network_info.height.clone();
         let mut tags = vec![
             Tag::new(&"Process".to_string(), &process_id),
@@ -90,7 +94,11 @@ impl<'a> Builder<'a> {
 
         let mut assignment = DataItem::new(vec![], vec![], tags, self.signer.get_public_key())?;
         let assignment_message = assignment.get_message()?.to_vec();
+
+        let start_sig = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let assignment_signature = self.signer.sign_tx(assignment_message).await?;
+        let end_sig = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        self.logger.log(format!("=== SIGNING ASSIGNMENT - {:?}", (end_sig - start_sig)));
 
         assignment.signature = assignment_signature;
 
@@ -118,7 +126,11 @@ impl<'a> Builder<'a> {
             DataItem::new(vec![], buffer, bundle_tags, self.signer.get_public_key())?;
         let bundle_message = bundle_data_item.get_message()?.to_vec();
 
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let signature = self.signer.sign_tx(bundle_message).await?;
+        let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        self.logger.log(format!("=== SIGNING NESTED BUNDLE - {:?}", (end - start)));
+
 
         bundle_data_item.signature = signature;
 

@@ -13,7 +13,7 @@ function fetchResultWith ({ fetchResult }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
   return (ctx) =>
-    fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.cu)
+    fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.schedulerTx.message, ctx.cu)
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
           return {

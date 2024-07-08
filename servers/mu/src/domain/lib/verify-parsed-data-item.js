@@ -1,4 +1,4 @@
-import { anyPass, propOr, tap } from 'ramda'
+import { anyPass, propOr } from 'ramda'
 import { Rejected, Resolved, of } from 'hyper-async'
 
 import { eqOrIncludes, parseTags } from '../utils.js'
@@ -13,7 +13,6 @@ export function verifyParsedDataItemWith () {
   const isTagEqualTo = ({ name, value }) => (tag) => tag.name === name && tag.value === value
 
   return (dataItem) => of(dataItem)
-    .map(tap(console.log))
     .map(propOr([], 'tags'))
     .chain((rawTags) =>
       of(rawTags)
