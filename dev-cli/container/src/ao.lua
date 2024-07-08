@@ -150,6 +150,12 @@ function ao.send(msg)
         end
     end
 
+    -- If running in an environment without the AOS Handlers module, do not add
+    -- the onReply and receive functions to the message.
+    if not Handlers then
+        return message
+    end
+
     -- clone spawn info and add to outbox
     local extMessage = {}
     for k, v in pairs(message) do
