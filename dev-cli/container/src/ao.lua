@@ -234,6 +234,12 @@ function ao.spawn(module, msg)
         end
     end
 
+    -- If running in an environment without the AOS Handlers module, do not add
+    -- the after and receive functions to the spawn.
+    if not Handlers then
+        return spawn
+    end
+
     -- clone spawn info and add to outbox
     local extSpawn = {}
     for k, v in pairs(spawn) do
