@@ -178,6 +178,13 @@ function ao.send(msg)
             )
         end
 
+    message.receive = function()
+        return Handlers.receive({
+            From = message.Target,
+            ["X-Reference"] = message.Reference
+        })
+    end
+
     return message
 end
 
