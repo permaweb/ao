@@ -258,6 +258,15 @@ function ao.spawn(module, msg)
             )
         end
     
+    spawn.receive = function()
+        return Handlers.receive({
+            Action = "Spawned",
+            From = ao.id,
+            ["Reference"] = spawnRef
+        })
+
+    end
+    
     return spawn
 end
 
