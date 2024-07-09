@@ -1,0 +1,20 @@
+{
+    "name": "AO Container",
+	"dockerComposeFile": "docker-compose.yaml",
+	"service": "development",
+	"workspaceFolder": "/workspace",
+    "customizations": {
+        "vscode": {
+            "extensions": [],
+            "settings": {}
+        }
+    },
+    "forwardPorts": [
+		9000, // SU
+ 		5432, // Postgres
+		6363, // CU
+		3004 // MU
+	],
+	"shutdownAction": "none",
+	"remoteUser": "root"
+}
