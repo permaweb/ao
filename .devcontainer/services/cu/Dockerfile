@@ -16,9 +16,6 @@ WORKDIR /usr/src/cu
 
 COPY --from=downloader /download/ao/servers/cu .
 
-RUN sed -i '/heapdump/d' package.json
-RUN sed -i '/heapdump/d' src/app.js
-
 RUN npm install --ignore-engines --omit=dev
 
 EXPOSE 6363

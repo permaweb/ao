@@ -16,8 +16,6 @@ WORKDIR /usr/src/mu
 COPY --from=downloader /download/ao/servers/mu .
 
 RUN sed -i '/postinstall/d' package.json
-RUN sed -i '/heapdump/d' package.json
-RUN sed -i '/heapdump/d' src/app.js
 
 RUN npm install --ignore-engines --omit=dev
 
