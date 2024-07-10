@@ -233,7 +233,7 @@ export const processSchema = z.object({
 })
 
 export const processCheckpointSchema = z.object({
-  src: z.enum(['memory', 'record', 'arweave', 'cold_start']),
+  src: z.enum(['memory', 'file', 'record', 'arweave', 'cold_start']),
   fromFile: z.string().nullish(),
   Memory: bufferSchema.nullish(),
   moduleId: z.string().nullish(),

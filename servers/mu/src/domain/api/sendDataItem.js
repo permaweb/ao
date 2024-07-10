@@ -95,6 +95,10 @@ export function sendDataItemWith ({
   const sendProcess = (ctx) => of(ctx)
     .map(logger.tap({ log: 'Sending process...' }))
     .chain(writeProcess)
+    .map((ctx) => {
+      console.log(101, { ctx })
+      return ctx
+    })
     .map((res) => ({
       ...res,
       /**
@@ -138,6 +142,7 @@ export function sendDataItemWith ({
         verifyParsedDataItem(ctx.dataItem)
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
           .chain(({ isMessage }) => {
+            console.log(100, { ctx, isMessage })
             if (isMessage) {
               /*
                   add schedLocation into the context if the

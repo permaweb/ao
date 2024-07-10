@@ -6,7 +6,6 @@ import { readFile, writeFile } from 'node:fs/promises'
 import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
-import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
@@ -144,7 +143,8 @@ export const createApis = async (ctx) => {
 
   const writeProcessMemoryFile = AoProcessClient.writeProcessMemoryFileWith({
     DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
-    writeFile
+    writeFile,
+    readFile
   })
 
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
@@ -174,6 +174,11 @@ export const createApis = async (ctx) => {
     writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({
       db: sqlite
     }),
+    writeCacheBackupFile: AoProcessClient.writeCacheBackupFileWith({
+      writeFile,
+      readFile
+    }),
+    writeProcessMemoryFile,
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
@@ -186,7 +191,11 @@ export const createApis = async (ctx) => {
     writeProcessMemoryFile,
     logger: ctx.logger,
     setTimeout: (...args) => lt.setTimeout(...args),
-    clearTimeout: (...args) => lt.clearTimeout(...args)
+    clearTimeout: (...args) => lt.clearTimeout(...args),
+    writeCacheBackupFile: AoProcessClient.writeCacheBackupFileWith({
+      writeFile,
+      readFile
+    })
   })
 
   const loadWasmModule = WasmClient.loadWasmModuleWith({
@@ -262,10 +271,7 @@ export const createApis = async (ctx) => {
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       readProcessMemoryFile,
-      findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
-        DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
-        glob: fastGlob
-      }),
+      findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({ readFile }),
       readCheckpointFile: AoProcessClient.readCheckpointFileWith({
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
         readFile
@@ -404,9 +410,10 @@ export const createApis = async (ctx) => {
     /**
      * push a new object to keep references to original data intact
      */
-    wasmMemoryCache.data.forEach((value) =>
-      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
-    )
+    wasmMemoryCache.data.forEach((value) => {
+      console.log('xyz', { value })
+      return pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
+    })
 
     checkpointP = pMap(
       pArgs,

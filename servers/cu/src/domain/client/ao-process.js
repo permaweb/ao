@@ -1,8 +1,8 @@
+import fs from 'fs'
 import { promisify } from 'node:util'
 import { gunzip, gzip, constants as zlibConstants } from 'node:zlib'
 import { Readable } from 'node:stream'
-import { basename, join } from 'node:path'
-
+import { join } from 'node:path'
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, isNotNil, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
@@ -31,6 +31,7 @@ function createCheckpointId ({ processId, timestamp, ordinate, cron }) {
  */
 export const LATEST = 'LATEST'
 
+const CACHE_BACKUP_FILE_NAME = 'cache-backup.json'
 /**
  * @type {{
  *  get: (processId: string) => { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }
@@ -60,7 +61,7 @@ let processMemoryCache
  * via passing in a new implementation such as using the 'long-timeout' library
  * This resolves issue #666
  */
-export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, writeProcessMemoryFile, setTimeout, clearTimeout }) {
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, writeProcessMemoryFile, setTimeout, clearTimeout, writeCacheBackupFile }) {
   if (processMemoryCache) return processMemoryCache
 
   const clearTimerWith = (map) => (key) => {
@@ -134,7 +135,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
      * Capacity Configuration
      * #######################
      */
-    maxSize: MAX_SIZE,
+    maxSize: 7602180,
     /**
      * Size is calculated using the Memory Array Buffer
      */
@@ -188,6 +189,9 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
           {
             evaluation: value.evaluation,
             File: writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
+              .then((path) => {
+                writeCacheBackupFile(value.evaluation, path)
+              })
               .catch((err) => {
                 logger(
                   'Error occurred when draining Memory for evaluation "%j" to a file. Skipping adding back to the cache...',
@@ -198,7 +202,8 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
                 return undefined
               }),
             Memory: undefined
-          })
+          }
+        )
       }
     }
   })
@@ -242,6 +247,7 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
        * The Memory is being added back to the LRU Cache,
        * so the drainedToFile entry needs to be removed
        */
+      console.log({ key, value })
       drainedToFile.delete(key)
       setTtl(key)
       return lru.set(key, value)
@@ -455,33 +461,19 @@ export function deleteProcessWith ({ db }) {
  * ################################
  */
 
-export function findCheckpointFileBeforeWith ({ DIR, glob }) {
+export function findCheckpointFileBeforeWith ({ readFile }) {
   return ({ processId, before }) => {
     const { stop: stopTimer } = timer('findCheckpointFileBefore', { processId, before })
-    /**
-     * Find all the Checkpoint files for this process
-     *
-     * names like: eval-{processId},{timestamp},{ordinate},{cron}.json
-     */
-    return glob(join(DIR, `checkpoint-${processId}*.json`))
+    const timestamp = before === 'LATEST' ? new Date().getTime() : before.timestamp
+    return readFile(CACHE_BACKUP_FILE_NAME)
       .finally(stopTimer)
-      .then((paths) =>
-        paths.map(path => {
-          const file = basename(path)
-          const [processId, timestamp, ordinate, cron] = file
-            .slice(11, -5) // remove prefix checkpoint- and suffix .json
-            .split(',') // [processId, timestamp, ordinate, cron]
-
-          return { file, processId, timestamp, ordinate, cron }
-        })
-      )
-      /**
-       * Find the latest Checkpoint before the params we are interested in
-       */
-      .then((parsed) => parsed.reduce(
-        latestCheckpointBefore(before),
-        undefined
-      ))
+      .then((fileData) => {
+        const parsedData = JSON.parse(fileData.toString() ?? '{}')
+        const processData = parsedData[processId]
+        console.log(112, { processData })
+        if (isEarlierThan({ timestamp }, processData.evaluation)) return processData
+        return undefined
+      })
   }
 }
 
@@ -505,6 +497,24 @@ export function writeCheckpointFileWith ({ DIR, writeFile }) {
   }
 }
 
+export function writeCacheBackupFileWith ({ writeFile, readFile }) {
+  return (evaluation, path) => {
+    const { processId, timestamp, cron } = evaluation
+    const backupPath = CACHE_BACKUP_FILE_NAME
+    const backupExists = fs.existsSync(backupPath)
+    console.log('Writing...', { backupExists, backupPath, processId, path, timestamp, cron })
+    if (backupExists) {
+      readFile(backupPath).then((backupFile) => {
+        const fileData = JSON.parse(backupFile.toString())
+        fileData[processId] = { path, evaluation }
+        console.log({ fileData, processId })
+        writeFile(backupPath, JSON.stringify(fileData))
+      })
+    } else {
+      writeFile(backupPath, JSON.stringify({ [processId]: { path, evaluation } }))
+    }
+  }
+}
 /**
  * TODO: should we inject this lock?
  */
@@ -527,6 +537,7 @@ export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
       const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
       const path = join(DIR, file)
 
+      console.log('Writing123...', { file, Memory, path })
       return writeFile(path, Memory)
         .then(() => file)
         .finally(stopTimer)
@@ -905,6 +916,55 @@ export function findLatestProcessMemoryWith ({
       })
   }
 
+  function maybeFile (args) {
+    const { processId, omitMemory } = args
+    /**
+     * Attempt to find the latest checkpoint in a file
+     */
+    return findCheckpointFileBefore({ processId, before: LATEST })
+      .chain((checkpoint) => {
+        console.log(111, { checkpoint })
+        /**
+         * No previously created checkpoint is cached in a file,
+         * so keep looking
+         */
+        if (!checkpoint) return Rejected(args)
+
+        /**
+         * We have found a previously created checkpoint, cached in a record, so
+         * we can skip querying the gateway for it, and instead download the
+         * checkpointed Memory directly, from arweave.
+         *
+         * The "record" checkpoint already contains all the metadata we would
+         * otherwise have to pull from the gateway
+         */
+        return of(checkpoint)
+          .chain((checkpoint) => {
+            return of()
+              .chain(fromPromise(async () => checkpoint.path))
+              .chain((path) => {
+                if (omitMemory) return Resolved(null)
+                if (!path) return Rejected(args)
+                logger('Reloading cached process memory from file "%s"', path)
+                return readProcessMemoryFile(path)
+              })
+              .chain(fromPromise(decodeData(checkpoint.evaluation.encoding)))
+          })
+          .chain()
+          .map((Memory) => ({
+            src: 'file',
+            Memory,
+            moduleId: checkpoint.evaluation.moduleId,
+            timestamp: checkpoint.evaluation.timestamp,
+            blockHeight: checkpoint.evaluation.blockHeight,
+            epoch: checkpoint.evaluation.epoch,
+            nonce: checkpoint.evaluation.nonce,
+            ordinate: checkpoint.evaluation.ordinate,
+            cron: checkpoint.evaluation.cron
+          }))
+      })
+  }
+
   function maybeRecord (args) {
     const { processId, omitMemory } = args
 
@@ -1144,6 +1204,7 @@ export function findLatestProcessMemoryWith ({
 
     return of({ processId, before, omitMemory })
       .chain(maybeCached)
+      .bichain(maybeFile, Resolved)
       .bichain(maybeRecord, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
@@ -1156,6 +1217,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
   return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
     const cached = cache.get(processId)
 
+    console.log('abc123', { Memory })
     /**
      * Ensure that we are always caching a Buffer and not a TypedArray
      *
@@ -1219,6 +1281,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       gasUsed: incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? incrementedGasUsed : 0
     }
     // cache.set(processId, { Memory: zipped, evaluation })
+    console.log('Setting cache...', { processId, size: cache.size })
     cache.set(processId, { Memory, evaluation })
 
     /**
@@ -1227,7 +1290,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     **/
     // if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
 
-    if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
+    // if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
     /**
      * Eagerly create the Checkpoint on the next event queue drain
      */
@@ -1266,6 +1329,8 @@ export function saveCheckpointWith ({
   address,
   writeCheckpointFile,
   writeCheckpointRecord,
+  writeProcessMemoryFile,
+  writeCacheBackupFile,
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
   DISABLE_PROCESS_CHECKPOINT_CREATION,
@@ -1447,10 +1512,11 @@ export function saveCheckpointWith ({
     /**
      * A Checkpoint has not been recently created for this process, so continue
      */
+    console.log({ processMemoryCache })
     if (!recentCheckpoints.has(processId)) return Rejected(args)
 
     logger('Checkpoint was recently created for process "%s", and so not creating another one.', processId)
-    return Resolved()
+    return Rejected(args)
   }
 
   function createCheckpoint (args) {
@@ -1460,6 +1526,7 @@ export function saveCheckpointWith ({
       { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
     )
 
+    console.log(222, { processId })
     return address()
       .chain((owner) => queryCheckpoints({
         query: GET_AO_PROCESS_CHECKPOINTS(!!cron),
@@ -1530,6 +1597,40 @@ export function saveCheckpointWith ({
               return { id: res.id, encoding: 'gzip' }
             }
           )
+          .bichain(
+            (ctx) => {
+              const evaluation = {
+                processId,
+                moduleId,
+                timestamp,
+                nonce,
+                epoch,
+                blockHeight,
+                cron,
+                encoding: 'gzip'
+              }
+              console.log(105, { processId, Memory })
+              if (Memory) {
+                writeProcessMemoryFile({
+                  Memory,
+                  evaluation
+                })
+                  .then((path) => {
+                    console.log('Wrote.', { path })
+                    writeCacheBackupFile(evaluation, path)
+                  })
+                  .catch((err) => {
+                    logger(
+                      'Error occurred when draining Memory for evaluation "%j" to a file. Skipping adding back to the cache...',
+                      evaluation,
+                      err
+                    )
+                  })
+              }
+              return Rejected(ctx)
+            },
+            Resolved
+          )
       })
       .chain((onArweave) => {
         return writeCheckpointRecord({
@@ -1564,6 +1665,7 @@ export function saveCheckpointWith ({
   }
 
   return async ({ Memory, File, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) => {
+    console.log(223, { processId })
     return maybeCheckpointDisabled({ Memory, File, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron })
       .bichain(maybeRecentlyCheckpointed, Resolved)
       .bichain(createCheckpoint, Resolved)
