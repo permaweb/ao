@@ -1,10 +1,21 @@
 local ao = {
-    _version = "0.0.4",
+    _version = "0.0.5",
     id = "",
     _module = "",
     authorities = {},
-    _ref = 0,
-    outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
+    Reference = 0,
+    outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
+    nonExtractableTags = {
+        'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
+        'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
+    },
+    nonForwardableTags = {
+        'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
+        'From', 'Owner', 'Anchor', 'Target', 'Tags',
+        'TagArray', 'Hash-Chain', 'Timestamp', 'Nonce', 'Epoch', 'Signature',
+        'Forwarded-By', 'Pushed-For', 'Read-Only', 'Cron', 'Block-Height',
+        'Reference', 'Id', 'Reply-To'
+    }
 }
 
 local function _includes(list)
@@ -38,14 +49,38 @@ end
 
 local function padZero32(num) return string.format("%032d", num) end
 
+function ao.clone(obj, seen)
+    -- Handle non-tables and previously-seen tables.
+    if type(obj) ~= 'table' then return obj end
+    if seen and seen[obj] then return seen[obj] end
+  
+    -- New table; mark it as seen and copy recursively.
+    local s = seen or {}
+    local res = {}
+    s[obj] = res
+    for k, v in pairs(obj) do res[ao.clone(k, s)] = ao.clone(v, s) end
+    return setmetatable(res, getmetatable(obj))
+end
+
 function ao.normalize(msg)
     for _, o in ipairs(msg.Tags) do
-        if not _includes({
-            'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
-            'Ref_', 'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
-        })(o.name) then msg[o.name] = o.value end
+        if not _includes(ao.nonExtractableTags)(o.name) then
+            msg[o.name] = o.value
+        end
     end
     return msg
+end
+
+function ao.sanitize(msg)
+    local newMsg = ao.clone(msg)
+
+    for k,_ in pairs(newMsg) do
+        if _includes(ao.nonForwardableTags)(k) then
+            newMsg[k] = nil
+        end
+    end
+
+    return newMsg
 end
 
 function ao.init(env)
@@ -82,19 +117,17 @@ function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}, 
 
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
-    ao._ref = ao._ref + 1
+    ao.Reference = ao.Reference + 1
 
     local message = {
         Target = msg.Target,
         Data = msg.Data,
-        Anchor = padZero32(ao._ref),
+        Anchor = padZero32(ao.Reference),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
             {name = "Type", value = "Message"},
-            {name = "From-Process", value = ao.id},
-            {name = "From-Module", value = ao._module},
-            {name = "Ref_", value = tostring(ao._ref)}
+            {name = "Reference", value = tostring(ao.Reference)}
         }
     }
 
@@ -117,21 +150,60 @@ function ao.send(msg)
         end
     end
 
+    -- If running in an environment without the AOS Handlers module, do not add
+    -- the onReply and receive functions to the message.
+    if not Handlers then
+        return message
+    end
+
+    -- clone spawn info and add to outbox
+    local extMessage = {}
+    for k, v in pairs(message) do
+        extMessage[k] = v
+    end
+
     -- add message to outbox
-    table.insert(ao.outbox.Messages, message)
+    table.insert(ao.outbox.Messages, extMessage)
+
+    -- add callback for onReply handler(s)
+    message.onReply =
+        function(...) -- Takes either (AddressThatWillReply, handler(s)) or (handler(s))
+            local from, resolver
+            if select("#", ...) == 2 then
+                from = select(1, ...)
+                resolver = select(2, ...)
+            else
+                from = message.Target
+                resolver = select(1, ...)
+            end
+
+            -- Add a one-time callback that runs the user's (matching) resolver on reply
+            Handlers.once(
+                { From = from, ["X-Reference"] = message.Reference },
+                resolver
+            )
+        end
+
+    message.receive = function()
+        return Handlers.receive({
+            From = message.Target,
+            ["X-Reference"] = message.Reference
+        })
+    end
 
     return message
 end
 
 function ao.spawn(module, msg)
-    assert(type(module) == "string", "module source id is required!")
-    assert(type(msg) == 'table', 'msg should be a table')
+    assert(type(module) == "string", "Module source id is required!")
+    assert(type(msg) == 'table', 'Message must be a table')
     -- inc spawn reference
-    ao._ref = ao._ref + 1
+    ao.Reference = ao.Reference + 1
+    local spawnRef = tostring(ao.Reference)
 
     local spawn = {
         Data = msg.Data or "NODATA",
-        Anchor = padZero32(ao._ref),
+        Anchor = padZero32(ao.Reference),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
@@ -139,7 +211,7 @@ function ao.spawn(module, msg)
             {name = "From-Process", value = ao.id},
             {name = "From-Module", value = ao._module},
             {name = "Module", value = module},
-            {name = "Ref_", value = tostring(ao._ref)}
+            {name = "Reference", value = spawnRef}
         }
     }
 
@@ -162,9 +234,39 @@ function ao.spawn(module, msg)
         end
     end
 
-    -- add spawn to outbox
-    table.insert(ao.outbox.Spawns, spawn)
+    -- If running in an environment without the AOS Handlers module, do not add
+    -- the after and receive functions to the spawn.
+    if not Handlers then
+        return spawn
+    end
 
+    -- clone spawn info and add to outbox
+    local extSpawn = {}
+    for k, v in pairs(spawn) do
+        extSpawn[k] = v
+    end
+
+    table.insert(ao.outbox.Spawns, extSpawn)
+
+    -- add 'after' callback to returned table
+    --local result = {}
+    spawn.after =
+        function(callback)
+            Handlers.once(
+                { Action = "Spawned", From = ao.id, ["Reference"] = spawnRef },
+                callback
+            )
+        end
+    
+    spawn.receive = function()
+        return Handlers.receive({
+            Action = "Spawned",
+            From = ao.id,
+            ["Reference"] = spawnRef
+        })
+
+    end
+    
     return spawn
 end
 
