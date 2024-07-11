@@ -1,5 +1,5 @@
-INSTALL=$1
-if [ "$INSTALL" = "true" ]; then
+if [ "$INSTALL_EMSDK" = "true" ]; then
+    apt-get -y install --no-install-recommends llvm-dev libclang-dev librocksdb-dev clang
     git clone https://github.com/emscripten-core/emsdk.git /emsdk
     cd /emsdk
     git pull

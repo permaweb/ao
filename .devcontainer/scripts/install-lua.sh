@@ -1,7 +1,4 @@
-INSTALL=$1
-export LUA_VERSION=$2
-export LUAROCKS_VERSION=$3
-if [ "$INSTALL" = "true" ]; then
+if [ "$INSTALL_LUA" = "true" ]; then
     # Install lua runtime
     cd / 
     curl -L http://www.lua.org/ftp/lua-${LUA_VERSION}.tar.gz | tar xzf - 

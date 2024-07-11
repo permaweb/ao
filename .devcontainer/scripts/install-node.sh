@@ -1,7 +1,4 @@
-INSTALL=$1
-export NVM_DIR=$2
-NODE_VERSION=$3
-if [ "$INSTALL" = "true" ]; then
+if [ "$INSTALL_NODE" = "true" ]; then
     mkdir -p $NVM_DIR
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"

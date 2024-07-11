@@ -26,8 +26,9 @@ services:
         - LUA_VERSION=${LUA_VERSION}
         - LUAROCKS_VERSION=${LUAROCKS_VERSION}
         - EMSCRIPTEN_VERSION=${EMSCRIPTEN_VERSION}
-        - RUST_VERSION=${RUST_VERSION}
         - NODE_VERSION=${NODE_VERSION}
+        - PYTHON_VERSION=${PYTHON_VERSION}
+        - PYTHON_PIP_VERSION=${PYTHON_PIP_VERSION}
 
     env_file: .env
     volumes:
@@ -71,7 +72,7 @@ services:
     restart: unless-stopped
     command: sleep infinity
     network_mode: host
-
+    
   cu:
     build: 
       context: ./services/cu
