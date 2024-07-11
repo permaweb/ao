@@ -156,7 +156,7 @@ function ao.send(msg)
         return message
     end
 
-    -- clone spawn info and add to outbox
+    -- clone message info and add to outbox
     local extMessage = {}
     for k, v in pairs(message) do
         extMessage[k] = v
