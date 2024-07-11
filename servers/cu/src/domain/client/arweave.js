@@ -179,7 +179,6 @@ export function queryGatewayWith ({ fetch, GRAPHQL_URL, logger }) {
 
 export function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
   return async (dataItem) => {
-    // return { id: 'tx-123' }
     return of(dataItem)
       .chain(fromPromise((body) =>
         fetch(`${UPLOADER_URL}/tx/arweave`, {

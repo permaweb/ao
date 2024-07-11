@@ -3,13 +3,14 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE, CHECKPOINTS_TABLE] = [
+export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE, CHECKPOINTS_TABLE, CHECKPOINT_FILES_TABLE] = [
   'processes',
   'blocks',
   'modules',
   'evaluations',
   'messages',
-  'checkpoints'
+  'checkpoints',
+  'checkpoint_files'
 ]
 
 const createProcesses = async (db) => db.prepare(
@@ -78,6 +79,17 @@ const createCheckpoints = async (db) => db.prepare(
   ) WITHOUT ROWID;`
 ).run()
 
+const createCheckpointFiles = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${CHECKPOINT_FILES_TABLE}(
+    processId TEXT PRIMARY KEY,
+    timestamp INTEGER,
+    ordinate TEXT,
+    cron TEXT,
+    file TEXT,
+    evaluation TEXT
+  ) WITHOUT ROWID;`
+).run()
+
 const createBlocksIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${BLOCKS_TABLE}_height_timestamp
     ON ${BLOCKS_TABLE}
@@ -93,6 +105,12 @@ const createMessagesIndexes = async (db) => db.prepare(
 
 const createCheckpointsIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${CHECKPOINTS_TABLE}_processId_timestamp
+    ON ${CHECKPOINTS_TABLE}
+    (processId, timestamp);`
+).run()
+
+const createCheckpointFilesIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${CHECKPOINT_FILES_TABLE}_processId_timestamp
     ON ${CHECKPOINTS_TABLE}
     (processId, timestamp);`
 ).run()
@@ -121,9 +139,11 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       .then(() => createEvaluations(db))
       .then(() => createMessages(db))
       .then(() => createCheckpoints(db))
+      .then(() => createCheckpointFiles(db))
       .then(() => createBlocksIndexes(db))
       .then(() => createMessagesIndexes(db))
       .then(() => createCheckpointsIndexes(db))
+      .then(() => createCheckpointFilesIndexes(db))
   }
 
   return {
