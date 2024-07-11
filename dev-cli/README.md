@@ -1,7 +1,7 @@
 # ao CLI
 
 The `ao` cli enables developers to create, run, build, and publish
-SmartWeaveContracts written in [Lua](https://www.lua.org/).
+SmartWeaveContracts written in [Lua](https://www.lua.org/) and [C/C++](https://cplusplus.com/).
 
 - Initialize a Lua SmartWeaveContract template
 - Run Lua in a Repl or run your Lua SmartWeaveContract
@@ -16,7 +16,7 @@ SmartWeaveContracts written in [Lua](https://www.lua.org/).
   - [Initialize a new Project](#initialize-a-new-project)
   - [Run a Lua Repl](#run-a-lua-repl)
   - [Execute a Lua file](#execute-a-lua-file)
-  - [Build Lua to Wasm](#build-lua-to-wasm)
+  - [Build Lua or C/C++ to Wasm](#build-lua-or-cc-to-wasm)
   - [Publish Wasm to Permaweb](#publish-wasm-to-permaweb)
   - [Help](#help)
 - [Testing example](#testing-example)
@@ -74,7 +74,14 @@ Then follow the instructions for adding the `ao` binary to your `PATH`. Use
 ### Initialize a new Project
 
 ```sh
+# Initialize a Lua project by default.
 ao init [myproject]
+
+# Explicitly Initialize a Lua project.
+ao init -l lua [myproject]
+
+# Initialize a C/C++ project.
+ao init -l cpp [myproject] 
 ```
 
 This will create a new directory, if needed, named `{myproject}`
@@ -95,7 +102,7 @@ This is great for testing Lua modules
 ao run [file.lua]
 ```
 
-### Build Lua to Wasm
+### Build Lua or C/C++ to Wasm
 
 ```sh
 ao build

@@ -142,10 +142,10 @@ EMSCRIPTEN_KEEPALIVE
 
     def make_c_function_delarations(self):
         template = '''
+        
 EMSCRIPTEN_KEEPALIVE
 {} {}({}) {{
-    Process process;
-    return process.handle({});
+    return process_handle({});
     {}
 }}
 '''
