@@ -75,20 +75,17 @@ RUN cd /lua-${LUA_VERSION} && \
 ###############
 #### Build ####
 ###############
-COPY ./src/emcc-lua /usr/local/bin/emcc-lua
-COPY ./src/emcc_lua_lib /usr/local/emcc-lua/emcc_lua_lib
+COPY ./src/ao-build-module /usr/local/bin/ao-build-module
+COPY ./src/ao_module_lib /usr/local/ao-module/ao_module_lib
 
-COPY ./src/pre.js /opt/pre.js
-COPY ./src/definition.yml /opt/definition.yml
-COPY ./src/loader.lua /opt/loader.lua
+COPY ./src/core/ /opt/
 
 RUN mkdir -p /opt/src
 COPY ./src/json.lua /opt/src/json.lua
 # COPY ./src/ao.lua /opt/src/ao.lua
 # COPY ./src/pack.lua /opt/pack.lua
-COPY ./src/main.c /opt/main.c
-COPY ./src/main.lua /opt/main.lua
-RUN chmod +x /usr/local/bin/emcc-lua
+
+RUN chmod +x /usr/local/bin/ao-build-module
 
 ###################################
 # BUILD WeaveDrive Extension Helper

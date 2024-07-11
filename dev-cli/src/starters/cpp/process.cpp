@@ -1,19 +1,12 @@
 
-#include "process.h"
 #include "ao.h"
 #include <stdio.h>
 
-AO ao;
-
-Process::Process()
+const char *process_handle(const char *arg_0, const char *arg_1)
 {
-  version = "1.0.0";
-}
-
-const char *Process::handle(const char *env, const char *msg)
-{
-  ao.init(env);
-  printf("arg0: %s\n", env);
-  printf("arg1: %s\n", msg);
+  ao_init(arg_0);
+  printf("arg0: %s\n", arg_0);
+  printf("arg1: %s\n", arg_1);
+  
   return "{\"ok\": true,\"response\":{\"Output\":\"pong\" },\"Memory\":50000000}";
 }

@@ -38,3 +38,14 @@ def debug_print(message):
     if IS_DEBUG:
         print(message)
 
+
+def __get_output(output, entry_file):
+    out_file = os.path.basename(entry_file)
+    if output.get('file'):
+        out_file = output.get('file')
+
+    tpl = os.path.splitext(out_file)[1]
+    if not tpl[1]:
+        tpl[1] = 'html'
+
+    return '{}.{}'.format(tpl[0], tpl[1])

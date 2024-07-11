@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import glob
+import shutil
+from shlex import quote
+
+sys.path.append('/usr/local/ao-module')
+
+from ao_module_lib.definition import Definition
+from ao_module_lib.helper import is_lua_source_file, is_c_source_file, is_c_header_file, shell_exec, debug_print
+
+from ao_module_lib.languages.c import inject_c_files
+from ao_module_lib.languages.lua import inject_lua_files, LUAROCKS_LOCAL_MODULE_DIR
+
+
+def determine_language():
+    lang = []
+    # Get all source files
+    files = glob.glob('/src/**/*', recursive=True)
+    # Loop through all files and determine the language
+    for file in files:
+        if is_lua_source_file(file) and 'lua' not in lang:
+            lang.append('lua')
+        elif (is_c_source_file(file) or is_c_header_file(file)) and 'c' not in lang:
+            lang.append('c')
+
+    # Check if multiple languages are detected
+    if len(lang) > 1:
+        raise Exception('Multiple languages detected in the module')
+    elif len(lang) == 0:
+        raise Exception('No language detected in the module')
+
+    # Return the language or default to lua
+    return lang[0] or 'lua'
+
+def main():
+    # Load the definition file
+    definition = Definition('/opt/definition.yml')
+
+    # Determine the language of the source files
+    language = determine_language()
+
+    # Read the main.c file into c_program
+    c_program = ''
+    with open('/opt/main.c', mode='r') as c:
+        c_program = c.read()
+
+    # Inject c files into c_program if language is c
+    c_source_files = []
+    if(language == 'c'):
+        c_program = inject_c_files(definition, c_program, c_source_files)
+
+    # Inject lua files into c_program always to load lua files and replace placeholders
+    link_libraries = []
+    c_program = inject_lua_files(definition, c_program, link_libraries)
+    
+    #Generate compile target file
+    debug_print('Start to generate complie.c')
+
+    with open('/tmp/compile.cpp', mode='w') as build:
+        build.write(c_program)
+
+    # Compile the module to a WASM file using emcc
+    debug_print('Start to compile as WASM')
+
+    # Setup the compile command
+    cmd = ['emcc', '-O3', 
+      '-g2',
+      '-s', 'ASYNCIFY=1',
+      '-s', 'MEMORY64=1',
+      '-s', 'STACK_SIZE=41943040',
+      '-s', 'ASYNCIFY_STACK_SIZE=41943040',
+      '-s', 'ALLOW_MEMORY_GROWTH=1', 
+      '-s', 'INITIAL_MEMORY=52428800', 
+      '-s', 'MAXIMUM_MEMORY=524288000', 
+      '-s', 'WASM=1', 
+      '-s', 'MODULARIZE', 
+      # '-s', 'FILESYSTEM=0', 
+      '-s', 'DETERMINISTIC=1', 
+      '-s', 'NODERAWFS=0', 
+      '-s', 'FORCE_FILESYSTEM=1',
+      '-msimd128',
+      '--pre-js', '/opt/pre.js'
+    ]
+
+    # Link aolibc library
+    cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
+    cmd.extend(['-s', 'ASSERTIONS=1'])
+    cmd.extend(definition.get_extra_args())
+
+    # Add the lua include path
+    cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
+
+    # Add all c source files if there are any
+    for f in c_source_files:
+        cmd.append(quote(f))
+    
+    # Add the compile file and link libraries
+    cmd.extend(['/tmp/compile.cpp', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
+    cmd.extend([quote(v.filepath) for v in link_libraries])
+    cmd.extend([quote(v.filepath) for v in link_libraries])
+
+    # Export the main function and malloc for the runtime
+    cmd.extend(['-s', 'EXPORTED_FUNCTIONS=["_malloc", "_main"]'])
+
+    # Export the runtime methods cwrap
+    cmd.extend(['-lm', '-ldl', '-o', definition.get_output_file(), '-s', 'EXPORTED_RUNTIME_METHODS=["cwrap"]'])
+
+    debug_print('Compile command is {}'.format(' '.join(cmd)))
+    shell_exec(*cmd)
+
+    # add metering library
+    # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
+    # shell_exec(*meter_cmd)
+    shell_exec(*['rm', os.path.join(os.getcwd(), 'process.js')])
+
+if __name__ == '__main__':
+    main()
+
+    # cleanup temporary module directory
+    if os.path.isdir(LUAROCKS_LOCAL_MODULE_DIR):
+        shutil.rmtree(LUAROCKS_LOCAL_MODULE_DIR)
