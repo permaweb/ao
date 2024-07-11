@@ -61,5 +61,5 @@ jobs:
           push: true
           context: servers/su
           tags: |
-            ghcr.io/ar-io/ao-su:latest
-            ghcr.io/ar-io/ao-su:${{ github.sha }}
+            ghcr.io/permaweb/ao-su:latest
+            ghcr.io/permaweb/ao-su:${{ github.sha }}
