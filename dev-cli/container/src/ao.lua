@@ -1,10 +1,10 @@
 local ao = {
     _version = "0.0.5",
-    id = "",
-    _module = "",
-    authorities = {},
-    Reference = 0,
-    outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
+    id = ao.id or "",
+    _module = ao._module or "",
+    authorities = ao.authorities or {},
+    reference = ao.reference or 0,
+    outbox = ao.outbox or {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
     nonExtractableTags = {
         'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
         'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
@@ -117,17 +117,17 @@ function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}, 
 
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
-    ao.Reference = ao.Reference + 1
+    ao.reference = ao.reference + 1
 
     local message = {
         Target = msg.Target,
         Data = msg.Data,
-        Anchor = padZero32(ao.Reference),
+        Anchor = padZero32(ao.reference),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
             {name = "Type", value = "Message"},
-            {name = "Reference", value = tostring(ao.Reference)}
+            {name = "Reference", value = tostring(ao.reference)}
         }
     }
 
@@ -198,12 +198,12 @@ function ao.spawn(module, msg)
     assert(type(module) == "string", "Module source id is required!")
     assert(type(msg) == 'table', 'Message must be a table')
     -- inc spawn reference
-    ao.Reference = ao.Reference + 1
-    local spawnRef = tostring(ao.Reference)
+    ao.reference = ao.reference + 1
+    local spawnRef = tostring(ao.reference)
 
     local spawn = {
         Data = msg.Data or "NODATA",
-        Anchor = padZero32(ao.Reference),
+        Anchor = padZero32(ao.reference),
         Tags = {
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
