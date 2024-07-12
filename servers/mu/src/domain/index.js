@@ -24,6 +24,8 @@ import { processAssignWith } from './api/processAssign.js'
 
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
+import { handleWorkerQueueMessage } from './lib/handle-worker-queue-message.js'
+import { BroadcastChannel } from 'node:worker_threads'
 
 export { errFrom } from './utils.js'
 
@@ -40,6 +42,14 @@ const histogram = MetricsClient.histogramWith()({
   description: 'Outgoing request duration in seconds',
   buckets: [0.5, 1, 3, 5, 10, 30],
   labelNames: ['method', 'operation', 'errorType', 'status', 'statusGroup']
+})
+const workerQueueGauge = MetricsClient.gaugeWith({})({
+  name: 'queue_size',
+  description: 'The size of the queue'
+})
+const cronMonitorGauge = MetricsClient.gaugeWith({})({
+  name: 'running_cron_monitor',
+  description: 'The number of cron monitors running'
 })
 
 /**
@@ -115,12 +125,17 @@ export const createApis = async (ctx) => {
           workerData: {
             id: workerId,
             queueId,
-            DB_URL
+            DB_URL,
+            TASK_QUEUE_MAX_RETRIES: ctx.TASK_QUEUE_MAX_RETRIES,
+            TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY
           }
         }
       }
     }
   })
+
+  const broadcastChannel = new BroadcastChannel('mu-worker')
+  broadcastChannel.onmessage = (event) => handleWorkerQueueMessage({ queueGauge: workerQueueGauge })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
     return workerPool.exec('enqueueResults', results)
@@ -147,7 +162,7 @@ export const createApis = async (ctx) => {
   const sendAssign = sendAssignWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
     locateProcess: locate,
-    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: sendAssignLogger }),
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: sendAssignLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: sendAssignLogger
@@ -163,7 +178,8 @@ export const createApis = async (ctx) => {
     CRON_CURSOR_DIR,
     CU_URL,
     fetchCron,
-    crank
+    crank,
+    monitorGauge: cronMonitorGauge
   })
 
   const monitorProcess = monitorProcessWith({
@@ -176,7 +192,8 @@ export const createApis = async (ctx) => {
   const stopMonitorProcess = stopMonitorProcessWith({
     stopProcessMonitor: cronClient.killMonitoredProcessWith({
       logger: stopMonitorProcessLogger,
-      PROC_FILE_PATH
+      PROC_FILE_PATH,
+      monitorGauge: cronMonitorGauge
     }),
     createDataItem,
     logger: monitorProcessLogger
@@ -249,7 +266,8 @@ export const createResultApis = async (ctx) => {
     locateProcess: locate,
     locateNoRedirect,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger })
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger })
   })
 
   const processAssignLogger = logger.child('processAssign')
@@ -257,7 +275,7 @@ export const createResultApis = async (ctx) => {
     logger: processSpawnLogger,
     locateProcess: locate,
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processAssignLogger }),
-    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, logger: processAssignLogger })
+    writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: processAssignLogger })
   })
   return {
     processMsg,

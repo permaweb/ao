@@ -1,5 +1,5 @@
 import { worker } from 'workerpool'
-import { workerData } from 'node:worker_threads'
+import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { of } from 'hyper-async'
 import { cond, equals, propOr } from 'ramda'
 import cron from 'node-cron'
@@ -9,6 +9,8 @@ import { domainConfigSchema, config } from '../../config.js'
 import { logger } from '../../logger.js'
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
+
+const broadcastChannel = new BroadcastChannel('mu-worker')
 
 export const domain = {
   ...(domainConfigSchema.parse(config)),
@@ -43,6 +45,7 @@ export function processResultWith ({
 }) {
   return async (result) => {
     return of(result)
+      .map((result) => ({ ...result, stage: result.stage ?? 'start' }))
       /**
        * Choose the correct business logic based
        * on the type of the individual Result
@@ -71,9 +74,9 @@ export function processResultWith ({
 }
 
 /**
- * Push results onto the queue and seperate
+ * Push results onto the queue and separate
  * them out by type so they can be individually
- * operated on by the worker. Also stucture them
+ * operated on by the worker. Also structure them
  * correctly for input into the business logic
  */
 export function enqueueResultsWith ({ enqueue }) {
@@ -111,7 +114,7 @@ export function enqueueResultsWith ({ enqueue }) {
  * do not need to wait for other results to finish
  * so we can do this async
  */
-function processResultsWith ({ dequeue, processResult, logger }) {
+function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUEUE_MAX_RETRIES, TASK_QUEUE_RETRY_DELAY }) {
   return async () => {
     while (true) {
       const result = dequeue()
@@ -120,11 +123,50 @@ function processResultsWith ({ dequeue, processResult, logger }) {
         processResult(result).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
+          /**
+           * Upon failure, we want to add back to the task queue
+           * our task with its progress (ctx). This progress is passed
+           * down in the cause object of the error.
+           *
+           * After some time, enqueue the task again and increment retries.
+           * Upon maximum retries, finish.
+           */
+          const ctx = e.cause ?? {}
+          const retries = ctx.retries ?? 0
+          const stage = ctx.stage
+          setTimeout(() => {
+            if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end') {
+              enqueue({ ...ctx, retries: retries + 1 })
+            }
+          }, TASK_QUEUE_RETRY_DELAY)
         })
       } else {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
     }
+  }
+}
+
+function broadcastEnqueueWith ({ enqueue }) {
+  return (...args) => {
+    broadcastChannel.postMessage({
+      purpose: 'metrics',
+      action: 'enqueue'
+    })
+    return enqueue(...args)
+  }
+}
+
+function broadcastDequeueWith ({ dequeue }) {
+  return (...args) => {
+    const dequeuedResult = dequeue(...args)
+    if (dequeuedResult) {
+      broadcastChannel.postMessage({
+        purpose: 'metrics',
+        action: 'dequeue'
+      })
+    }
+    return dequeuedResult
   }
 }
 
@@ -143,11 +185,13 @@ const queue = await createTaskQueue({
 const dequeuedTasks = new Set()
 
 const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger, db })
+const broadcastEnqueue = broadcastEnqueueWith({ enqueue })
 const dequeue = dequeueWith({ queue, logger, dequeuedTasks })
+const broadcastDequeue = broadcastDequeueWith({ dequeue })
 const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
 
 const enqueueResults = enqueueResultsWith({
-  enqueue
+  enqueue: broadcastEnqueue
 })
 
 const processResult = processResultWith({
@@ -159,9 +203,12 @@ const processResult = processResultWith({
 })
 
 const processResults = processResultsWith({
-  dequeue,
+  enqueue: broadcastEnqueue,
+  dequeue: broadcastDequeue,
   processResult,
-  logger
+  logger,
+  TASK_QUEUE_MAX_RETRIES: workerData.TASK_QUEUE_MAX_RETRIES,
+  TASK_QUEUE_RETRY_DELAY: workerData.TASK_QUEUE_RETRY_DELAY
 })
 
 /** Set up a cron to clear out old tasks from the

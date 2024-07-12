@@ -62,7 +62,7 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
   }
 }
 
-function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
+function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH, monitorGauge }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -74,6 +74,7 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     if (cronsRunning[processId]) {
       throw new Error('Process already being monitored')
     }
+    monitorGauge.inc()
     const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
 
     let ct = null
@@ -170,13 +171,14 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
   }
 }
 
-function killMonitoredProcessWith ({ logger, PROC_FILE_PATH }) {
+function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge }) {
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
     if (!ct) {
       logger(`Cron process not found: ${processId}`)
       throw new Error('Process monitor not found')
     }
+    monitorGauge.dec()
     ct.stop()
     delete cronsRunning[processId]
     delete procsToSave[processId]

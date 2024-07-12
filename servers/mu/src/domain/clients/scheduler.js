@@ -54,7 +54,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
       )
       .bimap(logger.tap('Error while communicating with SU:'), identity)
       .bichain(
-        (err) => Rejected(JSON.stringify(err)),
+        (err) => Rejected(err),
         fromPromise(async (res) => {
           if (!res?.ok) {
             const text = await res.text()
@@ -135,9 +135,7 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
           })
         })
       )
-      .bimap(logger.tap('Error while communicating with SU:'), identity)
-      .bichain(
-        (err) => Rejected(JSON.stringify(err)),
+      .chain(
         fromPromise(async (res) => {
           if (!res?.ok) {
             const text = await res.text()
@@ -146,7 +144,13 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap('Successfully forwarded Assignment to SU'))
+      .bimap(
+        (e) => {
+          logger.tap('Error while communicating with SU:')(e)
+          return new Error(e)
+        },
+        logger.tap('Successfully forwarded Assignment to SU')
+      )
       .toPromise()
   }
 }

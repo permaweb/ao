@@ -120,10 +120,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
           .then(filter(isNotNil))
           .then(params => new URLSearchParams(params))
-          .then((params) => backoff(
-            () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
-            { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
-          ))
+          .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes))
           .catch(async (err) => {
             logger(
               'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
@@ -136,7 +133,15 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           })
           .then(resToJson)
       })
-    ).then((values) => values.map(v => v.value))
+    ).then((values) =>
+      /**
+       * By returning the error, Dataloader will register as an error
+       * for the individual call to load, without failing the batch as a whole
+       *
+       * See https://www.npmjs.com/package/dataloader#caching-errors
+       */
+      values.map(v => v.status === 'fulfilled' ? v.value : v.reason)
+    )
   }, {
     cacheKeyFn: ({ suUrl, processId, from, to, pageSize }) => `${suUrl},${processId},${from},${to},${pageSize}`,
     batchScheduleFn: (cb) => setTimeout(cb, 20)
@@ -154,7 +159,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
    */
   function fetchAllPages ({ suUrl, processId, from, to }) {
     async function fetchPage ({ from }) {
-      return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
+      const params = new URLSearchParams(filter(isNotNil, { 'process-id': processId, from, to, limit: pageSize }))
+
+      return backoff(
+        () => fetchPageDataloader.load({ suUrl, processId, from, to, pageSize }),
+        { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
+      )
     }
 
     return async function * scheduled () {

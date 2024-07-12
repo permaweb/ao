@@ -1,8 +1,8 @@
 import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
-import { assoc, is } from 'ramda'
+import { assoc, identity, is } from 'ramda'
 // import z from 'zod'
 
-import { parseTags } from '../utils.js'
+import { checkStage, parseTags } from '../utils.js'
 
 // const ctxSchema = z.object({
 //   processTx: z.any()
@@ -36,6 +36,7 @@ export function spawnProcessWith (env) {
   }
 
   return (ctx) => {
+    if (!checkStage('spawn-process')(ctx)) return Resolved(ctx)
     const { Tags, Data } = ctx.cachedSpawn.spawn
 
     const tagsIn = Tags.filter(tag => ![
@@ -89,5 +90,11 @@ export function spawnProcessWith (env) {
           .map((r) => assoc('processTx', r.id, ctx))
           .map(logger.tap('Added processTx to the ctx '))
       })
+      .bimap(
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
+        identity
+      )
   }
 }

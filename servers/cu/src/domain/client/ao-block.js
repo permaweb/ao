@@ -1,6 +1,7 @@
 import { fromPromise, of } from 'hyper-async'
-import { applySpec, last, map, path, pathSatisfies, pipe, pluck, prop, props } from 'ramda'
+import { applySpec, last, map, path, pathSatisfies, pipe, pluck, prop, props, splitEvery } from 'ramda'
 import { z } from 'zod'
+import pMap from 'p-map'
 
 import { blockSchema } from '../model.js'
 import { BLOCKS_TABLE } from './sqlite.js'
@@ -45,7 +46,24 @@ export function saveBlocksWith ({ db }) {
           blockDocSchema.parse
         ))
       )
-      .chain(fromPromise(blocks => db.run(createQuery(blocks))))
+      /**
+       * Sqlite only allows 999 variables per statement, by default.
+       *
+       * So we split our blocks into groups of 250 => 750 variables per prepared statement
+       * then execute them in parallel, with a max concurrency of 5 groups, which should
+       * handle the majority of cases where a large amount of blocks are having to be loaded
+       */
+      .map(splitEvery(250))
+      .chain(fromPromise((blockGroups) =>
+        pMap(
+          blockGroups,
+          (blocks) => db.run(createQuery(blocks)),
+          {
+            concurrency: 5,
+            stopOnError: false
+          }
+        )
+      ))
       .toPromise()
   }
 }

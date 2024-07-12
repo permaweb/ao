@@ -134,26 +134,6 @@ export const createApis = async (ctx) => {
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
-  const stats = statsWith({
-    gauge,
-    loadWorkerStats: () => ({
-      primary: primaryWorkerPool.stats(),
-      dryRun: dryRunWorkerPool.stats()
-    }),
-    /**
-     * https://nodejs.org/api/process.html#processmemoryusage
-     *
-     * Note: worker thread resources will be included in rss,
-     * as that is the Resident Set Size for the entire node process
-     */
-    loadMemoryUsage: () => process.memoryUsage(),
-    loadProcessCacheUsage: () => AoProcessClient.loadProcessCacheUsage()
-  })
-  const metrics = {
-    contentType: _metrics.contentType,
-    compute: fromPromise(() => _metrics.metrics())
-  }
-
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
     readProcessMemoryFile,
@@ -191,6 +171,29 @@ export const createApis = async (ctx) => {
     logger: ctx.logger,
     cache: WasmClient.createWasmModuleCache({ MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE })
   })
+
+  const stats = statsWith({
+    gauge,
+    loadWorkerStats: () => ({
+      primary: primaryWorkerPool.stats(),
+      dryRun: dryRunWorkerPool.stats()
+    }),
+    /**
+     * https://nodejs.org/api/process.html#processmemoryusage
+     *
+     * Note: worker thread resources will be included in rss,
+     * as that is the Resident Set Size for the entire node process
+     */
+    loadMemoryUsage: () => process.memoryUsage(),
+    loadProcessCacheUsage: () => wasmMemoryCache.data.loadProcessCacheUsage()
+  })
+  /**
+   * TODO: Should this just be a field on stats to call?
+   */
+  const metrics = {
+    contentType: _metrics.contentType,
+    compute: fromPromise(() => _metrics.metrics())
+  }
 
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
@@ -338,7 +341,9 @@ export const createApis = async (ctx) => {
     /**
      * push a new object to keep references to original data intact
      */
-    wasmMemoryCache.lru.forEach((value) => pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation }))
+    wasmMemoryCache.data.forEach((value) =>
+      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
+    )
 
     checkpointP = pMap(
       pArgs,
