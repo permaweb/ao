@@ -103,10 +103,13 @@ There are a few environment variables that you can set. Besides
   already created a Checkpoint for that process, since it last started. This is
   effectively a throttle on `Checkpoint` creation, for a given process (defaults
   to `30 minutes`)
-- `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint`
+- `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint` 
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
+- `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION`: Where to disable process `Checkpoint` 
+  creation to the file system. (You must explicitly enable `Checkpoint` creation by setting -
+  `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION` to `'false'`)
 - `EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD`: If a process uses this amount of
   gas, then it will immediately create a Checkpoint at the end of the
   evaluation stream.

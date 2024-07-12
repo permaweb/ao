@@ -29,7 +29,6 @@ import { healthcheckWith } from './api/healthcheck.js'
 import { readResultsWith } from './api/readResults.js'
 import { dryRunWith } from './api/dryRun.js'
 import { statsWith } from './api/perf.js'
-import { existsSync } from 'node:fs'
 
 export { createLogger } from './logger.js'
 export { domainConfigSchema, positiveIntSchema } from './model.js'
@@ -159,6 +158,10 @@ export const createApis = async (ctx) => {
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
+  const writeFileRecord = AoProcessClient.writeFileRecordWith({
+    db: sqlite
+  })
+
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
     readProcessMemoryFile,
@@ -170,12 +173,11 @@ export const createApis = async (ctx) => {
     writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({
       db: sqlite
     }),
-    writeFileRecord: AoProcessClient.writeFileRecordWith({
-      db: sqlite
-    }),
+    writeFileRecord,
     writeProcessMemoryFile,
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
+    DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
   })
 
@@ -187,9 +189,7 @@ export const createApis = async (ctx) => {
     logger: ctx.logger,
     setTimeout: (...args) => lt.setTimeout(...args),
     clearTimeout: (...args) => lt.clearTimeout(...args),
-    writeFileRecord: AoProcessClient.writeFileRecordWith({
-      db: sqlite
-    })
+    writeFileRecord
   })
 
   const loadWasmModule = WasmClient.loadWasmModuleWith({
@@ -275,8 +275,6 @@ export const createApis = async (ctx) => {
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
       IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
       PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
-      DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
-      fileExists: existsSync,
       logger
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
@@ -402,9 +400,9 @@ export const createApis = async (ctx) => {
     /**
      * push a new object to keep references to original data intact
      */
-    wasmMemoryCache.data.forEach((value) => {
-      return pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
-    })
+    wasmMemoryCache.data.forEach((value) =>
+      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
+    )
 
     checkpointP = pMap(
       pArgs,

@@ -2,6 +2,7 @@ import { promisify } from 'node:util'
 import { gunzip, gzip, constants as zlibConstants } from 'node:zlib'
 import { Readable } from 'node:stream'
 import { join } from 'node:path'
+
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, isNotNil, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
@@ -298,11 +299,6 @@ const processDocSchema = z.object({
 function latestCheckpointBefore (destination) {
   return (curLatest, checkpoint) => {
     /**
-     * What we will compare. In some cases, the timestamp is in the evaluation
-     * key of the checkpoint object. This handles those cases.
-     */
-    const evaluation = checkpoint.evaluation ?? checkpoint
-    /**
      * Often times, we are just interested in the latest checkpoint --
      * the latest point we can start evaluating from, up to the present.
      *
@@ -331,17 +327,17 @@ function latestCheckpointBefore (destination) {
        * checkpoint is later than the timestamp we're interested in,
        * so we cannot use it
        */
-      isLaterThan({ timestamp, ordinate, cron }, evaluation) ||
+      isLaterThan({ timestamp, ordinate, cron }, checkpoint) ||
       /**
        * checkpoint is equal to evaluation what we're interested in,
        * so we can't use it, since we may need the evaluation's result
        */
-      isEqualTo({ timestamp, ordinate, cron }, evaluation) ||
+      isEqualTo({ timestamp, ordinate, cron }, checkpoint) ||
       /**
        * The checkpoint is earlier than the latest checkpoint we've found so far,
        * and we're looking for the latest, so just ignore this checkpoint
        */
-      (curLatest && isEarlierThan(curLatest, evaluation))
+      (curLatest && isEarlierThan(curLatest, checkpoint))
     ) return curLatest
 
     /**
@@ -505,7 +501,7 @@ export function findCheckpointFileBeforeWith ({ db }) {
          * If the checkpoint evaluation is too early, we return undefined
          */
         return parsed.reduce(
-          latestCheckpointBefore(before),
+          (acc, checkpoint) => latestCheckpointBefore(before)(acc, { ...checkpoint.evaluation, file: checkpoint.file }),
           undefined
         )
       })
@@ -514,7 +510,7 @@ export function findCheckpointFileBeforeWith ({ db }) {
 }
 
 /**
- * Write to the file sqlite directory
+ * Write to the database of checkpoint file paths.
  * with the updated evaluation and path.
  */
 export function writeFileRecordWith ({ db }) {
@@ -772,8 +768,6 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
-  DIR,
-  fileExists,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -971,9 +965,8 @@ export function findLatestProcessMemoryWith ({
 
   /**
    * Check if there is a process checkpoint in the file system.
-   * First, we will search the sqlite directory for a path and ensure the evaluation is before our current eval.
+   * First, we will search the database of checkpoint file paths for a path and ensure the evaluation is before our current eval.
    * Then, we will check if the file exists and read the file.
-   * Then, we will decode the data.
    */
   function maybeFile (args) {
     const { processId, omitMemory } = args
@@ -990,8 +983,8 @@ export function findLatestProcessMemoryWith ({
 
         /**
          * We have found a previously created checkpoint, cached in a record, so
-         * we can skip querying the gateway for it, and instead download the
-         * checkpointed Memory directly, from arweave.
+         * we can skip querying the gateway for it, and instead load the
+         * checkpointed Memory directly, from the file system.
          *
          * The "record" checkpoint already contains all the metadata we would
          * otherwise have to pull from the gateway
@@ -1003,20 +996,26 @@ export function findLatestProcessMemoryWith ({
               .chain(fromPromise(async () => checkpoint.file))
               .chain((path) => {
                 if (!path) return Rejected(args)
-                if (!fileExists(join(DIR, path))) return Rejected(args)
                 return readProcessMemoryFile(path)
               })
+              .bichain(
+                (e) => {
+                  logger('Error Encountered when reading process memory file for process "%s" from file "%s": "%s"', args.processId, checkpoint.file, e.message)
+                  return Rejected(args)
+                },
+                Resolved
+              )
           })
           .map((Memory) => ({
             src: 'file',
             Memory,
-            moduleId: checkpoint.evaluation.moduleId,
-            timestamp: checkpoint.evaluation.timestamp,
-            blockHeight: checkpoint.evaluation.blockHeight,
-            epoch: checkpoint.evaluation.epoch,
-            nonce: checkpoint.evaluation.nonce,
-            ordinate: checkpoint.evaluation.ordinate,
-            cron: checkpoint.evaluation.cron
+            moduleId: checkpoint.moduleId,
+            timestamp: checkpoint.timestamp,
+            blockHeight: checkpoint.blockHeight,
+            epoch: checkpoint.epoch,
+            nonce: checkpoint.nonce,
+            ordinate: checkpoint.ordinate,
+            cron: checkpoint.cron
           }))
       })
   }
@@ -1388,6 +1387,7 @@ export function saveCheckpointWith ({
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
   DISABLE_PROCESS_CHECKPOINT_CREATION,
+  DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
   recentCheckpoints = new Map()
 }) {
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -1554,8 +1554,9 @@ export function saveCheckpointWith ({
     const { processId } = args
     /**
      * Creating Checkpoints is enabled, so continue
+     * If either Arweave or file checkpoints are enabled, we continue.
      */
-    if (!DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected(args)
+    if (!DISABLE_PROCESS_CHECKPOINT_CREATION || !DISABLE_PROCESS_FILE_CHECKPOINT_CREATION) return Rejected(args)
 
     logger('Checkpoint creation is disabled on this CU, so no work needs to be done for process "%s"', processId)
     return Resolved()
@@ -1569,7 +1570,7 @@ export function saveCheckpointWith ({
     if (!recentCheckpoints.has(processId)) return Rejected(args)
 
     logger('Checkpoint was recently created for process "%s", and so not creating another one.', processId)
-    return Rejected(args)
+    return Resolved()
   }
 
   function createCheckpoint (args) {
@@ -1622,7 +1623,13 @@ export function saveCheckpointWith ({
          * and upload it to Arweave.
          */
         return createCheckpointDataItem(args)
-          .chain((dataItem) => uploadDataItem(dataItem.data))
+          .chain((dataItem) => {
+          /**
+           * If Arweave checkpoints are disabled, skip this step.
+          */
+            if (DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected(args)
+            return uploadDataItem(dataItem.data)
+          })
           .bimap(
             logger.tap('Failed to upload Checkpoint DataItem'),
             (res) => {
@@ -1649,47 +1656,54 @@ export function saveCheckpointWith ({
               return { id: res.id, encoding: 'gzip' }
             }
           )
-          .bichain(
-            (ctx) => {
-              /**
-               * If the upload to arweave fails, we will save a backup checkpoint in the file system.
-               * Then, we will add it to the sqlite directory.
-               */
-              const evaluation = {
-                processId,
-                moduleId,
-                timestamp,
-                nonce,
-                ordinate,
-                epoch,
-                blockHeight,
-                cron,
-                encoding: 'gzip'
-              }
-              if (Memory) {
-                writeProcessMemoryFile({
-                  Memory,
-                  evaluation
-                })
-                  .then((path) => {
-                    writeFileRecord(evaluation, path)
-                  })
-                  .catch((err) => {
-                    logger(
-                      'Error occurred when draining Memory for evaluation "%j" to a file. Skipping adding back to the cache...',
-                      evaluation,
-                      err
-                    )
-                  })
-              }
-              return Rejected(ctx)
-            },
-            Resolved
+          .bichain((ctx) => {
+            /**
+             * If file checkpoints are disabled, skip this step.
+             */
+            if (DISABLE_PROCESS_FILE_CHECKPOINT_CREATION) return Rejected(ctx)
+            /**
+             * If the upload to arweave fails, or is disabled, we will save a backup checkpoint in the file system.
+             * Then, we will add it to the database of checkpoint file paths.
+             */
+            const evaluation = {
+              processId,
+              moduleId,
+              timestamp,
+              nonce,
+              ordinate,
+              epoch,
+              blockHeight,
+              cron,
+              encoding
+            }
+
+            return of({ Memory, evaluation })
+              .map((ctx) => {
+                /**
+                 * If we have no Memory, there is nothing to drain to a file.
+                 * If this is the case, we will skip this step and no checkpoint will be saved.
+                 */
+                if (!ctx.Memory) return Rejected(ctx)
+                return ctx
+              })
+              .chain(fromPromise(writeProcessMemoryFile))
+              .chain(fromPromise((path) => writeFileRecord(evaluation, path)))
+              .map((path) => ({ path, ...evaluation }))
+          },
+          Resolved
           )
       })
-      .chain((onArweave) => {
+      .chain((ctx) => {
+        /**
+         * There are three types of checkpoint records: those in the cache,
+         * those drained to file system, and those that are uploaded to arweave
+         * and subsequently have their tx-id stored in a sqlite database.
+         * If ctx.path exists, we have found a checkpoint record in the file system.
+         * Therefore, we do not write a checkpoint record with a reference to Arweave.
+         */
+        if (ctx.path) return Resolved(ctx)
         return writeCheckpointRecord({
-          Memory: onArweave,
+          Memory: ctx,
           evaluation: {
             processId,
             moduleId,
@@ -1698,7 +1712,7 @@ export function saveCheckpointWith ({
             nonce,
             blockHeight,
             ordinate,
-            encoding: onArweave.encoding,
+            encoding: ctx.encoding,
             cron
           }
         })
@@ -1715,7 +1729,7 @@ export function saveCheckpointWith ({
             },
             Resolved
           )
-          .map(() => onArweave)
+          .map(() => ctx)
       })
   }
 

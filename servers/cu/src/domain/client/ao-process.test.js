@@ -218,7 +218,7 @@ describe('ao-process', () => {
           cron: undefined
         }
       })
-      assert.deepStrictEqual(res, { file: 'state-process-123.dat', evaluation })
+      assert.deepStrictEqual(res, { file: 'state-process-123.dat', ...evaluation })
     })
 
     test('should return the latest checkpoint from a file BEFORE the before', async () => {
@@ -242,7 +242,8 @@ describe('ao-process', () => {
 
       assert.deepStrictEqual(res, {
         file: 'state-process-456.dat',
-        evaluation: { ...evaluation, timestamp: nineSecondsAgo }
+        ...evaluation,
+        timestamp: nineSecondsAgo
       })
     })
 
@@ -468,7 +469,7 @@ describe('ao-process', () => {
         findCheckpointFileBefore: async ({ processId, before }) => {
           assert.equal(processId, PROCESS)
           assert.equal(before, LATEST)
-          return { file: 'state-process-123.dat', evaluation: cachedEval }
+          return { file: 'state-process-123.dat', ...cachedEval }
         },
         readProcessMemoryFile: async (file) => {
           assert.equal(file, 'state-process-123.dat')
@@ -485,9 +486,7 @@ describe('ao-process', () => {
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
-        PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
-        fileExists: () => true,
-        DIR: 'fake/directory/'
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -552,20 +551,17 @@ describe('ao-process', () => {
       })
 
       test('should move on if file not found', async () => {
-        let readFile = false
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           findCheckpointFileBefore: async () => {
-            return { file: 'state-process123.dat', evaluation: cachedEval }
+            return { file: 'state-process123.dat', ...cachedEval }
           },
           readProcessMemoryFile: async (path) => {
-            readFile = true
-          },
-          fileExists: () => false
+            throw new Error('ENOENT')
+          }
         }))
         const { Memory, ...res } = await findLatestProcessMemory(latestTarget)
 
-        assert.ok(!readFile)
         assert.notEqual(res.src, 'file')
       })
 
@@ -574,7 +570,7 @@ describe('ao-process', () => {
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           findCheckpointFileBefore: async () => {
-            return { file: 'state-process123.dat', evaluation: cachedEval }
+            return { file: 'state-process123.dat', ...cachedEval }
           },
           readProcessMemoryFile: async (path) => {
             readFile = true
@@ -583,7 +579,6 @@ describe('ao-process', () => {
         }))
         const { Memory, ...res } = await findLatestProcessMemory({ ...latestTarget, omitMemory: true })
 
-        console.log({ res, Memory })
         assert.ok(!readFile)
         assert.equal(res.src, 'file')
         assert.equal(Memory, null)
@@ -636,7 +631,7 @@ describe('ao-process', () => {
         test('Memory failed to drain to a file', async () => {
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
-            readCheckpointFile: async (file) => assert.fail('should not read memory file if failed to drain'),
+            readCheckpointFile: async () => assert.fail('should not read memory file if failed to drain'),
             cache: {
               get: () => ({
                 File: Promise.resolve(undefined),
@@ -1177,7 +1172,7 @@ describe('ao-process', () => {
             get: () => undefined
           },
           findCheckpointFileBefore: async () => {
-            return { file: 'state-process123.dat', evaluation: laterCachedEval }
+            return { file: 'state-process123.dat', ...laterCachedEval }
           },
           readProcessMemoryFile: async (path) => {
             assert.equal(path, 'state-process123.dat')
@@ -1194,9 +1189,7 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
-          fileExists: () => true,
-          DIR: 'fake/directory/'
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1569,7 +1562,8 @@ describe('ao-process', () => {
         address: () => {
           assert.fail('saving checkpoint process should not have been initiated')
         },
-        DISABLE_PROCESS_CHECKPOINT_CREATION: true
+        DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
       })
       const result = await saveCheckpoint({})
       assert.equal(result, undefined, 'should immediately resolve if checkpointing is disabled')
@@ -1582,6 +1576,7 @@ describe('ao-process', () => {
           assert.fail('saving checkpoint process should not have been initiated')
         },
         DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false,
         recentCheckpoints: new Map([['process-123', true]])
       })
       const result = await saveCheckpoint({ processId: 'process-123' })
@@ -1630,7 +1625,7 @@ describe('ao-process', () => {
       })
     })
 
-    test('should save a checkpoint', async () => {
+    test('should save a checkpoint to arweave', async () => {
       const saveCheckpoint = saveCheckpointWith({
         ...depsAll,
         queryGateway: () => Promise.resolve(),
@@ -1648,6 +1643,76 @@ describe('ao-process', () => {
       })
       const result = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
       assert.equal(result.id, 'tx-123', 'should return the id of the checkpoint')
+    })
+
+    test('should save a checkpoint to file system if arweave disabled', async () => {
+      let wroteArweaveCheckpointRecord = false
+      const saveCheckpoint = saveCheckpointWith({
+        ...depsAll,
+        queryGateway: () => Promise.resolve(),
+        queryCheckpointGateway: () => Promise.resolve(),
+        address: () => Promise.resolve(),
+        hashWasmMemory: () => Promise.resolve('hash'),
+        readProcessMemoryFile: () => undefined,
+        uploadDataItem: async () => undefined,
+        buildAndSignDataItem: (...args) => Promise.resolve(...args),
+        writeCheckpointRecord: async () => {
+          wroteArweaveCheckpointRecord = true
+        },
+        writeProcessMemoryFile: ({ evaluation }) => {
+          assert.equal(evaluation.processId, 'process-123')
+          return Promise.resolve('dir/file-path.dat')
+        },
+        writeCheckpointFile: () => {
+          return Promise.resolve()
+        },
+        writeFileRecord: (_evaluation, path) => {
+          assert.equal(path, 'dir/file-path.dat')
+          return Promise.resolve(path)
+        },
+        DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+      })
+      const result = await saveCheckpoint({ Memory: Buffer.from('Memory'), moduleId: 'module-123', processId: 'process-123' })
+
+      assert.ok(!wroteArweaveCheckpointRecord)
+      assert.equal(result.path, 'dir/file-path.dat', 'should return the file path of the checkpoint')
+    })
+
+    test('should save a checkpoint to file system if arweave checkpoint fails', async () => {
+      let wroteArweaveCheckpointRecord = false
+      const saveCheckpoint = saveCheckpointWith({
+        ...depsAll,
+        queryGateway: () => Promise.resolve(),
+        queryCheckpointGateway: () => Promise.resolve(),
+        address: () => Promise.resolve(),
+        hashWasmMemory: () => Promise.resolve('hash'),
+        readProcessMemoryFile: () => undefined, // Promise.resolve(Buffer.from([1, 2, 3])),
+        uploadDataItem: async () => {
+          throw new Error('402: Insufficient balance')
+        },
+        buildAndSignDataItem: (...args) => Promise.resolve(...args),
+        writeCheckpointRecord: async () => {
+          wroteArweaveCheckpointRecord = true
+        },
+        writeProcessMemoryFile: ({ evaluation }) => {
+          assert.equal(evaluation.processId, 'process-123')
+          return Promise.resolve('dir/file-path.dat')
+        },
+        writeCheckpointFile: () => {
+          return Promise.resolve()
+        },
+        writeFileRecord: (_evaluation, path) => {
+          assert.equal(path, 'dir/file-path.dat')
+          return Promise.resolve(path)
+        },
+        DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+      })
+      const result = await saveCheckpoint({ Memory: Buffer.from('Memory'), moduleId: 'module-123', processId: 'process-123' })
+
+      assert.ok(!wroteArweaveCheckpointRecord)
+      assert.equal(result.path, 'dir/file-path.dat', 'should return the file path of the checkpoint')
     })
   })
 })

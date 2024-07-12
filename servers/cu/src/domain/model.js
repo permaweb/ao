@@ -84,10 +84,14 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_CHECKPOINT_CREATION_THROTTLE: positiveIntSchema,
   /**
-   * Whether to disable Process Checkpoint creation entirely. Great for when developing locally,
+   * Whether to disable Arweave Process Checkpoint creation. Great for when developing locally,
    * of for an ephemeral CU
    */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
+  /**
+   * Whether to disable File Process Checkpoint creation entirely.
+   */
+  DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
    * @deprecated
    * If an evaluation stream evaluates this amount of messages,
