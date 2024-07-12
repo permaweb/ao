@@ -1217,7 +1217,8 @@ export function saveCheckpointWith ({
   writeCheckpointRecord,
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
-  DISABLE_PROCESS_CHECKPOINT_CREATION
+  DISABLE_PROCESS_CHECKPOINT_CREATION,
+  recentCheckpoints = new Map()
 }) {
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
   address = fromPromise(address)
@@ -1351,7 +1352,6 @@ export function saveCheckpointWith ({
       .chain(buildAndSignDataItem)
   }
 
-  const recentCheckpoints = new Map()
   const addRecentCheckpoint = (processId) => {
     /**
      * Shouldn't happen, since the entries clear themselves when their ttl
