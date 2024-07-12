@@ -1,8 +1,8 @@
-import { of, fromPromise } from 'hyper-async'
+import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
 import { assoc, __, defaultTo, concat } from 'ramda'
 
-import { removeTagsByNameMaybeValue } from '../utils.js'
+import { checkStage, removeTagsByNameMaybeValue } from '../utils.js'
 
 const ctxSchema = z.object({
   spawnSuccessTx: z.any()
@@ -12,7 +12,8 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
   return (ctx) => {
     /**
      * Start with the Tags from the original spawned message
-     */
+    */
+    if (!checkStage('build-success-tx')(ctx)) return Resolved(ctx)
     return of(ctx.cachedSpawn.spawn.Tags)
       .map(defaultTo([]))
       /**

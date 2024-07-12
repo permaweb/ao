@@ -12,8 +12,11 @@ const ctxSchema = z.object({
 function fetchResultWith ({ fetchResult }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
-  return (ctx) =>
-    fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+  return (ctx) => {
+    return of(ctx)
+      .chain(() => {
+        return fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+      })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
           return {
@@ -45,6 +48,8 @@ function fetchResultWith ({ fetchResult }) {
 
         return of({ ...ctx, msgs, spawns, assigns })
       })
+      .toPromise()
+  }
 }
 
 export function pullResultWith (env) {
@@ -55,7 +60,11 @@ export function pullResultWith (env) {
   return (ctx) => {
     if (!checkStage('pull-result')(ctx)) return Resolved(ctx)
     return of(ctx)
-      .chain(fetchResult)
+      .map((ctx) => ({ ...ctx, tx: ctx.tx ?? ctx.spawnSuccessTx }))
+      .chain((ctx) => {
+        return of(ctx)
+          .chain(fromPromise(fetchResult))
+      })
       .map(ctxSchema.parse)
       .bimap(
         (e) => {
