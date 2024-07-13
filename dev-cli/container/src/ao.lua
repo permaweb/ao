@@ -1,10 +1,11 @@
+local oldao = ao or {}
 local ao = {
     _version = "0.0.5",
-    id = ao.id or "",
-    _module = ao._module or "",
-    authorities = ao.authorities or {},
-    reference = ao.reference or 0,
-    outbox = ao.outbox or {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
+    id = oldao.id or "",
+    _module = oldao._module or "",
+    authorities = oldao.authorities or {},
+    reference = oldao.reference or 0,
+    outbox = oldao.outbox or {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
     nonExtractableTags = {
         'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
         'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
