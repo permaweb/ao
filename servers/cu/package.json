@@ -30,6 +30,7 @@
     "long-timeout": "^0.1.1",
     "lru-cache": "^10.3.0",
     "ms": "^2.1.3",
+    "opossum": "^8.1.4",
     "p-map": "^7.0.2",
     "prom-client": "^15.1.3",
     "ramda": "^0.30.1",

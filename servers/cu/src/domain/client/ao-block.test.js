@@ -127,5 +127,203 @@ describe('ao-block', () => {
       assert.equal(res.length, 51)
       assert.equal(res.length, uniqBy(prop('height'), res).length)
     })
+
+    test('should backoff for 3 attempts on error', async () => {
+      let errorCount = 0
+      let errorCaught = false
+      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
+        fetch: () => {
+          errorCount++
+          throw Error('Fetch error!')
+        },
+        GRAPHQL_URL,
+        pageSize: 17,
+        logger
+      }))
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorCaught = true
+        assert.equal(e.message, 'Fetch error!')
+      })
+      assert.ok(errorCaught)
+      assert.equal(errorCount, 3)
+    })
+
+    test('should circuit break on failure', async () => {
+      let errorsCount = 0
+      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
+        fetch: () => {
+          throw Error('Fetch error!')
+        },
+        GRAPHQL_URL,
+        pageSize: 17,
+        logger,
+        breakerOptions: {
+          timeout: 5000, // 5 seconds timeout
+          errorThresholdPercentage: 50, // open circuit after 50% failures
+          resetTimeout: 1000 // attempt to close circuit after 15 seconds
+        }
+      }))
+
+      /**
+       * This will trigger the circuit breaker to open
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Fetch error!')
+      })
+      /**
+       * This will fail because the breaker is open
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Can not communicate with gateway to retrieve block metadata (breaker is open)')
+      })
+
+      /**
+       * Allow the circuit breaker to close again
+       */
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      /**
+       * This will attempt to fetch as the circuit is closed
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Fetch error!')
+      })
+
+      assert.equal(errorsCount, 3)
+    })
+
+    test('should not circuit break on failure below volume threshold', async () => {
+      let errorsCount = 0
+      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
+        fetch: () => {
+          throw Error('Fetch error!')
+        },
+        GRAPHQL_URL,
+        pageSize: 17,
+        logger,
+        breakerOptions: {
+          timeout: 5000, // 5 seconds timeout
+          errorThresholdPercentage: 50, // open circuit after 50% failures
+          resetTimeout: 1000, // attempt to close circuit after 1 seconds
+          volumeThreshold: 20
+        }
+      }))
+
+      /**
+       * This will not trigger the circuit breaker to open, as the volume threshold is not met
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Fetch error!')
+      })
+      /**
+       * This will not trigger the circuit breaker to open, as the volume threshold is not met
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Fetch error!')
+      })
+
+      /**
+       * This will not trigger the circuit breaker to open, as the volume threshold is not met
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Fetch error!')
+      })
+
+      /**
+       * This will not trigger the circuit breaker to open, as the volume threshold is not met
+       */
+      await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 }).catch((e) => {
+        errorsCount++
+        assert.equal(e.message, 'Fetch error!')
+      })
+
+      assert.equal(errorsCount, 4)
+    })
+
+    test('should not circuit break on failure below error threshold', async () => {
+      let count = -1
+      const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
+        fetch: async () => {
+          count++
+          return {
+            /**
+             * This will cause every 3 calls to fail (25% error rate)
+             */
+            ok: count % 6 < 3,
+            json: () => ({
+              data: {
+                blocks: {
+                  pageInfo: {
+                    hasNextPage: false
+                  },
+                  edges: [
+                    {
+                      node: {
+                        timestamp: 1696632214,
+                        height: 1276377
+                      }
+                    },
+                    {
+                      node: {
+                        timestamp: 1696632326,
+                        height: 1276378
+                      }
+                    },
+                    {
+                      node: {
+                        timestamp: 1696632474,
+                        height: 1276379
+                      }
+                    },
+                    {
+                      node: {
+                        timestamp: 1696632530,
+                        height: 1276380
+                      }
+                    },
+                    {
+                      node: {
+                        timestamp: 1696632542,
+                        height: 1276381
+                      }
+                    },
+                    {
+                      node: {
+                        timestamp: 1696632548,
+                        height: 1276382
+                      }
+                    }
+                  ]
+                }
+              }
+            })
+          }
+        },
+        GRAPHQL_URL,
+        pageSize: 5,
+        logger,
+        circuitResetTimeout: 60000
+      }))
+
+      let successCount = 0
+      let errorCount = 0
+      for (let i = 0; i < 8; i++) {
+        await loadBlocksMeta({ min: 1276343, maxTimestamp: 1696633559000 })
+          .catch((_e) => {
+            errorCount++
+          })
+          .then((res) => {
+            if (res) successCount++
+          })
+      }
+      assert.equal(successCount, 6)
+      assert.equal(errorCount, 2)
+    })
   })
 })
