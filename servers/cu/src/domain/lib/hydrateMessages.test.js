@@ -97,6 +97,7 @@ describe('hydrateMessages', () => {
         Id: 'message-tx-345',
         Signature: 'sig-345',
         Owner: 'owner-345',
+        Target: 'process-123',
         Tags: [
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
@@ -113,7 +114,8 @@ describe('hydrateMessages', () => {
         Epoch: 0,
         Nonce: 23,
         'Block-Height': 123,
-        Timestamp: 123
+        Timestamp: 123,
+        Target: 'process-123'
       },
       block: { height: 99 }
     }
@@ -127,7 +129,8 @@ describe('hydrateMessages', () => {
         Epoch: 0,
         Nonce: 23,
         'Block-Height': 789,
-        Timestamp: 789
+        Timestamp: 789,
+        Target: 'process-123'
       },
       block: { height: 99 }
     }
@@ -141,7 +144,8 @@ describe('hydrateMessages', () => {
         Epoch: 0,
         Nonce: 23,
         'Block-Height': 989,
-        Timestamp: 989
+        Timestamp: 989,
+        Target: 'process-123'
       },
       block: { height: 99 }
     }
@@ -171,7 +175,8 @@ describe('hydrateMessages', () => {
             },
             tags: [
               { name: 'foo', value: 'bar' }
-            ]
+            ],
+            recipient: 'recipient-123'
           }
         }
 
@@ -186,7 +191,9 @@ describe('hydrateMessages', () => {
             id,
             owner: {
               address: 'owner-123'
-            }
+            },
+            // recipient could be an empty string
+            recipient: ''
           }
         }
 
@@ -201,7 +208,9 @@ describe('hydrateMessages', () => {
             anchor: 'anchor-123',
             owner: {
               address: 'owner-123'
-            }
+            },
+            // Not possible with graphql client impl, but still need to test '' default
+            recipient: undefined
           }
         }
 
@@ -238,9 +247,12 @@ describe('hydrateMessages', () => {
           ],
           Owner: 'owner-123',
           From: 'owner-123',
+          Target: 'recipient-123',
           Data: 'Hello World 🤖❌⚡️'
         }
       })
+
+      assert.equal(two.message.Target, 'recipient-123')
     })
 
     test('should not load meta fields if excluded', () => {
@@ -255,9 +267,12 @@ describe('hydrateMessages', () => {
           Tags: [],
           Owner: 'owner-123',
           From: 'owner-123',
+          Target: '',
           Data: 'Yay Data'
         }
       })
+
+      assert.equal(four.message.Target, '')
     })
 
     test('should not load Data if excluded', () => {
@@ -273,10 +288,13 @@ describe('hydrateMessages', () => {
           Tags: [],
           Owner: 'owner-123',
           From: 'owner-123',
+          Target: '',
           // Data omitted
           Data: undefined
         }
       })
+
+      assert.equal(five.message.Target, '')
     })
   })
 })

@@ -302,7 +302,13 @@ export const messageSchema = z.object({
     Signature: z.string().nullish(),
     Data: z.any().nullish(),
     Owner: z.string().min(1),
-    Target: z.string().min(1),
+    /**
+     * Target may be an empty string, in the case of assignment
+     * of a tx with no recipient
+     *
+     * Ergo, there is no min length on target.
+     */
+    Target: z.string(),
     Anchor: z.string().nullish(),
     From: z.string().min(1),
     'Forwarded-By': z.string().nullish(),
