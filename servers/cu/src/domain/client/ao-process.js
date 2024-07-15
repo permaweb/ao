@@ -1217,7 +1217,8 @@ export function saveCheckpointWith ({
   writeCheckpointRecord,
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
-  DISABLE_PROCESS_CHECKPOINT_CREATION
+  DISABLE_PROCESS_CHECKPOINT_CREATION,
+  recentCheckpoints = new Map()
 }) {
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
   address = fromPromise(address)
@@ -1351,7 +1352,6 @@ export function saveCheckpointWith ({
       .chain(buildAndSignDataItem)
   }
 
-  const recentCheckpoints = new Map()
   const addRecentCheckpoint = (processId) => {
     /**
      * Shouldn't happen, since the entries clear themselves when their ttl
@@ -1422,11 +1422,15 @@ export function saveCheckpointWith ({
       }))
       .map(path(['data', 'transactions', 'edges', '0']))
       .chain((checkpoint) => {
-        /**
-         * This CU has already created a Checkpoint
-         * for this evaluation so simply noop
-         */
         if (checkpoint) {
+          if (!Array.isArray(checkpoint.node.tags)) {
+            // TODO: should probably use a Zod schema to verify 'queryCheckpoints' returns the data structure we expect
+            return Rejected('expected checkpoint tags to be an array, cannot use checkpoint found on Arweave')
+          }
+          /**
+           * This CU has already created a Checkpoint
+           * for this evaluation so simply noop
+           */
           return Resolved({ id: checkpoint.node.id, encoding: pluckTagValue('Content-Encoding', checkpoint.node.tags) })
         }
 

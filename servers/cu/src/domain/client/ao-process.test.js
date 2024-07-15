@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 
 import { createLogger } from '../logger.js'
 import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
-import { LATEST, createProcessMemoryCache, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
+import { LATEST, createProcessMemoryCache, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveCheckpointWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
 import { Readable } from 'node:stream'
 import bytes from 'bytes'
 
@@ -1396,5 +1396,97 @@ describe('ao-process', () => {
     })
   })
 
-  describe.todo('saveCheckpointWith')
+  describe('saveCheckpointWith', () => {
+    const logger = createLogger('saveCheckpointWith')
+    const depsAll = {
+      logger
+    }
+
+    test('should not save checkpoint if checkpointing is disabled', async () => {
+      const saveCheckpoint = saveCheckpointWith({
+        ...depsAll,
+        address: () => {
+          assert.fail('saving checkpoint process should not have been initiated')
+        },
+        DISABLE_PROCESS_CHECKPOINT_CREATION: true
+      })
+      const result = await saveCheckpoint({})
+      assert.equal(result, undefined, 'should immediately resolve if checkpointing is disabled')
+    })
+
+    test('should not save checkpoint if process was recently checkpointed', async () => {
+      const saveCheckpoint = saveCheckpointWith({
+        ...depsAll,
+        address: () => {
+          assert.fail('saving checkpoint process should not have been initiated')
+        },
+        DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+        recentCheckpoints: new Map([['process-123', true]])
+      })
+      const result = await saveCheckpoint({ processId: 'process-123' })
+      assert.equal(result, undefined, 'should immediately resolve if process was recently checkpointed')
+    })
+
+    test('should not save a checkpoint if there is already a checkpoint for the evaluation on Arweave', async () => {
+      const saveCheckpoint = saveCheckpointWith({
+        ...depsAll,
+        address: () => {
+          return Promise.resolve()
+        },
+        queryGateway: () => Promise.resolve({ data: { transactions: { edges: [{ node: { id: 'tx-123', tags: [] } }] } } }),
+        queryCheckpointGateway: () => Promise.resolve({ data: { transactions: { edges: [{ node: { id: 'tx-123', tags: [] } }] } } }),
+        readProcessMemoryFile: () => {
+          assert.fail('should not attempt to read the process memory file')
+        },
+        writeCheckpointRecord: () => Promise.resolve(),
+        DISABLE_PROCESS_CHECKPOINT_CREATION: false
+      })
+      const result = await saveCheckpoint({ File: Promise.resolve('file') })
+      assert.equal(result.id, 'tx-123', 'should return the id of the checkpoint')
+    })
+
+    describe('should fail if the memory is not provided directly or as a field path', () => {
+      const deps = {
+        ...depsAll,
+        address: () => {
+          return Promise.resolve()
+        },
+        queryGateway: () => Promise.resolve(),
+        queryCheckpointGateway: () => Promise.resolve(),
+        DISABLE_PROCESS_CHECKPOINT_CREATION: false
+      }
+      test('should fail if memory and file are both undefined', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...deps
+        })
+        await saveCheckpoint({}).then(() => assert.fail('should not resolve if no Memory or File is provided')).catch(() => assert.ok(true))
+      })
+      test('should fail if file promise resolves with undefined', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...deps
+        })
+        await saveCheckpoint({ File: Promise.resolve(undefined) }).then(() => assert.fail('should not resolve if File resolves to undefined')).catch(() => assert.ok(true))
+      })
+    })
+
+    test('should save a checkpoint', async () => {
+      const saveCheckpoint = saveCheckpointWith({
+        ...depsAll,
+        queryGateway: () => Promise.resolve(),
+        queryCheckpointGateway: () => Promise.resolve(),
+        address: () => Promise.resolve(),
+        hashWasmMemory: () => Promise.resolve('hash'),
+        readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
+        uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
+        buildAndSignDataItem: (...args) => Promise.resolve(...args),
+        writeCheckpointRecord: (d) => {
+          assert.ok(true)
+          return Promise.resolve()
+        },
+        DISABLE_PROCESS_CHECKPOINT_CREATION: false
+      })
+      const result = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
+      assert.equal(result.id, 'tx-123', 'should return the id of the checkpoint')
+    })
+  })
 })
