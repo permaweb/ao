@@ -75,24 +75,45 @@ export const mapNode = pipe(
         })
       )
     ),
+    // both
+    applySpec({
+      isAssignment: pipe(
+        path(['message', 'id']),
+        isNil
+      )
+    }),
     // static
     always({ Cron: false })
   ]),
   // Combine into the desired shape
-  ([fAssignment, fMessage = {}, fStatic]) => ({
+  ([fAssignment, fMessage = {}, fBoth, fStatic]) => ({
     cron: undefined,
     ordinate: fAssignment.message.Nonce,
-    name: `Scheduled Message ${fMessage.Id || fAssignment.message.Message} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
+    name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
     exclude: fAssignment.Exclude,
-    isAssignment: !fMessage.Id,
+    isAssignment: fBoth.isAssignment,
     message: mergeAll([
       fMessage,
       fAssignment.message,
       /**
-       * Ensure Id is always set, regardless if this is a message
+       * For an Assignment, the message, and ergo it's Id will be undefined,
+       * but the assignment will contain a Message Tag that indicates the assigned tx.
+       * In this case, the assigned data can be queried for and hydrated, using the Id.
+       *
+       * So we must ensure that this field is always set, regardless if this is a message
        * or just an Assignment for an existing message on-chain
        */
-      { Id: fMessage.Id || fAssignment.message.Message },
+      { Id: fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id },
+      /**
+       * For an Assignment, the Target is derived from the recipient of
+       * the assigned tx.
+       *
+       * So we explicitly set Target to undefined here, such that hydration of Target
+       * must occur later. Otherwise we will receive high signal, in the form of an error,
+       * that the impl is incorrect, as opposed to an assignment potentially being misinterpreted
+       * as a bonafide scheduled message.
+       */
+      { Target: fBoth.isAssignment ? undefined : fAssignment.message.Target },
       fStatic
     ]),
     /**

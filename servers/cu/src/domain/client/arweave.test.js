@@ -29,6 +29,12 @@ describe('arweave', () => {
       )
       const result = await loadTransactionMeta(PROCESS)
       assert.ok(result.tags)
+      assert.ok(result.signature)
+      assert.ok(result.owner.address)
+      // eslint-disable-next-line no-prototype-builtins
+      assert.ok(result.hasOwnProperty('anchor'))
+      // eslint-disable-next-line no-prototype-builtins
+      assert.ok(result.hasOwnProperty('recipient'))
     })
 
     test('pass the correct variables', async () => {
