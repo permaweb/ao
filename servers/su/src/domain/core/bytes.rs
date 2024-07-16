@@ -480,9 +480,9 @@ impl DataItem {
     }
 
     pub fn as_bytes(&self) -> Result<Vec<u8>, ByteErrorType> {
-        if !self.is_signed() {
+       /* if !self.is_signed() {
             return Err(ByteErrorType::ByteError("no signature".to_string()));
-        }
+        }*/
         let data = match &self.data {
             Data::None => return Err(ByteErrorType::ByteError("invalid data type".to_string())),
             Data::Bytes(data) => data,

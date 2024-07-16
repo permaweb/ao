@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use std::time::Instant;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
-
+use actix_web::web;
 use dotenv::dotenv;
 use serde_json::json;
 use simd_json::to_string as simd_to_string;
-
-use super::builder::Builder;
+use crate::domain::core::scheduler::ScheduleInfo;
+use super::builder::{Builder, BundleOnlyResult};
 use super::json::{Message, Process};
 use super::scheduler;
 
@@ -184,25 +184,54 @@ pub async fn write_item(
             let end_update_schedule_info = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
             deps.logger.log(format!("=== UPDATE SCHEDULE INFO - {:?}", (end_update_schedule_info - end_acquire_lock)));
 
-            let build_result = builder.build_message(input, &*updated_info).await?;
-            let message = Message::from_bundle(&build_result.bundle)?;
+
+            let BundleOnlyResult { bundle_data_item: _, bundle } = builder.build_message_only(input.clone(), &*updated_info).await?;
+            let message = Message::from_bundle(&bundle)?;
+            updated_info.assignment_id = Some(message.clone().assignment.id);
             let end_create_msg = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            deps.logger.log(format!("=== CREATING MESSAGE - {:?}", (end_create_msg - end_update_schedule_info)));
+            deps.logger.log(format!("=== CREATING MESSAGE - {:?}", end_create_msg - end_update_schedule_info));
 
-            deps.data_store
-                .save_message(&message, &build_result.binary)
-                .await?;
-            deps.logger.log(format!("saved message"));
-            let end_save_msg = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            deps.logger.log(format!("=== SAVING MESSAGE - {:?}", (end_save_msg - end_create_msg)));
+            deps.logger.log(format!("=== update info - {:?}", updated_info.clone()));
 
+            let deps_clone = deps.clone();
+            let updated_info_clone = ScheduleInfo {
+                epoch: updated_info.epoch,
+                nonce: updated_info.nonce,
+                timestamp: updated_info.timestamp,
+                hash_chain: updated_info.hash_chain.clone(),
+                assignment_id: updated_info.assignment_id.clone()
+            };
+            let input_clone = input.clone();
 
-            upload(&deps, build_result.binary.to_vec()).await?;
-            let end_upload_turbo = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            deps.logger.log(format!("=== UPLOAD TURBO - {:?}", (end_upload_turbo - end_save_msg)));
-
-
+            // drop lock asap and store data 'later'
             drop(schedule_info);
+
+            let _ = web::block(move || {
+                tokio::spawn(async move {
+                    deps_clone.logger.log("Background task started".into());
+                    let builder = init_builder(&deps_clone).unwrap();
+                    let start_sign = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                    // build again, with signatures...that's dumb, but "for now"...
+                    let build_result = builder.build_message(input_clone, &updated_info_clone).await;
+
+                    let result = build_result.unwrap();
+                    let message = Message::from_bundle(&result.bundle).unwrap();
+
+                    deps_clone.data_store
+                        .save_message(&message, &result.binary)
+                        .await.unwrap();
+                    deps_clone.logger.log(format!("saved message"));
+                    let end_save_msg = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                    deps_clone.logger.log(format!("=== SAVING MESSAGE - {:?}", (end_save_msg - start_sign)));
+
+                    upload(&deps_clone, result.binary.to_vec()).await.unwrap();
+                    let end_upload_turbo = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                    deps_clone.logger.log(format!("Background task completed"));
+                    println!();
+                });
+            });
+
+
             match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json =

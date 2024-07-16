@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64_url;
 use dashmap::DashMap;
+use serde_derive::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
@@ -17,11 +18,13 @@ pub struct SchedulerDeps {
     information used to build a proper item
     in the schedule aka the proper tags
 */
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ScheduleInfo {
     pub epoch: i32,
     pub nonce: i32,
     pub timestamp: i64,
     pub hash_chain: String,
+    pub assignment_id: Option<String>
 }
 
 pub type LockedScheduleInfo = Arc<Mutex<ScheduleInfo>>;
@@ -62,6 +65,7 @@ impl ProcessScheduler {
                         nonce: 0,
                         timestamp: 0,
                         hash_chain: String::new(),
+                        assignment_id: None
                     }))
                 })
                 .value()
@@ -76,8 +80,8 @@ impl ProcessScheduler {
         schedule_info: &'a mut ScheduleInfo,
         id: String,
     ) -> Result<&mut ScheduleInfo, String> {
-        let (current_epoch, current_nonce, current_hash_chain, current_timestamp) =
-            match fetch_values(self.deps.clone(), &id).await {
+        let (current_epoch, current_nonce, current_hash_chain, current_timestamp, assignment_id) =
+            match fetch_values(self.deps.clone(), &id, schedule_info).await {
                 Ok(vals) => vals,
                 Err(e) => return Err(format!("error acquiring scheduler lock {}", e)),
             };
@@ -85,6 +89,7 @@ impl ProcessScheduler {
         schedule_info.nonce = current_nonce;
         schedule_info.hash_chain = current_hash_chain;
         schedule_info.timestamp = current_timestamp;
+        schedule_info.assignment_id = assignment_id;
         Ok(schedule_info)
     }
 }
@@ -147,7 +152,8 @@ fn gen_hash_chain(
 async fn fetch_values(
     deps: Arc<SchedulerDeps>,
     process_id: &String,
-) -> Result<(i32, i32, String, i64), String> {
+    schedule_info: &mut ScheduleInfo,
+) -> Result<(i32, i32, String, i64, Option<String>), String> {
     let start_time = SystemTime::now();
     let duration = match start_time.duration_since(UNIX_EPOCH) {
         Ok(d) => d,
@@ -157,30 +163,40 @@ async fn fetch_values(
 
 
     let start_total = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let latest_message = match deps.data_store.get_latest_message(process_id) {
-        Ok(m) => m,
-        Err(e) => return Err(format!("{:?}", e)),
-    };
-    let end_get_latest_message = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    deps.logger.log(format!("=== get_latest_message - {:?}", (end_get_latest_message - start_total)));
+    if schedule_info.nonce == 0 {
+        let latest_message = match deps.data_store.get_latest_message(process_id) {
+            Ok(m) => m,
+            Err(e) => return Err(format!("{:?}", e)),
+        };
+        let end_get_latest_message = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        deps.logger.log(format!("=== get_latest_message - {:?}", (end_get_latest_message - start_total)));
 
 
-    match latest_message {
-        Some(previous_message) => {
-            let epoch = previous_message.epoch().unwrap();
-            let nonce = previous_message.nonce().unwrap() + 1;
-            let hash_chain = gen_hash_chain(
-                &previous_message.hash_chain().unwrap(),
-                Some(&previous_message.assignment_id().unwrap()),
-            )?;
-            let end_hash_chain = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            deps.logger.log(format!("=== end_hash_chain - {:?}", (end_hash_chain - end_get_latest_message)));
-            Ok((epoch, nonce, hash_chain, millis))
+        match latest_message {
+            Some(previous_message) => {
+                let epoch = previous_message.epoch().unwrap();
+                let nonce = previous_message.nonce().unwrap() + 1;
+                let hash_chain = gen_hash_chain(
+                    &previous_message.hash_chain().unwrap(),
+                    Some(&previous_message.assignment_id().unwrap()),
+                )?;
+                let end_hash_chain = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                deps.logger.log(format!("=== end_hash_chain - {:?}", (end_hash_chain - end_get_latest_message)));
+                Ok((epoch, nonce, hash_chain, millis, Some(previous_message.assignment_id().unwrap())))
+            }
+            None => {
+                let hash_chain = gen_hash_chain(&process_id, None)?;
+                Ok((0, 0, hash_chain, millis, None))
+            }
         }
-        None => {
-            let hash_chain = gen_hash_chain(&process_id, None)?;
-            Ok((0, 0, hash_chain, millis))
-        }
+    } else {
+        let epoch = schedule_info.epoch();
+        let nonce = schedule_info.nonce().parse::<i32>().unwrap() + 1;
+        let hash_chain = gen_hash_chain(
+            &schedule_info.hash_chain(),
+            Some(schedule_info.assignment_id.as_ref().unwrap().as_str()),
+        )?;
+        Ok((epoch.parse().unwrap(), nonce, hash_chain, millis, Some(schedule_info.assignment_id.clone().unwrap())))
     }
 }
 

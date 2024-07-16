@@ -49,8 +49,7 @@ pub trait Log: Send + Sync {
     fn log(&self, message: String);
     fn error(&self, message: String);
 }
-
-pub trait ScheduleProvider {
+pub trait ScheduleProvider: Send + Sync {
     fn epoch(&self) -> String;
     fn nonce(&self) -> String;
     fn timestamp(&self) -> String;

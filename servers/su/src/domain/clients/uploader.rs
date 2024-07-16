@@ -75,7 +75,7 @@ impl Uploader for UploaderClient {
                 match response {
                     Ok(resp) if resp.status().is_success() => {
                         // Handle success
-                        logger_clone.log("Upload successful".to_string());
+                        // logger_clone.log("Upload successful".to_string());
                         break; // Exit the loop on success
                     }
                     Ok(resp) => {

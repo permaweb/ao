@@ -8,12 +8,17 @@ use super::json::Process;
 
 pub struct Builder<'a> {
     gateway: Arc<dyn Gateway>,
-    signer: Arc<dyn Signer>,
+    pub signer: Arc<dyn Signer>,
     logger: &'a Arc<dyn Log>,
 }
 
 pub struct BuildResult {
     pub binary: Vec<u8>,
+    pub bundle: DataBundle,
+}
+
+pub struct BundleOnlyResult {
+    pub bundle_data_item: DataItem,
     pub bundle: DataBundle,
 }
 
@@ -60,10 +65,30 @@ impl<'a> Builder<'a> {
         schedule_info: &dyn ScheduleProvider,
         exclude: &Option<String>,
     ) -> Result<DataItem, BuilderErrorType> {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let mut assignment = self.gen_assignment_only(message_id, process_id, schedule_info, exclude).await?;
+        let assignment_message = assignment.get_message()?.to_vec();
+
+        let start_sig = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let assignment_signature = self.signer.sign_tx(assignment_message).await?;
+        let end_sig = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        self.logger.log(format!("=== SIGNING ASSIGNMENT - {:?}", (end_sig - start_sig)));
+
+        assignment.signature = assignment_signature;
+
+        self.logger
+            .log(format!("built assignment {}", assignment.id()));
+
+        Ok(assignment)
+    }
+
+    async fn gen_assignment_only(
+        &self,
+        message_id: String,
+        process_id: String,
+        schedule_info: &dyn ScheduleProvider,
+        exclude: &Option<String>,
+    ) -> Result<DataItem, BuilderErrorType> {
         let network_info = self.gateway.network_info().await?;
-        let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        self.logger.log(format!("=== CHECKING NETWORK INFO - {:?}", (end - start)));
 
         let height = network_info.height.clone();
         let mut tags = vec![
@@ -92,23 +117,33 @@ impl<'a> Builder<'a> {
             None => (),
         }
 
-        let mut assignment = DataItem::new(vec![], vec![], tags, self.signer.get_public_key())?;
-        let assignment_message = assignment.get_message()?.to_vec();
-
-        let start_sig = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let assignment_signature = self.signer.sign_tx(assignment_message).await?;
-        let end_sig = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        self.logger.log(format!("=== SIGNING ASSIGNMENT - {:?}", (end_sig - start_sig)));
-
-        assignment.signature = assignment_signature;
-
+        let assignment = DataItem::new(vec![], vec![], tags, self.signer.get_public_key())?;
         self.logger
-            .log(format!("built assignment {}", assignment.id()));
+            .log(format!("built assignment only {}", assignment.id()));
 
         Ok(assignment)
     }
 
     async fn bundle_items(&self, items: Vec<DataItem>) -> Result<BuildResult, BuilderErrorType> {
+        let BundleOnlyResult { mut bundle_data_item, bundle } = self.bundle_items_only(items).await?;
+        let bundle_message = bundle_data_item.get_message()?.to_vec();
+
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let signature = self.signer.sign_tx(bundle_message).await?;
+        let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        self.logger.log(format!("=== SIGNING NESTED BUNDLE - {:?}", (end - start)));
+
+        bundle_data_item.signature = signature;
+
+        self.logger.log(format!("signature succeeded {}", ""));
+
+        Ok(BuildResult {
+            binary: bundle_data_item.as_bytes()?,
+            bundle,
+        })
+    }
+
+    async fn bundle_items_only(&self, items: Vec<DataItem>) -> Result<BundleOnlyResult, BuilderErrorType> {
         let bundle_tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
@@ -120,11 +155,12 @@ impl<'a> Builder<'a> {
             data_bundle.add_item(item.clone());
         });
 
+        // error: assignment data item is not signed!
         let buffer = data_bundle.to_bytes()?;
 
-        let mut bundle_data_item =
+        let bundle_data_item =
             DataItem::new(vec![], buffer, bundle_tags, self.signer.get_public_key())?;
-        let bundle_message = bundle_data_item.get_message()?.to_vec();
+        /*let bundle_message = bundle_data_item.get_message()?.to_vec();
 
         let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let signature = self.signer.sign_tx(bundle_message).await?;
@@ -134,10 +170,10 @@ impl<'a> Builder<'a> {
 
         bundle_data_item.signature = signature;
 
-        self.logger.log(format!("signature succeeded {}", ""));
+        self.logger.log(format!("signature succeeded {}", ""));*/
 
-        Ok(BuildResult {
-            binary: bundle_data_item.as_bytes()?,
+        Ok(BundleOnlyResult {
+            bundle_data_item,
             bundle: data_bundle,
         })
     }
@@ -192,6 +228,27 @@ impl<'a> Builder<'a> {
         {
             // bundle both the assignment and the message
             Ok(a) => self.bundle_items(vec![a, message_item]).await,
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn build_message_only(
+        &self,
+        tx: Vec<u8>,
+        schedule_info: &dyn ScheduleProvider,
+    ) -> Result<BundleOnlyResult, BuilderErrorType> {
+        let message_item = DataItem::from_bytes(tx)?;
+        match self
+            .gen_assignment_only(
+                message_item.id(),
+                message_item.target(),
+                schedule_info,
+                &None,
+            )
+            .await
+        {
+            // bundle both the assignment and the message
+            Ok(a) => self.bundle_items_only(vec![a, message_item]).await,
             Err(e) => Err(e),
         }
     }

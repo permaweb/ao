@@ -120,7 +120,7 @@ async fn main_post_route(
         query_params.process_id.clone(),
         query_params.assign.clone(),
     )
-    .await
+        .await
     {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
@@ -140,7 +140,7 @@ async fn main_post_route(
         query_params.base_layer.clone(),
         query_params.exclude.clone(),
     )
-    .await
+        .await
     {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
@@ -179,7 +179,7 @@ async fn main_get_route(
         to_sort_key,
         limit,
     )
-    .await;
+        .await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -236,8 +236,20 @@ async fn main() -> io::Result<()> {
             }
         },
         None => {
-            let err = Error::new(ErrorKind::InvalidInput, "Port argument not provided");
-            return Err(err);
+            9000
+        }
+    };
+
+    let workers = match args.get(3) {
+        Some(workers_str) => match workers_str.parse::<usize>() {
+            Ok(num) => num,
+            Err(_) => {
+                let err = Error::new(ErrorKind::InvalidInput, "Workers number is not valid");
+                return Err(err);
+            }
+        },
+        None => {
+            std::thread::available_parallelism().unwrap().get()
         }
     };
 
@@ -270,7 +282,8 @@ async fn main() -> io::Result<()> {
             .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
     })
-    .bind(("0.0.0.0", port))?
-    .run()
-    .await
+        .workers(workers)
+        .bind(("0.0.0.0", port))?
+        .run()
+        .await
 }

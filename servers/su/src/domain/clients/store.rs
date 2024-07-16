@@ -1,31 +1,31 @@
-use std::env::VarError;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::{env, io};
-use std::time::{SystemTime, UNIX_EPOCH};
-use dotenv::dotenv;
-use futures::future::join_all;
-use tokio::task::JoinHandle;
-use tokio::time::interval;
+use std::env::VarError;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use async_trait::async_trait;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
+use diesel::result::Error as DieselError;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use async_trait::async_trait;
-
-use super::super::SuLog;
-
-use super::super::core::dal::{
-    DataStore, JsonErrorType, Message, PaginatedMessages, Process, ProcessScheduler, Scheduler,
-    StoreErrorType, Log
-};
+use dotenv::dotenv;
+use futures::future::join_all;
+use tokio::task::JoinHandle;
+use tokio::time::interval;
 
 use crate::domain::config::AoConfig;
 
+use super::super::core::dal::{
+    DataStore, JsonErrorType, Log, Message, PaginatedMessages, Process, ProcessScheduler,
+    Scheduler, StoreErrorType
+};
+use super::super::SuLog;
+
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
-use diesel::result::Error as DieselError; // Import Diesel's Error
+// Import Diesel's Error
 
 impl From<DieselError> for StoreErrorType {
     fn from(diesel_error: DieselError) -> Self {
@@ -548,10 +548,10 @@ impl DataStore for StoreClient {
             message_id: &message.message_id()?,
             assignment_id: &message.assignment_id()?,
             message_data: serde_json::to_value(message).expect("Failed to serialize Message"),
+            bundle: &[],
             epoch: &message.epoch()?,
             nonce: &message.nonce()?,
             timestamp: &message.timestamp()?,
-            bundle: bundle_in,
             hash_chain: &message.hash_chain()?,
         };
 
@@ -1041,13 +1041,15 @@ pub struct NewProcessScheduler<'a> {
   See https://rocksdb.org/blog/2021/05/26/integrated-blob-db.html
 */
 mod bytestore {
-  use super::super::super::config::AoConfig;
-  use dashmap::DashMap;
-  use rocksdb::{Options, DB};
-  use std::sync::Arc;
-  use std::sync::RwLock;
+    use std::sync::Arc;
+    use std::sync::RwLock;
 
-  pub struct ByteStore {
+    use dashmap::DashMap;
+    use rocksdb::{DB, Options};
+
+    use super::super::super::config::AoConfig;
+
+    pub struct ByteStore {
       db: RwLock<Option<DB>>,
       config: AoConfig,
   }
