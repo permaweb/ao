@@ -267,7 +267,8 @@ export const createResultApis = async (ctx) => {
     locateNoRedirect,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger }),
-    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger })
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger })
   })
 
   const processAssignLogger = logger.child('processAssign')
