@@ -1,5 +1,5 @@
 import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
-import { assoc, identity, is } from 'ramda'
+import { assoc, find, identity, is, map, prop, propEq, when } from 'ramda'
 // import z from 'zod'
 
 import { checkStage, parseTags } from '../utils.js'
@@ -9,8 +9,9 @@ import { checkStage, parseTags } from '../utils.js'
 // }).passthrough()
 
 export function spawnProcessWith (env) {
-  let { logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign } = env
+  let { logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign, fetchSchedulerProcess } = env
 
+  fetchSchedulerProcess = fromPromise(fetchSchedulerProcess)
   writeDataItem = fromPromise(writeDataItem)
   locateScheduler = fromPromise(locateScheduler)
   locateNoRedirect = fromPromise(locateNoRedirect)
@@ -66,6 +67,28 @@ export function spawnProcessWith (env) {
               transformedData.tags.push({ name: 'Scheduler', value: schedulerResult.address })
               return of(transformedData.tags)
                 .chain(findModuleTag) // just needs to throw an error if not there
+                .chain(() => fetchSchedulerProcess(
+                  ctx.cachedSpawn.processId,
+                  schedulerResult.url
+                ))
+                .map((process) => {
+                  /**
+                   * Grab module Id from SU response
+                   */
+                  const moduleId = prop('value', find(propEq('Module', 'name'))(process.tags))
+                  /**
+                   * Replace 'Module', 'From-Module' tags with the module id from SU
+                   */
+                  const replaceModuleTags = map(
+                    when(
+                      propEq('From-Module', 'name'),
+                      (item) => { item.value = moduleId }
+                    )
+                  )
+
+                  replaceModuleTags(transformedData.tags)
+                  return process
+                })
                 .chain(
                   fromPromise(() => buildAndSign(transformedData))
                 )
@@ -78,6 +101,29 @@ export function spawnProcessWith (env) {
             .chain((schedulerResult) => {
               return of(transformedData.tags)
                 .chain(findModuleTag) // just needs to throw an error if not there
+                .chain(() => fetchSchedulerProcess(
+                  ctx.cachedSpawn.processId,
+                  schedulerResult.url
+                ))
+                .map((process) => {
+                  /**
+                   * Grab module Id from SU response
+                   */
+                  const moduleId = prop('value', find(propEq('Module', 'name'))(process.tags))
+
+                  /**
+                   * Replace 'Module', 'From-Module' tags with the module id from SU
+                   */
+                  const replaceModuleTags = map(
+                    when(
+                      propEq('From-Module', 'name'),
+                      (item) => { item.value = moduleId }
+                    )
+                  )
+
+                  replaceModuleTags(transformedData.tags)
+                  return process
+                })
                 .chain(
                   fromPromise(() => buildAndSign(transformedData))
                 )
