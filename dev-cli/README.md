@@ -117,11 +117,9 @@ You can also run `ao [command] --help` for command-lvl help.
 
 ## Testing example
 
-Once you have built your Lua into Wasm using `ao build`, the output will be a
-`process.js` and a `process.wasm` file.
+Once you have built your Lua into Wasm using `ao build`, the output will be a `process.wasm` file.
 
-The `process.js` file is the JS interop that allows invoking Wasm from a JS
-program, while the `process.wasm` is your Lua code compiled into Wasm.
+The `process.wasm` is your Lua code compiled into Wasm.
 
 ## For Developers
 
