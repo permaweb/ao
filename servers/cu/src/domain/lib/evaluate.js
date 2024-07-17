@@ -240,7 +240,7 @@ export function evaluateWith (env) {
             ),
             (err) => {
               /**
-               * finshed() will leave dangling event listeners even after this callback
+               * finished() will leave dangling event listeners even after this callback
                * has been invoked, so that unexpected errors do not cause full-on crashes.
                *
                * finished() returns a callback fn to cleanup these dangling listeners, so we make sure
@@ -249,6 +249,13 @@ export function evaluateWith (env) {
                * See https://nodejs.org/api/stream.html#streamfinishedstream-options-callback
                */
               cleanup()
+              if (!err) {
+                /**
+                 * Send a flag to the evaluator that the eval stream is finished.
+                 * This will allow for the WASM instance to be removed from the cache.
+                 */
+                ctx.evaluator({ close: true })
+              }
               err ? reject(err) : resolve()
             }
           )
