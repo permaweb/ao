@@ -1,12 +1,12 @@
 {
   "name": "node-esm-harness",
-  "description": "A test harness used to test ao SDK running in a node ESM project",
+  "description": "A test harness used to test aoconnect running in a node ESM project",
   "type": "module",
   "scripts": {
-    "postinstall": "npm link @permaweb/ao-sdk",
+    "postinstall": "npm link @permaweb/aoconnect",
     "start": "node --enable-source-maps index.test.js && echo '\nNode ESM Integration ✅'"
   },
   "dependencies": {
-    "@permaweb/ao-sdk": "*"
+    "@permaweb/aoconnect": "*"
   }
 }

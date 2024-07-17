@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.56](https://github.com/permaweb/ao/compare/connect@v0.0.55...connect@v0.0.56) (2024-06-18)
+
+
+### Bug Fixes
+
+* **connect:** add note to readme about usage with Next.js [#526](https://github.com/permaweb/ao/issues/526) ([4aeb407](https://github.com/permaweb/ao/commit/4aeb407619d09e2df76eacbaec9964a06e8c1a19))
+* **connect:** fix webpack module resolution for browsers ([f1dbada](https://github.com/permaweb/ao/commit/f1dbada732a8553502eaa7d313236e005c2bd5fa))
+
 ## [0.0.55](https://github.com/permaweb/ao/compare/connect@v0.0.54...connect@v0.0.55) (2024-05-28)
 
 

@@ -9,7 +9,8 @@ import {
   removeTagsByNameMaybeValue, joinUrl, preprocessUrls, backoff,
   isLaterThan,
   isEarlierThan,
-  maybeParseInt
+  maybeParseInt,
+  isEqualTo
 } from './utils.js'
 
 describe('utils', () => {
@@ -262,6 +263,24 @@ describe('utils', () => {
     })
   })
 
+  describe('isEarlierThan', () => {
+    const now = new Date()
+    const tenSecondsAgo = now - 10000
+
+    test('should return whether the right is equal to the left', () => {
+      // non-matching timestamp
+      assert.ok(!isEqualTo({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // non-matching ordinate
+      assert.ok(!isEqualTo({ timestamp: now, ordinate: '12' }, { timestamp: now, ordinate: '13' }))
+      // non-matching cron
+      assert.ok(!isEqualTo({ timestamp: now, ordinate: '12', cron: '0-1-minute' }, { timestamp: now, ordinate: '12', cron: '1-1-minute' }))
+      // undefined ordinates (previous bug hedge)
+      assert.ok(!isEqualTo({ timestamp: now, ordinate: undefined, cron: '0-1-minute' }, { timestamp: now, ordinate: undefined, cron: '1-1-minute' }))
+
+      assert.ok(isEqualTo({ timestamp: now, ordinate: '12', cron: '0-1-minute' }, { timestamp: now, ordinate: '12', cron: '0-1-minute' }))
+    })
+  })
+
   describe('findPendingForProcessBefore', () => {
     const pendingMap = new Map()
     const processId = 'process-123'
@@ -394,7 +413,6 @@ describe('utils', () => {
     })
 
     test('should map NaN to undefined', () => {
-      console.log(maybeParseInt(NaN))
       assert.ok(maybeParseInt(NaN) === undefined)
     })
   })

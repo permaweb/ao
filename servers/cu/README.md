@@ -72,8 +72,6 @@ There are a few environment variables that you can set. Besides
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
   `embedded`)
 - `DB_URL`: the name of the embdeeded database (defaults to `ao-cache`)
-- `DUMP_PATH`: the path to send `heap` snapshots to. (See
-  [Heap Snapshots](#heap-snapshot))
 - `PROCESS_WASM_MEMORY_MAX_LIMIT`: The maximum `Memory-Limit`, in bytes,
   supported for `ao` processes (defaults to `1GB`)
 - `PROCESS_WASM_COMPUTE_MAX_LIMIT`: The maximum `Compute-Limit`, in bytes,
@@ -96,8 +94,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process
   latest memory LRU In-Memory cache. An entries age is reset each time it is
   accessed
-- `PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD`: The time in milliseconds that a process' Memory should kept hot in memory, as part of the cache entry, before being drained into a file. This is useful to free up memory from processes who've been evalated and cached, but have not been accessed recently. Set to zero to always keep process' Memory hot in memory, as the expense of more heap usage (defaults to `1m`)
-- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store cached process memory (Defaults to the os temp directory)
+- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store drained process memory (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
   (defaults to `0`)
@@ -123,9 +120,10 @@ There are a few environment variables that you can set. Besides
 - `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a
   `blacklist` (defaults to none)
 - `ALLOW_PROCESSES`: The counterpart to RESTRICT_PROCESSES. When configured the
-  CU will only execute these processes aka. a `whitelist` (defaults to allow all processes) 
+  CU will only execute these processes aka. a `whitelist` (defaults to allow all processes)
 - `ALLOW_OWNERS`: A list of process owners, whose processes are allowed to execute
 on the CU aka. an owner `whitelist` (defaults to allow all owners)
+- `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are trusted and the CU can start from
 
 ## Tests
 

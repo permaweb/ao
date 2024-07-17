@@ -78,6 +78,6 @@ export function loadMessageMetaWith (env) {
         messageTxId: ctx.messageTxId
       }))
       .map(ctxSchema.parse)
-      .map(logger.tap('Loaded message process and timestamp and appended to ctx %j'))
+      // .map(logger.tap('Loaded message process and timestamp and appended to ctx %j'))
   }
 }

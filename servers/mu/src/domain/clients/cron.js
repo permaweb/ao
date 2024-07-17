@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import cron from 'node-cron'
 import { Mutex } from 'async-mutex'
+import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
 const mutex = new Mutex()
 /**
@@ -35,12 +36,17 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
     if (!fs.existsSync(PROC_FILE_PATH)) return
     const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
 
-    /**
-     * This .replace is used to fix corrupted json files
-     * it should be removed later now that the corruption
-     * issue is solved
-     */
-    const obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+    let obj
+    try {
+      /**
+       * This .replace is used to fix corrupted json files
+       * it should be removed later now that the corruption
+       * issue is solved
+       */
+      obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+    } catch (_e) {
+      obj = {}
+    }
 
     /*
      * start new os procs when the server starts because
@@ -56,8 +62,19 @@ function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
   }
 }
 
-function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH }) {
+function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH, monitorGauge }) {
+  const getCursorFetch = withTimerMetricsFetch({
+    fetch,
+    timer: histogram,
+    startLabelsFrom: () => ({
+      operation: 'getCursor'
+    })
+  })
   return async ({ processId }) => {
+    if (cronsRunning[processId]) {
+      throw new Error('Process already being monitored')
+    }
+    monitorGauge.inc()
     const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
 
     let ct = null
@@ -129,7 +146,7 @@ function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron
         return fs.readFileSync(cursorFilePath, 'utf8')
       }
 
-      const latestResults = await fetch(`${CU_URL}/results/${processId}?sort=DESC&limit=1&processId=${processId}`)
+      const latestResults = await getCursorFetch(`${CU_URL}/results/${processId}?sort=DESC&limit=1&processId=${processId}`)
 
       const latestJson = await latestResults.json()
         .catch(error => {
@@ -154,9 +171,14 @@ function startMonitoredProcessWith ({ logger, CRON_CURSOR_DIR, CU_URL, fetchCron
   }
 }
 
-function killMonitoredProcessWith ({ logger, PROC_FILE_PATH }) {
+function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge }) {
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
+    if (!ct) {
+      logger(`Cron process not found: ${processId}`)
+      throw new Error('Process monitor not found')
+    }
+    monitorGauge.dec()
     ct.stop()
     delete cronsRunning[processId]
     delete procsToSave[processId]

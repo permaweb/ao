@@ -2,6 +2,7 @@
 import { Transform, compose as composeStreams } from 'node:stream'
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
+import DataLoader from 'dataloader'
 
 import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../utils.js'
 
@@ -74,24 +75,45 @@ export const mapNode = pipe(
         })
       )
     ),
+    // both
+    applySpec({
+      isAssignment: pipe(
+        path(['message', 'id']),
+        isNil
+      )
+    }),
     // static
     always({ Cron: false })
   ]),
   // Combine into the desired shape
-  ([fAssignment, fMessage = {}, fStatic]) => ({
+  ([fAssignment, fMessage = {}, fBoth, fStatic]) => ({
     cron: undefined,
     ordinate: fAssignment.message.Nonce,
-    name: `Scheduled Message ${fMessage.Id || fAssignment.message.Message} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
+    name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
     exclude: fAssignment.Exclude,
-    isAssignment: !fMessage.Id,
+    isAssignment: fBoth.isAssignment,
     message: mergeAll([
       fMessage,
       fAssignment.message,
       /**
-       * Ensure Id is always set, regardless if this is a message
+       * For an Assignment, the message, and ergo it's Id will be undefined,
+       * but the assignment will contain a Message Tag that indicates the assigned tx.
+       * In this case, the assigned data can be queried for and hydrated, using the Id.
+       *
+       * So we must ensure that this field is always set, regardless if this is a message
        * or just an Assignment for an existing message on-chain
        */
-      { Id: fMessage.Id || fAssignment.message.Message },
+      { Id: fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id },
+      /**
+       * For an Assignment, the Target is derived from the recipient of
+       * the assigned tx.
+       *
+       * So we explicitly set Target to undefined here, such that hydration of Target
+       * must occur later. Otherwise we will receive high signal, in the form of an error,
+       * that the impl is incorrect, as opposed to an assignment potentially being misinterpreted
+       * as a bonafide scheduled message.
+       */
+      { Target: fBoth.isAssignment ? undefined : fAssignment.message.Target },
       fStatic
     ]),
     /**
@@ -111,6 +133,41 @@ export const mapNode = pipe(
 export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
 
+  const fetchPageDataloader = new DataLoader(async (args) => {
+    fetchPageDataloader.clearAll()
+
+    return Promise.allSettled(
+      args.map(({ suUrl, processId, from, to, pageSize }) => {
+        return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
+          .then(filter(isNotNil))
+          .then(params => new URLSearchParams(params))
+          .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes))
+          .catch(async (err) => {
+            logger(
+              'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
+              suUrl,
+              processId,
+              from,
+              to
+            )
+            throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${await strFromFetchError(err)}`)
+          })
+          .then(resToJson)
+      })
+    ).then((values) =>
+      /**
+       * By returning the error, Dataloader will register as an error
+       * for the individual call to load, without failing the batch as a whole
+       *
+       * See https://www.npmjs.com/package/dataloader#caching-errors
+       */
+      values.map(v => v.status === 'fulfilled' ? v.value : v.reason)
+    )
+  }, {
+    cacheKeyFn: ({ suUrl, processId, from, to, pageSize }) => `${suUrl},${processId},${from},${to},${pageSize}`,
+    batchScheduleFn: (cb) => setTimeout(cb, 20)
+  })
+
   /**
    * Returns an async generator that emits scheduled messages,
    * one at a time
@@ -123,24 +180,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
    */
   function fetchAllPages ({ suUrl, processId, from, to }) {
     async function fetchPage ({ from }) {
-      return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
-        .then(filter(isNotNil))
-        .then(params => new URLSearchParams(params))
-        .then((params) => backoff(
-          () => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes),
-          { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
-        ))
-        .catch(async (err) => {
-          logger(
-            'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
-            suUrl,
-            processId,
-            from,
-            to
-          )
-          throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${await strFromFetchError(err)}`)
-        })
-        .then(resToJson)
+      const params = new URLSearchParams(filter(isNotNil, { 'process-id': processId, from, to, limit: pageSize }))
+
+      return backoff(
+        () => fetchPageDataloader.load({ suUrl, processId, from, to, pageSize }),
+        { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
+      )
     }
 
     return async function * scheduled () {

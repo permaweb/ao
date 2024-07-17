@@ -66,6 +66,7 @@ function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
         Signature: meta.signature,
         Owner: meta.owner.address,
         From: mapFrom({ tags: meta.tags, owner: meta.owner.address }),
+        Target: meta.recipient || '',
         Tags: meta.tags,
         Anchor: meta.anchor,
         Data

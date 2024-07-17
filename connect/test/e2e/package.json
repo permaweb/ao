@@ -1,10 +1,10 @@
 {
-  "name": "@permaweb/ao-sdk-e2e",
-  "description": "integration test suites for @permaweb/ao-sdk",
+  "name": "@permaweb/aoconnect-e2e",
+  "description": "integration test suites for @permaweb/aoconnect",
   "type": "module",
   "scripts": {
     "test": "npm run test:node-cjs && npm run test:node-esm && npm run test:browser",
-    "test:browser": "cd ./browser-esm && npm i && npm start",
+    "test:browser": "cd ./browser-esm && npm i --legacy-peer-deps && npm start",
     "test:node-cjs": "cd ./node-cjs && npm i && npm start",
     "test:node-esm": "cd ./node-esm && npm i && npm start"
   }

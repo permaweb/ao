@@ -14,13 +14,13 @@ import { logger } from './logger.js'
 
 import { mountRoutesWithByAoUnit } from './routes/byAoUnit.js'
 
-export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
+export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners, processToHost, ownerToHost }) {
   const _logger = logger.child('proxy')
   _logger('Configuring to reverse proxy ao %s units...', aoUnit)
 
   const proxy = httpProxy.createProxyServer({})
 
-  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners }) : undefined
+  const bailout = aoUnit === 'cu' ? bailoutWith({ fetch, subrouterUrl, surUrl, owners, processToHost, ownerToHost }) : undefined
   const determineHost = determineHostWith({ hosts, bailout })
 
   async function trampoline (init) {
@@ -65,6 +65,8 @@ export function proxyWith ({ aoUnit, hosts, subrouterUrl, surUrl, owners }) {
       withErrorHandler,
       always(async (req, res) => {
         const processId = await processIdFromRequest(req)
+
+        if (!processId) return res.status(404).send({ error: 'Process id not found on request' })
 
         async function revProxy ({ failoverAttempt, err }) {
           /**

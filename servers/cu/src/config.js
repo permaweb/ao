@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir, cpus } from 'node:os'
 import * as path from 'node:path'
 
+import bytes from 'bytes'
 import { pipe } from 'ramda'
 import { z, ZodIssueCode } from 'zod'
 import ms from 'ms'
@@ -23,7 +24,7 @@ const MODE = process.env.NODE_CONFIG_ENV
 
 if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 
-const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2']
+const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2', 'wasm64-unknown-emscripten-draft_2024_02_15']
 
 /**
  * The server config is an extension of the config required by the domain (business logic).
@@ -33,8 +34,7 @@ const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm3
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   port: positiveIntSchema,
-  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean()),
-  DUMP_PATH: z.string().min(1)
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
 })
 
 /**
@@ -99,7 +99,6 @@ const CONFIG_ENVS = {
     ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_URL: process.env.DB_URL || 'ao-cache',
-    DUMP_PATH: process.env.DUMP_PATH || './static',
     WALLET: process.env.WALLET,
     WALLET_FILE: process.env.WALLET_FILE,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('10s'),
@@ -113,19 +112,21 @@ const CONFIG_ENVS = {
      *  catching up to a previous checkpoint.
      */
     EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: process.env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000,
-    PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
+    PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || bytes('1gb'),
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
     PROCESS_WASM_SUPPORTED_EXTENSIONS: process.env.PROCESS_WASM_SUPPORTED_EXTENSIONS || [],
     WASM_EVALUATION_MAX_WORKERS: process.env.WASM_EVALUATION_MAX_WORKERS || Math.max(cpus().length - 1, 1),
     WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE: process.env.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE || 70, // 70% of worker threads allocated to primary workloads
+    WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE: process.env.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE || 3000,
     WASM_INSTANCE_CACHE_MAX_SIZE: process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
     WASM_BINARY_FILE_DIRECTORY: process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
     PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: process.env.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS || [],
     IGNORE_ARWEAVE_CHECKPOINTS: process.env.IGNORE_ARWEAVE_CHECKPOINTS || [],
+    PROCESS_CHECKPOINT_TRUSTED_OWNERS: process.env.PROCESS_CHECKPOINT_TRUSTED_OWNERS || [],
     PROCESS_CHECKPOINT_FILE_DIRECTORY: process.env.PROCESS_CHECKPOINT_FILE_DIRECTORY || tmpdir(),
-    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
+    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || bytes('1gb'),
     PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
     PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: process.env.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD || ms('5m'),
     PROCESS_MEMORY_CACHE_FILE_DIR: process.env.PROCESS_MEMORY_CACHE_FILE_DIR || tmpdir(),
@@ -145,7 +146,6 @@ const CONFIG_ENVS = {
     ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     DB_URL: process.env.DB_URL || 'ao-cache',
-    DUMP_PATH: process.env.DUMP_PATH || tmpdir(),
     WALLET: process.env.WALLET,
     WALLET_FILE: process.env.WALLET_FILE,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('30s'),
@@ -159,19 +159,21 @@ const CONFIG_ENVS = {
      *  This is the baseline for checkpointing as no process should need to spend more than two hours catching up to a previous checkpoint.
      */
     EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: process.env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000,
-    PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || 1_000_000_000, // 1GB
+    PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || bytes('1gb'), // 1GB
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
     PROCESS_WASM_SUPPORTED_EXTENSIONS: process.env.PROCESS_WASM_SUPPORTED_EXTENSIONS || [],
     WASM_EVALUATION_MAX_WORKERS: process.env.WASM_EVALUATION_MAX_WORKERS || Math.max(cpus().length - 1, 1),
     WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE: process.env.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE || 70, // 70% of worker threads allocated to primary workloads
+    WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE: process.env.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE || 3000,
     WASM_INSTANCE_CACHE_MAX_SIZE: process.env.WASM_INSTANCE_CACHE_MAX_SIZE || 5, // 5 loaded wasm modules
     WASM_MODULE_CACHE_MAX_SIZE: process.env.WASM_MODULE_CACHE_MAX_SIZE || 5, // 5 wasm binaries
     WASM_BINARY_FILE_DIRECTORY: process.env.WASM_BINARY_FILE_DIRECTORY || tmpdir(),
     PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: process.env.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS || [],
     IGNORE_ARWEAVE_CHECKPOINTS: process.env.IGNORE_ARWEAVE_CHECKPOINTS || [],
+    PROCESS_CHECKPOINT_TRUSTED_OWNERS: process.env.PROCESS_CHECKPOINT_TRUSTED_OWNERS || [],
     PROCESS_CHECKPOINT_FILE_DIRECTORY: process.env.PROCESS_CHECKPOINT_FILE_DIRECTORY || tmpdir(),
-    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || 500_000_000, // 500MB
+    PROCESS_MEMORY_CACHE_MAX_SIZE: process.env.PROCESS_MEMORY_CACHE_MAX_SIZE || bytes('1gb'),
     PROCESS_MEMORY_CACHE_TTL: process.env.PROCESS_MEMORY_CACHE_TTL || ms('24h'),
     PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: process.env.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD || ms('5m'),
     PROCESS_MEMORY_CACHE_FILE_DIR: process.env.PROCESS_MEMORY_CACHE_FILE_DIR || tmpdir(),

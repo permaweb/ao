@@ -1,13 +1,14 @@
 import { randomBytes } from 'node:crypto'
 import PromClient from 'prom-client'
 
-export const initializeRuntimeMetricsWith = ({ prefix = 'ao_cu' }) => {
+PromClient.register.setContentType(PromClient.Registry.OPENMETRICS_CONTENT_TYPE)
+
+export const initializeRuntimeMetricsWith = ({ prefix = 'ao_cu' } = {}) => {
   let initialized = false
 
   return () => {
     if (initialized) return PromClient.register
 
-    PromClient.register.setContentType(PromClient.Registry.OPENMETRICS_CONTENT_TYPE)
     PromClient.collectDefaultMetrics({ prefix })
     initialized = true
     return PromClient.register
@@ -30,9 +31,25 @@ export const timer = (label, ctx) => {
   }
 }
 
-export const gaugeWith = ({ prefix = 'ao_cu' }) => {
+export const gaugeWith = ({ prefix = 'ao_cu' } = {}) => {
   return ({ name, description, collect }) => {
-    const g = new PromClient.Gauge({ name: `${prefix}_${name}`, help: description, collect })
+    const g = new PromClient.Gauge({
+      name: `${prefix}_${name}`,
+      help: description,
+      /**
+       * We abstract the use of 'this'
+       * to the collect function here.
+       *
+       * This way, the client may provide a function
+       * that simply returns the collected value to set,
+       * which will this call set here
+       */
+      ...(collect
+        ? { collect: async function () { this.set(await collect()) } }
+        : {}
+      ),
+      enableExemplars: true
+    })
 
     return {
       inc: (n) => g.inc(n),
@@ -42,12 +59,36 @@ export const gaugeWith = ({ prefix = 'ao_cu' }) => {
   }
 }
 
-export const histogramWith = ({ prefix = 'ao_cu' }) => {
-  return ({ name, description }) => {
-    const h = new PromClient.Histogram({ name: `${prefix}_${name}`, help: description })
+export const histogramWith = ({ prefix = 'ao_cu' } = {}) => {
+  return ({ name, description, buckets, labelNames = [] }) => {
+    const h = new PromClient.Histogram({ name: `${prefix}_${name}`, help: description, buckets, labelNames, enableExemplars: true })
 
     return {
-      observe: (v) => h.observe(v)
+      observe: (v) => h.observe(v),
+      startTimer: (labels, exemplars) => h.startTimer(labels, exemplars)
+    }
+  }
+}
+
+export const summaryWith = ({ prefix = 'ao_cu' } = {}) => {
+  const DEFAULT_MAX_AGE_SECONDS = 300
+  const DEFAULT_MAX_AGE_BUCKETS = 3
+  const DEFAULT_PERCENTILES = [0.01, 0.05, 0.5, 0.9, 0.95, 0.99]
+
+  return ({ name, description, percentiles, maxAgeSeconds, ageBuckets, labelNames = [] }) => {
+    const s = new PromClient.Summary({
+      name: `${prefix}_${name}`,
+      help: description,
+      percentiles: percentiles || DEFAULT_PERCENTILES,
+      labelNames,
+      maxAgeSeconds: maxAgeSeconds || DEFAULT_MAX_AGE_SECONDS,
+      ageBuckets: ageBuckets || DEFAULT_MAX_AGE_BUCKETS,
+      enableExemplars: true
+    })
+
+    return {
+      observe: (v) => s.observe(v),
+      startTimer: (labels, exemplars) => s.startTimer(labels, exemplars)
     }
   }
 }

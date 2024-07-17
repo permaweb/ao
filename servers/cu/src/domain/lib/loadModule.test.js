@@ -2,9 +2,10 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
+import { lensIndex, remove, set } from 'ramda'
+
 import { createLogger } from '../logger.js'
 import { loadModuleWith } from './loadModule.js'
-import { lensIndex, remove, set } from 'ramda'
 
 const PROCESS = 'contract-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
@@ -46,13 +47,16 @@ describe('loadModule', () => {
       logger
     })
 
+    const processTags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Compute-Limit', value: '10000' },
+      { name: 'Memory-Limit', value: '11-kb' }
+    ]
+
     const result = await loadModule({
       id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Compute-Limit', value: '10000' },
-        { name: 'Memory-Limit', value: '11-kb' }
-      ]
+      tags: processTags,
+      owner: 'p-owner-123'
     }).toPromise()
 
     assert.equal(result.moduleId, 'foobar')
@@ -64,7 +68,11 @@ describe('loadModule', () => {
       outputEncoding: 'JSON-1',
       computeLimit: 10000,
       memoryLimit: 11264,
-      extensions: {}
+      extensions: {},
+      mode: 'Assignments',
+      spawn: { id: PROCESS, owner: 'p-owner-123', tags: processTags },
+      module: { id: 'foobar', owner: 'owner-123', tags: moduleTags },
+      blockHeight: 100
     })
     assert.equal(result.id, PROCESS)
   })
@@ -92,12 +100,15 @@ describe('loadModule', () => {
       logger
     })
 
+    const processTags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Compute-Limit', value: '10000' }
+    ]
+
     const result = await loadModule({
       id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' },
-        { name: 'Compute-Limit', value: '10000' }
-      ]
+      owner: 'p-owner-123',
+      tags: processTags
     }).toPromise()
 
     assert.equal(result.moduleId, 'foobar')
@@ -109,7 +120,11 @@ describe('loadModule', () => {
       outputEncoding: 'JSON-1',
       computeLimit: 10000,
       memoryLimit: 15360,
-      extensions: {}
+      extensions: {},
+      mode: 'Assignments',
+      spawn: { id: PROCESS, owner: 'p-owner-123', tags: processTags },
+      module: { id: 'foobar', owner: 'owner-123', tags: moduleTags },
+      blockHeight: 100
     })
     assert.equal(result.id, PROCESS)
   })
@@ -142,11 +157,14 @@ describe('loadModule', () => {
       logger
     })
 
+    const processTags = [
+      { name: 'Module', value: 'foobar' }
+    ]
+
     const result = await loadModule({
       id: PROCESS,
-      tags: [
-        { name: 'Module', value: 'foobar' }
-      ]
+      owner: 'p-owner-123',
+      tags: processTags
     }).toPromise()
 
     assert.equal(result.moduleId, 'foobar')
@@ -157,7 +175,11 @@ describe('loadModule', () => {
       outputEncoding: 'JSON-1',
       computeLimit: 15000,
       memoryLimit: 15360,
-      extensions: {}
+      extensions: {},
+      mode: 'Assignments',
+      spawn: { id: PROCESS, owner: 'p-owner-123', tags: processTags },
+      module: { id: 'foobar', owner: 'owner-123', tags: moduleTags },
+      blockHeight: 100
     })
     assert.equal(result.moduleOwner, 'owner-123')
     assert.equal(result.id, PROCESS)

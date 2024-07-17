@@ -3,20 +3,19 @@ import { act, waitFor, render, screen } from '@testing-library/svelte'
 
 import App from './App.svelte'
 
-// TODO: need a new AO process
-const PROCESS = 'VkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro'
+const PROCESS = 'f6Ie4lnI-g_on29WbRSevAI8f6QTrlTXG1Xb0-TV_Sc'
 
-test('integration - readState', async () => {
-  await act(async () => render(App, { CONTRACT: PROCESS }))
+test('integration - dryrun', async () => {
+  await act(async () => render(App, { PROCESS }))
 
   await waitFor(() => {
-    console.log('waiting for process-state to render...')
-    screen.getByTestId('process-state')
+    console.log('waiting for dryrun result to render...')
+    screen.getByTestId('dryrun-result')
   }, {
     interval: 2000,
     timeout: 30000
   })
 
-  const processStateNode = screen.getByTestId('process-state')
-  expect(processStateNode).toBeTruthy()
+  const dryrunResultNode = screen.getByTestId('dryrun-result')
+  expect(dryrunResultNode).toBeTruthy()
 })

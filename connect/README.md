@@ -14,6 +14,7 @@ This module will run in a browser or server environment.
 - [Usage](#usage)
     - [ESM (Node & Browser) aka type: `module`](#esm-node--browser-aka-type-module)
     - [CJS (Node) type: `commonjs`](#cjs-node-type-commonjs)
+    - [Usage with Webpack](#usage-with-webpack)
   - [API](#api)
     - [`result`](#result)
     - [`results`](#results)
@@ -50,6 +51,14 @@ const { spawn, message, result } = require("@permaweb/aoconnect");
 
 The duration of this document will use `ESM` for examples
 
+#### Usage with Webpack
+
+AOConnect by default exposes a file designed to be used in the browser. If you're using Webpack to bundle an app for the server and are having issues, you may need to update import statements to point at an implementation for node like so.
+
+```js
+import { createDataItemSigner, message } from "@permaweb/aoconnect/node";
+```
+
 ### API
 
 #### `result`
@@ -59,7 +68,8 @@ Read the result of the message evaluation from an `ao` Compute Unit `cu`
 ```js
 import { result } from "@permaweb/aoconnect";
 
-let { messages, spawns, output, error } = await result({
+
+let { Messages, Spawns, Output, Error } = await result({
   message: "l3hbt-rIJ_dr9at-eQ3EVajHWMnxPNm9eBtXpzsFWZc",
   process: "5SGJUlPwlenkyuG9-xWh0Rcf0azm8XEd5RBTiutgWAg",
 });

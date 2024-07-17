@@ -2,6 +2,7 @@
 name = "su"
 version = "0.1.0"
 edition = "2021"
+default-run = "su"
 
 [dependencies]
 actix-web = "4"
@@ -28,6 +29,9 @@ rsa = "0.6.1"
 dashmap = "5.5.3"
 base64 = "0.21.5"
 actix-cors = "0.6.0"
+simd-json = "0.13.10"
+futures = "0.3.30"
+rocksdb = "0.22.0"
 
 [[bin]]
 name = "su"

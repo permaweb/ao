@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.55
+FROM emscripten/emsdk:3.1.59
 LABEL maintainer "tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there
@@ -89,6 +89,12 @@ COPY ./src/ao.lua /opt/src/ao.lua
 COPY ./src/main.c /opt/main.c
 COPY ./src/main.lua /opt/main.lua
 RUN chmod +x /usr/local/bin/emcc-lua
+
+###################################
+# BUILD WeaveDrive Extension Helper
+###################################
+COPY ./src/aolibc /opt/aolibc
+RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1"
 
 ENV CC 'emcc -s WASM=1'
 ENV NM 'llvm-nm'

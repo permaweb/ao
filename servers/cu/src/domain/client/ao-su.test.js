@@ -43,7 +43,7 @@ describe('ao-su', () => {
       }
     }
 
-    test('should map the current shape', () => {
+    test('should map a scheduled message', () => {
       const res = mapNode({
         message: {
           id: messageId,
@@ -79,7 +79,7 @@ describe('ao-su', () => {
       assert.equal(res.isAssignment, false)
     })
 
-    test('should set isAssignment to true message.Id to assignment Message tag if an assignment of message on-chain', () => {
+    describe('should map an assigned tx', () => {
       const res = mapNode({
         message: null,
         assignment: {
@@ -99,18 +99,37 @@ describe('ao-su', () => {
           data: 'su-data-123'
         }
       })
-      assert.deepStrictEqual(res.message, {
-        Id: assignedMessageId,
-        Message: assignedMessageId,
-        Target: 'process-123',
-        Epoch: 0,
-        Nonce: 23,
-        Timestamp: now,
-        'Block-Height': 123,
-        'Hash-Chain': 'hash-123',
-        Cron: false
+
+      test('should set isAssignment to true', () => {
+        assert.ok(res.isAssignment)
       })
-      assert.ok(res.isAssignment)
+
+      test('should set message.Id to the assignment Message tag', () => {
+        assert.equal(res.message.Id, assignedMessageId)
+        assert.equal(res.message.Message, assignedMessageId)
+      })
+
+      test('should explicitly set message.Target to undefined', () => {
+        assert.equal(res.message.Target, undefined)
+      })
+
+      test('should set the name to indicate an assignment', () => {
+        assert.equal(res.name, `Assigned Message ${assignedMessageId} ${now}:23`)
+      })
+
+      test('should set all other message fields as normal', () => {
+        assert.deepStrictEqual(res.message, {
+          Id: assignedMessageId,
+          Message: assignedMessageId,
+          Target: undefined,
+          Epoch: 0,
+          Nonce: 23,
+          Timestamp: now,
+          'Block-Height': 123,
+          'Hash-Chain': 'hash-123',
+          Cron: false
+        })
+      })
     })
   })
 

@@ -1,12 +1,12 @@
 {
   "name": "node-cjs-harness",
-  "description": "A test harness used to test ao SDK running in a node CJS project",
+  "description": "A test harness used to test aoconnect running in a node CJS project",
   "type": "commonjs",
   "scripts": {
-    "postinstall": "npm link @permaweb/ao-sdk",
+    "postinstall": "npm link @permaweb/aoconnect",
     "start": "node --enable-source-maps index.test.js && echo '\nNode CJS Integration ✅'"
   },
   "dependencies": {
-    "@permaweb/ao-sdk": "*"
+    "@permaweb/aoconnect": "*"
   }
 }

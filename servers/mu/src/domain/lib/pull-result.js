@@ -1,5 +1,6 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
+import { checkStage } from '../utils.js'
 
 const ctxSchema = z.object({
   msgs: z.any(),
@@ -11,8 +12,11 @@ const ctxSchema = z.object({
 function fetchResultWith ({ fetchResult }) {
   const fetchResultAsync = fromPromise(fetchResult)
 
-  return (ctx) =>
-    fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+  return (ctx) => {
+    return of(ctx)
+      .chain(() => {
+        return fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+      })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
           return {
@@ -44,6 +48,8 @@ function fetchResultWith ({ fetchResult }) {
 
         return of({ ...ctx, msgs, spawns, assigns })
       })
+      .toPromise()
+  }
 }
 
 export function pullResultWith (env) {
@@ -52,10 +58,19 @@ export function pullResultWith (env) {
   const fetchResult = fetchResultWith(env)
 
   return (ctx) => {
+    if (!checkStage('pull-result')(ctx)) return Resolved(ctx)
     return of(ctx)
-      .chain(fetchResult)
-      .bichain(Resolved, Resolved)
+      .map((ctx) => ({ ...ctx, tx: ctx.tx ?? ctx.spawnSuccessTx }))
+      .chain((ctx) => {
+        return of(ctx)
+          .chain(fromPromise(fetchResult))
+      })
       .map(ctxSchema.parse)
-      .map(logger.tap('Added "msgs, spawns, and assigns" to ctx'))
+      .bimap(
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
+        logger.tap('Added "msgs, spawns, and assigns" to ctx')
+      )
   }
 }

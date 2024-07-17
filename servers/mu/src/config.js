@@ -7,6 +7,12 @@ import { cpus, tmpdir } from 'node:os'
 const walletPath = process.env.PATH_TO_WALLET
 const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
 
+const positiveIntSchema = z.preprocess((val) => {
+  if (val == null) return -1
+  if (typeof val === 'number') return val
+  return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
+}, z.number().nonnegative())
+
 /**
  * Some frameworks will implicitly override NODE_ENV
  *
@@ -30,7 +36,10 @@ export const domainConfigSchema = z.object({
   UPLOADER_URL: z.string(),
   PROC_FILE_PATH: z.string(),
   CRON_CURSOR_DIR: z.string(),
-  MAX_WORKERS: z.number()
+  MAX_WORKERS: positiveIntSchema,
+  DB_URL: z.string(),
+  TASK_QUEUE_MAX_RETRIES: z.number(),
+  TASK_QUEUE_RETRY_DELAY: z.number()
 })
 
 /**
@@ -44,7 +53,8 @@ const serverConfigSchema = domainConfigSchema.extend({
     if (!val) return -1
     if (typeof val === 'number') return val
     return typeof val === 'string' ? parseInt(val) : -1
-  }, z.number().positive())
+  }, z.number().positive()),
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
 })
 
 /**
@@ -57,6 +67,7 @@ const CONFIG_ENVS = {
   development: {
     MODE,
     port: process.env.PORT || 3005,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'http://localhost:6363',
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://goldsky.arweave.net/graphql',
@@ -65,11 +76,15 @@ const CONFIG_ENVS = {
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
-    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1)
+    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
+    DB_URL: process.env.DB_URL || 'ao-cache',
+    TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
+    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
   },
   production: {
     MODE,
     port: process.env.PORT || 3005,
+    ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://goldsky.arweave.net/graphql',
@@ -78,7 +93,10 @@ const CONFIG_ENVS = {
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
     PROC_FILE_PATH: process.env.PROC_FILE_PATH || 'procs.json',
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
-    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1)
+    MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
+    DB_URL: process.env.DB_URL || 'ao-cache',
+    TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
+    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
   }
 }
 

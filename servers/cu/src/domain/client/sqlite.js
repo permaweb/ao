@@ -3,12 +3,13 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE] = [
+export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE, CHECKPOINTS_TABLE] = [
   'processes',
   'blocks',
   'modules',
   'evaluations',
-  'messages'
+  'messages',
+  'checkpoints'
 ]
 
 const createProcesses = async (db) => db.prepare(
@@ -65,6 +66,18 @@ const createMessages = async (db) => db.prepare(
   ) WITHOUT ROWID;`
 ).run()
 
+const createCheckpoints = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${CHECKPOINTS_TABLE}(
+    id TEXT PRIMARY KEY,
+    processId TEXT,
+    timestamp INTEGER,
+    ordinate TEXT,
+    cron TEXT,
+    memory TEXT,
+    evaluation TEXT
+  ) WITHOUT ROWID;`
+).run()
+
 const createBlocksIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${BLOCKS_TABLE}_height_timestamp
     ON ${BLOCKS_TABLE}
@@ -76,6 +89,12 @@ const createMessagesIndexes = async (db) => db.prepare(
     ON ${MESSAGES_TABLE}
     (id, processId, seq);
   `
+).run()
+
+const createCheckpointsIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${CHECKPOINTS_TABLE}_processId_timestamp
+    ON ${CHECKPOINTS_TABLE}
+    (processId, timestamp);`
 ).run()
 
 let internalSqliteDb
@@ -101,8 +120,10 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       .then(() => createModules(db))
       .then(() => createEvaluations(db))
       .then(() => createMessages(db))
+      .then(() => createCheckpoints(db))
       .then(() => createBlocksIndexes(db))
       .then(() => createMessagesIndexes(db))
+      .then(() => createCheckpointsIndexes(db))
   }
 
   return {

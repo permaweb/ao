@@ -73,6 +73,7 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
               name
               value
             }
+            recipient
           }
         }
       }

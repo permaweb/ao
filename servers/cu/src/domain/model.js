@@ -102,6 +102,12 @@ export const domainConfigSchema = z.object({
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
   /**
+   * The max size of the dry run worker thread pool queue
+   * of work. If the queue size hits this value,
+   * then subsequent enqueues are rejected.
+   */
+  WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE: positiveIntSchema,
+  /**
    * The percentage of worker threads to allocate to primary tasks
    * such as evaluations from "/result" or "/cron"
    *
@@ -128,6 +134,10 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
   /**
+   * An array of trusted owner wallets that Arweave checkpoints can be queried from.
+   */
+  PROCESS_CHECKPOINT_TRUSTED_OWNERS: commaDelimitedArraySchema,
+  /**
    * An array of checkpoint ids that should not be used
    */
   IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
@@ -145,14 +155,6 @@ export const domainConfigSchema = z.object({
    * An entries ttl is rest each time it is accessed
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
-  /**
-   * The time in milliseconds that a process' Memory should remain in the heap,
-   * as part of the cache entry, before being drained to a file.
-   *
-   * This helps free up memory from processes who've been evalated and cached,
-   * but have not been accessed recently
-   */
-  PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD: positiveIntSchema,
   /**
    * The directory to store drained process memory files
    */
@@ -187,7 +189,9 @@ export const domainConfigSchema = z.object({
 })
 
 export const bufferSchema = z.any().refine(buffer => {
-  return ArrayBuffer.isView(buffer) || Buffer.isBuffer(buffer)
+  return buffer instanceof ArrayBuffer ||
+    ArrayBuffer.isView(buffer) ||
+    Buffer.isBuffer(buffer)
 }, { message: 'Value must implement the buffer protocol' })
 
 export const streamSchema = z.any().refine(stream => {
@@ -220,7 +224,7 @@ export const processSchema = z.object({
 })
 
 export const processCheckpointSchema = z.object({
-  src: z.enum(['memory', 'file', 'arweave', 'cold_start']),
+  src: z.enum(['memory', 'record', 'arweave', 'cold_start']),
   fromFile: z.string().nullish(),
   Memory: bufferSchema.nullish(),
   moduleId: z.string().nullish(),
@@ -298,7 +302,13 @@ export const messageSchema = z.object({
     Signature: z.string().nullish(),
     Data: z.any().nullish(),
     Owner: z.string().min(1),
-    Target: z.string().min(1),
+    /**
+     * Target may be an empty string, in the case of assignment
+     * of a tx with no recipient
+     *
+     * Ergo, there is no min length on target.
+     */
+    Target: z.string(),
     Anchor: z.string().nullish(),
     From: z.string().min(1),
     'Forwarded-By': z.string().nullish(),

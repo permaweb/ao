@@ -4,14 +4,14 @@ import { Readable } from 'node:stream'
 import { basename, join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
+import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, isNotNil, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
 
 import { isEarlierThan, isEqualTo, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
-import { PROCESSES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
+import { PROCESSES_TABLE, CHECKPOINTS_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
 
 const gunzipP = promisify(gunzip)
@@ -22,6 +22,9 @@ function pluckTagValue (name, tags) {
   return tag ? tag.value : undefined
 }
 
+function createCheckpointId ({ processId, timestamp, ordinate, cron }) {
+  return `${[processId, timestamp, ordinate, cron].filter(isNotNil).join(',')}`
+}
 /**
  * Used to indicate we are interested in the latest cached
  * memory for the given process
@@ -30,9 +33,12 @@ export const LATEST = 'LATEST'
 
 /**
  * @type {{
- *  get: LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }>['get']
- *  set: LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }>['set']
- *  lru: LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }>
+ *  get: (processId: string) => { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }
+ *  set: (processId: string, value: { evaluation: Evaluation, Memory: ArrayBuffer }) => void
+ *  data: {
+ *    loadProcessCacheUsage: () => { size: number, calculatedSize: number, processes: { process: string, size: number }[]}
+ *    forEach: (fn: (value: { evaluation: Evaluation, File?: Promise<string | undefined>, Memory?: ArrayBuffer }) => unknown) => void
+ *  }
  * }}
  *
  * @typedef Evaluation
@@ -47,7 +53,14 @@ export const LATEST = 'LATEST'
  * @prop {string} [cron]
  */
 let processMemoryCache
-export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_THRESHOLD, gauge, onEviction, writeProcessMemoryFile }) {
+
+/**
+ * setTimeout is passed in as a dependency here because in a few instances such as TTL timeout, a value greater than the safe integer limit is used
+ * which causes setTimeout to overflow and return immediately. Allowing the caller to pass in their own setTimeout function allows them to handle this
+ * via passing in a new implementation such as using the 'long-timeout' library
+ * This resolves issue #666
+ */
+export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, writeProcessMemoryFile, setTimeout, clearTimeout }) {
   if (processMemoryCache) return processMemoryCache
 
   const clearTimerWith = (map) => (key) => {
@@ -67,8 +80,31 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
   const ttlTimers = new Map()
   const clearTtlTimer = clearTimerWith(ttlTimers)
 
-  const drainToFileTimers = new Map()
-  const clearDrainToFileTimer = clearTimerWith(drainToFileTimers)
+  function setTtl (key) {
+    clearTtlTimer(key)
+
+    const ttl = setTimeout(() => {
+      /**
+       * Calling delete on the LRUCache
+       * will trigger the disposeAfter callback on the cache
+       * to be called
+       */
+      lru.delete(key)
+      ttlTimers.delete(key)
+    }, TTL)
+    ttl.unref()
+
+    ttlTimers.set(key, ttl)
+  }
+
+  /**
+   * @type {Map<string, DrainedCacheValue>}
+   *
+   * @typedef DrainedCacheValue
+   * @property {Evaluation} evaluation
+   * @property {Promise<string | undefined>} File
+   */
+  const drainedToFile = new Map()
 
   /**
    * Expose the total count of processes cached on this unit,
@@ -77,15 +113,17 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
   gauge({
     name: 'ao_process_total',
     description: 'The total amount of ao Processes cached on the Compute Unit',
-    collect: function () {
-      this.set(data.size)
-    }
+    collect: () => lru.size + drainedToFile.size
   })
 
   /**
-   * @type {LRUCache<string, { evaluation: Evaluation, File?: string, Memory?: ArrayBuffer }}
+   * @type {LRUCache<string, LRUCacheValue}
+   *
+   * @typedef LRUCacheValue
+   * @property {Evaluation} evaluation
+   * @property {ArrayBuffer} Memory
    */
-  const data = new LRUCache({
+  const lru = new LRUCache({
     /**
      * #######################
      * Capacity Configuration
@@ -94,95 +132,140 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, DRAIN_TO_FILE_T
     maxSize: MAX_SIZE,
     /**
      * Size is calculated using the Memory Array Buffer
-     * or just the name of the file (negligible in the File case)
      */
-    sizeCalculation: ({ Memory, File }) => {
-      if (Memory) return Memory.byteLength
-      return File.length
-    },
-    noDisposeOnSet: true,
-    disposeAfter: (value, key, reason) => {
-      if (reason === 'set') return
+    sizeCalculation: ({ Memory }) => Memory.byteLength,
+    /**
+     * The process has either lived out its ttl, or has been evicted
+     * from the cache.
+     *
+     * So we drain Process memory to a file, updating the cache entry
+     * in the LRU In-Memory cache, but removing the process Memory from the heap,
+     * clearing up space
+     *
+     * On a subsequent read, client may need to read the process memory back in from
+     * a file
+     */
+    disposeAfter: async (value, key, reason) => {
+      if (reason === 'delete' || reason === 'evict') {
+        /**
+         * In some way the Memory was removed or zeroed out
+         *
+         * There is no Memory, so nothing to preserve by writing
+         * to a file, so simply noop, letting the cache entry
+         * naturally be evicted (gone forever)
+         *
+         * This is basically a hedge against a defunct entry
+         */
+        if (!value.Memory || !value.Memory.byteLength) return
 
-      clearTtlTimer(key)
-      onEviction({ key, value })
+        /**
+         * Add a cache entry to the drainedToFile cache with an entry containing a
+         * file reference containing the process memory
+         * and remove the reference to the actual Memory, so that it can be GC'd,
+         * and freed up in the LRU Cache
+         *
+         * Since we are storing in an internal separate data store,
+         * this won't have a ttl associated with it.
+         *
+         * Note we do not mutate the old object, and instead cache a new one,
+         * in case the old object containing the memory is in use elsewhere
+         *
+         * Unlike 'dispose', It's safe to add back to the LRU Cache here (if needed). From lru-cache docs:
+         * """
+         *  It is safe to add an item right back into the cache at this point.
+         * However, note that it is *very* easy to inadvertently create infinite
+         * recursion this way.
+         * """
+         */
+        logger('Draining memory of size %d for process "%s" to file...', value.Memory.byteLength, key)
+        drainedToFile.set(
+          key,
+          {
+            evaluation: value.evaluation,
+            File: writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
+              .catch((err) => {
+                logger(
+                  'Error occurred when draining Memory for evaluation "%j" to a file. Skipping adding back to the cache...',
+                  value.evaluation,
+                  err
+                )
+                lru.delete(key)
+                return undefined
+              }),
+            Memory: undefined
+          })
+      }
     }
   })
   processMemoryCache = {
     get: (key) => {
-      if (!data.has(key)) return undefined
-
       /**
-       * Will subsequently renew the age
-       * and recency of the cached value
+       * A value was in the LRU In-Memory Cache
        */
-      const value = data.get(key)
-      processMemoryCache.set(key, value)
+      if (lru.has(key)) {
+        const value = lru.get(key)
 
-      return value
-    },
-    set: (key, value) => {
-      clearTtlTimer(key)
-      clearDrainToFileTimer(key)
-      /**
-       * Calling delete will trigger the disposeAfter callback on the cache
-       * to be called
-       */
-      const ttl = setTimeout(() => {
-        data.delete(key)
-        ttlTimers.delete(key)
-        clearDrainToFileTimer(key)
-      }, TTL).unref()
+        /**
+         * Somehow the Memory buffer was zeroed out,
+         * perhaps from a transfer to a worker thread gone wrong.
+         *
+         * Regardless, we cannot use the entry, so clear it's ttl timer
+         * and implicitly delete the defunct entry from all caches,
+         * internally
+         *
+         * This is basically a hedge against a defunct entry
+         */
+        if (value.Memory && !value.Memory.byteLength) {
+          clearTtlTimer(key)
+          lru.delete(key)
+          drainedToFile.delete(key)
+          return
+        }
 
-      ttlTimers.set(key, ttl)
-
-      /**
-       * Set up timer to drain Process memory to a file, if not accessed
-       * within the DRAIN_TO_FILE period ie. 30 seconds
-       *
-       * This keeps the cache entry in the LRU In-Memory cache, but removes
-       * the process Memory from the heap, clearing up space
-       *
-       * On subsequent read, client may need to read the memory back in from
-       * a file
-       */
-      if (value.Memory && DRAIN_TO_FILE_THRESHOLD) {
-        const drainToFile = setTimeout(async () => {
-          const file = await writeProcessMemoryFile({ Memory: value.Memory, evaluation: value.evaluation })
-          /**
-           * Update the cache entry with the file reference containing the memory
-           * and remove the reference to the Memory, so that it can be GC'd.
-           *
-           * Since we are setting on the underlying data store directly,
-           * this won't reset the ttl
-           *
-           * Note we do not mutate the old object, and instead cache a new one,
-           * in case the old object containing the memory is in use elsewhere
-           */
-          data.set(key, { evaluation: value.evaluation, File: file, Memory: undefined })
-          drainToFileTimers.delete(key)
-        }, DRAIN_TO_FILE_THRESHOLD).unref()
-
-        drainToFileTimers.set(key, drainToFile)
+        /**
+         * Will subsequently renew the age
+         * and recency of the cached value
+         */
+        setTtl(key)
+        return value
       }
 
-      return data.set(key, value)
+      if (drainedToFile.has(key)) return drainedToFile.get(key)
     },
-    lru: data
+    set: (key, value) => {
+      /**
+       * The Memory is being added back to the LRU Cache,
+       * so the drainedToFile entry needs to be removed
+       */
+      drainedToFile.delete(key)
+      setTtl(key)
+      return lru.set(key, value)
+    },
+    data: {
+      loadProcessCacheUsage: () => {
+        const lruSize = lru.size
+        const drainedSize = drainedToFile.size
+        const size = lruSize + drainedSize
+
+        const lruCalcSize = lru.calculatedSize
+        const drainedCalcSize = drainedToFile.size * 50
+        const calculatedSize = lruCalcSize + drainedCalcSize
+
+        const lruProcesses = lru.dump()
+          .map(([key, entry]) => ({ process: key, size: entry.size }))
+        const drainedProcesses = Array.from(drainedToFile.keys()).map((key) => ({ process: key, size: 50 }))
+        const processes = lruProcesses.concat(drainedProcesses)
+
+        return { size, calculatedSize, processes }
+      },
+      forEach: (fn) => {
+        Array.from(lru.values()).forEach(fn)
+        Array.from(drainedToFile.values()).forEach(fn)
+      }
+    }
   }
 
   return processMemoryCache
-}
-
-export function loadProcessCacheUsage () {
-  if (!processMemoryCache) return
-
-  return {
-    size: processMemoryCache.lru.size,
-    calculatedSize: processMemoryCache.lru.calculatedSize,
-    processes: processMemoryCache.lru.dump()
-      .map(([key, entry]) => ({ process: key, size: entry.size }))
-  }
 }
 
 export function isProcessOwnerSupportedWith ({ ALLOW_OWNERS }) {
@@ -409,6 +492,110 @@ export function writeProcessMemoryFileWith ({ DIR, writeFile }) {
 
 /**
  * ################################
+ * #########  sqlite utils ##########
+ * ################################
+ */
+
+export function findCheckpointRecordBeforeWith ({ db }) {
+  function createQuery ({ processId, before }) {
+    const timestamp = before === 'LATEST' ? new Date().getTime() : before.timestamp
+    /** We are grabbing the most recent 5 checkpoints that occur after the before timestamp.
+     * Generally, the most recent timestamp will be the best option (LIMIT 1).
+     * However, in some cases, many checkpoints can share the same timestamps. If this is the case, we will have
+     * to compare their crons, ordinates, etc (subsequent latestCheckpointBefore).
+     * We choose 5 because we believe that it is a sufficiently
+     * large enough set to ensure we include the correct checkpoint.
+     */
+
+    return {
+      sql: `
+        SELECT *
+        FROM ${CHECKPOINTS_TABLE}
+        WHERE
+          processId = ? AND timestamp < ?
+        ORDER BY timestamp DESC
+        LIMIT 5;
+      `,
+      parameters: [processId, timestamp]
+    }
+  }
+
+  return ({ processId, before }) => {
+    /**
+     * Find all the Checkpoint records for this process
+     */
+    return of({ processId, before })
+      .chain((doc) => {
+        return of(doc)
+          .map(createQuery)
+          .chain(fromPromise((query) => db.query(query)))
+      })
+      .map((results) => {
+        return results.map((result) => ({ ...result, Memory: JSON.parse(pathOr({}, ['memory'])(result)), evaluation: JSON.parse(pathOr({}, ['evaluation'])(result)) }))
+      })
+      .map((parsed) => {
+        return parsed.reduce(
+          latestCheckpointBefore(before),
+          undefined
+        )
+      })
+      .toPromise()
+  }
+}
+
+export function writeCheckpointRecordWith ({ db }) {
+  const checkpointDocSchema = z.object({
+    Memory: z.object({
+      id: z.string().min(1),
+      encoding: z.coerce.string().nullish()
+    }),
+    evaluation: z.object({
+      processId: z.string().min(1),
+      moduleId: z.string().min(1),
+      timestamp: z.coerce.number(),
+      epoch: z.coerce.number().nullish(),
+      nonce: z.coerce.number().nullish(),
+      blockHeight: z.coerce.number(),
+      ordinate: z.coerce.string(),
+      encoding: z.coerce.string().nullish(),
+      cron: z.string().nullish()
+    })
+  })
+
+  function createQuery ({ Memory, evaluation }) {
+    return {
+      sql: `
+        INSERT OR IGNORE INTO ${CHECKPOINTS_TABLE}
+        (id, processId, timestamp, ordinate, cron, memory, evaluation)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      parameters: [
+        createCheckpointId(evaluation),
+        evaluation.processId,
+        evaluation.timestamp,
+        evaluation.ordinate,
+        evaluation.cron,
+        JSON.stringify(Memory),
+        JSON.stringify(evaluation)
+      ]
+    }
+  }
+
+  return ({ Memory, evaluation }) => {
+    return of({ Memory, evaluation })
+      .map(checkpointDocSchema.parse)
+      .chain((doc) =>
+        of(doc)
+          .map(createQuery)
+          .chain(fromPromise((query) => db.run(query)))
+          .map(always(doc.id))
+      )
+      .toPromise()
+  }
+}
+
+/**
+ * ################################
  * ##### Checkpoint query utils ###
  * ################################
  */
@@ -470,12 +657,14 @@ export function findLatestProcessMemoryWith ({
   readProcessMemoryFile,
   findCheckpointFileBefore,
   readCheckpointFile,
+  findCheckpointRecordBefore,
   address,
   queryGateway,
   queryCheckpointGateway,
   loadTransactionData,
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
+  PROCESS_CHECKPOINT_TRUSTED_OWNERS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -484,6 +673,7 @@ export function findLatestProcessMemoryWith ({
   findCheckpointFileBefore = fromPromise(findCheckpointFileBefore)
   readCheckpointFile = fromPromise(readCheckpointFile)
   loadTransactionData = fromPromise(loadTransactionData)
+  findCheckpointRecordBefore = fromPromise(findCheckpointRecordBefore)
 
   const IGNORED_CHECKPOINTS = new Set(IGNORE_ARWEAVE_CHECKPOINTS)
   const isCheckpointIgnored = (id) => !!IGNORED_CHECKPOINTS.size && IGNORED_CHECKPOINTS.has(id)
@@ -492,7 +682,7 @@ export function findLatestProcessMemoryWith ({
 
   const GET_AO_PROCESS_CHECKPOINTS = `
     query GetAoProcessCheckpoints(
-      $owner: String!
+      $owners: [String!]!
       $processId: String!
       $limit: Int!
     ) {
@@ -502,7 +692,7 @@ export function findLatestProcessMemoryWith ({
           { name: "Type", values: ["Checkpoint"] }
           { name: "Data-Protocol", values: ["ao"] }
         ],
-        owners: [$owner]
+        owners: $owners,
         first: $limit,
         sort: HEIGHT_DESC
       ) {
@@ -611,6 +801,7 @@ export function findLatestProcessMemoryWith ({
          */
         if (!cached) return Rejected(args)
 
+        let file
         return of(cached)
           .chain((cached) => {
             if (omitMemory) return Resolved(null)
@@ -623,11 +814,22 @@ export function findLatestProcessMemoryWith ({
                  * so we need to read it back in from the file
                  */
                 if (cached.File) {
-                  logger('Reloading cached process memory from file "%s"', cached.File)
-                  return readProcessMemoryFile(cached.File)
+                  return of()
+                    .chain(fromPromise(async () => cached.File))
+                    .chain((maybeFile) => {
+                      if (!maybeFile) return Rejected(args)
+
+                      file = maybeFile
+                      logger('Reloading cached process memory from file "%s"', file)
+                      return readProcessMemoryFile(file)
+                    })
                 }
 
-                return Rejected('either Memory or File required')
+                logger(
+                  'Process cache entry error for process "%s". Entry contains neither Memory or File. Falling back to checkpoint record...',
+                  processId
+                )
+                return Rejected(args)
               })
               /**
                * decode according to whatever encoding is being used to cache
@@ -639,7 +841,7 @@ export function findLatestProcessMemoryWith ({
            */
           .map((Memory) => ({
             src: 'memory',
-            fromFile: cached.File,
+            fromFile: file,
             Memory,
             moduleId: cached.evaluation.moduleId,
             timestamp: cached.evaluation.timestamp,
@@ -652,7 +854,7 @@ export function findLatestProcessMemoryWith ({
       })
   }
 
-  function maybeFile (args) {
+  function maybeRecord (args) {
     const { processId, omitMemory } = args
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
@@ -663,7 +865,7 @@ export function findLatestProcessMemoryWith ({
     /**
      * Attempt to find the latest checkpoint in a file
      */
-    return findCheckpointFileBefore({ processId, before: LATEST })
+    return findCheckpointRecordBefore({ processId, before: LATEST })
       .chain((latest) => {
         /**
          * No previously created checkpoint is cached in a file,
@@ -672,16 +874,15 @@ export function findLatestProcessMemoryWith ({
         if (!latest) return Rejected(args)
 
         /**
-         * We have found a previously created checkpoint, cached in a file, so
+         * We have found a previously created checkpoint, cached in a record, so
          * we can skip querying the gateway for it, and instead download the
          * checkpointed Memory directly, from arweave.
          *
-         * The "file" checkpoint already contains all the metadata we would
+         * The "record" checkpoint already contains all the metadata we would
          * otherwise have to pull from the gateway
          */
-        return of(latest.file)
+        return of(latest)
           // { Memory: { id, encoding }, evaluation }
-          .chain(readCheckpointFile)
           .chain((checkpoint) => {
             if (!isCheckpointIgnored(checkpoint.Memory.id)) return Resolved(checkpoint)
             logger('Encountered Ignored Checkpoint "%s" from file. Skipping...', checkpoint.Memory.id)
@@ -697,7 +898,7 @@ export function findLatestProcessMemoryWith ({
                * Finally map the Checkpoint to the expected shape
                */
               .map((Memory) => ({
-                src: 'file',
+                src: 'record',
                 Memory,
                 moduleId: checkpoint.evaluation.moduleId,
                 timestamp: checkpoint.evaluation.timestamp,
@@ -731,13 +932,20 @@ export function findLatestProcessMemoryWith ({
       return Rejected(args)
     }
 
-    return address()
-      .chain((owner) => queryCheckpoints({
-        query: GET_AO_PROCESS_CHECKPOINTS,
-        variables: { owner, processId, limit: 50 },
-        processId,
-        before: LATEST
-      }))
+    return of({ PROCESS_CHECKPOINT_TRUSTED_OWNERS })
+      .chain(({ PROCESS_CHECKPOINT_TRUSTED_OWNERS }) => {
+        if (isEmpty(PROCESS_CHECKPOINT_TRUSTED_OWNERS)) return address()
+        return Resolved(PROCESS_CHECKPOINT_TRUSTED_OWNERS)
+      })
+      .map((owners) => ifElse(Array.isArray, always(owners), always([owners]))(owners))
+      .chain((owners) => {
+        return queryCheckpoints({
+          query: GET_AO_PROCESS_CHECKPOINTS,
+          variables: { owners, processId, limit: 50 },
+          processId,
+          before: LATEST
+        })
+      })
       .map(path(['data', 'transactions', 'edges']))
       .map(determineLatestCheckpoint)
       .chain((latestCheckpoint) => {
@@ -885,7 +1093,7 @@ export function findLatestProcessMemoryWith ({
 
     return of({ processId, before, omitMemory })
       .chain(maybeCached)
-      .bichain(maybeFile, Resolved)
+      .bichain(maybeRecord, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
       .chain(maybeOld({ processId, before }))
@@ -908,31 +1116,37 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       : Buffer.from(Memory)
 
     /**
-     * The provided value is not later than the currently cached value,
-     * so simply ignore it and return, keeping the current value in cache
-     *
-     * Having updateAgeOnGet to true also renews the cache value's TTL,
-     * which is what we want
-     */
-    if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) return
-
-    logger(
-      'Caching latest memory for process "%s" with parameters "%j"',
-      processId,
-      { messageId, timestamp, ordinate, cron, blockHeight }
-    )
-    /**
      * Either no value was cached or the provided evaluation is later than
      * the value currently cached, so overwrite it
      */
-    // const { stop: stopTimer } = timer('saveLatestProcessMemory:gzip', { processId, timestamp, ordinate, cron, size: Memory.byteLength })
-    // const zipped = await gzipP(Memory, { level: zlibConstants.Z_BEST_SPEED })
-    // stopTimer()
 
-    const incrementedGasUsed = pipe(
-      pathOr(BigInt(0), ['evaluation', 'gasUsed']),
-      add(gasUsed || BigInt(0))
-    )(cached)
+    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
+    /**
+     * The cache is being reseeded ie. Memory was reloaded from a file
+     */
+    if (cached && isEqualTo(cached.evaluation, { timestamp, ordinate, cron })) {
+      /**
+       * If Memory exists on the cache entry, then there is nothing to "reseed"
+       * so do nothing
+       */
+      if (cached.Memory) return
+    /**
+     * The provided value is not later than the currently cached value,
+     * so simply ignore it and return, keeping the current value in cache
+     */
+    } else if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) {
+      return
+    } else {
+      logger(
+        'Caching latest memory for process "%s" with parameters "%j"',
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight }
+      )
+      incrementedGasUsed = pipe(
+        pathOr(BigInt(0), ['evaluation', 'gasUsed']),
+        add(gasUsed || BigInt(0))
+      )(cached)
+    }
 
     const evaluation = {
       processId,
@@ -1000,9 +1214,11 @@ export function saveCheckpointWith ({
   uploadDataItem,
   address,
   writeCheckpointFile,
+  writeCheckpointRecord,
   logger: _logger,
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
-  DISABLE_PROCESS_CHECKPOINT_CREATION
+  DISABLE_PROCESS_CHECKPOINT_CREATION,
+  recentCheckpoints = new Map()
 }) {
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
   address = fromPromise(address)
@@ -1010,6 +1226,7 @@ export function saveCheckpointWith ({
   buildAndSignDataItem = fromPromise(buildAndSignDataItem)
   uploadDataItem = fromPromise(uploadDataItem)
   writeCheckpointFile = fromPromise(writeCheckpointFile)
+  writeCheckpointRecord = fromPromise(writeCheckpointRecord)
 
   const logger = _logger.child('ao-process:saveCheckpoint')
 
@@ -1064,10 +1281,21 @@ export function saveCheckpointWith ({
       .chain(() => {
         if (Memory) return of(Memory)
         if (File) {
-          logger('Reloading cached process memory from file "%s"', File)
-          return readProcessMemoryFile(File)
+          return of()
+            .chain(fromPromise(async () => File))
+            .chain((maybeFile) => {
+              if (!maybeFile) return Rejected('either Memory or File required')
+
+              const file = maybeFile
+              logger('Reloading cached process memory from file "%s"', file)
+              return readProcessMemoryFile(file)
+            })
         }
 
+        logger(
+          'Process cache entry error for evaluation "%j". Entry contains neither Memory or File. Skipping saving of checkpoint...',
+          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+        )
         return Rejected('either File or Memory required')
       })
       .chain((buffer) =>
@@ -1124,7 +1352,6 @@ export function saveCheckpointWith ({
       .chain(buildAndSignDataItem)
   }
 
-  const recentCheckpoints = new Map()
   const addRecentCheckpoint = (processId) => {
     /**
      * Shouldn't happen, since the entries clear themselves when their ttl
@@ -1195,11 +1422,15 @@ export function saveCheckpointWith ({
       }))
       .map(path(['data', 'transactions', 'edges', '0']))
       .chain((checkpoint) => {
-        /**
-         * This CU has already created a Checkpoint
-         * for this evaluation so simply noop
-         */
         if (checkpoint) {
+          if (!Array.isArray(checkpoint.node.tags)) {
+            // TODO: should probably use a Zod schema to verify 'queryCheckpoints' returns the data structure we expect
+            return Rejected('expected checkpoint tags to be an array, cannot use checkpoint found on Arweave')
+          }
+          /**
+           * This CU has already created a Checkpoint
+           * for this evaluation so simply noop
+           */
           return Resolved({ id: checkpoint.node.id, encoding: pluckTagValue('Content-Encoding', checkpoint.node.tags) })
         }
 
@@ -1241,7 +1472,7 @@ export function saveCheckpointWith ({
           )
       })
       .chain((onArweave) => {
-        return writeCheckpointFile({
+        return writeCheckpointRecord({
           Memory: onArweave,
           evaluation: {
             processId,

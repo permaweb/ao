@@ -164,31 +164,41 @@ def main():
 
     # Finally, compile to wasm
     debug_print('Start to compile as WASM')
-    cmd = ['emcc', '-O0', 
+    cmd = ['emcc', '-O3', 
+      '-g2',
+      '-s', 'ASYNCIFY=1',
       '-s', 'MEMORY64=1',
+      '-s', 'STACK_SIZE=41943040',
+      '-s', 'ASYNCIFY_STACK_SIZE=41943040',
       '-s', 'ALLOW_MEMORY_GROWTH=1', 
-      '-s', 'INITIAL_MEMORY=6291456', 
+      '-s', 'INITIAL_MEMORY=52428800', 
       '-s', 'MAXIMUM_MEMORY=524288000', 
       '-s', 'WASM=1', 
       '-s', 'MODULARIZE', 
       # '-s', 'FILESYSTEM=0', 
       '-s', 'DETERMINISTIC=1', 
       '-s', 'NODERAWFS=0', 
+      '-s', 'FORCE_FILESYSTEM=1',
+      '-msimd128',
       '--pre-js', '/opt/pre.js'
     ]
+    cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
+    cmd.extend(['-s', 'ASSERTIONS=1'])
     cmd.extend(definition.get_extra_args())
     cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
     cmd.extend(['/tmp/compile.c', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
     cmd.extend([quote(v.filepath) for v in link_libraries])
     cmd.extend([quote(v.filepath) for v in link_libraries])
+
+    cmd.extend(['-s', 'EXPORTED_FUNCTIONS=["_malloc", "_main"]'])
     cmd.extend(['-lm', '-ldl', '-o', definition.get_output_file(), '-s', 'EXPORTED_RUNTIME_METHODS=["cwrap"]'])
 
     debug_print('Compile command is {}'.format(' '.join(cmd)))
     shell_exec(*cmd)
 
     # add metering library
-    meter_cmd = ['node', '/opt/node/apply-metering.cjs']
-    shell_exec(*meter_cmd)
+    # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
+    # shell_exec(*meter_cmd)
     shell_exec(*['rm', '/src/process.js'])
 
 if __name__ == '__main__':

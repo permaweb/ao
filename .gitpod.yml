@@ -4,6 +4,7 @@ image:
 tasks:
   - name: Init Repo Tooling
     init: nvm i && npm i
+    command: nvm i
 
 vscode:
   extensions:

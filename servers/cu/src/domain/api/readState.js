@@ -1,5 +1,5 @@
 import { isNotNil } from 'ramda'
-import { Resolved, of } from 'hyper-async'
+import { Resolved, of, fromPromise } from 'hyper-async'
 
 import { chainEvaluationWith } from '../lib/chainEvaluation.js'
 import { loadProcessWith } from '../lib/loadProcess.js'
@@ -7,6 +7,7 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { loadMessagesWith } from '../lib/loadMessages.js'
 import { evaluateWith } from '../lib/evaluate.js'
 import { hydrateMessagesWith } from '../lib/hydrateMessages.js'
+import { loadProcessMetaWith } from '../lib/loadProcessMeta.js'
 
 export { pendingReadStates } from '../lib/chainEvaluation.js'
 
@@ -27,6 +28,7 @@ export { pendingReadStates } from '../lib/chainEvaluation.js'
  */
 export function readStateWith (env) {
   const chainEvaluation = chainEvaluationWith(env)
+  const loadProcessMeta = loadProcessMetaWith(env)
   const loadProcess = loadProcessWith(env)
   const loadMessages = loadMessagesWith(env)
   const hydrateMessages = hydrateMessagesWith(env)
@@ -58,6 +60,46 @@ export function readStateWith (env) {
       return res
     }
 
+    /**
+     * The potential Promise that encapsulates the evaluation stream
+     * for this readState
+     *
+     * If no additional evaluation stream is warranted ie. a cached output,
+     * or an already pending identical evaluation stream, then the below chain
+     * is never executed, and so no additional work is performed
+     */
+    let pending
+    function next () {
+      if (!pending) {
+        /**
+         * The Async is forked into a Promise, which then wrapped
+         * into another Async.
+         *
+         * Since there is only one instance of the underlying Promise,
+         * there is only one instance of the work used to resolve each Async,
+         * every time, thus preventing duplication of work
+         */
+        pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
+          .chain(loadProcessMeta)
+          .chain(loadProcess)
+          .chain(loadModule)
+          .chain(loadMessages)
+          .chain(hydrateMessages)
+          .chain(evaluate)
+          .chain((ctx) => Resolved({
+            ...ctx,
+            result: ctx.output,
+            from: ctx.last.timestamp,
+            fromBlockHeight: ctx.last.blockHeight,
+            ordinate: ctx.last.ordinate
+          }))
+          .bimap(logStats, logStats)
+          .toPromise()
+      }
+
+      return pending
+    }
+
     return chainEvaluation({
       processId,
       messageId,
@@ -66,28 +108,7 @@ export function readStateWith (env) {
       cron,
       exact,
       needsMemory,
-      /**
-       * The async that encapsulates the evaluation stream
-       * to potentially chain.
-       *
-       * If an exact match is found, this will never unwrap
-       * thus never performing the work
-       */
-      next: of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
-        .chain(loadProcess)
-        .chain(loadModule)
-        .chain(loadMessages)
-        .chain(hydrateMessages)
-        // { output }
-        .chain(evaluate)
-        .chain((ctx) => Resolved({
-          ...ctx,
-          result: ctx.output,
-          from: ctx.last.timestamp,
-          fromBlockHeight: ctx.last.blockHeight,
-          ordinate: ctx.last.ordinate
-        }))
-        .bimap(logStats, logStats)
+      next: of().chain(fromPromise(next))
     })
   }
 }

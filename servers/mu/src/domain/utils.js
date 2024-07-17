@@ -144,3 +144,137 @@ export function eqOrIncludes (val) {
     [T, F]
   ])
 }
+
+/**
+ * A function that, given a function, will immediately invoke it,
+ * then retry it on errors, using an exponential backoff.
+ *
+ * If the final retry fails, then the overall Promise is rejected
+ * with that error
+ *
+ * @param {function} fn - the function to be called
+ * @param {{ maxRetries: number, delay: number, log: Logger, name: string }} param1 - the number of total retries and increased delay for each try
+ */
+export const backoff = (
+  fn,
+  { maxRetries = 3, delay = 500, log, name }
+) => {
+  /**
+   * Recursive function that recurses with exponential backoff
+   */
+  const action = (retry, delay) => {
+    return Promise.resolve()
+      .then(fn)
+      .catch((err) => {
+        // Reached max number of retries
+        if (retry >= maxRetries) {
+          log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
+          return Promise.reject(err)
+        }
+
+        /**
+         * increment the retry count Retry with an exponential backoff
+         */
+        const newRetry = retry + 1
+        const newDelay = delay + delay
+        log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
+        /**
+         * Retry in {delay} milliseconds
+         */
+        return new Promise((resolve) => setTimeout(resolve, delay))
+          .then(() => action(newRetry, newDelay))
+      })
+  }
+
+  return action(0, delay)
+}
+
+/**
+ * Checks if a response is OK. Otherwise, throw response.
+ *
+ * @param {Response} res - The response to check
+ * @returns
+ */
+export const okRes = (res) => {
+  if (res.ok) return res
+  throw res
+}
+
+/**
+ * Checks if we are at a provided stage
+ *
+ * @param {String} stage - The stage to check against
+ * @returns {Boolean} - Whether we are at the stage
+ *
+ * We also return true if ctx.stage is undefined.
+ * This is to guard against functions accessing this util
+ * from outside the task queue pipeline. If there is no stage,
+ * we are outside the process pipeline, and this check should be ignored.
+ */
+export const checkStage = (stage) => {
+  return (ctx) => {
+    return !ctx.stage || ctx.stage === stage
+  }
+}
+
+/**
+ * Sets stage from prev stage to next stage
+ *
+ * @param {String | Array} prevStage
+ * @param {String} nextStage
+ * @returns {Object} - the mutated context object
+ *
+ * Sets the object's 'stage' value to nextStage.
+ * Before we do this, we make sure we are at the expected
+ * previous stage. This is to prevent overwriting stages
+ * where we do not want to - when we are 'behind'.
+ *
+ * When recovering, we will 'skip over' all the stages that have
+ * been previously completed. We want to avoid overwriting our stage
+ * when we are in the catching up process.
+ *
+ * In some cases, there are multiple acceptable previous stages.
+ * In these cases, we can pass in an array as prevStage, and check
+ * against all of these stages.
+ *
+ */
+
+export const setStage = (prevStage, nextStage) => {
+  return (ctx) => {
+    if (Array.isArray(prevStage) && prevStage.includes(ctx.stage)) return { ...ctx, stage: nextStage }
+    if (ctx.stage === prevStage) {
+      return { ...ctx, stage: nextStage }
+    }
+    return ctx
+  }
+}
+
+// from https://github.com/then/is-promise/blob/master/index.js
+export function isPromise (obj) {
+  return (
+    !!obj &&
+    (typeof obj === 'object' || typeof obj === 'function') &&
+    typeof obj.then === 'function'
+  )
+}
+
+/**
+ * Given a function, it will return a function that swallows any errors. If an error is encountered,
+ * undefined is returned, otherwise the result of the function is returned.
+ *
+ * In other words, a function wrapped with swallow will never throw an error.
+ *
+ * @param {Function} fn - The function to be wrapped.
+ * @returns {Function} A new function that wraps the original function in a try-catch block.
+ *
+ * @example
+ * const safeFunction = swallow(riskyFunction);
+ * safeFunction(args); // Executes riskyFunction with args, but swallows any errors.
+ */
+export const swallow = (fn) => (...args) => {
+  try {
+    const res = fn(...args)
+    if (isPromise(res)) return res.catch(() => {})
+    return res
+  } catch {}
+}

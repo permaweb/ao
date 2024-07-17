@@ -9,6 +9,7 @@ import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
+import lt from 'long-timeout'
 
 // Precanned clients to use for OOTB apis
 import * as ArweaveClient from './client/arweave.js'
@@ -84,7 +85,8 @@ export const createApis = async (ctx) => {
     Math.max(1, ctx.WASM_EVALUATION_MAX_WORKERS - 1),
     Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
   )
-  const primaryWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+
+  const primaryWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
     maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
   })
@@ -93,9 +95,10 @@ export const createApis = async (ctx) => {
     1,
     Math.floor(ctx.WASM_EVALUATION_MAX_WORKERS * (1 - (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100)))
   )
-  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'client', 'worker.js'), {
+  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
     maxWorkers: maxDryRunWorkerTheads,
-    onCreateWorker: onCreateWorker('dry-run')
+    onCreateWorker: onCreateWorker('dry-run'),
+    maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE
   })
 
   const arweave = ArweaveClient.createWalletClient()
@@ -122,31 +125,14 @@ export const createApis = async (ctx) => {
   ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
+  ctx.logger('Trusting Arweave Checkpoints [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))
   ctx.logger('Allowing only process owners [ %s ]', ctx.ALLOW_OWNERS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
   ctx.logger('Max worker threads set to %s', ctx.WASM_EVALUATION_MAX_WORKERS)
   ctx.logger('Max primary worker threads set to %s', maxPrimaryWorkerThreads)
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
-
-  const stats = statsWith({
-    loadWorkerStats: () => ({
-      primary: primaryWorkerPool.stats(),
-      dryRun: dryRunWorkerPool.stats()
-    }),
-    /**
-     * https://nodejs.org/api/process.html#processmemoryusage
-     *
-     * Note: worker thread resources will be included in rss,
-     * as that is the Resident Set Size for the entire node process
-     */
-    loadMemoryUsage: () => process.memoryUsage(),
-    loadProcessCacheUsage: () => AoProcessClient.loadProcessCacheUsage()
-  })
-  const metrics = {
-    contentType: _metrics.contentType,
-    compute: fromPromise(() => _metrics.metrics())
-  }
+  ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
@@ -160,6 +146,9 @@ export const createApis = async (ctx) => {
       DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
       writeFile
     }),
+    writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({
+      db: sqlite
+    }),
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
@@ -169,21 +158,42 @@ export const createApis = async (ctx) => {
     gauge,
     MAX_SIZE: ctx.PROCESS_MEMORY_CACHE_MAX_SIZE,
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
-    DRAIN_TO_FILE_THRESHOLD: ctx.PROCESS_MEMORY_CACHE_DRAIN_TO_FILE_THRESHOLD,
     writeProcessMemoryFile,
-    /**
-     * Save the evicted process memory as a Checkpoint on Arweave
-     */
-    onEviction: ({ value }) =>
-      saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        })
+    logger: ctx.logger,
+    setTimeout: (...args) => lt.setTimeout(...args),
+    clearTimeout: (...args) => lt.clearTimeout(...args)
   })
+
+  const loadWasmModule = WasmClient.loadWasmModuleWith({
+    fetch: ctx.fetch,
+    ARWEAVE_URL: ctx.ARWEAVE_URL,
+    WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
+    logger: ctx.logger,
+    cache: WasmClient.createWasmModuleCache({ MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE })
+  })
+
+  const stats = statsWith({
+    gauge,
+    loadWorkerStats: () => ({
+      primary: primaryWorkerPool.stats(),
+      dryRun: dryRunWorkerPool.stats()
+    }),
+    /**
+     * https://nodejs.org/api/process.html#processmemoryusage
+     *
+     * Note: worker thread resources will be included in rss,
+     * as that is the Resident Set Size for the entire node process
+     */
+    loadMemoryUsage: () => process.memoryUsage(),
+    loadProcessCacheUsage: () => wasmMemoryCache.data.loadProcessCacheUsage()
+  })
+  /**
+   * TODO: Should this just be a field on stats to call?
+   */
+  const metrics = {
+    contentType: _metrics.contentType,
+    compute: fromPromise(() => _metrics.metrics())
+  }
 
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
@@ -202,11 +212,15 @@ export const createApis = async (ctx) => {
         DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
         readFile
       }),
+      findCheckpointRecordBefore: AoProcessClient.findCheckpointRecordBeforeWith({
+        db: sqlite
+      }),
       address,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
       IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
+      PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
       logger
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
@@ -224,10 +238,11 @@ export const createApis = async (ctx) => {
     findModule: AoModuleClient.findModuleWith({ db: sqlite, logger }),
     saveModule: AoModuleClient.saveModuleWith({ db: sqlite, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
+      loadWasmModule,
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => primaryWorkerPool.exec('evaluate', args),
+      evaluate: (args, options) => primaryWorkerPool.exec('evaluate', [args], options),
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
@@ -267,10 +282,26 @@ export const createApis = async (ctx) => {
      * primary evaluations
      */
     loadDryRunEvaluator: AoModuleClient.evaluatorWith({
+      loadWasmModule,
       /**
        * Evaluation will invoke a worker available in the worker pool
        */
-      evaluate: (...args) => dryRunWorkerPool.exec('evaluate', args),
+      evaluate: (args, options) => Promise.resolve()
+        .then(() => dryRunWorkerPool.exec('evaluate', [args], options))
+        .catch((err) => {
+          /**
+           * Hack to detect when the max queue size is being exceeded and to reject
+           * with a more informative error
+           */
+          if (err.message.startsWith('Max queue size of')) {
+            const dryRunLimitErr = new Error('Dry-Run enqueue limit exceeded')
+            dryRunLimitErr.status = 429
+            return Promise.reject(dryRunLimitErr)
+          }
+
+          // Bubble as normal
+          return Promise.reject(err)
+        }),
       logger: dryRunLogger
     })
   })
@@ -310,7 +341,9 @@ export const createApis = async (ctx) => {
     /**
      * push a new object to keep references to original data intact
      */
-    wasmMemoryCache.lru.forEach((value) => pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation }))
+    wasmMemoryCache.data.forEach((value) =>
+      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
+    )
 
     checkpointP = pMap(
       pArgs,

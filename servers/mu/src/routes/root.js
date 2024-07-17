@@ -5,7 +5,7 @@ import { z } from 'zod'
 // arbundles verifies cross chain signed data items, warp-arbundles only supports arweave
 import { DataItem } from 'arbundles'
 
-import { withMiddleware } from './middleware/index.js'
+import { withMetrics, withMiddleware } from './middleware/index.js'
 
 // const { DataItem } = WarpArBundles
 
@@ -101,6 +101,7 @@ const withBaseRoute = (app) => {
     '/',
     compose(
       withMiddleware,
+      withMetrics(),
       always(async (_req, res) => {
         return res.send('ao messenger unit')
       })
