@@ -1,5 +1,6 @@
 import { getByOwnerSchema, loadSchedulerSchema, setByOwnerSchema } from './dal.js'
 import { InvalidSchedulerLocationError } from './err.js'
+import { trimSlash } from './utils.js'
 
 export function rawWith ({ loadScheduler, cache }) {
   loadScheduler = loadSchedulerSchema.implement(loadScheduler)
@@ -19,7 +20,7 @@ export function rawWith ({ loadScheduler, cache }) {
         return loadScheduler(address)
           .then((scheduler) =>
             setByOwner(address, scheduler.url, scheduler.ttl)
-              .then(() => ({ url: scheduler.url }))
+              .then(() => ({ url: trimSlash(scheduler.url) }))
           )
           .catch((err) => {
             if (err instanceof InvalidSchedulerLocationError) return undefined
