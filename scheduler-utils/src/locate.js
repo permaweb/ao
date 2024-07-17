@@ -1,4 +1,5 @@
 import { checkForRedirectSchema, getByOwnerSchema, getByProcessSchema, loadProcessSchedulerSchema, loadSchedulerSchema, setByOwnerSchema, setByProcessSchema } from './dal.js'
+import { trimSlash } from './utils.js'
 
 export function locateWith ({ loadProcessScheduler, loadScheduler, cache, followRedirects, checkForRedirect }) {
   loadProcessScheduler = loadProcessSchedulerSchema.implement(loadProcessScheduler)
@@ -53,7 +54,7 @@ export function locateWith ({ loadProcessScheduler, loadScheduler, cache, follow
              */
             if (followRedirects) finalUrl = await checkForRedirect(scheduler.url, process)
 
-            const byProcess = { url: finalUrl, address: scheduler.address }
+            const byProcess = { url: trimSlash(finalUrl), address: scheduler.address }
             await setByProcess(process, byProcess, scheduler.ttl)
             return byProcess
           })
