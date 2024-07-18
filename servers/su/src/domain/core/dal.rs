@@ -58,9 +58,6 @@ pub trait ScheduleProvider {
 }
 
 pub trait Config: Send + Sync {
-    fn su_wallet_path(&self) -> String;
-    fn upload_node_url(&self) -> String;
-    fn gateway_url(&self) -> String;
     fn mode(&self) -> String;
     fn scheduler_list_path(&self) -> String;
 }
