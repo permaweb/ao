@@ -88,8 +88,8 @@ impl ArweaveGateway {
 
     async fn network_info_fetch() -> Result<NetworkInfo, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let gateway_url = config.gateway_url;
-        let url = Url::parse(&gateway_url).map_err(|e| format!("{:?}", e))?;
+        let arweave_url = config.arweave_url;
+        let url = Url::parse(&arweave_url).map_err(|e| format!("{:?}", e))?;
 
         let network_client = NetworkInfoClient::new(url);
 
@@ -131,9 +131,9 @@ impl ArweaveGateway {
 impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let gateway_url = config.gateway_url;
+        let arweave_url = config.arweave_url;
 
-        let url = match Url::parse(&gateway_url) {
+        let url = match Url::parse(&arweave_url) {
             Ok(u) => u,
             Err(e) => return Err(format!("{}", e)),
         };
@@ -166,9 +166,9 @@ impl Gateway for ArweaveGateway {
 
     async fn status(&self, tx_id: &String) -> Result<TxStatus, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let gateway_url = config.gateway_url;
+        let arweave_url = config.arweave_url;
 
-        let url = match Url::parse(&gateway_url) {
+        let url = match Url::parse(&arweave_url) {
             Ok(u) => u,
             Err(e) => return Err(format!("{}", e)),
         };
@@ -205,7 +205,7 @@ impl Gateway for ArweaveGateway {
 
     async fn gql_tx(&self, tx_id: &String) -> Result<GatewayTx, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let gateway_url = config.gateway_url;
+        let graphql_url = config.graphql_url;
         let client = Client::new();
 
         let query = serde_json::json!({
@@ -220,7 +220,7 @@ impl Gateway for ArweaveGateway {
             .map_err(|e| GatewayErrorType::GraphQLError(e.to_string()))?;
 
         let response = client
-            .post(format!("{}/graphql", gateway_url))
+            .post(format!("{}/graphql", graphql_url))
             .header("Content-Type", "application/json")
             .body(query_string)
             .send()
