@@ -27,7 +27,6 @@ describe('cuFetchWithCache', () => {
     assert.deepStrictEqual(await response.json(), {
       message: 'Hello, world!'
     })
-    console.log(cache)
     assert.equal(cache.size, 0)
   })
 
