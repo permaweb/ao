@@ -1,8 +1,9 @@
 local json = require "json"
-local process = require ".process"
+
 ao = require "ao"
 
 function handle(msgJSON, aoJSON)
+    local process = require ".process"
     -- decode inputs
     local msg = json.decode(msgJSON)
     local env = json.decode(aoJSON)
