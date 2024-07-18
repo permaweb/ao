@@ -60,6 +60,8 @@ const cronMonitorGauge = MetricsClient.gaugeWith({})({
 export const createApis = async (ctx) => {
   const CU_URL = ctx.CU_URL
   const UPLOADER_URL = ctx.UPLOADER_URL
+  const GRAPHQL_URL = ctx.GRAPHQL_URL
+  const ARWEAVE_URL = ctx.ARWEAVE_URL
   const PROC_FILE_PATH = ctx.PROC_FILE_PATH
   const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
 
@@ -72,7 +74,7 @@ export const createApis = async (ctx) => {
     logger
   })
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: true })
+  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true })
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -153,7 +155,7 @@ export const createApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: sendDataItemLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram })
   })
@@ -223,6 +225,8 @@ export const createResultApis = async (ctx) => {
   const CU_URL = ctx.CU_URL
   const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
+  const GRAPHQL_URL = ctx.GRAPHQL_URL
+  const ARWEAVE_URL = ctx.ARWEAVE_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -233,8 +237,8 @@ export const createResultApis = async (ctx) => {
     logger
   })
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: true })
-  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL: ctx.GRAPHQL_URL, followRedirects: false })
+  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true })
+  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: false })
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -255,7 +259,7 @@ export const createResultApis = async (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     logger,
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram })
   })
 
