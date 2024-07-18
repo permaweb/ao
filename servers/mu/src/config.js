@@ -1,8 +1,11 @@
 import path from 'node:path'
 import fs from 'node:fs'
-
-import { z } from 'zod'
 import { cpus, tmpdir } from 'node:os'
+
+import { z, ZodIssueCode } from 'zod'
+import { pipe } from 'ramda'
+
+import { preprocessUrls } from './domain/utils.js'
 
 const walletPath = process.env.PATH_TO_WALLET
 const walletKey = JSON.parse(fs.readFileSync(path.resolve(walletPath), 'utf8'))
@@ -32,7 +35,19 @@ export const domainConfigSchema = z.object({
   MU_WALLET: z.record(z.any()),
   SCHEDULED_INTERVAL: z.number(),
   DUMP_PATH: z.string(),
-  GRAPHQL_URL: z.string(),
+  /**
+   * The url for the graphql server to be used by the MU
+   * to query for metadata from an Arweave Gateway
+   *
+   * ie. https://arweave.net/graphql
+   */
+  GRAPHQL_URL: z.string().url('GRAPHQL_URL must be a valid URL'),
+  /**
+   * The url for the server that hosts the Arweave http API
+   *
+   * ie. https://arweave.net
+   */
+  ARWEAVE_URL: z.string().url('ARWEAVE_URL must be a valid URL'),
   UPLOADER_URL: z.string(),
   PROC_FILE_PATH: z.string(),
   CRON_CURSOR_DIR: z.string(),
@@ -70,7 +85,9 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'http://localhost:6363',
-    GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://goldsky.arweave.net/graphql',
+    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    GRAPHQL_URL: process.env.GRAPHQL_URL,
+    ARWEAVE_URL: process.env.ARWEAVE_URL,
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
@@ -87,7 +104,9 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
-    GRAPHQL_URL: process.env.GRAPHQL_URL || 'https://goldsky.arweave.net/graphql',
+    GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
+    GRAPHQL_URL: process.env.GRAPHQL_URL,
+    ARWEAVE_URL: process.env.ARWEAVE_URL,
     SCHEDULED_INTERVAL: process.env.SCHEDULED_INTERVAL || 500,
     DUMP_PATH: process.env.DUMP_PATH || '',
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
@@ -100,4 +119,15 @@ const CONFIG_ENVS = {
   }
 }
 
-export const config = serverConfigSchema.parse(CONFIG_ENVS[MODE])
+const preprocessedServerConfigSchema = z.preprocess(
+  (envConfig, zodRefinementContext) => {
+    try {
+      return pipe(preprocessUrls)(envConfig)
+    } catch (message) {
+      zodRefinementContext.addIssue({ code: ZodIssueCode.custom, message })
+    }
+  },
+  serverConfigSchema
+)
+
+export const config = preprocessedServerConfigSchema.parse(CONFIG_ENVS[MODE])
