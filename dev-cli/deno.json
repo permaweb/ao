@@ -1,5 +1,5 @@
 {
-  "version": "0.0.54",
+  "version": "0.0.60",
   "tasks": {
     "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
     "build-binaries": "./tools/build.sh",
