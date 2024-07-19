@@ -21,48 +21,38 @@ const cronsRunning = {}
 const procsToSave = {}
 let isInit = false
 
-async function saveProcs (procFilePath) {
-  const release = await mutex.acquire()
-  try {
-    await fs.promises.writeFile(procFilePath, JSON.stringify(procsToSave), 'utf8')
-  } finally {
-    release()
+export function saveProcsWith ({ save }) {
+  return async () => {
+    const release = await mutex.acquire()
+    try {
+      await save(procsToSave)
+    } finally {
+      release()
+    }
   }
 }
 
-function initCronProcsWith ({ PROC_FILE_PATH, startMonitoredProcess }) {
+function initCronProcsWith ({ startMonitoredProcess, readProcFile, saveProcs }) {
   return async () => {
     if (isInit) return
-    if (!fs.existsSync(PROC_FILE_PATH)) return
-    const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
-
-    let obj
-    try {
-      /**
-       * This .replace is used to fix corrupted json files
-       * it should be removed later now that the corruption
-       * issue is solved
-       */
-      obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
-    } catch (_e) {
-      obj = {}
-    }
+    const procFileData = readProcFile()
+    if (!procFileData) return
 
     /*
      * start new os procs when the server starts because
      * the server has either restarted or been redeployed.
      */
-    for (const processId of Object.keys(obj)) {
+    for (const processId of Object.keys(procFileData)) {
       await startMonitoredProcess({ processId })
     }
 
-    await saveProcs(PROC_FILE_PATH)
+    await saveProcs(procsToSave)
 
     isInit = true
   }
 }
 
-function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH, monitorGauge }) {
+function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH, monitorGauge, saveProcs }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -171,7 +161,7 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
   }
 }
 
-function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge }) {
+function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge, saveProcs }) {
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
     if (!ct) {

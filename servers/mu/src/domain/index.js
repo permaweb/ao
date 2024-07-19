@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import fs from 'node:fs'
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
@@ -12,7 +13,7 @@ import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
-import cronClient from './clients/cron.js'
+import cronClient, { saveProcsWith } from './clients/cron.js'
 
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
@@ -172,6 +173,13 @@ export const createApis = async (ctx) => {
 
   const monitorProcessLogger = logger.child('monitorProcess')
   const fetchCron = fromPromise(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger }))
+
+  const saveProcs = saveProcsWith({
+    save: async (procsToSave) => {
+      await fs.promises.writeFile(PROC_FILE_PATH, JSON.stringify(procsToSave), 'utf8')
+    }
+  })
+
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
     fetch,
     histogram,
@@ -181,7 +189,8 @@ export const createApis = async (ctx) => {
     CU_URL,
     fetchCron,
     crank,
-    monitorGauge: cronMonitorGauge
+    monitorGauge: cronMonitorGauge,
+    saveProcs
   })
 
   const monitorProcess = monitorProcessWith({
@@ -195,7 +204,8 @@ export const createApis = async (ctx) => {
     stopProcessMonitor: cronClient.killMonitoredProcessWith({
       logger: stopMonitorProcessLogger,
       PROC_FILE_PATH,
-      monitorGauge: cronMonitorGauge
+      monitorGauge: cronMonitorGauge,
+      saveProcs
     }),
     createDataItem,
     logger: monitorProcessLogger
@@ -209,8 +219,25 @@ export const createApis = async (ctx) => {
     sendAssign,
     fetchCron,
     initCronProcs: cronClient.initCronProcsWith({
-      PROC_FILE_PATH,
-      startMonitoredProcess: startProcessMonitor
+      startMonitoredProcess: startProcessMonitor,
+      readProcFile: () => {
+        if (!fs.existsSync(PROC_FILE_PATH)) return
+        const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
+
+        let obj
+        try {
+          /**
+           * This .replace is used to fix corrupted json files
+           * it should be removed later now that the corruption
+           * issue is solved
+           */
+          obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+        } catch (_e) {
+          obj = {}
+        }
+        return obj
+      },
+      saveProcs
     })
   }
 }
