@@ -27,12 +27,16 @@ const sadWasm = await AoLoader(readFileSync('./test/processes/sad/process.wasm')
 async function evaluateHappyMessage ({ moduleId, moduleOptions: mOptions }) {
   assert.equal(moduleId, 'foo-module')
   assert.deepStrictEqual(mOptions, moduleOptions)
-  return ({ Memory, message, AoGlobal }) => happyWasm(Memory, message, AoGlobal)
+  return ({ Memory, message, AoGlobal, close }) => {
+    if (!close) return happyWasm(Memory, message, AoGlobal)
+  }
 }
 
 async function evaluateSadMessage ({ moduleId }) {
   assert.equal(moduleId, 'foo-module')
-  return ({ Memory, message, AoGlobal }) => sadWasm(Memory, message, AoGlobal)
+  return ({ Memory, message, AoGlobal, close }) => {
+    if (!close) return sadWasm(Memory, message, AoGlobal)
+  }
 }
 
 describe('evaluate', () => {
@@ -136,7 +140,7 @@ describe('evaluate', () => {
     assert.ok(last.ordinate)
   })
 
-  test('skip over dupliate messages (dup assignment or dup push (deepHash))', async () => {
+  test('skip over duplicate messages (dup assignment or dup push (deepHash))', async () => {
     let evalCount = 0
     let messageCount = 0
     const env = {
@@ -163,7 +167,7 @@ describe('evaluate', () => {
       loadEvaluator: async (...args) => {
         const e = await evaluateHappyMessage(...args)
         return (...opts) => {
-          evalCount++
+          if (!opts[opts.length - 1].close) evalCount++
           return e(...opts)
         }
       },
@@ -271,7 +275,7 @@ describe('evaluate', () => {
       loadEvaluator: async (...args) => {
         const e = await evaluateHappyMessage(...args)
         return (...opts) => {
-          evalCount++
+          if (!opts[opts.length - 1].close) evalCount++
           return e(...opts)
         }
       },
@@ -413,7 +417,7 @@ describe('evaluate', () => {
       loadEvaluator: async (...args) => {
         const e = await evaluateSadMessage(...args)
         return (...opts) => {
-          evalCount++
+          if (!opts[opts.length - 1].close) evalCount++
           return e(...opts)
         }
       },
@@ -513,7 +517,8 @@ describe('evaluate', () => {
   test('removes invalid tags', async () => {
     const evaluate = evaluateWith({
       findMessageBefore: async () => { throw { status: 404 } },
-      loadEvaluator: () => ({ message }) => {
+      loadEvaluator: () => ({ message, close }) => {
+        if (close) return
         assert.deepStrictEqual(
           message.Tags,
           [
