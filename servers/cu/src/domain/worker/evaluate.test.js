@@ -428,5 +428,34 @@ describe('evaluate', async () => {
         assert.equal(cache.size, 0)
       })
     })
+
+    test('returns nothing, removes from cache if close flag received', async () => {
+      const wasmInstanceCache = new LRUCache({ max: 1 })
+      wasmInstanceCache.set('stream-123', 'foo')
+
+      const evaluate = evaluateWith({
+        saveEvaluation: async (evaluation) => evaluation,
+        wasmInstanceCache,
+        loadWasmModule: () => assert.fail('should not call if close flag received'),
+        bootstrapWasmInstance: () => assert.fail('should not call if close flag received'),
+        ARWEAVE_URL: 'https://foo.bar',
+        logger
+      })
+
+      const args = {
+        streamId: 'stream-123',
+        close: true
+      }
+
+      /**
+       * Should return undefined if close flag is received
+       */
+      const res = await evaluate(args)
+      assert.ok(!res)
+      /**
+       * Should remove stream-123 from cache, leaving size of 0 remaining.
+       */
+      assert.equal(wasmInstanceCache.size, 0)
+    })
   })
 })
