@@ -405,7 +405,11 @@ export const backoff = (
  */
 export async function strFromFetchError (err) {
   if (err instanceof TypeError) return (err.cause ? err.cause.message : err.message) || 'Unknown TypeError'
-  if (err instanceof Response) return `${err.status}: ${await err.text()}`
+  /**
+   * duck typing for a Response, which works for POJOs,
+   * node native fetch Response and undici fetch Response
+   */
+  if (err.status && typeof err.text === 'function') return `${err.status}: ${await err.text()}`
   return err.message || 'Unknown Error'
 }
 

@@ -3,6 +3,7 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 import ms from 'ms'
+import { Response as UndiciResponse } from 'undici'
 
 import {
   busyIn, errFrom, evaluationToCursor, findPendingForProcessBeforeWith, maybeParseCursor,
@@ -10,7 +11,8 @@ import {
   isLaterThan,
   isEarlierThan,
   maybeParseInt,
-  isEqualTo
+  isEqualTo,
+  strFromFetchError
 } from './utils.js'
 
 describe('utils', () => {
@@ -414,6 +416,14 @@ describe('utils', () => {
 
     test('should map NaN to undefined', () => {
       assert.ok(maybeParseInt(NaN) === undefined)
+    })
+  })
+
+  describe('strFromFetchError', () => {
+    test('duck types a Response', async () => {
+      assert.equal(await strFromFetchError(new Response('error from native Response', { status: 422 })), '422: error from native Response')
+      assert.equal(await strFromFetchError(new UndiciResponse('error from undici Response', { status: 400 })), '400: error from undici Response')
+      assert.equal(await strFromFetchError({ status: 404, text: () => 'error from pojo' }), '404: error from pojo')
     })
   })
 })
