@@ -276,7 +276,7 @@ export const loadProcessWith = ({ fetch, logger }) => {
     )
       .catch(async (err) => {
         logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
-        throw new Error(await strFromFetchError(err))
+        throw new Error(`Error Encountered when loading process from Scheduler Unit: ${await strFromFetchError(err)}`)
       })
       .then(resToJson)
       .then(applySpec({
@@ -303,7 +303,7 @@ export const loadTimestampWith = ({ fetch, logger }) => {
   )
     .catch(async (err) => {
       logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
-      throw new Error(await strFromFetchError(err))
+      throw new Error(`Error Encountered when loading timestamp for process from Scheduler Unit: ${await strFromFetchError(err)}`)
     })
     .then(resToJson)
     .then((res) => ({
@@ -351,7 +351,7 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
           'Error Encountered when loading message meta for message "%s" to process "%s" from SU "%s"',
           messageTxId, processId, suUrl
         )
-        throw new Error(await strFromFetchError(err))
+        throw new Error(`Error Encountered when loading message from Scheduler Unit: ${await strFromFetchError(err)}`)
       })
       .then(resToJson)
       /**
