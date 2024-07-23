@@ -11,7 +11,7 @@ use actix_web::{
 use serde::Deserialize;
 use serde_json::json;
 
-use su::domain::{flows, init_deps, router, Deps};
+use su::domain::{flows, init_deps, router, Deps, PromMetrics};
 
 #[derive(Deserialize)]
 struct FromTo {
@@ -57,13 +57,13 @@ fn err_response(err: String) -> HttpResponse {
 }
 
 async fn base(
-    deps: web::Data<Arc<Deps>>,
+    data: web::Data<AppState>,
     query_params: web::Query<ProcessId>,
     req: HttpRequest,
 ) -> impl Responder {
     let process_id = query_params.process_id.clone();
 
-    match router::redirect_process_id(deps.get_ref().clone(), process_id).await {
+    match router::redirect_process_id(data.deps.clone(), process_id).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect()
@@ -74,7 +74,7 @@ async fn base(
         Err(err) => return err_response(err.to_string()),
     }
 
-    match flows::health(deps.get_ref().clone()).await {
+    match flows::health(data.deps.clone()).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
@@ -83,13 +83,14 @@ async fn base(
 }
 
 async fn timestamp_route(
-    deps: web::Data<Arc<Deps>>,
+    data: web::Data<AppState>,
     query_params: web::Query<ProcessId>,
     req: HttpRequest,
 ) -> impl Responder {
+    data.metrics.get_request("/timestamp".to_string());
     let process_id = query_params.process_id.clone();
 
-    match router::redirect_process_id(deps.get_ref().clone(), process_id).await {
+    match router::redirect_process_id(data.deps.clone(), process_id).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect()
@@ -100,7 +101,7 @@ async fn timestamp_route(
         Err(err) => return err_response(err.to_string()),
     }
 
-    match flows::timestamp(deps.get_ref().clone()).await {
+    match flows::timestamp(data.deps.clone()).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
@@ -109,13 +110,14 @@ async fn timestamp_route(
 }
 
 async fn main_post_route(
-    deps: web::Data<Arc<Deps>>,
+    data: web::Data<AppState>,
     req_body: web::Bytes,
     req: HttpRequest,
     query_params: web::Query<OptionalAssign>,
 ) -> impl Responder {
+    data.metrics.post_request();
     match router::redirect_data_item(
-        deps.get_ref().clone(),
+        data.deps.clone(),
         req_body.to_vec(),
         query_params.process_id.clone(),
         query_params.assign.clone(),
@@ -133,7 +135,7 @@ async fn main_post_route(
     }
 
     match flows::write_item(
-        deps.get_ref().clone(),
+        data.deps.clone(),
         req_body.to_vec(),
         query_params.process_id.clone(),
         query_params.assign.clone(),
@@ -150,18 +152,19 @@ async fn main_post_route(
 }
 
 async fn main_get_route(
-    deps: web::Data<Arc<Deps>>,
+    data: web::Data<AppState>,
     req: HttpRequest,
     path: web::Path<TxId>,
     query_params: web::Query<FromTo>,
 ) -> impl Responder {
+    data.metrics.get_request("/".to_string());
     let tx_id = path.tx_id.clone();
     let from_sort_key = query_params.from.clone();
     let to_sort_key = query_params.to.clone();
     let limit = query_params.limit.clone();
     let process_id = query_params.process_id.clone();
 
-    match router::redirect_tx_id(deps.get_ref().clone(), tx_id.clone(), process_id.clone()).await {
+    match router::redirect_tx_id(data.deps.clone(), tx_id.clone(), process_id.clone()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect()
@@ -172,14 +175,8 @@ async fn main_get_route(
         Err(err) => return err_response(err.to_string()),
     }
 
-    let result = flows::read_message_data(
-        deps.get_ref().clone(),
-        tx_id,
-        from_sort_key,
-        to_sort_key,
-        limit,
-    )
-    .await;
+    let result =
+        flows::read_message_data(data.deps.clone(), tx_id, from_sort_key, to_sort_key, limit).await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -190,13 +187,14 @@ async fn main_get_route(
 }
 
 async fn read_process_route(
-    deps: web::Data<Arc<Deps>>,
+    data: web::Data<AppState>,
     req: HttpRequest,
     path: web::Path<ProcessIdRequired>,
 ) -> impl Responder {
+    data.metrics.get_request("/processes".to_string());
     let process_id = path.process_id.clone();
 
-    match router::redirect_process_id(deps.get_ref().clone(), Some(process_id.clone())).await {
+    match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
             return HttpResponse::TemporaryRedirect()
@@ -207,7 +205,7 @@ async fn read_process_route(
         Err(err) => return err_response(err.to_string()),
     }
 
-    match flows::read_process(deps.get_ref().clone(), process_id).await {
+    match flows::read_process(data.deps.clone(), process_id).await {
         Ok(processed_str) => HttpResponse::Ok()
             .content_type("application/json")
             .body(processed_str),
@@ -217,6 +215,23 @@ async fn read_process_route(
 
 async fn health_check() -> impl Responder {
     HttpResponse::Ok()
+}
+
+async fn metrics_route(data: web::Data<AppState>) -> impl Responder {
+    let result = data.metrics.emit_metrics();
+    match result {
+        Ok(metrics_str) => HttpResponse::Ok()
+            .content_type("application/openmetrics-text; version=1.0.0; charset=utf-8")
+            .body(metrics_str),
+        Err(err) => HttpResponse::BadRequest()
+            .content_type("text/plain")
+            .body(err),
+    }
+}
+
+struct AppState {
+    deps: Arc<Deps>,
+    metrics: Arc<PromMetrics>,
 }
 
 #[actix_web::main]
@@ -241,9 +256,10 @@ async fn main() -> io::Result<()> {
         }
     };
 
-    let wrapped = web::Data::new(init_deps(mode).await);
+    let (deps, metrics) = init_deps(mode).await;
+    let app_state = web::Data::new(AppState { deps, metrics });
 
-    let run_deps = wrapped.get_ref().clone();
+    let run_deps = app_state.deps.clone();
 
     if run_deps.config.mode() == "router" {
         match router::init_schedulers(run_deps.clone()).await {
@@ -261,12 +277,13 @@ async fn main() -> io::Result<()> {
                     .allow_any_header(),
             )
             .wrap(Logger::default())
-            .app_data(wrapped.clone())
+            .app_data(app_state.clone())
             .app_data(web::PayloadConfig::new(10485760))
             .route("/", web::get().to(base))
             .route("/", web::post().to(main_post_route))
             .route("/timestamp", web::get().to(timestamp_route))
             .route("/health", web::get().to(health_check))
+            .route("/metrics", web::get().to(metrics_route))
             .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
     })

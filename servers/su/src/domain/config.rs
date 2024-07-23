@@ -19,6 +19,7 @@ pub struct AoConfig {
     pub migration_batch_size: i64,
     pub db_write_connections: u32,
     pub db_read_connections: u32,
+    pub enable_metrics: bool,
 }
 
 impl AoConfig {
@@ -37,8 +38,8 @@ impl AoConfig {
             Err(_e) => false,
         };
         let su_data_dir = match use_disk {
-          true => env::var("SU_DATA_DIR")?,
-          false => "".to_string()
+            true => env::var("SU_DATA_DIR")?,
+            false => "".to_string(),
         };
         let migration_batch_size = match env::var("MIGRATION_BATCH_SIZE") {
             Ok(val) => val.parse().unwrap(),
@@ -53,12 +54,16 @@ impl AoConfig {
             Err(_e) => 10,
         };
         let graphql_url = match env::var("GRAPHQL_URL") {
-          Ok(val) => val,
-          Err(_e) => env::var("GATEWAY_URL")?
+            Ok(val) => val,
+            Err(_e) => env::var("GATEWAY_URL")?,
         };
         let arweave_url = match env::var("ARWEAVE_URL") {
-          Ok(val) => val,
-          Err(_e) => env::var("GATEWAY_URL")?
+            Ok(val) => val,
+            Err(_e) => env::var("GATEWAY_URL")?,
+        };
+        let enable_metrics = match env::var("ENABLE_METRICS") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
         };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
@@ -74,6 +79,7 @@ impl AoConfig {
             migration_batch_size,
             db_write_connections,
             db_read_connections,
+            enable_metrics,
         })
     }
 }
