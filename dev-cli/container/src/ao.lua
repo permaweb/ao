@@ -185,9 +185,13 @@ function ao.send(msg)
             )
         end
 
-    message.receive = function()
+    message.receive = function(...)
+        local from = message.Target
+        if select("#", ...) == 1 then
+            from = select(1, ...)
+        end
         return Handlers.receive({
-            From = message.Target,
+            From = from,
             ["X-Reference"] = message.Reference
         })
     end
@@ -251,7 +255,7 @@ function ao.spawn(module, msg)
 
     -- add 'after' callback to returned table
     --local result = {}
-    spawn.after =
+    spawn.onReply =
         function(callback)
             Handlers.once(
                 { Action = "Spawned", From = ao.id, ["Reference"] = spawnRef },
