@@ -255,7 +255,7 @@ function ao.spawn(module, msg)
 
     -- add 'after' callback to returned table
     --local result = {}
-    spawn.after =
+    spawn.onReply =
         function(callback)
             Handlers.once(
                 { Action = "Spawned", From = ao.id, ["Reference"] = spawnRef },
