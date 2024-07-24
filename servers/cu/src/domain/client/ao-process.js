@@ -817,12 +817,19 @@ export function findLatestProcessMemoryWith ({
                   return of()
                     .chain(fromPromise(async () => cached.File))
                     .chain((maybeFile) => {
-                      if (!maybeFile) return Rejected(args)
+                      if (!maybeFile) return Rejected('No file path cached')
 
                       file = maybeFile
                       logger('Reloading cached process memory from file "%s"', file)
                       return readProcessMemoryFile(file)
                     })
+                    .bichain(
+                      (e) => {
+                        logger('Error Encountered when reading process memory file for process "%s" from file "%s": "%s"', processId, file || 'path not found', e)
+                        return Rejected(args)
+                      },
+                      Resolved
+                    )
                 }
 
                 logger(
@@ -1277,6 +1284,8 @@ export function saveCheckpointWith ({
 
   function createCheckpointDataItem (args) {
     const { moduleId, processId, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory, File } = args
+
+    let file
     return of()
       .chain(() => {
         if (Memory) return of(Memory)
@@ -1284,12 +1293,19 @@ export function saveCheckpointWith ({
           return of()
             .chain(fromPromise(async () => File))
             .chain((maybeFile) => {
-              if (!maybeFile) return Rejected('either Memory or File required')
+              if (!maybeFile) return Rejected('no file path cached')
 
-              const file = maybeFile
+              file = maybeFile
               logger('Reloading cached process memory from file "%s"', file)
               return readProcessMemoryFile(file)
             })
+            .bichain(
+              (e) => {
+                logger('Error Encountered when reading process memory file for process "%s" from file "%s": "%s"', processId, file || 'path not found', e)
+                return Rejected(args)
+              },
+              Resolved
+            )
         }
 
         logger(
