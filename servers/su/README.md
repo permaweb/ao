@@ -36,7 +36,9 @@ Create a .env file with the following variables, or set them in the OS:
 - `SU_WALLET_PATH` a local filepath to an arweave wallet the SU will use to write tx's
 - `DATABASE_URL` a postgres database url, you must have a postgres database called `su`
 - `DATABASE_READ_URL` an optional separate postgres database url for reads
-- `GATEWAY_URL`an arweave gateway url to write to `https://arweave.net/`
+- `GRAPHQL_URL`an url for the arweave graphql interface `https://arweave-search.goldsky.com`
+- `ARWEAVE_URL`an arweave gateway url to fetch actual transactions and network info from `https://arweave.net/`
+- `GATEWAY_URL`an default fallback for the above 2. Must provide graphql, network info, and tx fetching.
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
 - `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore when in `su` MODE, just set it to `""`.
@@ -45,6 +47,7 @@ Create a .env file with the following variables, or set them in the OS:
 - `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
 - `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
 - `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
+- `ENABLE_METRICS` enable prometheus metrics to be available on the  `/metrics` endpoint
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
@@ -106,16 +109,20 @@ environment variables. You will also need to make sure the database url is acces
 in the container. 
 
 - `SU_WALLET_PATH` a local filepath to an arweave wallet the SU will use to write tx's
-- `DATABASE_URL` a postgres database url, you must create a postgres database called `su`
-- `GATEWAY_URL`an arweave gateway url to write to `https://arweave.net/`
+- `DATABASE_URL` a postgres database url, you must have a postgres database called `su`
+- `DATABASE_READ_URL` an optional separate postgres database url for reads
+- `GRAPHQL_URL`an url for the arweave graphql interface `https://arweave-search.goldsky.com`
+- `ARWEAVE_URL`an arweave gateway url to fetch actual transactions and network info from `https://arweave.net/`
+- `GATEWAY_URL`an default fallback for the above 2. Must provide graphql, network info, and tx fetching.
 - `UPLOAD_NODE_URL` an uploader url such as `https://up.arweave.net`
 - `MODE` can be either value `su` or `router` but for local development use `su`
-- `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore in `su` mode just set it to `""`.
+- `SCHEDULER_LIST_PATH` a list of schedulers only used for `router` MODE. Ignore when in `su` MODE, just set it to `""`.
 - `DB_WRITE_CONNECTIONS` how many db connections in the writer pool,defaults to 10
 - `DB_READ_CONNECTIONS` how many db connections in the reader pool, default to 10
 - `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
 - `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
 - `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
+- `ENABLE_METRICS` enable prometheus metrics to be available on the  `/metrics` endpoint
 
 
 

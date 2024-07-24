@@ -58,9 +58,6 @@ pub trait ScheduleProvider {
 }
 
 pub trait Config: Send + Sync {
-    fn su_wallet_path(&self) -> String;
-    fn upload_node_url(&self) -> String;
-    fn gateway_url(&self) -> String;
     fn mode(&self) -> String;
     fn scheduler_list_path(&self) -> String;
 }
@@ -122,4 +119,15 @@ pub trait DataStore: Send + Sync {
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType>;
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
     fn check_existing_message(&self, message: &Message) -> Result<(), StoreErrorType>;
+}
+
+pub trait CoreMetrics: Send + Sync {
+    fn get_process_observe(&self, duration: u128);
+    fn get_message_observe(&self, duration: u128);
+    fn get_messages_observe(&self, duration: u128);
+    fn serialize_json_observe(&self, duration: u128);
+    fn read_message_data_observe(&self, duration: u128);
+    fn write_item_observe(&self, duration: u128);
+    fn write_assignment_observe(&self, duration: u128);
+    fn acquire_write_lock_observe(&self, duration: u128);
 }

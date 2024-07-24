@@ -15,12 +15,13 @@ use config::AoConfig;
 use core::dal::{Config, Gateway, Log};
 use logger::SuLog;
 
+pub use clients::metrics::PromMetrics;
 pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
 pub use store::migrate_to_disk;
 
-pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
+pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     let logger: Arc<dyn Log> = SuLog::init();
 
     let data_store = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
@@ -31,7 +32,7 @@ pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
         Err(e) => logger.log(format!("{:?}", e)),
     }
 
-    let config = Arc::new(AoConfig::new(mode).expect("Failed to read configuration"));
+    let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
 
     if config.use_disk {
         let logger_clone = logger.clone();
@@ -70,14 +71,23 @@ pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
         UploaderClient::new(&config.upload_node_url, logger.clone()).expect("Invalid uploader url"),
     );
 
-    Arc::new(Deps {
-        data_store,
-        logger,
-        config,
-        scheduler,
-        gateway,
-        signer,
-        wallet,
-        uploader,
-    })
+    let metrics = Arc::new(PromMetrics::new(
+        AoConfig::new(mode).expect("Failed to read configuration"),
+    ));
+    let metrics_clone = metrics.clone();
+
+    (
+        Arc::new(Deps {
+            data_store,
+            logger,
+            config,
+            scheduler,
+            gateway,
+            signer,
+            wallet,
+            uploader,
+            metrics,
+        }),
+        metrics_clone,
+    )
 }

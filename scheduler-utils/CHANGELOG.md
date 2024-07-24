@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.20](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.19...scheduler-utils@v0.0.20) (2024-07-17)
+
+
+### Bug Fixes
+
+* **scheduler-utils:** trim trailing slash from returned URLs [#246](https://github.com/permaweb/ao/issues/246) ([ecb97a6](https://github.com/permaweb/ao/commit/ecb97a6e357a1d57dfb0a8b96afe0639b4893dd0))
+
 ## [0.0.19](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.18...scheduler-utils@v0.0.19) (2024-04-30)
 
 ## [0.0.18](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.17...scheduler-utils@v0.0.18) (2024-04-17)

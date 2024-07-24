@@ -1,10 +1,10 @@
-import { backoff, okRes } from '../utils.js'
+import { backoff, joinUrl, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
 function isWalletWith ({
   fetch,
   histogram,
-  GRAPHQL_URL,
+  ARWEAVE_URL,
   logger,
   setById,
   getById
@@ -27,7 +27,7 @@ function isWalletWith ({
       return cachedIsWallet.isWallet
     }
 
-    logger(`id: ${id} not cached checking gateway for tx`)
+    logger(`id: ${id} not cached checking arweave for tx`)
 
     /*
       Only if this is actually a tx will this
@@ -36,14 +36,13 @@ function isWalletWith ({
     */
     return backoff(
       () =>
-        walletFetch(`${GRAPHQL_URL.replace('/graphql', '')}/${id}`, {
-          method: 'HEAD'
-        }).then(okRes),
+        walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
+          .then(okRes),
       {
         maxRetries: 3,
         delay: 500,
         log: logger,
-        name: `isWalletOnGateway(${id})`
+        name: `isWallet(${id})`
       }
     )
       .then((res) => {

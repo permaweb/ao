@@ -3,9 +3,55 @@ import * as assert from 'node:assert'
 
 import { z } from 'zod'
 
-import { errFrom, removeTagsByNameMaybeValue, swallow } from './utils.js'
+import { errFrom, joinUrl, preprocessUrls, removeTagsByNameMaybeValue, swallow } from './utils.js'
 
 describe('utils', () => {
+  describe('joinUrl', () => {
+    test('should return the url', () => {
+      assert.equal(joinUrl({ url: 'https://arweave.net/graphql' }), 'https://arweave.net/graphql')
+      assert.equal(joinUrl({ url: 'https://arweave.net/graphql?foo=bar' }), 'https://arweave.net/graphql?foo=bar')
+      assert.equal(joinUrl({ url: 'https://arweave.net/graphql', path: undefined }), 'https://arweave.net/graphql')
+    })
+
+    test('should append the path', () => {
+      assert.equal(joinUrl({ url: 'https://arweave.net', path: 'graphql' }), 'https://arweave.net/graphql')
+      assert.equal(joinUrl({ url: 'https://arweave.net', path: '/graphql' }), 'https://arweave.net/graphql')
+      assert.equal(joinUrl({ url: 'https://arweave.net/', path: 'graphql' }), 'https://arweave.net/graphql')
+      assert.equal(joinUrl({ url: 'https://arweave.net/', path: '/graphql' }), 'https://arweave.net/graphql')
+
+      assert.equal(joinUrl({ url: 'https://arweave.net?foo=bar', path: 'graphql' }), 'https://arweave.net/graphql?foo=bar')
+      assert.equal(joinUrl({ url: 'https://arweave.net?foo=bar', path: '/graphql' }), 'https://arweave.net/graphql?foo=bar')
+      assert.equal(joinUrl({ url: 'https://arweave.net/?foo=bar', path: 'graphql' }), 'https://arweave.net/graphql?foo=bar')
+      assert.equal(joinUrl({ url: 'https://arweave.net/?foo=bar', path: '/graphql' }), 'https://arweave.net/graphql?foo=bar')
+    })
+  })
+
+  describe('preprocessUrls', () => {
+    const GATEWAY_URL = 'https://foo.bar'
+    const ARWEAVE_URL = 'https://arweave.net'
+    const GRAPHQL_URL = 'https://my.custom/graphql'
+
+    test('should use the provided values', () => {
+      const config = preprocessUrls({ GATEWAY_URL, ARWEAVE_URL, GRAPHQL_URL })
+      assert.equal(config.ARWEAVE_URL, ARWEAVE_URL)
+      assert.equal(config.GRAPHQL_URL, GRAPHQL_URL)
+    })
+
+    test('should use the provided GATEWAY_URL to default ARWEAVE_URL and GRAPHQL_URL', () => {
+      const noArweaveUrl = preprocessUrls({ GATEWAY_URL, GRAPHQL_URL })
+      assert.equal(noArweaveUrl.ARWEAVE_URL, GATEWAY_URL)
+      assert.equal(noArweaveUrl.GRAPHQL_URL, GRAPHQL_URL)
+
+      const noGraphQlUrl = preprocessUrls({ GATEWAY_URL, ARWEAVE_URL })
+      assert.equal(noGraphQlUrl.GRAPHQL_URL, `${GATEWAY_URL}/graphql`)
+      assert.equal(noGraphQlUrl.ARWEAVE_URL, ARWEAVE_URL)
+
+      const neither = preprocessUrls({ GATEWAY_URL })
+      assert.equal(neither.GRAPHQL_URL, `${GATEWAY_URL}/graphql`)
+      assert.equal(neither.ARWEAVE_URL, GATEWAY_URL)
+    })
+  })
+
   describe('errFrom', () => {
     test('should map ZodError to a friendly error', async () => {
       const schema = z.function().args(z.object({ name: z.string() })).returns(

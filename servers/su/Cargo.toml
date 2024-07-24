@@ -32,6 +32,8 @@ actix-cors = "0.6.0"
 simd-json = "0.13.10"
 futures = "0.3.30"
 rocksdb = "0.22.0"
+prometheus-client = "0.22.3"
+sysinfo = "0.30.13"
 
 [[bin]]
 name = "su"

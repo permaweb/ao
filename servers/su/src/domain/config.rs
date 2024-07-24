@@ -9,7 +9,8 @@ pub struct AoConfig {
     pub database_url: String,
     pub database_read_url: String,
     pub su_wallet_path: String,
-    pub gateway_url: String,
+    pub graphql_url: String,
+    pub arweave_url: String,
     pub upload_node_url: String,
     pub mode: String,
     pub scheduler_list_path: String,
@@ -18,6 +19,7 @@ pub struct AoConfig {
     pub migration_batch_size: i64,
     pub db_write_connections: u32,
     pub db_read_connections: u32,
+    pub enable_metrics: bool,
 }
 
 impl AoConfig {
@@ -35,6 +37,10 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
+        let su_data_dir = match use_disk {
+            true => env::var("SU_DATA_DIR")?,
+            false => "".to_string(),
+        };
         let migration_batch_size = match env::var("MIGRATION_BATCH_SIZE") {
             Ok(val) => val.parse().unwrap(),
             Err(_e) => 1000,
@@ -47,33 +53,38 @@ impl AoConfig {
             Ok(val) => val.parse().unwrap(),
             Err(_e) => 10,
         };
+        let graphql_url = match env::var("GRAPHQL_URL") {
+            Ok(val) => val,
+            Err(_e) => env::var("GATEWAY_URL")?,
+        };
+        let arweave_url = match env::var("ARWEAVE_URL") {
+            Ok(val) => val,
+            Err(_e) => env::var("GATEWAY_URL")?,
+        };
+        let enable_metrics = match env::var("ENABLE_METRICS") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
             su_wallet_path: env::var("SU_WALLET_PATH")?,
-            gateway_url: env::var("GATEWAY_URL")?,
+            graphql_url,
+            arweave_url,
             upload_node_url: env::var("UPLOAD_NODE_URL")?,
             mode: mode_out,
             scheduler_list_path: env::var("SCHEDULER_LIST_PATH")?,
             use_disk,
-            su_data_dir: env::var("SU_DATA_DIR")?,
+            su_data_dir,
             migration_batch_size,
             db_write_connections,
             db_read_connections,
+            enable_metrics,
         })
     }
 }
 
 impl Config for AoConfig {
-    fn su_wallet_path(&self) -> String {
-        self.su_wallet_path.clone()
-    }
-    fn upload_node_url(&self) -> String {
-        self.upload_node_url.clone()
-    }
-    fn gateway_url(&self) -> String {
-        self.gateway_url.clone()
-    }
     fn mode(&self) -> String {
         self.mode.clone()
     }

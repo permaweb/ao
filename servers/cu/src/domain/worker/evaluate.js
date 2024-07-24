@@ -158,12 +158,20 @@ export function evaluateWith ({
    *
    * Finally, evaluates the message and returns the result of the evaluation.
    */
-  return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) =>
+  return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal, close }) => {
+    /**
+     * If we receive the close flag, it means we have reached the end of the eval stream.
+     * We will remove the WASM instance from the cache and skip loading the module.
+     */
+    if (close) {
+      wasmInstanceCache.delete(streamId)
+      return
+    }
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
-    maybeCachedInstance({ streamId, moduleId, wasmModule, moduleOptions, name, processId, Memory, message, AoGlobal })
+    return maybeCachedInstance({ streamId, moduleId, wasmModule, moduleOptions, name, processId, Memory, message, AoGlobal })
       .bichain(loadInstance, Resolved)
       /**
        * Perform the evaluation
@@ -225,4 +233,5 @@ export function evaluateWith ({
           })
       )
       .toPromise()
+  }
 }

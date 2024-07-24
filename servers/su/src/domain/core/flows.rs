@@ -10,7 +10,7 @@ use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
 
-use super::dal::{Config, DataStore, Gateway, Log, Signer, Uploader, Wallet};
+use super::dal::{Config, DataStore, Gateway, Log, Signer, Uploader, Wallet, CoreMetrics};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
@@ -20,6 +20,7 @@ pub struct Deps {
     pub signer: Arc<dyn Signer>,
     pub wallet: Arc<dyn Wallet>,
     pub uploader: Arc<dyn Uploader>,
+    pub metrics: Arc<dyn CoreMetrics>,
 
     /*
         scheduler is part of the core but we initialize
@@ -56,10 +57,14 @@ async fn assignment_only(
     base_layer: Option<String>,
     exclude: Option<String>,
 ) -> Result<String, String> {
+    let start_top_level = Instant::now();
     let builder = init_builder(&deps)?;
 
+    let start_acquire_lock = Instant::now();
     let locked_schedule_info = deps.scheduler.acquire_lock(process_id.clone()).await?;
     let mut schedule_info = locked_schedule_info.lock().await;
+    let elapsed_acquire_lock = start_acquire_lock.elapsed();
+    deps.metrics.acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
     let updated_info = deps
         .scheduler
         .update_schedule_info(&mut *schedule_info, process_id.clone())
@@ -88,6 +93,8 @@ async fn assignment_only(
         Ok(timestamp) => {
             let response_json =
                 json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
+            let elapsed_top_level = start_top_level.elapsed();
+            deps.metrics.write_assignment_observe(elapsed_top_level.as_millis());
             Ok(response_json.to_string())
         }
         Err(e) => Err(format!("{:?}", e)),
@@ -109,6 +116,7 @@ pub async fn write_item(
     base_layer: Option<String>,
     exclude: Option<String>,
 ) -> Result<String, String> {
+    let start_top_level = Instant::now();
     // XOR, if we have one of these, we must have both.
     if process_id.is_some() ^ assign.is_some() {
         return Err("If sending assign or process-id, you must send both.".to_string());
@@ -143,8 +151,11 @@ pub async fn write_item(
                 process we are creating. So if a message is written
                 while the process is still being created it will wait
             */
+            let start_acquire_lock = Instant::now();
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
+            let elapsed_acquire_lock = start_acquire_lock.elapsed();
+            deps.metrics.acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
             let updated_info = deps
                 .scheduler
                 .update_schedule_info(&mut *schedule_info, data_item.id())
@@ -161,6 +172,8 @@ pub async fn write_item(
                 Ok(timestamp) => {
                     let response_json =
                         json!({ "timestamp": timestamp, "id": process.process_id.clone() });
+                    let elapsed_top_level = start_top_level.elapsed();
+                    deps.metrics.write_item_observe(elapsed_top_level.as_millis());
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e)),
@@ -171,8 +184,11 @@ pub async fn write_item(
                 process we are writing a message to. this ensures
                 no conflicts in the schedule
             */
+            let start_acquire_lock = Instant::now();
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
+            let elapsed_acquire_lock = start_acquire_lock.elapsed();
+            deps.metrics.acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
             let updated_info = deps
                 .scheduler
                 .update_schedule_info(&mut *schedule_info, data_item.target())
@@ -190,6 +206,8 @@ pub async fn write_item(
                 Ok(timestamp) => {
                     let response_json =
                         json!({ "timestamp": timestamp, "id": message.message_id()? });
+                    let elapsed_top_level = start_top_level.elapsed();
+                    deps.metrics.write_item_observe(elapsed_top_level.as_millis());
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e)),
@@ -209,11 +227,15 @@ pub async fn read_message_data(
     to: Option<String>,
     limit: Option<i32>,
 ) -> Result<String, String> {
+    let start_top_level = Instant::now();
+    let start_get_message = Instant::now();
     if let Ok(message) = deps.data_store.get_message(&tx_id) {
         if message.message.is_some()
             || ((message.message_id()? != message.process_id()?)
                 && (message.assignment_id()? == tx_id))
         {
+            let elapsed_get_message = start_get_message.elapsed();
+            deps.metrics.get_message_observe(elapsed_get_message.as_millis());
             return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
         }
     }
@@ -227,12 +249,17 @@ pub async fn read_message_data(
         let duration = start.elapsed();
         deps.logger
             .log(format!("Time elapsed in get_messages() is: {:?}", duration));
+        deps.metrics.get_messages_observe(duration.as_millis());
 
         let startj = Instant::now();
         let result = simd_to_string(&messages).map_err(|e| format!("{:?}", e))?;
         let durationj = startj.elapsed();
         deps.logger
             .log(format!("Time elapsed in json mapping is: {:?}", durationj));
+        deps.metrics.serialize_json_observe(durationj.as_millis());
+
+        let elapsed_top_level = start_top_level.elapsed();
+        deps.metrics.read_message_data_observe(elapsed_top_level.as_millis());
 
         return Ok(result);
     }
@@ -241,7 +268,10 @@ pub async fn read_message_data(
 }
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
+    let start = Instant::now();
     let process = deps.data_store.get_process(&process_id)?;
+    let elapsed = start.elapsed();
+    deps.metrics.get_process_observe(elapsed.as_millis());
     let result = match serde_json::to_string(&process) {
         Ok(r) => r,
         Err(e) => return Err(format!("{:?}", e)),

@@ -2,9 +2,15 @@ import { fromPromise, of } from 'hyper-async'
 import { applySpec, last, map, path, pathSatisfies, pipe, pluck, prop, props, splitEvery } from 'ramda'
 import { z } from 'zod'
 import pMap from 'p-map'
-
 import { blockSchema } from '../model.js'
 import { BLOCKS_TABLE } from './sqlite.js'
+import { backoff, strFromFetchError } from '../utils.js'
+import CircuitBreaker from 'opossum'
+
+const okRes = (res) => {
+  if (res.ok) return res
+  throw res
+}
 
 const blockDocSchema = z.object({
   id: blockSchema.shape.height,
@@ -105,7 +111,14 @@ export function findBlocksWith ({ db }) {
  * @param {Env1} env
  * @returns {LoadBlocksMeta}
  */
-export function loadBlocksMetaWith ({ fetch, GRAPHQL_URL, pageSize, logger }) {
+export function loadBlocksMetaWith ({
+  fetch, GRAPHQL_URL, pageSize, logger, breakerOptions = {
+    timeout: 10000, // 10 seconds timeout
+    errorThresholdPercentage: 50, // open circuit after 50% failures
+    resetTimeout: 15000, // attempt to close circuit after 15 seconds
+    volumeThreshold: 15 // only use rolling windows of 15 or more requests
+  }
+}) {
   // TODO: create a dataloader and use that to batch load contracts
   const GET_BLOCKS_QUERY = `
       query GetBlocks($min: Int!, $limit: Int!) {
@@ -146,16 +159,26 @@ export function loadBlocksMetaWith ({ fetch, GRAPHQL_URL, pageSize, logger }) {
           )
           return variables
         })
-        .then((variables) =>
-          fetch(GRAPHQL_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: GET_BLOCKS_QUERY,
-              variables
-            })
-          })
-        )
+        .then((variables) => {
+          return backoff(
+            () => fetch(GRAPHQL_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                query: GET_BLOCKS_QUERY,
+                variables
+              })
+            }).then(okRes).catch(async (e) => {
+              logger(
+                'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
+                newMin,
+                maxTimestamp
+              )
+              throw new Error(`Can not communicate with gateway to retrieve block metadata: ${await strFromFetchError(e)}`)
+            }),
+            { maxRetries: 2, delay: 300, log: logger, name: `loadBlockMeta(${JSON.stringify({ newMin, maxTimestamp })})` }
+          )
+        })
         .then(async (res) => {
           if (res.ok) return res.json()
           logger(
@@ -218,10 +241,12 @@ export function loadBlocksMetaWith ({ fetch, GRAPHQL_URL, pageSize, logger }) {
     return fetchPage({ min, maxTimestamp }).then(maybeFetchNext)
   }
 
+  const circuitBreaker = new CircuitBreaker(fetchAllPages, breakerOptions)
+
   return (args) =>
     of(args)
       .chain(fromPromise(({ min, maxTimestamp }) =>
-        fetchAllPages({ min, maxTimestamp })
+        circuitBreaker.fire({ min, maxTimestamp })
           .then(prop('edges'))
           .then(pluck('node'))
           .then(map(block => ({
@@ -232,6 +257,10 @@ export function loadBlocksMetaWith ({ fetch, GRAPHQL_URL, pageSize, logger }) {
                */
             timestamp: block.timestamp * 1000
           })))
+          .catch((e) => {
+            if (e.message === 'Breaker is open') throw new Error('Can not communicate with gateway to retrieve block metadata (breaker is open)')
+            else throw e
+          })
           // .then(logger.tap('Loaded blocks meta after height %s up to timestamp %s', min, maxTimestamp))
       ))
       .toPromise()
