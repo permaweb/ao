@@ -12,7 +12,8 @@ import {
   isEarlierThan,
   maybeParseInt,
   isEqualTo,
-  strFromFetchError
+  strFromFetchError,
+  addressFrom
 } from './utils.js'
 
 describe('utils', () => {
@@ -424,6 +425,30 @@ describe('utils', () => {
       assert.equal(await strFromFetchError(new Response('error from native Response', { status: 422 })), '422: error from native Response')
       assert.equal(await strFromFetchError(new UndiciResponse('error from undici Response', { status: 400 })), '400: error from undici Response')
       assert.equal(await strFromFetchError({ status: 404, text: () => 'error from pojo' }), '404: error from pojo')
+    })
+  })
+
+  describe('addressFrom', () => {
+    test('should return the address for arweave public keys', () => {
+      const address = 'ukkobWjvi0Gwt7SSt2pdQRS2vXsRO3s-kGDx7jQlJdY'
+      const key = 'sA3TgZ_yWVqU7wKurqwvV8LWqLHHMFXGPoFRAq-wYqntTl4_BbR7u3EIYiC9xUh1yaveiyquDNub1wp3SN5W8GZSugnu29EyUcPo1eH976hRlthHtJAk4fidbXNgUPHf25qkVAfYcl84S8cKCis8sFTIwxOaKDBnZiTkgYkYNO2_iav82p-N-WQ20oC_QNj9tXkl8vyYqhAKIwBT_Wf1P8CNDQiAFbR4aMK4x1c19RaA0gxUtQrVs3LlVbeygImUXvoKzad1PkGj3bPPXoMe1JzSul9J5VRR1qiOKVBloNCfTFfEykw5BCshWBNgMJ2Vgh_qyrx9nQGXU-dlTcnWISyTrD5Ctm0tqq0lqaLN3lTLIDHUsQdQbkTMaXfxDSym09A-gDb6bmyatwwMMNlKHRy_H6Shp28PrPQJWdducViMdcx0timKFYWMAGBehtFIe2eI7fc7nNmuJ6NxG8MBSt9PoGWxEhktjjAYxhmQOVCaT2aQRmvmWmp2F9XONiGY5Q4jqbwrIG89eVrNJmUBf3oeTCdjMSsqoj8ypr4oWVyOGJkxwn4gmKJ1w9TzcSIN-1bT9T1J6P2lamQYiF9CqGfzQ-Hqa-nBvfhFCaOxX_6JIBcN5ng52w_cTtLT_gs6VI90PZQzDe_HHlepgW_yf85FLlg9hhnU2TmNLkmshRk'
+
+      const res = addressFrom({ address, key })
+      assert.equal(res, address)
+    })
+
+    test('should return the ethereum address for ethereum public keys', () => {
+      const address = 'KNrSdKEQPHc3lHcLUViwvGONLYp2EcxL_oaHBH6zh3w'
+      const keys = ['BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo___ne03QpL-5WFHztzVceB3WD4QY_Ipl0UkHr_R8kDpVk', 'BOaKz8AlOhBiDf9wawobHx9YM-o76zveIlDV8nHzVjYGZy68ReC36i6BbstwygMTexyUdu7GPUYy6ZACC3tvujk']
+
+      const ethAddresses = ['0xFCAd0B19bB29D4674531d6f115237E16AfCE377c', '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1']
+
+      keys.forEach((key, idx) => {
+        const res = addressFrom({ address, key })
+        assert.ok(res)
+        assert.equal(res, ethAddresses[idx])
+        assert.equal(res.length, 42) // last 20 bytes prefixed with '0x'
+      })
     })
   })
 })

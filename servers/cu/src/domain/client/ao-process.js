@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
 
-import { isEarlierThan, isEqualTo, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
+import { isEarlierThan, isEqualTo, isJsonString, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
 import { processSchema } from '../model.js'
 import { PROCESSES_TABLE, CHECKPOINTS_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
@@ -353,9 +353,30 @@ export function findProcessWith ({ db }) {
     .map(defaultTo([]))
     .map(head)
     .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Process not found' }))
+    .chain((row) => {
+      if (isJsonString(row.owner)) return Resolved(row)
+
+      /**
+       * owner contains the deprecated, pre-parsed value, so we need to self cleanup.
+       * So implictly delete the defunct record and Reject as if it was not found.
+       *
+       * It will then be up the client (in this case the business logic) to re-insert
+       * the record with the proper format
+       */
+      return of({
+        sql: `
+          DELETE FROM ${PROCESSES_TABLE}
+          WHERE
+            id = ?;
+        `,
+        parameters: [processId]
+      }).chain(fromPromise((query) => db.run(query)))
+        .chain(() => Rejected({ status: 404, message: 'Process record invalid' }))
+    })
     .map(evolve({
       tags: JSON.parse,
-      block: JSON.parse
+      block: JSON.parse,
+      owner: JSON.parse
     }))
     .map(processDocSchema.parse)
     .map(applySpec({
@@ -383,7 +404,7 @@ export function saveProcessWith ({ db }) {
         process.signature,
         process.data,
         process.anchor,
-        process.owner,
+        JSON.stringify(process.owner),
         JSON.stringify(process.tags),
         JSON.stringify(process.block)
       ]
@@ -403,6 +424,24 @@ export function saveProcessWith ({ db }) {
       )
       .toPromise()
   }
+}
+
+export function deleteProcessWith ({ db }) {
+  function createQuery ({ processId }) {
+    return {
+      sql: `
+        DELETE FROM ${PROCESSES_TABLE}
+        WHERE
+          id = ?;
+      `,
+      parameters: [processId]
+    }
+  }
+  return ({ processId }) => of({ processId })
+    .map(createQuery)
+    .chain(fromPromise((query) => db.run(query)))
+    .map(always(processId))
+    .toPromise()
 }
 
 /**
@@ -817,12 +856,19 @@ export function findLatestProcessMemoryWith ({
                   return of()
                     .chain(fromPromise(async () => cached.File))
                     .chain((maybeFile) => {
-                      if (!maybeFile) return Rejected(args)
+                      if (!maybeFile) return Rejected('No file path cached')
 
                       file = maybeFile
                       logger('Reloading cached process memory from file "%s"', file)
                       return readProcessMemoryFile(file)
                     })
+                    .bichain(
+                      (e) => {
+                        logger('Error Encountered when reading process memory file for process "%s" from file "%s": "%s"', processId, file || 'path not found', e)
+                        return Rejected(args)
+                      },
+                      Resolved
+                    )
                 }
 
                 logger(
@@ -1277,6 +1323,8 @@ export function saveCheckpointWith ({
 
   function createCheckpointDataItem (args) {
     const { moduleId, processId, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory, File } = args
+
+    let file
     return of()
       .chain(() => {
         if (Memory) return of(Memory)
@@ -1284,12 +1332,19 @@ export function saveCheckpointWith ({
           return of()
             .chain(fromPromise(async () => File))
             .chain((maybeFile) => {
-              if (!maybeFile) return Rejected('either Memory or File required')
+              if (!maybeFile) return Rejected('no file path cached')
 
-              const file = maybeFile
+              file = maybeFile
               logger('Reloading cached process memory from file "%s"', file)
               return readProcessMemoryFile(file)
             })
+            .bichain(
+              (e) => {
+                logger('Error Encountered when reading process memory file for process "%s" from file "%s": "%s"', processId, file || 'path not found', e)
+                return Rejected(args)
+              },
+              Resolved
+            )
         }
 
         logger(

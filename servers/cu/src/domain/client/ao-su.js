@@ -4,7 +4,7 @@ import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
-import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../utils.js'
+import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError } from '../utils.js'
 
 const okRes = (res) => {
   if (res.ok) return res
@@ -56,24 +56,26 @@ export const mapNode = pipe(
     // fromMessage
     pipe(
       path(['message']),
-      ifElse(
-        isNil,
+      (message) => {
         /**
          * No message, meaning this is an Assignment for an existing message
          * on chain, to be hydrated later (see hydrateMessages)
          */
-        always(undefined),
-        applySpec({
+        if (isNil(message)) return undefined
+
+        const address = addressFrom(message.owner)
+
+        return applySpec({
           Id: path(['id']),
           Signature: path(['signature']),
           Data: path(['data']),
-          Owner: path(['owner', 'address']),
+          Owner: always(address),
           Anchor: path(['anchor']),
-          From: (message) => mapFrom({ tags: message.tags, owner: message.owner.address }),
-          'Forwarded-By': (message) => mapForwardedBy({ tags: message.tags, owner: message.owner.address }),
+          From: (message) => mapFrom({ tags: message.tags, owner: address }),
+          'Forwarded-By': (message) => mapForwardedBy({ tags: message.tags, owner: address }),
           Tags: pathOr([], ['tags'])
-        })
-      )
+        })(message)
+      }
     ),
     // both
     applySpec({
@@ -280,7 +282,7 @@ export const loadProcessWith = ({ fetch, logger }) => {
       })
       .then(resToJson)
       .then(applySpec({
-        owner: path(['owner', 'address']),
+        owner: path(['owner']),
         tags: path(['tags']),
         block: applySpec({
           height: pipe(

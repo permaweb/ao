@@ -12,6 +12,7 @@ import {
   saveModuleWith
 } from './ao-module.js'
 import { createLogger } from '../logger.js'
+import { MODULES_TABLE } from './sqlite.js'
 
 const logger = createLogger('ao-cu:readState')
 
@@ -24,7 +25,7 @@ describe('ao-module', () => {
             query: async () => [{
               id: 'mod-123',
               tags: JSON.stringify([{ name: 'foo', value: 'bar' }]),
-              owner: 'owner-123'
+              owner: JSON.stringify({ address: 'owner-123', key: 'key-123' })
             }]
           },
           logger
@@ -35,7 +36,7 @@ describe('ao-module', () => {
       assert.deepStrictEqual(res, {
         id: 'mod-123',
         tags: [{ name: 'foo', value: 'bar' }],
-        owner: 'owner-123'
+        owner: { address: 'owner-123', key: 'key-123' }
       })
     })
 
@@ -52,6 +53,34 @@ describe('ao-module', () => {
       const res = await findModule({ moduleId: 'mod-123' })
         .catch(err => {
           assert.equal(err.status, 404)
+          return { ok: true }
+        })
+
+      assert(res.ok)
+    })
+
+    test('passively delete record and return 404 status if record has invalid owner', async () => {
+      const findModule = findModuleSchema.implement(
+        findModuleWith({
+          db: {
+            query: async () => [{
+              id: 'mod-123',
+              tags: JSON.stringify([{ name: 'foo', value: 'bar' }]),
+              owner: 'owner-123'
+            }],
+            run: async ({ sql, parameters }) => {
+              assert.ok(sql.trim().startsWith(`DELETE FROM ${MODULES_TABLE}`))
+              assert.deepStrictEqual(parameters, ['mod-123'])
+            }
+          },
+          logger
+        })
+      )
+
+      const res = await findModule({ moduleId: 'mod-123' })
+        .catch(err => {
+          assert.equal(err.status, 404)
+          assert.equal(err.message, 'Module record invalid')
           return { ok: true }
         })
 
@@ -85,7 +114,7 @@ describe('ao-module', () => {
                 JSON.stringify([
                   { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
                 ]),
-                'owner-123'
+                JSON.stringify({ address: 'owner-123', key: 'key-123' })
               ])
               return Promise.resolve(true)
             }
@@ -99,7 +128,7 @@ describe('ao-module', () => {
         tags: [
           { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
         ],
-        owner: 'owner-123'
+        owner: { address: 'owner-123', key: 'key-123' }
       })
     })
 
@@ -120,7 +149,7 @@ describe('ao-module', () => {
         tags: [
           { name: 'Module-Format', value: 'wasm32-unknown-emscripten' }
         ],
-        owner: 'owner-123'
+        owner: { address: 'owner-123', key: 'key-123' }
       })
     })
   })

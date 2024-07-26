@@ -4,8 +4,12 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, defaultTo, evolve, head, prop } from 'ramda'
 import { z } from 'zod'
 
+import { arrayBufferFromMaybeView, isJsonString } from '../utils.js'
 import { moduleSchema } from '../model.js'
 import { MODULES_TABLE } from './sqlite.js'
+import { timer } from './metrics.js'
+
+const TWO_GB = 2 * 1024 * 1024 * 1024
 
 const moduleDocSchema = z.object({
   id: z.string().min(1),
@@ -26,7 +30,7 @@ export function saveModuleWith ({ db, logger: _logger }) {
       parameters: [
         module.id,
         JSON.stringify(module.tags),
-        module.owner
+        JSON.stringify(module.owner)
       ]
     }
   }
@@ -68,8 +72,29 @@ export function findModuleWith ({ db }) {
     .map(defaultTo([]))
     .map(head)
     .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Module not found' }))
+    .chain((row) => {
+      if (isJsonString(row.owner)) return Resolved(row)
+
+      /**
+       * owner contains the deprecated, pre-parsed value, so we need to self cleanup.
+       * So implictly delete the defunct record and Reject as if it was not found.
+       *
+       * It will then be up the client (in this case the business logic) to re-insert
+       * the record with the proper format
+       */
+      return of({
+        sql: `
+          DELETE FROM ${MODULES_TABLE}
+          WHERE
+            id = ?;
+        `,
+        parameters: [moduleId]
+      }).chain(fromPromise((query) => db.run(query)))
+        .chain(() => Rejected({ status: 404, message: 'Module record invalid' }))
+    })
     .map(evolve({
-      tags: JSON.parse
+      tags: JSON.parse,
+      owner: JSON.parse
     }))
     .map(moduleDocSchema.parse)
     .map(applySpec({
@@ -115,6 +140,69 @@ export function evaluatorWith ({ evaluate, loadWasmModule }) {
                * We may want to defer to prevent starvation of other tasks on the main thread
                */
               if (defer) await new Promise(resolve => setImmediate(resolve))
+
+              if (args.Memory) {
+                /**
+                 * The ArrayBuffer is transferred to the worker as part of performing
+                 * an evaluation. This transfer will subsequently detach any views, Buffers,
+                 * and more broadly, references to the ArrayBuffer on this thread.
+                 *
+                 * So if this is the first eval being performed for the eval stream,
+                 * then we copy the contents of the ArrayBuffer. That way, we can be sure
+                 * that no references on the main thread will be affected during the eval stream
+                 * transfers happening back and forth. This effectively give's each eval stream
+                 * it's own ArrayBuffer to pass back and forth.
+                 *
+                 * (this is no worse than the structured clone that was happening before
+                 * as part of message passing. But instead, the clone is only performed once,
+                 * instead of on each evaluation)
+                 *
+                 * TODO: perhaps there is a way to somehow lock the ArrayBuffer usage
+                 * instead of copying on first evaluation. We have to be careful that nothing
+                 * (ie. a view of the ArrayBuffer in a Wasm Instnace dryrun)
+                 * inadvertantly mutates the underlying ArrayBuffer
+                 */
+                if (args.first) {
+                  let stopTimer = () => {}
+                  if (args.Memory.byteLength > TWO_GB) {
+                    stopTimer = timer('copyLargeMemory', {
+                      streamId,
+                      processId: args.processId,
+                      byteLength: args.Memory.byteLength
+                    }).stop
+                  }
+                  /**
+                   * We must pass a view into copyBytesFrom,
+                   *
+                   * so we first check whether it already is or not,
+                   * and create one on top of the ArrayBuffer if necessary
+                   *
+                   * (NodeJS' Buffer is a subclass of DataView)
+                   */
+                  args.Memory = ArrayBuffer.isView(args.Memory)
+                    ? Buffer.copyBytesFrom(args.Memory)
+                    : Buffer.copyBytesFrom(new Uint8Array(args.Memory))
+                  stopTimer()
+                }
+
+                /**
+                 * If Memory is sufficiently large, transferring the View somehow
+                 * causes the underlying ArrayBuffer to be truncated. This truncation
+                 * does not occur when instead the underlying ArrayBuffer is transferred,
+                 * directly.
+                 *
+                 * So we always ensure the Memory transferred to the worker thread
+                 * is the actual ArrayBuffer, and not a View.
+                 *
+                 * (the same is done in the opposite direction in the worker thread)
+                 *
+                 * TODO: maybe AoLoader should be made to return the underlying ArrayBuffer
+                 * as Memory, instead of a View?
+                 */
+                args.Memory = arrayBufferFromMaybeView(args.Memory)
+
+                options = { transfer: [args.Memory] }
+              }
 
               args.streamId = streamId
               args.moduleId = moduleId

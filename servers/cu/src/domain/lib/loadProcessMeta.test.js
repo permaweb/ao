@@ -32,7 +32,7 @@ describe('loadProcess', () => {
         assert.equal(processId, PROCESS)
         assert.equal(suUrl, 'https://foo.bar')
         return {
-          owner: 'woohoo',
+          owner: { address: 'woohoo', key: 'key-123' },
           tags,
           signature: 'sig-123',
           anchor: null,
@@ -67,7 +67,7 @@ describe('loadProcess', () => {
       isProcessOwnerSupported: async (process) => true,
       findProcess: async () => ({
         id: PROCESS,
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         signature: 'sig-123',
         anchor: null,
         data: 'data-123',
@@ -109,7 +109,7 @@ describe('loadProcess', () => {
       saveProcess: async (process) => {
         assert.deepStrictEqual(process, {
           id: PROCESS,
-          owner: 'woohoo',
+          owner: { address: 'woohoo', key: 'key-123' },
           tags,
           block: { height: 123, timestamp: 1697574792000 }
         })
@@ -117,7 +117,7 @@ describe('loadProcess', () => {
       },
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         tags,
         block: { height: 123, timestamp: 1697574792000 }
       }),
@@ -140,7 +140,7 @@ describe('loadProcess', () => {
       saveProcess: async () => { throw { status: 409 } },
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         tags,
         block: { height: 123, timestamp: 1697574792000 }
       }),
@@ -162,7 +162,7 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         tags: [
           { name: 'Not_Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
@@ -185,7 +185,7 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         tags: [
           { name: 'Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
@@ -208,7 +208,7 @@ describe('loadProcess', () => {
       saveProcess: async () => PROCESS,
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
       loadProcess: async (id) => ({
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         tags: [
           { name: 'Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
@@ -236,7 +236,7 @@ describe('loadProcess', () => {
       isProcessOwnerSupported: async (process) => false,
       findProcess: async () => ({
         id: PROCESS,
-        owner: 'woohoo',
+        owner: { address: 'woohoo', key: 'key-123' },
         signature: 'sig-123',
         anchor: null,
         data: 'data-123',

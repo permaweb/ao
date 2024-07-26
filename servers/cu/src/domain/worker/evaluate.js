@@ -7,6 +7,10 @@ import { saveEvaluationSchema } from '../dal.js'
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
 export function evaluateWith ({
+  /**
+   * TODO: no longer needed since the wasmModule
+   * is passed in. Eventually remove usage and injection
+   */
   loadWasmModule,
   wasmInstanceCache,
   bootstrapWasmInstance,
@@ -165,7 +169,7 @@ export function evaluateWith ({
      */
     if (close) {
       wasmInstanceCache.delete(streamId)
-      return
+      return Promise.resolve()
     }
     /**
      * Dynamically load the module, either from cache,
@@ -182,7 +186,25 @@ export function evaluateWith ({
             logger('Evaluating message "%s" to process "%s"', name, processId)
             return wasmInstance
           })
-          .chain(fromPromise(async (wasmInstance) => wasmInstance(Memory, message, AoGlobal)))
+          .chain(fromPromise(async (wasmInstance) =>
+            /**
+             * AoLoader requires Memory to be a View, so that it can set the WebAssembly.Instance
+             * memory.
+             *
+             * DataView.set is used internally in AoLoader to "reload" the Memory
+             * into a WebAssembly.Instance. set() claims to
+             * "intelligently copy the source range of the buffer to the destination range
+             * [if they share the same underlying ArrayBuffer]" but doesn't go into detail about what
+             * "intelligent" actually means.
+             *
+             * It seems to imply that only diffs will be copied, if any at all. So for the same
+             * exact underlying ArrayBuffer with no diffs, I would _hope_ that is little to no
+             * performance penalty, but we should verify
+             *
+             * TODO: check if any performance implications in using set() within AoLoaderrs
+             */
+            wasmInstance(ArrayBuffer.isView(Memory) ? Memory : new Uint8Array(Memory), message, AoGlobal)
+          ))
           .bichain(
             /**
              * Map thrown error to a result.error. In this way, the Worker should _never_
