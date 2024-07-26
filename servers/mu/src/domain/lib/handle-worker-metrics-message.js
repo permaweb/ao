@@ -1,4 +1,4 @@
-function metricsMessageHandler (payload, maximumQueueArray, maximumQueueTimeArray) {
+function queueMessageHandler (payload, maximumQueueArray, maximumQueueTimeArray) {
   const { size, time } = payload
   const seconds = Math.floor(time / 1000 % 60)
 
@@ -27,11 +27,23 @@ function metricsMessageHandler (payload, maximumQueueArray, maximumQueueTimeArra
     maximumQueueTimeArray[seconds] = time
   }
 }
+function retriesMessageHandler (payload, gauge) {
+  gauge.inc({ retries: payload.retries >= 10 ? '10+' : payload.retries, status: payload.status })
+}
+function errorStageMessageHandler (payload, gauge) {
+  gauge.inc({ stage: payload.stage, type: payload.type })
+}
 
-export function handleWorkerQueueMessage ({ queueGauge, maximumQueueArray, maximumQueueTimeArray }) {
+export function handleWorkerMetricsMessage ({ retriesGauge, stageGauge, maximumQueueArray, maximumQueueTimeArray }) {
   return ({ payload }) => {
     if (payload.purpose === 'queue-size') {
-      metricsMessageHandler(payload, maximumQueueArray, maximumQueueTimeArray)
+      queueMessageHandler(payload, maximumQueueArray, maximumQueueTimeArray)
+    }
+    if (payload.purpose === 'task-retries') {
+      retriesMessageHandler(payload, retriesGauge)
+    }
+    if (payload.purpose === 'error-stage') {
+      errorStageMessageHandler(payload, stageGauge)
     }
   }
 }

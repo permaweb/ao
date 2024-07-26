@@ -120,7 +120,13 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
       const result = dequeue()
       if (result) {
         logger(`Processing task of type ${result.type}`)
-        processResult(result).catch((e) => {
+        processResult(result).then((ctx) => {
+          broadcastChannel.postMessage({
+            purpose: 'task-retries',
+            retries: ctx.retries ?? 0,
+            status: 'success'
+          })
+        }).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
           /**
@@ -134,9 +140,21 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
           const ctx = e.cause ?? {}
           const retries = ctx.retries ?? 0
           const stage = ctx.stage
+          const type = result.type
+          broadcastChannel.postMessage({
+            purpose: 'error-stage',
+            stage,
+            type
+          })
           setTimeout(() => {
             if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end') {
               enqueue({ ...ctx, retries: retries + 1 })
+            } else {
+              broadcastChannel.postMessage({
+                purpose: 'task-retries',
+                retries,
+                status: 'failure'
+              })
             }
           }, TASK_QUEUE_RETRY_DELAY)
         })
