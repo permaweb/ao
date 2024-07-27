@@ -1,21 +1,22 @@
 local oldao = ao or {}
 local ao = {
-    _version = "0.0.5",
+    _version = "0.0.6",
     id = oldao.id or "",
     _module = oldao._module or "",
     authorities = oldao.authorities or {},
     reference = oldao.reference or 0,
-    outbox = oldao.outbox or {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
+    outbox = oldao.outbox or
+        {Output = {}, Messages = {}, Spawns = {}, Assignments = {}},
     nonExtractableTags = {
         'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
         'From', 'Owner', 'Anchor', 'Target', 'Data', 'Tags'
     },
     nonForwardableTags = {
         'Data-Protocol', 'Variant', 'From-Process', 'From-Module', 'Type',
-        'From', 'Owner', 'Anchor', 'Target', 'Tags',
-        'TagArray', 'Hash-Chain', 'Timestamp', 'Nonce', 'Epoch', 'Signature',
-        'Forwarded-By', 'Pushed-For', 'Read-Only', 'Cron', 'Block-Height',
-        'Reference', 'Id', 'Reply-To'
+        'From', 'Owner', 'Anchor', 'Target', 'Tags', 'TagArray', 'Hash-Chain',
+        'Timestamp', 'Nonce', 'Epoch', 'Signature', 'Forwarded-By',
+        'Pushed-For', 'Read-Only', 'Cron', 'Block-Height', 'Reference', 'Id',
+        'Reply-To'
     }
 }
 
@@ -54,7 +55,7 @@ function ao.clone(obj, seen)
     -- Handle non-tables and previously-seen tables.
     if type(obj) ~= 'table' then return obj end
     if seen and seen[obj] then return seen[obj] end
-  
+
     -- New table; mark it as seen and copy recursively.
     local s = seen or {}
     local res = {}
@@ -75,10 +76,8 @@ end
 function ao.sanitize(msg)
     local newMsg = ao.clone(msg)
 
-    for k,_ in pairs(newMsg) do
-        if _includes(ao.nonForwardableTags)(k) then
-            newMsg[k] = nil
-        end
+    for k, _ in pairs(newMsg) do
+        if _includes(ao.nonForwardableTags)(k) then newMsg[k] = nil end
     end
 
     return newMsg
@@ -114,7 +113,9 @@ function ao.log(txt)
 end
 
 -- clears outbox
-function ao.clearOutbox() ao.outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}} end
+function ao.clearOutbox()
+    ao.outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
+end
 
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
@@ -153,15 +154,11 @@ function ao.send(msg)
 
     -- If running in an environment without the AOS Handlers module, do not add
     -- the onReply and receive functions to the message.
-    if not Handlers then
-        return message
-    end
+    if not Handlers then return message end
 
     -- clone message info and add to outbox
     local extMessage = {}
-    for k, v in pairs(message) do
-        extMessage[k] = v
-    end
+    for k, v in pairs(message) do extMessage[k] = v end
 
     -- add message to outbox
     table.insert(ao.outbox.Messages, extMessage)
@@ -179,21 +176,14 @@ function ao.send(msg)
             end
 
             -- Add a one-time callback that runs the user's (matching) resolver on reply
-            Handlers.once(
-                { From = from, ["X-Reference"] = message.Reference },
-                resolver
-            )
+            Handlers.once({From = from, ["X-Reference"] = ao.reference},
+                          resolver)
         end
 
     message.receive = function(...)
         local from = message.Target
-        if select("#", ...) == 1 then
-            from = select(1, ...)
-        end
-        return Handlers.receive({
-            From = from,
-            ["X-Reference"] = message.Reference
-        })
+        if select("#", ...) == 1 then from = select(1, ...) end
+        return Handlers.receive({From = from, ["X-Reference"] = ao.reference})
     end
 
     return message
@@ -241,28 +231,24 @@ function ao.spawn(module, msg)
 
     -- If running in an environment without the AOS Handlers module, do not add
     -- the after and receive functions to the spawn.
-    if not Handlers then
-        return spawn
-    end
+    if not Handlers then return spawn end
 
     -- clone spawn info and add to outbox
     local extSpawn = {}
-    for k, v in pairs(spawn) do
-        extSpawn[k] = v
-    end
+    for k, v in pairs(spawn) do extSpawn[k] = v end
 
     table.insert(ao.outbox.Spawns, extSpawn)
 
     -- add 'after' callback to returned table
-    --local result = {}
-    spawn.onReply =
-        function(callback)
-            Handlers.once(
-                { Action = "Spawned", From = ao.id, ["Reference"] = spawnRef },
-                callback
-            )
-        end
-    
+    -- local result = {}
+    spawn.onReply = function(callback)
+        Handlers.once({
+            Action = "Spawned",
+            From = ao.id,
+            ["Reference"] = spawnRef
+        }, callback)
+    end
+
     spawn.receive = function()
         return Handlers.receive({
             Action = "Spawned",
@@ -271,7 +257,7 @@ function ao.spawn(module, msg)
         })
 
     end
-    
+
     return spawn
 end
 
