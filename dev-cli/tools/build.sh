@@ -7,6 +7,8 @@ cd "$(dirname "$0")/.."
 
 OUTPUT_DIR="dist"
 
+mkdir ${OUTPUT_DIR}
+
 rm -f "${OUTPUT_DIR}/ao-*.zip"
 
 deno compile --allow-read --allow-write --allow-run --output "${OUTPUT_DIR}/ao" --target x86_64-unknown-linux-gnu src/mod.js
