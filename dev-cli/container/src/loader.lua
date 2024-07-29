@@ -7,6 +7,7 @@ function handle(msgJSON, aoJSON)
     -- decode inputs
     local msg = json.decode(msgJSON)
     local env = json.decode(aoJSON)
+
     ao.init(env)
     -- relocate custom tags to root message
     msg = ao.normalize(msg)
@@ -27,5 +28,6 @@ function handle(msgJSON, aoJSON)
 
     -- encode output
     local responseJSON = json.encode({ok = status, response = response})
+    collectgarbage()
     return responseJSON
 end

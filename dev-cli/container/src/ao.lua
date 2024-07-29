@@ -120,6 +120,7 @@ end
 function ao.send(msg)
     assert(type(msg) == 'table', 'msg should be a table')
     ao.reference = ao.reference + 1
+    local referenceString = tostring(ao.reference)
 
     local message = {
         Target = msg.Target,
@@ -129,7 +130,7 @@ function ao.send(msg)
             {name = "Data-Protocol", value = "ao"},
             {name = "Variant", value = "ao.TN.1"},
             {name = "Type", value = "Message"},
-            {name = "Reference", value = tostring(ao.reference)}
+            {name = "Reference", value = referenceString}
         }
     }
 
@@ -176,14 +177,15 @@ function ao.send(msg)
             end
 
             -- Add a one-time callback that runs the user's (matching) resolver on reply
-            Handlers.once({From = from, ["X-Reference"] = ao.reference},
+            Handlers.once({From = from, ["X-Reference"] = referenceString},
                           resolver)
         end
 
     message.receive = function(...)
         local from = message.Target
         if select("#", ...) == 1 then from = select(1, ...) end
-        return Handlers.receive({From = from, ["X-Reference"] = ao.reference})
+        return
+            Handlers.receive({From = from, ["X-Reference"] = referenceString})
     end
 
     return message
