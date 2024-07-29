@@ -1,5 +1,5 @@
 /* eslint-disable */
 export const VERSION = {
-  "CLI": "0.0.65",
-  "IMAGE": "0.0.45"
+  "CLI": "0.0.67",
+  "IMAGE": "0.0.47"
 }
