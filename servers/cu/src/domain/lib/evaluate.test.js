@@ -45,6 +45,12 @@ describe('evaluate', () => {
       findMessageBefore: async () => { throw { status: 404 } },
       loadEvaluator: evaluateHappyMessage,
       saveLatestProcessMemory: async () => {},
+      evaluationCounter: {
+        inc: () => undefined
+      },
+      gasCounter: {
+        inc: () => undefined
+      },
       logger
     })
 
@@ -172,6 +178,12 @@ describe('evaluate', () => {
         }
       },
       saveLatestProcessMemory: async () => {},
+      evaluationCounter: {
+        inc: () => undefined
+      },
+      gasCounter: {
+        inc: () => undefined
+      },
       logger
     }
 
@@ -280,6 +292,12 @@ describe('evaluate', () => {
         }
       },
       saveLatestProcessMemory: async () => {},
+      evaluationCounter: {
+        inc: () => undefined
+      },
+      gasCounter: {
+        inc: () => undefined
+      },
       logger
     }
 
@@ -422,6 +440,12 @@ describe('evaluate', () => {
         }
       },
       saveLatestProcessMemory: async () => {},
+      evaluationCounter: {
+        inc: () => undefined
+      },
+      gasCounter: {
+        inc: () => undefined
+      },
       logger
     }
 
@@ -528,6 +552,12 @@ describe('evaluate', () => {
         return { Memory: Buffer.from('Hello world') }
       },
       saveLatestProcessMemory: async () => {},
+      evaluationCounter: {
+        inc: () => undefined
+      },
+      gasCounter: {
+        inc: () => undefined
+      },
       logger
     })
 
