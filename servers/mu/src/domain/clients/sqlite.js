@@ -3,8 +3,9 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [TASKS_TABLE] = [
-  'tasks'
+export const [TASKS_TABLE, TRACES_TABLE] = [
+  'tasks',
+  'traces'
 ]
 const createTasks = async (db) => db.prepare(
   `CREATE TABLE IF NOT EXISTS ${TASKS_TABLE}(
@@ -13,6 +14,23 @@ const createTasks = async (db) => db.prepare(
     timestamp INTEGER,
     data TEXT
   ) WITHOUT ROWID;`
+).run()
+
+const createTraces = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${TRACES_TABLE}(
+    id TEXT PRIMARY KEY,
+    messageId TEXT,
+    processId TEXT,
+    wallet TEXT,
+    timestamp INTEGER,
+    data TEXT
+  ) WITHOUT ROWID;`
+).run()
+
+const createTracesIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${TRACES_TABLE}_messageId_processId
+    ON ${TRACES_TABLE}
+    (messageId, processId);`
 ).run()
 
 let internalSqliteDb
@@ -34,11 +52,16 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
 
     await Promise.resolve()
       .then(() => createTasks(db))
+      .then(() => createTraces(db))
+      .then(() => createTracesIndexes(db))
   }
 
   return {
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
-    run: async ({ sql, parameters }) => db.prepare(sql).run(...parameters),
+    run: async ({ sql, parameters }) => {
+      console.log({ sql, parameters })
+      return db.prepare(sql).run(...parameters)
+    },
     transaction: async (statements) => db.transaction(
       (statements) => statements.map(({ sql, parameters }) => db.prepare(sql).run(...parameters))
     )(statements),

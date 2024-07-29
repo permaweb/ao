@@ -1,6 +1,7 @@
 import debug from 'debug'
 import { tap } from 'ramda'
-
+import { randomBytes } from 'crypto'
+import { TRACES_TABLE } from './sqlite.js'
 /*
  * Here we persist the logs to the storage system
  * for traces.
@@ -9,7 +10,34 @@ function traceLogs (namespace, args) {
   console.log('Saving logs to trace:', namespace, args)
 }
 
-export function traceWith ({ namespace, TRACE_DB_PATH }) {
+function createTraceWith ({ db }) {
+  function createQuery (message, messageId, processId, wallet) {
+    const randomByteString = randomBytes(8).toString('hex')
+    return {
+      sql: `
+        INSERT OR IGNORE INTO ${TRACES_TABLE}
+        (id, messageId, processId, wallet, timestamp, data)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      parameters: [
+        `${messageId}-${processId}-${wallet}-${randomByteString}`,
+        messageId,
+        processId,
+        wallet,
+        Date.now(),
+        message
+      ]
+    }
+  }
+
+  return (message, messageId, processId, wallet) => {
+    console.log({ message, messageId, processId, wallet })
+    db.run(createQuery(message, messageId, processId, wallet)).catch((e) => console.log('db error: ', { e }))
+  }
+}
+
+export function traceWith ({ namespace, db, TRACE_DB_PATH }) {
+  const createTrace = createTraceWith({ db })
   const logger = debug(namespace)
 
   /*
@@ -17,9 +45,21 @@ export function traceWith ({ namespace, TRACE_DB_PATH }) {
    * and also calling the original logger function in order to mimic
    * the same behaviour
    */
-  const tracerLogger = (...args) => {
-    traceLogs(namespace, ...args)
-    logger(...args)
+  // args - 0: message, 1: messageId, 2: processId, 3: wallet
+  const tracerLogger = (args) => {
+    if (typeof args === 'object') {
+      const { log, messageId, processId, wallet } = args
+      console.log({ log, messageId, processId, wallet })
+      traceLogs(namespace, log)
+      logger(log)
+      if (messageId || processId || wallet) {
+        createTrace(...log)
+      }
+    } else {
+      const log = args
+      traceLogs(namespace, log)
+      logger(log)
+    }
   }
 
   tracerLogger.namespace = logger.namespace
