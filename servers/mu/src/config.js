@@ -54,7 +54,8 @@ export const domainConfigSchema = z.object({
   MAX_WORKERS: positiveIntSchema,
   DB_URL: z.string(),
   TASK_QUEUE_MAX_RETRIES: z.number(),
-  TASK_QUEUE_RETRY_DELAY: z.number()
+  TASK_QUEUE_RETRY_DELAY: z.number(),
+  TRACE_DB_PATH: z.string()
 })
 
 /**
@@ -96,7 +97,8 @@ const CONFIG_ENVS = {
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
     DB_URL: process.env.DB_URL || 'ao-cache',
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
-    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
+    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
+    TRACE_DB_PATH: process.env.TRACE_DB_PATH || 'trace'
   },
   production: {
     MODE,
@@ -115,7 +117,8 @@ const CONFIG_ENVS = {
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
     DB_URL: process.env.DB_URL || 'ao-cache',
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
-    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
+    TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
+    TRACE_DB_PATH: process.env.TRACE_DB_PATH || 'trace'
   }
 }
 

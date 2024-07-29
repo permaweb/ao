@@ -17,6 +17,7 @@ import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
 import cronClient, { saveProcsWith } from './clients/cron.js'
+import { readTracesWith } from './clients/tracer.js'
 
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
@@ -99,7 +100,7 @@ export const createApis = async (ctx) => {
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
 
   /**
-   * TODO: I don't really like implictly doing this,
+   * TODO: I don't really like implicitly doing this,
    * but works for now.
    */
   const _metrics = MetricsClient.initializeRuntimeMetricsWith({})()
@@ -155,7 +156,15 @@ export const createApis = async (ctx) => {
   })
 
   const broadcastChannel = new BroadcastChannel('mu-worker')
-  broadcastChannel.onmessage = (event) => handleWorkerMetricsMessage({ retriesGauge: taskRetriesGauge, stageGauge: errorStageGauge, maximumQueueArray, maximumQueueTimeArray })({ payload: event.data })
+  const broadcastLogger = logger.child('workerQueueBroadcast')
+
+  broadcastChannel.onmessage = (event) => handleWorkerMetricsMessage({
+    retriesGauge: taskRetriesGauge,
+    stageGauge: errorStageGauge,
+    maximumQueueArray,
+    maximumQueueTimeArray,
+    logger: broadcastLogger
+  })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
     return workerPool.exec('enqueueResults', results)
@@ -228,6 +237,8 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
+  const traceMsgs = fromPromise(readTracesWith({ TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
+
   return {
     metrics,
     sendDataItem,
@@ -235,6 +246,7 @@ export const createApis = async (ctx) => {
     stopMonitorProcess,
     sendAssign,
     fetchCron,
+    traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
       readProcFile: () => {
@@ -260,9 +272,9 @@ export const createApis = async (ctx) => {
 }
 
 /**
- * A seperate set of apis used by the worker
- * to process results. These are seperate because
- * we dont want the worker to initialize the same
+ * A separate set of apis used by the worker
+ * to process results. These are separate because
+ * we don't want the worker to initialize the same
  * apis that create another worker pool.
  */
 export const createResultApis = async (ctx) => {

@@ -1,21 +1,50 @@
 import { worker } from 'workerpool'
 import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { of } from 'hyper-async'
-import { cond, equals, propOr } from 'ramda'
+import { cond, equals, propOr, tap } from 'ramda'
 import cron from 'node-cron'
 
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
 import { domainConfigSchema, config } from '../../config.js'
+// Without this import the worker crashes
 import { logger } from '../../logger.js'
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
 
+/*
+ * Here we create a logger and inject it, this logger has the
+ * same interface as the other one however instead of writing
+ * to stdout it sends all the logs back to the main thread
+ * using the broadcast channel.
+*/
+function createBroadcastLogger ({ namespace, config }) {
+  const loggerBroadcast = (note, ...args) => {
+    broadcastChannel.postMessage({
+      purpose: 'log',
+      namespace,
+      message: note,
+      args
+    })
+  }
+
+  loggerBroadcast.child = (name) => {
+    return createBroadcastLogger({ namespace: `${namespace}:${name}`, config })
+  }
+
+  loggerBroadcast.tap = (note, ...rest) =>
+    tap((...args) => loggerBroadcast(note, ...rest, ...args))
+
+  return loggerBroadcast
+}
+
+const broadcastLogger = createBroadcastLogger('mu-worker-broadcast')
+
 export const domain = {
   ...(domainConfigSchema.parse(config)),
   fetch,
-  logger
+  logger: broadcastLogger
 }
 
 /**

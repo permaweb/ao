@@ -27,7 +27,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
         maxRetries: 5,
         delay: 500,
         log: logger,
-        name: `forwardAssignment(${JSON.stringify({
+        name: `fetchResult(${JSON.stringify({
           CU_URL,
           processId,
           txId
