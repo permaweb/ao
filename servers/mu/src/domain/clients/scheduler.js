@@ -23,33 +23,42 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
       .map(logger.tap(`Forwarding message to SU ${suUrl}`))
       .chain(
         fromPromise((body) =>
-          suFetch(suUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              Accept: 'application/json'
-            },
-            redirect: 'manual',
-            body
-          }).then(async (response) => {
-            /*
-            After upgrading to node 22 we have to handle
-            the redirects manually otherwise fetch throws
-            an error
-          */
-            if ([307, 308].includes(response.status)) {
-              const newUrl = response.headers.get('Location')
-              return suRedirectFetch(newUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  Accept: 'application/json'
-                },
-                body
-              })
-            }
-            return response
-          })
+          backoff(
+            () => suFetch(suUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              redirect: 'manual',
+              body
+            }).then(async (response) => {
+              /*
+              After upgrading to node 22 we have to handle
+              the redirects manually otherwise fetch throws
+              an error
+            */
+              if ([307, 308].includes(response.status)) {
+                const newUrl = response.headers.get('Location')
+                return suRedirectFetch(newUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/octet-stream',
+                    Accept: 'application/json'
+                  },
+                  body
+                })
+              }
+              return response
+            }),
+            {
+              maxRetries: 5,
+              delay: 500,
+              log: logger,
+              name: `writeDataItem(${JSON.stringify({
+                suUrl
+              })})`
+            })
         )
       )
       .bimap(logger.tap('Error while communicating with SU:'), identity)
@@ -114,7 +123,7 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
               maxRetries: 5,
               delay: 500,
               log: logger,
-              name: `forwardAssignment(${JSON.stringify({
+              name: `writeAssignment(${JSON.stringify({
                 suUrl,
                 processId,
                 txId
