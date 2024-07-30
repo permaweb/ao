@@ -1,5 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
+import { BroadcastChannel } from 'node:worker_threads'
+
+import { apply } from 'ramda'
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
@@ -26,8 +29,6 @@ import { processAssignWith } from './api/processAssign.js'
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
 import { handleWorkerQueueMessage } from './lib/handle-worker-queue-message.js'
-import { BroadcastChannel } from 'node:worker_threads'
-
 export { errFrom } from './utils.js'
 
 const { DataItem } = warpArBundles
@@ -44,9 +45,13 @@ const histogram = MetricsClient.histogramWith()({
   buckets: [0.5, 1, 3, 5, 10, 30],
   labelNames: ['method', 'operation', 'errorType', 'status', 'statusGroup']
 })
+const maximumQueueArray = new Array(60).fill(0)
+const maximumQueueTimeArray = new Array(60).fill(undefined)
+
 const workerQueueGauge = MetricsClient.gaugeWith({})({
   name: 'queue_size',
-  description: 'The size of the queue'
+  description: 'The size of the queue',
+  collect: () => apply(Math.max, maximumQueueArray)
 })
 const cronMonitorGauge = MetricsClient.gaugeWith({})({
   name: 'running_cron_monitor',
@@ -138,7 +143,7 @@ export const createApis = async (ctx) => {
   })
 
   const broadcastChannel = new BroadcastChannel('mu-worker')
-  broadcastChannel.onmessage = (event) => handleWorkerQueueMessage({ queueGauge: workerQueueGauge })({ payload: event.data })
+  broadcastChannel.onmessage = (event) => handleWorkerQueueMessage({ queueGauge: workerQueueGauge, maximumQueueArray, maximumQueueTimeArray })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
     return workerPool.exec('enqueueResults', results)
