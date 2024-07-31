@@ -25,7 +25,7 @@ export function sendAssignWith ({
     .bichain(
       (error) => {
         return of(error)
-          .map(logger.tap('Initial assignment failed %s', ctx.txId))
+          .map(logger.tap({ log: ['Initial assignment failed %s', ctx.txId] }))
           .chain(() => Rejected(error))
       },
       (res) => Resolved(res)
@@ -45,8 +45,8 @@ export function sendAssignWith ({
           initialTxId
         }))
         .bimap(
-          logger.tap('Failed to crank messages from assignment'),
-          logger.tap('Cranking complete')
+          logger.tap({ log: 'Failed to crank messages from assignment' }),
+          logger.tap({ log: 'Cranking complete' })
         )
     }))
 

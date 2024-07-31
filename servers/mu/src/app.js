@@ -25,7 +25,7 @@ export const server = pipe(
     })
 
     domain.apis.initCronProcs().then(() => {
-      logger('Crons initialized')
+      logger({ log: 'Crons initialized' })
     })
 
     return server

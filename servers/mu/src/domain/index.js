@@ -140,7 +140,7 @@ export const createApis = async (ctx) => {
         queueId = queueIds.shift()
       }
       const workerId = randomBytes(8).toString('hex')
-      ctx.logger('Starting worker with id "%s", queue id "%s"...', workerId, queueId)
+      ctx.logger({ log: `Starting worker with id "${workerId}", queue id "${queueId}"...` })
       return {
         workerThreadOpts: {
           workerData: {
@@ -237,7 +237,7 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
-  const traceMsgs = fromPromise(readTracesWith({ TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
+  const traceMsgs = fromPromise(readTracesWith({ db, TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
 
   return {
     metrics,

@@ -11,7 +11,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
   })
 
   return async (txId, processId) => {
-    logger(`${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`)
+    logger({ log: `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1` })
 
     const requestOptions = {
       timeout: 0
@@ -49,7 +49,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
 
 function selectNodeWith ({ CU_URL, logger }) {
   return async (processId) => {
-    logger(`Selecting cu for process ${processId}`)
+    logger({ log: `Selecting cu for process ${processId}` })
     return CU_URL
   }
 }
@@ -67,10 +67,10 @@ function fetchCronWith ({ fetch, histogram, CU_URL, logger }) {
     if (cursor) {
       requestUrl = `${CU_URL}/cron/${processId}?from=${cursor}&limit=50`
     }
-    logger(`Fetching cron: ${requestUrl}`)
+    logger({ log: `Fetching cron: ${requestUrl}` })
     return cronFetch(requestUrl).then((r) =>
       r.json().catch((error) => {
-        logger(`Failed to parse cron JSON: ${error.toString()}`)
+        logger({ log: `Failed to parse cron JSON: ${error.toString()}` })
         return { edges: [] }
       })
     )

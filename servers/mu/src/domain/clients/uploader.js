@@ -12,7 +12,7 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
   })
   return async (data) => {
     return of(data)
-      .map(logger.tap(`Forwarding message to uploader ${UPLOADER_URL}`))
+      .map(logger.tap({ log: `Forwarding message to uploader ${UPLOADER_URL}` }))
       .chain(
         fromPromise((body) =>
           dataItemFetch(`${UPLOADER_URL}/tx/arweave`, {
@@ -25,7 +25,7 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
           })
         )
       )
-      .bimap(logger.tap('Error while communicating with uploader:'), identity)
+      .bimap(logger.tap({ log: 'Error while communicating with uploader:' }), identity)
       .bichain(
         (err) => Rejected(JSON.stringify(err)),
         fromPromise(async (res) => {
@@ -36,7 +36,7 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap('Successfully forwarded DataItem to uploader'))
+      .map(logger.tap({ log: 'Successfully forwarded DataItem to uploader' }))
       .toPromise()
   }
 }

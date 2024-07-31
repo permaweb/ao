@@ -41,7 +41,7 @@ export function writeAssignWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap('Added "tx" to ctx')
+        logger.tap({ log: 'Added "tx" to ctx' })
       )
   }
 }

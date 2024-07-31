@@ -45,8 +45,8 @@ const withMessageRoutes = (app) => {
           })
             .chain(sendAssign)
             .bimap(
-              logger.tap('Failed to send the Assignment'),
-              logger.tap('Successfully sent Assignment. Beginning to crank...')
+              logger.tap({ log: 'Failed to send the Assignment' }),
+              logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...' })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
@@ -61,7 +61,7 @@ const withMessageRoutes = (app) => {
           const inputSchema = z.object({
             body: z.any().refine(
               async (val) => DataItem.verify(val).catch((err) => {
-                logger('Error verifying DataItem', err)
+                logger({ log: ['Error verifying DataItem', err] })
                 return false
               }),
               { message: 'A valid and signed data item must be provided as the body' }
@@ -76,8 +76,8 @@ const withMessageRoutes = (app) => {
           await of({ raw: input.body })
             .chain(sendDataItem)
             .bimap(
-              logger.tap('Failed to send the DataItem'),
-              logger.tap('Successfully sent DataItem. Beginning to crank...')
+              logger.tap({ log: 'Failed to send the DataItem' }),
+              logger.tap({ log: 'Successfully sent DataItem. Beginning to crank...' })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
@@ -148,11 +148,11 @@ const withTraceRoutes = (app) => {
 
         const input = inputSchema.parse({ ...query, pageSize: query['page-size'] })
 
-        if (input.process && input.message) {
-          const err = new Error('Only one of process or message query parameters can be provided')
-          err.status = 422
-          throw err
-        }
+        // if (input.process && input.message) {
+        //   const err = new Error('Only one of process or message query parameters can be provided')
+        //   err.status = 422
+        //   throw err
+        // }
 
         /**
          * Retrieve all message traces for the given input
@@ -161,8 +161,8 @@ const withTraceRoutes = (app) => {
         await of({ ...input, limit: input.pageSize, offset: input.pageSize * (input.page - 1) })
           .chain(traceMsgs)
           .bimap(
-            logger.tap('Failed to retrieve trace for process "%s" or message "%s"', input.process, input.message),
-            logger.tap('Successfully retrieved trace for process "%s" or message "%s"', input.process, input.message)
+            logger.tap({ log: ['Failed to retrieve trace for process "%s" or message "%s"', input.process, input.message] }),
+            logger.tap({ log: ['Successfully retrieved trace for process "%s" or message "%s"', input.process, input.message] })
           )
           .map((traces) => res.send(traceConnection({ nodes: traces, pageSize: input.pageSize })))
           .toPromise()

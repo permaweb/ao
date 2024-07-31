@@ -42,5 +42,5 @@ export const withTimerMetricsFetch = ({
     }
   },
   tracesFrom,
-  logger: logger('ao-mu-metrics')
+  logger: logger.child('ao-mu-metrics')
 })(fetch)

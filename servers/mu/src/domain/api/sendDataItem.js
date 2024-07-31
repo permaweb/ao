@@ -49,7 +49,7 @@ export function sendDataItemWith ({
         .bichain(
           (error) => {
             return of(error)
-              .map(logger.tap('Initial message failed %s', message.id))
+              .map(logger.tap({ log: ['Initial message failed %s', message.id] }))
               .chain(() => Rejected(error))
           },
           (res) => Resolved(res)
@@ -70,8 +70,8 @@ export function sendDataItemWith ({
               initialTxId
             }))
             .bimap(
-              logger.tap('Failed to crank messages'),
-              logger.tap('Cranking complete')
+              logger.tap({ log: 'Failed to crank messages' }),
+              logger.tap({ log: 'Cranking complete' })
             )
         }))
     )
@@ -108,8 +108,8 @@ export function sendDataItemWith ({
           })
         }, Resolved)
         .bimap(
-          logger.tap('Assignments cranked for Process DataItem.'),
-          logger.tap('No cranking for a Process DataItem without target required. Nooping...'))
+          logger.tap({ log: 'Assignments cranked for Process DataItem.' }),
+          logger.tap({ log: 'No cranking for a Process DataItem without target required. Nooping...' }))
     }))
 
   return (ctx) => {

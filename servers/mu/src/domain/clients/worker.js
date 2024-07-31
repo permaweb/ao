@@ -148,7 +148,7 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
     while (true) {
       const result = dequeue()
       if (result) {
-        logger(`Processing task of type ${result.type}`)
+        logger({ log: `Processing task of type ${result.type}` }, result)
         processResult(result).then((ctx) => {
           broadcastChannel.postMessage({
             purpose: 'task-retries',
@@ -162,11 +162,11 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
            * Upon failure, we want to add back to the task queue
            * our task with its progress (ctx). This progress is passed
            * down in the cause object of the error.
-           *
-           * After some time, enqueue the task again and increment retries.
-           * Upon maximum retries, finish.
-           */
-          const ctx = e.cause ?? {}
+          *
+          * After some time, enqueue the task again and increment retries.
+          * Upon maximum retries, finish.
+          */
+          const ctx = e.cause
           const retries = ctx.retries ?? 0
           const stage = ctx.stage
           const type = result.type
@@ -175,8 +175,10 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
             stage,
             type
           })
+          logger({ log: `Result failed with error ${e}, will not recover`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)
           setTimeout(() => {
-            if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end') {
+            if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end' && ctx) {
+              logger({ log: `Retrying process task of type ${result.type}, attempt ${retries + 1}`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)
               enqueue({ ...ctx, retries: retries + 1 })
             } else {
               broadcastChannel.postMessage({

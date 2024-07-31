@@ -33,6 +33,6 @@ export function parseDataItemWith ({ createDataItem, logger }) {
         })
       ))
       .map(mergeRight(ctx))
-      .map(logger.tap('Successfully parsed data item and added as "tx" to ctx'))
+      .map(logger.tap({ log: 'Successfully parsed data item and added as "tx" to ctx' }))
   }
 }

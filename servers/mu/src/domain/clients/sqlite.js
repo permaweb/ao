@@ -23,6 +23,7 @@ const createTraces = async (db) => db.prepare(
     processId TEXT,
     wallet TEXT,
     timestamp INTEGER,
+    logs TEXT,
     data TEXT
   ) WITHOUT ROWID;`
 ).run()
@@ -59,7 +60,6 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
   return {
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
     run: async ({ sql, parameters }) => {
-      console.log({ sql, parameters })
       return db.prepare(sql).run(...parameters)
     },
     transaction: async (statements) => db.transaction(

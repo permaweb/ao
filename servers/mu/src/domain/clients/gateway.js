@@ -18,16 +18,16 @@ function isWalletWith ({
   })
 
   return async (id) => {
-    logger(`Checking if id is a wallet ${id}`)
+    logger({ log: `Checking if id is a wallet ${id}` })
 
     const cachedIsWallet = await getById(id)
 
     if (cachedIsWallet !== null && cachedIsWallet !== undefined) {
-      logger(`Found id: ${id} in cache with value: ${cachedIsWallet.isWallet}`)
+      logger({ log: `Found id: ${id} in cache with value: ${cachedIsWallet.isWallet}` })
       return cachedIsWallet.isWallet
     }
 
-    logger(`id: ${id} not cached checking arweave for tx`)
+    logger({ log: `id: ${id} not cached checking arweave for tx` })
 
     /*
       Only if this is actually a tx will this

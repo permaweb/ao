@@ -1,0 +1,1868 @@
+
+> @permaweb/ao-mu@1.0.0 dev
+> nodemon
+
+[33m[nodemon] 3.0.3[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): src/**/*[39m
+[33m[nodemon] watching extensions: js[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "x-powered-by" to true
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "etag" to 'weak'
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "etag fn" to [Function: generateETag]
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "env" to 'development'
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "query parser" to 'extended'
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "subdomain offset" to 2
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "trust proxy" to false
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Wed, 31 Jul 2024 19:45:27 GMT express:application booting in development mode
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "view" to [Function: View]
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Wed, 31 Jul 2024 19:45:27 GMT express:application set "jsonp callback name" to 'callback'
+Wed, 31 Jul 2024 19:45:27 GMT express:router use '/' query
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router use '/' expressInit
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router use '/' corsMiddleware
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router use '/' jsonParser
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router use '/' rawParser
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route post '/monitor/:processId'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route delete '/monitor/:processId'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route post '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:route get '/'
+Wed, 31 Jul 2024 19:45:27 GMT express:router:layer new '/'
+2024-07-31T19:45:27.556Z ao-mu Server is running on http://localhost:3004
+2024-07-31T19:45:27.559Z ao-mu Crons initialized
+Wed, 31 Jul 2024 19:45:31 GMT express:router dispatching POST /
+Wed, 31 Jul 2024 19:45:31 GMT express:router query  : /
+Wed, 31 Jul 2024 19:45:31 GMT express:router expressInit  : /
+Wed, 31 Jul 2024 19:45:31 GMT express:router corsMiddleware  : /
+Wed, 31 Jul 2024 19:45:31 GMT express:router jsonParser  : /
+Wed, 31 Jul 2024 19:45:31 GMT body-parser:json content-type "application/octet-stream"
+Wed, 31 Jul 2024 19:45:31 GMT body-parser:json skip parsing
+Wed, 31 Jul 2024 19:45:31 GMT express:router rawParser  : /
+Wed, 31 Jul 2024 19:45:31 GMT body-parser:raw content-type "application/octet-stream"
+Wed, 31 Jul 2024 19:45:31 GMT body-parser:raw content-encoding "identity"
+Wed, 31 Jul 2024 19:45:31 GMT body-parser:raw read body
+Wed, 31 Jul 2024 19:45:31 GMT body-parser:raw parse body
+2024-07-31T19:45:31.655Z ao-mu:sendDataItem Successfully parsed data item and added as "tx" to ctx
+2024-07-31T19:45:32.444Z ao-mu:sendDataItem Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:32.849Z ao-mu:sendDataItem Successfully forwarded DataItem to SU
+2024-07-31T19:45:32.849Z ao-mu:sendDataItem Added "schedulerTx" to ctx
+2024-07-31T19:45:32.849Z ao-mu:POST_root Successfully sent DataItem. Beginning to crank...
+2024-07-31T19:45:32.853Z ao-mu:sendDataItem Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:32.853Z ao-mu:sendDataItem Added "cuAddress" to ctx
+2024-07-31T19:45:32.853Z ao-mu:sendDataItem https://cu.ao-testnet.xyz/result/oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:33.162Z ao-mu:cuFetchWithCache inserting cu redirect into cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:33.912Z ao-mu:sendDataItem Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:33.913Z ao-mu Starting worker with id "aba9920b8186b472", queue id "6baa93e82733e4db"...
+2024-07-31T19:45:34.506Z ao-mu Initializing queue for queue index 6baa93e82733e4db
+2024-07-31T19:45:34.515Z ao-mu:sendDataItem Cranking complete
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455134514-4aad09d24862d250'
+  },
+  msg: {
+    Tags: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Anchor: '00000000000000000000000000000173'
+  }
+}
+2024-07-31T19:45:34.615Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:34.618Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:34.618Z ao-mu:workerQueueBroadcast:processMsg id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 not cached checking arweave for tx
+2024-07-31T19:45:36.067Z ao-mu:workerQueueBroadcast:processMsg https://su46.ao-testnet.xyz/processes/ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:36.383Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:36.383Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:36.554Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:36.554Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:36.554Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:36.554Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:36.555Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/4hywx1oGQnZflA2USoW8i5F_olVLYG5dqvH9SFcsrmY?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:36.872Z ao-mu:workerQueueBroadcast:cuFetchWithCache inserting cu redirect into cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:37.520Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:37.520Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object]
+    ],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: '4hywx1oGQnZflA2USoW8i5F_olVLYG5dqvH9SFcsrmY',
+      timestamp: 1722455136655
+    },
+    tx: {
+      id: '4hywx1oGQnZflA2USoW8i5F_olVLYG5dqvH9SFcsrmY',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455134514-4aad09d24862d250',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137520-1f34186e8c512ac1'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000174',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+2024-07-31T19:45:37.532Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.532Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.532Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.533Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.533Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.533Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.533Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.534Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.534Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.534Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.534Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.534Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg Found id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 in cache with value: false
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.535Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.536Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.536Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.536Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.536Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.536Z ao-mu:workerQueueBroadcast:processMsg cached process found ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137520-38d51302753f3a38'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000175',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137521-28974101fa0b0f4c'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000176',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137521-cffce0dc41e230b4'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000177',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137521-bdd699fdd2384fbf'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000178',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137522-8dbf6b74d803831a'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000179',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137523-32543b92117aaf2f'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000180',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137523-5b80642cc687ea17'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000181',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137524-75e5ac01e559ef70'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000182',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    dbId: '6baa93e82733e4db-1722455137524-1884ed01022738c5'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000183',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'Success'
+  }
+}
+2024-07-31T19:45:37.532Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.532Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.533Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.533Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.533Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.533Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.534Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.534Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.534Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:45:37.605Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.605Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.606Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.606Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.608Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.608Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.609Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.610Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.611Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.611Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.612Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.612Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.614Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.615Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.616Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.616Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.618Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.618Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.619Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:45:37.619Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:45:37.776Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:37.776Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:37.777Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.777Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:37.777Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/l0_qQOPxsehTRXy2c2844cPGcb-kdWFUHzSUTCnJiA8?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:37.777Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:37.962Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:37.962Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:37.962Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:37.962Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:37.962Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/QmI4N_Exc9clem84siw09i14Mb7tEIBEq-5pb5yV0Cc?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:37.962Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.005Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.006Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.006Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.006Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.006Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/GR2_ZnCuHo6QviumUsgQryav_WC9gHEjzPuY6wed_9g?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.006Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.051Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.051Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.052Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.052Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.052Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/XYAIll41_Gywrw2CyqX-5XzbnKEgw2EvxqWZfbTmAyE?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.052Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.096Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.096Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.097Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.097Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.097Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/fFEj3Fd0NR15HBtimczVRq-XJkcdnTBDgNNgaLUYbwg?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.097Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.151Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.151Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.151Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.151Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.151Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/952_BbdznpqeM3O9ai1qmdJYuzwQorzxmic-8Zg4LkY?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.151Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.155Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:38.155Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'l0_qQOPxsehTRXy2c2844cPGcb-kdWFUHzSUTCnJiA8',
+      timestamp: 1722455137879
+    },
+    tx: {
+      id: 'l0_qQOPxsehTRXy2c2844cPGcb-kdWFUHzSUTCnJiA8',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137520-1f34186e8c512ac1',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:38.187Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.187Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.187Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.188Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.188Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/VzD4yPKpipdWjAl4Q2avpJh4iUjhT2KXl6qvgqspOxg?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.188Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.242Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.243Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.243Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.243Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.243Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/oA1roEqUg5ZW9HVFHDgZCoLtjZrl8N0dXtigeXsWd1o?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.243Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.304Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.304Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.304Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.304Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.304Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/B3xqZXevEafLvpS-L_kIdS5xGifmJBwJS2tlXmAHemI?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.304Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.347Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:45:38.347Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:45:38.347Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:45:38.348Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:45:38.348Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/QJxXr_IkvSATwAKG5EFqObMIIJ-YDrRjaEavEYNbnaU?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:45:38.348Z ao-mu:workerQueueBroadcast:cuFetchWithCache found redirect url in cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:45:38.627Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:38.627Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'QmI4N_Exc9clem84siw09i14Mb7tEIBEq-5pb5yV0Cc',
+      timestamp: 1722455138065
+    },
+    tx: {
+      id: 'QmI4N_Exc9clem84siw09i14Mb7tEIBEq-5pb5yV0Cc',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137520-38d51302753f3a38',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:38.877Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:38.877Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'GR2_ZnCuHo6QviumUsgQryav_WC9gHEjzPuY6wed_9g',
+      timestamp: 1722455138107
+    },
+    tx: {
+      id: 'GR2_ZnCuHo6QviumUsgQryav_WC9gHEjzPuY6wed_9g',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137524-75e5ac01e559ef70',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:39.160Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:39.160Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'XYAIll41_Gywrw2CyqX-5XzbnKEgw2EvxqWZfbTmAyE',
+      timestamp: 1722455138154
+    },
+    tx: {
+      id: 'XYAIll41_Gywrw2CyqX-5XzbnKEgw2EvxqWZfbTmAyE',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137524-1884ed01022738c5',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:39.209Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:39.209Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'VzD4yPKpipdWjAl4Q2avpJh4iUjhT2KXl6qvgqspOxg',
+      timestamp: 1722455138287
+    },
+    tx: {
+      id: 'VzD4yPKpipdWjAl4Q2avpJh4iUjhT2KXl6qvgqspOxg',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137523-32543b92117aaf2f',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:39.227Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:39.227Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'fFEj3Fd0NR15HBtimczVRq-XJkcdnTBDgNNgaLUYbwg',
+      timestamp: 1722455138201
+    },
+    tx: {
+      id: 'fFEj3Fd0NR15HBtimczVRq-XJkcdnTBDgNNgaLUYbwg',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137521-cffce0dc41e230b4',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:39.286Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:39.286Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: '952_BbdznpqeM3O9ai1qmdJYuzwQorzxmic-8Zg4LkY',
+      timestamp: 1722455138243
+    },
+    tx: {
+      id: '952_BbdznpqeM3O9ai1qmdJYuzwQorzxmic-8Zg4LkY',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137522-8dbf6b74d803831a',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:39.518Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:39.519Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'oA1roEqUg5ZW9HVFHDgZCoLtjZrl8N0dXtigeXsWd1o',
+      timestamp: 1722455138347
+    },
+    tx: {
+      id: 'oA1roEqUg5ZW9HVFHDgZCoLtjZrl8N0dXtigeXsWd1o',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137521-28974101fa0b0f4c',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:39.791Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:39.791Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'B3xqZXevEafLvpS-L_kIdS5xGifmJBwJS2tlXmAHemI',
+      timestamp: 1722455138407
+    },
+    tx: {
+      id: 'B3xqZXevEafLvpS-L_kIdS5xGifmJBwJS2tlXmAHemI',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137523-5b80642cc687ea17',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+2024-07-31T19:45:40.017Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:45:40.017Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added tx and schedLocation to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'QJxXr_IkvSATwAKG5EFqObMIIJ-YDrRjaEavEYNbnaU',
+      timestamp: 1722455138448
+    },
+    tx: {
+      id: 'QJxXr_IkvSATwAKG5EFqObMIIJ-YDrRjaEavEYNbnaU',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'oa3rzGaGdlq85zUukzBcH4gq6TSe7BDnK-cXWgwbu9o',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '6baa93e82733e4db-1722455137521-bdd699fdd2384fbf',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added tx and schedLocation to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}

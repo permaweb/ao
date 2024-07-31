@@ -70,7 +70,7 @@ export function pullResultWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap('Added "msgs, spawns, and assigns" to ctx')
+        logger.tap({ log: 'Added "msgs, spawns, and assigns" to ctx', options: { messageId: ctx.initialTxId, processId: ctx.tx.processId } })
       )
   }
 }

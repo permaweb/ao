@@ -15,7 +15,7 @@ export const withErrorHandler = (handler) => (req, res) => {
     .catch((err) => {
       const { domain: { logger } } = req
 
-      logger(err)
+      logger({ log: err })
       const formatted = errFrom(err)
       if (res.writableEnded) return
 

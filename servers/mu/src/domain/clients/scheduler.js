@@ -20,7 +20,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
   })
   return async ({ data, suUrl }) => {
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap(`Forwarding message to SU ${suUrl}`))
+      .map(logger.tap({ log: `Forwarding message to SU ${suUrl}` }))
       .chain(
         fromPromise((body) =>
           suFetch(suUrl, {
@@ -52,7 +52,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           })
         )
       )
-      .bimap(logger.tap('Error while communicating with SU:'), identity)
+      .bimap(logger.tap({ log: 'Error while communicating with SU:' }), identity)
       .bichain(
         (err) => Rejected(err),
         fromPromise(async (res) => {
@@ -63,7 +63,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap('Successfully forwarded DataItem to SU'))
+      .map(logger.tap({ log: 'Successfully forwarded DataItem to SU' }))
       .toPromise()
   }
 }
@@ -85,7 +85,7 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
   })
   return async ({ txId, processId, baseLayer, exclude, suUrl }) => {
     return of({ txId, processId, baseLayer, exclude, suUrl })
-      .map(logger.tap(`Forwarding Assignment to SU ${suUrl}`))
+      .map(logger.tap({ log: `Forwarding Assignment to SU ${suUrl}` }))
       .chain(
         fromPromise(({ txId, processId, baseLayer, exclude, suUrl }) => {
           let url = `${suUrl}/?process-id=${processId}&assign=${txId}`
@@ -146,10 +146,10 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
       )
       .bimap(
         (e) => {
-          logger.tap('Error while communicating with SU:')(e)
+          logger.tap({ log: 'Error while communicating with SU:' })(e)
           return new Error(e)
         },
-        logger.tap('Successfully forwarded Assignment to SU')
+        logger.tap({ log: 'Successfully forwarded Assignment to SU' })
       )
       .toPromise()
   }
@@ -173,11 +173,11 @@ function fetchSchedulerProcessWith ({
     return getByProcess(processId)
       .then((cached) => {
         if (cached) {
-          logger(`cached process found ${processId}`)
+          logger({ log: `cached process found ${processId}` })
           return cached
         }
 
-        logger(`${suUrl}/processes/${processId}`)
+        logger({ log: `${suUrl}/processes/${processId}` })
 
         return suFetch(`${suUrl}/processes/${processId}`)
           .then((res) => res.json())
@@ -188,7 +188,7 @@ function fetchSchedulerProcessWith ({
           })
       })
       .catch((e) => {
-        logger(`error fetching process ${e}`)
+        logger({ log: `error fetching process ${e}` })
       })
   }
 }

@@ -22,8 +22,8 @@ export function processMsgWith ({
   fetchSchedulerProcess
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet })
-  const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave })
+  const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
 
   return (ctx) => {
@@ -55,7 +55,7 @@ export function processMsgWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        logger.tap('processMsgSuccess')
+        logger.tap({ log: 'processMsgSuccess', options: { end: true, processId: ctx.cachedMsg.fromProcessId, messageId: ctx.initialTxId } })
       )
   }
 }

@@ -111,7 +111,7 @@ export function buildTxWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap('Added tx and schedLocation to ctx')
+        logger.tap({ log: 'Added tx and schedLocation to ctx', options: { messageId: ctx?.initialTxId, processId: ctx?.cachedMsg?.processId } })
       )
   }
 }
