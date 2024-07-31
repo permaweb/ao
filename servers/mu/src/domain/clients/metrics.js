@@ -37,18 +37,6 @@ export const counterWith = ({ prefix = 'ao_mu' } = {}) => {
       name: `${prefix}_${name}`,
       help: description,
       labelNames,
-      /**
-       * We abstract the use of 'this'
-       * to the collect function here.
-       *
-       * This way, the client may provide a function
-       * that simply returns the collected value to set,
-       * which will this call set here
-       */
-      ...(collect
-        ? { collect: async function () { this.set(await collect()) } }
-        : {}
-      ),
       enableExemplars: true
     })
 

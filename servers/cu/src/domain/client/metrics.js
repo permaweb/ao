@@ -36,6 +36,18 @@ export const gaugeWith = ({ prefix = 'ao_cu' } = {}) => {
     const g = new PromClient.Gauge({
       name: `${prefix}_${name}`,
       help: description,
+      /**
+       * We abstract the use of 'this'
+       * to the collect function here.
+       *
+       * This way, the client may provide a function
+       * that simply returns the collected value to set,
+       * which will this call set here
+       */
+      ...(collect
+        ? { collect: async function () { this.set(await collect()) } }
+        : {}
+      ),
       enableExemplars: true
     })
 
