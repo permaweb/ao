@@ -32,7 +32,7 @@ export const timer = (label, ctx) => {
 }
 
 export const counterWith = ({ prefix = 'ao_mu' } = {}) => {
-  return ({ name, description, collect, labelNames = [] }) => {
+  return ({ name, description, labelNames = [] }) => {
     const c = new PromClient.Counter({
       name: `${prefix}_${name}`,
       help: description,
