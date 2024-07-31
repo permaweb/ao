@@ -31,6 +31,21 @@ export const timer = (label, ctx) => {
   }
 }
 
+export const counterWith = ({ prefix = 'ao_mu' } = {}) => {
+  return ({ name, description, labelNames = [] }) => {
+    const c = new PromClient.Counter({
+      name: `${prefix}_${name}`,
+      help: description,
+      labelNames,
+      enableExemplars: true
+    })
+
+    return {
+      inc: (n) => c.inc(n)
+    }
+  }
+}
+
 export const gaugeWith = ({ prefix = 'ao_mu' } = {}) => {
   return ({ name, description, collect, labelNames = [] }) => {
     const g = new PromClient.Gauge({
