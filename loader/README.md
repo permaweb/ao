@@ -34,12 +34,12 @@ const env = {
 
 // Create the handle function that executes the Wasm
 const handle = await AoLoader(wasmBinary, {
-  format = "wasm32-unknown-emscripten2",
-  inputEncoding = "JSON-1",
-  outputEncoding = "JSON-1", 
-  memoryLimit = "524288000", // in bytes
-  computeLimit = 9e12.toString(),
-  extensions = []
+  format: "wasm32-unknown-emscripten2",
+  inputEncoding: "JSON-1",
+  outputEncoding: "JSON-1", 
+  memoryLimit: "524288000", // in bytes
+  computeLimit: 9e12.toString(),
+  extensions: []
 });
 
 // To spawn a process, pass null as the buffer
@@ -58,12 +58,12 @@ const result = await handle(null, {
 
 ```js
 const options = {
-  format = "wasm32-unknown-emscripten2",
-  inputEncoding = "JSON-1",
-  outputEncoding = "JSON-1", 
-  memoryLimit = "524288000", // in bytes
-  computeLimit = 9e12.toString(),
-  extensions = []
+  format: "wasm32-unknown-emscripten2",
+  inputEncoding: "JSON-1",
+  outputEncoding: "JSON-1", 
+  memoryLimit: "524288000", // in bytes
+  computeLimit: 9e12.toString(),
+  extensions: []
 }
 const handle = await AoLoader(wasmBinary, options);
 const buffer = await LoadFromCache();
@@ -96,12 +96,12 @@ import fs from "fs";
 async function main() {
   const wasmBinary = fs.readFileSync("process.wasm");
   const options = {
-    format = "wasm32-unknown-emscripten2",
-    inputEncoding = "JSON-1",
-    outputEncoding = "JSON-1", 
-    memoryLimit = "524288000", // in bytes
-    computeLimit = 9e12.toString(),
-    extensions = []
+    format: "wasm32-unknown-emscripten2",
+    inputEncoding: "JSON-1",
+    outputEncoding: "JSON-1", 
+    memoryLimit: "524288000", // in bytes
+    computeLimit: 9e12.toString(),
+    extensions: []
   }
   const handle = AoLoader(wasmBinary, options);
   const result = await handle(...);
@@ -121,12 +121,12 @@ async function main() {
   const wasmBinary = await fetch(`https://arweave.net/${tx_id}`)
     .then(res => res.arrayBuffer())
   const options = {
-    format = "wasm32-unknown-emscripten2",
-    inputEncoding = "JSON-1",
-    outputEncoding = "JSON-1", 
-    memoryLimit = "524288000", // in bytes
-    computeLimit = 9e12.toString(),
-    extensions = []
+    format: "wasm32-unknown-emscripten2",
+    inputEncoding: "JSON-1",
+    outputEncoding: "JSON-1", 
+    memoryLimit: "524288000", // in bytes
+    computeLimit: 9e12.toString(),
+    extensions: []
   }
 
   const handle = AoLoader(wasmBinary, options);
