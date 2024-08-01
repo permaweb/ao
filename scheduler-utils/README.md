@@ -99,6 +99,8 @@ specify those coonfigurations by providing their values `connect`. You can curre
 - The `GRAPHQL_URL`
 - The In-Memory `cacheSize`
 - Following Redirects `followRedirects`, a boolean that optimizes scheduler routing if `true`
+- `GRAPHQL_MAX_RETRIES`, the maximum amount of retries for failed gateway queries
+- `GRAPHQL_RETRY_BACKOFF`, the initial delay for a gateway query retry. Doubled for each successive retry
 
 > If you'd like to use no In-Memory Cache, and load the record from chain every time, then set the `cacheSize` to `0`
 
@@ -108,7 +110,9 @@ import { connect } from "@permaweb/ao-scheduler-utils";
 const { validate, locate, raw } = connect({
   GRAPHQL_URL: "...",
   cacheSize: 1000,
-  followRedirects: true
+  followRedirects: true,
+  GRAPHQL_MAX_RETRIES: 0,
+  GRAPHQL_RETRY_BACKOFF: 300
 });
 ```
 
