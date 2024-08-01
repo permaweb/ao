@@ -37,9 +37,16 @@ WORKDIR /app
 # Copy the binary from your local file system to the container
 COPY --from=builder /usr/src/su/target/release/su /app/su
 
+# Copy necessary libraries from the builder
+COPY --from=builder /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/
+COPY --from=builder /lib64/ /lib64/
+
 # Provide instructions for building the binary
 # (This will be displayed when someone runs `docker build`)
 LABEL build_instructions="To build just the binary, run the following command: docker build --target builder -t su ."
 
 # Run the binary - provide args on execution
 ENTRYPOINT [ "/app/su" ]
+
+# Run time command arguments, default is empty
+CMD []
