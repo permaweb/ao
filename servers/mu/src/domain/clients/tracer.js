@@ -11,13 +11,13 @@ import { TRACES_TABLE } from './sqlite.js'
 // }
 
 function createTraceWith ({ db }) {
-  function createQuery (logs, messageId, processId, wallet, data) {
+  function createQuery (logs, messageId, processId, wallet, parentMessageId, data) {
     const randomByteString = randomBytes(8).toString('hex')
     return {
       sql: `
         INSERT OR IGNORE INTO ${TRACES_TABLE}
-        (id, messageId, processId, wallet, timestamp, logs, data)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (id, messageId, processId, wallet, timestamp, parentId, logs, data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       parameters: [
         `${messageId}-${processId}-${wallet}-${randomByteString}`,
@@ -25,18 +25,19 @@ function createTraceWith ({ db }) {
         processId,
         wallet,
         Date.now(),
+        parentMessageId,
         logs,
         data
       ]
     }
   }
 
-  return ({ logs, messageId, processId, wallet, ctx }) => {
+  return ({ logs, messageId, processId, wallet, parentMessageId, ctx }) => {
     if (ctx) {
       ctx.tx.dataLength = ctx.tx.data?.length ?? undefined
       delete ctx.tx.data
     }
-    db.run(createQuery(logs, messageId, processId, wallet, JSON.stringify(ctx ?? '{}'))).catch((e) => console.log('db error: ', { e }))
+    db.run(createQuery(logs, messageId, processId, wallet, parentMessageId, JSON.stringify(ctx ?? '{}'))).catch((e) => console.log('db error: ', { e }))
     // console.log('Db saved.')
   }
 }
@@ -54,12 +55,13 @@ export function traceWith ({ namespace, db, TRACE_DB_PATH }) {
    */
   // args - 0: message, 1: messageId, 2: processId, 3: wallet
   const tracerLogger = ({ log, options }, ctx) => {
+    // TODO: Log everything at the end
     if (Array.isArray(log)) {
       logger(...log)
     } else {
       logger(log)
     }
-    const { messageId, processId, wallet, end } = options ?? {}
+    const { messageId, processId, wallet, end, parentMessageId } = options ?? {}
     if (messageId || wallet) {
       const id = `${messageId}-${processId}`
       const currLogs = activeLogs.get(id)
@@ -71,10 +73,18 @@ export function traceWith ({ namespace, db, TRACE_DB_PATH }) {
       }
 
       if (end) {
-        const log = activeLogs.get(id)
+        const currentLog = activeLogs.get(id)
         const ctx = activeCtx.get(id)
-        console.log({ id, log, ctx, logs: log.logs })
-        createTrace({ logs: JSON.stringify(log.logs), messageId, processId, wallet, ctx })
+        // console.log({ id, currentLog, ctx, logs: currentLog.logs })
+        createTrace({ logs: JSON.stringify(currentLog.logs), messageId, processId, wallet, parentMessageId, ctx })
+        // TODO: Log everything at the end
+        // for (const log of currentLog.logs) {
+        //   if (Array.isArray(log)) {
+        //     logger(...log)
+        //   } else {
+        //     logger(log)
+        //   }
+        // }
       }
     }
   }
@@ -118,21 +128,50 @@ export function readTracesWith ({ db }) {
     /*
      * the page size for the request
      */
-    limit,
+    limit = 20,
     /*
      * offset is the page to return so if limit is 20 and offset is
      * 20, this function should return records starting at 20
      */
-    offset
+    offset = 0
   }) => {
     function createQuery (messageId, processId, wallet) {
       return {
         sql: `
-          SELECT * FROM ${TRACES_TABLE}
-          WHERE messageId = ?
+          WITH RECURSIVE 
+            Ancestors AS (
+                SELECT id, messageId, processId, wallet, logs, data, parentId
+                FROM traces
+                WHERE messageId = ?
+                UNION ALL
+                SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId
+                FROM traces t
+                INNER JOIN Ancestors a ON t.messageId = a.parentId
+            ),
+            Descendants AS (
+                SELECT id, messageId, processId, wallet, logs, data, parentId
+                FROM traces
+                WHERE messageId = ?
+                UNION ALL
+                SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId
+                FROM traces t
+                INNER JOIN Descendants d ON t.parentId = d.messageId
+            )
+            SELECT 'root' AS type, id, messageId, processId, wallet, logs, data, parentId FROM traces WHERE messageId = ?
+            UNION ALL
+            SELECT 'ancestor' AS type, id, messageId, processId, wallet, logs, data, parentId FROM Ancestors WHERE messageId != ?
+            UNION ALL
+            SELECT 'descendant' AS type, id, messageId, processId, wallet, logs, data, parentId FROM Descendants WHERE messageId != ?
+            LIMIT ?, ?;
         `,
         parameters: [
-          messageId
+          messageId,
+          messageId,
+          messageId,
+          messageId,
+          messageId,
+          offset,
+          limit
         ]
       }
     }

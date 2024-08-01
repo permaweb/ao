@@ -42,7 +42,7 @@ export function writeMessageTxWith (env) {
           (e) => {
             return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
           },
-          logger.tap({ log: 'Added "schedulerTx" to ctx', options: { messageId: ctx.initialTxId, processId: ctx.tx.processId } })
+          logger.tap({ log: 'Added "schedulerTx" to ctx', options: { messageId: ctx.tx.id, processId: ctx.tx.processId } })
         )
     } else {
       ctx = setStage('write-message', 'write-message-arweave')(ctx)
@@ -56,7 +56,7 @@ export function writeMessageTxWith (env) {
           (e) => {
             return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
           },
-          logger.tap({ log: 'Added "arweaveTx" to ctx', options: { messageId: ctx.initialTxId, processId: ctx.tx.processId } })
+          logger.tap({ log: 'Added "arweaveTx" to ctx', options: { messageId: ctx.tx.id, processId: ctx.tx.processId } })
         )
     }
   }

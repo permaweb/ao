@@ -1866,3 +1866,244 @@ Wed, 31 Jul 2024 19:45:31 GMT body-parser:raw parse body
     'processMsgSuccess'
   ]
 }
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "x-powered-by" to true
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "etag" to 'weak'
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "etag fn" to [Function: generateETag]
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "env" to 'development'
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "query parser" to 'extended'
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "subdomain offset" to 2
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "trust proxy" to false
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Wed, 31 Jul 2024 19:47:48 GMT express:application booting in development mode
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "view" to [Function: View]
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Wed, 31 Jul 2024 19:47:48 GMT express:application set "jsonp callback name" to 'callback'
+Wed, 31 Jul 2024 19:47:48 GMT express:router use '/' query
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router use '/' expressInit
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router use '/' corsMiddleware
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router use '/' jsonParser
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router use '/' rawParser
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route post '/monitor/:processId'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route delete '/monitor/:processId'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route post '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:route get '/'
+Wed, 31 Jul 2024 19:47:48 GMT express:router:layer new '/'
+2024-07-31T19:47:48.461Z ao-mu Server is running on http://localhost:3004
+2024-07-31T19:47:48.462Z ao-mu Crons initialized
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "x-powered-by" to true
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "etag" to 'weak'
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "etag fn" to [Function: generateETag]
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "env" to 'development'
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "query parser" to 'extended'
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "subdomain offset" to 2
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "trust proxy" to false
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Wed, 31 Jul 2024 19:48:01 GMT express:application booting in development mode
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "view" to [Function: View]
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Wed, 31 Jul 2024 19:48:01 GMT express:application set "jsonp callback name" to 'callback'
+Wed, 31 Jul 2024 19:48:01 GMT express:router use '/' query
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router use '/' expressInit
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router use '/' corsMiddleware
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router use '/' jsonParser
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router use '/' rawParser
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route post '/monitor/:processId'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route delete '/monitor/:processId'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route post '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:route get '/'
+Wed, 31 Jul 2024 19:48:01 GMT express:router:layer new '/'
+2024-07-31T19:48:01.148Z ao-mu Server is running on http://localhost:3004
+2024-07-31T19:48:01.151Z ao-mu Crons initialized
+Wed, 31 Jul 2024 19:48:06 GMT express:router dispatching POST /
+Wed, 31 Jul 2024 19:48:06 GMT express:router query  : /
+Wed, 31 Jul 2024 19:48:06 GMT express:router expressInit  : /
+Wed, 31 Jul 2024 19:48:06 GMT express:router corsMiddleware  : /
+Wed, 31 Jul 2024 19:48:06 GMT express:router jsonParser  : /
+Wed, 31 Jul 2024 19:48:06 GMT body-parser:json content-type "application/octet-stream"
+Wed, 31 Jul 2024 19:48:06 GMT body-parser:json skip parsing
+Wed, 31 Jul 2024 19:48:06 GMT express:router rawParser  : /
+Wed, 31 Jul 2024 19:48:06 GMT body-parser:raw content-type "application/octet-stream"
+Wed, 31 Jul 2024 19:48:06 GMT body-parser:raw content-encoding "identity"
+Wed, 31 Jul 2024 19:48:06 GMT body-parser:raw read body
+Wed, 31 Jul 2024 19:48:06 GMT body-parser:raw parse body
+2024-07-31T19:48:06.470Z ao-mu:sendDataItem Successfully parsed data item and added as "tx" to ctx
+2024-07-31T19:48:07.409Z ao-mu:sendDataItem Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:48:07.856Z ao-mu:sendDataItem Successfully forwarded DataItem to SU
+2024-07-31T19:48:07.856Z ao-mu:sendDataItem Added "schedulerTx" to ctx
+2024-07-31T19:48:07.856Z ao-mu:POST_root Successfully sent DataItem. Beginning to crank...
+2024-07-31T19:48:07.859Z ao-mu:sendDataItem Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:48:07.859Z ao-mu:sendDataItem Added "cuAddress" to ctx
+2024-07-31T19:48:07.860Z ao-mu:sendDataItem https://cu.ao-testnet.xyz/result/NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:48:08.216Z ao-mu:cuFetchWithCache inserting cu redirect into cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:48:09.165Z ao-mu:sendDataItem Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:48:09.167Z ao-mu Starting worker with id "37d343d72de8641a", queue id "5c1f94d656249ad7"...
+2024-07-31T19:48:09.455Z ao-mu Initializing queue for queue index 5c1f94d656249ad7
+2024-07-31T19:48:09.462Z ao-mu:sendDataItem Cranking complete
+{
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    initialTxId: 'NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8',
+    dbId: '5c1f94d656249ad7-1722455289460-bc09ec0e22e281c7'
+  },
+  msg: {
+    Tags: [ [Object], [Object], [Object], [Object], [Object], [Object] ],
+    Anchor: '00000000000000000000000000000184',
+    Target: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    Data: 'foo1'
+  }
+}
+2024-07-31T19:48:09.561Z ao-mu Processing task of type MESSAGE
+2024-07-31T19:48:09.563Z ao-mu:workerQueueBroadcast:processMsg Checking if id is a wallet ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:48:09.563Z ao-mu:workerQueueBroadcast:processMsg id: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 not cached checking arweave for tx
+2024-07-31T19:48:10.778Z ao-mu:workerQueueBroadcast:processMsg https://su46.ao-testnet.xyz/processes/ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:48:11.119Z ao-mu:workerQueueBroadcast:default Added tx and schedLocation to ctx
+2024-07-31T19:48:11.120Z ao-mu:workerQueueBroadcast:processMsg Forwarding message to SU https://su46.ao-testnet.xyz
+2024-07-31T19:48:11.280Z ao-mu:workerQueueBroadcast:processMsg Successfully forwarded DataItem to SU
+2024-07-31T19:48:11.281Z ao-mu:workerQueueBroadcast:default Added "schedulerTx" to ctx
+2024-07-31T19:48:11.281Z ao-mu:workerQueueBroadcast:processMsg Selecting cu for process ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0
+2024-07-31T19:48:11.281Z ao-mu:workerQueueBroadcast:default Added "cuAddress" to ctx
+2024-07-31T19:48:11.281Z ao-mu:workerQueueBroadcast:processMsg https://cu.ao-testnet.xyz/result/B6R3KH15E9Un7-DPsXFYciB7ssGrdBPtt71Ny7PYfro?process-id=ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0&no-busy=1
+2024-07-31T19:48:11.578Z ao-mu:workerQueueBroadcast:cuFetchWithCache inserting cu redirect into cache for process: ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0 redirect: cu8.ao-testnet.xyz
+2024-07-31T19:48:12.118Z ao-mu:workerQueueBroadcast:default Added "msgs, spawns, and assigns" to ctx
+2024-07-31T19:48:12.119Z ao-mu:workerQueueBroadcast:default processMsgSuccess
+{
+  id: 'NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8-ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+  log: {
+    logs: [
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'Added "schedulerTx" to ctx',
+      'Added "cuAddress" to ctx',
+      'Added "msgs, spawns, and assigns" to ctx',
+      'processMsgSuccess'
+    ],
+    messageId: 'NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8',
+    processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+    wallet: undefined
+  },
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'B6R3KH15E9Un7-DPsXFYciB7ssGrdBPtt71Ny7PYfro',
+      timestamp: 1722455291381
+    },
+    tx: {
+      id: 'B6R3KH15E9Un7-DPsXFYciB7ssGrdBPtt71Ny7PYfro',
+      data: [Uint8Array],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    schedLocation: {
+      url: 'https://su46.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0',
+      initialTxId: 'NI8CmsDHj1bECUIYKvkcs4Ug5MddVnOqboujnfU2nB8',
+      fromProcessId: 'ew9G51chguatUWnfPjdvYjSZaK7C4AWTxQ5zeWht9P0'
+    },
+    dbId: '5c1f94d656249ad7-1722455289460-bc09ec0e22e281c7',
+    stage: 'end'
+  },
+  logs: [
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'Added "schedulerTx" to ctx',
+    'Added "cuAddress" to ctx',
+    'Added "msgs, spawns, and assigns" to ctx',
+    'processMsgSuccess'
+  ]
+}
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "x-powered-by" to true
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "etag" to 'weak'
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "etag fn" to [Function: generateETag]
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "env" to 'development'
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "query parser" to 'extended'
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "subdomain offset" to 2
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "trust proxy" to false
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Wed, 31 Jul 2024 19:49:07 GMT express:application booting in development mode
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "view" to [Function: View]
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
+Wed, 31 Jul 2024 19:49:07 GMT express:application set "jsonp callback name" to 'callback'
+Wed, 31 Jul 2024 19:49:07 GMT express:router use '/' query
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router use '/' expressInit
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router use '/' corsMiddleware
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router use '/' jsonParser
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router use '/' rawParser
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route post '/monitor/:processId'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route new '/monitor/:processId'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/monitor/:processId'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route delete '/monitor/:processId'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route post '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:route get '/'
+Wed, 31 Jul 2024 19:49:07 GMT express:router:layer new '/'
+2024-07-31T19:49:07.406Z ao-mu Server is running on http://localhost:3004
+2024-07-31T19:49:07.413Z ao-mu Crons initialized

@@ -18,6 +18,6 @@ export function getCuAddressWith ({ selectNode, logger }) {
         },
         identity
       )
-      .map(logger.tap({ log: 'Added "cuAddress" to ctx', options: { messageId: ctx.initialTxId, processId: ctx.tx.processId } }))
+      .map(logger.tap({ log: 'Added "cuAddress" to ctx', options: { messageId: ctx.tx.id, processId: ctx.tx.processId } }))
   }
 }

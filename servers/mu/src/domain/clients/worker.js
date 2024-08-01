@@ -114,7 +114,8 @@ export function enqueueResultsWith ({ enqueue }) {
       ...msgs.map(msg => ({
         type: 'MESSAGE',
         cachedMsg: msg,
-        initialTxId: msg.initialTxId
+        initialTxId: msg.initialTxId,
+        parentId: msg.parentId
       })),
       ...spawns.map(spawn => ({
         type: 'SPAWN',

@@ -23,7 +23,8 @@ function fetchResultWith ({ fetchResult }) {
             msg,
             processId: msg.Target,
             initialTxId: ctx.initialTxId,
-            fromProcessId: ctx.tx.processId
+            fromProcessId: ctx.tx.processId,
+            parentId: ctx.tx.id
           }
         })
 
@@ -70,7 +71,7 @@ export function pullResultWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap({ log: 'Added "msgs, spawns, and assigns" to ctx', options: { messageId: ctx.initialTxId, processId: ctx.tx.processId } })
+        logger.tap({ log: 'Added "msgs, spawns, and assigns" to ctx', options: { messageId: ctx.tx.id, processId: ctx.tx.processId } })
       )
   }
 }

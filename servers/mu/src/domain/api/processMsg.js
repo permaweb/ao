@@ -55,7 +55,7 @@ export function processMsgWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        logger.tap({ log: 'processMsgSuccess', options: { end: true, processId: ctx.cachedMsg.fromProcessId, messageId: ctx.initialTxId } })
+        (ctx) => logger.tap({ log: 'processMsgSuccess', options: { end: true, parentMessageId: ctx.parentId, processId: ctx.tx.processId, messageId: ctx.tx.id } })(ctx)
       )
   }
 }

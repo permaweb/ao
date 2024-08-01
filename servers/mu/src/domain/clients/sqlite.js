@@ -23,6 +23,7 @@ const createTraces = async (db) => db.prepare(
     processId TEXT,
     wallet TEXT,
     timestamp INTEGER,
+    parentId TEXT,
     logs TEXT,
     data TEXT
   ) WITHOUT ROWID;`
