@@ -75,6 +75,8 @@ function doesMessageExistWith ({ findMessageBefore }) {
  * @returns {Evaluate}
  */
 export function evaluateWith (env) {
+  const evaluationCounter = env.evaluationCounter
+  // const gasCounter = env.gasCounter
   const logger = env.logger.child('evaluate')
   env = { ...env, logger }
 
@@ -237,6 +239,15 @@ export function evaluateWith (env) {
                             ctx.stats.messages.error = ctx.stats.messages.error || 0
                             ctx.stats.messages.error++
                           }
+
+                          /**
+                           * Increments gauges for total evaluations
+                           */
+                          evaluationCounter.inc(1, { cron: Boolean(cron), dryRun: Boolean(ctx.dryRun) }, { processId: ctx.id, error: Boolean(output.Error) })
+                          /**
+                           * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
+                           */
+                          // gasCounter.inc(output.GasUsed ?? 0, { cron: Boolean(cron), dryRun: Boolean(ctx.dryRun) }, { processId: ctx.id, error: Boolean(output.Error) })
 
                           return output
                         })

@@ -195,6 +195,21 @@ export const createApis = async (ctx) => {
     compute: fromPromise(() => _metrics.metrics())
   }
 
+  const evaluationCounter = MetricsClient.counterWith({})({
+    name: 'total_evaluations',
+    description: 'The total number of evaluations on a CU',
+    labelNames: ['processId', 'cron', 'dryRun', 'error']
+  })
+
+  /**
+   * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
+   */
+  // const gasCounter = MetricsClient.counterWith({})({
+  //   name: 'total_gas_used',
+  //   description: 'The total number of gas used on a CU',
+  //   labelNames: ['processId', 'cron', 'dryRun', 'error']
+  // })
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -229,6 +244,8 @@ export const createApis = async (ctx) => {
       saveCheckpoint,
       logger
     }),
+    evaluationCounter,
+    // gasCounter,
     saveProcess: AoProcessClient.saveProcessWith({ db: sqlite, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ db: sqlite, logger }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db: sqlite, logger }),

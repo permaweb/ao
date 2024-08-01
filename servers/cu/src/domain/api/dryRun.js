@@ -81,7 +81,12 @@ export function dryRunWith (env) {
            * Otherwise, we are evaluating up to the latest
            */
           exact: !!messageTxId,
-          needsMemory: true
+          needsMemory: true,
+          /**
+           * Add an indicator that this eval stream is part of a dry run.
+           * This is used for metric purposes.
+           */
+          dryRun: true
         })
       )
       /**
@@ -161,7 +166,7 @@ export function dryRunWith (env) {
              * Pass a messages stream to evaluate that only emits the single dry-run
              * message and then completes
              */
-            return evaluate({ ...ctx, messages: Readable.from(dryRunMessage()) })
+            return evaluate({ ...ctx, dryRun: true, messages: Readable.from(dryRunMessage()) })
           })
       })
       .map((res) => res.output)
