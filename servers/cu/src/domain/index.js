@@ -200,8 +200,26 @@ export const createApis = async (ctx) => {
   const stats = statsWith({
     gauge,
     loadWorkerStats: () => ({
-      primary: primaryWorkerPool.stats(),
-      dryRun: dryRunWorkerPool.stats()
+      primary: ({
+        ...primaryWorkerPool.stats(),
+        /**
+         * We use a work queue on the main thread while keeping
+         * worker pool queues empty (see comment above)
+         *
+         * So we use the work queue size to report pending tasks
+         */
+        pendingTasks: primaryWorkQueue.size
+      }),
+      dryRun: ({
+        ...dryRunWorkerPool.stats(),
+        /**
+         * We use a work queue on the main thread while keeping
+         * worker pool queues empty (see comment above)
+         *
+         * So we use the work queue size to report pending tasks
+         */
+        pendingTasks: dryRunWorkQueue.size
+      })
     }),
     /**
      * https://nodejs.org/api/process.html#processmemoryusage
