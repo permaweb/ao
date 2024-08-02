@@ -57,7 +57,7 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap({ log: 'Added spawnSuccessTx to ctx' })
+        logger.tap({ log: 'Added spawnSuccessTx to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } })
       )
   }
 }

@@ -109,18 +109,23 @@ export function processResultWith ({
  * correctly for input into the business logic
  */
 export function enqueueResultsWith ({ enqueue }) {
-  return ({ msgs, spawns, assigns }) => {
+  return ({ msgs, spawns, assigns, initialTxId }) => {
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',
         cachedMsg: msg,
         initialTxId: msg.initialTxId,
+        messageId: msg.initialTxId,
+        processId: msg.fromProcessId,
         parentId: msg.parentId
       })),
       ...spawns.map(spawn => ({
         type: 'SPAWN',
         cachedSpawn: spawn,
-        initialTxId: spawn.initialTxId
+        initialTxId: spawn.initialTxId,
+        messageId: spawn.initialTxId,
+        processId: spawn.processId,
+        parentId: spawn.parentId
       })),
       ...assigns.flatMap(assign => assign.Processes.map(
         (pid) => ({
@@ -130,7 +135,10 @@ export function enqueueResultsWith ({ enqueue }) {
             processId: pid,
             baseLayer: assign.BaseLayer === true ? '' : null,
             exclude: assign.Exclude && assign.Exclude.length > 0 ? assign.Exclude.join(',') : null
-          }
+          },
+          messageId: assign.Message,
+          processId: pid,
+          parentId: initialTxId
         })
       ))
     ]
@@ -157,8 +165,6 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
             status: 'success'
           })
         }).catch((e) => {
-          logger(`Result failed with error ${e}, will not recover`)
-          logger(e)
           /**
            * Upon failure, we want to add back to the task queue
            * our task with its progress (ctx). This progress is passed

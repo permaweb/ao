@@ -23,7 +23,7 @@ export function sendSpawnSuccessWith (env) {
           return of(result)
             .map(assoc('spawnSuccessSequencerTx', __, ctx))
             .map(ctxSchema.parse)
-            .map(logger.tap({ log: 'Added "spawnSuccessSequencerTx" to ctx' }))
+            .map(logger.tap({ log: 'Added "spawnSuccessSequencerTx" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } }))
         }
       )
       .bimap(

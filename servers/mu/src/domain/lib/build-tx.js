@@ -112,7 +112,6 @@ export function buildTxWith (env) {
           return new Error(e, { cause: ctx })
         },
         (ctx) => {
-          console.log(66, { messageId: ctx.tx.id })
           return logger.tap({ log: 'Added tx and schedLocation to ctx', options: { messageId: ctx.tx.id, processId: ctx.tx.processId } })(ctx)
         }
       )

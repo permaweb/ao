@@ -44,7 +44,7 @@ export function processAssignWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        logger.tap({ log: 'processAssignSuccess' })
+        logger.tap({ log: 'processAssignSuccess', options: { end: true, messageId: ctx.messageId, processId: ctx.processId } })
       )
   }
 }

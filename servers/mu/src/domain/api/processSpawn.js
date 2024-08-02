@@ -39,7 +39,7 @@ export function processSpawnWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        logger.tap({ log: 'processSpawnSuccess' })
+        (ctx) => logger.tap({ log: 'processSpawnSuccess', options: { end: true, parentMessageId: ctx.parentId, processId: ctx.processId, messageId: ctx.messageId } })(ctx)
       )
   }
 }

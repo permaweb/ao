@@ -33,12 +33,15 @@ function createTraceWith ({ db }) {
   }
 
   return ({ logs, messageId, processId, wallet, parentMessageId, ctx }) => {
-    if (ctx) {
-      ctx.tx.dataLength = ctx.tx.data?.length ?? undefined
+    if (ctx?.tx?.data) {
+      ctx.tx.dataLength = ctx.tx.data.length
       delete ctx.tx.data
     }
-    db.run(createQuery(logs, messageId, processId, wallet, parentMessageId, JSON.stringify(ctx ?? '{}'))).catch((e) => console.log('db error: ', { e }))
-    // console.log('Db saved.')
+    if (ctx?.raw) {
+      ctx.rawLength = ctx.raw.length
+      delete ctx.raw
+    }
+    db.run(createQuery(logs, messageId, processId, wallet, parentMessageId, JSON.stringify(ctx ?? '{}')))
   }
 }
 
@@ -75,7 +78,6 @@ export function traceWith ({ namespace, db, TRACE_DB_PATH }) {
       if (end) {
         const currentLog = activeLogs.get(id)
         const ctx = activeCtx.get(id)
-        // console.log({ id, currentLog, ctx, logs: currentLog.logs })
         createTrace({ logs: JSON.stringify(currentLog.logs), messageId, processId, wallet, parentMessageId, ctx })
         // TODO: Log everything at the end
         // for (const log of currentLog.logs) {

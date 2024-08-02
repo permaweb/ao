@@ -134,7 +134,11 @@ export function spawnProcessWith (env) {
         return writeDataItem({ suUrl: schedulerResult.url, data: signedData.data.toString('base64') })
           .map((result) => { return { id: signedData.id, block: result.block, timestamp: result.timestamp } })
           .map((r) => assoc('processTx', r.id, ctx))
-          .map(logger.tap({ log: 'Added processTx to the ctx ' }))
+          .map((ctx) => assoc('messageId', ctx.processTx, ctx))
+          .map((ctx) => {
+            logger({ log: 'Added processTx to the ctx', options: { messageId: ctx.messageId, processId: ctx.processId } })
+            return ctx
+          })
       })
       .bimap(
         (e) => {

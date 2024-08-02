@@ -37,6 +37,6 @@ export function writeProcessTxWith (env) {
       })
       .map(assoc('schedulerTx', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap({ log: 'Added "schedulerTx" to ctx' }))
+      .map(logger.tap({ log: 'Added "schedulerTx" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } }))
   }
 }

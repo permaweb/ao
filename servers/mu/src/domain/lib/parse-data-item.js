@@ -15,24 +15,31 @@ export function parseDataItemWith ({ createDataItem, logger }) {
        * Everything downstream expects a tx field, so construct it and add to context
        */
       .chain(fromPromise(
-        async (dataItem) => ({
-          tx: { id: await dataItem.id, processId: dataItem.target, data: ctx.raw },
-          dataItem: {
-            id: await dataItem.id,
-            signature: dataItem.signature,
-            owner: dataItem.owner,
-            target: dataItem.target,
-            tags: dataItem.tags,
-            /**
-             * For some reason, anchor is not included in the toJSON api on DataItem,
-             * so we make sure to include it here
-             */
-            anchor: dataItem.anchor
-
+        async (dataItem) => {
+          const id = await dataItem.id
+          return {
+            tx: { id, processId: dataItem.target, data: ctx.raw },
+            dataItem: {
+              id: await dataItem.id,
+              signature: dataItem.signature,
+              owner: dataItem.owner,
+              target: dataItem.target,
+              tags: dataItem.tags,
+              /**
+               * For some reason, anchor is not included in the toJSON api on DataItem,
+               * so we make sure to include it here
+               */
+              anchor: dataItem.anchor
+            },
+            messageId: id,
+            processId: dataItem.target
           }
         })
-      ))
+      )
       .map(mergeRight(ctx))
-      .map(logger.tap({ log: 'Successfully parsed data item and added as "tx" to ctx' }))
+      .map((ctx) => {
+        logger({ log: 'Successfully parsed data item and added as "tx" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } })
+        return ctx
+      })
   }
 }

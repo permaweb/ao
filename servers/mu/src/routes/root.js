@@ -41,12 +41,14 @@ const withMessageRoutes = (app) => {
               txId: assign,
               baseLayer,
               exclude
-            }
+            },
+            processId,
+            messageId: assign
           })
             .chain(sendAssign)
             .bimap(
-              logger.tap({ log: 'Failed to send the Assignment' }),
-              logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...' })
+              logger.tap({ log: 'Failed to send the Assignment', options: { messageId: assign, processId, end: true } }),
+              logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...', options: { messageId: assign, processId } })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
@@ -76,8 +78,14 @@ const withMessageRoutes = (app) => {
           await of({ raw: input.body })
             .chain(sendDataItem)
             .bimap(
-              logger.tap({ log: 'Failed to send the DataItem' }),
-              logger.tap({ log: 'Successfully sent DataItem. Beginning to crank...' })
+              (ctx) => {
+                logger({ log: 'Failed to send the DataItem', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } })
+                return ctx
+              },
+              (ctx) => {
+                logger({ log: 'Successfully sent DataItem. Beginning to crank...', options: { messageId: ctx.messageId, processId: ctx.processId } })
+                return ctx
+              }
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
@@ -138,9 +146,11 @@ const withTraceRoutes = (app) => {
 
         const logger = _logger.child('GET_trace')
 
+        // if (!query.process) return res.send('Process ID is required')
         const inputSchema = z.object({
-          process: z.string().optional(),
+          process: z.string({ required_error: 'Process ID is required' }),
           message: z.string().optional(),
+          assign: z.string().optional(),
           wallet: z.string().optional(),
           page: z.coerce.number().int().default(1),
           pageSize: z.coerce.number().int().default(DEFAULT_PAGE_SIZE)
@@ -158,7 +168,7 @@ const withTraceRoutes = (app) => {
          * Retrieve all message traces for the given input
          */
 
-        await of({ ...input, limit: input.pageSize, offset: input.pageSize * (input.page - 1) })
+        await of({ ...input, message: input.message || input.assign, limit: input.pageSize, offset: input.pageSize * (input.page - 1) })
           .chain(traceMsgs)
           .bimap(
             logger.tap({ log: ['Failed to retrieve trace for process "%s" or message "%s"', input.process, input.message] }),

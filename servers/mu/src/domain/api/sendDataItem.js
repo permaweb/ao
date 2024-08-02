@@ -49,7 +49,7 @@ export function sendDataItemWith ({
         .bichain(
           (error) => {
             return of(error)
-              .map(logger.tap({ log: ['Initial message failed %s', message.id] }))
+              .map(logger.tap({ log: ['Initial message failed %s', message.id], options: { messageId: ctx.messageId, processId: ctx.processId } }))
               .chain(() => Rejected(error))
           },
           (res) => Resolved(res)
@@ -63,15 +63,23 @@ export function sendDataItemWith ({
           crank: () => of({ ...res, initialTxId: res.tx.id })
             .chain(getCuAddress)
             .chain(pullResult)
-            .chain(({ msgs, spawns, assigns, initialTxId }) => crank({
-              msgs,
-              spawns,
-              assigns,
-              initialTxId
-            }))
+            .chain(({ msgs, spawns, assigns, initialTxId }) => {
+              return crank({
+                msgs,
+                spawns,
+                assigns,
+                initialTxId
+              })
+            })
             .bimap(
-              logger.tap({ log: 'Failed to crank messages' }),
-              logger.tap({ log: 'Cranking complete' })
+              (res) => {
+                logger({ log: 'Failed to crank messages', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }, ctx)
+                return res
+              },
+              (res) => {
+                logger({ log: 'Cranking complete', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }, ctx)
+                return res
+              }
             )
         }))
     )
@@ -108,8 +116,8 @@ export function sendDataItemWith ({
           })
         }, Resolved)
         .bimap(
-          logger.tap({ log: 'Assignments cranked for Process DataItem.' }),
-          logger.tap({ log: 'No cranking for a Process DataItem without target required. Nooping...' }))
+          logger.tap({ log: 'Assignments cranked for Process DataItem.', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }),
+          logger.tap({ log: 'No cranking for a Process DataItem without target required. Nooping...', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }))
     }))
 
   return (ctx) => {

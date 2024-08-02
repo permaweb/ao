@@ -114,6 +114,10 @@ export const createApis = async (ctx) => {
   const DB_URL = `${ctx.DB_URL}.sqlite`
   const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
+  // Create log database client
+  const LOG_DB_URL = `${ctx.TRACE_DB_PATH}.sqlite`
+  const logDb = await SqliteClient.createSqliteClient({ url: LOG_DB_URL, bootstrap: true })
+
   /**
    * Select queue ids from database on startup.
    * This will allow us to "pick up" persisted tasks
@@ -237,7 +241,7 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
-  const traceMsgs = fromPromise(readTracesWith({ db, TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
+  const traceMsgs = fromPromise(readTracesWith({ db: logDb, TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
 
   return {
     metrics,
