@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 
 import pMap from 'p-map'
+import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
 import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
@@ -81,6 +82,28 @@ export const createApis = async (ctx) => {
     }
   }
 
+  /**
+   * Some of the work performed, in prep for sending the task to the worker thread pool,
+   * ie. copying the process memory so that each eval stream may have their own memory
+   * to pass back and forth (see below), can be resource intensive.
+   *
+   * If the thread pool is fully utilized, the pool will start to queue tasks sent to it on the main-thread.
+   * Subsequently, the amount of time between when the "prep-work" and
+   * the "actual evaluation work" are performed can grow very large.
+   *
+   * This effectively produces a "front-loading" effect, where all the "prep-work" is ran
+   * all up front, then queued for a worker to eventually take on the actual work.
+   *
+   * In other words, resource intensive data strucutres ie. process memory can just be
+   * sitting queued for long periods of time, waiting for an available worker thread. We need to mitigate this.
+   *
+   * So for each worker thread pool, we utilize a queue with matching concurrency as the thread pool,
+   * which will defer performing the "prep-work" until right before a worker is available to perform the "actual work",
+   * ergo eliminating the "front-loading" effect.
+   *
+   * (see pQueue instantitations below)
+   */
+
   const maxPrimaryWorkerThreads = Math.min(
     Math.max(1, ctx.WASM_EVALUATION_MAX_WORKERS - 1),
     Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
@@ -90,6 +113,7 @@ export const createApis = async (ctx) => {
     maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
   })
+  const primaryWorkQueue = new PQueue({ concurrency: maxPrimaryWorkerThreads })
 
   const maxDryRunWorkerTheads = Math.max(
     1,
@@ -100,6 +124,7 @@ export const createApis = async (ctx) => {
     onCreateWorker: onCreateWorker('dry-run'),
     maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE
   })
+  const dryRunWorkQueue = new PQueue({ concurrency: maxDryRunWorkerTheads })
 
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
@@ -256,10 +281,14 @@ export const createApis = async (ctx) => {
     saveModule: AoModuleClient.saveModuleWith({ db: sqlite, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
       loadWasmModule,
-      /**
-       * Evaluation will invoke a worker available in the worker pool
-       */
-      evaluate: (args, options) => primaryWorkerPool.exec('evaluate', [args], options),
+      evaluateWith: (prep) => primaryWorkQueue.add(() =>
+        Promise.resolve()
+          /**
+           * prep work is deferred until the work queue tasks is executed
+           */
+          .then(prep)
+          .then(([args, options]) => primaryWorkerPool.exec('evaluate', [args], options))
+      ),
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
@@ -300,25 +329,31 @@ export const createApis = async (ctx) => {
      */
     loadDryRunEvaluator: AoModuleClient.evaluatorWith({
       loadWasmModule,
-      /**
-       * Evaluation will invoke a worker available in the worker pool
-       */
-      evaluate: (args, options) => Promise.resolve()
-        .then(() => dryRunWorkerPool.exec('evaluate', [args], options))
-        .catch((err) => {
+      evaluateWith: (prep) => dryRunWorkQueue.add(() =>
+        Promise.resolve()
           /**
-           * Hack to detect when the max queue size is being exceeded and to reject
-           * with a more informative error
+           * prep work is deferred until the work queue tasks is executed
            */
-          if (err.message.startsWith('Max queue size of')) {
-            const dryRunLimitErr = new Error('Dry-Run enqueue limit exceeded')
-            dryRunLimitErr.status = 429
-            return Promise.reject(dryRunLimitErr)
-          }
+          .then(prep)
+          .then(([args, options]) =>
+            Promise.resolve()
+              .then(() => dryRunWorkerPool.exec('evaluate', [args], options))
+              .catch((err) => {
+                /**
+                 * Hack to detect when the max queue size is being exceeded and to reject
+                 * with a more informative error
+                 */
+                if (err.message.startsWith('Max queue size of')) {
+                  const dryRunLimitErr = new Error('Dry-Run enqueue limit exceeded')
+                  dryRunLimitErr.status = 429
+                  return Promise.reject(dryRunLimitErr)
+                }
 
-          // Bubble as normal
-          return Promise.reject(err)
-        }),
+                // Bubble as normal
+                return Promise.reject(err)
+              })
+          )
+      ),
       logger: dryRunLogger
     })
   })
