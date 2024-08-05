@@ -1,8 +1,8 @@
 local process = { _version = "0.0.1" }
+ao = require('.ao')
 
-function process.handle(msg, ao) 
-  assert(ao.isTrusted(msg), 'ao Message is not trusted')
-  
+function process.handle(msg, env) 
+
   if (msg.Data == "ping") then
     ao.send({ Target = msg.From, Data = "pong" })
   end
