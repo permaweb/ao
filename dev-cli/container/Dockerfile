@@ -1,5 +1,5 @@
 FROM emscripten/emsdk:3.1.59
-LABEL maintainer "tom wilson <tom@hyper.io>"
+LABEL maintainer="tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there
 # to expose files on the host to the ao container
@@ -9,9 +9,9 @@ LABEL maintainer "tom wilson <tom@hyper.io>"
 RUN apt-get update -qq -y
 RUN apt-get install -y curl vim make gcc libreadline6-dev libssl-dev zlib1g-dev zip unzip
 
-ENV LUA_VERSION 5.3.4
-ENV LUAROCKS_VERSION 2.4.4
-ENV PYTHON_VERSION 3.6.6
+ENV LUA_VERSION=5.3.4
+ENV LUAROCKS_VERSION=2.4.4
+ENV PYTHON_VERSION=3.6.6
 
 # install deno
 # RUN curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -93,8 +93,8 @@ RUN chmod +x /usr/local/bin/ao-build-module
 COPY ./src/aolibc /opt/aolibc
 RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1"
 
-ENV CC 'emcc -s WASM=1'
-ENV NM 'llvm-nm'
+ENV CC='emcc -s WASM=1'
+ENV NM='/emsdk/upstream/bin/llvm-nm'
 
 ###########################################
 ### Publish, Bundler, Process, Contract ###
