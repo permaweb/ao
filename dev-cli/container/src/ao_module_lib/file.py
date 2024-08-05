@@ -26,3 +26,4 @@ class BundleFile(LuaFile):
         super().__init__(filepath)
         self.filepath = os.path.relpath(filepath)
 
+

@@ -24,6 +24,10 @@ def is_c_header_file(file):
     ext = get_extention(file)
     return ext == 'h' or ext == 'hpp'
 
+def is_rust_source_file(file):
+    ext = get_extention(file)
+    return ext == 'rs'
+
 
 def is_binary_library(file):
     ext = get_extention(file)

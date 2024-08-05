@@ -2,7 +2,7 @@ import glob
 import os
 import re
 import subprocess
-
+import shutil
 from ao_module_lib.definition import Definition
 from ao_module_lib.file import LuaFile, ModuleFile, BundleFile
 from ao_module_lib.helper import is_lua_source_file, is_binary_library, encode_hex_literals, shell_exec, debug_print
@@ -23,7 +23,7 @@ def __get_uname():
     return uname
 
 
-def inject_lua_files(definition: Definition, c_program: str, link_libraries: list):
+def inject_lua_files(definition: Definition, c_program: str, link_libraries: list, dependency_libraries: list):
 
     uname = __get_uname()
 
@@ -43,8 +43,8 @@ def inject_lua_files(definition: Definition, c_program: str, link_libraries: lis
     local_include_dir = os.path.join(os.path.dirname(entry_file), 'src')
     local_include_prefix_re = re.compile(re.escape(local_include_dir + '/'))
 
-    # Detect bundles
     bundle_files = glob.glob('/src/**/*.lua', recursive=True)
+    bundle_files += glob.glob('/src/**/*.so', recursive=True)
 
     # Optional dependencies
     bundle_files += glob.glob(local_include_dir + '/**/*.lua', recursive=True)
@@ -54,9 +54,10 @@ def inject_lua_files(definition: Definition, c_program: str, link_libraries: lis
     bundle_files += glob.glob(LUAROCKS_LOCAL_MODULE_DIR +
                               '/share/lua/**/*.lua', recursive=True)
     debug_print('Start to factory and distinguish module files')
-
+    debug_print(NM)
     for bundle in bundle_files:
         if is_lua_source_file(bundle):
+            debug_print('Lua file found: {}'.format(bundle))
             basename = re.sub(LUAROCKS_LOCAL_MODULE_PREFIX_RE, '', bundle)
             basename = re.sub(local_include_prefix_re, '', basename)
             lua_files.append(LuaFile(bundle, basename))
