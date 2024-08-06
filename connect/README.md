@@ -141,10 +141,12 @@ If you would like the connect to use ao components other than the defaults, you
 can specify those components by providing their urls to `connect`. You can
 currently specify:
 
-- The GATEWAY_URL (`GATEWAY_URL`) (currently only used as the default host for `GRAPHQL_URL`)
-- The GRAPHQL_URL (`GRAPHQL_URL`) (defaults to `${GATEWAY_URL}/graphql`)
-- The Messenger Unit URL (`MU_URL`)
-- The Compute Unit URL (`CU_URL`)
+- `GATEWAY_URL`: (currently only used as the default host for `GRAPHQL_URL`)
+- `GRAPHQL_URL`: the Arweave GraphQL gateway to use for querying data from Arweave. (defaults to `${GATEWAY_URL}/graphql`)
+- `GRAPHQL_MAX_RETRIES`: the number of times to retry querying the gateway, utilizing an exponential backoff (defaults to `0`)
+- `GRAPHQL_RETRY_BACKOFF`: the initial backoff, in milliseconds (moot if `GRAPHQL_MAX_RETRIES` is set to `0`) (defaults to `300`)
+- `MU_URL`: The Messenger Unit URL
+- `CU_URL`: The Compute Unit URL
 
 ```js
 import { connect } from "@permaweb/aoconnect";
@@ -152,6 +154,8 @@ import { connect } from "@permaweb/aoconnect";
 const { spawn, message, result } = connect({
   GATEWAY_URL: "...",
   GRAPHQL_URL: "...",
+  GRAPHQL_MAX_RETRIES: 2,
+  GRAPHQL_RETRY_BACKOFF: 250,
   MU_URL: "...",
   CU_URL: "...",
 });
@@ -159,7 +163,7 @@ const { spawn, message, result } = connect({
 
 > If `GATEWAY_URL` is set but `GRAPHQL_URL` is _not_ set, then the `GATEWAY_URL` provided **MUST** have a `/graphql` endpoint that serves the Arweave Gateway GraphQL Server. ie. `https://arweave.net/graphql`
 
-If any url is not provided, a library default will be used. In this sense,
+If any value is not provided, a library default will be used. In this sense,
 invoking `connect()` with no parameters or an empty object is functionally
 equivalent to using the top-lvl exports of the library:
 
