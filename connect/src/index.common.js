@@ -27,10 +27,12 @@ export { serializeCron } from './lib/serializeCron/index.js'
  *
  * - a GATEWAY_URL
  * - a GRAPHQL_URL (defaults to GATEWAY_URL/graphql)
+ * - a GRAPHQL_MAX_RETRIES. Defaults to 0
+ * - a GRAPHQL_RETRY_BACKOFF. Defaults to 300 (moot if GRAPHQL_MAX_RETRIES is set to 0)
  * - a Messenger Unit URL
  * - a Compute Unit URL
  *
- * If any url is not provided, an SDK default will be used.
+ * If any value is not provided, an SDK default will be used.
  * Invoking connect() with no parameters or an empty object is functionally equivalent
  * to using the top-lvl exports of the SDK ie.
  *
@@ -45,11 +47,13 @@ export { serializeCron } from './lib/serializeCron/index.js'
  * } from '@permaweb/ao-sdk';
  *
  * // These are functionally equivalent
- * connect() == { spawn, message, result, monitor }
+ * connect() == { spawn, message, result, results, monitor }
  *
  * @typedef Services
  * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
  * @property {string} [GRAPHQL_URL] - the url of the desired Arweave Gateway GraphQL Server
+ * @property {number} [GRAPHQL_MAX_RETRIES] - the number of times to retry querying the gateway, utilizing an exponential backoff
+ * @property {number} [GRAPHQL_RETRY_BACKOFF] - the initial backoff, in milliseconds (moot if GRAPHQL_MAX_RETRIES is set to 0)
  * @property {string} [MU_URL] - the url of the desried ao Messenger Unit.
  * @property {string} [CU_URL] - the url of the desried ao Compute Unit.
  *
@@ -57,6 +61,8 @@ export { serializeCron } from './lib/serializeCron/index.js'
  */
 export function connect ({
   GRAPHQL_URL,
+  GRAPHQL_MAX_RETRIES,
+  GRAPHQL_RETRY_BACKOFF,
   GATEWAY_URL = DEFAULT_GATEWAY_URL,
   MU_URL = DEFAULT_MU_URL,
   CU_URL = DEFAULT_CU_URL
@@ -65,7 +71,7 @@ export function connect ({
 
   if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
 
-  const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL })
+  const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
   const processMetaCache = SuClient.createProcessMetaCache({ MAX_SIZE: 25 })
 
