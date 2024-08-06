@@ -241,9 +241,21 @@ export function evaluateWith (env) {
                           }
 
                           /**
-                           * Increments gauges for total evaluations
+                           * Increments gauges for total evaluations for both:
+                           *
+                           * total evaluations (no labels)
+                           * specific kinds of evaluations (type of eval stream, type of message, whether an error occurred or not)
                            */
-                          evaluationCounter.inc(1, { cron: Boolean(cron), dryRun: Boolean(ctx.dryRun) }, { processId: ctx.id, error: Boolean(output.Error) })
+                          evaluationCounter.inc(1)
+                          evaluationCounter.inc(
+                            1,
+                            {
+                              stream_type: ctx.dryRun ? 'dry-run' : 'primary',
+                              message_type: ctx.dryRun ? 'dry-run' : cron ? 'cron' : isAssignment ? 'assignment' : 'scheduled',
+                              process_error: Boolean(output.Error)
+                            },
+                            { processId: ctx.id }
+                          )
                           /**
                            * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
                            */
