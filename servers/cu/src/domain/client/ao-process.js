@@ -113,7 +113,12 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
   gauge({
     name: 'ao_process_total',
     description: 'The total amount of ao Processes cached on the Compute Unit',
-    collect: () => lru.size + drainedToFile.size
+    labelNames: ['cache_type'],
+    collect: (set) => {
+      set(lru.size + drainedToFile.size)
+      set(lru.size, { cache_type: 'memory' })
+      set(drainedToFile.size, { cache_type: 'file' })
+    }
   })
 
   /**
