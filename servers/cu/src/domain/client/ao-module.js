@@ -105,7 +105,7 @@ export function findModuleWith ({ db }) {
     .toPromise()
 }
 
-export function evaluatorWith ({ evaluate, loadWasmModule }) {
+export function evaluatorWith ({ evaluateWith, loadWasmModule }) {
   const EVAL_DEFER_BACKPRESSURE = 10
   return ({ moduleId, moduleOptions }) =>
     of(moduleOptions)
@@ -141,75 +141,79 @@ export function evaluatorWith ({ evaluate, loadWasmModule }) {
                */
               if (defer) await new Promise(resolve => setImmediate(resolve))
 
-              if (args.Memory) {
-                /**
-                 * The ArrayBuffer is transferred to the worker as part of performing
-                 * an evaluation. This transfer will subsequently detach any views, Buffers,
-                 * and more broadly, references to the ArrayBuffer on this thread.
-                 *
-                 * So if this is the first eval being performed for the eval stream,
-                 * then we copy the contents of the ArrayBuffer. That way, we can be sure
-                 * that no references on the main thread will be affected during the eval stream
-                 * transfers happening back and forth. This effectively give's each eval stream
-                 * it's own ArrayBuffer to pass back and forth.
-                 *
-                 * (this is no worse than the structured clone that was happening before
-                 * as part of message passing. But instead, the clone is only performed once,
-                 * instead of on each evaluation)
-                 *
-                 * TODO: perhaps there is a way to somehow lock the ArrayBuffer usage
-                 * instead of copying on first evaluation. We have to be careful that nothing
-                 * (ie. a view of the ArrayBuffer in a Wasm Instnace dryrun)
-                 * inadvertantly mutates the underlying ArrayBuffer
-                 */
-                if (args.first) {
-                  let stopTimer = () => {}
-                  if (args.Memory.byteLength > TWO_GB) {
-                    stopTimer = timer('copyLargeMemory', {
-                      streamId,
-                      processId: args.processId,
-                      byteLength: args.Memory.byteLength
-                    }).stop
-                  }
+              const prep = () => {
+                if (args.Memory) {
                   /**
-                   * We must pass a view into copyBytesFrom,
+                   * The ArrayBuffer is transferred to the worker as part of performing
+                   * an evaluation. This transfer will subsequently detach any views, Buffers,
+                   * and more broadly, references to the ArrayBuffer on this thread.
                    *
-                   * so we first check whether it already is or not,
-                   * and create one on top of the ArrayBuffer if necessary
+                   * So if this is the first eval being performed for the eval stream,
+                   * then we copy the contents of the ArrayBuffer. That way, we can be sure
+                   * that no references on the main thread will be affected during the eval stream
+                   * transfers happening back and forth. This effectively give's each eval stream
+                   * it's own ArrayBuffer to pass back and forth.
                    *
-                   * (NodeJS' Buffer is a subclass of DataView)
+                   * (this is no worse than the structured clone that was happening before
+                   * as part of message passing. But instead, the clone is only performed once,
+                   * instead of on each evaluation)
+                   *
+                   * TODO: perhaps there is a way to somehow lock the ArrayBuffer usage
+                   * instead of copying on first evaluation. We have to be careful that nothing
+                   * (ie. a view of the ArrayBuffer in a Wasm Instnace dryrun)
+                   * inadvertantly mutates the underlying ArrayBuffer
                    */
-                  args.Memory = ArrayBuffer.isView(args.Memory)
-                    ? Buffer.copyBytesFrom(args.Memory)
-                    : Buffer.copyBytesFrom(new Uint8Array(args.Memory))
-                  stopTimer()
+                  if (args.first) {
+                    let stopTimer = () => {}
+                    if (args.Memory.byteLength > TWO_GB) {
+                      stopTimer = timer('copyLargeMemory', {
+                        streamId,
+                        processId: args.processId,
+                        byteLength: args.Memory.byteLength
+                      }).stop
+                    }
+                    /**
+                     * We must pass a view into copyBytesFrom,
+                     *
+                     * so we first check whether it already is or not,
+                     * and create one on top of the ArrayBuffer if necessary
+                     *
+                     * (NodeJS' Buffer is a subclass of DataView)
+                     */
+                    args.Memory = ArrayBuffer.isView(args.Memory)
+                      ? Buffer.copyBytesFrom(args.Memory)
+                      : Buffer.copyBytesFrom(new Uint8Array(args.Memory))
+                    stopTimer()
+                  }
+
+                  /**
+                   * If Memory is sufficiently large, transferring the View somehow
+                   * causes the underlying ArrayBuffer to be truncated. This truncation
+                   * does not occur when instead the underlying ArrayBuffer is transferred,
+                   * directly.
+                   *
+                   * So we always ensure the Memory transferred to the worker thread
+                   * is the actual ArrayBuffer, and not a View.
+                   *
+                   * (the same is done in the opposite direction in the worker thread)
+                   *
+                   * TODO: maybe AoLoader should be made to return the underlying ArrayBuffer
+                   * as Memory, instead of a View?
+                   */
+                  args.Memory = arrayBufferFromMaybeView(args.Memory)
+
+                  options = { transfer: [args.Memory] }
                 }
 
-                /**
-                 * If Memory is sufficiently large, transferring the View somehow
-                 * causes the underlying ArrayBuffer to be truncated. This truncation
-                 * does not occur when instead the underlying ArrayBuffer is transferred,
-                 * directly.
-                 *
-                 * So we always ensure the Memory transferred to the worker thread
-                 * is the actual ArrayBuffer, and not a View.
-                 *
-                 * (the same is done in the opposite direction in the worker thread)
-                 *
-                 * TODO: maybe AoLoader should be made to return the underlying ArrayBuffer
-                 * as Memory, instead of a View?
-                 */
-                args.Memory = arrayBufferFromMaybeView(args.Memory)
+                args.streamId = streamId
+                args.moduleId = moduleId
+                args.moduleOptions = moduleOptions
+                args.wasmModule = wasmModule
 
-                options = { transfer: [args.Memory] }
+                return [args, options]
               }
 
-              args.streamId = streamId
-              args.moduleId = moduleId
-              args.moduleOptions = moduleOptions
-              args.wasmModule = wasmModule
-
-              return evaluate(args, options)
+              return evaluateWith(prep)
             })
       }))
       .toPromise()

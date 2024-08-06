@@ -84,7 +84,7 @@ COPY ./src/loader.lua /opt/loader.lua
 
 RUN mkdir -p /opt/src
 COPY ./src/json.lua /opt/src/json.lua
-COPY ./src/ao.lua /opt/src/ao.lua
+# COPY ./src/ao.lua /opt/src/ao.lua
 # COPY ./src/pack.lua /opt/pack.lua
 COPY ./src/main.c /opt/main.c
 COPY ./src/main.lua /opt/main.lua

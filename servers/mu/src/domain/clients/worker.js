@@ -120,7 +120,13 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
       const result = dequeue()
       if (result) {
         logger(`Processing task of type ${result.type}`)
-        processResult(result).catch((e) => {
+        processResult(result).then((ctx) => {
+          broadcastChannel.postMessage({
+            purpose: 'task-retries',
+            retries: ctx.retries ?? 0,
+            status: 'success'
+          })
+        }).catch((e) => {
           logger(`Result failed with error ${e}, will not recover`)
           logger(e)
           /**
@@ -134,9 +140,21 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
           const ctx = e.cause ?? {}
           const retries = ctx.retries ?? 0
           const stage = ctx.stage
+          const type = result.type
+          broadcastChannel.postMessage({
+            purpose: 'error-stage',
+            stage,
+            type
+          })
           setTimeout(() => {
             if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end') {
               enqueue({ ...ctx, retries: retries + 1 })
+            } else {
+              broadcastChannel.postMessage({
+                purpose: 'task-retries',
+                retries,
+                status: 'failure'
+              })
             }
           }, TASK_QUEUE_RETRY_DELAY)
         })
@@ -147,26 +165,14 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
   }
 }
 
-function broadcastEnqueueWith ({ enqueue }) {
+function broadcastEnqueueWith ({ enqueue, queue }) {
   return (...args) => {
     broadcastChannel.postMessage({
-      purpose: 'metrics',
-      action: 'enqueue'
+      purpose: 'queue-size',
+      size: queue.length + 1,
+      time: Date.now()
     })
     return enqueue(...args)
-  }
-}
-
-function broadcastDequeueWith ({ dequeue }) {
-  return (...args) => {
-    const dequeuedResult = dequeue(...args)
-    if (dequeuedResult) {
-      broadcastChannel.postMessage({
-        purpose: 'metrics',
-        action: 'dequeue'
-      })
-    }
-    return dequeuedResult
   }
 }
 
@@ -178,6 +184,14 @@ const queue = await createTaskQueue({
 })
 
 /**
+ * We post a message with the queue size every second to ensure
+ * that the sliding window array of queue sizes does not become
+ * stale with minutes-old values.
+ */
+setInterval(() => {
+  broadcastChannel.postMessage({ purpose: 'queue-size', size: queue.length, time: Date.now() })
+}, 1000)
+/**
  * Initialize a set of task ids.
  * These task ids represent database ids
  * to be remove on the next cron cycle.
@@ -185,9 +199,8 @@ const queue = await createTaskQueue({
 const dequeuedTasks = new Set()
 
 const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger, db })
-const broadcastEnqueue = broadcastEnqueueWith({ enqueue })
+const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue })
 const dequeue = dequeueWith({ queue, logger, dequeuedTasks })
-const broadcastDequeue = broadcastDequeueWith({ dequeue })
 const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
 
 const enqueueResults = enqueueResultsWith({
@@ -204,7 +217,7 @@ const processResult = processResultWith({
 
 const processResults = processResultsWith({
   enqueue: broadcastEnqueue,
-  dequeue: broadcastDequeue,
+  dequeue,
   processResult,
   logger,
   TASK_QUEUE_MAX_RETRIES: workerData.TASK_QUEUE_MAX_RETRIES,

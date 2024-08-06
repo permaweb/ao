@@ -1,6 +1,7 @@
 import { defaultTo, find, juxt, path, pipe, prop, propEq } from 'ramda'
 
 import { InvalidSchedulerLocationError, SchedulerTagNotFoundError, TransactionNotFoundError } from '../err.js'
+import { backoff, okRes } from '../utils.js'
 
 const URL_TAG = 'Url'
 const TTL_TAG = 'Time-To-Live'
@@ -22,20 +23,23 @@ const findTransactionTags = (err) => pipe(
   defaultTo([])
 )
 
-function gatewayWith ({ fetch, GRAPHQL_URL }) {
+function gatewayWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES = 0, GRAPHQL_RETRY_BACKOFF = 300 }) {
   return async ({ query, variables }) => {
-    return fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables })
-    })
-      .then((res) => res.json())
+    return backoff(
+      () => fetch(GRAPHQL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables })
+      })
+        .then(okRes)
+        .then((res) => res.json()),
+      { maxRetries: GRAPHQL_MAX_RETRIES, delay: GRAPHQL_RETRY_BACKOFF })
   }
 }
 
-export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL }) {
-  const gateway = gatewayWith({ fetch, GRAPHQL_URL })
-  const loadScheduler = loadSchedulerWith({ fetch, GRAPHQL_URL })
+export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF }) {
+  const gateway = gatewayWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+  const loadScheduler = loadSchedulerWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
   const GET_TRANSACTIONS_QUERY = `
     query GetTransactions ($transactionIds: [ID!]!) {
@@ -64,8 +68,8 @@ export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL }) {
   }
 }
 
-export function loadSchedulerWith ({ fetch, GRAPHQL_URL }) {
-  const gateway = gatewayWith({ fetch, GRAPHQL_URL })
+export function loadSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF }) {
+  const gateway = gatewayWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
   const GET_SCHEDULER_LOCATION = `
     query GetSchedulerLocation ($owner: String!) {

@@ -31,9 +31,41 @@ export const timer = (label, ctx) => {
   }
 }
 
+export const counterWith = ({ prefix = 'ao_mu' } = {}) => {
+  return ({ name, description, labelNames = [] }) => {
+    const c = new PromClient.Counter({
+      name: `${prefix}_${name}`,
+      help: description,
+      labelNames,
+      enableExemplars: true
+    })
+
+    return {
+      inc: (n) => c.inc(n)
+    }
+  }
+}
+
 export const gaugeWith = ({ prefix = 'ao_mu' } = {}) => {
-  return ({ name, description, collect }) => {
-    const g = new PromClient.Gauge({ name: `${prefix}_${name}`, help: description, collect, enableExemplars: true })
+  return ({ name, description, collect, labelNames = [] }) => {
+    const g = new PromClient.Gauge({
+      name: `${prefix}_${name}`,
+      help: description,
+      labelNames,
+      /**
+       * We abstract the use of 'this'
+       * to the collect function here.
+       *
+       * This way, the client may provide a function
+       * that simply returns the collected value to set,
+       * which will this call set here
+       */
+      ...(collect
+        ? { collect: async function () { this.set(await collect()) } }
+        : {}
+      ),
+      enableExemplars: true
+    })
 
     return {
       inc: (n) => g.inc(n),
