@@ -8,22 +8,27 @@ import { validateWith } from './validate.js'
 
 export * from './err.js'
 
+const DEFAULT_CACHE_SIZE = 100
 const DEFAULT_GRAPHQL_URL = 'https://arweave.net/graphql'
 const DEFAULT_GRAPHQL_MAX_RETRIES = 0
 const DEFAULT_GRAPHQL_RETRY_BACKOFF = 300
+const DEFAULT_FOLLOW_REDIRECTS = false
+
 /**
  * @typedef ConnectParams
  * @property {number} [cacheSize] - the size of the internal LRU cache
  * @property {boolean} [followRedirects] - whether to follow redirects and cache that url instead
  * @property {string} [GRAPHQL_URL] - the url of the gateway to be used
+ * @property {number} [GRAPHQL_MAX_RETRIES] - the number of times to retry querying the gateway, utilizing an exponential backoff
+ * @property {number} [GRAPHQL_RETRY_BACKOFF] - the initial backoff, in milliseconds
  *
  * Build the apis using the provided configuration. You can currently specify
  *
- * - a GRAPHQL_URL. Defaults to https://arweave.net/graphql
  * - a cache size for the internal LRU cache. Defaults to 100
  * - whether or not to follow redirects when locating a scheduler. Defaults to false
- * - a max amount of retries on gateway queries. Defaults to 0
- * - retry delay for retries on gateway queries. Defaults to 300 ms
+ * - a GRAPHQL_URL. Defaults to https://arweave.net/graphql
+ * - a GRAPHQL_MAX_RETRIES. Defaults to 0
+ * - a GRAPHQL_RETRY_BACKOFF. Defaults to 300 (moot if GRAPHQL_MAX_RETRIES is set to 0)
  *
  * If any value is not provided, a default will be used.
  * Invoking connect() with no parameters or an empty object is functionally equivalent
@@ -31,7 +36,13 @@ const DEFAULT_GRAPHQL_RETRY_BACKOFF = 300
  *
  * @param {ConnectParams} [params]
  */
-export function connect ({ cacheSize = 100, GRAPHQL_URL = DEFAULT_GRAPHQL_URL, followRedirects = false, GRAPHQL_MAX_RETRIES = DEFAULT_GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF = DEFAULT_GRAPHQL_RETRY_BACKOFF } = {}) {
+export function connect ({
+  cacheSize = DEFAULT_CACHE_SIZE,
+  followRedirects = DEFAULT_FOLLOW_REDIRECTS,
+  GRAPHQL_URL = DEFAULT_GRAPHQL_URL,
+  GRAPHQL_MAX_RETRIES = DEFAULT_GRAPHQL_MAX_RETRIES,
+  GRAPHQL_RETRY_BACKOFF = DEFAULT_GRAPHQL_RETRY_BACKOFF
+} = {}) {
   const _cache = InMemoryClient.createLruCache({ size: cacheSize })
 
   const loadScheduler = GatewayClient.loadSchedulerWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
