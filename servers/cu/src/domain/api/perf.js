@@ -1,41 +1,37 @@
-import { path, zipObj } from 'ramda'
+import { zipObj } from 'ramda'
 
 export function statsWith ({ loadWorkerStats, loadMemoryUsage, loadProcessCacheUsage, gauge }) {
-  const workerStatGaugesWith = ({ type }) => {
-    const totalWorkers = path([type, 'totalWorkers'])
-    const pendingTasks = path([type, 'pendingTasks'])
-    const activeTasks = path([type, 'activeTasks'])
+  gauge({
+    name: 'worker_total',
+    description: 'The total amount of workers currently spun-up on the Compute Unit',
+    labelNames: ['worker_type'],
+    collect: (set) => Promise.resolve()
+      .then(loadWorkerStats)
+      .then(({ primary, dryRun }) => {
+        set(primary.totalWorkers + dryRun.totalWorkers)
+        set(primary.totalWorkers, { worker_type: 'primary' })
+        set(dryRun.totalWorkers, { worker_type: 'dry-run' })
+      })
+  })
 
-    // total workers
-    gauge({
-      name: `${type.toLowerCase()}_worker_total`,
-      description: `The total amount of ${type} workers currently spun-up on the Compute Unit`,
-      collect: () => Promise.resolve()
-        .then(loadWorkerStats)
-        .then(totalWorkers)
-    })
+  gauge({
+    name: 'worker_tasks_total',
+    description: 'The total amount of worker tasks on the Compute Unit',
+    labelNames: ['worker_type', 'task_type'],
+    collect: (set) => Promise.resolve()
+      .then(loadWorkerStats)
+      .then(({ primary, dryRun }) => {
+        // pending
+        set(primary.pendingTasks + dryRun.pendingTasks)
+        set(primary.pendingTasks, { worker_type: 'primary', task_type: 'pending' })
+        set(dryRun.pendingTasks, { worker_type: 'dry-run', task_type: 'pending' })
 
-    // pending tasks
-    gauge({
-      name: `${type.toLowerCase()}_worker_pending_tasks_total`,
-      description: `The total amount of ${type} pending tasks on the Compute Unit`,
-      collect: () => Promise.resolve()
-        .then(loadWorkerStats)
-        .then(pendingTasks)
-    })
-
-    // active tasks
-    gauge({
-      name: `${type.toLowerCase()}_worker_active_tasks_total`,
-      description: `The total amount of ${type} active tasks on the Compute Unit`,
-      collect: () => Promise.resolve()
-        .then(loadWorkerStats)
-        .then(activeTasks)
-    })
-  }
-
-  workerStatGaugesWith({ type: 'dryRun' })
-  workerStatGaugesWith({ type: 'primary' })
+        // active
+        set(primary.activeTasks + dryRun.activeTasks)
+        set(primary.activeTasks, { worker_type: 'primary', task_type: 'active' })
+        set(dryRun.activeTasks, { worker_type: 'dry-run', task_type: 'active' })
+      })
+  })
 
   return async () => Promise.all([
     loadWorkerStats(),

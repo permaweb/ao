@@ -54,12 +54,19 @@ export const gaugeWith = ({ prefix = 'ao_cu' } = {}) => {
        * We abstract the use of 'this'
        * to the collect function here.
        *
-       * This way, the client may provide a function
-       * that simply returns the collected value to set,
-       * which will this call set here
+       * This way, the client may invoke set without
+       * the common "gotchas" w.r.t 'this'.
+       *
+       * Also makes the set api match the inc/dec/set api
+       * below, where value _then_ labels are passed
        */
       ...(collect
-        ? { collect: async function () { this.set(await collect()) } }
+        ? {
+            collect: async function () {
+              const set = this.set.bind(this)
+              await collect((value, labels) => set(labels || {}, value))
+            }
+          }
         : {}
       ),
       labelNames,
