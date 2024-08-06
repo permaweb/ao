@@ -35,7 +35,7 @@ export function readStateWith (env) {
   const loadModule = loadModuleWith(env)
   const evaluate = evaluateWith(env)
 
-  return ({ processId, messageId, to, ordinate, cron, exact, needsMemory, dryRun = false }) => {
+  return ({ processId, messageId, to, ordinate, cron, exact, needsMemory }) => {
     messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'latest'
 
     const stats = {
@@ -79,7 +79,7 @@ export function readStateWith (env) {
          * there is only one instance of the work used to resolve each Async,
          * every time, thus preventing duplication of work
          */
-        pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory, dryRun })
+        pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsMemory })
           .chain(loadProcessMeta)
           .chain(loadProcess)
           .chain(loadModule)

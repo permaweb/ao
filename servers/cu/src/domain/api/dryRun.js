@@ -81,12 +81,7 @@ export function dryRunWith (env) {
            * Otherwise, we are evaluating up to the latest
            */
           exact: !!messageTxId,
-          needsMemory: true,
-          /**
-           * Add an indicator that this eval stream is part of a dry run.
-           * This is used for metric purposes.
-           */
-          dryRun: true
+          needsMemory: true
         })
       )
       /**
