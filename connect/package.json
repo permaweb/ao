@@ -60,7 +60,6 @@
     "typescript": "^5.5.4"
   },
   "engines": {
-    "node": ">=18",
-    "yarn": "please-use-npm"
+    "node": ">=18"
   }
 }
