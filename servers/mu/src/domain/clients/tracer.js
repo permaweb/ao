@@ -144,31 +144,35 @@ export function readTracesWith ({ db }) {
         sql: `
           WITH RECURSIVE 
             Ancestors AS (
-                SELECT id, messageId, processId, wallet, logs, data, parentId
+                SELECT id, messageId, processId, wallet, logs, data, parentId, timestamp
                 FROM traces
                 WHERE messageId = ?
                 UNION ALL
-                SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId
+                SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId, t.timestamp
                 FROM traces t
                 INNER JOIN Ancestors a ON t.messageId = a.parentId
+                WHERE t.messageId != ?
             ),
             Descendants AS (
-                SELECT id, messageId, processId, wallet, logs, data, parentId
+                SELECT id, messageId, processId, wallet, logs, data, parentId, timestamp
                 FROM traces
                 WHERE messageId = ?
                 UNION ALL
-                SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId
+                SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId, t.timestamp
                 FROM traces t
                 INNER JOIN Descendants d ON t.parentId = d.messageId
+                WHERE t.messageId != ?
             )
-            SELECT 'root' AS type, id, messageId, processId, wallet, logs, data, parentId FROM traces WHERE messageId = ?
+            SELECT 'root' AS type, id, messageId, processId, wallet, logs, data, parentId, timestamp FROM traces WHERE messageId = ?
             UNION ALL
-            SELECT 'ancestor' AS type, id, messageId, processId, wallet, logs, data, parentId FROM Ancestors WHERE messageId != ?
+            SELECT 'ancestor' AS type, id, messageId, processId, wallet, logs, data, parentId, timestamp FROM Ancestors WHERE messageId != ?
             UNION ALL
-            SELECT 'descendant' AS type, id, messageId, processId, wallet, logs, data, parentId FROM Descendants WHERE messageId != ?
+            SELECT 'descendant' AS type, id, messageId, processId, wallet, logs, data, parentId, timestamp FROM Descendants WHERE messageId != ?
             LIMIT ?, ?;
         `,
         parameters: [
+          messageId,
+          messageId,
           messageId,
           messageId,
           messageId,

@@ -1237,3 +1237,9 @@ Ending message stream... {
 [32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
 [32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
