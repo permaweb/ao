@@ -101,6 +101,8 @@ If there is an insufficient balance, then you will receive a `Transfer-Error` Me
 }
 ```
 
+If the Transfer's Recipient is a 0x address, it must be an [EIP55](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md) standard address, since 0x addresses on ao only support the EIP55 address format
+
 ### Mint
 
 The Process itself can `mint` more `Points Coin`!
