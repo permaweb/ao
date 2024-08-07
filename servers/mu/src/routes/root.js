@@ -159,7 +159,6 @@ const withTraceRoutes = (app) => {
 
         const input = inputSchema.parse({ ...query, pageSize: query['page-size'] })
 
-        console.log({ input })
         if ([input.message, input.assign, input.spawn].filter(isNotNil).length > 1) {
           const err = new Error('Only one of message, assign, or spawn query parameters can be provided')
           err.status = 422

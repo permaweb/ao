@@ -1,4 +1,4 @@
-import { logger } from '../../logger.js'
+// import { logger } from '../../logger.js'
 import { withTimerMetrics } from './with-timer-metrics.js'
 import { always } from 'ramda'
 
@@ -7,7 +7,8 @@ export const withTimerMetricsFetch = ({
   fetch,
   startLabelsFrom = always({}),
   stopLabelsFrom = always({}),
-  tracesFrom = always({})
+  tracesFrom = always({}),
+  logger
 }) => withTimerMetrics({
   timer,
   startLabelsFrom: (_url, fetchOptions = {}) => {

@@ -7,7 +7,6 @@ import cron from 'node-cron'
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
 import { domainConfigSchema, config } from '../../config.js'
 // Without this import the worker crashes
-// import { logger } from '../../logger.js'
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
 import { randomBytes } from 'node:crypto'
@@ -113,7 +112,6 @@ export function processResultWith ({
  */
 export function enqueueResultsWith ({ enqueue }) {
   return ({ msgs, spawns, assigns, initialTxId, parentId, processId, ...rest }) => {
-    console.log(401, { msgs, spawns, assigns, parentId, processId, rest, msg: msgs[0] })
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',

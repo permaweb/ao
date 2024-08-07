@@ -8,7 +8,8 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'uploadDataItem'
-    })
+    }),
+    logger
   })
   return async (data) => {
     return of(data)

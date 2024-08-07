@@ -171,7 +171,6 @@ export const createApis = async (ctx) => {
   })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
-    console.log(400, { results })
     return workerPool.exec('enqueueResults', results)
   }
 

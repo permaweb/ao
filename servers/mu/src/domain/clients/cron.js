@@ -58,7 +58,8 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'getCursor'
-    })
+    }),
+    logger
   })
   return async ({ processId }) => {
     if (cronsRunning[processId]) {

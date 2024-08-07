@@ -7,7 +7,8 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'result'
-    })
+    }),
+    logger
   })
 
   return async (txId, processId, logId) => {
@@ -62,7 +63,8 @@ function fetchCronWith ({ fetch, histogram, CU_URL, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'fetchCron'
-    })
+    }),
+    logger
   })
   return async ({ processId, cursor }) => {
     let requestUrl = `${CU_URL}/cron/${processId}`

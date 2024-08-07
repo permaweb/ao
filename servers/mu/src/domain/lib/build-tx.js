@@ -104,8 +104,7 @@ export function buildTxWith (env) {
           })
       )
       .map((res) => {
-        // add tx and schedLocation to the result
-        console.log(101, { ctx, res })
+        // add tx and schedLocation to the result, overwrite messageId as txId
         return { ...ctx, ...res, messageId: res.tx.id }
       })
       .map(ctxSchema.parse)

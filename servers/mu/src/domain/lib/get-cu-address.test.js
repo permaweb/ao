@@ -1,13 +1,15 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { getCuAddressWith } from './get-cu-address.js'
 
-const logger = createLogger('ao-mu:processMsg')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 // selectNode doesnt return processId just here for testing
-async function selectNode (processId) {
+async function selectNode ({ processId }) {
   return processId
 }
 

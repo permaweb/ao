@@ -2,6 +2,18 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { withTimerMetricsFetch } from './with-timer-metrics-fetch.js'
 
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
+logger.child = () => {
+  const tempLogger = () => undefined
+  tempLogger.tap = () => (args) => {
+    return args
+  }
+  return tempLogger
+}
+
 describe('withTimerMetricsFetch', () => {
   describe('should start and stop the timer with expected labels and traces', () => {
     test('when the original function is successful', async () => {
@@ -23,7 +35,8 @@ describe('withTimerMetricsFetch', () => {
         fetch: () => Promise.resolve(new Response({ message: 'Success' }, { status: 200 })),
         startLabelsFrom: () => ({ foo: 'bar' }),
         tracesFrom: () => ({ baz: 1 }),
-        stopLabelsFrom: () => ({ bar: false })
+        stopLabelsFrom: () => ({ bar: false }),
+        logger
       })
 
       await metricsFunction('someUrl')
@@ -53,7 +66,8 @@ describe('withTimerMetricsFetch', () => {
         fetch: () => Promise.reject(new DOMException('I am an error', 'ThisIsAStubbedError')),
         startLabelsFrom: () => ({ foo: 'bar' }),
         tracesFrom: () => ({ baz: 1 }),
-        stopLabelsFrom: () => ({ bar: false })
+        stopLabelsFrom: () => ({ bar: false }),
+        logger
       })
 
       await metricsFunction('some url')

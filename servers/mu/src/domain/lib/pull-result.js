@@ -49,7 +49,6 @@ function fetchResultWith ({ fetchResult }) {
             .concat(ctx.tagAssignments)
           : fetchedResult.Assignments
 
-        console.log(400, { assigns, ctx })
         return of({ ...ctx, msgs, spawns, assigns })
       })
       .toPromise()

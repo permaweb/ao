@@ -2,7 +2,11 @@ import * as assert from 'node:assert'
 import { describe, test } from 'node:test'
 
 import cron from './cron.js'
-import createLogger from '../logger.js'
+
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('cron', () => {
   describe('initCronProcsWith', () => {
@@ -44,7 +48,6 @@ describe('cron', () => {
   })
 
   describe('killMonitoredProcessWith', () => {
-    const logger = createLogger('kill-monitor-test')
     test('should not kill process if process is not a running cron', async () => {
       const killMonitoredProcess = await cron.killMonitoredProcessWith({
         PROC_FILE_PATH: 'test',

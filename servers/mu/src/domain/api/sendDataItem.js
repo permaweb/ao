@@ -64,7 +64,6 @@ export function sendDataItemWith ({
             .chain(getCuAddress)
             .chain(pullResult)
             .chain((ctx) => {
-              console.log('Send Data Item -> Crank', { ctx })
               const { msgs, spawns, assigns, initialTxId, messageId: parentId } = ctx
               return crank({
                 msgs,

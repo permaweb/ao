@@ -1,10 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { buildSuccessTxWith } from './build-success-tx.js'
 
-const logger = createLogger('ao-mu:spawnProcess')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('buildSuccessTx', () => {
   test('build spawn success msg', async () => {

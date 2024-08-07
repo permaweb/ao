@@ -1,10 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { parseDataItemWith } from './parse-data-item.js'
 
-const logger = createLogger('ao-mu:processMsg')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('parseDataItem', () => {
   test('parse data item into tx object', async () => {

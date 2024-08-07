@@ -1,10 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { startWith } from './start-process.js'
 
-const logger = createLogger('ao-mu:startWith')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('startWith', () => {
   test('start a process monitor', async () => {

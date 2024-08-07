@@ -9,14 +9,16 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeDataItem'
-    })
+    }),
+    logger
   })
   const suRedirectFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeDataItemWithRedirect'
-    })
+    }),
+    logger
   })
   return async ({ data, suUrl, logId }) => {
     return of(Buffer.from(data, 'base64'))
@@ -74,14 +76,16 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignment'
-    })
+    }),
+    logger
   })
   const suRedirectFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignmentWithRedirect'
-    })
+    }),
+    logger
   })
   return async ({ txId, processId, baseLayer, exclude, suUrl, logId }) => {
     return of({ txId, processId, baseLayer, exclude, suUrl, logId })
@@ -168,7 +172,8 @@ function fetchSchedulerProcessWith ({
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignmentWithRedirect'
-    })
+    }),
+    logger
   })
   return (processId, suUrl, logId) => {
     return getByProcess(processId)

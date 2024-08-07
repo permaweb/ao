@@ -3,9 +3,18 @@ import { describe, test } from 'node:test'
 
 import * as InMemoryClient from '../clients/in-memory.js'
 import { cuFetchWithCache } from './cu-fetch-with-cache.js'
-import createLogger from '../logger.js'
 
-const logger = createLogger({ name: 'cu-fetch-with-cache.test' })
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
+logger.child = () => {
+  const tempLogger = () => undefined
+  tempLogger.tap = () => (args) => {
+    return args
+  }
+  return tempLogger
+}
 
 describe('cuFetchWithCache', () => {
   test('fetch works as it normally does', async () => {

@@ -14,7 +14,8 @@ function isWalletWith ({
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'isWallet'
-    })
+    }),
+    logger
   })
 
   return async (id, logId) => {

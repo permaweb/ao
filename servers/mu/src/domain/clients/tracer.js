@@ -2,14 +2,11 @@ import debug from 'debug'
 import { propOr, tap } from 'ramda'
 import { randomBytes } from 'crypto'
 import { TRACES_TABLE } from './sqlite.js'
+
 /*
  * Here we persist the logs to the storage system
  * for traces.
 */
-// function traceLogs (namespace, args) {
-//   console.log('Saving logs to trace:', namespace, args)
-// }
-
 function createTraceWith ({ db }) {
   function createQuery (logs, messageId, processId, wallet, parentId, data, type) {
     const randomByteString = randomBytes(8).toString('hex')
@@ -75,7 +72,6 @@ export function traceWith ({ namespace, db, TRACE_DB_PATH, activeTraces }) {
       const logs = JSON.stringify(currentLog.logs)
       const { messageId, processId, wallet, parentId } = ctx ?? {}
       const type = ctx.type ?? ctx.dataItem.tags?.find((tag) => tag.name === 'Type')?.value?.toUpperCase()
-      console.log('Ending message stream...', { logId, currentLog, logs, messageId, processId, wallet, parentId, ctx, tags: ctx.dataItem?.tags, type })
       if (messageId || processId) {
         createTrace({ logs, messageId, processId, wallet, parentId, ctx, type })
       }
@@ -143,7 +139,6 @@ export function readTracesWith ({ db }) {
     type
   }) => {
     function createQuery (messageId, processId) {
-      console.log({ messageId, processId })
       return {
         sql: `
         WITH RECURSIVE 
@@ -192,7 +187,6 @@ export function readTracesWith ({ db }) {
       }
     }
 
-    console.log({ process, message })
     const results = (await db.query(createQuery(message, process)).catch((e) => console.error('db error: ', { e }))).map((result) => {
       return { ...result, logs: JSON.parse(result.logs), data: JSON.parse(result.data) }
     })
