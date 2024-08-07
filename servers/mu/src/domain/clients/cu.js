@@ -28,6 +28,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
         maxRetries: 5,
         delay: 500,
         log: logger,
+        logId,
         name: `fetchResult(${JSON.stringify({
           CU_URL,
           processId,

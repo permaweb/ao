@@ -96,7 +96,8 @@ export function processResultWith ({
           msgs: propOr([], 'msgs', res),
           spawns: propOr([], 'spawns', res),
           assigns: propOr([], 'assigns', res),
-          parentId: propOr(undefined, 'parentId', res)
+          parentId: propOr(undefined, 'parentId', res),
+          processId: propOr(undefined, 'processId', res)
         })
         return of(res)
       })
@@ -111,8 +112,8 @@ export function processResultWith ({
  * correctly for input into the business logic
  */
 export function enqueueResultsWith ({ enqueue }) {
-  return ({ msgs, spawns, assigns, initialTxId, parentId, ...rest }) => {
-    console.log(100, { msgs, spawns, assigns, parentId, rest, msg: msgs[0] })
+  return ({ msgs, spawns, assigns, initialTxId, parentId, processId, ...rest }) => {
+    console.log(401, { msgs, spawns, assigns, parentId, processId, rest, msg: msgs[0] })
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',
@@ -142,7 +143,7 @@ export function enqueueResultsWith ({ enqueue }) {
             exclude: assign.Exclude && assign.Exclude.length > 0 ? assign.Exclude.join(',') : null
           },
           messageId: assign.Message,
-          processId: pid,
+          processId,
           parentId,
           logId: randomBytes(8).toString('hex')
         })

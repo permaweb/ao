@@ -1,4 +1,4 @@
-import { always, compose, pipe } from 'ramda'
+import { always, compose, isNotNil, pipe } from 'ramda'
 import { of } from 'hyper-async'
 import { z } from 'zod'
 // import WarpArBundles from 'warp-arbundles'
@@ -150,6 +150,7 @@ const withTraceRoutes = (app) => {
         const inputSchema = z.object({
           process: z.string({ required_error: 'Process ID is required' }),
           message: z.string().optional(),
+          spawn: z.string().optional(),
           assign: z.string().optional(),
           wallet: z.string().optional(),
           page: z.coerce.number().int().default(1),
@@ -158,17 +159,19 @@ const withTraceRoutes = (app) => {
 
         const input = inputSchema.parse({ ...query, pageSize: query['page-size'] })
 
-        // if (input.process && input.message) {
-        //   const err = new Error('Only one of process or message query parameters can be provided')
-        //   err.status = 422
-        //   throw err
-        // }
+        console.log({ input })
+        if ([input.message, input.assign, input.spawn].filter(isNotNil).length > 1) {
+          const err = new Error('Only one of message, assign, or spawn query parameters can be provided')
+          err.status = 422
+          throw err
+        }
 
+        const type = input.spawn ? 'SPAWN' : input.assign ? 'ASSIGN' : 'MESSAGE'
         /**
          * Retrieve all message traces for the given input
          */
 
-        await of({ ...input, message: input.message || input.assign, limit: input.pageSize, offset: input.pageSize * (input.page - 1) })
+        await of({ ...input, message: input.message || input.assign, limit: input.pageSize, offset: input.pageSize * (input.page - 1), type })
           .chain(traceMsgs)
           .bimap(
             logger.tap({ log: ['Failed to retrieve trace for process "%s" or message "%s"', input.process, input.message] }),

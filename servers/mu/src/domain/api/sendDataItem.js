@@ -75,7 +75,6 @@ export function sendDataItemWith ({
               })
             })
             .bimap(
-              // TODO: How to I get ctx with msgs, spawns, etc. to the loggers below?
               (res) => {
                 logger({ log: 'Failed to crank messages', end: true }, ctx)
                 return res

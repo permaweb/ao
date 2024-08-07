@@ -25,7 +25,8 @@ const createTraces = async (db) => db.prepare(
     timestamp INTEGER,
     parentId TEXT,
     logs TEXT,
-    data TEXT
+    data TEXT,
+    type TEXT
   ) WITHOUT ROWID;`
 ).run()
 

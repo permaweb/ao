@@ -42,6 +42,7 @@ function isWalletWith ({
         maxRetries: 3,
         delay: 500,
         log: logger,
+        logId,
         name: `isWallet(${id})`
       }
     )

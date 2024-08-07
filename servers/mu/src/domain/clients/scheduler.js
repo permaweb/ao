@@ -114,6 +114,7 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
               maxRetries: 5,
               delay: 500,
               log: logger,
+              logId,
               name: `forwardAssignment(${JSON.stringify({
                 suUrl,
                 processId,
