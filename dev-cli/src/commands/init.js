@@ -4,7 +4,7 @@ import { Command } from '../deps.js'
 import * as path from 'https://deno.land/std@0.138.0/path/mod.ts'
 import { copy } from 'https://deno.land/std@0.224.0/fs/copy.ts'
 
-const STARTERS = path.resolve(path.dirname(path.fromFileUrl(import.meta.url)) + '/../starters')
+const STARTERS = path.resolve(Deno.env.get("AO_INSTALL") + '/starters')
 const C = path.resolve(STARTERS + '/c')
 const LUA = path.resolve(STARTERS + '/lua')
 

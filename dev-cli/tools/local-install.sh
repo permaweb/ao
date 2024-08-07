@@ -42,6 +42,16 @@ ao_install="${AO_INSTALL:-$HOME/.ao}"
 bin_dir="$ao_install/bin"
 exe="$bin_dir/ao"
 
+# Download the starters
+starters="$ao_install/starters"
+if [ ! -d "$starters" ]; then
+	mkdir -p "$starters"
+fi
+ao_starters_uri="${OUTPUT_DIR}/starters.zip"
+cp "$ao_starters_uri" "$starters.zip" 
+unzip -d "$starters" -o "$starters.zip"
+rm "$starters.zip"
+
 if [ ! -d "$bin_dir" ]; then
 	mkdir -p "$bin_dir"
 fi
