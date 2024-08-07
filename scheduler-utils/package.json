@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-scheduler-utils",
-  "version": "0.0.21",
+  "version": "0.0.23",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -40,7 +40,6 @@
     "typescript": "^5.4.5"
   },
   "engines": {
-    "node": ">=18",
-    "yarn": "please-use-npm"
+    "node": ">=18"
   }
 }

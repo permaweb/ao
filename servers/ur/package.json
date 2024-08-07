@@ -24,7 +24,6 @@
     "nodemon": "^3.1.4"
   },
   "engines": {
-    "node": ">=18",
-    "yarn": "please-use-npm"
+    "node": ">=18"
   }
 }

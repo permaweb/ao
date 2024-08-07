@@ -239,9 +239,9 @@ export const createApis = async (ctx) => {
   }
 
   const evaluationCounter = MetricsClient.counterWith({})({
-    name: 'total_evaluations',
+    name: 'ao_process_total_evaluations',
     description: 'The total number of evaluations on a CU',
-    labelNames: ['processId', 'cron', 'dryRun', 'error']
+    labelNames: ['stream_type', 'message_type', 'process_error']
   })
 
   /**

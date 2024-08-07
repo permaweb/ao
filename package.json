@@ -4,6 +4,7 @@
   "workspaces": [],
   "scripts": {
     "fmt": "standard --fix",
+    "preinstall": "npx only-allow npm",
     "prepare": "husky",
     "staged": "lint-staged"
   },
@@ -13,11 +14,9 @@
     "husky": "^9.0.11",
     "lint-staged": "^15.2.5",
     "markdown-toc-gen": "^1.0.1",
+    "only-allow": "^1.2.1",
     "sort-package-json": "^2.10.0",
     "standard": "^17.1.0"
-  },
-  "engines": {
-    "yarn": "please-use-npm"
   },
   "standard": {
     "ignore": [

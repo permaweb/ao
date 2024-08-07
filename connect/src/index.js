@@ -5,8 +5,10 @@ const GATEWAY_URL = process.env.GATEWAY_URL || undefined
 const MU_URL = process.env.MU_URL || undefined
 const CU_URL = process.env.CU_URL || undefined
 const GRAPHQL_URL = process.env.GRAPHQL_URL || undefined
+const GRAPHQL_MAX_RETRIES = process.env.GRAPHQL_MAX_RETRIES || undefined
+const GRAPHQL_RETRY_BACKOFF = process.env.GRAPHQL_RETRY_BACKOFF || undefined
 
-const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = connect({ GATEWAY_URL, MU_URL, CU_URL, GRAPHQL_URL })
+const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = connect({ GATEWAY_URL, MU_URL, CU_URL, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
 export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
 export { connect }
