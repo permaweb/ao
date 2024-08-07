@@ -7,7 +7,7 @@ export function cuFetchWithCache ({ fetch, cache, logger }) {
     return undefined
   }
 
-  async function runFetch (url, opts) {
+  async function runFetch (url, opts, logId) {
     const response = await fetch(url, {
       ...opts,
       redirect: 'manual'
@@ -18,7 +18,7 @@ export function cuFetchWithCache ({ fetch, cache, logger }) {
       const processId = urlObject.searchParams.get('process-id')
       if (processId) {
         const redirectURL = new URL(redirected)
-        logger({ log: ['inserting cu redirect into cache for process: %s redirect: %s', processId, redirectURL.host] })
+        logger({ log: ['inserting cu redirect into cache for process: %s redirect: %s', processId, redirectURL.host], logId })
         cache.set(processId, redirectURL.host)
       }
       return runFetch(redirected, opts)
@@ -26,16 +26,16 @@ export function cuFetchWithCache ({ fetch, cache, logger }) {
     return response
   }
 
-  return async (url, opts) => {
+  return async (url, opts, logId) => {
     const requestUrl = new URL(url)
     const processId = requestUrl.searchParams.get('process-id')
     const foundRedirectUrl = cache.get(processId)
     if (foundRedirectUrl) {
-      logger({ log: ['found redirect url in cache for process: %s redirect: %s', processId, foundRedirectUrl] })
+      logger({ log: ['found redirect url in cache for process: %s redirect: %s', processId, foundRedirectUrl], logId })
       // only sets the host, the protocol will be reused from the passed in url
       // this is a safe assumption because all CUs are implementing the same APIs over the same protocols
       requestUrl.host = foundRedirectUrl
     }
-    return runFetch(requestUrl.toString(), opts)
+    return runFetch(requestUrl.toString(), opts, logId)
   }
 }

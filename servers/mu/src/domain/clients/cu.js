@@ -10,8 +10,8 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
     })
   })
 
-  return async (txId, processId) => {
-    logger({ log: `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1` })
+  return async (txId, processId, logId) => {
+    logger({ log: `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
 
     const requestOptions = {
       timeout: 0
@@ -21,7 +21,8 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
       () =>
         resultFetch(
           `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`,
-          requestOptions
+          requestOptions,
+          logId
         ).then(okRes),
       {
         maxRetries: 5,
@@ -48,8 +49,8 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
 }
 
 function selectNodeWith ({ CU_URL, logger }) {
-  return async (processId) => {
-    logger({ log: `Selecting cu for process ${processId}` })
+  return async ({ processId, logId }) => {
+    logger({ log: `Selecting cu for process ${processId}`, logId })
     return CU_URL
   }
 }

@@ -33,10 +33,10 @@ export function writeProcessTxWith (env) {
       .chain(findSchedulerTag)
       .chain((schedulerAddress) => {
         return locateScheduler(schedulerAddress)
-          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64') }))
+          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64'), logId: ctx.logId }))
       })
       .map(assoc('schedulerTx', __, ctx))
       .map(ctxSchema.parse)
-      .map(logger.tap({ log: 'Added "schedulerTx" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } }))
+      .map(logger.tap({ log: 'Added "schedulerTx" to ctx' }))
   }
 }

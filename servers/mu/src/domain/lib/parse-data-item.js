@@ -37,9 +37,6 @@ export function parseDataItemWith ({ createDataItem, logger }) {
         })
       )
       .map(mergeRight(ctx))
-      .map((ctx) => {
-        logger({ log: 'Successfully parsed data item and added as "tx" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } })
-        return ctx
-      })
+      .map(logger.tap({ log: 'Successfully parsed data item and added as "tx" to ctx' }))
   }
 }

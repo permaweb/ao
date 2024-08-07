@@ -112,11 +112,11 @@ export const createApis = async (ctx) => {
 
   // Create database client
   const DB_URL = `${ctx.DB_URL}.sqlite`
-  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
+  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true, type: 'tasks' })
 
   // Create log database client
-  const LOG_DB_URL = `${ctx.TRACE_DB_PATH}.sqlite`
-  const logDb = await SqliteClient.createSqliteClient({ url: LOG_DB_URL, bootstrap: true })
+  const TRACE_DB_URL = `${ctx.TRACE_DB_PATH}.sqlite`
+  const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
 
   /**
    * Select queue ids from database on startup.
@@ -241,7 +241,7 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
-  const traceMsgs = fromPromise(readTracesWith({ db: logDb, TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
+  const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
 
   return {
     metrics,
@@ -310,6 +310,7 @@ export const createResultApis = async (ctx) => {
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
+    logger: processMsgLogger,
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
     createDataItem,
     locateScheduler: raw,
@@ -318,7 +319,6 @@ export const createResultApis = async (ctx) => {
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
-    logger,
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram })
   })
@@ -337,7 +337,7 @@ export const createResultApis = async (ctx) => {
 
   const processAssignLogger = logger.child('processAssign')
   const processAssign = processAssignWith({
-    logger: processSpawnLogger,
+    logger: processAssignLogger,
     locateProcess: locate,
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processAssignLogger }),
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: processAssignLogger })

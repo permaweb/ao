@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { DataItem } from 'arbundles'
 
 import { withMetrics, withMiddleware } from './middleware/index.js'
+import { randomBytes } from 'node:crypto'
 
 // const { DataItem } = WarpArBundles
 
@@ -28,6 +29,7 @@ const withMessageRoutes = (app) => {
         } = req
 
         const logger = _logger.child('POST_root')
+        const logId = randomBytes(8).toString('hex')
 
         if ((processId && !assign) || (!processId && assign)) {
           res.status(400).send({ error: 'You must set both process-id and assign to send an assignment, not just one' })
@@ -43,12 +45,13 @@ const withMessageRoutes = (app) => {
               exclude
             },
             processId,
-            messageId: assign
+            messageId: assign,
+            logId
           })
             .chain(sendAssign)
             .bimap(
-              logger.tap({ log: 'Failed to send the Assignment', options: { messageId: assign, processId, end: true } }),
-              logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...', options: { messageId: assign, processId } })
+              logger.tap({ log: 'Failed to send the Assignment', end: true }),
+              logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...' })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
@@ -75,17 +78,14 @@ const withMessageRoutes = (app) => {
           /**
            * Forward the DataItem
            */
-          await of({ raw: input.body })
+          await of({ raw: input.body, logId })
             .chain(sendDataItem)
             .bimap(
-              (ctx) => {
-                logger({ log: 'Failed to send the DataItem', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } })
-                return ctx
+              (e) => {
+                logger({ log: 'Failed to send the DataItem', end: true }, e.cause)
+                return e
               },
-              (ctx) => {
-                logger({ log: 'Successfully sent DataItem. Beginning to crank...', options: { messageId: ctx.messageId, processId: ctx.processId } })
-                return ctx
-              }
+              logger.tap({ log: 'Successfully sent DataItem. Beginning to crank...' })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**

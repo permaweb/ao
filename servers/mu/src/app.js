@@ -6,7 +6,6 @@ import { logger } from './logger.js'
 import { config } from './config.js'
 import { withRoutes } from './routes/index.js'
 import { domain } from './routes/middleware/withDomain.js'
-// import { createSqliteClient } from './domain/clients/sqlite.js'
 
 export const server = pipe(
   (app) => app.use(cors()),
@@ -14,7 +13,6 @@ export const server = pipe(
   (app) => app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' })),
   withRoutes,
   async (app) => {
-    // await createSqliteClient({ url: config.DB_URL, bootstrap: true })
     const server = app.listen(config.port, () => {
       logger({ log: `Server is running on http://localhost:${config.port}` })
     })

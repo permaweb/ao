@@ -7,9 +7,10 @@ import cron from 'node-cron'
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
 import { domainConfigSchema, config } from '../../config.js'
 // Without this import the worker crashes
-import { logger } from '../../logger.js'
+// import { logger } from '../../logger.js'
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
+import { randomBytes } from 'node:crypto'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
 
@@ -94,7 +95,8 @@ export function processResultWith ({
         enqueueResults({
           msgs: propOr([], 'msgs', res),
           spawns: propOr([], 'spawns', res),
-          assigns: propOr([], 'assigns', res)
+          assigns: propOr([], 'assigns', res),
+          parentId: propOr(undefined, 'parentId', res)
         })
         return of(res)
       })
@@ -109,7 +111,8 @@ export function processResultWith ({
  * correctly for input into the business logic
  */
 export function enqueueResultsWith ({ enqueue }) {
-  return ({ msgs, spawns, assigns, initialTxId }) => {
+  return ({ msgs, spawns, assigns, initialTxId, parentId, ...rest }) => {
+    console.log(100, { msgs, spawns, assigns, parentId, rest, msg: msgs[0] })
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',
@@ -117,7 +120,8 @@ export function enqueueResultsWith ({ enqueue }) {
         initialTxId: msg.initialTxId,
         messageId: msg.initialTxId,
         processId: msg.fromProcessId,
-        parentId: msg.parentId
+        parentId: msg.parentId,
+        logId: randomBytes(8).toString('hex')
       })),
       ...spawns.map(spawn => ({
         type: 'SPAWN',
@@ -125,7 +129,8 @@ export function enqueueResultsWith ({ enqueue }) {
         initialTxId: spawn.initialTxId,
         messageId: spawn.initialTxId,
         processId: spawn.processId,
-        parentId: spawn.parentId
+        parentId: spawn.parentId,
+        logId: randomBytes(8).toString('hex')
       })),
       ...assigns.flatMap(assign => assign.Processes.map(
         (pid) => ({
@@ -138,7 +143,8 @@ export function enqueueResultsWith ({ enqueue }) {
           },
           messageId: assign.Message,
           processId: pid,
-          parentId: initialTxId
+          parentId,
+          logId: randomBytes(8).toString('hex')
         })
       ))
     ]
@@ -214,11 +220,11 @@ function broadcastEnqueueWith ({ enqueue, queue }) {
   }
 }
 
-const db = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false })
+const db = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false, type: 'tasks' })
 const queue = await createTaskQueue({
   queueId: workerData.queueId,
   db,
-  logger
+  logger: broadcastLogger
 })
 
 /**
@@ -236,9 +242,9 @@ setInterval(() => {
  */
 const dequeuedTasks = new Set()
 
-const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger, db })
+const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger: broadcastLogger, db })
 const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue })
-const dequeue = dequeueWith({ queue, logger, dequeuedTasks })
+const dequeue = dequeueWith({ queue, logger: broadcastLogger, dequeuedTasks })
 const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
 
 const enqueueResults = enqueueResultsWith({
@@ -246,7 +252,7 @@ const enqueueResults = enqueueResultsWith({
 })
 
 const processResult = processResultWith({
-  logger,
+  logger: broadcastLogger,
   enqueueResults,
   processMsg,
   processSpawn,
@@ -257,7 +263,7 @@ const processResults = processResultsWith({
   enqueue: broadcastEnqueue,
   dequeue,
   processResult,
-  logger,
+  logger: broadcastLogger,
   TASK_QUEUE_MAX_RETRIES: workerData.TASK_QUEUE_MAX_RETRIES,
   TASK_QUEUE_RETRY_DELAY: workerData.TASK_QUEUE_RETRY_DELAY
 })

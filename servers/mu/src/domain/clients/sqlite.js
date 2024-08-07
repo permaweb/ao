@@ -36,7 +36,7 @@ const createTracesIndexes = async (db) => db.prepare(
 ).run()
 
 let internalSqliteDb
-export async function createSqliteClient ({ url, bootstrap = false, walLimit = bytes.parse('100mb') }) {
+export async function createSqliteClient ({ url, bootstrap = false, walLimit = bytes.parse('100mb'), type = 'tasks' }) {
   if (internalSqliteDb) return internalSqliteDb
 
   const db = Database(url)
@@ -52,10 +52,15 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       if (stat && stat.size > walLimit) db.pragma('wal_checkpoint(RESTART)')
     }), 5000).unref()
 
-    await Promise.resolve()
-      .then(() => createTasks(db))
-      .then(() => createTraces(db))
-      .then(() => createTracesIndexes(db))
+    if (type === 'tasks') {
+      await Promise.resolve()
+        .then(() => createTasks(db))
+    }
+    if (type === 'traces') {
+      await Promise.resolve()
+        .then(() => createTraces(db))
+        .then(() => createTracesIndexes(db))
+    }
   }
 
   return {

@@ -30,6 +30,10 @@ export function processMsgWith ({
     return of(ctx)
       .map(setStage('start', 'build-tx'))
       .chain(buildTx)
+      .map((ctx) => {
+        console.log('After building msg tx...', { ctx })
+        return ctx
+      })
       .map(setStage('build-tx', 'write-message'))
       /*
         If the tx has a target that is not a process, it has
@@ -55,7 +59,11 @@ export function processMsgWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        (ctx) => logger.tap({ log: 'processMsgSuccess', options: { end: true, parentMessageId: ctx.parentId, processId: ctx.tx.processId, messageId: ctx.tx.id } })(ctx)
+        (ctx) => {
+          console.log('Done processing message', { ctx })
+          logger({ log: 'Successfully processed message', end: true }, ctx)
+          return ctx
+        }
       )
   }
 }

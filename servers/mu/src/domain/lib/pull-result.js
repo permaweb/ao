@@ -15,7 +15,7 @@ function fetchResultWith ({ fetchResult }) {
   return (ctx) => {
     return of(ctx)
       .chain(() => {
-        return fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId)
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
@@ -73,7 +73,7 @@ export function pullResultWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap({ log: 'Added "msgs, spawns, and assigns" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } })
+        logger.tap({ log: 'Added msgs, spawns, and assigns to ctx' })
       )
   }
 }

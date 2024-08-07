@@ -25,7 +25,7 @@ export function sendAssignWith ({
     .bichain(
       (error) => {
         return of(error)
-          .map(logger.tap({ log: ['Initial assignment failed %s', ctx.txId], options: { messageId: ctx.messageId, processId: ctx.processId } }))
+          .map(() => logger({ log: ['Initial assignment failed %s', ctx.txId] }, ctx))
           .chain(() => Rejected(error))
       },
       (res) => Resolved(res)
@@ -38,21 +38,22 @@ export function sendAssignWith ({
       crank: () => of({ ...res, initialTxId: res.tx.id })
         .chain(getCuAddress)
         .chain(pullResult)
-        .chain(({ msgs, spawns, assigns, initialTxId }) => {
+        .chain(({ msgs, spawns, assigns, initialTxId, parentId }) => {
           return crank({
             msgs,
             spawns,
             assigns,
-            initialTxId
+            initialTxId,
+            parentId
           })
         })
         .bimap(
           (res) => {
-            logger({ log: 'Failed to crank messages from assignment', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }, ctx)
+            logger({ log: 'Failed to crank messages from assignment', end: true }, ctx)
             return res
           },
           (res) => {
-            logger({ log: 'Cranking complete', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }, ctx)
+            logger({ log: 'Cranking complete', end: true }, ctx)
             return res
           }
         )

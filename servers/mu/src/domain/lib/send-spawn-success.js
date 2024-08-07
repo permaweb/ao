@@ -16,14 +16,14 @@ export function sendSpawnSuccessWith (env) {
     if (!checkStage('send-spawn-success')(ctx)) return Resolved(ctx)
     return of(ctx.cachedSpawn.processId)
       .chain(locateProcess)
-      .map((schedulerResult) => { return { suUrl: schedulerResult.url, data: ctx.spawnSuccessTx.data.toString('base64') } })
+      .map((schedulerResult) => { return { suUrl: schedulerResult.url, data: ctx.spawnSuccessTx.data.toString('base64'), logId: ctx.logId } })
       .chain(fromPromise(writeDataItem))
       .chain(
         (result) => {
           return of(result)
             .map(assoc('spawnSuccessSequencerTx', __, ctx))
             .map(ctxSchema.parse)
-            .map(logger.tap({ log: 'Added "spawnSuccessSequencerTx" to ctx', options: { messageId: ctx.messageId, processId: ctx.processId } }))
+            .map(logger.tap({ log: 'Added spawnSuccessSequencerTx to ctx' }))
         }
       )
       .bimap(

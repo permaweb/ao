@@ -1,5 +1,5 @@
 import debug from 'debug'
-import { tap } from 'ramda'
+import { propOr, tap } from 'ramda'
 import { randomBytes } from 'crypto'
 import { TRACES_TABLE } from './sqlite.js'
 /*
@@ -11,7 +11,7 @@ import { TRACES_TABLE } from './sqlite.js'
 // }
 
 function createTraceWith ({ db }) {
-  function createQuery (logs, messageId, processId, wallet, parentMessageId, data) {
+  function createQuery (logs, messageId, processId, wallet, parentId, data) {
     const randomByteString = randomBytes(8).toString('hex')
     return {
       sql: `
@@ -25,14 +25,14 @@ function createTraceWith ({ db }) {
         processId,
         wallet,
         Date.now(),
-        parentMessageId,
+        parentId,
         logs,
         data
       ]
     }
   }
 
-  return ({ logs, messageId, processId, wallet, parentMessageId, ctx }) => {
+  return ({ logs, messageId, processId, wallet, parentId, ctx }) => {
     if (ctx?.tx?.data) {
       ctx.tx.dataLength = ctx.tx.data.length
       delete ctx.tx.data
@@ -41,13 +41,11 @@ function createTraceWith ({ db }) {
       ctx.rawLength = ctx.raw.length
       delete ctx.raw
     }
-    db.run(createQuery(logs, messageId, processId, wallet, parentMessageId, JSON.stringify(ctx ?? '{}')))
+    db.run(createQuery(logs, messageId, processId, wallet, parentId, JSON.stringify(ctx ?? '{}')))
   }
 }
 
-const activeLogs = new Map()
-const activeCtx = new Map()
-export function traceWith ({ namespace, db, TRACE_DB_PATH }) {
+export function traceWith ({ namespace, db, TRACE_DB_PATH, activeTraces }) {
   const createTrace = createTraceWith({ db })
   const logger = debug(namespace)
 
@@ -56,47 +54,51 @@ export function traceWith ({ namespace, db, TRACE_DB_PATH }) {
    * and also calling the original logger function in order to mimic
    * the same behaviour
    */
-  // args - 0: message, 1: messageId, 2: processId, 3: wallet
-  const tracerLogger = ({ log, options }, ctx) => {
+  const tracerLogger = ({ log, logId, end }, ctx) => {
+    logId = logId || propOr(undefined, 'logId', ctx)
     // TODO: Log everything at the end
-    if (Array.isArray(log)) {
-      logger(...log)
+    if (!logId) {
+      if (Array.isArray(log)) {
+        logger(...log)
+      } else {
+        logger(log)
+      }
     } else {
-      logger(log)
-    }
-    const { messageId, processId, wallet, end, parentMessageId } = options ?? {}
-    if (messageId || wallet) {
-      const id = `${messageId}-${processId}`
-      const currLogs = activeLogs.get(id)
-      activeCtx.set(id, ctx)
+      const currLogs = activeTraces.get(logId)
+      // console.log(`Adding to map ${logId}:`, log)
       if (currLogs) {
         currLogs.logs.push(log)
       } else {
-        activeLogs.set(id, { logs: [log], messageId, processId, wallet })
+        activeTraces.set(logId, { logs: [log] })
       }
+    }
+    if (end) {
+      const currentLog = activeTraces.get(logId)
+      const logs = JSON.stringify(currentLog.logs)
+      const { messageId, processId, wallet, parentId } = ctx ?? {}
+      console.log('Ending message stream...', { logId, currentLog, logs, messageId, processId, wallet, parentId })
+      if (messageId || processId) {
+        createTrace({ logs, messageId, processId, wallet, parentId, ctx })
+      }
+      activeTraces.delete(logId)
 
-      if (end) {
-        const currentLog = activeLogs.get(id)
-        const ctx = activeCtx.get(id)
-        createTrace({ logs: JSON.stringify(currentLog.logs), messageId, processId, wallet, parentMessageId, ctx })
-        // TODO: Log everything at the end
-        // for (const log of currentLog.logs) {
-        //   if (Array.isArray(log)) {
-        //     logger(...log)
-        //   } else {
-        //     logger(log)
-        //   }
-        // }
+      // TODO: Logging everything at the end makes the timer useless - maybe make our own
+      for (const log of currentLog?.logs) {
+        if (Array.isArray(log)) {
+          logger(...log)
+        } else {
+          logger(log)
+        }
       }
     }
   }
 
   tracerLogger.namespace = logger.namespace
 
-  tracerLogger.child = (name) => traceWith({ namespace: `${tracerLogger.namespace}:${name}`, db, TRACE_DB_PATH })
-  tracerLogger.tap = ({ log, options }) => {
+  tracerLogger.child = (name) => traceWith({ namespace: `${tracerLogger.namespace}:${name}`, db, TRACE_DB_PATH, activeTraces })
+  tracerLogger.tap = ({ log, logId, end }) => {
     return tap((...args) => {
-      return tracerLogger({ log, options }, ...args)
+      return tracerLogger({ log, logId, end }, ...args)
     })
   }
 

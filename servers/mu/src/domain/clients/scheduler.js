@@ -18,9 +18,9 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
       operation: 'writeDataItemWithRedirect'
     })
   })
-  return async ({ data, suUrl }) => {
+  return async ({ data, suUrl, logId }) => {
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap({ log: `Forwarding message to SU ${suUrl}` }))
+      .map(logger.tap({ log: `Forwarding message to SU ${suUrl}`, logId }))
       .chain(
         fromPromise((body) =>
           suFetch(suUrl, {
@@ -52,7 +52,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           })
         )
       )
-      .bimap(logger.tap({ log: 'Error while communicating with SU:' }), identity)
+      .bimap(logger.tap({ log: 'Error while communicating with SU:', logId }), identity)
       .bichain(
         (err) => Rejected(err),
         fromPromise(async (res) => {
@@ -63,7 +63,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap({ log: 'Successfully forwarded DataItem to SU' }))
+      .map(logger.tap({ log: 'Successfully forwarded DataItem to SU', logId }))
       .toPromise()
   }
 }
@@ -83,9 +83,9 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
       operation: 'writeAssignmentWithRedirect'
     })
   })
-  return async ({ txId, processId, baseLayer, exclude, suUrl }) => {
-    return of({ txId, processId, baseLayer, exclude, suUrl })
-      .map(logger.tap({ log: `Forwarding Assignment to SU ${suUrl}` }))
+  return async ({ txId, processId, baseLayer, exclude, suUrl, logId }) => {
+    return of({ txId, processId, baseLayer, exclude, suUrl, logId })
+      .map(logger.tap({ log: `Forwarding Assignment to SU ${suUrl}`, logId }))
       .chain(
         fromPromise(({ txId, processId, baseLayer, exclude, suUrl }) => {
           let url = `${suUrl}/?process-id=${processId}&assign=${txId}`
@@ -146,10 +146,10 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
       )
       .bimap(
         (e) => {
-          logger.tap({ log: 'Error while communicating with SU:' })(e)
+          logger({ log: 'Error while communicating with SU:', logId })
           return new Error(e)
         },
-        logger.tap({ log: 'Successfully forwarded Assignment to SU' })
+        logger.tap({ log: 'Successfully forwarded Assignment to SU', logId })
       )
       .toPromise()
   }
@@ -169,15 +169,15 @@ function fetchSchedulerProcessWith ({
       operation: 'writeAssignmentWithRedirect'
     })
   })
-  return (processId, suUrl) => {
+  return (processId, suUrl, logId) => {
     return getByProcess(processId)
       .then((cached) => {
         if (cached) {
-          logger({ log: `cached process found ${processId}` })
+          logger({ log: `cached process found ${processId}`, logId })
           return cached
         }
 
-        logger({ log: `${suUrl}/processes/${processId}` })
+        logger({ log: `${suUrl}/processes/${processId}`, logId })
 
         return suFetch(`${suUrl}/processes/${processId}`)
           .then((res) => res.json())
@@ -188,7 +188,7 @@ function fetchSchedulerProcessWith ({
           })
       })
       .catch((e) => {
-        logger({ log: `error fetching process ${e}` })
+        logger({ log: `error fetching process ${e}`, logId })
       })
   }
 }

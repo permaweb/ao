@@ -7,87 +7,1233 @@
 [33m[nodemon] watching path(s): src/**/*[39m
 [33m[nodemon] watching extensions: js[39m
 [32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "x-powered-by" to true
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "etag" to 'weak'
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "etag fn" to [Function: generateETag]
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "env" to 'development'
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "query parser" to 'extended'
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "subdomain offset" to 2
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "trust proxy" to false
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "trust proxy fn" to [Function: trustNone]
-Tue, 06 Aug 2024 15:42:04 GMT express:application booting in development mode
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "view" to [Function: View]
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
-Tue, 06 Aug 2024 15:42:04 GMT express:application set "jsonp callback name" to 'callback'
-Tue, 06 Aug 2024 15:42:04 GMT express:router use '/' query
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router use '/' expressInit
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router use '/' corsMiddleware
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router use '/' jsonParser
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router use '/' rawParser
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route new '/monitor/:processId'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/monitor/:processId'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route post '/monitor/:processId'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route new '/monitor/:processId'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/monitor/:processId'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route delete '/monitor/:processId'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route post '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:route get '/'
-Tue, 06 Aug 2024 15:42:04 GMT express:router:layer new '/'
-2024-08-06T15:42:04.286Z ao-mu Server is running on http://localhost:3004
-2024-08-06T15:42:04.288Z ao-mu Crons initialized
+Send Data Item -> Crank {
+  ctx: {
+    msgs: [ [Object] ],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      timestamp: 1722999749579
+    },
+    raw: <Buffer 01 00 91 d8 0a dd 80 b3 8f 0a 46 68 cf b4 27 5e ad d6 1d ca d8 9c 27 bc 27 65 9b 97 5d 36 e0 76 92 ce 7d 5a 9e ec 34 d7 5e 3f f5 f0 c5 51 36 fb 5f 9f ... 1140 more bytes>,
+    logId: '4612623511e9f3d0',
+    tx: {
+      id: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      data: <Buffer 01 00 91 d8 0a dd 80 b3 8f 0a 46 68 cf b4 27 5e ad d6 1d ca d8 9c 27 bc 27 65 9b 97 5d 36 e0 76 92 ce 7d 5a 9e ec 34 d7 5e 3f f5 f0 c5 51 36 fb 5f 9f ... 1140 more bytes>
+    },
+    dataItem: {
+      id: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      signature: 'kdgK3YCzjwpGaM-0J16t1h3K2JwnvCdlm5ddNuB2ks59Wp7sNNdeP_XwxVE2-1-f7ypsX8BqGhGS4AcNImXYxTisiPTgs0io3m9_WRhL0X9odpITZ5222y-_js1iAh4pHQYhNpSaQoA9UoRsHwzudoNIYvJA4VqXZbPHlHOD2m95tUlCfRIYqWsaeVFT35GuJTHXprDPI52roUkhoyqyTWS6kCey5IWQ9HxCH8h6TeWublwZMkaHukamGnVIjuvYoV_q2DTYVYWjQbaqqtWbhaWYcIZek575MDfzPvD2lCIkCEPDc_qwlG1pVTpMJjOPZs5QTeQAmN6-N4XS34-ZFw44UnuDppoSA61fhfZGUCOJXMWwNoxNYHd8QM3cUrp2fKPpgPrNdz3besNXXtOAhIOkWE7iQL-_kgPvTq0wiUMwt1aAgzIJ_rvZpQm1zz0RKE1ftGStmJ4CQnVRG8L8-bQ0SE3dn9j6Pb4HB_mj8SjdDu9h98282GEE5KXjwkfDYqiIgPn_Mhu1mWYZWM40zNpoUtsN_jnsDxL9Ksk_kX90DrRHdsgKDWieJg-DKIHlllfRn4RHDbazRWOg770ZJOJpVQE4JdCmC2xH5MYKyzCf2VqiRU2pkyUm0qR9QatcuLZIm2tH9dYwy6iI66cHofSOBw8qbVzX5aCgHGxvQHo',
+      owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+      target: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      tags: [Array],
+      anchor: ''
+    },
+    messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    }
+  }
+}
+100 {
+  msgs: [
+    {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+    }
+  ],
+  spawns: [],
+  assigns: [],
+  parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+  rest: {},
+  msg: {
+    msg: {
+      Tags: [Array],
+      Target: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      Anchor: '00000000000000000000000000000025'
+    },
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+  }
+}
+Ending message stream... {
+  logId: '4612623511e9f3d0',
+  currentLog: {
+    logs: [
+      'Successfully parsed data item and added as "tx" to ctx',
+      'Forwarding message to SU https://su25.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added schedulerTx to ctx',
+      'Successfully sent DataItem. Beginning to crank...',
+      'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added cuAddress to ctx',
+      'https://cu.ao-testnet.xyz/result/csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Cranking complete'
+    ]
+  },
+  logs: [
+    'Successfully parsed data item and added as "tx" to ctx',
+    'Forwarding message to SU https://su25.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added schedulerTx to ctx',
+    'Successfully sent DataItem. Beginning to crank...',
+    'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added cuAddress to ctx',
+    'https://cu.ao-testnet.xyz/result/csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+    [
+      'inserting cu redirect into cache for process: %s redirect: %s',
+      '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'cu111.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Cranking complete'
+  ],
+  messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: undefined
+}
+1 {
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    logId: '40b5a05693808fe2',
+    dbId: 'f5bfdb583132ff60-1722999750683-11efd7255c77d925'
+  }
+}
+101 {
+  ctx: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    logId: '40b5a05693808fe2',
+    dbId: 'f5bfdb583132ff60-1722999750683-11efd7255c77d925',
+    stage: 'build-tx'
+  },
+  res: {
+    tx: {
+      id: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+      data: <Buffer 01 00 46 87 ef 7e 35 f2 da fc a1 8c 45 83 71 ad 50 9d 41 f1 cb 5a 7c b1 eb b9 a2 25 e2 89 17 66 60 c8 5d 01 a2 59 d1 cc 56 06 7b 89 e8 bf 27 ac 9c ab ... 1297 more bytes>,
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk'
+    },
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: []
+  }
+}
+After building msg tx... {
+  ctx: {
+    tx: {
+      id: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+      data: <Buffer 01 00 46 87 ef 7e 35 f2 da fc a1 8c 45 83 71 ad 50 9d 41 f1 cb 5a 7c b1 eb b9 a2 25 e2 89 17 66 60 c8 5d 01 a2 59 d1 cc 56 06 7b 89 e8 bf 27 ac 9c ab ... 1297 more bytes>,
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk'
+    },
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    logId: '40b5a05693808fe2',
+    dbId: 'f5bfdb583132ff60-1722999750683-11efd7255c77d925',
+    stage: 'build-tx'
+  }
+}
+Done processing message {
+  ctx: {
+    msgs: [ [Object] ],
+    spawns: [ [Object] ],
+    assigns: [ [Object] ],
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+      timestamp: 1722999751705
+    },
+    tx: {
+      id: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+      data: <Buffer 01 00 46 87 ef 7e 35 f2 da fc a1 8c 45 83 71 ad 50 9d 41 f1 cb 5a 7c b1 eb b9 a2 25 e2 89 17 66 60 c8 5d 01 a2 59 d1 cc 56 06 7b 89 e8 bf 27 ac 9c ab ... 1297 more bytes>,
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk'
+    },
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+    },
+    messageId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    logId: '40b5a05693808fe2',
+    dbId: 'f5bfdb583132ff60-1722999750683-11efd7255c77d925',
+    stage: 'end'
+  }
+}
+Ending message stream... {
+  logId: '40b5a05693808fe2',
+  currentLog: {
+    logs: [
+      'Processing task of type MESSAGE',
+      'Checking if id is a wallet 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'id: 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk not cached checking arweave for tx',
+      'https://su25.ao-testnet.xyz/processes/33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added tx and schedLocation to ctx',
+      'Forwarding message to SU https://su25.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added schedulerTx to ctx',
+      'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added cuAddress to ctx',
+      'https://cu.ao-testnet.xyz/result/BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed message'
+    ]
+  },
+  logs: [
+    'Processing task of type MESSAGE',
+    'Checking if id is a wallet 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'id: 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk not cached checking arweave for tx',
+    'https://su25.ao-testnet.xyz/processes/33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added tx and schedLocation to ctx',
+    'Forwarding message to SU https://su25.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added schedulerTx to ctx',
+    'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added cuAddress to ctx',
+    'https://cu.ao-testnet.xyz/result/BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+    [
+      'inserting cu redirect into cache for process: %s redirect: %s',
+      '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'cu111.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed message'
+  ],
+  messageId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+}
+100 {
+  msgs: [
+    {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    }
+  ],
+  spawns: [
+    {
+      spawn: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    }
+  ],
+  assigns: [
+    {
+      Processes: [Array],
+      Message: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw'
+    }
+  ],
+  parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+  rest: {},
+  msg: {
+    msg: {
+      Tags: [Array],
+      Anchor: '00000000000000000000000000000026',
+      Target: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      Data: 'Hello World'
+    },
+    processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+  }
+}
+1 {
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    logId: '49d055a28ee78b95',
+    dbId: 'f5bfdb583132ff60-1722999752365-397e149acef802b3'
+  }
+}
+1 {
+  result: {
+    type: 'SPAWN',
+    cachedSpawn: {
+      spawn: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    logId: '037dfedf40d53748',
+    dbId: 'f5bfdb583132ff60-1722999752365-dba859c5a4ef2bd8'
+  }
+}
+1 {
+  result: {
+    type: 'ASSIGN',
+    assign: {
+      txId: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw',
+      processId: '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+      baseLayer: null,
+      exclude: null
+    },
+    messageId: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw',
+    processId: '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+    parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    logId: '905d41e5a55be406',
+    dbId: 'f5bfdb583132ff60-1722999752366-15e0abb7d53f7608'
+  }
+}
+101 {
+  ctx: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    logId: '49d055a28ee78b95',
+    dbId: 'f5bfdb583132ff60-1722999752365-397e149acef802b3',
+    stage: 'build-tx'
+  },
+  res: {
+    tx: {
+      id: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+      data: <Buffer 01 00 a9 7d fa ad 04 7e e2 16 00 32 fa 33 ea 0b 09 93 3f 07 5c 39 47 32 af 34 de e6 74 e6 26 4a 70 1a c3 7c 48 ad 06 64 05 b0 ff 7f 12 9e c4 98 c0 e1 ... 1293 more bytes>,
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc'
+    },
+    schedLocation: {
+      url: 'https://su19.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: []
+  }
+}
+After building msg tx... {
+  ctx: {
+    tx: {
+      id: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+      data: <Buffer 01 00 a9 7d fa ad 04 7e e2 16 00 32 fa 33 ea 0b 09 93 3f 07 5c 39 47 32 af 34 de e6 74 e6 26 4a 70 1a c3 7c 48 ad 06 64 05 b0 ff 7f 12 9e c4 98 c0 e1 ... 1293 more bytes>,
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc'
+    },
+    schedLocation: {
+      url: 'https://su19.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    },
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    messageId: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    logId: '49d055a28ee78b95',
+    dbId: 'f5bfdb583132ff60-1722999752365-397e149acef802b3',
+    stage: 'build-tx'
+  }
+}
+Done processing message {
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+      timestamp: 1722999753136
+    },
+    tx: {
+      id: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+      data: <Buffer 01 00 a9 7d fa ad 04 7e e2 16 00 32 fa 33 ea 0b 09 93 3f 07 5c 39 47 32 af 34 de e6 74 e6 26 4a 70 1a c3 7c 48 ad 06 64 05 b0 ff 7f 12 9e c4 98 c0 e1 ... 1293 more bytes>,
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc'
+    },
+    schedLocation: {
+      url: 'https://su19.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+    },
+    messageId: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+    logId: '49d055a28ee78b95',
+    dbId: 'f5bfdb583132ff60-1722999752365-397e149acef802b3',
+    stage: 'end'
+  }
+}
+Ending message stream... {
+  logId: '49d055a28ee78b95',
+  currentLog: {
+    logs: [
+      'Processing task of type MESSAGE',
+      'Checking if id is a wallet gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      'id: gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc not cached checking arweave for tx',
+      'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added tx and schedLocation to ctx',
+      'Forwarding message to SU https://su19.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added schedulerTx to ctx',
+      'Selecting cu for process gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      'Added cuAddress to ctx',
+      'https://cu.ao-testnet.xyz/result/L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g?process-id=gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed message'
+    ]
+  },
+  logs: [
+    'Processing task of type MESSAGE',
+    'Checking if id is a wallet gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+    'id: gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc not cached checking arweave for tx',
+    'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added tx and schedLocation to ctx',
+    'Forwarding message to SU https://su19.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added schedulerTx to ctx',
+    'Selecting cu for process gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+    'Added cuAddress to ctx',
+    'https://cu.ao-testnet.xyz/result/L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g?process-id=gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc&no-busy=1',
+    [
+      'inserting cu redirect into cache for process: %s redirect: %s',
+      'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      'cu126.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed message'
+  ],
+  messageId: 'L7s1BJsTeajzGSrbdykQ8g5PLjKHLIBlO6M4jbxy25g',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+}
+100 {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+  rest: {},
+  msg: undefined
+}
+Ending message stream... {
+  logId: '905d41e5a55be406',
+  currentLog: {
+    logs: [
+      'Processing task of type ASSIGN',
+      'Forwarding Assignment to SU https://su93.ao-testnet.xyz',
+      'Successfully forwarded Assignment to SU',
+      'Added "tx" to ctx',
+      'https://cu.ao-testnet.xyz/result/ls5jOTbgYhYf9rBqefLAd9Fg_aPPVN-Vzjhq8CReZY8?process-id=6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed assign'
+    ]
+  },
+  logs: [
+    'Processing task of type ASSIGN',
+    'Forwarding Assignment to SU https://su93.ao-testnet.xyz',
+    'Successfully forwarded Assignment to SU',
+    'Added "tx" to ctx',
+    'https://cu.ao-testnet.xyz/result/ls5jOTbgYhYf9rBqefLAd9Fg_aPPVN-Vzjhq8CReZY8?process-id=6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw&no-busy=1',
+    [
+      'inserting cu redirect into cache for process: %s redirect: %s',
+      '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+      'cu132.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed assign'
+  ],
+  messageId: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw',
+  processId: '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+  wallet: undefined,
+  parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8'
+}
+100 {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  parentId: 'csaIMhAWaaOOjuFrZBiZmKOK8PNVpkSOVMB2SgMDmc8',
+  rest: {},
+  msg: undefined
+}
+Ending message stream... {
+  logId: '037dfedf40d53748',
+  currentLog: {
+    logs: [
+      'Processing task of type SPAWN',
+      'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Forwarding message to SU https://su-router.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added processTx to the ctx',
+      'Added spawnSuccessTx to ctx',
+      'Forwarding message to SU https://su25.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added spawnSuccessSequencerTx to ctx',
+      'https://cu.ao-testnet.xyz/result/BFVQEkhBfz7_gDc3fFchpyVcNYOksGFpDhadFfJ9Sf8?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed spawn'
+    ]
+  },
+  logs: [
+    'Processing task of type SPAWN',
+    'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Forwarding message to SU https://su-router.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added processTx to the ctx',
+    'Added spawnSuccessTx to ctx',
+    'Forwarding message to SU https://su25.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added spawnSuccessSequencerTx to ctx',
+    'https://cu.ao-testnet.xyz/result/BFVQEkhBfz7_gDc3fFchpyVcNYOksGFpDhadFfJ9Sf8?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+    [
+      'found redirect url in cache for process: %s redirect: %s',
+      '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'cu111.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed spawn'
+  ],
+  messageId: 'y4-YfOTmtgdJ6jO5DPhed41SPEuFv4SU_Y-j71eUgNw',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw'
+}
+100 {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  parentId: 'BTFEy-BLKTP4PZOV6eErZH7oxmyOhbMHnhm3AGHdBHw',
+  rest: {},
+  msg: undefined
+}
+Send Data Item -> Crank {
+  ctx: {
+    msgs: [ [Object] ],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      timestamp: 1722999914874
+    },
+    raw: <Buffer 01 00 38 38 0e 99 dc d5 e7 5a 91 61 05 48 87 5b 0b 81 60 80 bc 02 13 28 16 81 a8 1e ff 76 67 d4 3e df 2e 5e 7e 55 7e 35 da cc 21 5c 0f 6e 79 c1 a2 fe ... 1140 more bytes>,
+    logId: 'fcaabf0340ec3d73',
+    tx: {
+      id: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      data: <Buffer 01 00 38 38 0e 99 dc d5 e7 5a 91 61 05 48 87 5b 0b 81 60 80 bc 02 13 28 16 81 a8 1e ff 76 67 d4 3e df 2e 5e 7e 55 7e 35 da cc 21 5c 0f 6e 79 c1 a2 fe ... 1140 more bytes>
+    },
+    dataItem: {
+      id: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      signature: 'ODgOmdzV51qRYQVIh1sLgWCAvAITKBaBqB7_dmfUPt8uXn5VfjXazCFcD255waL-qFDsXAM2lQ3E4B_v034m-6EVb9BrP5gmkJqI2BE95veRBEwBKBORRQqS3cce2YxCgORwHoBPodGtBCPvWC0p-GvLmq7yoJFI0iKT9hzNrD68LFlIQRC62ZvJXWB5DcrFnDJMF9lVKf4rG21cm4k0Z4fVHbcipgnd3F-2L2Q_QpRmfzvEa2IY9adM7Ht7wETkiiRUkCVipHSNNiJU5tb3S2fksmfX97V7sDq5RGZ48UjYxQCz8L_wgWfm1p-34V-1TzbODk5SL8cBGNySu4k0znkKJqVqUiWgEZiygQjjElmxb2UQeajl2TuwwpFp9d6flHqFQ3SelJrFyhZSzvOleHLXZg0FapOwTJR0hs80LBBGoq2G7CzgCjcah-wZGtWOYCTTOQjIMitSdydoexOd2RqpvlYdZ6KRpbVEHTQiNznDl0YYKopWEw9mcSUTJx6BqE8zlj-ee_VUdzIDyKxTQQlnZUkJCI8Q2OqI9uQqV5H5o6v_8PH37Xnu0_PpGGz_od0Z6_qb2Z8dISFUdFQdrdwkkzvZPUz5gQsFj5s9etCuK67BQWvx3M5MPSJT-0WtQ6MODw7wO4BMoYbYHM8lg7VgjmLSPcHLPMTqUK27r9s',
+      owner: 'xwZmykELttGG2_3K1X-mUE4SLdXvwaLbomUom9skYyw73FeaMJdc2SALACh0dYElaVG87-IQOir2ERU3iNoYyOCWC9lT_b538M1FnSYoLGgb5MaQf-mLVN3qELaj-UTh26nBuFa3Op3vfN-l6Ak7ZUJvMuK5tkbwYzb4T9dBOZ0Af3243z5VMuUQPD2L38uxBche2BPFm0vdEzVTkOQzOE8zssdnBcRhSYp0VuEbi4sjhF0hiknz2-i89cLOwWsO_pP9QLZMN-VEVFMCchtgXB58D8EQ6SLzbqhiN8AxKuOJK4EGKxee6tjyvd9fSiJrHqlbCr9amO--hoPp4BxMQuQWkClWiSKaMnUgK0LkPys_UoDLO3piYDdfqFrWaAoLzgh8xolg2-mlt6Q2-Hu8jvsgoaXHGYKZ5Qhf1ZfMw_iV51XbAlhhfSn9Qdmo4uNTpsN_pnnMlVv8DxgYhv_nXQCiAK7KFyowMie6oQr1nKytHuRrL0q9a6zx0U1znd6_SCb-jJaXVR7GinhsqnmSCsV4mE9Lpjq3sz4cbzv63hbY9zbtC0HUQGIC03dBzQ8dfN-9BdD5jccAyzsl8OIZOWJmyEphExzY8WmhmBEp6wLAIzWez_fDjHygtBSz4auVt8dLtt8y2rlaSLOzukS9WA6lus2yz5DNQJwfrbxNldE',
+      target: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      tags: [Array],
+      anchor: ''
+    },
+    messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    }
+  }
+}
+100 {
+  msgs: [
+    {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+    }
+  ],
+  spawns: [],
+  assigns: [],
+  parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+  rest: {},
+  msg: {
+    msg: {
+      Tags: [Array],
+      Target: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      Anchor: '00000000000000000000000000000028'
+    },
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+  }
+}
+Ending message stream... {
+  logId: 'fcaabf0340ec3d73',
+  currentLog: {
+    logs: [
+      'Successfully parsed data item and added as "tx" to ctx',
+      'Forwarding message to SU https://su25.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added schedulerTx to ctx',
+      'Successfully sent DataItem. Beginning to crank...',
+      'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added cuAddress to ctx',
+      'https://cu.ao-testnet.xyz/result/c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Cranking complete'
+    ]
+  },
+  logs: [
+    'Successfully parsed data item and added as "tx" to ctx',
+    'Forwarding message to SU https://su25.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added schedulerTx to ctx',
+    'Successfully sent DataItem. Beginning to crank...',
+    'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added cuAddress to ctx',
+    'https://cu.ao-testnet.xyz/result/c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+    [
+      'found redirect url in cache for process: %s redirect: %s',
+      '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'cu111.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Cranking complete'
+  ],
+  messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: undefined
+}
+1 {
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    logId: '6826e10b79eded14',
+    dbId: 'f5bfdb583132ff60-1722999915415-008104820911c89b'
+  }
+}
+101 {
+  ctx: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    logId: '6826e10b79eded14',
+    dbId: 'f5bfdb583132ff60-1722999915415-008104820911c89b',
+    stage: 'build-tx'
+  },
+  res: {
+    tx: {
+      id: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+      data: <Buffer 01 00 36 b2 4d 1c bf 5a 76 0c 91 ea fd 8d 8f cb d9 15 94 2e ab 58 55 80 32 1f 6e 62 57 e4 ca 39 d0 19 5d d7 d9 dc 61 d1 37 34 91 59 fa 75 4b 6c ba d3 ... 1297 more bytes>,
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk'
+    },
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: []
+  }
+}
+After building msg tx... {
+  ctx: {
+    tx: {
+      id: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+      data: <Buffer 01 00 36 b2 4d 1c bf 5a 76 0c 91 ea fd 8d 8f cb d9 15 94 2e ab 58 55 80 32 1f 6e 62 57 e4 ca 39 d0 19 5d d7 d9 dc 61 d1 37 34 91 59 fa 75 4b 6c ba d3 ... 1297 more bytes>,
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk'
+    },
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    logId: '6826e10b79eded14',
+    dbId: 'f5bfdb583132ff60-1722999915415-008104820911c89b',
+    stage: 'build-tx'
+  }
+}
+Done processing message {
+  ctx: {
+    msgs: [ [Object] ],
+    spawns: [ [Object] ],
+    assigns: [ [Object] ],
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+      timestamp: 1722999915733
+    },
+    tx: {
+      id: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+      data: <Buffer 01 00 36 b2 4d 1c bf 5a 76 0c 91 ea fd 8d 8f cb d9 15 94 2e ab 58 55 80 32 1f 6e 62 57 e4 ca 39 d0 19 5d d7 d9 dc 61 d1 37 34 91 59 fa 75 4b 6c ba d3 ... 1297 more bytes>,
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk'
+    },
+    schedLocation: {
+      url: 'https://su25.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+    },
+    messageId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    logId: '6826e10b79eded14',
+    dbId: 'f5bfdb583132ff60-1722999915415-008104820911c89b',
+    stage: 'end'
+  }
+}
+Ending message stream... {
+  logId: '6826e10b79eded14',
+  currentLog: {
+    logs: [
+      'Processing task of type MESSAGE',
+      'Checking if id is a wallet 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Found id: 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk in cache with value: false',
+      'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added tx and schedLocation to ctx',
+      'Forwarding message to SU https://su25.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added schedulerTx to ctx',
+      'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added cuAddress to ctx',
+      'https://cu.ao-testnet.xyz/result/IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed message'
+    ]
+  },
+  logs: [
+    'Processing task of type MESSAGE',
+    'Checking if id is a wallet 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Found id: 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk in cache with value: false',
+    'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added tx and schedLocation to ctx',
+    'Forwarding message to SU https://su25.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added schedulerTx to ctx',
+    'Selecting cu for process 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added cuAddress to ctx',
+    'https://cu.ao-testnet.xyz/result/IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+    [
+      'found redirect url in cache for process: %s redirect: %s',
+      '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'cu111.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed message'
+  ],
+  messageId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+}
+100 {
+  msgs: [
+    {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    }
+  ],
+  spawns: [
+    {
+      spawn: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    }
+  ],
+  assigns: [
+    {
+      Processes: [Array],
+      Message: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw'
+    }
+  ],
+  parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+  rest: {},
+  msg: {
+    msg: {
+      Tags: [Array],
+      Anchor: '00000000000000000000000000000029',
+      Target: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      Data: 'Hello World'
+    },
+    processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+  }
+}
+1 {
+  result: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    logId: '2e4cf857f01674d1',
+    dbId: 'f5bfdb583132ff60-1722999916308-f1d33259311a7627'
+  }
+}
+1 {
+  result: {
+    type: 'SPAWN',
+    cachedSpawn: {
+      spawn: [Object],
+      processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    logId: '683b949ff315cec4',
+    dbId: 'f5bfdb583132ff60-1722999916309-65e90ed84efa5dd8'
+  }
+}
+1 {
+  result: {
+    type: 'ASSIGN',
+    assign: {
+      txId: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw',
+      processId: '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+      baseLayer: null,
+      exclude: null
+    },
+    messageId: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw',
+    processId: '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+    parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    logId: 'aab3b7c8aa91e081',
+    dbId: 'f5bfdb583132ff60-1722999916309-33fe2959cefda415'
+  }
+}
+101 {
+  ctx: {
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    logId: '2e4cf857f01674d1',
+    dbId: 'f5bfdb583132ff60-1722999916308-f1d33259311a7627',
+    stage: 'build-tx'
+  },
+  res: {
+    tx: {
+      id: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+      data: <Buffer 01 00 50 9b 39 55 68 ec 39 e5 b8 0b db 18 4b 72 13 51 76 39 90 0c 17 d6 23 cd e2 1f e1 0c c3 73 9f 81 20 88 67 ab e7 41 a5 12 d5 26 ef b1 85 0a 13 83 ... 1293 more bytes>,
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc'
+    },
+    schedLocation: {
+      url: 'https://su19.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: []
+  }
+}
+After building msg tx... {
+  ctx: {
+    tx: {
+      id: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+      data: <Buffer 01 00 50 9b 39 55 68 ec 39 e5 b8 0b db 18 4b 72 13 51 76 39 90 0c 17 d6 23 cd e2 1f e1 0c c3 73 9f 81 20 88 67 ab e7 41 a5 12 d5 26 ef b1 85 0a 13 83 ... 1293 more bytes>,
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc'
+    },
+    schedLocation: {
+      url: 'https://su19.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    },
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    messageId: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    logId: '2e4cf857f01674d1',
+    dbId: 'f5bfdb583132ff60-1722999916308-f1d33259311a7627',
+    stage: 'build-tx'
+  }
+}
+Done processing message {
+  ctx: {
+    msgs: [],
+    spawns: [],
+    assigns: [],
+    initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+    cuAddress: 'https://cu.ao-testnet.xyz',
+    schedulerTx: {
+      id: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+      timestamp: 1722999916690
+    },
+    tx: {
+      id: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+      data: <Buffer 01 00 50 9b 39 55 68 ec 39 e5 b8 0b db 18 4b 72 13 51 76 39 90 0c 17 d6 23 cd e2 1f e1 0c c3 73 9f 81 20 88 67 ab e7 41 a5 12 d5 26 ef b1 85 0a 13 83 ... 1293 more bytes>,
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc'
+    },
+    schedLocation: {
+      url: 'https://su19.ao-testnet.xyz',
+      address: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    },
+    tagAssignments: [],
+    type: 'MESSAGE',
+    cachedMsg: {
+      msg: [Object],
+      processId: 'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      initialTxId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+      fromProcessId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+    },
+    messageId: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+    processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+    logId: '2e4cf857f01674d1',
+    dbId: 'f5bfdb583132ff60-1722999916308-f1d33259311a7627',
+    stage: 'end'
+  }
+}
+Ending message stream... {
+  logId: '2e4cf857f01674d1',
+  currentLog: {
+    logs: [
+      'Processing task of type MESSAGE',
+      'Checking if id is a wallet gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      'Found id: gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc in cache with value: false',
+      'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Added tx and schedLocation to ctx',
+      'Forwarding message to SU https://su19.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added schedulerTx to ctx',
+      'Selecting cu for process gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      'Added cuAddress to ctx',
+      'https://cu.ao-testnet.xyz/result/zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM?process-id=gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed message'
+    ]
+  },
+  logs: [
+    'Processing task of type MESSAGE',
+    'Checking if id is a wallet gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+    'Found id: gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc in cache with value: false',
+    'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Added tx and schedLocation to ctx',
+    'Forwarding message to SU https://su19.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added schedulerTx to ctx',
+    'Selecting cu for process gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+    'Added cuAddress to ctx',
+    'https://cu.ao-testnet.xyz/result/zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM?process-id=gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc&no-busy=1',
+    [
+      'found redirect url in cache for process: %s redirect: %s',
+      'gtm0mBr5gScA_s2bMKHPffGOxgp2tM7MSLN2ez3Bmvc',
+      'cu126.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed message'
+  ],
+  messageId: 'zS02urY2sZFvqxgs_Vx1MD_G2_tbKeWCOfsPHE8I-UM',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+}
+100 {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+  rest: {},
+  msg: undefined
+}
+Ending message stream... {
+  logId: '683b949ff315cec4',
+  currentLog: {
+    logs: [
+      'Processing task of type SPAWN',
+      'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'Forwarding message to SU https://su-router.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added processTx to the ctx',
+      'Added spawnSuccessTx to ctx',
+      'Forwarding message to SU https://su25.ao-testnet.xyz',
+      'Successfully forwarded DataItem to SU',
+      'Added spawnSuccessSequencerTx to ctx',
+      'https://cu.ao-testnet.xyz/result/AxX4JuZsfWC1AqcEr8dvfQh_ED8twHULtZ8oTD-TLz8?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed spawn'
+    ]
+  },
+  logs: [
+    'Processing task of type SPAWN',
+    'cached process found 33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+    'Forwarding message to SU https://su-router.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added processTx to the ctx',
+    'Added spawnSuccessTx to ctx',
+    'Forwarding message to SU https://su25.ao-testnet.xyz',
+    'Successfully forwarded DataItem to SU',
+    'Added spawnSuccessSequencerTx to ctx',
+    'https://cu.ao-testnet.xyz/result/AxX4JuZsfWC1AqcEr8dvfQh_ED8twHULtZ8oTD-TLz8?process-id=33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk&no-busy=1',
+    [
+      'found redirect url in cache for process: %s redirect: %s',
+      '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+      'cu111.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed spawn'
+  ],
+  messageId: 'oApm31WlhMzPuUegtm8GMRySaqXRG8s0TLqlYldvWxo',
+  processId: '33f8GW206OIBpNE6jrBVXIkoJTSuBecxR3BBikuFhyk',
+  wallet: undefined,
+  parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI'
+}
+100 {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  parentId: 'IdrR3t-u-xyYSnO-n84t6aadt6s6z004J8sFzv0nvzI',
+  rest: {},
+  msg: undefined
+}
+Ending message stream... {
+  logId: 'aab3b7c8aa91e081',
+  currentLog: {
+    logs: [
+      'Processing task of type ASSIGN',
+      'Forwarding Assignment to SU https://su93.ao-testnet.xyz',
+      'Successfully forwarded Assignment to SU',
+      'Added "tx" to ctx',
+      'https://cu.ao-testnet.xyz/result/KwWnTn6WjBv-E9m2VmH3nh68zrDRLuuFBXKTv0B0zWg?process-id=6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw&no-busy=1',
+      [Array],
+      'Added msgs, spawns, and assigns to ctx',
+      'Successfully processed assign'
+    ]
+  },
+  logs: [
+    'Processing task of type ASSIGN',
+    'Forwarding Assignment to SU https://su93.ao-testnet.xyz',
+    'Successfully forwarded Assignment to SU',
+    'Added "tx" to ctx',
+    'https://cu.ao-testnet.xyz/result/KwWnTn6WjBv-E9m2VmH3nh68zrDRLuuFBXKTv0B0zWg?process-id=6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw&no-busy=1',
+    [
+      'found redirect url in cache for process: %s redirect: %s',
+      '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+      'cu132.ao-testnet.xyz'
+    ],
+    'Added msgs, spawns, and assigns to ctx',
+    'Successfully processed assign'
+  ],
+  messageId: 'Z7YKnEw8B3rqOeO0R7aEu7QNc-mof2k-Qlw6pJPklCw',
+  processId: '6fQXu1OPchKjFbG5zpKRmWucrtx7jRiSuNBvsSD1BQw',
+  wallet: undefined,
+  parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI'
+}
+100 {
+  msgs: [],
+  spawns: [],
+  assigns: [],
+  parentId: 'c_gphtvThfTCYPAfv3uRpG_N5Qom0RDwQt3Sp4Ju0AI',
+  rest: {},
+  msg: undefined
+}
 [32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "x-powered-by" to true
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "etag" to 'weak'
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "etag fn" to [Function: generateETag]
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "env" to 'development'
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "query parser" to 'extended'
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "subdomain offset" to 2
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "trust proxy" to false
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "trust proxy fn" to [Function: trustNone]
-Tue, 06 Aug 2024 15:43:13 GMT express:application booting in development mode
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "view" to [Function: View]
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "views" to '/Users/jackfrain/Desktop/ao/servers/mu/views'
-Tue, 06 Aug 2024 15:43:13 GMT express:application set "jsonp callback name" to 'callback'
-Tue, 06 Aug 2024 15:43:13 GMT express:router use '/' query
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router use '/' expressInit
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router use '/' corsMiddleware
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router use '/' jsonParser
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router use '/' rawParser
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route new '/monitor/:processId'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/monitor/:processId'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route post '/monitor/:processId'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route new '/monitor/:processId'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/monitor/:processId'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route delete '/monitor/:processId'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route post '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:route get '/'
-Tue, 06 Aug 2024 15:43:13 GMT express:router:layer new '/'
-2024-08-06T15:43:13.526Z ao-mu Server is running on http://localhost:3004
-2024-08-06T15:43:13.529Z ao-mu Crons initialized
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node -r dotenv/config src/app.js`[39m

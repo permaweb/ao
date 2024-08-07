@@ -49,7 +49,7 @@ export function sendDataItemWith ({
         .bichain(
           (error) => {
             return of(error)
-              .map(logger.tap({ log: ['Initial message failed %s', message.id], options: { messageId: ctx.messageId, processId: ctx.processId } }))
+              .map(() => logger({ log: ['Initial message failed %s', message.id] }, ctx))
               .chain(() => Rejected(error))
           },
           (res) => Resolved(res)
@@ -63,21 +63,25 @@ export function sendDataItemWith ({
           crank: () => of({ ...res, initialTxId: res.tx.id })
             .chain(getCuAddress)
             .chain(pullResult)
-            .chain(({ msgs, spawns, assigns, initialTxId }) => {
+            .chain((ctx) => {
+              console.log('Send Data Item -> Crank', { ctx })
+              const { msgs, spawns, assigns, initialTxId, messageId: parentId } = ctx
               return crank({
                 msgs,
                 spawns,
                 assigns,
-                initialTxId
+                initialTxId,
+                parentId
               })
             })
             .bimap(
+              // TODO: How to I get ctx with msgs, spawns, etc. to the loggers below?
               (res) => {
-                logger({ log: 'Failed to crank messages', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }, ctx)
+                logger({ log: 'Failed to crank messages', end: true }, ctx)
                 return res
               },
               (res) => {
-                logger({ log: 'Cranking complete', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }, ctx)
+                logger({ log: 'Cranking complete', end: true }, ctx)
                 return res
               }
             )
@@ -94,9 +98,8 @@ export function sendDataItemWith ({
       ...res,
       /**
          * There is nothing to crank for a process sent to the MU,
-         *
          * so the crank method will simply noop, keeping the behavior
-         * a black box
+         * a black box - unless there is an Target tag on the spawn.
          */
       crank: () => of({ res })
         .chain(({ res }) => {
@@ -116,8 +119,8 @@ export function sendDataItemWith ({
           })
         }, Resolved)
         .bimap(
-          logger.tap({ log: 'Assignments cranked for Process DataItem.', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }),
-          logger.tap({ log: 'No cranking for a Process DataItem without target required. Nooping...', options: { messageId: ctx.messageId, processId: ctx.processId, end: true } }))
+          logger.tap({ log: 'Assignments cranked for Process DataItem.', end: true }),
+          logger.tap({ log: 'No cranking for a Process DataItem without target required. Nooping...', end: true }))
     }))
 
   return (ctx) => {
