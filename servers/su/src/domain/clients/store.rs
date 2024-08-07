@@ -842,6 +842,7 @@ impl DataStore for StoreClient {
         let new_scheduler = NewScheduler {
             url: &scheduler.url,
             process_count: &scheduler.process_count,
+            no_route: scheduler.no_route.as_ref(),
         };
 
         match diesel::insert_into(schedulers)
@@ -864,6 +865,7 @@ impl DataStore for StoreClient {
             .set((
                 process_count.eq(scheduler.process_count),
                 url.eq(&scheduler.url),
+                no_route.eq(&scheduler.no_route)
             ))
             .execute(conn)
         {
@@ -887,6 +889,7 @@ impl DataStore for StoreClient {
                     row_id: Some(db_scheduler.row_id),
                     url: db_scheduler.url,
                     process_count: db_scheduler.process_count,
+                    no_route: db_scheduler.no_route,
                 };
                 Ok(scheduler)
             }
@@ -908,6 +911,7 @@ impl DataStore for StoreClient {
                     row_id: Some(db_scheduler.row_id),
                     url: db_scheduler.url,
                     process_count: db_scheduler.process_count,
+                    no_route: db_scheduler.no_route,
                 };
                 Ok(scheduler)
             }
@@ -928,6 +932,7 @@ impl DataStore for StoreClient {
                         row_id: Some(db_scheduler.row_id),
                         url: db_scheduler.url,
                         process_count: db_scheduler.process_count,
+                        no_route: db_scheduler.no_route
                     })
                     .collect();
                 Ok(schedulers_out)
@@ -1006,6 +1011,7 @@ pub struct DbScheduler {
     pub row_id: i32,
     pub url: String,
     pub process_count: i32,
+    pub no_route: Option<bool>, 
 }
 
 #[derive(Insertable)]
@@ -1013,6 +1019,7 @@ pub struct DbScheduler {
 pub struct NewScheduler<'a> {
     pub url: &'a str,
     pub process_count: &'a i32,
+    pub no_route: Option<&'a bool>, 
 }
 
 #[derive(Queryable, Selectable)]

@@ -29,6 +29,7 @@ table! {
         row_id -> Int4,
         url -> Varchar,
         process_count -> Int4,
+        no_route -> Nullable<Bool>,
     }
 }
 

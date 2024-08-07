@@ -13,10 +13,12 @@ use tokio::{fs::File, io::AsyncReadExt};
     a file. It is a basic load balancer implementation
 */
 
+#[derive(Debug)]
 pub struct Scheduler {
     pub row_id: Option<i32>,
     pub url: String,
     pub process_count: i32,
+    pub no_route: Option<bool>,
 }
 
 pub struct ProcessScheduler {
@@ -28,6 +30,7 @@ pub struct ProcessScheduler {
 #[derive(Deserialize, Debug)]
 struct SchedulerEntry {
     url: String,
+    no_route: Option<bool>
 }
 
 /*
@@ -57,11 +60,20 @@ pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
                 row_id: None,
                 url: entry.url.clone(),
                 process_count: 0,
+                no_route: entry.no_route,
             };
             deps.data_store.save_scheduler(&scheduler)?;
             deps.logger
                 .log(format!("saved new scheduler: {}", entry.url));
         }
+
+        /*
+          If we no longer what to route any process to this su 
+          we can set no_route to true.
+        */
+        let mut sched = deps.data_store.get_scheduler_by_url(&entry.url)?;
+        sched.no_route = entry.no_route;
+        deps.data_store.update_scheduler(&sched)?;
     }
 
     Ok("schedulers initialized".to_string())
@@ -154,7 +166,13 @@ pub async fn redirect_data_item(
                 new process so we need to generate a
                 process_schedulers record and return the url
             */
-            let mut schedulers = deps.data_store.get_all_schedulers()?;
+            let mut schedulers = deps
+              .data_store
+              .get_all_schedulers()?
+              .into_iter()
+              .filter(|scheduler| scheduler.no_route.unwrap_or(false) == false)
+              .collect::<Vec<_>>();
+              
             if let Some(min_scheduler) = schedulers.iter_mut().min_by_key(|s| s.process_count) {
                 min_scheduler.process_count += 1;
                 deps.data_store.update_scheduler(min_scheduler)?;

@@ -34,7 +34,7 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
 
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
 
-    if config.use_disk {
+    if config.use_disk && config.mode != "router" {
         let logger_clone = logger.clone();
         /*
           sync_bytestore is a blocking routine so we must
