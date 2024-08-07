@@ -8,7 +8,7 @@
 **/data
 *yalc*
 ao-cache*
-trace.sqlite*
+trace*
 wallet.json
 .wallet.json
 procs.json
