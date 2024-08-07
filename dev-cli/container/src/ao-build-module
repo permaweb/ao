@@ -14,30 +14,39 @@ from ao_module_lib.helper import is_lua_source_file, is_c_source_file, is_c_head
 
 from ao_module_lib.languages.c import inject_c_files
 from ao_module_lib.languages.rust import inject_rust_files
-from ao_module_lib.languages.lua import inject_lua_files, LUAROCKS_LOCAL_MODULE_DIR
+from ao_module_lib.languages.lua import inject_lua_files
+from ao_module_lib.libraries import load_libraries, LUAROCKS_LOCAL_MODULE_DIR
 
 
 def determine_language():
-    lang = []
+    lang = 'lua'
+    langs = []
     # Get all source files
     files = glob.glob('/src/**/*', recursive=True)
     # Loop through all files and determine the language
     for file in files:
-        if is_lua_source_file(file) and 'lua' not in lang:
-            lang.append('lua')
-        elif (is_c_source_file(file)) and 'c' not in lang:
-            lang.append('c')
-        elif is_rust_source_file(file) and 'rust' not in lang:
-            lang.append('rust')
+        if is_lua_source_file(file) and 'lua' not in langs:
+            langs.append('lua')
+        elif (is_c_source_file(file)) and 'c' not in langs:
+            langs.append('c')
+        elif is_rust_source_file(file) and 'rust' not in langs:
+            langs.append('rust')
 
     # Check if multiple languages are detected
-    if len(lang) > 1:
-        raise Exception('Multiple languages detected in the module')
-    elif len(lang) == 0:
+    # if len(lang) > 1:
+    #     raise Exception('Multiple languages detected in the module')
+    if len(langs) == 0:
         raise Exception('No language detected in the module')
+    
+    if langs.count('lua') == 0 and langs.count('c') >= 1:
+        lang = 'c'
+    elif langs.count('lua') == 0 and langs.count('rust') >= 1:
+        lang = 'rust'
+    else:
+        lang = 'lua'
 
     # Return the language or default to lua
-    return lang[0] or 'lua'
+    return lang
 
 def main():
     # Load the definition file
@@ -55,11 +64,13 @@ def main():
         c_program = c.read()
 
     link_libraries = []
-    dependencies_libraries = []
-    # Inject c files into c_program if language is c
     c_source_files = []
+    injected_lua_files = []
+    dependency_libraries = []
+    
+    # Inject c files into c_program if language is c
     if(language == 'c'):
-        c_program = inject_c_files(definition, c_program, c_source_files, link_libraries)
+        c_program = inject_c_files(definition, c_program, c_source_files)
     
     # Inject rust files into c_program if language is rust
     if(language == 'rust'):
@@ -67,7 +78,14 @@ def main():
 
     # Inject lua files into c_program always to load lua files and replace placeholders
     if(language == 'lua'):
-        c_program = inject_lua_files(definition, c_program, link_libraries, dependencies_libraries)
+        c_program = inject_lua_files(definition, c_program, injected_lua_files)
+    
+    # Load all libraries
+    c_program = load_libraries(definition, c_program, link_libraries, c_source_files, injected_lua_files,dependency_libraries)
+                    
+    # Inject the lua files into the c program
+    c_program = c_program.replace(
+        '__INJECT_LUA_FILES__', '\n'.join(injected_lua_files))
     
     #Generate compile target file
     debug_print('Start to generate complie.c')
@@ -119,12 +137,14 @@ def main():
     # Add the compile file and link libraries
     cmd.extend(['/tmp/compile.c', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
     cmd.extend([quote(v.filepath) for v in link_libraries])
+    cmd.extend([quote(v.filepath) for v in dependency_libraries])
+    cmd.extend(config.get_extra_args())
 
     # Export the main function and malloc for the runtime
     cmd.extend(['-s', 'EXPORTED_FUNCTIONS=["_malloc", "_main"]'])
 
     # Export the runtime methods cwrap
-    cmd.extend(['-lm', '-ldl', '-o', definition.get_output_file(), '-s', 'EXPORTED_RUNTIME_METHODS=["cwrap", "ccall", "UTF8ToString", "lengthBytesUTF8", "FS"]'])
+    cmd.extend(['-lm', '-ldl', '-o', definition.get_output_file(), '-s', 'EXPORTED_RUNTIME_METHODS=["cwrap"]'])
 
     debug_print('Compile command is {}'.format(' '.join(cmd)))
     shell_exec(*cmd)
@@ -132,7 +152,8 @@ def main():
     # add metering library
     # meter_cmd = ['node', '/opt/node/apply-metering.cjs']
     # shell_exec(*meter_cmd)
-    shell_exec(*['rm', os.path.join(os.getcwd(), 'process.js')])
+    if config.keep_js is False:
+        shell_exec(*['rm', os.path.join(os.getcwd(), 'process.js')])
 
 if __name__ == '__main__':
     main()
