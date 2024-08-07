@@ -35,14 +35,14 @@ export function writeMessageTxWith (env) {
 
       if (!checkStage('write-message-su')(ctx)) return Resolved(ctx)
 
-      return writeDataItem({ suUrl: ctx.schedLocation.url, data: ctx.tx.data.toString('base64') })
+      return writeDataItem({ suUrl: ctx.schedLocation.url, data: ctx.tx.data.toString('base64'), logId: ctx.logId })
         .map(assoc('schedulerTx', __, ctx))
         .map(ctxSchema.parse)
         .bimap(
           (e) => {
             return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
           },
-          logger.tap('Added "schedulerTx" to ctx')
+          logger.tap({ log: 'Added schedulerTx to ctx' })
         )
     } else {
       ctx = setStage('write-message', 'write-message-arweave')(ctx)
@@ -56,7 +56,7 @@ export function writeMessageTxWith (env) {
           (e) => {
             return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
           },
-          logger.tap('Added "arweaveTx" to ctx')
+          logger.tap({ log: 'Added "arweaveTx" to ctx' })
         )
     }
   }

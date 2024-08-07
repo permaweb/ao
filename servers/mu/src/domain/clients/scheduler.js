@@ -9,18 +9,20 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeDataItem'
-    })
+    }),
+    logger
   })
   const suRedirectFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeDataItemWithRedirect'
-    })
+    }),
+    logger
   })
-  return async ({ data, suUrl }) => {
+  return async ({ data, suUrl, logId }) => {
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap(`Forwarding message to SU ${suUrl}`))
+      .map(logger.tap({ log: `Forwarding message to SU ${suUrl}`, logId }))
       .chain(
         fromPromise((body) =>
           suFetch(suUrl, {
@@ -52,7 +54,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           })
         )
       )
-      .bimap(logger.tap('Error while communicating with SU:'), identity)
+      .bimap(logger.tap({ log: 'Error while communicating with SU:', logId }), identity)
       .bichain(
         (err) => Rejected(err),
         fromPromise(async (res) => {
@@ -63,7 +65,7 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           return res.json()
         })
       )
-      .map(logger.tap('Successfully forwarded DataItem to SU'))
+      .map(logger.tap({ log: 'Successfully forwarded DataItem to SU', logId }))
       .toPromise()
   }
 }
@@ -74,18 +76,20 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignment'
-    })
+    }),
+    logger
   })
   const suRedirectFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignmentWithRedirect'
-    })
+    }),
+    logger
   })
-  return async ({ txId, processId, baseLayer, exclude, suUrl }) => {
-    return of({ txId, processId, baseLayer, exclude, suUrl })
-      .map(logger.tap(`Forwarding Assignment to SU ${suUrl}`))
+  return async ({ txId, processId, baseLayer, exclude, suUrl, logId }) => {
+    return of({ txId, processId, baseLayer, exclude, suUrl, logId })
+      .map(logger.tap({ log: `Forwarding Assignment to SU ${suUrl}`, logId }))
       .chain(
         fromPromise(({ txId, processId, baseLayer, exclude, suUrl }) => {
           let url = `${suUrl}/?process-id=${processId}&assign=${txId}`
@@ -114,6 +118,7 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
               maxRetries: 5,
               delay: 500,
               log: logger,
+              logId,
               name: `forwardAssignment(${JSON.stringify({
                 suUrl,
                 processId,
@@ -146,10 +151,10 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
       )
       .bimap(
         (e) => {
-          logger.tap('Error while communicating with SU:')(e)
+          logger({ log: 'Error while communicating with SU:', logId })
           return new Error(e)
         },
-        logger.tap('Successfully forwarded Assignment to SU')
+        logger.tap({ log: 'Successfully forwarded Assignment to SU', logId })
       )
       .toPromise()
   }
@@ -167,17 +172,18 @@ function fetchSchedulerProcessWith ({
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'writeAssignmentWithRedirect'
-    })
+    }),
+    logger
   })
-  return (processId, suUrl) => {
+  return (processId, suUrl, logId) => {
     return getByProcess(processId)
       .then((cached) => {
         if (cached) {
-          logger(`cached process found ${processId}`)
+          logger({ log: `cached process found ${processId}`, logId })
           return cached
         }
 
-        logger(`${suUrl}/processes/${processId}`)
+        logger({ log: `${suUrl}/processes/${processId}`, logId })
 
         return suFetch(`${suUrl}/processes/${processId}`)
           .then((res) => res.json())
@@ -188,7 +194,7 @@ function fetchSchedulerProcessWith ({
           })
       })
       .catch((e) => {
-        logger(`error fetching process ${e}`)
+        logger({ log: `error fetching process ${e}`, logId })
       })
   }
 }

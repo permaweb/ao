@@ -33,8 +33,26 @@ function retriesMessageHandler (payload, gauge) {
 function errorStageMessageHandler (payload, gauge) {
   gauge.inc({ stage: payload.stage, type: payload.type })
 }
+function logMessageHandler (payload, logger) {
+  let { namespace, message, args } = payload
 
-export function handleWorkerMetricsMessage ({ retriesGauge, stageGauge, maximumQueueArray, maximumQueueTimeArray }) {
+  // Set default namespace if undefined
+  namespace = namespace || 'default'
+  const loggerNamespace = logger.namespace
+
+  // Check if the payload namespace matches the logger's namespace
+  let logFunction
+  if (namespace === loggerNamespace) {
+    logFunction = logger
+  } else {
+    const childNamespace = namespace.split(':').pop()
+    logFunction = logger.child(childNamespace)
+  }
+
+  logFunction(message, ...args)
+}
+
+export function handleWorkerMetricsMessage ({ retriesGauge, stageGauge, maximumQueueArray, maximumQueueTimeArray, logger }) {
   return ({ payload }) => {
     if (payload.purpose === 'queue-size') {
       queueMessageHandler(payload, maximumQueueArray, maximumQueueTimeArray)
@@ -44,6 +62,9 @@ export function handleWorkerMetricsMessage ({ retriesGauge, stageGauge, maximumQ
     }
     if (payload.purpose === 'error-stage') {
       errorStageMessageHandler(payload, stageGauge)
+    }
+    if (payload.purpose === 'log') {
+      logMessageHandler(payload, logger)
     }
   }
 }

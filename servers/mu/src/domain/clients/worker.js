@@ -1,21 +1,50 @@
 import { worker } from 'workerpool'
 import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { of } from 'hyper-async'
-import { cond, equals, propOr } from 'ramda'
+import { cond, equals, propOr, tap } from 'ramda'
 import cron from 'node-cron'
 
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
 import { domainConfigSchema, config } from '../../config.js'
-import { logger } from '../../logger.js'
+// Without this import the worker crashes
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
+import { randomBytes } from 'node:crypto'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
+
+/*
+ * Here we create a logger and inject it, this logger has the
+ * same interface as the other one however instead of writing
+ * to stdout it sends all the logs back to the main thread
+ * using the broadcast channel.
+*/
+function createBroadcastLogger ({ namespace, config }) {
+  const loggerBroadcast = (note, ...args) => {
+    broadcastChannel.postMessage({
+      purpose: 'log',
+      namespace,
+      message: note,
+      args
+    })
+  }
+
+  loggerBroadcast.child = (name) => {
+    return createBroadcastLogger({ namespace: `${namespace}:${name}`, config })
+  }
+
+  loggerBroadcast.tap = (note, ...rest) =>
+    tap((...args) => loggerBroadcast(note, ...rest, ...args))
+
+  return loggerBroadcast
+}
+
+const broadcastLogger = createBroadcastLogger({ namespace: 'mu-worker-broadcast', config })
 
 export const domain = {
   ...(domainConfigSchema.parse(config)),
   fetch,
-  logger
+  logger: broadcastLogger
 }
 
 /**
@@ -59,13 +88,16 @@ export function processResultWith ({
       /**
        * Here we enqueue further result sets that
        * were themselves the result of running the
-       * processing functions above
+       * processing functions above. We also pass a
+       * parentId and processId for logging purposes
        */
       .chain((res) => {
         enqueueResults({
           msgs: propOr([], 'msgs', res),
           spawns: propOr([], 'spawns', res),
-          assigns: propOr([], 'assigns', res)
+          assigns: propOr([], 'assigns', res),
+          parentId: propOr(undefined, 'parentId', res),
+          processId: propOr(undefined, 'processId', res)
         })
         return of(res)
       })
@@ -77,20 +109,30 @@ export function processResultWith ({
  * Push results onto the queue and separate
  * them out by type so they can be individually
  * operated on by the worker. Also structure them
- * correctly for input into the business logic
+ * correctly for input into the business logic.
+ * messageId, processId, parentId, and logId have been
+ * added for log tracing purposes.
  */
 export function enqueueResultsWith ({ enqueue }) {
-  return ({ msgs, spawns, assigns }) => {
+  return ({ msgs, spawns, assigns, initialTxId, parentId, processId, ...rest }) => {
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',
         cachedMsg: msg,
-        initialTxId: msg.initialTxId
+        initialTxId: msg.initialTxId,
+        messageId: msg.initialTxId,
+        processId: msg.fromProcessId,
+        parentId: msg.parentId,
+        logId: randomBytes(8).toString('hex')
       })),
       ...spawns.map(spawn => ({
         type: 'SPAWN',
         cachedSpawn: spawn,
-        initialTxId: spawn.initialTxId
+        initialTxId: spawn.initialTxId,
+        messageId: spawn.initialTxId,
+        processId: spawn.processId,
+        parentId: spawn.parentId,
+        logId: randomBytes(8).toString('hex')
       })),
       ...assigns.flatMap(assign => assign.Processes.map(
         (pid) => ({
@@ -100,7 +142,11 @@ export function enqueueResultsWith ({ enqueue }) {
             processId: pid,
             baseLayer: assign.BaseLayer === true ? '' : null,
             exclude: assign.Exclude && assign.Exclude.length > 0 ? assign.Exclude.join(',') : null
-          }
+          },
+          messageId: assign.Message,
+          processId,
+          parentId,
+          logId: randomBytes(8).toString('hex')
         })
       ))
     ]
@@ -119,35 +165,41 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
     while (true) {
       const result = dequeue()
       if (result) {
-        logger(`Processing task of type ${result.type}`)
+        logger({ log: `Processing task of type ${result.type}` }, result)
         processResult(result).then((ctx) => {
+          /**
+           * After successfully processing result,
+           * broadcast retries metric.
+           */
           broadcastChannel.postMessage({
             purpose: 'task-retries',
             retries: ctx.retries ?? 0,
             status: 'success'
           })
         }).catch((e) => {
-          logger(`Result failed with error ${e}, will not recover`)
-          logger(e)
-          /**
-           * Upon failure, we want to add back to the task queue
-           * our task with its progress (ctx). This progress is passed
-           * down in the cause object of the error.
-           *
-           * After some time, enqueue the task again and increment retries.
-           * Upon maximum retries, finish.
-           */
-          const ctx = e.cause ?? {}
+          const ctx = e.cause
           const retries = ctx.retries ?? 0
           const stage = ctx.stage
           const type = result.type
+
+          logger({ log: `Result failed with error ${e}, will not recover`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)
           broadcastChannel.postMessage({
             purpose: 'error-stage',
             stage,
             type
           })
+
+          /**
+           * Upon failure, we want to add back to the task queue
+           * our task with its progress (ctx). This progress is passed
+           * down in the cause object of the error.
+          *
+          * After some time, enqueue the task again and increment retries.
+          * Upon maximum retries, finish.
+          */
           setTimeout(() => {
-            if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end') {
+            if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end' && ctx) {
+              logger({ log: `Retrying process task of type ${result.type}, attempt ${retries + 1}`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)
               enqueue({ ...ctx, retries: retries + 1 })
             } else {
               broadcastChannel.postMessage({
@@ -176,11 +228,11 @@ function broadcastEnqueueWith ({ enqueue, queue }) {
   }
 }
 
-const db = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false })
+const db = await createSqliteClient({ url: workerData.DB_URL, bootstrap: false, type: 'tasks' })
 const queue = await createTaskQueue({
   queueId: workerData.queueId,
   db,
-  logger
+  logger: broadcastLogger
 })
 
 /**
@@ -198,9 +250,9 @@ setInterval(() => {
  */
 const dequeuedTasks = new Set()
 
-const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger, db })
+const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger: broadcastLogger, db })
 const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue })
-const dequeue = dequeueWith({ queue, logger, dequeuedTasks })
+const dequeue = dequeueWith({ queue, logger: broadcastLogger, dequeuedTasks })
 const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
 
 const enqueueResults = enqueueResultsWith({
@@ -208,7 +260,7 @@ const enqueueResults = enqueueResultsWith({
 })
 
 const processResult = processResultWith({
-  logger,
+  logger: broadcastLogger,
   enqueueResults,
   processMsg,
   processSpawn,
@@ -219,7 +271,7 @@ const processResults = processResultsWith({
   enqueue: broadcastEnqueue,
   dequeue,
   processResult,
-  logger,
+  logger: broadcastLogger,
   TASK_QUEUE_MAX_RETRIES: workerData.TASK_QUEUE_MAX_RETRIES,
   TASK_QUEUE_RETRY_DELAY: workerData.TASK_QUEUE_RETRY_DELAY
 })

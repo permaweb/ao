@@ -19,7 +19,7 @@ export function withTimerMetrics ({ timer, startLabelsFrom = always({}), stopLab
       try {
         return stop(...args)
       } catch (e) {
-        logger('METRICS ERROR: Error encountered when stopping timer, skipping metric observance.', e)
+        logger({ log: ['METRICS ERROR: Error encountered when stopping timer, skipping metric observance.', e] })
         throw e
       }
     })

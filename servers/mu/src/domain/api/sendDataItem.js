@@ -49,7 +49,7 @@ export function sendDataItemWith ({
         .bichain(
           (error) => {
             return of(error)
-              .map(logger.tap('Initial message failed %s', message.id))
+              .map(() => logger({ log: ['Initial message failed %s', message.id] }, ctx))
               .chain(() => Rejected(error))
           },
           (res) => Resolved(res)
@@ -63,15 +63,25 @@ export function sendDataItemWith ({
           crank: () => of({ ...res, initialTxId: res.tx.id })
             .chain(getCuAddress)
             .chain(pullResult)
-            .chain(({ msgs, spawns, assigns, initialTxId }) => crank({
-              msgs,
-              spawns,
-              assigns,
-              initialTxId
-            }))
+            .chain((ctx) => {
+              const { msgs, spawns, assigns, initialTxId, messageId: parentId } = ctx
+              return crank({
+                msgs,
+                spawns,
+                assigns,
+                initialTxId,
+                parentId
+              })
+            })
             .bimap(
-              logger.tap('Failed to crank messages'),
-              logger.tap('Cranking complete')
+              (res) => {
+                logger({ log: 'Failed to crank messages', end: true }, ctx)
+                return res
+              },
+              (res) => {
+                logger({ log: 'Cranking complete', end: true }, ctx)
+                return res
+              }
             )
         }))
     )
@@ -86,9 +96,8 @@ export function sendDataItemWith ({
       ...res,
       /**
          * There is nothing to crank for a process sent to the MU,
-         *
          * so the crank method will simply noop, keeping the behavior
-         * a black box
+         * a black box - unless there is an Target tag on the spawn.
          */
       crank: () => of({ res })
         .chain(({ res }) => {
@@ -108,8 +117,15 @@ export function sendDataItemWith ({
           })
         }, Resolved)
         .bimap(
-          logger.tap('Assignments cranked for Process DataItem.'),
-          logger.tap('No cranking for a Process DataItem without target required. Nooping...'))
+          (res) => {
+            logger({ log: 'Assignments cranked for Process DataItem.', end: true }, ctx)
+            return res
+          },
+          (res) => {
+            logger({ log: 'No cranking for a Process DataItem without target required. Nooping...', end: true }, ctx)
+            return res
+          }
+        )
     }))
 
   return (ctx) => {

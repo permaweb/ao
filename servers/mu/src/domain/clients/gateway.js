@@ -14,20 +14,21 @@ function isWalletWith ({
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'isWallet'
-    })
+    }),
+    logger
   })
 
-  return async (id) => {
-    logger(`Checking if id is a wallet ${id}`)
+  return async (id, logId) => {
+    logger({ log: `Checking if id is a wallet ${id}`, logId })
 
     const cachedIsWallet = await getById(id)
 
     if (cachedIsWallet !== null && cachedIsWallet !== undefined) {
-      logger(`Found id: ${id} in cache with value: ${cachedIsWallet.isWallet}`)
+      logger({ log: `Found id: ${id} in cache with value: ${cachedIsWallet.isWallet}`, logId })
       return cachedIsWallet.isWallet
     }
 
-    logger(`id: ${id} not cached checking arweave for tx`)
+    logger({ log: `id: ${id} not cached checking arweave for tx`, logId })
 
     /*
       Only if this is actually a tx will this
@@ -42,6 +43,7 @@ function isWalletWith ({
         maxRetries: 3,
         delay: 500,
         log: logger,
+        logId,
         name: `isWallet(${id})`
       }
     )

@@ -8,7 +8,7 @@ const ctxSchema = z.object({
 
 export function getCuAddressWith ({ selectNode, logger }) {
   return (ctx) => {
-    return of(ctx.tx.processId)
+    return of({ processId: ctx.tx.processId, logId: ctx.logId })
       .chain(fromPromise(selectNode))
       .map(assoc('cuAddress', __, ctx))
       .map(ctxSchema.parse)
@@ -18,6 +18,6 @@ export function getCuAddressWith ({ selectNode, logger }) {
         },
         identity
       )
-      .map(logger.tap('Added "cuAddress" to ctx'))
+      .map(logger.tap({ log: 'Added cuAddress to ctx' }))
   }
 }

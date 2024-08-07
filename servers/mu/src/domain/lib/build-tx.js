@@ -21,14 +21,15 @@ export function buildTxWith (env) {
 
   return (ctx) => {
     if (!checkStage('build-tx')(ctx)) return Resolved(ctx)
-    return isWallet(ctx.cachedMsg.processId)
+    return isWallet(ctx.cachedMsg.processId, ctx.logId)
       .chain(
         (isWalletId) => {
           return locateProcess(ctx.cachedMsg.fromProcessId)
             .chain(
               (fromSchedLocation) => fetchSchedulerProcess(
                 ctx.cachedMsg.fromProcessId,
-                fromSchedLocation.url
+                fromSchedLocation.url,
+                ctx.logId
               )
                 .map((schedulerResult) => ({
                   fromProcessSchedData: schedulerResult
@@ -103,15 +104,15 @@ export function buildTxWith (env) {
           })
       )
       .map((res) => {
-        // add tx and schedLocation to the result
-        return { ...ctx, ...res }
+        // add tx and schedLocation to the result, overwrite messageId as txId
+        return { ...ctx, ...res, messageId: res.tx.id }
       })
       .map(ctxSchema.parse)
       .bimap(
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap('Added tx and schedLocation to ctx')
+        logger.tap({ log: 'Added tx and schedLocation to ctx' })
       )
   }
 }

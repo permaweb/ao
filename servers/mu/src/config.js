@@ -53,6 +53,7 @@ export const domainConfigSchema = z.object({
   CRON_CURSOR_DIR: z.string(),
   MAX_WORKERS: positiveIntSchema,
   DB_URL: z.string(),
+  TRACE_DB_URL: z.string(),
   TASK_QUEUE_MAX_RETRIES: z.number(),
   TASK_QUEUE_RETRY_DELAY: z.number()
 })
@@ -95,6 +96,7 @@ const CONFIG_ENVS = {
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
     DB_URL: process.env.DB_URL || 'ao-cache',
+    TRACE_DB_URL: process.env.TRACE_DB_URL || 'trace',
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
   },
@@ -114,6 +116,7 @@ const CONFIG_ENVS = {
     CRON_CURSOR_DIR: process.env.CRON_CURSOR_DIR || tmpdir(),
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
     DB_URL: process.env.DB_URL || 'ao-cache',
+    TRACE_DB_URL: process.env.TRACE_DB_URL || 'trace',
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000
   }

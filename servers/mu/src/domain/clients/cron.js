@@ -58,7 +58,8 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     timer: histogram,
     startLabelsFrom: () => ({
       operation: 'getCursor'
-    })
+    }),
+    logger
   })
   return async ({ processId }) => {
     if (cronsRunning[processId]) {
@@ -123,9 +124,9 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
         })
           .toPromise()
           .then((res) => {
-            logger(`Cron results sent to worker: ${res}`)
+            logger({ log: `Cron results sent to worker: ${res}` })
           }).catch((e) => {
-            logger(`Error sending cron results to worker ${e}`)
+            logger({ log: `Error sending cron results to worker ${e}` })
           })
       })
       return result
@@ -165,7 +166,7 @@ function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge, saveP
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
     if (!ct) {
-      logger(`Cron process not found: ${processId}`)
+      logger({ log: `Cron process not found: ${processId}` })
       throw new Error('Process monitor not found')
     }
     monitorGauge.dec()
@@ -173,7 +174,7 @@ function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge, saveP
     delete cronsRunning[processId]
     delete procsToSave[processId]
     await saveProcs(PROC_FILE_PATH)
-    logger(`Cron process stopped: ${processId}`)
+    logger({ log: `Cron process stopped: ${processId}` })
   }
 }
 

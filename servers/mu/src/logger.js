@@ -1,3 +1,9 @@
-import { createLogger } from './domain/index.js'
+import { createLogger } from './domain/logger.js'
+import { domainConfigSchema, config } from './config.js'
 
-export const logger = createLogger('ao-mu')
+const activeTraces = new Map()
+export const logger = await createLogger({
+  namespace: 'ao-mu',
+  config: domainConfigSchema.parse(config),
+  activeTraces
+})

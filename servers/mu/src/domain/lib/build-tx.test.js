@@ -1,10 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { buildTxWith } from './build-tx.js'
 
-const logger = createLogger('ao-mu:processMsg')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 // this is not what the buildAndSign actually returns
 // using tags here as data for testing

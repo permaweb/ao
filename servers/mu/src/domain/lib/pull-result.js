@@ -15,7 +15,7 @@ function fetchResultWith ({ fetchResult }) {
   return (ctx) => {
     return of(ctx)
       .chain(() => {
-        return fetchResultAsync(ctx.tx.id, ctx.tx.processId)
+        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId)
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {
@@ -23,7 +23,8 @@ function fetchResultWith ({ fetchResult }) {
             msg,
             processId: msg.Target,
             initialTxId: ctx.initialTxId,
-            fromProcessId: ctx.tx.processId
+            fromProcessId: ctx.tx.processId,
+            parentId: ctx.messageId ?? ctx.initialTxId
           }
         })
 
@@ -31,7 +32,9 @@ function fetchResultWith ({ fetchResult }) {
           return {
             spawn,
             processId: ctx.tx.processId,
-            initialTxId: ctx.initialTxId
+            initialTxId: ctx.initialTxId,
+            fromProcessId: ctx.processId,
+            parentId: ctx.messageId ?? ctx.initialTxId
           }
         })
 
@@ -70,7 +73,7 @@ export function pullResultWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap('Added "msgs, spawns, and assigns" to ctx')
+        logger.tap({ log: 'Added msgs, spawns, and assigns to ctx' })
       )
   }
 }

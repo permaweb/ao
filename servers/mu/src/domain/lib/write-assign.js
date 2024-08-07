@@ -21,7 +21,8 @@ export function writeAssignWith (env) {
       txId: ctx.assign.txId,
       processId: ctx.assign.processId,
       baseLayer: ctx.assign.baseLayer,
-      exclude: ctx.assign.exclude
+      exclude: ctx.assign.exclude,
+      logId: ctx.logId
     })
     /*
             return the tx in this shape so we can pull
@@ -41,7 +42,7 @@ export function writeAssignWith (env) {
         (e) => {
           return new Error(e, { cause: ctx })
         },
-        logger.tap('Added "tx" to ctx')
+        logger.tap({ log: 'Added "tx" to ctx' })
       )
   }
 }

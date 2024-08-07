@@ -1,26 +1,31 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { pullResultWith } from './pull-result.js'
 
-const logger = createLogger('ao-mu:processMsg')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('pullResultWith', () => {
   test('fetch result by transaction id', async () => {
-    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }], Target: 'pid-1' }
+    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }], Target: 'target-pid' }
     const spawn1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
     const assign1 = { Processes: ['p1'], Message: 'm1' }
     const cachedMsg1 = {
       msg: msg1,
-      fromProcessId: 'pid-1',
-      processId: 'pid-1',
-      initialTxId: 'i-1'
+      fromProcessId: 'from-pid',
+      processId: 'target-pid',
+      initialTxId: 'i-1',
+      parentId: 'i-1'
     }
     const cachedSpawn1 = {
       spawn: spawn1,
-      processId: 'pid-1',
-      initialTxId: 'i-1'
+      processId: 'from-pid',
+      initialTxId: 'i-1',
+      parentId: 'i-1',
+      fromProcessId: 'from-pid'
     }
     const pullResult = pullResultWith({
       fetchResult: async (id) => {
@@ -37,9 +42,10 @@ describe('pullResultWith', () => {
     const result = await pullResult({
       tx: {
         id: 'id-1',
-        processId: 'pid-1'
+        processId: 'from-pid'
       },
       initialTxId: 'i-1',
+      processId: 'from-pid',
       tagAssignments: [{ Processes: ['p2'], Message: 'm2' }]
     }).toPromise()
 

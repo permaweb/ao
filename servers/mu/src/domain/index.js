@@ -17,6 +17,7 @@ import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
 import cronClient, { saveProcsWith } from './clients/cron.js'
+import { readTracesWith } from './clients/tracer.js'
 
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
@@ -99,7 +100,7 @@ export const createApis = async (ctx) => {
   const setByProcess = InMemoryClient.setByProcessWith({ cache })
 
   /**
-   * TODO: I don't really like implictly doing this,
+   * TODO: I don't really like implicitly doing this,
    * but works for now.
    */
   const _metrics = MetricsClient.initializeRuntimeMetricsWith({})()
@@ -111,7 +112,11 @@ export const createApis = async (ctx) => {
 
   // Create database client
   const DB_URL = `${ctx.DB_URL}.sqlite`
-  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
+  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true, type: 'tasks' })
+
+  // Create log database client
+  const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
+  const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
 
   /**
    * Select queue ids from database on startup.
@@ -139,7 +144,7 @@ export const createApis = async (ctx) => {
         queueId = queueIds.shift()
       }
       const workerId = randomBytes(8).toString('hex')
-      ctx.logger('Starting worker with id "%s", queue id "%s"...', workerId, queueId)
+      ctx.logger({ log: `Starting worker with id "${workerId}", queue id "${queueId}"...` })
       return {
         workerThreadOpts: {
           workerData: {
@@ -155,7 +160,15 @@ export const createApis = async (ctx) => {
   })
 
   const broadcastChannel = new BroadcastChannel('mu-worker')
-  broadcastChannel.onmessage = (event) => handleWorkerMetricsMessage({ retriesGauge: taskRetriesGauge, stageGauge: errorStageGauge, maximumQueueArray, maximumQueueTimeArray })({ payload: event.data })
+  const broadcastLogger = logger.child('workerQueueBroadcast')
+
+  broadcastChannel.onmessage = (event) => handleWorkerMetricsMessage({
+    retriesGauge: taskRetriesGauge,
+    stageGauge: errorStageGauge,
+    maximumQueueArray,
+    maximumQueueTimeArray,
+    logger: broadcastLogger
+  })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
     return workerPool.exec('enqueueResults', results)
@@ -228,6 +241,8 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
+  const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL }))
+
   return {
     metrics,
     sendDataItem,
@@ -235,6 +250,7 @@ export const createApis = async (ctx) => {
     stopMonitorProcess,
     sendAssign,
     fetchCron,
+    traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
       readProcFile: () => {
@@ -260,9 +276,9 @@ export const createApis = async (ctx) => {
 }
 
 /**
- * A seperate set of apis used by the worker
- * to process results. These are seperate because
- * we dont want the worker to initialize the same
+ * A separate set of apis used by the worker
+ * to process results. These are separate because
+ * we don't want the worker to initialize the same
  * apis that create another worker pool.
  */
 export const createResultApis = async (ctx) => {
@@ -294,6 +310,7 @@ export const createResultApis = async (ctx) => {
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
+    logger: processMsgLogger,
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: processMsgLogger }),
     createDataItem,
     locateScheduler: raw,
@@ -302,7 +319,6 @@ export const createResultApis = async (ctx) => {
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
-    logger,
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram })
   })
@@ -321,7 +337,7 @@ export const createResultApis = async (ctx) => {
 
   const processAssignLogger = logger.child('processAssign')
   const processAssign = processAssignWith({
-    logger: processSpawnLogger,
+    logger: processAssignLogger,
     locateProcess: locate,
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processAssignLogger }),
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: processAssignLogger })

@@ -22,7 +22,7 @@ export function processSpawnWith ({
   const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign, fetchSchedulerProcess })
   const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
   const sendSpawnSuccess = sendSpawnSuccessWith({ logger, writeDataItem, locateProcess })
-  const pullResult = pullResultWith({ fetchResult, logger })
+  const pullResult = pullResultWith({ logger, fetchResult })
 
   return (ctx) => {
     return of(ctx)
@@ -39,7 +39,7 @@ export function processSpawnWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        logger.tap('processSpawnSuccess')
+        logger.tap({ log: 'Successfully processed spawn', end: true })
       )
   }
 }

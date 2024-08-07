@@ -1,10 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { writeProcessTxWith } from './write-process-tx.js'
 
-const logger = createLogger('ao-mu:processMsg')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('writeProcessTxWith', () => {
   test('write a tx to the scheduler', async () => {

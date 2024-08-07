@@ -1,11 +1,13 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { sendDataItemWith } from './sendDataItem.js'
 import { Resolved } from 'hyper-async'
 
-const logger = createLogger('ao-mu:sendDataItem')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('sendDataItemWith', () => {
   describe('Send Data Item', () => {

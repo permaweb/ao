@@ -1,10 +1,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
 import { processAssignWith } from './processAssign.js'
 
-const logger = createLogger('ao-mu:processAssign')
+const logger = () => undefined
+logger.tap = () => (args) => {
+  return args
+}
 
 describe('processAssignWith', () => {
   test('process assignment result', async () => {

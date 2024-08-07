@@ -189,7 +189,7 @@ export function eqOrIncludes (val) {
  */
 export const backoff = (
   fn,
-  { maxRetries = 3, delay = 500, log, name }
+  { maxRetries = 3, delay = 500, log, logId, name }
 ) => {
   /**
    * Recursive function that recurses with exponential backoff
@@ -200,7 +200,7 @@ export const backoff = (
       .catch((err) => {
         // Reached max number of retries
         if (retry >= maxRetries) {
-          log(`(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`)
+          log({ log: `(${name}) Reached max number of retries: ${maxRetries}. Bubbling err`, logId })
           return Promise.reject(err)
         }
 
@@ -209,7 +209,7 @@ export const backoff = (
          */
         const newRetry = retry + 1
         const newDelay = delay + delay
-        log(`(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`)
+        log({ log: `(${name}) Backing off -- retry ${newRetry} starting in ${newDelay} milliseconds...`, logId })
         /**
          * Retry in {delay} milliseconds
          */

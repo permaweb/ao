@@ -10,7 +10,7 @@ import { TASKS_TABLE } from './sqlite.js'
  *
  */
 export async function createTaskQueue ({ queueId, logger, db }) {
-  logger(`Initializing queue for queue index ${queueId}`)
+  logger({ log: `Initializing queue for queue index ${queueId}` })
   function createQuery () {
     return {
       sql: `

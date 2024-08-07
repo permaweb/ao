@@ -10,6 +10,6 @@ export function resolveSchedulerWith (env) {
   const { logger } = env
   return (ctx) => {
     return of(ctx)
-      .map(logger.tap('Resolved Scheduler'))
+      .map(logger.tap({ log: 'Resolved Scheduler' }))
   }
 }

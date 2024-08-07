@@ -69,7 +69,8 @@ export function spawnProcessWith (env) {
                 .chain(findModuleTag) // just needs to throw an error if not there
                 .chain(() => fetchSchedulerProcess(
                   ctx.cachedSpawn.processId,
-                  schedulerResult.url
+                  schedulerResult.url,
+                  ctx.logId
                 ))
                 .map((process) => {
                   /**
@@ -103,7 +104,8 @@ export function spawnProcessWith (env) {
                 .chain(findModuleTag) // just needs to throw an error if not there
                 .chain(() => fetchSchedulerProcess(
                   ctx.cachedSpawn.processId,
-                  schedulerResult.url
+                  schedulerResult.url,
+                  ctx.logId
                 ))
                 .map((process) => {
                   /**
@@ -131,10 +133,11 @@ export function spawnProcessWith (env) {
             })
         })
       .chain(({ schedulerResult, signedData }) => {
-        return writeDataItem({ suUrl: schedulerResult.url, data: signedData.data.toString('base64') })
+        return writeDataItem({ suUrl: schedulerResult.url, data: signedData.data.toString('base64'), logId: ctx.logId })
           .map((result) => { return { id: signedData.id, block: result.block, timestamp: result.timestamp } })
           .map((r) => assoc('processTx', r.id, ctx))
-          .map(logger.tap('Added processTx to the ctx '))
+          .map((ctx) => assoc('messageId', ctx.processTx, ctx))
+          .map(logger.tap({ log: 'Added processTx to the ctx' }))
       })
       .bimap(
         (e) => {
