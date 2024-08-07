@@ -55,10 +55,7 @@ export function processMsgWith ({
         (e) => {
           return new Error(e, { cause: e.cause })
         },
-        (ctx) => {
-          logger({ log: 'Successfully processed message', end: true }, ctx)
-          return ctx
-        }
+        logger.tap({ log: 'Successfully processed message', end: true })
       )
   }
 }

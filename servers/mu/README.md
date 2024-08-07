@@ -42,7 +42,8 @@ There are a few environment variables that you can set:
   to use to sign messages that it is pushing
 - `DEBUG`: if DEBUG=* or DEBUG=ao-mu* then verbose debug logs will be provided in the console.
 - `UPLOADER_URL`: URL to upload service (defaults to https://up.arweave.net)
-- `DB_URL`: URL to local sqlite database.
+- `DB_URL`: URL to local sqlite database containing enqueued tasks.
+- `TRACE_DB_URL`: URL to local sqlite database containing message log traces.
 - `TASK_QUEUE_MAX_RETRIES`: The amount of attempts for the tasks queue to process a message.
 - `TASK_QUEUE_RETRY_DELAY`: The retry in between each attempt to process a message in the task queue.
 

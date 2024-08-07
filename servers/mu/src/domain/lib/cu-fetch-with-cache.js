@@ -21,7 +21,7 @@ export function cuFetchWithCache ({ fetch, cache, logger }) {
         logger({ log: ['inserting cu redirect into cache for process: %s redirect: %s', processId, redirectURL.host], logId })
         cache.set(processId, redirectURL.host)
       }
-      return runFetch(redirected, opts)
+      return runFetch(redirected, opts, logId)
     }
     return response
   }

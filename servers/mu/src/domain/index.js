@@ -115,7 +115,7 @@ export const createApis = async (ctx) => {
   const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true, type: 'tasks' })
 
   // Create log database client
-  const TRACE_DB_URL = `${ctx.TRACE_DB_PATH}.sqlite`
+  const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
   const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
 
   /**
@@ -241,7 +241,7 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
-  const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_PATH: ctx.TRACE_DB_PATH }))
+  const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL }))
 
   return {
     metrics,

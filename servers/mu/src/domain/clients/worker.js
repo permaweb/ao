@@ -39,7 +39,7 @@ function createBroadcastLogger ({ namespace, config }) {
   return loggerBroadcast
 }
 
-const broadcastLogger = createBroadcastLogger('mu-worker-broadcast')
+const broadcastLogger = createBroadcastLogger({ namespace: 'mu-worker-broadcast', config })
 
 export const domain = {
   ...(domainConfigSchema.parse(config)),
@@ -88,7 +88,8 @@ export function processResultWith ({
       /**
        * Here we enqueue further result sets that
        * were themselves the result of running the
-       * processing functions above
+       * processing functions above. We also pass a
+       * parentId and processId for logging purposes
        */
       .chain((res) => {
         enqueueResults({
@@ -108,7 +109,9 @@ export function processResultWith ({
  * Push results onto the queue and separate
  * them out by type so they can be individually
  * operated on by the worker. Also structure them
- * correctly for input into the business logic
+ * correctly for input into the business logic.
+ * messageId, processId, parentId, and logId have been
+ * added for log tracing purposes.
  */
 export function enqueueResultsWith ({ enqueue }) {
   return ({ msgs, spawns, assigns, initialTxId, parentId, processId, ...rest }) => {
@@ -164,12 +167,28 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
       if (result) {
         logger({ log: `Processing task of type ${result.type}` }, result)
         processResult(result).then((ctx) => {
+          /**
+           * After successfully processing result,
+           * broadcast retries metric.
+           */
           broadcastChannel.postMessage({
             purpose: 'task-retries',
             retries: ctx.retries ?? 0,
             status: 'success'
           })
         }).catch((e) => {
+          const ctx = e.cause
+          const retries = ctx.retries ?? 0
+          const stage = ctx.stage
+          const type = result.type
+
+          logger({ log: `Result failed with error ${e}, will not recover`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)
+          broadcastChannel.postMessage({
+            purpose: 'error-stage',
+            stage,
+            type
+          })
+
           /**
            * Upon failure, we want to add back to the task queue
            * our task with its progress (ctx). This progress is passed
@@ -178,16 +197,6 @@ function processResultsWith ({ enqueue, dequeue, processResult, logger, TASK_QUE
           * After some time, enqueue the task again and increment retries.
           * Upon maximum retries, finish.
           */
-          const ctx = e.cause
-          const retries = ctx.retries ?? 0
-          const stage = ctx.stage
-          const type = result.type
-          broadcastChannel.postMessage({
-            purpose: 'error-stage',
-            stage,
-            type
-          })
-          logger({ log: `Result failed with error ${e}, will not recover`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)
           setTimeout(() => {
             if (retries < TASK_QUEUE_MAX_RETRIES && stage !== 'end' && ctx) {
               logger({ log: `Retrying process task of type ${result.type}, attempt ${retries + 1}`, end: retries >= TASK_QUEUE_MAX_RETRIES }, ctx)

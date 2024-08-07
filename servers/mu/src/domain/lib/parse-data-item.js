@@ -31,6 +31,7 @@ export function parseDataItemWith ({ createDataItem, logger }) {
                */
               anchor: dataItem.anchor
             },
+            // Create messageId, processId for log tracing purposes
             messageId: id,
             processId: dataItem.target
           }

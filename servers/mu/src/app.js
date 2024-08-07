@@ -12,7 +12,7 @@ export const server = pipe(
   (app) => app.use(express.json({ type: 'application/json' })),
   (app) => app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' })),
   withRoutes,
-  async (app) => {
+  (app) => {
     const server = app.listen(config.port, () => {
       logger({ log: `Server is running on http://localhost:${config.port}` })
     })

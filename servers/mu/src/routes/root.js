@@ -50,7 +50,10 @@ const withMessageRoutes = (app) => {
           })
             .chain(sendAssign)
             .bimap(
-              logger.tap({ log: 'Failed to send the Assignment', end: true }),
+              (e) => {
+                logger({ log: 'Failed to send the Assignment', logId, end: true }, e.cause)
+                return e
+              },
               logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...' })
             )
             .chain(({ tx, crank: crankIt }) => {
@@ -82,7 +85,7 @@ const withMessageRoutes = (app) => {
             .chain(sendDataItem)
             .bimap(
               (e) => {
-                logger({ log: 'Failed to send the DataItem', end: true }, e.cause)
+                logger({ log: `Failed to send the DataItem: ${e}`, end: true }, e.cause)
                 return e
               },
               logger.tap({ log: 'Successfully sent DataItem. Beginning to crank...' })
@@ -146,7 +149,6 @@ const withTraceRoutes = (app) => {
 
         const logger = _logger.child('GET_trace')
 
-        // if (!query.process) return res.send('Process ID is required')
         const inputSchema = z.object({
           process: z.string({ required_error: 'Process ID is required' }),
           message: z.string().optional(),
@@ -159,6 +161,9 @@ const withTraceRoutes = (app) => {
 
         const input = inputSchema.parse({ ...query, pageSize: query['page-size'] })
 
+        /**
+         * Can only specify one of message, assign, or spawn
+         */
         if ([input.message, input.assign, input.spawn].filter(isNotNil).length > 1) {
           const err = new Error('Only one of message, assign, or spawn query parameters can be provided')
           err.status = 422

@@ -117,8 +117,15 @@ export function sendDataItemWith ({
           })
         }, Resolved)
         .bimap(
-          logger.tap({ log: 'Assignments cranked for Process DataItem.', end: true }),
-          logger.tap({ log: 'No cranking for a Process DataItem without target required. Nooping...', end: true }))
+          (res) => {
+            logger({ log: 'Assignments cranked for Process DataItem.', end: true }, ctx)
+            return res
+          },
+          (res) => {
+            logger({ log: 'No cranking for a Process DataItem without target required. Nooping...', end: true }, ctx)
+            return res
+          }
+        )
     }))
 
   return (ctx) => {
