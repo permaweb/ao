@@ -35,7 +35,7 @@ presets = {
     'xxl': {
         'stack_size': mb_to_bytes(96), 
         'initial_memory': mb_to_bytes(128), 
-        'maximum_memory': mb_to_bytes(1024)
+        'maximum_memory': mb_to_bytes(4096)
     },
 }
 
@@ -44,6 +44,8 @@ class Config():
     stack_size = 0
     initial_memory = 0
     maximum_memory = 0
+    extra_compile_args = []
+    keep_js = False
 
     def __init__(self, config_file):
         
@@ -65,9 +67,18 @@ class Config():
                 self.stack_size = data.get('stack_size', self.stack_size)
                 self.initial_memory = data.get('initial_memory', self.initial_memory)
                 self.maximum_memory = data.get('maximum_memory', self.maximum_memory)
+                self.extra_compile_args = data.get('extra_compile_args', self.extra_compile_args)
+                self.keep_js = data.get('keep_js', self.keep_js)
 
     def setValuesByPreset(self, preset):
         self.preset = preset
         self.stack_size = presets[self.preset]['stack_size']
         self.initial_memory = presets[self.preset]['initial_memory']
         self.maximum_memory = presets[self.preset]['maximum_memory']
+        
+    def get_extra_args(self):
+        args = []
+        for val in self.extra_compile_args:
+            args.extend(['{}'.format(val)])
+        debug_print('Extra compile args: {}'.format(args))
+        return args
