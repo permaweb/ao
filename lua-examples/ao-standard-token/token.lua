@@ -65,7 +65,7 @@ handlers.add('balance', handlers.utils.hasMatchingTag('Action', 'Balance'), func
 
   ao.send({
     Target = msg.From,
-    Tags = { Target = msg.From, Balance = bal, Ticker = Ticker, Action = 'Balance-Notice', Data = json.encode(tonumber(bal)) }
+    Tags = { Target = msg.From, Balance = bal, Ticker = Ticker, Data = json.encode(tonumber(bal)) }
   })
 end)
 
@@ -73,7 +73,7 @@ end)
   Balances
 ]] --
 handlers.add('balances', handlers.utils.hasMatchingTag('Action', 'Balances'),
-             function(msg) ao.send({ Target = msg.From, Action = 'Balances-Notice', Data = json.encode(Balances) }) end)
+             function(msg) ao.send({ Target = msg.From,  Data = json.encode(Balances) }) end)
 
 --[[
   Transfer
