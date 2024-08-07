@@ -76,6 +76,16 @@ if [ ! -d "$bin_dir" ]; then
 	mkdir -p "$bin_dir"
 fi
 
+# Download the starters
+starters="$ao_install/starters"
+if [ ! -d "$starters" ]; then
+	mkdir -p "$starters"
+fi
+ao_starters_uri="https://arweave.net/\${AO_BINARIES_TX_ID}/starters.zip"
+curl --fail --location --progress-bar --output "$starters.zip" "$ao_starters_uri"
+unzip -d "$starters" -o "$starters.zip"
+rm "$starters.zip"
+
 # Download the binary
 curl --fail --location --progress-bar --output "$exe.zip" "$ao_uri"
 unzip -d "$bin_dir" -o "$exe.zip"
