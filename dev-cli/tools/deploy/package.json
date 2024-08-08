@@ -2,8 +2,7 @@
   "name": "@permaweb/ao-cli-deploy",
   "type": "module",
   "dependencies": {
-    "arweave": "^1.14.4",
-    "warp-contracts": "^1.4.19",
-    "zod": "^3.22.4"
+    "@ar.io/sdk": "^2.1.0",
+    "zod": "^3.23.8"
   }
 }

@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-import { WarpFactory, defaultCacheOptions } from 'warp-contracts'
-import Arweave from 'arweave'
+import { ANT, ArweaveSigner } from '@ar.io/sdk'
 import { z } from 'zod'
 
 function env (key) {
@@ -12,16 +11,6 @@ function env (key) {
   }
   return res.data
 }
-
-/**
- * Add U Tags in order to Mint U as part of CI
- */
-// const U_TAGS = [
-//   { name: 'App-Name', value: 'SmartWeaveAction' },
-//   { name: 'App-Version', value: '0.3.0' },
-//   { name: 'Input', value: JSON.stringify({ function: 'mint' }) },
-//   { name: 'Contract', value: 'KTzTXT_ANmF84fWEKHzWURD1LWd9QaFR9yfYUwH2Lxw' }
-// ]
 
 const actions = {
   async UPDATE_ARNS () {
@@ -34,20 +23,19 @@ const actions = {
      * The install_ao ANT Contract
      * See https://sonar.warp.cc/?#/app/contract/uOf4TMgQxdaSXgcZ778PZR13UQPKJoZVK2ZvLAE90Xg?network=mainnet%23
      */
-    const ANT = 'uOf4TMgQxdaSXgcZ778PZR13UQPKJoZVK2ZvLAE90Xg'
+    // const ANT = 'uOf4TMgQxdaSXgcZ778PZR13UQPKJoZVK2ZvLAE90Xg'
+    const ANT_PROCESS = 'YFbfeqZMbPVGFjQ-PHJY-Y99JQu7O3Jdet06pJnD5iI'
 
-    const arweave = Arweave.init({ host: 'arweave.net', port: 443, protocol: 'https' })
-    const warp = WarpFactory.custom(arweave, defaultCacheOptions, 'mainnet').useArweaveGateway().build()
+    const signer = new ArweaveSigner(jwk)
+    const ant = ANT.init({ processId: ANT_PROCESS, signer })
 
-    // Update the ao ANT Contract to point to the new install script
-    const aoAntContract = warp.contract(ANT).connect(jwk)
-    const antUpdate = await aoAntContract.writeInteraction({
-      function: 'setRecord',
-      subDomain: 'install',
-      transactionId: INSTALL_SCRIPT_ID
-    })
-
-    console.log('Updated ao ANT record', antUpdate.interactionTx)
+    await ant
+      .setRecord({
+        undername: 'install',
+        transactionId: INSTALL_SCRIPT_ID,
+        ttlSeconds: 3600
+      })
+      .then((res) => console.log('Updated ao install ANT record', res.id))
 
     return INSTALL_SCRIPT_ID
   }
