@@ -1,4 +1,5 @@
 import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
+import { identity } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
@@ -64,6 +65,10 @@ export function sendAssignWith ({
       .chain((ctx) =>
         locateProcessLocal(ctx.assign.processId)
           .chain((schedLocation) => sendAssign({ ...ctx, schedLocation }))
+          .bimap(
+            (e) => new Error(e, { cause: ctx }),
+            identity
+          )
       )
   }
 }

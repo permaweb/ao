@@ -1,4 +1,5 @@
 import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
+import { identity } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { writeMessageTxWith } from '../lib/write-message-tx.js'
@@ -146,6 +147,10 @@ export function sendDataItemWith ({
             }
             return sendProcess(ctx)
           })
+          .bimap(
+            (e) => new Error(e, { cause: ctx }),
+            identity
+          )
       )
   }
 }
