@@ -11,6 +11,7 @@ import { command as Build } from './commands/build.js'
 import { command as Publish } from './commands/publish.js'
 import { command as Spawn } from './commands/spawn.js'
 import { command as Bundler } from './commands/bundler.js'
+import { command as Exec } from './commands/exec.js'
 
 const cli = new Command()
   .name('ao')
@@ -24,5 +25,6 @@ const cli = new Command()
   .command('publish', Publish)
   .command('spawn', Spawn)
   .command('bundler', Bundler)
+  .command('exec', Exec)
 
 await cli.parse(Deno.args)
