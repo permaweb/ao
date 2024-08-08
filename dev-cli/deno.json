@@ -1,14 +1,14 @@
 {
   "version": "0.1.3",
   "tasks": {
-    "cache": "deno cache --lock=deno.lock --lock-write ./src/mod.js",
+    "cache": "deno cache --lock=deno.lock ./src/mod.js",
     "build-binaries": "./tools/build.sh",
-    "build-install-script": "deno run -A tools/create-install-script.js",
+    "build-install-script": "deno run -A --no-lock tools/create-install-script.js",
     "arns-install-script": "ACTION=UPDATE_ARNS node tools/deploy/index.js",
-    "bump": "deno run -A tools/update-version.js",
+    "bump": "deno run -A --no-lock tools/update-version.js",
     "test": "echo 'NOT IMPLEMENTED'",
     "tx-mappings": "deno run -A tools/update-tx-mappings.js",
-    "toc": "deno run -A npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",
+    "toc": "deno run -A --no-lock npm:markdown-toc-gen@1 insert README.md && deno fmt README.md",
     "install-local": "./tools/local-install.sh",
     "install-latest": "curl -fsSL https://install_ao.g8way.io | bash"
   },

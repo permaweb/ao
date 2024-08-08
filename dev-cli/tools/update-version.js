@@ -15,8 +15,8 @@
  * The semver version to set in the manifest
  * --version=1.2.3
  */
-import { parse } from 'https://deno.land/std@0.200.0/flags/mod.ts'
-import { join } from 'https://deno.land/std@0.200.0/path/mod.ts'
+import { parse } from 'https://deno.land/std@0.224.0/flags/mod.ts'
+import { join } from 'https://deno.land/std@0.224.0/path/mod.ts'
 
 import * as semver from 'https://deno.land/x/semver@v1.4.1/mod.ts'
 
