@@ -6,7 +6,6 @@ import { readFile, writeFile } from 'node:fs/promises'
 import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
-import fastGlob from 'fast-glob'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
@@ -159,6 +158,10 @@ export const createApis = async (ctx) => {
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
+  const writeFileRecord = AoProcessClient.writeFileRecordWith({
+    db: sqlite
+  })
+
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
     readProcessMemoryFile,
@@ -167,15 +170,14 @@ export const createApis = async (ctx) => {
     hashWasmMemory: WasmClient.hashWasmMemory,
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
-    writeCheckpointFile: AoProcessClient.writeCheckpointFileWith({
-      DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
-      writeFile
-    }),
     writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({
       db: sqlite
     }),
+    writeFileRecord,
+    writeProcessMemoryFile,
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
+    DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
   })
 
@@ -186,7 +188,8 @@ export const createApis = async (ctx) => {
     writeProcessMemoryFile,
     logger: ctx.logger,
     setTimeout: (...args) => lt.setTimeout(...args),
-    clearTimeout: (...args) => lt.clearTimeout(...args)
+    clearTimeout: (...args) => lt.clearTimeout(...args),
+    writeFileRecord
   })
 
   const loadWasmModule = WasmClient.loadWasmModuleWith({
@@ -262,14 +265,7 @@ export const createApis = async (ctx) => {
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       readProcessMemoryFile,
-      findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({
-        DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
-        glob: fastGlob
-      }),
-      readCheckpointFile: AoProcessClient.readCheckpointFileWith({
-        DIR: ctx.PROCESS_CHECKPOINT_FILE_DIRECTORY,
-        readFile
-      }),
+      findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({ db: sqlite }),
       findCheckpointRecordBefore: AoProcessClient.findCheckpointRecordBeforeWith({
         db: sqlite
       }),
