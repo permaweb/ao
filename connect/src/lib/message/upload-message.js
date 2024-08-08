@@ -68,9 +68,9 @@ function buildDataWith ({ logger }) {
          */
         () => Resolved(ctx),
         /**
-         * Just generate a random value for data
+         * No data is provided, so replace with one space
          */
-        () => Resolved(Math.random().toString().slice(-4))
+        () => Resolved(' ')
           .map(assoc('data', __, ctx))
           /**
            * Since we generate the data value, we know it's Content-Type,
