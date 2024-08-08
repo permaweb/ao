@@ -114,6 +114,13 @@ jobs:
           fileName: wallet.json
           encodedString: ${{ secrets.CI_WALLET }}
 
+      - name: 🔬 Decode ArNS Wallet JSON File
+        uses: timheuer/base64-to-file@v1
+        id: arns_wallet_file
+        with:
+          fileName: arns_wallet.json
+          encodedString: ${{ secrets.CI_AO_ARNS_WALLET }}
+
       # The version in the manifest is used to set the version
       # displayed for the CI. So we need to update version,
       # prior to building the binaries
@@ -261,7 +268,8 @@ jobs:
 
           echo "tx_id=${INSTALL_TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
-          WALLET: ${{ steps.wallet_file.outputs.filePath }}
+          # A seprate wallet controls the AO ANT, so we use it to update ArNS
+          WALLET: ${{ steps.arns_wallet_file.outputs.filePath }}
           FOLDER_ID: ${{ steps.publish_binaries.outputs.folder_id }}
           INSTALL_SCRIPT: ${{ steps.build_install_script.outputs.install_script }}
 
