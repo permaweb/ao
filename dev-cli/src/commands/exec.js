@@ -3,7 +3,7 @@
 import { Command } from '../deps.js'
 import { VERSION } from '../versions.js'
 
-export async function build (_, command) {
+export async function exec (_, command) {
   const pwd = Deno.cwd()
   const p = Deno.run({
     cmd: [
@@ -21,6 +21,6 @@ export async function build (_, command) {
 }
 
 export const command = new Command()
-  .description('Build the Lua Project into WASM')
+  .description('Exec command in the container ( ie: exec emcmake cmake . )')
   .arguments('<command:string>')
-  .action(build)
+  .action(exec)
