@@ -257,18 +257,12 @@ export const createApis = async (ctx) => {
         if (!fs.existsSync(PROC_FILE_PATH)) return
         const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
 
-        let obj
-        try {
-          /**
-           * This .replace is used to fix corrupted json files
-           * it should be removed later now that the corruption
-           * issue is solved
-           */
-          obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
-        } catch (_e) {
-          obj = {}
-        }
-        return obj
+        /**
+         * This .replace is used to fix corrupted json files
+         * it should be removed later now that the corruption
+         * issue is solved
+         */
+        return JSON.parse(data.replace(/}\s*"/g, ',"'))
       },
       saveProcs
     })
