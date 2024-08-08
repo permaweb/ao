@@ -15,6 +15,10 @@
 // async JS code from C.
 EM_ASYNC_JS(int, weavedrive_open, (const char* c_filename, const char* mode), {
     const filename = UTF8ToString(Number(c_filename));
+    if (!Module.WeaveDrive) {
+        return Promise.resolve(null)
+    }
+
     const drive = Module.WeaveDrive(Module, FS);
     return await drive.open(filename);
 });
@@ -22,6 +26,11 @@ EM_ASYNC_JS(int, weavedrive_open, (const char* c_filename, const char* mode), {
 EM_ASYNC_JS(int, weavedrive_read, (int fd, int *dst_ptr, size_t length), {
     const drive = Module.WeaveDrive(Module, FS);
     return Promise.resolve(await drive.read(fd, dst_ptr, length));
+});
+
+EM_ASYNC_JS(int, weavedrive_close, (int fd), {
+  const drive = Module.WeaveDrive(Module, FS);
+  return drive.close(fd);
 });
 
 FILE* fopen(const char* filename, const char* mode) {
@@ -43,6 +52,8 @@ size_t fread(void* ptr, size_t size, size_t nmemb, FILE* stream) {
 
 int fclose(FILE* stream) {
      AO_LOG( "AO: fclose called\n");
+     int fd = fileno(stream);
+     weavedrive_close(fd);
      return 0;  // Returning success, adjust as necessary
 }
 
