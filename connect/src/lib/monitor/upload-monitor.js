@@ -40,7 +40,7 @@ export function uploadMonitorWith (env) {
            *
            * so just randomize data and set tags to an empty array
            */
-          data: Math.random().toString().slice(-4),
+          data: ' ',
           tags: []
         })
       ))

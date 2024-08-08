@@ -3,7 +3,7 @@ const { createData, ArweaveSigner } = pkg
 
 function buildAndSignWith ({ MU_WALLET }) {
   return async ({ processId, data, tags, anchor }) => {
-    data = data || Math.random().toString().slice(-4)
+    data = data || ' '
     const signer = new ArweaveSigner(MU_WALLET)
 
     const interactionDataItem = createData(data, signer, { target: processId, anchor, tags })
