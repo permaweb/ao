@@ -208,6 +208,30 @@ export const createApis = async (ctx) => {
   const deleteCronProcess = deleteCronProcessWith({ db })
   const updateCronProcessCursor = updateCronProcessCursorWith({ db })
   const getCronProcessCursor = getCronProcessCursorWith({ db })
+  
+
+  const readProcFile = () => {
+    if (!fs.existsSync(PROC_FILE_PATH)) return
+    const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
+
+    let obj
+    try {
+      /**
+       * This .replace is used to fix corrupted json files
+       * it should be removed later now that the corruption
+       * issue is solved
+       */
+      obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+    } catch (_e) {
+      obj = {}
+    }
+    return obj
+  }
+  /**
+   * Initialize cron monitor to include existing crons in proc file.
+   */
+  const existingCrons = Object.keys(readProcFile()).length || 0
+  cronMonitorGauge.set(existingCrons)
 
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
     fetch,
@@ -280,6 +304,8 @@ export const createApis = async (ctx) => {
       saveCronProcess,
       updateCronProcessCursor,
       CRON_CURSOR_DIR
+      readProcFile,
+      saveProcs
     })
   }
 }
