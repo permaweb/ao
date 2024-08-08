@@ -1,2 +1,3 @@
 export { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.3/command/mod.ts'
-export { basename, resolve } from 'https://deno.land/std@0.200.0/path/mod.ts'
+export { basename, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts'
+export { copy } from 'https://deno.land/std@0.224.0/fs/copy.ts'
