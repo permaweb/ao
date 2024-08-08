@@ -10,8 +10,8 @@
  * The transaction id that contains the binaries
  * --binaries=SYHBhGAmBo6fgAkINNoRtumOzxNB8-JFv2tPhBuNk5c
  */
-import { parse } from 'https://deno.land/std@0.200.0/flags/mod.ts'
-import { join } from 'https://deno.land/std@0.200.0/path/mod.ts'
+import { parse } from 'https://deno.land/std@0.224.0/flags/mod.ts'
+import { join } from 'https://deno.land/std@0.224.0/path/mod.ts'
 
 async function main () {
   const { binaries } = parse(Deno.args)
