@@ -1,7 +1,8 @@
 # ao CLI
 
 The `ao` cli enables developers to create, run, build, and publish
-SmartWeaveContracts written in [Lua](https://www.lua.org/) and [C](https://en.cppreference.com/w/c/language).
+SmartWeaveContracts written in [Lua](https://www.lua.org/) and
+[C](https://en.cppreference.com/w/c/language).
 
 - Initialize a Lua SmartWeaveContract template
 - Run Lua in a Repl or run your Lua SmartWeaveContract
@@ -81,7 +82,7 @@ ao init [myproject]
 ao init -l lua [myproject]
 
 # Initialize a C project.
-ao init -l c [myproject] 
+ao init -l c [myproject]
 ```
 
 This will create a new directory, if needed, named `{myproject}`
@@ -124,7 +125,8 @@ You can also run `ao [command] --help` for command-lvl help.
 
 ## Testing example
 
-Once you have built your Lua into Wasm using `ao build`, the output will be a `process.wasm` file.
+Once you have built your Lua into Wasm using `ao build`, the output will be a
+`process.wasm` file.
 
 The `process.wasm` is your Lua code compiled into Wasm.
 
@@ -161,22 +163,21 @@ Workflow Dispatch that will:
 
 - Check that the version is Semver
 - Build the CLI binaries
-- Publish the binaries to Arweave, via Irys Node 2
+- Publish the binaries to Arweave, by default via Turbo (up.arweave.net)
 - Build the install script
-- Publish the install script to Arweave, via Irys Node 2
+- Publish the install script to Arweave, by default via Turbo (up.arweave.net)
 - Update the `ArNS` for `https://install_ao.g8way.io` to point to the newest
   install script
 - Update `version` and `txMappings` in `deno.json`
 - `push` `deno.json` updates back to the remote repo
 
-> Because the binaries are large, ~100MB for the combined 3, we have to fund a
-> Irys Node in order to upload them to Arweave. The CLI uses a wallet,
-> `lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps`, that has funded Irys Node 2
-> with a very small amount of funds (`CI_WALLET` env variable). If the funds are
+> Because the binaries are large, ~100MB for the combined 3, we have to fund the
+> bundler in order to upload them to Arweave. The CLI uses a wallet,
+> `lCA-1KVTuBxbUgUyeT_50tzrt1RZkiEpY-FFDcxmvps`, that has funded Turbo with a
+> very small amount of funds (`CI_WALLET` env variable). If the funds are
 > depleted, then the CLI will no longer be able to publish the CLI to Arweave.
-> For now, if the Irys Node needs more funding, contact `@TillaTheHun0`. (Maybe
-> eventually we add a Workflow Dispatch script to automatically fund the Irys
-> Node)
+> For now, if Turbo needs more funding, contact `@TillaTheHun0`. (Maybe
+> eventually we add a Workflow Dispatch script to automatically fund Turbo)
 
 #### Need a to also Publish a new Docker Image version?
 
@@ -191,4 +192,5 @@ DockerHub using `docker push p3rmaw3b/ao:<tag>`.
 Once the docker image is published, update the `VERSION.IMAGE` value to the
 corresponding version in `src/versions.js`, commit, and push.
 
-Then run the CI as described in [Publish a new Version of the CLI](#publish-a-new-version-of-the-cli)
+Then run the CI as described in
+[Publish a new Version of the CLI](#publish-a-new-version-of-the-cli)
