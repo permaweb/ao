@@ -1,12 +1,18 @@
 import { always } from 'ramda'
 
-import { histogramWith } from '../../domain/clients/metrics.js'
+import { histogramWith, summaryWith } from '../../domain/clients/metrics.js'
 import { withTimerMetrics } from '../../domain/lib/with-timer-metrics.js'
 
 const histogram = histogramWith()({
   name: 'http_request_duration_seconds',
   description: 'Request duration in seconds',
   buckets: [0.5, 1, 3, 5, 10, 30],
+  labelNames: ['method', 'route', 'status', 'statusGroup']
+})
+
+const summary = summaryWith()({
+  name: 'http_request_summary_seconds',
+  description: 'Request duration in seconds summary',
   labelNames: ['method', 'route', 'status', 'statusGroup']
 })
 
@@ -44,7 +50,21 @@ export const withMetrics = ({ labelsFrom = always({}), tracesFrom = always({}) }
   }
 
   return (handler) => withTimerMetrics({
-    timer: histogram,
+    timer: {
+      /**
+       * wrap starting/stopping the histogram and summary
+       * with a single "timer" managed by the util
+       */
+      startTimer: (labels, traces) => {
+        const stop = histogram.startTimer(labels, traces)
+        const stopSummary = summary.startTimer(labels, traces)
+
+        return (stopLabels, stopTraces) => {
+          stop(stopLabels, stopTraces)
+          stopSummary(stopLabels, stopTraces)
+        }
+      }
+    },
     startLabelsFrom: labelsFromReq,
     stopLabelsFrom: labelsFromRes,
     tracesFrom
