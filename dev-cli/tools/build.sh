@@ -31,4 +31,4 @@ zip -j "${OUTPUT_DIR}/ao-x86_64-pc-windows-msvc.exe.zip" "${OUTPUT_DIR}/ao.exe"
 rm -f "${OUTPUT_DIR}/ao.exe"
 
 #  stdout, so can be piped or saved to a variable
-echo "$(pwd)/${OUTPUT_DIR}"
+echo "${OUTPUT_DIR}"
