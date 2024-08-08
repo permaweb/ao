@@ -85,3 +85,26 @@ export const histogramWith = ({ prefix = 'ao_mu' } = {}) => {
     }
   }
 }
+
+export const summaryWith = ({ prefix = 'ao_mu' } = {}) => {
+  const DEFAULT_MAX_AGE_SECONDS = 300
+  const DEFAULT_MAX_AGE_BUCKETS = 3
+  const DEFAULT_PERCENTILES = [0.01, 0.05, 0.5, 0.9, 0.95, 0.99]
+
+  return ({ name, description, percentiles, maxAgeSeconds, ageBuckets, labelNames = [] }) => {
+    const s = new PromClient.Summary({
+      name: `${prefix}_${name}`,
+      help: description,
+      percentiles: percentiles || DEFAULT_PERCENTILES,
+      labelNames,
+      maxAgeSeconds: maxAgeSeconds || DEFAULT_MAX_AGE_SECONDS,
+      ageBuckets: ageBuckets || DEFAULT_MAX_AGE_BUCKETS,
+      enableExemplars: true
+    })
+
+    return {
+      observe: (v) => s.observe(v),
+      startTimer: (labels, exemplars) => s.startTimer(labels, exemplars)
+    }
+  }
+}
