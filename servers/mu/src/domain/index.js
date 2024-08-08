@@ -209,6 +209,28 @@ export const createApis = async (ctx) => {
       await fs.promises.writeFile(PROC_FILE_PATH, JSON.stringify(procsToSave), 'utf8')
     }
   })
+  const readProcFile = () => {
+    if (!fs.existsSync(PROC_FILE_PATH)) return
+    const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
+
+    let obj
+    try {
+      /**
+       * This .replace is used to fix corrupted json files
+       * it should be removed later now that the corruption
+       * issue is solved
+       */
+      obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
+    } catch (_e) {
+      obj = {}
+    }
+    return obj
+  }
+  /**
+   * Initialize cron monitor to include existing crons in proc file.
+   */
+  const existingCrons = Object.keys(readProcFile()).length || 0
+  cronMonitorGauge.set(existingCrons)
 
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
     fetch,
@@ -253,23 +275,7 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      readProcFile: () => {
-        if (!fs.existsSync(PROC_FILE_PATH)) return
-        const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
-
-        let obj
-        try {
-          /**
-           * This .replace is used to fix corrupted json files
-           * it should be removed later now that the corruption
-           * issue is solved
-           */
-          obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
-        } catch (_e) {
-          obj = {}
-        }
-        return obj
-      },
+      readProcFile,
       saveProcs
     })
   }
