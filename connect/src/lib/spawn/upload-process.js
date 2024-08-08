@@ -59,7 +59,7 @@ function buildDataWith ({ logger }) {
          */
         () => Resolved(ctx),
         /**
-         * Just generate a random value for data
+         * No data is provided, so replace with one space
          */
         () => Resolved(' ')
           .map(assoc('data', __, ctx))
