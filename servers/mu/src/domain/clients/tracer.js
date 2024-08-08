@@ -105,8 +105,9 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces }) {
     if (end) {
       const currentLog = activeTraces.get(logId)
       const logs = JSON.stringify(currentLog?.logs || [])
-      const { messageId, processId, wallet, parentId } = ctx ?? {}
-      const type = ctx.type || ctx.dataItem.tags?.find((tag) => tag.name === 'Type')?.value?.toUpperCase()
+      ctx = ctx ?? {}
+      const { messageId, processId, wallet, parentId } = ctx
+      const type = ctx?.type || ctx?.dataItem?.tags?.find((tag) => tag.name === 'Type')?.value?.toUpperCase()
 
       /**
        * If we have a messageId or processId, save our trace to the DB.
@@ -118,11 +119,13 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces }) {
       /**
        * Iterate through our list of logs and print each one.
        */
-      for (const log of currentLog?.logs) {
-        if (Array.isArray(log)) {
-          logger(...log)
-        } else {
-          logger(log)
+      if (currentLog?.logs?.length > 0) {
+        for (const log of currentLog?.logs) {
+          if (Array.isArray(log)) {
+            logger(...log)
+          } else {
+            logger(log)
+          }
         }
       }
       /**
