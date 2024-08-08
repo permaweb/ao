@@ -12,7 +12,7 @@ describe('cron', () => {
   describe('initCronProcsWith', () => {
     test('should not start process if proc file could not be read', async () => {
       await cron.initCronProcsWith({
-        readProcFile: () => undefined,
+        getCronProcesses: () => undefined,
         startMonitoredProcess: async () => {
           assert.fail('should not start process')
         }
@@ -20,25 +20,23 @@ describe('cron', () => {
     })
 
     describe('processing proc file runs successfully when not initial run and skips subsequent runs', async () => {
-      let saveProcsCalls = 0
+      let startMonitoredProcessCalls = 0
       const initCronProcs = await cron.initCronProcsWith({
-        readProcFile: () => ({ 1: '1' }),
-        startMonitoredProcess: async () => Promise.resolve(),
-        saveProcs: () => {
-          console.log('calling save procs')
-          saveProcsCalls++
+        getCronProcesses: () => [{ processId: '1', status: 'running' }],
+        startMonitoredProcess: async () => {
+          startMonitoredProcessCalls++
           return Promise.resolve()
         }
       })
 
       test('should start process by reading proc file and saving procs', async () => {
         await initCronProcs()
-        assert.equal(saveProcsCalls, 1)
+        assert.equal(startMonitoredProcessCalls, 1)
       })
 
       test('should not process any more times after initial process', async () => {
         await initCronProcs()
-        assert.equal(saveProcsCalls, 1)
+        assert.equal(startMonitoredProcessCalls, 1)
       })
     })
   })
@@ -55,7 +53,7 @@ describe('cron', () => {
         monitorGauge: () => ({
           dec: () => {}
         }),
-        saveProcs: async () => Promise.resolve()
+        deleteCronProcess: async () => Promise.resolve()
       })
       await killMonitoredProcess({ processId: 1 }).catch(() => {
         assert.ok('should catch error')

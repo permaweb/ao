@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-import fs from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
 import { apply } from 'ramda'
@@ -16,7 +15,7 @@ import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
-import cronClient, { saveProcsWith } from './clients/cron.js'
+import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
 import { readTracesWith } from './clients/tracer.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -204,11 +203,10 @@ export const createApis = async (ctx) => {
   const monitorProcessLogger = logger.child('monitorProcess')
   const fetchCron = fromPromise(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger }))
 
-  const saveProcs = saveProcsWith({
-    save: async (procsToSave) => {
-      await fs.promises.writeFile(PROC_FILE_PATH, JSON.stringify(procsToSave), 'utf8')
-    }
-  })
+  const saveCronProcess = saveCronProcessWith({ db })
+  const deleteCronProcess = deleteCronProcessWith({ db })
+  const updateCronProcessCursor = updateCronProcessCursorWith({ db })
+  const getCronProcessCursor = getCronProcessCursorWith({ db })
 
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
     fetch,
@@ -220,7 +218,9 @@ export const createApis = async (ctx) => {
     fetchCron,
     crank,
     monitorGauge: cronMonitorGauge,
-    saveProcs
+    saveCronProcess,
+    updateCronProcessCursor,
+    getCronProcessCursor
   })
 
   const monitorProcess = monitorProcessWith({
@@ -235,7 +235,7 @@ export const createApis = async (ctx) => {
       logger: stopMonitorProcessLogger,
       PROC_FILE_PATH,
       monitorGauge: cronMonitorGauge,
-      saveProcs
+      deleteCronProcess
     }),
     createDataItem,
     logger: monitorProcessLogger
@@ -253,24 +253,20 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      readProcFile: () => {
-        if (!fs.existsSync(PROC_FILE_PATH)) return
-        const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
-
-        let obj
-        try {
-          /**
-           * This .replace is used to fix corrupted json files
-           * it should be removed later now that the corruption
-           * issue is solved
-           */
-          obj = JSON.parse(data.replace(/}\s*"/g, ',"'))
-        } catch (_e) {
-          obj = {}
+      getCronProcesses: async () => {
+        function createQuery () {
+          return {
+            sql: `
+              SELECT * FROM ${SqliteClient.CRON_PROCESSES_TABLE}
+              WHERE status = 'running'
+            `,
+            parameters: []
+          }
         }
-        return obj
+        const processes = (await db.query(createQuery()))
+        return processes
       },
-      saveProcs
+      saveCronProcess
     })
   }
 }
