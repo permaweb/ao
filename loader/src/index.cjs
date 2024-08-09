@@ -63,10 +63,10 @@ const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 
 /**
  * @callback handleFunction
- * @param {ArrayBuffer | NULL} buffer
+ * @param {ArrayBuffer | null} buffer
  * @param {Message} msg
  * @param {Environment} env
- * @returns {HandleResponse}
+ * @returns {Promise<HandleResponse>}
  */
 
 /**
