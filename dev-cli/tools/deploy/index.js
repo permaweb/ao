@@ -35,7 +35,7 @@ const actions = {
         transactionId: INSTALL_SCRIPT_ID,
         ttlSeconds: 3600
       })
-      .then((res) => console.log('Updated ao install ANT record', res.id))
+      .then((res) => console.log(`Updated install_ao ANT record to "${INSTALL_SCRIPT_ID}". Message Id: "${res.id}"`))
 
     return INSTALL_SCRIPT_ID
   }
