@@ -101,7 +101,15 @@ If there is an insufficient balance, then you will receive a `Transfer-Error` Me
 }
 ```
 
-If the Transfer's Recipient is a 0x address, it must be an [EIP55](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md) standard address, since 0x addresses on ao only support the EIP55 address format
+If the Transfer's Recipient is a 0x address, it must be an [EIP55](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md) standard address, since 0x addresses on ao only support the EIP55 address format.
+You can use the methods in the [APM](https://apm.betteridea.dev/pkg?id=6CodALD5aCaSByXrEqw2RcmkFWUQ8B9ZuN6VU-4IJtI) library.
+such as:
+```lua
+local utils = require(".utils")
+handlers.add('transfer', ...)
+    assert(utils.verifyEccAddress(msg.Tags.Recipient) == true, 'Ecc recipient must be EIP55')
+
+```
 
 ### Mint
 
