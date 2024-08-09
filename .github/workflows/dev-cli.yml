@@ -264,8 +264,6 @@ jobs:
             | jq -r '.created[0].dataTxId'
           )
 
-          INSTALL_SCRIPT_ID="${INSTALL_TRANSACTION_ID}" deno task arns-install-script
-
           echo "tx_id=${INSTALL_TRANSACTION_ID}" >> $GITHUB_OUTPUT
         env:
           WALLET: ${{ steps.wallet_file.outputs.filePath }}
