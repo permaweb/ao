@@ -70,18 +70,23 @@ const Wasm64 = require('./formats/wasm64-emscripten.cjs')
  */
 
 /**
+ * @typedef {'wasm32-unknown-emscripten'|
+ * 'wasm32-unknown-emscripten2'|
+ * 'wasm32-unknown-emscripten3'|
+ * 'wasm64-unknown-emscripten-draft_2024_02_15'} BinaryFormat
+ */
+
+/**
  * @typedef Options
- * @property {string} format
- * @property {string} input
- * @property {string} output
- * @property {string} memory
- * @property {string} compute
- * @property {String[]} extensions
+ * @property {BinaryFormat} [format]
+ * @property {number} [computeLimit]
+ * @property {string} [memoryLimit]
+ * @property {string[]} [extensions]
  */
 
 /**
  * @param {ArrayBuffer} binary
- * @param {Options} options
+ * @param {Options} [options]
  * @returns {Promise<handleFunction>}
  */
 module.exports = async function (binary, options) {
