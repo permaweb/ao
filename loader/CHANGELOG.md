@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.36](https://github.com/permaweb/ao/compare/loader@v0.0.35...loader@v0.0.36) (2024-08-09)
+
+
+### Bug Fixes
+
+* AoLoader initializer types ([ce2fc06](https://github.com/permaweb/ao/commit/ce2fc06e6fb42c5d496c7c8d1ceaa4f247df7f42))
+* environment types ([ddcd394](https://github.com/permaweb/ao/commit/ddcd394a2fd34ecf789e3d14dc86068f75d1d26e))
+* handleFunction types ([5ca7d67](https://github.com/permaweb/ao/commit/5ca7d67b6acd09cfb9515dcca14f39cac13320b1))
+* point to the correct types for AoLoader ([6e3db4a](https://github.com/permaweb/ao/commit/6e3db4ad803fc4b5f27505c0a8944ed511157d87))
+
 ## [0.0.35](https://github.com/permaweb/ao/compare/loader@v0.0.34...loader@v0.0.35) (2024-06-09)
 
 ## [0.0.34](https://github.com/permaweb/ao/compare/loader@v0.0.33...loader@v0.0.34) (2024-06-09)
