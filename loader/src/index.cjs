@@ -49,7 +49,7 @@ const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 
 /**
  * @typedef Environment
- * @property {{id: string, owner: string, tags: Tag[]}} process
+ * @property {{Id: string, Owner: string, Tags: Tag[]}} Process
  */
 
 /**
