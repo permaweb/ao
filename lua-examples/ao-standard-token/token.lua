@@ -72,7 +72,7 @@ end)
   Balances
 ]] --
 handlers.add('balances', handlers.utils.hasMatchingTag('Action', 'Balances'),
-             function(msg) ao.send({ Target = msg.From,  Data = json.encode(Balances) }) end)
+             function(msg) ao.send({ Target = msg.From, Data = json.encode(Balances) }) end)
 
 --[[
   Transfer
