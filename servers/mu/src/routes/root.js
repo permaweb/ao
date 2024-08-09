@@ -15,6 +15,7 @@ const withMessageRoutes = (app) => {
     '/',
     compose(
       withMiddleware,
+      withMetrics(),
       always(async (req, res) => {
         const {
           body,
