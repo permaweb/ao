@@ -9,10 +9,10 @@
     "staged": "lint-staged"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.3.0",
+    "@commitlint/cli": "^19.4.0",
     "@commitlint/config-conventional": "^19.2.2",
-    "husky": "^9.0.11",
-    "lint-staged": "^15.2.5",
+    "husky": "^9.1.4",
+    "lint-staged": "^15.2.8",
     "markdown-toc-gen": "^1.0.1",
     "only-allow": "^1.2.1",
     "sort-package-json": "^2.10.0",

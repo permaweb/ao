@@ -39,7 +39,7 @@ contributing.
 The `ao` repo uses `npm` and `node` to install and execute top level, repo-wide, tooling. So first, you should run `npm i` at the root to install those dependencies. This will set up git hooks that will help ensure you're following some of the guidelines outlined in this document:
 
 - All JavaScript projects in the repo follow [`standard` style](https://standardjs.com/)
-- All Commit Messages follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+- All Commit Messages follow our [Conventional Commits Config](https://www.conventionalcommits.org/en/v1.0.0/)
 - All Markdown files should contain a Table of Contents
 
 Once you've install the top level tooling, each of these conventions are enforced, via git a commit hook, automatically.
@@ -76,8 +76,8 @@ Dependencies are constraints. Therefore, external dependencies should be
 scrutinized, vetted and have a specific purpose. A developer should consider
 whether a dependency is strictly needed before adding it to the project.
 
-> Across teams/projects/layers, each may use different tools, but each
-> team/project/layer should be consistent _in and of itself_.
+> Across projects/layers, each may use different tools, but each
+> project/layer should be consistent _in and of itself_.
 
 Lean towards dependencies that implement specifications ie.
 [Web Standards](https://developer.mozilla.org/en-US/docs/Glossary/Web_standards)
@@ -107,11 +107,17 @@ each commit. Follow these guidelines to write effective commit messages:
 2. **Reference the related issue** - Commit messages should reference the issue
    they are addressing. For example, "feat(web): add ghost button #123".
 
-3. **Address the changes made** - Commit messages should describe the changes
+3. **Reference project(s) in the commit message's**
+   [scope](https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope).
+   For example, "feat(cu): implement awesome feature #123", "fix(connect): add gateway caching #456"
+
+> There is a git hook will run to ensure your commit message reference a project with `scope`
+
+4. **Address the changes made** - Commit messages should describe the changes
    made in the commit. For example, "refactor(web): remove unused imports #123"
    ✅ not "refactor(web): changes based on feedback #123" ❌
 
-4. **Use the imperative mood** - in the subject line. This means using verbs
+5. **Use the imperative mood** - in the subject line. This means using verbs
    like "Add", "Fix", "Update", etc., as if you are giving an order. This helps
    keep the subject line short and consistent while also making it easier to
    understand the changelog in the future.

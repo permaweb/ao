@@ -6,6 +6,9 @@
 
 # ao - Hyper. Parallel. Compute.
 
+> :information_source: We welcome contributions. **First**, please read
+> [our contribution guidelines](CONTRIBUTING.md)
+
 ## What is `ao`?
 
 The `ao` computer is the
