@@ -102,14 +102,14 @@ export function sendDataItemWith ({
          */
       crank: () => of({ res })
         .chain(({ res }) => {
-          const hasTargetTag = res.dataItem.tags.find((tag) => tag.name === 'Target')
-          if (hasTargetTag) {
+          const hasTarget = Boolean(res.dataItem.target)
+          if (hasTarget) {
             return Rejected({ res })
           }
           return Resolved()
         })
         .bichain(({ res }) => {
-          const assigns = [{ Message: res.dataItem.id, Processes: res.dataItem.tags.filter((tag) => tag.name === 'Target').map((tag) => tag.value) }]
+          const assigns = [{ Message: res.dataItem.id, Processes: [res.dataItem.target] }]
           return crank({
             msgs: [],
             spawns: [],

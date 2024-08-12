@@ -59,8 +59,8 @@ describe('sendDataItemWith', () => {
           selectNode: () => 'cu-url',
           createDataItem: (raw) => ({
             id: 'process-id',
+            target: 'target-process-id',
             tags: [
-              { name: 'Target', value: 'target-process-id' },
               { name: 'Data-Protocol', value: 'ao' },
               { name: 'Type', value: 'Process' },
               { name: 'Scheduler', value: 'scheduler-id' }
