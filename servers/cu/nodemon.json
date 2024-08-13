@@ -1,5 +1,5 @@
 {
-  "watch": ["src"],
+  "watch": ["src", ".env"],
   "exec": "node --experimental-wasm-memory64 -r dotenv/config src/app.js",
   "ext": "js",
   "delay": "500",

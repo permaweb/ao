@@ -185,7 +185,11 @@ export const domainConfigSchema = z.object({
    * A list of wallets whose processes the CU should exclusively allow
    * aka. whitelist of processes created by these wallets
    */
-  ALLOW_OWNERS: commaDelimitedArraySchema
+  ALLOW_OWNERS: commaDelimitedArraySchema,
+  /**
+   * Allow the CU to evaluate dry run messages against historical process evaluations
+   */
+  ALLOW_HISTORICAL_PROCESS_EVALUATIONS: z.boolean()
 })
 
 export const bufferSchema = z.any().refine(buffer => {

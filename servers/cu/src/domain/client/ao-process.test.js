@@ -1074,7 +1074,8 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          ALLOW_HISTORICAL_PROCESS_EVALUATIONS: false
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1112,7 +1113,8 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          ALLOW_HISTORICAL_PROCESS_EVALUATIONS: false
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1161,13 +1163,14 @@ describe('ao-process', () => {
           },
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          ALLOW_HISTORICAL_PROCESS_EVALUATIONS: false
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
         await findLatestProcessMemory(target)
-          .then(() => assert.fail('should reject'))
+          .then((r) => assert.fail('should reject'))
           .catch((err) => assert.deepStrictEqual(err, {
             status: 425,
             ordinate: laterCachedEval.ordinate,

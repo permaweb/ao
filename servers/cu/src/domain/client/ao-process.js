@@ -363,7 +363,7 @@ export function findProcessWith ({ db }) {
 
       /**
        * owner contains the deprecated, pre-parsed value, so we need to self cleanup.
-       * So implictly delete the defunct record and Reject as if it was not found.
+       * So implicitly delete the defunct record and Reject as if it was not found.
        *
        * It will then be up the client (in this case the business logic) to re-insert
        * the record with the proper format
@@ -709,6 +709,7 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+  ALLOW_HISTORICAL_PROCESS_EVALUATIONS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -759,7 +760,7 @@ export function findLatestProcessMemoryWith ({
   /**
    * TODO: lots of room for optimization here
    */
-  function determineLatestCheckpoint (edges) {
+  function determineLatestCheckpointBefore ({ edges, before }) {
     return transduce(
       compose(
         map(prop('node')),
@@ -788,12 +789,7 @@ export function findLatestProcessMemoryWith ({
           }
         })
       ),
-      /**
-       * Pass the LATEST flag, which configures latestCheckpointBefore
-       * to only be concerned with finding the absolute latest checkpoint
-       * in the list
-       */
-      latestCheckpointBefore(LATEST),
+      latestCheckpointBefore(before),
       undefined,
       edges
     )
@@ -834,11 +830,12 @@ export function findLatestProcessMemoryWith ({
   }
 
   function maybeCached (args) {
-    const { processId, omitMemory } = args
+    const { processId, omitMemory, before } = args
 
+    const cacheKey = before === LATEST ? processId : `${processId}:${before.nonce}:${before.ordinate}:${before.timestamp}`
     return of(processId)
       .chain((processId) => {
-        const cached = cache.get(processId)
+        const cached = cache.get(cacheKey)
 
         /**
          * There is no cached memory, so keep looking
@@ -906,7 +903,7 @@ export function findLatestProcessMemoryWith ({
   }
 
   function maybeRecord (args) {
-    const { processId, omitMemory } = args
+    const { processId, before, omitMemory } = args
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
       logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query file checkpoints...', processId)
@@ -914,9 +911,9 @@ export function findLatestProcessMemoryWith ({
     }
 
     /**
-     * Attempt to find the latest checkpoint in a file
+     * Attempt to find the relevant checkpoint in a file
      */
-    return findCheckpointRecordBefore({ processId, before: LATEST })
+    return findCheckpointRecordBefore({ processId, before })
       .chain((latest) => {
         /**
          * No previously created checkpoint is cached in a file,
@@ -976,7 +973,7 @@ export function findLatestProcessMemoryWith ({
   }
 
   function maybeCheckpointFromArweave (args) {
-    const { processId, omitMemory } = args
+    const { processId, omitMemory, before } = args
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
       logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query gateway...', processId)
@@ -994,13 +991,13 @@ export function findLatestProcessMemoryWith ({
           query: GET_AO_PROCESS_CHECKPOINTS,
           variables: { owners, processId, limit: 50 },
           processId,
-          before: LATEST
+          before
         })
       })
       .map(path(['data', 'transactions', 'edges']))
-      .map(determineLatestCheckpoint)
-      .chain((latestCheckpoint) => {
-        if (!latestCheckpoint) return Rejected(args)
+      .map((edges) => determineLatestCheckpointBefore({ edges, before }))
+      .chain((latestCheckpointBefore) => {
+        if (!latestCheckpointBefore) return Rejected(args)
 
         /**
          * We have found a Checkpoint that we can use, so
@@ -1009,7 +1006,7 @@ export function findLatestProcessMemoryWith ({
         return of()
           .chain(() => {
             if (omitMemory) return Resolved(null)
-            return downloadCheckpointFromArweave(latestCheckpoint)
+            return downloadCheckpointFromArweave(latestCheckpointBefore)
           })
           /**
            * Finally map the Checkpoint to the expected shape
@@ -1019,24 +1016,24 @@ export function findLatestProcessMemoryWith ({
           .map((Memory) => ({
             src: 'arweave',
             Memory,
-            moduleId: latestCheckpoint.module,
-            timestamp: latestCheckpoint.timestamp,
-            epoch: latestCheckpoint.epoch,
-            nonce: latestCheckpoint.nonce,
+            moduleId: latestCheckpointBefore.module,
+            timestamp: latestCheckpointBefore.timestamp,
+            epoch: latestCheckpointBefore.epoch,
+            nonce: latestCheckpointBefore.nonce,
             /**
              * Derived from Nonce on Checkpoint
              * (see determineLatestCheckpointBefore)
              */
-            ordinate: latestCheckpoint.ordinate,
-            blockHeight: latestCheckpoint.blockHeight,
-            cron: latestCheckpoint.cron
+            ordinate: latestCheckpointBefore.ordinate,
+            blockHeight: latestCheckpointBefore.blockHeight,
+            cron: latestCheckpointBefore.cron
           }))
           .bimap(
             (err) => {
               logger(
                 'Error encountered when downloading Checkpoint found for process "%s", from Arweave, with parameters "%j"',
                 processId,
-                { checkpointTxId: latestCheckpoint.id, ...latestCheckpoint },
+                { checkpointTxId: latestCheckpointBefore.id, ...latestCheckpointBefore },
                 err
               )
               return args
@@ -1111,10 +1108,7 @@ export function findLatestProcessMemoryWith ({
        *
        * See https://github.com/permaweb/ao/issues/667
        */
-      if (
-        before !== LATEST &&
-        isEarlierThan(found, before)
-      ) {
+      if (before !== LATEST && isEarlierThan(found, before)) {
         logger(
           'OLD MESSAGE: Request for old message, sent to process "%s", with parameters "%j" when CU has found checkpoint with parameters "%j"',
           processId,
@@ -1147,7 +1141,7 @@ export function findLatestProcessMemoryWith ({
       .bichain(maybeRecord, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
-      .chain(maybeOld({ processId, before }))
+      .chain(ALLOW_HISTORICAL_PROCESS_EVALUATIONS ? maybeOld({ processId, before }) : Resolved) // conditionally chain maybeOld
       .toPromise()
   }
 }
@@ -1568,5 +1562,29 @@ export function saveCheckpointWith ({
       .bichain(maybeRecentlyCheckpointed, Resolved)
       .bichain(createCheckpoint, Resolved)
       .toPromise()
+  }
+}
+
+export function saveHistoricalProcessMemoryWith ({ cache, logger }) {
+  return async ({ processId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
+    /**
+     * If we are not allowing historical process evaluations, then we should save the process id to the cache at a specific location using the nonce, ordinate and timestamp.
+     */
+    const cached = cache.get(`${processId}:${nonce}:${ordinate}:${timestamp}`)
+    if (cached) {
+      /**
+       * If Memory exists on the cache entry, then there is nothing to "reseed"
+       * so do nothing
+       */
+      if (cached.Memory) return
+    }
+
+    // save it to the cache and return
+    logger(
+      'Caching historical memory for process "%s" with parameters "%j"',
+      processId,
+      { timestamp, ordinate, cron, blockHeight }
+    )
+    cache.set(`${processId}:${nonce}:${ordinate}:${timestamp}`, { Memory, evaluation: { processId, timestamp, epoch, nonce, blockHeight, ordinate, cron, gasUsed } })
   }
 }

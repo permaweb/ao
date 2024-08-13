@@ -42,7 +42,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "standard": "^17.1.0"
   },
   "engines": {
     "node": ">=18"

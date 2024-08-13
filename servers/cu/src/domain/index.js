@@ -158,6 +158,7 @@ export const createApis = async (ctx) => {
   ctx.logger('Max primary worker threads set to %s', maxPrimaryWorkerThreads)
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
+  ctx.logger('Historical process evaluations allowed: %s', ctx.ALLOW_HISTORICAL_PROCESS_EVALUATIONS)
 
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
@@ -279,6 +280,11 @@ export const createApis = async (ctx) => {
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
       IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
       PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+      ALLOW_HISTORICAL_PROCESS_EVALUATIONS: ctx.ALLOW_HISTORICAL_PROCESS_EVALUATIONS,
+      logger
+    }),
+    saveHistoricalProcessMemory: AoProcessClient.saveHistoricalProcessMemoryWith({
+      cache: wasmMemoryCache,
       logger
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
