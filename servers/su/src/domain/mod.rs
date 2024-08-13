@@ -21,7 +21,7 @@ pub use core::router;
 pub use flows::Deps;
 pub use store::migrate_to_disk;
 
-pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
+pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Registry) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
 
     let data_store = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
@@ -73,21 +73,18 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
 
     let metrics = Arc::new(PromMetrics::new(
         AoConfig::new(mode).expect("Failed to read configuration"),
+        metrics_registry,
     ));
-    let metrics_clone = metrics.clone();
 
-    (
-        Arc::new(Deps {
-            data_store,
-            logger,
-            config,
-            scheduler,
-            gateway,
-            signer,
-            wallet,
-            uploader,
-            metrics,
-        }),
-        metrics_clone,
-    )
+    Arc::new(Deps {
+        data_store,
+        logger,
+        config,
+        scheduler,
+        gateway,
+        signer,
+        wallet,
+        uploader,
+        metrics,
+    })
 }

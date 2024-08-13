@@ -11,7 +11,10 @@ use actix_web::{
 use serde::Deserialize;
 use serde_json::json;
 
-use su::domain::{flows, init_deps, router, Deps, PromMetrics};
+use actix_web_prom::PrometheusMetricsBuilder;
+use prometheus::Registry;
+
+use su::domain::{flows, init_deps, router, Deps};
 
 #[derive(Deserialize)]
 struct FromTo {
@@ -87,7 +90,6 @@ async fn timestamp_route(
     query_params: web::Query<ProcessId>,
     req: HttpRequest,
 ) -> impl Responder {
-    data.metrics.get_request("/timestamp".to_string());
     let process_id = query_params.process_id.clone();
 
     match router::redirect_process_id(data.deps.clone(), process_id).await {
@@ -115,7 +117,6 @@ async fn main_post_route(
     req: HttpRequest,
     query_params: web::Query<OptionalAssign>,
 ) -> impl Responder {
-    data.metrics.post_request();
     match router::redirect_data_item(
         data.deps.clone(),
         req_body.to_vec(),
@@ -157,7 +158,6 @@ async fn main_get_route(
     path: web::Path<TxId>,
     query_params: web::Query<FromTo>,
 ) -> impl Responder {
-    data.metrics.get_request("/".to_string());
     let tx_id = path.tx_id.clone();
     let from_sort_key = query_params.from.clone();
     let to_sort_key = query_params.to.clone();
@@ -191,7 +191,6 @@ async fn read_process_route(
     req: HttpRequest,
     path: web::Path<ProcessIdRequired>,
 ) -> impl Responder {
-    data.metrics.get_request("/processes".to_string());
     let process_id = path.process_id.clone();
 
     match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
@@ -217,21 +216,8 @@ async fn health_check() -> impl Responder {
     HttpResponse::Ok()
 }
 
-async fn metrics_route(data: web::Data<AppState>) -> impl Responder {
-    let result = data.metrics.emit_metrics();
-    match result {
-        Ok(metrics_str) => HttpResponse::Ok()
-            .content_type("application/openmetrics-text; version=1.0.0; charset=utf-8")
-            .body(metrics_str),
-        Err(err) => HttpResponse::BadRequest()
-            .content_type("text/plain")
-            .body(err),
-    }
-}
-
 struct AppState {
     deps: Arc<Deps>,
-    metrics: Arc<PromMetrics>,
 }
 
 #[actix_web::main]
@@ -256,8 +242,15 @@ async fn main() -> io::Result<()> {
         }
     };
 
-    let (deps, metrics) = init_deps(mode).await;
-    let app_state = web::Data::new(AppState { deps, metrics });
+    let registry = Registry::new();
+    let prometheus = PrometheusMetricsBuilder::new("su")
+        .endpoint("/metrics")
+        .registry(registry.clone())
+        .build()
+        .unwrap();
+
+    let deps = init_deps(mode, registry).await;
+    let app_state = web::Data::new(AppState { deps });
 
     let run_deps = app_state.deps.clone();
 
@@ -277,13 +270,13 @@ async fn main() -> io::Result<()> {
                     .allow_any_header(),
             )
             .wrap(Logger::default())
+            .wrap(prometheus.clone())
             .app_data(app_state.clone())
             .app_data(web::PayloadConfig::new(10485760))
             .route("/", web::get().to(base))
             .route("/", web::post().to(main_post_route))
             .route("/timestamp", web::get().to(timestamp_route))
             .route("/health", web::get().to(health_check))
-            .route("/metrics", web::get().to(metrics_route))
             .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
     })
