@@ -10,7 +10,7 @@ use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
 
-use super::dal::{Config, DataStore, Gateway, Log, Signer, Uploader, Wallet, CoreMetrics};
+use super::dal::{Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
@@ -64,7 +64,8 @@ async fn assignment_only(
     let locked_schedule_info = deps.scheduler.acquire_lock(process_id.clone()).await?;
     let mut schedule_info = locked_schedule_info.lock().await;
     let elapsed_acquire_lock = start_acquire_lock.elapsed();
-    deps.metrics.acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
+    deps.metrics
+        .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
     let updated_info = deps
         .scheduler
         .update_schedule_info(&mut *schedule_info, process_id.clone())
@@ -94,7 +95,8 @@ async fn assignment_only(
             let response_json =
                 json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
             let elapsed_top_level = start_top_level.elapsed();
-            deps.metrics.write_assignment_observe(elapsed_top_level.as_millis());
+            deps.metrics
+                .write_assignment_observe(elapsed_top_level.as_millis());
             Ok(response_json.to_string())
         }
         Err(e) => Err(format!("{:?}", e)),
@@ -155,7 +157,8 @@ pub async fn write_item(
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
             let elapsed_acquire_lock = start_acquire_lock.elapsed();
-            deps.metrics.acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
+            deps.metrics
+                .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
             let updated_info = deps
                 .scheduler
                 .update_schedule_info(&mut *schedule_info, data_item.id())
@@ -173,7 +176,8 @@ pub async fn write_item(
                     let response_json =
                         json!({ "timestamp": timestamp, "id": process.process_id.clone() });
                     let elapsed_top_level = start_top_level.elapsed();
-                    deps.metrics.write_item_observe(elapsed_top_level.as_millis());
+                    deps.metrics
+                        .write_item_observe(elapsed_top_level.as_millis());
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e)),
@@ -188,7 +192,8 @@ pub async fn write_item(
             let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
             let mut schedule_info = locked_schedule_info.lock().await;
             let elapsed_acquire_lock = start_acquire_lock.elapsed();
-            deps.metrics.acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
+            deps.metrics
+                .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
             let updated_info = deps
                 .scheduler
                 .update_schedule_info(&mut *schedule_info, data_item.target())
@@ -207,7 +212,8 @@ pub async fn write_item(
                     let response_json =
                         json!({ "timestamp": timestamp, "id": message.message_id()? });
                     let elapsed_top_level = start_top_level.elapsed();
-                    deps.metrics.write_item_observe(elapsed_top_level.as_millis());
+                    deps.metrics
+                        .write_item_observe(elapsed_top_level.as_millis());
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e)),
@@ -235,7 +241,8 @@ pub async fn read_message_data(
                 && (message.assignment_id()? == tx_id))
         {
             let elapsed_get_message = start_get_message.elapsed();
-            deps.metrics.get_message_observe(elapsed_get_message.as_millis());
+            deps.metrics
+                .get_message_observe(elapsed_get_message.as_millis());
             return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
         }
     }
@@ -259,7 +266,8 @@ pub async fn read_message_data(
         deps.metrics.serialize_json_observe(durationj.as_millis());
 
         let elapsed_top_level = start_top_level.elapsed();
-        deps.metrics.read_message_data_observe(elapsed_top_level.as_millis());
+        deps.metrics
+            .read_message_data_observe(elapsed_top_level.as_millis());
 
         return Ok(result);
     }

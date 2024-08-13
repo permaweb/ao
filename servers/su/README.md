@@ -47,7 +47,7 @@ Create a .env file with the following variables, or set them in the OS:
 - `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
 - `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
 - `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
-- `ENABLE_METRICS` enable prometheus metrics to be available on the  `/metrics` endpoint
+- `ENABLE_METRICS` enable application level prometheus metrics to be available on the  `/metrics` endpoint
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
@@ -122,7 +122,7 @@ in the container.
 - `USE_DISK` whether or not to write and read rocksdb, this is a performance enhancement for the data storage layer
 - `SU_DATA_DIR` if `USE_DISK` is `true`, this is where rocksdb will be initialized
 - `MIGRATION_BATCH_SIZE` when running the migration binary how many to fetch at once from postgres
-- `ENABLE_METRICS` enable prometheus metrics to be available on the  `/metrics` endpoint
+- `ENABLE_METRICS` enable application level prometheus metrics to be available on the  `/metrics` endpoint
 
 
 

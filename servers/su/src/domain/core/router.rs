@@ -30,7 +30,7 @@ pub struct ProcessScheduler {
 #[derive(Deserialize, Debug)]
 struct SchedulerEntry {
     url: String,
-    no_route: Option<bool>
+    no_route: Option<bool>,
 }
 
 /*
@@ -68,7 +68,7 @@ pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
         }
 
         /*
-          If we no longer what to route any process to this su 
+          If we no longer what to route any process to this su
           we can set no_route to true.
         */
         let mut sched = deps.data_store.get_scheduler_by_url(&entry.url)?;
@@ -167,12 +167,12 @@ pub async fn redirect_data_item(
                 process_schedulers record and return the url
             */
             let mut schedulers = deps
-              .data_store
-              .get_all_schedulers()?
-              .into_iter()
-              .filter(|scheduler| scheduler.no_route.unwrap_or(false) == false)
-              .collect::<Vec<_>>();
-              
+                .data_store
+                .get_all_schedulers()?
+                .into_iter()
+                .filter(|scheduler| scheduler.no_route.unwrap_or(false) == false)
+                .collect::<Vec<_>>();
+
             if let Some(min_scheduler) = schedulers.iter_mut().min_by_key(|s| s.process_count) {
                 min_scheduler.process_count += 1;
                 deps.data_store.update_scheduler(min_scheduler)?;
