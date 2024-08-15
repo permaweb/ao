@@ -46,6 +46,7 @@ class Config():
     maximum_memory = 0
     extra_compile_args = []
     keep_js = False
+    target = 64
 
     def __init__(self, config_file):
         
@@ -69,6 +70,20 @@ class Config():
                 self.maximum_memory = data.get('maximum_memory', self.maximum_memory)
                 self.extra_compile_args = data.get('extra_compile_args', self.extra_compile_args)
                 self.keep_js = data.get('keep_js', self.keep_js)
+                self.setTarget(data.get('target', self.target))
+  
+
+    def setTarget(self, value):
+        if(not isinstance(value, int) and not isinstance(value, str)):
+            print('Invalid target. Defaulting to 64 bit')
+            value = 64
+        else:
+            if(isinstance(value, str)):
+                value = int(value)
+            if(value != 64 and value != 32):
+                print('Invalid target. Defaulting to 64 bit')
+                value = 64
+        self.target = value
 
     def setValuesByPreset(self, preset):
         self.preset = preset
