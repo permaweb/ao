@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import fs from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
 import { apply } from 'ramda'
@@ -266,7 +267,19 @@ export const createApis = async (ctx) => {
         const processes = (await db.query(createQuery()))
         return processes
       },
-      saveCronProcess
+      readProcFile: () => {
+        if (!fs.existsSync(PROC_FILE_PATH)) return
+        const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
+        /**
+         * This .replace is used to fix corrupted json files
+         * it should be removed later now that the corruption
+         * issue is solved
+         */
+        return JSON.parse(data.replace(/}\s*"/g, ',"'))
+      },
+      saveCronProcess,
+      updateCronProcessCursor,
+      CRON_CURSOR_DIR
     })
   }
 }

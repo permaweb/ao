@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 import cron from 'node-cron'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 import { CRON_PROCESSES_TABLE } from './sqlite.js'
@@ -7,7 +9,6 @@ import { CRON_PROCESSES_TABLE } from './sqlite.js'
  * but cannot be saved to a file.
  */
 const cronsRunning = {}
-let isInit = false
 
 /**
  * Save a processId in the cron processes database.
@@ -69,6 +70,7 @@ export function getCronProcessCursorWith ({ db }) {
     return (await db.query(createQuery({ processId })))?.[0]?.cursor
   }
 }
+
 export function updateCronProcessCursorWith ({ db }) {
   return async ({ processId, cursor }) => {
     function createQuery ({ processId, cursor }) {
@@ -88,24 +90,36 @@ export function updateCronProcessCursorWith ({ db }) {
   }
 }
 
-function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
+function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, readProcFile, saveCronProcess, updateCronProcessCursor, CRON_CURSOR_DIR }) {
   return async () => {
+    const procFileData = readProcFile()
+    if (procFileData) {
+      for (const processId of Object.keys(procFileData)) {
+        await saveCronProcess({ processId })
+        const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
+        if (fs.existsSync(cursorFilePath)) {
+          const cursor = fs.readFileSync(cursorFilePath, 'utf8')
+          updateCronProcessCursor({ processId, cursor })
+        }
+      }
+    }
     /**
-     * If we have initialized already, or no cron processes are found, continue
+     * If no cron processes are found, continue
      */
-    if (isInit) return
-    const procFileData = await getCronProcesses()
-    if (!procFileData) return
+    const cronProcesses = await getCronProcesses()
+    if (!cronProcesses) return
 
     /*
      * start new os procs when the server starts because
      * the server has either restarted or been redeployed.
      */
-    for (const { processId } of procFileData) {
-      await startMonitoredProcess({ processId })
+    for (const { processId } of cronProcesses) {
+      try {
+        await startMonitoredProcess({ processId })
+      } catch (e) {
+        console.log(`Error starting process monitor: ${e}`)
+      }
     }
-
-    isInit = true
   }
 }
 

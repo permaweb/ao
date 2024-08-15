@@ -15,28 +15,44 @@ describe('cron', () => {
         getCronProcesses: () => undefined,
         startMonitoredProcess: async () => {
           assert.fail('should not start process')
-        }
+        },
+        readProcFile: () => undefined
       })()
     })
 
     describe('processing proc file runs successfully when not initial run and skips subsequent runs', async () => {
       let startMonitoredProcessCalls = 0
-      const initCronProcs = await cron.initCronProcsWith({
+      const initCronProcs = cron.initCronProcsWith({
         getCronProcesses: () => [{ processId: '1', status: 'running' }],
         startMonitoredProcess: async () => {
+          console.log('here ')
           startMonitoredProcessCalls++
           return Promise.resolve()
-        }
+        },
+        readProcFile: () => undefined
       })
 
       test('should start process by reading proc file and saving procs', async () => {
         await initCronProcs()
         assert.equal(startMonitoredProcessCalls, 1)
       })
+    })
 
-      test('should not process any more times after initial process', async () => {
+    describe('dumps proc file into sqlite if file is present', async () => {
+      let saveCronProcessCalls = 0
+      const initCronProcs = cron.initCronProcsWith({
+        getCronProcesses: () => undefined,
+        startMonitoredProcess: async () => undefined,
+        readProcFile: () => ({ 'process-123': 'running', 'process-456': 'running' }),
+        saveCronProcess: ({ processId }) => {
+          saveCronProcessCalls++
+          assert.ok(['process-123', 'process-456'].includes(processId))
+        }
+      })
+
+      test('make sure crons are being saved to sqlite', async () => {
         await initCronProcs()
-        assert.equal(startMonitoredProcessCalls, 1)
+        assert.equal(saveCronProcessCalls, 2)
       })
     })
   })
@@ -47,7 +63,7 @@ describe('cron', () => {
 
   describe('killMonitoredProcessWith', () => {
     test('should not kill process if process is not a running cron', async () => {
-      const killMonitoredProcess = await cron.killMonitoredProcessWith({
+      const killMonitoredProcess = cron.killMonitoredProcessWith({
         PROC_FILE_PATH: 'test',
         logger,
         monitorGauge: () => ({
