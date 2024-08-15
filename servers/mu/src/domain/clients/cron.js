@@ -1,58 +1,129 @@
 import fs from 'fs'
 import path from 'path'
 import cron from 'node-cron'
-import { Mutex } from 'async-mutex'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
-
-const mutex = new Mutex()
+import { CRON_PROCESSES_TABLE } from './sqlite.js'
 /**
  * cronsRunning stores the node cron response
  * which can be used to stop a cron that is running
  * but cannot be saved to a file.
  */
 const cronsRunning = {}
-/**
- * procesToSave will contain the same process ids as
- * the keys but will have a string as a value so it
- * can be saved to a file. It doesnt need to be an object
- * but to remain compatable with files out there it still
- * is an object.
- */
-const procsToSave = {}
-let isInit = false
 
-export function saveProcsWith ({ save }) {
-  return async () => {
-    const release = await mutex.acquire()
-    try {
-      await save(procsToSave)
-    } finally {
-      release()
+/**
+ * Save a processId in the cron processes database.
+ * @param {{ processId: string }} processId - the processId to save
+ */
+export function saveCronProcessWith ({ db }) {
+  return async ({ processId }) => {
+    function createQuery ({ processId }) {
+      return {
+        sql: `
+          INSERT OR IGNORE INTO ${CRON_PROCESSES_TABLE}
+          (processId, status)
+          VALUES (?, ?)
+        `,
+        parameters: [
+          processId,
+          'running'
+        ]
+      }
     }
+    db.run(createQuery({ processId }))
   }
 }
 
-function initCronProcsWith ({ startMonitoredProcess, readProcFile, saveProcs }) {
+/**
+ * Delete a processId from the cron processes database.
+ * @param {{ processId: string }} processId - the processId to delete
+ */
+export function deleteCronProcessWith ({ db }) {
+  return async ({ processId }) => {
+    function createQuery ({ processId }) {
+      return {
+        sql: `
+          DELETE FROM ${CRON_PROCESSES_TABLE}
+          WHERE processId = ?
+        `,
+        parameters: [
+          processId
+        ]
+      }
+    }
+    db.run(createQuery({ processId }))
+  }
+}
+
+export function getCronProcessCursorWith ({ db }) {
+  return async ({ processId }) => {
+    function createQuery ({ processId }) {
+      return {
+        sql: `
+          SELECT cursor FROM ${CRON_PROCESSES_TABLE}
+          WHERE processId = ?
+        `,
+        parameters: [
+          processId
+        ]
+      }
+    }
+    return (await db.query(createQuery({ processId })))?.[0]?.cursor
+  }
+}
+
+export function updateCronProcessCursorWith ({ db }) {
+  return async ({ processId, cursor }) => {
+    function createQuery ({ processId, cursor }) {
+      return {
+        sql: `
+          UPDATE ${CRON_PROCESSES_TABLE}
+          SET cursor = ?
+          WHERE processId = ?
+        `,
+        parameters: [
+          cursor,
+          processId
+        ]
+      }
+    }
+    db.run(createQuery({ processId, cursor }))
+  }
+}
+
+function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, readProcFile, saveCronProcess, updateCronProcessCursor, CRON_CURSOR_DIR }) {
   return async () => {
-    if (isInit) return
     const procFileData = readProcFile()
-    if (!procFileData) return
+    if (procFileData) {
+      for (const processId of Object.keys(procFileData)) {
+        await saveCronProcess({ processId })
+        const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
+        if (fs.existsSync(cursorFilePath)) {
+          const cursor = fs.readFileSync(cursorFilePath, 'utf8')
+          updateCronProcessCursor({ processId, cursor })
+        }
+      }
+    }
+    /**
+     * If no cron processes are found, continue
+     */
+    const cronProcesses = await getCronProcesses()
+    if (!cronProcesses) return
 
     /*
      * start new os procs when the server starts because
      * the server has either restarted or been redeployed.
      */
-    for (const processId of Object.keys(procFileData)) {
-      await startMonitoredProcess({ processId })
+    for (const { processId } of cronProcesses) {
+      try {
+        await startMonitoredProcess({ processId })
+      } catch (e) {
+        console.log(`Error starting process monitor: ${e}`)
+      }
     }
-
-    await saveProcs(procsToSave)
-
-    isInit = true
   }
 }
 
-function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR, CU_URL, fetchCron, crank, PROC_FILE_PATH, monitorGauge, saveProcs }) {
+function startMonitoredProcessWith ({ fetch, histogram, logger, CU_URL, fetchCron, crank, monitorGauge, saveCronProcess, getCronProcessCursor, updateCronProcessCursor }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -62,11 +133,13 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     logger
   })
   return async ({ processId }) => {
+    /**
+     * If we have an existing cron running for this process,
+     * throw an error to avoid double monitoring / overwriting
+     */
     if (cronsRunning[processId]) {
       throw new Error('Process already being monitored')
     }
-    monitorGauge.inc()
-    const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
 
     let ct = null
     let isJobRunning = false
@@ -97,14 +170,12 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     })
 
     cronsRunning[processId] = ct
+
     /**
-     * We dont need an object here for procsToSave
-     * anymore but to remain compatable with the
-     * files already out there we're still using one.
-     * Thats why here is just sending 'running'
+     * Once we have updated cronsRunning, save our processId in the db.
      */
-    procsToSave[processId] = 'running'
-    await saveProcs(PROC_FILE_PATH)
+    await saveCronProcess({ processId })
+    monitorGauge.inc()
 
     function publishCron (result) {
       result.edges.forEach((edge) => {
@@ -133,9 +204,8 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     }
 
     async function getCursor () {
-      if (fs.existsSync(cursorFilePath)) {
-        return fs.readFileSync(cursorFilePath, 'utf8')
-      }
+      const cursor = await getCronProcessCursor({ processId })
+      if (cursor) return cursor
 
       const latestResults = await getCursorFetch(`${CU_URL}/results/${processId}?sort=DESC&limit=1&processId=${processId}`)
 
@@ -155,25 +225,27 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CRON_CURSOR_DIR,
     function setCursor (result) {
       const cursor = result.edges[result.edges?.length - 1]?.cursor
       if (cursor) {
-        fs.writeFileSync(cursorFilePath, cursor, 'utf8')
+        updateCronProcessCursor({ processId, cursor })
       }
       return result
     }
   }
 }
 
-function killMonitoredProcessWith ({ logger, PROC_FILE_PATH, monitorGauge, saveProcs }) {
+function killMonitoredProcessWith ({ logger, monitorGauge, deleteCronProcess }) {
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
     if (!ct) {
       logger({ log: `Cron process not found: ${processId}` })
       throw new Error('Process monitor not found')
     }
-    monitorGauge.dec()
     ct.stop()
     delete cronsRunning[processId]
-    delete procsToSave[processId]
-    await saveProcs(PROC_FILE_PATH)
+    /**
+     * Remove the processId from the cron processes db.
+     */
+    await deleteCronProcess({ processId })
+    monitorGauge.dec()
     logger({ log: `Cron process stopped: ${processId}` })
   }
 }
