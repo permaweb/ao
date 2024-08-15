@@ -47,10 +47,19 @@ ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 RUN node --version
 RUN npm --version
 
+# Make a copy of the lua runtime for 32-bit
+RUN cp -r /lua-${LUA_VERSION} /lua-${LUA_VERSION}-32
+
 # And, re-compile lua with "generic WASM"
 RUN cd /lua-${LUA_VERSION} && \
   make clean && \
   make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1' 
+
+# And, re-compile lua with "generic WASM 32-bit"
+RUN cd /lua-${LUA_VERSION}-32 && \
+  make clean && \
+  make generic CC='emcc -s WASM=1 -s SUPPORT_LONGJMP=1' 
+
 
 #############################
 ##### Install Commands ######
@@ -91,6 +100,11 @@ RUN chmod +x /usr/local/bin/ao-build-module
 # BUILD WeaveDrive Extension Helper
 ###################################
 COPY ./src/aolibc /opt/aolibc
+## Build aolibc for 32-bit and rename to aolibc32
+RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s SUPPORT_LONGJMP=1" && cp ./aolibc.a ./aolibc32.a
+RUN rm /opt/aolibc/aolibc.a
+RUN rm /opt/aolibc/aostdio.o
+# Build aolibc for 64-bit
 RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1"
 
 ENV CC='emcc -s WASM=1'
