@@ -832,7 +832,10 @@ export function findLatestProcessMemoryWith ({
   function maybeCached (args) {
     const { processId, omitMemory, before } = args
 
-    const cacheKey = before === LATEST ? processId : `${processId}:${before.nonce}:${before.ordinate}:${before.timestamp}`
+    // only use the historical cache key if we are allowing historical process evaluations
+    const cacheKey = before !== LATEST && ALLOW_HISTORICAL_PROCESS_EVALUATIONS ? `${processId}:${before.nonce}:${before.ordinate}:${before.timestamp}` : processId
+
+
     return of(processId)
       .chain((processId) => {
         const cached = cache.get(cacheKey)
@@ -1141,12 +1144,12 @@ export function findLatestProcessMemoryWith ({
       .bichain(maybeRecord, Resolved)
       .bichain(maybeCheckpointFromArweave, Resolved)
       .bichain(coldStart, Resolved)
-      .chain(ALLOW_HISTORICAL_PROCESS_EVALUATIONS ? maybeOld({ processId, before }) : Resolved) // conditionally chain maybeOld
+      .chain(!ALLOW_HISTORICAL_PROCESS_EVALUATIONS ? maybeOld({ processId, before }) : Resolved)
       .toPromise()
   }
 }
 
-export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD }) {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, ALLOW_HISTORICAL_PROCESS_EVALUATIONS }) {
   return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
     const cached = cache.get(processId)
 
@@ -1180,6 +1183,15 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
      * so simply ignore it and return, keeping the current value in cache
      */
     } else if (cached && !isLaterThan(cached.evaluation, { timestamp, ordinate, cron })) {
+      // if we allow historical process evaluations, save this specific value to the cache at its timestamp
+      if (ALLOW_HISTORICAL_PROCESS_EVALUATIONS) {
+        logger(
+          'Caching historical memory for process "%s" with parameters "%j"',
+          processId,
+          { messageId, timestamp, ordinate, cron, blockHeight }
+        )
+        cache.set(`${processId}:${nonce}:${ordinate}:${timestamp}`, { Memory, evaluation: { processId, moduleId, timestamp, epoch, nonce, blockHeight, ordinate, cron, gasUsed } })
+      }
       return
     } else {
       logger(
@@ -1562,29 +1574,5 @@ export function saveCheckpointWith ({
       .bichain(maybeRecentlyCheckpointed, Resolved)
       .bichain(createCheckpoint, Resolved)
       .toPromise()
-  }
-}
-
-export function saveHistoricalProcessMemoryWith ({ cache, logger }) {
-  return async ({ processId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
-    /**
-     * If we are not allowing historical process evaluations, then we should save the process id to the cache at a specific location using the nonce, ordinate and timestamp.
-     */
-    const cached = cache.get(`${processId}:${nonce}:${ordinate}:${timestamp}`)
-    if (cached) {
-      /**
-       * If Memory exists on the cache entry, then there is nothing to "reseed"
-       * so do nothing
-       */
-      if (cached.Memory) return
-    }
-
-    // save it to the cache and return
-    logger(
-      'Caching historical memory for process "%s" with parameters "%j"',
-      processId,
-      { timestamp, ordinate, cron, blockHeight }
-    )
-    cache.set(`${processId}:${nonce}:${ordinate}:${timestamp}`, { Memory, evaluation: { processId, timestamp, epoch, nonce, blockHeight, ordinate, cron, gasUsed } })
   }
 }

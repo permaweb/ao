@@ -283,13 +283,10 @@ export const createApis = async (ctx) => {
       ALLOW_HISTORICAL_PROCESS_EVALUATIONS: ctx.ALLOW_HISTORICAL_PROCESS_EVALUATIONS,
       logger
     }),
-    saveHistoricalProcessMemory: AoProcessClient.saveHistoricalProcessMemoryWith({
-      cache: wasmMemoryCache,
-      logger
-    }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+      ALLOW_HISTORICAL_PROCESS_EVALUATIONS: ctx.ALLOW_HISTORICAL_PROCESS_EVALUATIONS,
       saveCheckpoint,
       logger
     }),

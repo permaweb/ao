@@ -8,7 +8,6 @@ import { LRUCache } from 'lru-cache'
 import { evaluatorSchema, findMessageBeforeSchema, saveLatestProcessMemorySchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
 import { removeTagsByNameMaybeValue } from '../utils.js'
-import { saveHistoricalProcessMemoryWith } from '../client/ao-process.js'
 
 /**
  * The result that is produced from this step
@@ -300,21 +299,6 @@ export function evaluateWith (env) {
         const { noSave, cron, ordinate, message } = prev
         if (!noSave) {
           await saveLatestProcessMemory({
-            processId: ctx.id,
-            moduleId: ctx.moduleId,
-            messageId: message.Id,
-            timestamp: message.Timestamp,
-            nonce: message.Nonce,
-            epoch: message.Epoch,
-            blockHeight: message['Block-Height'],
-            ordinate,
-            cron,
-            Memory: prev.Memory,
-            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron,
-            gasUsed: totalGasUsed
-          })
-          // for historical purposes
-          await saveHistoricalProcessMemoryWith({
             processId: ctx.id,
             moduleId: ctx.moduleId,
             messageId: message.Id,

@@ -200,7 +200,7 @@ describe('loadProcess', () => {
       .then(() => assert.fail('should have rejected'))
       .catch((err) => assert.deepStrictEqual(err, {
         status: 425,
-        message: 'message at timestamp 1697574792000 not found cached, and earlier than latest known nonce 12'
+        message: 'message at timestamp 1697574792000 not found cached, and earlier than latest allowed nonce 12'
       }))
 
     // ordinate

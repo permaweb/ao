@@ -93,7 +93,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, lo
 
           return {
             status: 425,
-            message: `message ${id} not found cached, and earlier than latest known nonce ${err.ordinate}`
+            message: `message ${id} not found cached, and earlier than latest allowed nonce ${err.ordinate}`
           }
         },
         identity
