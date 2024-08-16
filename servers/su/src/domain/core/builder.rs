@@ -55,7 +55,7 @@ impl<'a> Builder<'a> {
 
     async fn gen_assignment(
         &self,
-        message_id: String,
+        message_id: Option<String>,
         process_id: String,
         schedule_info: &dyn ScheduleProvider,
         exclude: &Option<String>,
@@ -64,7 +64,6 @@ impl<'a> Builder<'a> {
         let height = network_info.height.clone();
         let mut tags = vec![
             Tag::new(&"Process".to_string(), &process_id),
-            Tag::new(&"Message".to_string(), &message_id),
             Tag::new(&"Epoch".to_string(), &schedule_info.epoch()),
             Tag::new(&"Nonce".to_string(), &schedule_info.nonce()),
             Tag::new(&"Hash-Chain".to_string(), &schedule_info.hash_chain()),
@@ -74,6 +73,11 @@ impl<'a> Builder<'a> {
             Tag::new(&"Type".to_string(), &"Assignment".to_string()),
             Tag::new(&"Variant".to_string(), &"ao.TN.1".to_string()),
         ];
+
+        match message_id {
+            Some(id) => tags.push(Tag::new(&"Message".to_string(), &id)),
+            None => (),
+        };
 
         /*
             exclude is a comma seperated value fed in as a query
@@ -146,8 +150,8 @@ impl<'a> Builder<'a> {
             Ok(_) => {
                 match self
                     .gen_assignment(
-                        message_id.clone(),
-                        process.process_id.clone(),
+                        Some(message_id.clone()),
+                        process.process.process_id.clone(),
                         schedule_info,
                         exclude,
                     )
@@ -171,7 +175,7 @@ impl<'a> Builder<'a> {
         let message_item = DataItem::from_bytes(tx)?;
         match self
             .gen_assignment(
-                message_item.id(),
+                Some(message_item.id()),
                 message_item.target(),
                 schedule_info,
                 &None,
@@ -189,48 +193,16 @@ impl<'a> Builder<'a> {
         tx: Vec<u8>,
         schedule_info: &dyn ScheduleProvider,
     ) -> Result<BuildResult, BuilderErrorType> {
-        let item = DataItem::from_bytes(tx)?;
+        let process_item = DataItem::from_bytes(tx)?;
 
-        self.logger.log(format!(
-            "attempting to verify data item id - {}",
-            &item.id()
-        ));
-        self.logger.log(format!("owner - {}", &item.owner()));
-        self.logger.log(format!("target - {}", &item.target()));
-        self.logger.log(format!("tags - {:?}", &item.tags()));
-
-        self.logger
-            .log(format!("verified data item id - {}", &item.id()));
-
-        let network_info = self.gateway.network_info().await?;
-        let height = network_info.height.clone();
-
-        let tags = vec![
-            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
-            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-            Tag::new(&"Block-Height".to_string(), &height.to_string()),
-            Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
-        ];
-        self.logger.log(format!("generated tags - {:?}", &tags));
-
-        let mut data_bundle = DataBundle::new(tags.clone());
-        data_bundle.add_item(item);
-        let buffer = data_bundle.to_bytes()?;
-
-        let pub_key = self.signer.get_public_key();
-        let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;
-        let message = new_data_item.get_message()?.to_vec();
-
-        let signature = self.signer.sign_tx(message).await?;
-
-        new_data_item.signature = signature;
-
-        self.logger.log(format!("signature succeeded {}", ""));
-
-        Ok(BuildResult {
-            binary: new_data_item.as_bytes()?,
-            bundle: data_bundle,
-        })
+        match self
+            .gen_assignment(None, process_item.id(), schedule_info, &None)
+            .await
+        {
+            // bundle both the assignment and the message
+            Ok(a) => self.bundle_items(vec![a, process_item]).await,
+            Err(e) => Err(e),
+        }
     }
 
     pub fn parse_data_item(&self, tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
@@ -253,6 +225,7 @@ impl<'a> Builder<'a> {
                     assurance that it is confirmed.
                 */
                 let threshold = match process
+                    .process
                     .tags
                     .iter()
                     .find(|tag| tag.name == "Settlement-Depth")
