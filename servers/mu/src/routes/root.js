@@ -55,7 +55,7 @@ const withMessageRoutes = (app) => {
                 logger({ log: 'Failed to send the Assignment', logId, end: true }, e.cause)
                 return e
               },
-              logger.tap({ log: 'Successfully sent Assignment. Beginning to crank...' })
+              logger.tap({ log: 'Successfully sent Assignment. Beginning to push...' })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
@@ -89,7 +89,7 @@ const withMessageRoutes = (app) => {
                 logger({ log: `Failed to send the DataItem: ${e}`, end: true }, e.cause)
                 return e
               },
-              logger.tap({ log: 'Successfully sent DataItem. Beginning to crank...' })
+              logger.tap({ log: 'Successfully sent DataItem. Beginning to push...' })
             )
             .chain(({ tx, crank: crankIt }) => {
               /**
