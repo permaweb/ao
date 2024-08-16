@@ -76,11 +76,11 @@ export function sendDataItemWith ({
             })
             .bimap(
               (res) => {
-                logger({ log: 'Failed to crank messages', end: true }, ctx)
+                logger({ log: 'Failed to push messages', end: true }, ctx)
                 return res
               },
               (res) => {
-                logger({ log: 'Cranking complete', end: true }, ctx)
+                logger({ log: 'Pushing complete', end: true }, ctx)
                 return res
               }
             )
@@ -119,11 +119,11 @@ export function sendDataItemWith ({
         }, Resolved)
         .bimap(
           (res) => {
-            logger({ log: 'Assignments cranked for Process DataItem.', end: true }, ctx)
+            logger({ log: 'Assignments pushed for Process DataItem.', end: true }, ctx)
             return res
           },
           (res) => {
-            logger({ log: 'No cranking for a Process DataItem without target required. Nooping...', end: true }, ctx)
+            logger({ log: 'No pushing for a Process DataItem without target required. Nooping...', end: true }, ctx)
             return res
           }
         )

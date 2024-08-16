@@ -50,11 +50,11 @@ export function sendAssignWith ({
         })
         .bimap(
           (res) => {
-            logger({ log: 'Failed to crank messages from assignment', end: true }, ctx)
+            logger({ log: 'Failed to push messages from assignment', end: true }, ctx)
             return res
           },
           (res) => {
-            logger({ log: 'Cranking complete', end: true }, ctx)
+            logger({ log: 'Pushing complete', end: true }, ctx)
             return res
           }
         )
