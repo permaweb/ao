@@ -174,7 +174,7 @@ pub async fn write_item(
             match system_time_u64() {
                 Ok(timestamp) => {
                     let response_json =
-                        json!({ "timestamp": timestamp, "id": process.process_id.clone() });
+                        json!({ "timestamp": timestamp, "id": process.process.process_id.clone() });
                     let elapsed_top_level = start_top_level.elapsed();
                     deps.metrics
                         .write_item_observe(elapsed_top_level.as_millis());
@@ -247,11 +247,11 @@ pub async fn read_message_data(
         }
     }
 
-    if let Ok(_) = deps.data_store.get_process(&tx_id) {
+    if let Ok(process) = deps.data_store.get_process(&tx_id) {
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&tx_id, &from, &to, &limit)
+            .get_messages(&process, &from, &to, &limit)
             .await?;
         let duration = start.elapsed();
         deps.logger
@@ -280,7 +280,7 @@ pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String,
     let process = deps.data_store.get_process(&process_id)?;
     let elapsed = start.elapsed();
     deps.metrics.get_process_observe(elapsed.as_millis());
-    let result = match serde_json::to_string(&process) {
+    let result = match serde_json::to_string(&process.process) {
         Ok(r) => r,
         Err(e) => return Err(format!("{:?}", e)),
     };
