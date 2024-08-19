@@ -41,13 +41,8 @@ describe('cron', () => {
     describe('dumps proc file into sqlite if file is present', async () => {
       let saveCronProcessCalls = 0
       const initCronProcs = cron.initCronProcsWith({
-        getCronProcesses: () => undefined,
-        startMonitoredProcess: async () => undefined,
-        readProcFile: () => ({ 'process-123': 'running', 'process-456': 'running' }),
-        saveCronProcess: ({ processId }) => {
-          saveCronProcessCalls++
-          assert.ok(['process-123', 'process-456'].includes(processId))
-        }
+        getCronProcesses: () => [{ processId: 'pid-123', status: 'running' }, { processId: 'pid-456', status: 'running' }],
+        startMonitoredProcess: async () => { saveCronProcessCalls++ }
       })
 
       test('make sure crons are being saved to sqlite', async () => {

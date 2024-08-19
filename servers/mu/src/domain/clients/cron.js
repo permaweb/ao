@@ -1,5 +1,3 @@
-import fs from 'fs'
-import path from 'path'
 import cron from 'node-cron'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 import { CRON_PROCESSES_TABLE } from './sqlite.js'
@@ -90,19 +88,8 @@ export function updateCronProcessCursorWith ({ db }) {
   }
 }
 
-function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, readProcFile, saveCronProcess, updateCronProcessCursor, CRON_CURSOR_DIR }) {
+function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
   return async () => {
-    const procFileData = readProcFile()
-    if (procFileData) {
-      for (const processId of Object.keys(procFileData)) {
-        await saveCronProcess({ processId })
-        const cursorFilePath = path.join(`/${CRON_CURSOR_DIR}/${processId}-cursor.txt`)
-        if (fs.existsSync(cursorFilePath)) {
-          const cursor = fs.readFileSync(cursorFilePath, 'utf8')
-          updateCronProcessCursor({ processId, cursor })
-        }
-      }
-    }
     /**
      * If no cron processes are found, continue
      */
