@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-scheduler-utils",
-  "version": null,
+  "version": "0.0.24",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
