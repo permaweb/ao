@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.59](https://github.com/permaweb/ao/compare/connect@v0.0.58...connect@v0.0.59) (2024-08-19)
+
+
+### Bug Fixes
+
+* **connect:** stop adding random bits to empty data in aoconnect ([5e78933](https://github.com/permaweb/ao/commit/5e789337ab8df95259a06c3552c926a42cf821c0))
+* **mu:** add comments to data bit replacement ([4cc47d6](https://github.com/permaweb/ao/commit/4cc47d68979766c2fa47dec8e2601510fd051697))
+
 ## [0.0.58](https://github.com/permaweb/ao/compare/connect@v0.0.57...connect@v0.0.58) (2024-08-06)
 
 
