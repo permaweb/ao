@@ -318,14 +318,7 @@ export const createApis = async (ctx) => {
     isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
     isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
     isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
-    /**
-     * This is not configurable, as Load message support will be dictated by the protocol,
-     * which proposes Assignments as a more flexible and extensible solution that also includes
-     * Load Message use-cases
-     *
-     * But for now, supporting Load messages in perpetuity.
-     */
-    AO_LOAD_MAX_BLOCK: Number.MAX_SAFE_INTEGER,
+    MODULE_MODE: ctx.MODULE_MODE,
     logger
   })
   /**

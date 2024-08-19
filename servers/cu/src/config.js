@@ -91,6 +91,7 @@ const preprocessedServerConfigSchema = z.preprocess(
 const CONFIG_ENVS = {
   development: {
     MODE,
+    MODULE_MODE: process.env.MODULE_MODE,
     port: process.env.PORT || 6363,
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
@@ -138,6 +139,7 @@ const CONFIG_ENVS = {
   },
   production: {
     MODE,
+    MODULE_MODE: process.env.MODULE_MODE,
     port: process.env.PORT || 6363,
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
