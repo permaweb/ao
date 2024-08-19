@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-import fs from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
 import { apply } from 'ramda'
@@ -209,6 +208,25 @@ export const createApis = async (ctx) => {
   const updateCronProcessCursor = updateCronProcessCursorWith({ db })
   const getCronProcessCursor = getCronProcessCursorWith({ db })
 
+  async function getCronProcesses () {
+    function createQuery () {
+      return {
+        sql: `
+          SELECT * FROM ${SqliteClient.CRON_PROCESSES_TABLE}
+          WHERE status = 'running'
+        `,
+        parameters: []
+      }
+    }
+    const processes = (await db.query(createQuery()))
+    return processes
+  }
+  /**
+   * Initialize cron monitor to include existing crons in sqlite cron processes table.
+   */
+  const existingCrons = Object.keys(await getCronProcesses()).length || 0
+  cronMonitorGauge.set(existingCrons)
+
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
     fetch,
     histogram,
@@ -254,32 +272,7 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      getCronProcesses: async () => {
-        function createQuery () {
-          return {
-            sql: `
-              SELECT * FROM ${SqliteClient.CRON_PROCESSES_TABLE}
-              WHERE status = 'running'
-            `,
-            parameters: []
-          }
-        }
-        const processes = (await db.query(createQuery()))
-        return processes
-      },
-      readProcFile: () => {
-        if (!fs.existsSync(PROC_FILE_PATH)) return
-        const data = fs.readFileSync(PROC_FILE_PATH, 'utf8')
-        /**
-         * This .replace is used to fix corrupted json files
-         * it should be removed later now that the corruption
-         * issue is solved
-         */
-        return JSON.parse(data.replace(/}\s*"/g, ',"'))
-      },
-      saveCronProcess,
-      updateCronProcessCursor,
-      CRON_CURSOR_DIR
+      getCronProcesses
     })
   }
 }
