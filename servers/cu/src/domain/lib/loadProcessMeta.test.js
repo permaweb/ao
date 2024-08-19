@@ -37,7 +37,10 @@ describe('loadProcess', () => {
           signature: 'sig-123',
           anchor: null,
           data: 'data-123',
-          block: { height: 123, timestamp: 1697574792000 }
+          block: { height: 123, timestamp: 1697574792000 },
+          timestamp: 1697574792000,
+          nonce: 0,
+          processId
         }
       },
       logger
@@ -116,10 +119,13 @@ describe('loadProcess', () => {
         return PROCESS
       },
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
-      loadProcess: async (id) => ({
+      loadProcess: async ({ processId }) => ({
         owner: { address: 'woohoo', key: 'key-123' },
         tags,
-        block: { height: 123, timestamp: 1697574792000 }
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
       }),
       logger
     })
@@ -139,10 +145,13 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => { throw { status: 409 } },
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
-      loadProcess: async (id) => ({
+      loadProcess: async ({ processId }) => ({
         owner: { address: 'woohoo', key: 'key-123' },
         tags,
-        block: { height: 123, timestamp: 1697574792000 }
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
       }),
       logger
     })
@@ -161,14 +170,16 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
-      loadProcess: async (id) => ({
+      loadProcess: async ({ processId }) => ({
         owner: { address: 'woohoo', key: 'key-123' },
         tags: [
-          { name: 'Not_Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Process' }
         ],
-        block: { height: 123, timestamp: 1697574792000 }
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
       }),
       logger
     })
@@ -184,14 +195,17 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
-      loadProcess: async (id) => ({
+      loadProcess: async ({ processId }) => ({
         owner: { address: 'woohoo', key: 'key-123' },
         tags: [
           { name: 'Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'not_ao' },
           { name: 'Type', value: 'Process' }
         ],
-        block: { height: 123, timestamp: 1697574792000 }
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
       }),
       logger
     })
@@ -207,14 +221,17 @@ describe('loadProcess', () => {
       findProcess: async () => { throw { status: 404 } },
       saveProcess: async () => PROCESS,
       locateProcess: async ({ processId: id }) => ({ url: 'https://foo.bar' }),
-      loadProcess: async (id) => ({
+      loadProcess: async ({ processId }) => ({
         owner: { address: 'woohoo', key: 'key-123' },
         tags: [
           { name: 'Module', value: 'foobar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Not_process' }
         ],
-        block: { height: 123, timestamp: 1697574792000 }
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
       }),
       logger
     })

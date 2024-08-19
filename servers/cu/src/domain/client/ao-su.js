@@ -293,7 +293,14 @@ export const loadProcessWith = ({ fetch, logger }) => {
            * SU is currently sending back timestamp in milliseconds,
            */
           timestamp: path(['timestamp'])
-        })
+        }),
+        /**
+         * These were added for the aop6 Boot Loader change so that
+         * the Process can be used properly downstream.
+         */
+        processId: always(processId),
+        timestamp: path(['timestamp']),
+        nonce: always(0)
       }))
   }
 }

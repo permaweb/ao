@@ -187,7 +187,11 @@ export const loadProcessSchema = z.function()
     suUrl: z.string().url(),
     processId: z.string().min(1)
   }))
-  .returns(z.promise(processSchema.omit({ id: true })))
+  .returns(z.promise(processSchema.omit({ id: true }).extend({
+    timestamp: z.number().min(1),
+    nonce: z.number().min(0),
+    processId: z.string().min(1)
+  })))
 
 export const loadTimestampSchema = z.function()
   .args(z.object({
