@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
-use bundlr_sdk::tags::*;
+use super::tags::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum JsonErrorType {
@@ -803,15 +803,20 @@ mod tests {
     #[test]
     fn test_from_bundle() {
         let d_item_string = PROCESS_ITEM_STR.to_string();
+        let a_d_item_string = ASSIGNMENT_ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
+        let assignment_item_bytes =
+            base64_url::decode(&a_d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
+        let assignment_data_item =
+            DataItem::from_bytes(assignment_item_bytes).expect("failed to build data item");
         let tags = vec![
             Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
             Tag::new(&"Block-Height".to_string(), &"100".to_string()),
-            Tag::new(&"Timestamp".to_string(), &"100".to_string()),
         ];
         let mut data_bundle = DataBundle::new(tags);
+        data_bundle.add_item(assignment_data_item);
         data_bundle.add_item(data_item);
         let process = Process::from_bundle(&data_bundle).expect("failed to create process");
         assert_eq!(
