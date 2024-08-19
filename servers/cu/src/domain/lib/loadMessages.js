@@ -6,7 +6,7 @@ import { z } from 'zod'
 import ms from 'ms'
 
 import { streamSchema } from '../model.js'
-import { mapFrom } from '../utils.js'
+import { mapFrom, parseTags } from '../utils.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
@@ -610,52 +610,80 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
           const isColdStart = !ctx.from
 
           /**
-           * Generate and emit a message that represents the process itself.
+           * Generate and emit a message that represents the process itself
+           * if the Process was started before the aop6 Boot Loader change
            *
            * It will be the first message evaluated by the module
            */
+
+          const messages = $messages[Symbol.asyncIterator]()
+
+          /**
+           * { value: any, done: boolean }
+           */
+          let message = await messages.next()
+
+          /**
+           * If this is a cold start
+           *  if (message) then check tags and emit generated if type !== 'Process'
+           *  else convert the Process into a Message and emit it
+           */
           if (isColdStart) {
-            logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
-            yield {
-              /**
-               * Ensure the noSave flag is set, so evaluation does not persist
-               * this process message
-               */
-              noSave: true,
-              ordinate: '^',
-              name: `Process Message ${ctx.id}`,
-              message: {
-                Id: ctx.id,
-                Signature: ctx.signature,
-                Data: ctx.data,
-                Owner: ctx.owner,
+            const { value, done } = message
+            /**
+             * This condition is to handle 2 cases. Before aop6 ECHO Boot loader,
+             * The first Message in a stream will be an actual Message. But after
+             * aop6 the first Message is now the process itself, shaped like a Message
+             *
+             * As a result, old Processes that were started before the boot loader
+             * change, can either have no Messages, or have the first Message with a tag
+             * of type Message, as opposed to Process. In both these cases on a cold start
+             * we need to inject the Process as the first Message in the stream, as was
+             * done prior to the Boot Loader change.
+             */
+            if (done || parseTags(value.Tags).Type !== 'Process') {
+              logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
+              yield {
                 /**
-                 * the target of the process message is itself
+                 * Ensure the noSave flag is set, so evaluation does not persist
+                 * this process message
                  */
-                Target: ctx.id,
-                Anchor: ctx.anchor,
-                /**
-                 * Since a process may be spawned from another process,
-                 * the owner may not always be an "end user" wallet,
-                 * but the MU wallet that signed and pushed the spawn.
-                 *
-                 * The MU sets From-Process on any data item it pushes
-                 * on behalf of a process, including spawns.
-                 *
-                 * So we can set From here using the Process tags
-                 * and owner, just like we do for any other message
-                 */
-                From: mapFrom({ tags: ctx.tags, owner: ctx.owner }),
-                Tags: ctx.tags,
-                Epoch: undefined,
-                Nonce: undefined,
-                Timestamp: ctx.block.timestamp,
-                'Block-Height': ctx.block.height,
-                Cron: false
-              },
-              AoGlobal: {
-                Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags },
-                Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
+                noSave: true,
+                ordinate: '^',
+                name: `Process Message ${ctx.id}`,
+                message: {
+                  Id: ctx.id,
+                  Signature: ctx.signature,
+                  Data: ctx.data,
+                  Owner: ctx.owner,
+                  /**
+                   * the target of the process message is itself
+                   */
+                  Target: ctx.id,
+                  Anchor: ctx.anchor,
+                  /**
+                   * Since a process may be spawned from another process,
+                   * the owner may not always be an "end user" wallet,
+                   * but the MU wallet that signed and pushed the spawn.
+                   *
+                   * The MU sets From-Process on any data item it pushes
+                   * on behalf of a process, including spawns.
+                   *
+                   * So we can set From here using the Process tags
+                   * and owner, just like we do for any other message
+                   */
+                  From: mapFrom({ tags: ctx.tags, owner: ctx.owner }),
+                  Tags: ctx.tags,
+                  Epoch: undefined,
+                  Nonce: undefined,
+                  Timestamp: ctx.block.timestamp,
+                  'Block-Height': ctx.block.height,
+                  Cron: false
+                },
+                AoGlobal: {
+                  Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags },
+                  Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
+                }
               }
             }
           }
@@ -663,7 +691,17 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
           /**
            * Emit the merged stream of Cron and Scheduled Messages
            */
-          for await (const message of $messages) yield message
+          while (true) {
+            const { value, done } = message
+            /**
+             * We're done, so break the loop
+             */
+            if (done) break
+
+            yield value
+            const next = await messages.next()
+            message = next
+          }
         })
       )
     })

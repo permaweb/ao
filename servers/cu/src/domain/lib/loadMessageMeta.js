@@ -1,7 +1,7 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { findProcessSchema, loadMessageMetaSchema, locateProcessSchema } from '../dal.js'
+import { findProcessSchema, loadMessageMetaSchema, locateProcessSchema, loadProcessSchema } from '../dal.js'
 import { findRawTag, trimSlash } from '../utils.js'
 
 /**
@@ -67,16 +67,38 @@ export function loadMessageMetaWith (env) {
   env = { ...env, logger }
 
   const loadMessageMeta = fromPromise(loadMessageMetaSchema.implement(env.loadMessageMeta))
+  const loadProcess = fromPromise(loadProcessSchema.implement(env.loadProcess))
 
   const maybeCached = maybeCachedWith(env)
 
   return (ctx) => {
     return maybeCached(ctx.processId)
-      .chain(({ url }) => loadMessageMeta({
-        suUrl: trimSlash(url),
-        processId: ctx.processId,
-        messageTxId: ctx.messageTxId
-      }))
+      .chain(({ url }) => {
+        /**
+         * This condition handles the aop6 Boot Loader functionality
+         * It is here so that this function can be called with a process id
+         * as a message id and the cu will evaluate the Process with the Process
+         * itself as the first Message without there necessarily being any more
+         * Messages on the Process.
+         */
+        if (ctx.processId === ctx.messageTxId) {
+          return loadProcess({
+            suUrl: trimSlash(url),
+            processId: ctx.processId,
+            messageTxId: ctx.messageTxId
+          })
+        }
+
+        /**
+         * Otherwise, this is just being called with a Message id
+         * so there is no need to fetch the Process here
+         */
+        return loadMessageMeta({
+          suUrl: trimSlash(url),
+          processId: ctx.processId,
+          messageTxId: ctx.messageTxId
+        })
+      })
       .map(ctxSchema.parse)
       // .map(logger.tap('Loaded message process and timestamp and appended to ctx %j'))
   }

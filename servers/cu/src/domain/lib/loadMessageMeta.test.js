@@ -25,6 +25,18 @@ describe('loadMessageMeta', () => {
         })
         return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
       },
+      loadProcess: async ({ processId }) => ({
+        owner: { address: 'woohoo', key: 'key-123' },
+        tags: [
+          { name: 'Module', value: 'foobar' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Process' }
+        ],
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
+      }),
       logger
     })
 
@@ -61,6 +73,18 @@ describe('loadMessageMeta', () => {
         })
         return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
       },
+      loadProcess: async ({ processId }) => ({
+        owner: { address: 'woohoo', key: 'key-123' },
+        tags: [
+          { name: 'Module', value: 'foobar' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Process' }
+        ],
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
+      }),
       logger
     })
 
