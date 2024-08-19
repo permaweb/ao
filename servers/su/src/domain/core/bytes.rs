@@ -2,7 +2,7 @@ use std::clone::Clone;
 
 use bytes::{BufMut, Bytes};
 
-use bundlr_sdk::{error::BundlrError, tags::*};
+use super::tags::*;
 
 use base64_url;
 use sha2::{Digest, Sha256, Sha384};
@@ -14,9 +14,9 @@ pub enum ByteErrorType {
     ByteError(String),
 }
 
-impl From<BundlrError> for ByteErrorType {
-    fn from(error: BundlrError) -> Self {
-        ByteErrorType::ByteError(format!("Byte error: {}", error))
+impl From<TagError> for ByteErrorType {
+    fn from(error: TagError) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {:?}", error))
     }
 }
 
