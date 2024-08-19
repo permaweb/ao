@@ -5,7 +5,7 @@ import * as assert from 'node:assert'
 import { lensIndex, remove, set } from 'ramda'
 
 import { createLogger } from '../logger.js'
-import { loadModuleWith } from './loadModule.js'
+import { LLAMA_ADMISSABLE, loadModuleWith } from './loadModule.js'
 
 const PROCESS = 'contract-123-9HdeqeuYQOgMgWucro'
 const logger = createLogger('ao-cu:readState')
@@ -72,6 +72,62 @@ describe('loadModule', () => {
       memoryLimit: 11264,
       extensions: {},
       mode: 'Assignments',
+      spawn: { id: PROCESS, owner: 'p-owner-123', tags: processTags },
+      module: { id: 'foobar', owner: 'owner-123', tags: moduleTags },
+      blockHeight: 100
+    })
+    assert.equal(result.id, PROCESS)
+  })
+
+  test('use llama mode and admissable list if the MODULE_MODE is llama', async () => {
+    const loadModule = loadModuleWith({
+      loadTransactionMeta: async () => ({
+        owner: moduleOwner,
+        tags: moduleTags
+      }),
+      findModule: async () => { throw { status: 404 } },
+      saveModule: async () => 'foobar',
+      isModuleMemoryLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 11264)
+        return true
+      },
+      isModuleComputeLimitSupported: async ({ limit }) => {
+        assert.equal(limit, 10000)
+        return true
+      },
+      isModuleFormatSupported: async ({ format }) => {
+        assert.equal(format, 'wasm32-unknown-emscripten')
+        return true
+      },
+      isModuleExtensionSupported: async ({ extension }) => true,
+      MODULE_MODE: 'llama',
+      logger
+    })
+
+    const processTags = [
+      { name: 'Module', value: 'foobar' },
+      { name: 'Compute-Limit', value: '10000' },
+      { name: 'Memory-Limit', value: '11-kb' }
+    ]
+
+    const result = await loadModule({
+      id: PROCESS,
+      tags: processTags,
+      owner: 'p-owner-123'
+    }).toPromise()
+
+    assert.equal(result.moduleId, 'foobar')
+    assert.deepStrictEqual(result.moduleTags, moduleTags)
+    assert.equal(result.moduleOwner, 'owner-123')
+    assert.deepStrictEqual(result.moduleOptions, {
+      format: 'wasm32-unknown-emscripten',
+      inputEncoding: 'JSON-1',
+      outputEncoding: 'JSON-1',
+      computeLimit: 10000,
+      memoryLimit: 11264,
+      extensions: {},
+      mode: 'test',
+      admissableList: LLAMA_ADMISSABLE,
       spawn: { id: PROCESS, owner: 'p-owner-123', tags: processTags },
       module: { id: 'foobar', owner: 'owner-123', tags: moduleTags },
       blockHeight: 100

@@ -15,6 +15,10 @@ export const commaDelimitedArraySchema = z.preprocess((val) => {
 
 export const domainConfigSchema = z.object({
   /**
+   * shim to support llama configurability.
+   */
+  MODULE_MODE: z.string().nullish(),
+  /**
    * The maximum Memory-Limit, in bytes, supported for ao processes
    *
    * ie. '1000' or '1_000'
