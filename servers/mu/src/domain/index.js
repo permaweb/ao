@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { BroadcastChannel } from 'node:worker_threads'
+import cron from 'node-cron'
 
 import { apply } from 'ramda'
 import warpArBundles from 'warp-arbundles'
@@ -15,7 +16,7 @@ import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
-import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
+import cronClient, { deleteCronProcessWith, deleteOldTracesWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
 import { readTracesWith } from './clients/tracer.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -207,6 +208,7 @@ export const createApis = async (ctx) => {
   const deleteCronProcess = deleteCronProcessWith({ db })
   const updateCronProcessCursor = updateCronProcessCursorWith({ db })
   const getCronProcessCursor = getCronProcessCursorWith({ db })
+  const deleteOldTraces = deleteOldTracesWith({ db })
 
   async function getCronProcesses () {
     function createQuery () {
@@ -260,7 +262,7 @@ export const createApis = async (ctx) => {
     logger: monitorProcessLogger
   })
 
-  const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL }))
+  const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL, DISABLE_TRACE: ctx.DISABLE_TRACE }))
 
   return {
     metrics,
@@ -272,7 +274,9 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      getCronProcesses
+      getCronProcesses,
+      deleteOldTraces,
+      cron
     })
   }
 }
