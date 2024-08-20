@@ -56,7 +56,7 @@ function createTraceWith ({ db }) {
   }
 }
 
-export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces }) {
+export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_TRACE }) {
   const createTrace = createTraceWith({ db })
   const logger = debug(namespace)
 
@@ -112,7 +112,7 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces }) {
       /**
        * If we have a messageId or processId, save our trace to the DB.
        */
-      if (messageId || processId) {
+      if (messageId || processId || !DISABLE_TRACE) {
         createTrace({ logs, messageId, processId, wallet, parentId, ctx, type })
       }
 
@@ -151,7 +151,7 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces }) {
 /*
  * Here we fetch the traces from the trace data source
 */
-export function readTracesWith ({ db }) {
+export function readTracesWith ({ db, DISABLE_TRACE }) {
   return async ({
     /*
      * Given a process id return all message activity for
@@ -247,6 +247,10 @@ export function readTracesWith ({ db }) {
           limit
         ]
       }
+    }
+
+    if (DISABLE_TRACE) {
+      return []
     }
 
     const results = (

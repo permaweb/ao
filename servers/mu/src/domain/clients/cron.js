@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
-import { CRON_PROCESSES_TABLE } from './sqlite.js'
+import { CRON_PROCESSES_TABLE, TRACES_TABLE } from './sqlite.js'
 /**
  * cronsRunning stores the node cron response
  * which can be used to stop a cron that is running
@@ -88,7 +88,25 @@ export function updateCronProcessCursorWith ({ db }) {
   }
 }
 
-function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
+export function deleteOldTracesWith ({ db }) {
+  return async () => {
+    function createQuery () {
+      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000)
+      return {
+        sql: `
+          DELETE FROM ${TRACES_TABLE}
+          WHERE timestamp < ?
+        `,
+        parameters: [
+          oneDayAgo
+        ]
+      }
+    }
+    db.run(createQuery())
+  }
+}
+
+function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, deleteOldTraces, cron }) {
   return async () => {
     /**
      * If no cron processes are found, continue
@@ -107,6 +125,13 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
         console.log(`Error starting process monitor: ${e}`)
       }
     }
+
+    /**
+     * Create cron to clear out traces
+     */
+    cron.schedule('0 0 * * *', async () => {
+      await deleteOldTraces()
+    })
   }
 }
 
