@@ -15,9 +15,7 @@ describe('cron', () => {
         getCronProcesses: () => undefined,
         startMonitoredProcess: async () => {
           assert.fail('should not start process')
-        },
-        readProcFile: () => undefined,
-        cron: { schedule: () => undefined }
+        }
       })()
     })
 
@@ -29,9 +27,7 @@ describe('cron', () => {
           console.log('here ')
           startMonitoredProcessCalls++
           return Promise.resolve()
-        },
-        readProcFile: () => undefined,
-        cron: { schedule: () => undefined }
+        }
       })
 
       test('should start process by reading proc file and saving procs', async () => {
@@ -44,8 +40,7 @@ describe('cron', () => {
       let saveCronProcessCalls = 0
       const initCronProcs = cron.initCronProcsWith({
         getCronProcesses: () => [{ processId: 'pid-123', status: 'running' }, { processId: 'pid-456', status: 'running' }],
-        startMonitoredProcess: async () => { saveCronProcessCalls++ },
-        cron: { schedule: () => undefined }
+        startMonitoredProcess: async () => { saveCronProcessCalls++ }
       })
 
       test('make sure crons are being saved to sqlite', async () => {

@@ -80,6 +80,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
     transaction: async (statements) => db.transaction(
       (statements) => statements.map(({ sql, parameters }) => db.prepare(sql).run(...parameters))
     )(statements),
+    pragma: async (value, options) => db.pragma(value, options),
     db
   }
 }

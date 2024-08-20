@@ -90,23 +90,45 @@ export function updateCronProcessCursorWith ({ db }) {
 
 export function deleteOldTracesWith ({ db }) {
   return async () => {
-    function createQuery () {
-      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000)
+    function createQuery ({ pageSize, pageCount }) {
+      /**
+       * Check if the database has grown to greater than 1GB.
+       * If it has, delete the least recent 10% of traces.
+       */
       return {
         sql: `
+          WITH page_info AS (
+            SELECT 
+              ? * ? AS db_size_in_bytes
+          ),
+          delete_entries AS (
+            SELECT COUNT(*) AS total_rows, COUNT(*) / 10 AS rows_to_delete
+            FROM ${TRACES_TABLE}
+          )
           DELETE FROM ${TRACES_TABLE}
-          WHERE timestamp < ?
+          WHERE timestamp IN (
+            SELECT timestamp
+            FROM ${TRACES_TABLE}
+            ORDER BY timestamp ASC
+            LIMIT (SELECT rows_to_delete FROM delete_entries)
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM page_info
+            WHERE db_size_in_bytes > 1024 * 1024 * 1024
+          );
         `,
-        parameters: [
-          oneDayAgo
-        ]
+        parameters: [pageSize, pageCount]
       }
     }
-    db.run(createQuery())
+    const pageSize = await db.pragma('page_size', { simple: true }) // db.query(createPageSizeQuery())
+    const pageCount = await db.pragma('page_count', { simple: true }) // query(createPageCountQuery())
+    console.log({ pageSize, pageCount })
+    db.run(createQuery({ pageSize, pageCount }))
   }
 }
 
-function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, deleteOldTraces, cron }) {
+function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
   return async () => {
     /**
      * If no cron processes are found, continue
@@ -125,13 +147,6 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, deleteOld
         console.log(`Error starting process monitor: ${e}`)
       }
     }
-
-    /**
-     * Create cron to clear out traces
-     */
-    cron.schedule('0 0 * * *', async () => {
-      await deleteOldTraces()
-    })
   }
 }
 
