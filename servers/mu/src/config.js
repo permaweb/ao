@@ -56,7 +56,7 @@ export const domainConfigSchema = z.object({
   TRACE_DB_URL: z.string(),
   TASK_QUEUE_MAX_RETRIES: z.number(),
   TASK_QUEUE_RETRY_DELAY: z.number(),
-  DISABLE_TRACE: z.string()
+  DISABLE_TRACE: z.boolean()
 })
 
 /**
