@@ -623,25 +623,23 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
            */
           let message = await messages.next()
 
-          /**
-           * If this is a cold start
-           *  if (message) then check tags and emit generated if type !== 'Process'
-           *  else convert the Process into a Message and emit it
-           */
           if (isColdStart) {
             const { value, done } = message
             /**
-             * This condition is to handle 2 cases. Before aop6 ECHO Boot loader,
+             * This condition is to handle 3 cases. Before aop6 ECHO Boot loader,
              * The first Message in a stream will be an actual Message. But after
              * aop6 the first Message is now the process itself, shaped like a Message
              *
              * As a result, old Processes that were started before the boot loader
-             * change, can either have no Messages, or have the first Message with a tag
-             * of type Message, as opposed to Process. In both these cases on a cold start
-             * we need to inject the Process as the first Message in the stream, as was
-             * done prior to the Boot Loader change.
+             * change, can either 1. have no Messages, 2. have the first Message with a tag
+             * of type Message, as opposed to Process, Or 3. an old Process can have a its
+             * first Message be a Cron. In these cases on a cold start we need to
+             * inject the Process as the first Message in the stream, as was done
+             * prior to the Boot Loader change.
+             *
+             * See https://github.com/permaweb/ao/issues/730
              */
-            if (done || parseTags(value.Tags).Type !== 'Process') {
+            if (done || (parseTags(value.message.Tags).Type !== 'Process') || value.message.Cron) {
               logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
               yield {
                 /**
@@ -691,16 +689,9 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
           /**
            * Emit the merged stream of Cron and Scheduled Messages
            */
-          while (true) {
-            const { value, done } = message
-            /**
-             * We're done, so break the loop
-             */
-            if (done) break
-
-            yield value
-            const next = await messages.next()
-            message = next
+          while (!message.done) {
+            yield message.value
+            message = await messages.next()
           }
         })
       )

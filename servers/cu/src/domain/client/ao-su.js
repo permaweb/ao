@@ -297,6 +297,8 @@ export const loadProcessWith = ({ fetch, logger }) => {
         /**
          * These were added for the aop6 Boot Loader change so that
          * the Process can be used properly downstream.
+         *
+         * See https://github.com/permaweb/ao/issues/730
          */
         processId: always(processId),
         timestamp: path(['timestamp']),
