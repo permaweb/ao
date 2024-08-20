@@ -92,7 +92,10 @@ export const createApis = async (ctx) => {
           WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
           ARWEAVE_URL: ctx.ARWEAVE_URL,
           DB_URL,
-          id: workerId
+          id: workerId,
+          MODE: ctx.MODE,
+          LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
+          DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL
         }
       }
     }

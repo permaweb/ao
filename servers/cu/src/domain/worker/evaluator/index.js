@@ -16,7 +16,7 @@ setGlobalDispatcher(new Agent({
   keepAliveMaxTimeout: 10 * 60 * 1000 // 10 mins
 }))
 
-const logger = createLogger(`ao-cu:${hostname()}:worker-${workerData.id}`)
+const logger = createLogger({ ...workerData, name: `ao-cu:${hostname()}:worker-${workerData.id}` })
 
 const apis = await createApis({
   ...workerData,
