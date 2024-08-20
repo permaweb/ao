@@ -91,4 +91,56 @@ describe('loadMessageMeta', () => {
     await loadMessageMeta({ processId: 'process-123', messageTxId: 'message-tx-123' })
       .toPromise()
   })
+
+  test('should load the process meta if the messageId is the processId', async () => {
+    const loadMessageMeta = loadMessageMetaWith({
+      findProcess: async () => { throw new Error('woops') },
+      locateScheduler: async () => assert.fail('should not call if process is not cached'),
+      locateProcess: async ({ processId: id, schedulerHint }) => {
+        assert.equal(id, 'process-123')
+        assert.ok(schedulerHint === undefined)
+        return { url: 'https://foo.bar' }
+      },
+      loadMessageMeta: async (args) => {
+        assert.deepStrictEqual(args, {
+          suUrl: 'https://foo.bar',
+          processId: 'process-123',
+          messageTxId: 'message-tx-123'
+        })
+        return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
+      },
+      loadProcess: async ({ processId }) => {
+        assert.equal(processId, 'process-123')
+        return {
+          owner: { address: 'woohoo', key: 'key-123' },
+          tags: [
+            { name: 'Module', value: 'foobar' },
+            { name: 'Data-Protocol', value: 'ao' },
+            { name: 'Type', value: 'Process' }
+          ],
+          block: { height: 123, timestamp: 1697574792000 },
+          timestamp: 1697574792000,
+          nonce: 0,
+          processId
+        }
+      },
+      logger
+    })
+
+    const res = await loadMessageMeta({ processId: 'process-123', messageTxId: 'process-123' })
+      .toPromise()
+
+    assert.deepStrictEqual(res, {
+      owner: { address: 'woohoo', key: 'key-123' },
+      tags: [
+        { name: 'Module', value: 'foobar' },
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'Type', value: 'Process' }
+      ],
+      block: { height: 123, timestamp: 1697574792000 },
+      timestamp: 1697574792000,
+      nonce: 0,
+      processId: 'process-123'
+    })
+  })
 })
