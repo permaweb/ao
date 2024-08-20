@@ -208,7 +208,14 @@ export const createApis = async (ctx) => {
   const deleteCronProcess = deleteCronProcessWith({ db })
   const updateCronProcessCursor = updateCronProcessCursorWith({ db })
   const getCronProcessCursor = getCronProcessCursorWith({ db })
-  const deleteOldTraces = deleteOldTracesWith({ db })
+  const deleteOldTraces = deleteOldTracesWith({ db: traceDb })
+
+  /**
+   * Create cron to clear out traces, each hour
+   */
+  cron.schedule('0 * * * *', async () => {
+    await deleteOldTraces()
+  })
 
   async function getCronProcesses () {
     function createQuery () {
