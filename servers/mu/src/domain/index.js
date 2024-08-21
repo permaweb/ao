@@ -213,7 +213,7 @@ export const createApis = async (ctx) => {
   /**
    * Create cron to clear out traces, each hour
    */
-  cron.schedule('0 * * * *', async () => {
+  cron.schedule('* * * * *', async () => {
     await deleteOldTraces()
   })
 
