@@ -191,7 +191,7 @@ export function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
         })
       ))
       .bimap(
-        logger.tap('Error while communicating with uploader:'),
+        logger.tap('Error while communicating with uploader: %O'),
         identity
       )
       .bichain(
