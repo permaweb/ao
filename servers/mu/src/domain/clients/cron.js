@@ -90,19 +90,15 @@ export function updateCronProcessCursorWith ({ db }) {
 
 export function deleteOldTracesWith ({ db }) {
   return async () => {
-    function createQuery ({ pageSize, pageCount }) {
+    function createQuery ({ overflow }) {
       /**
        * Check if the database has grown to greater than 1GB.
        * If it has, delete the least recent 10% of traces.
        */
       return {
         sql: `
-          WITH page_info AS (
-            SELECT 
-              ? * ? AS db_size_in_bytes
-          ),
-          delete_entries AS (
-            SELECT COUNT(*) AS total_rows, COUNT(*) / 10 AS rows_to_delete
+          WITH delete_entries AS (
+            SELECT COUNT(*) AS total_rows, CEILING(COUNT(*) * ?) AS rows_to_delete
             FROM ${TRACES_TABLE}
           )
           DELETE FROM ${TRACES_TABLE}
@@ -112,19 +108,23 @@ export function deleteOldTracesWith ({ db }) {
             ORDER BY timestamp ASC
             LIMIT (SELECT rows_to_delete FROM delete_entries)
           )
-          AND EXISTS (
-            SELECT 1
-            FROM page_info
-            WHERE db_size_in_bytes > 1024 * 1024 * 1024
-          );
         `,
-        parameters: [pageSize, pageCount]
+        parameters: [overflow]
       }
     }
-    const pageSize = await db.pragma('page_size', { simple: true }) // db.query(createPageSizeQuery())
-    const pageCount = await db.pragma('page_count', { simple: true }) // query(createPageCountQuery())
-    console.log({ pageSize, pageCount })
-    db.run(createQuery({ pageSize, pageCount }))
+    const pageSize = await db.pragma('page_size', { simple: true })
+    const pageCount = await db.pragma('page_count', { simple: true })
+    /**
+     * Calculate if we are over the maximum amount of bytes allocated
+     * to the trace database. If we are, we will remove the oldest traces
+     * such that we will return to below the maximum amount.
+     */
+    const totalBytes = pageSize * pageCount
+    const maxBytes = 1024 * 1024 * 1024
+    const overflow = maxBytes / totalBytes
+    if (overflow >= 1) return
+    await db.run(createQuery({ overflow: 1 - overflow }))
+    db.run({ sql: 'VACUUM;', parameters: [] })
   }
 }
 
@@ -190,7 +190,7 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CU_URL, fetchCro
           )
           .fork(
             e => console.log(e),
-            _success => { console.log('success', _success) }
+            _success => console.log('success', _success)
           )
         ct.start() // resume cron when done getting messages
       }
