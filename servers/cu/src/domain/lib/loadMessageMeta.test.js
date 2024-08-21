@@ -101,13 +101,8 @@ describe('loadMessageMeta', () => {
         assert.ok(schedulerHint === undefined)
         return { url: 'https://foo.bar' }
       },
-      loadMessageMeta: async (args) => {
-        assert.deepStrictEqual(args, {
-          suUrl: 'https://foo.bar',
-          processId: 'process-123',
-          messageTxId: 'message-tx-123'
-        })
-        return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
+      loadMessageMeta: async () => {
+        assert.fail('loadMessageMeta should not be called')
       },
       loadProcess: async ({ processId }) => {
         assert.equal(processId, 'process-123')
