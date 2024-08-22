@@ -112,7 +112,7 @@ export function sendDataItemWith ({
          * This is so getCuAddress and pullResult both operate properly.
          */
         .map(({ res }) => {
-          return { ...res, tx: { ...res.tx, processId: res.tx.id }, processId: res.tx.id }
+          return { ...res, tx: { ...res.tx, processId: res.tx.id }, processId: res.tx.id, initialTxId: res.tx.id }
         })
         .chain(getCuAddress)
         .chain(pullResult)

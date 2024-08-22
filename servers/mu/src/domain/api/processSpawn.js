@@ -33,6 +33,8 @@ export function processSpawnWith ({
         /**
          * Fetch the initial boot result for the process
          * itself as per aop6 Boot Loader, add it to ctx
+         *
+         * See: https://github.com/permaweb/ao/issues/730
          */
         return pullResult({
           processId: res.processTx,
@@ -58,7 +60,7 @@ export function processSpawnWith ({
          * tx, with the pullResult for the process id, so they
          * all will get pushed
          */
-        return pullResult(res).map((spawnRes) => {
+        return pullResult({ ...res, tx: { ...res.spawnSuccessTx } }).map((spawnRes) => {
           return {
             ...res,
             msgs: [...(res.msgs || []), ...(spawnRes.msgs || [])],

@@ -63,7 +63,7 @@ export function pullResultWith (env) {
   return (ctx) => {
     if (!checkStage('pull-result')(ctx)) return Resolved(ctx)
     return of(ctx)
-      .map((ctx) => ({ ...ctx, tx: ctx.tx ?? ctx.spawnSuccessTx }))
+      .map((ctx) => ({ ...ctx, tx: ctx.tx }))
       .chain((ctx) => {
         return of(ctx)
           .chain(fromPromise(fetchResult))
