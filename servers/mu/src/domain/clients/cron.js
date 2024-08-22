@@ -170,7 +170,7 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CU_URL, fetchCro
 
     let ct = null
     let isJobRunning = false
-    ct = cron.schedule('0 * * * *', async () => {
+    ct = cron.schedule('*/10 * * * * *', async () => {
       if (!isJobRunning) {
         isJobRunning = true
         ct.stop() // pause cron while fetching messages
