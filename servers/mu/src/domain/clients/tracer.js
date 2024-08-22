@@ -3,6 +3,53 @@ import { propOr, tap } from 'ramda'
 import { randomBytes } from 'crypto'
 import { TRACES_TABLE } from './sqlite.js'
 
+/**
+ * Each minute, a cron runs to check if the trace db is overflowing.
+ * If it is, delete a calculated amount of rows to clear up room.
+ * @param {{ overflow: string }} overflow - the percentage the database needs to reduce by to return below the memory limit
+ */
+export function deleteOldTracesWith ({ db, logger }) {
+  return async () => {
+    function createQuery ({ overflow }) {
+      /**
+       * Check if the database has grown to greater than 1GB.
+       * If it has, delete the least recent 10% of traces.
+       */
+      return {
+        sql: `
+          WITH delete_entries AS (
+            SELECT COUNT(*) AS total_rows, CEILING(COUNT(*) * ?) AS rows_to_delete
+            FROM ${TRACES_TABLE}
+          )
+          DELETE FROM ${TRACES_TABLE}
+          WHERE timestamp IN (
+            SELECT timestamp
+            FROM ${TRACES_TABLE}
+            ORDER BY timestamp ASC
+            LIMIT (SELECT rows_to_delete FROM delete_entries)
+          )
+        `,
+        parameters: [overflow]
+      }
+    }
+    const pageSize = await db.pragma('page_size', { simple: true })
+    const pageCount = await db.pragma('page_count', { simple: true })
+    /**
+     * Calculate if we are over the maximum amount of bytes allocated
+     * to the trace database. If we are, we will remove the oldest traces
+     * such that we will return to below the maximum amount.
+     */
+    const totalBytes = pageSize * pageCount
+    const maxBytes = 1024 * 1024 * 1024
+    const overflow = maxBytes / totalBytes
+    if (overflow >= 1) return
+    logger(({ log: `Deleting old traces, overflow of ${1 - overflow}` }))
+    await db.run(createQuery({ overflow: 1 - overflow }))
+    await db.run({ sql: 'VACUUM;', parameters: [] })
+    logger({ log: 'Deleted old traces.' })
+  }
+}
+
 function createTraceWith ({ db }) {
   /**
    * Persist the logs to the storage system for traces
