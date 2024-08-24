@@ -54,7 +54,10 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
           })
         )
       )
-      .bimap(logger.tap({ log: 'Error while communicating with SU:', logId }), identity)
+      .bimap((e) => {
+        logger({ log: `Error while communicating with SU: ${e}`, logId })
+        return e
+      }, identity)
       .bichain(
         (err) => Rejected(err),
         fromPromise(async (res) => {
