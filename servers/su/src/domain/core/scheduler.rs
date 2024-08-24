@@ -6,7 +6,7 @@ use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
-use crate::domain::core::dal::{DataStore, Log, ScheduleProvider, StoreErrorType};
+use crate::domain::core::dal::{DataStore, Log, ScheduleProvider};
 
 pub struct SchedulerDeps {
     pub data_store: Arc<dyn DataStore>,
@@ -162,55 +162,18 @@ async fn fetch_values(
 
     match latest_message {
         Some(previous_message) => {
-            let epoch = previous_message.epoch()?;
-            let nonce = previous_message.nonce()? + 1;
+            let epoch = previous_message.epoch().unwrap();
+            let nonce = previous_message.nonce().unwrap() + 1;
             let hash_chain = gen_hash_chain(
-                &previous_message.hash_chain()?,
-                Some(&previous_message.assignment_id()?),
+                &previous_message.hash_chain().unwrap(),
+                Some(&previous_message.assignment_id().unwrap()),
             )?;
             Ok((epoch, nonce, hash_chain, millis))
         }
-        /*
-          There is no message yet so the Nonce will start
-          at the process
-        */
-        None => match deps.data_store.get_process(process_id) {
-            Ok(process) => {
-                /*
-                  Handling the old vs new process structure
-                  processes created before the boot loader update
-                  did not have an assignment
-                */
-                match process.assignment {
-                    Some(_) => {
-                        // this is the first message on a new process
-                        let epoch = process.epoch()?;
-                        let nonce = process.nonce()? + 1;
-                        let hash_chain = gen_hash_chain(
-                            &process.hash_chain()?,
-                            Some(&process.assignment_id()?),
-                        )?;
-                        Ok((epoch, nonce, hash_chain, millis))
-                    }
-                    None => {
-                        // this is the first message on an old process
-                        let hash_chain = gen_hash_chain(&process_id, None)?;
-                        Ok((0, 0, hash_chain, millis))
-                    }
-                }
-            }
-            /*
-              There is no process saved yet so the Nonce will start
-              at 0
-            */
-            Err(e) => match e {
-                StoreErrorType::NotFound(_) => {
-                    let hash_chain = gen_hash_chain(&process_id, None)?;
-                    Ok((0, 0, hash_chain, millis))
-                }
-                _ => Err(format!("{:?}", e)),
-            },
-        },
+        None => {
+            let hash_chain = gen_hash_chain(&process_id, None)?;
+            Ok((0, 0, hash_chain, millis))
+        }
     }
 }
 

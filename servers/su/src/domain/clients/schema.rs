@@ -6,10 +6,6 @@ table! {
         process_id -> Varchar,
         process_data -> Jsonb,
         bundle -> Bytea,
-        epoch -> Nullable<Int4>,
-        nonce -> Nullable<Int4>,
-        timestamp -> Nullable<BigInt>,
-        hash_chain -> Nullable<Text>,
     }
 }
 

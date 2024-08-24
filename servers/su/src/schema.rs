@@ -13,8 +13,6 @@ diesel::table! {
         timestamp -> Int8,
         bundle -> Bytea,
         hash_chain -> Text,
-        #[max_length = 255]
-        assignment_id -> Nullable<Varchar>,
     }
 }
 
@@ -33,10 +31,6 @@ diesel::table! {
         process_id -> Varchar,
         process_data -> Jsonb,
         bundle -> Bytea,
-        epoch -> Nullable<Int4>,
-        nonce -> Nullable<Int4>,
-        hash_chain -> Nullable<Text>,
-        timestamp -> Nullable<Int8>,
     }
 }
 
@@ -45,7 +39,6 @@ diesel::table! {
         row_id -> Int4,
         url -> Varchar,
         process_count -> Int4,
-        no_route -> Nullable<Bool>,
     }
 }
 

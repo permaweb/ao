@@ -468,21 +468,10 @@ impl DataStore for StoreClient {
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_conn()?;
 
-        let (process_epoch, process_hash_chain, process_timestamp, process_nonce) = (
-            process.epoch().ok(),
-            process.hash_chain().ok(),
-            process.timestamp().ok(),
-            process.nonce().ok(),
-        );
-
         let new_process = NewProcess {
-            process_id: &process.process.process_id,
+            process_id: &process.process_id,
             process_data: serde_json::to_value(process).expect("Failed to serialize Process"),
             bundle: bundle_in,
-            epoch: process_epoch,
-            hash_chain: process_hash_chain.as_deref(),
-            nonce: process_nonce,
-            timestamp: process_timestamp,
         };
 
         match diesel::insert_into(processes)
@@ -507,7 +496,7 @@ impl DataStore for StoreClient {
 
         match db_process_result {
             Ok(Some(db_process)) => {
-                let process: Process = Process::from_val(&db_process.process_data)?;
+                let process: Process = serde_json::from_value(db_process.process_data.clone())?;
                 Ok(process)
             }
             Ok(None) => Err(StoreErrorType::NotFound("Process not found".to_string())),
@@ -601,16 +590,14 @@ impl DataStore for StoreClient {
 
     async fn get_messages(
         &self,
-        process_in: &Process,
+        process_id_in: &str,
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn()?;
-        let mut query = messages
-            .filter(process_id.eq(process_in.process.process_id.clone()))
-            .into_boxed();
+        let mut query = messages.filter(process_id.eq(process_id_in)).into_boxed();
 
         // Apply 'from' timestamp filtering if 'from' is provided
         if let Some(from_timestamp_str) = from {
@@ -629,103 +616,113 @@ impl DataStore for StoreClient {
         }
 
         // Apply limit, converting Option<i32> to i64 and adding 1 to check for the next page
-        let limit_val = limit.unwrap_or(100) as i64; // Default limit if none is provided
+        let limit_val = limit.unwrap_or(5000) as i64; // Default limit if none is provided
 
-        // Determine if the 'from' timestamp matches the process timestamp and if assignment is present
-        let include_process = process_in.assignment.is_some()
-            && match from {
-                Some(from_timestamp_str) => {
-                    let from_timestamp = from_timestamp_str
-                        .parse::<i64>()
-                        .map_err(StoreErrorType::from)?;
-                    from_timestamp == process_in.process.timestamp
-                }
-                None => true, // No 'from' timestamp means it's the first page
-            };
+        if self.bytestore.clone().is_ready() {
+            let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
+                .select((
+                    row_id,
+                    process_id,
+                    message_id,
+                    assignment_id,
+                    epoch,
+                    nonce,
+                    timestamp,
+                    hash_chain,
+                ))
+                .order(timestamp.asc())
+                .limit(limit_val + 1) // Fetch one extra record to determine if a next page exists
+                .load(conn);
 
-        // If including the process, reduce the limit for the database query by 1
-        let adjusted_limit_val = if include_process {
-            limit_val - 1
-        } else {
-            limit_val
-        };
+            match db_messages_result {
+                Ok(db_messages) => {
+                    let has_next_page = db_messages.len() as i64 > limit_val;
+                    // Take only up to the limit if there's an extra indicating a next page
+                    let messages_o = if has_next_page {
+                        &db_messages[..(limit_val as usize)]
+                    } else {
+                        &db_messages[..]
+                    };
 
-        let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
-            .select((
-                row_id,
-                process_id,
-                message_id,
-                assignment_id,
-                epoch,
-                nonce,
-                timestamp,
-                hash_chain,
-            ))
-            .order(timestamp.asc())
-            .limit(adjusted_limit_val + 1) // Fetch one extra record to determine if a next page exists
-            .load(conn);
+                    let message_ids: Vec<(String, Option<String>, String, String)> = messages_o
+                        .iter()
+                        .map(|msg| {
+                            (
+                                msg.message_id.clone(),
+                                msg.assignment_id.clone(),
+                                msg.process_id.clone(),
+                                msg.timestamp.to_string().clone(),
+                            )
+                        })
+                        .collect();
 
-        match db_messages_result {
-            Ok(db_messages) => {
-                let has_next_page = db_messages.len() as i64 > adjusted_limit_val;
+                    let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
 
-                // Take only up to the limit if there's an extra indicating a next page
-                let messages_o = if has_next_page {
-                    &db_messages[..(adjusted_limit_val as usize)]
-                } else {
-                    &db_messages[..]
-                };
+                    let mut messages_mapped: Vec<Message> = vec![];
 
-                let mut messages_mapped: Vec<Message> = vec![];
-
-                // Include the process as the first message if determined to be on the first page and has assignment
-                if include_process {
-                    let process_message = Message::from_process(process_in.clone())?;
-                    messages_mapped.push(process_message);
-                }
-
-                // Map database messages to the Message struct
-                let message_ids: Vec<(String, Option<String>, String, String)> = messages_o
-                    .iter()
-                    .map(|msg| {
-                        (
-                            msg.message_id.clone(),
-                            msg.assignment_id.clone(),
-                            msg.process_id.clone(),
-                            msg.timestamp.to_string().clone(),
-                        )
-                    })
-                    .collect();
-
-                let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
-
-                for db_message in messages_o.iter() {
-                    match binaries.get(&(
-                        db_message.message_id.clone(),
-                        db_message.assignment_id.clone(),
-                        db_message.process_id.clone(),
-                        db_message.timestamp.to_string().clone(),
-                    )) {
-                        Some(bytes_result) => {
-                            let mapped = Message::from_bytes(bytes_result.clone())?;
-                            messages_mapped.push(mapped);
-                        }
-                        None => {
-                            // Fall back to the database if the binary isn't available
-                            let full_message = self.get_message_internal(
-                                &db_message.message_id,
-                                &db_message.assignment_id,
-                            )?;
-                            messages_mapped.push(full_message);
+                    for db_message in messages_o.iter() {
+                        /*
+                          binaries is keyed by the tuple (message_id, assignment_id, process_id, timestamp)
+                        */
+                        match binaries.get(&(
+                            db_message.message_id.clone(),
+                            db_message.assignment_id.clone(),
+                            db_message.process_id.clone(),
+                            db_message.timestamp.to_string().clone(),
+                        )) {
+                            Some(bytes_result) => {
+                                let mapped = Message::from_bytes(bytes_result.clone())?;
+                                messages_mapped.push(mapped);
+                            }
+                            None => {
+                                /*
+                                  If for some reason we dont have a file available
+                                  this is a fall back to the database
+                                */
+                                let full_message = self.get_message_internal(
+                                    &db_message.message_id,
+                                    &db_message.assignment_id,
+                                )?;
+                                messages_mapped.push(full_message);
+                            }
                         }
                     }
+                    let paginated =
+                        PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                    Ok(paginated)
                 }
-
-                // Create paginated result
-                let paginated = PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
-                Ok(paginated)
+                Err(e) => Err(StoreErrorType::from(e)),
             }
-            Err(e) => Err(StoreErrorType::from(e)),
+        } else {
+            let db_messages_result: Result<Vec<DbMessage>, DieselError> = query
+                .order(timestamp.asc())
+                .limit(limit_val + 1) // Fetch one extra record to determine if a next page exists
+                .load(conn);
+
+            match db_messages_result {
+                Ok(db_messages) => {
+                    let has_next_page = db_messages.len() as i64 > limit_val;
+                    // Take only up to the limit if there's an extra indicating a next page
+                    let messages_o = if has_next_page {
+                        &db_messages[..(limit_val as usize)]
+                    } else {
+                        &db_messages[..]
+                    };
+
+                    let mut messages_mapped: Vec<Message> = vec![];
+                    for db_message in messages_o.iter() {
+                        let json = serde_json::from_value(db_message.message_data.clone())?;
+                        let bytes: Vec<u8> = db_message.bundle.clone();
+                        let mapped = Message::from_val(&json, bytes)?;
+                        messages_mapped.push(mapped);
+                    }
+
+                    let paginated =
+                        PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                    Ok(paginated)
+                }
+                Err(e) => Err(StoreErrorType::from(e)),
+            }
         }
     }
 
@@ -953,10 +950,6 @@ pub struct DbProcess {
     pub process_id: String,
     pub process_data: serde_json::Value,
     pub bundle: Vec<u8>,
-    pub epoch: Option<i32>,
-    pub nonce: Option<i32>,
-    pub timestamp: Option<i64>,
-    pub hash_chain: Option<String>,
 }
 
 #[derive(Queryable, Selectable)]
@@ -1009,10 +1002,6 @@ pub struct NewProcess<'a> {
     pub process_id: &'a str,
     pub process_data: serde_json::Value,
     pub bundle: &'a [u8],
-    pub epoch: Option<i32>,          // New nullable field
-    pub nonce: Option<i32>,          // New nullable field
-    pub hash_chain: Option<&'a str>, // New nullable field
-    pub timestamp: Option<i64>,      // New nullable field
 }
 
 #[derive(Queryable, Selectable)]
