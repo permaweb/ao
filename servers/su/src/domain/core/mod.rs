@@ -3,7 +3,6 @@ mod bytes;
 mod builder;
 // build json from raw data
 mod json;
-mod tags;
 
 // traits for injecting dependencies
 pub mod dal;

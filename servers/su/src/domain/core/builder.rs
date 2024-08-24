@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::tags::Tag;
+use bundlr_sdk::tags::Tag;
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
 use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus};
