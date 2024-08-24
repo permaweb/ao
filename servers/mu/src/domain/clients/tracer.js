@@ -208,6 +208,7 @@ export function readTracesWith ({ db, DISABLE_TRACE }) {
               SELECT id, messageId, processId, wallet, logs, data, parentId, timestamp, type
               FROM traces
               WHERE messageId LIKE ? AND processId = ?
+              ORDER BY timestamp DESC
             ),  
             FilteredRoot AS (
               SELECT * FROM Root WHERE type = ?

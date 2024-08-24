@@ -40,6 +40,7 @@ export function sendDataItemWith ({
      * must also be performed.
      */
   const sendMessage = (ctx) => of({ ...ctx, message: ctx.dataItem })
+    .map(logger.tap({ log: 'Sending message...' }))
     .map(({ message, ...rest }) => ({
       ...rest,
       message
@@ -50,7 +51,7 @@ export function sendDataItemWith ({
         .bichain(
           (error) => {
             return of(error)
-              .map(() => logger({ log: ['Initial message failed %s', message.id] }, ctx))
+              .map(() => logger({ log: `Initial message failed: ${message.id} with error` }, ctx))
               .chain(() => Rejected(error))
           },
           (res) => Resolved(res)
@@ -92,6 +93,7 @@ export function sendDataItemWith ({
      * and return a noop crank
      */
   const sendProcess = (ctx) => of(ctx)
+    .map(logger.tap({ log: 'Sending process...' }))
     .chain(writeProcess)
     .map((res) => ({
       ...res,
@@ -134,6 +136,7 @@ export function sendDataItemWith ({
       .chain(parseDataItem)
       .chain((ctx) =>
         verifyParsedDataItem(ctx.dataItem)
+          .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
           .chain(({ isMessage }) => {
             if (isMessage) {
               /*
@@ -143,6 +146,7 @@ export function sendDataItemWith ({
                   Arweave
               */
               return locateProcessLocal(ctx.dataItem.target)
+                .map(logger.tap({ log: 'Successfully located process scheduler', logId: ctx.logId }))
                 .chain((schedLocation) => sendMessage({ ...ctx, schedLocation }))
             }
             return sendProcess(ctx)
