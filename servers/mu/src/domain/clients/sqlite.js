@@ -45,6 +45,12 @@ const createTracesIndexes = async (db) => db.prepare(
     (messageId, processId);`
 ).run()
 
+const createTracesTimestampIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${TRACES_TABLE}_timestamp
+    ON ${TRACES_TABLE}
+    (timestamp ASC);`
+).run()
+
 let internalSqliteDb
 export async function createSqliteClient ({ url, bootstrap = false, walLimit = bytes.parse('100mb'), type = 'tasks' }) {
   if (internalSqliteDb) return internalSqliteDb
@@ -71,6 +77,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       await Promise.resolve()
         .then(() => createTraces(db))
         .then(() => createTracesIndexes(db))
+        .then(() => createTracesTimestampIndexes(db))
     }
   }
 

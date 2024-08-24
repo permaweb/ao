@@ -5,6 +5,7 @@ import { cond, equals, propOr, tap } from 'ramda'
 import cron from 'node-cron'
 
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
+import { deleteOldTracesWith } from './cron.js'
 import { domainConfigSchema, config } from '../../config.js'
 // Without this import the worker crashes
 import { createResultApis } from '../../domain/index.js'
@@ -293,6 +294,24 @@ ct = cron.schedule('*/2 * * * * *', async () => {
   }
 })
 
+let traceCt = null
+let traceIsJobRunning = false
+const traceDb = await createSqliteClient({ url: workerData.TRACE_DB_URL, bootstrap: false, type: 'traces' })
+const deleteOldTraces = deleteOldTracesWith({ db: traceDb, logger: broadcastLogger })
+/**
+ * Create cron to clear out traces, each hour
+ */
+function startDeleteTraceCron () {
+  traceCt = cron.schedule('0 * * * *', async () => {
+    if (!traceIsJobRunning) {
+      traceIsJobRunning = true
+      traceCt.stop()
+      await deleteOldTraces()
+      traceCt.start()
+      traceIsJobRunning = false
+    }
+  })
+}
 /**
  * Start the processing of results from
  * the queue and expose the worker api
@@ -301,5 +320,6 @@ ct = cron.schedule('*/2 * * * * *', async () => {
 processResults()
 
 worker({
-  enqueueResults
+  enqueueResults,
+  startDeleteTraceCron
 })

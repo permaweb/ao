@@ -56,15 +56,14 @@ export function handleWorkerMetricsMessage ({ retriesGauge, stageGauge, maximumQ
   return ({ payload }) => {
     if (payload.purpose === 'queue-size') {
       queueMessageHandler(payload, maximumQueueArray, maximumQueueTimeArray)
-    }
-    if (payload.purpose === 'task-retries') {
+    } else if (payload.purpose === 'task-retries') {
       retriesMessageHandler(payload, retriesGauge)
-    }
-    if (payload.purpose === 'error-stage') {
+    } else if (payload.purpose === 'error-stage') {
       errorStageMessageHandler(payload, stageGauge)
-    }
-    if (payload.purpose === 'log') {
+    } else if (payload.purpose === 'log') {
       logMessageHandler(payload, logger)
+    } else if (!payload.purpose) {
+      logger(payload)
     }
   }
 }

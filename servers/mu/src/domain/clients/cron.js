@@ -88,7 +88,7 @@ export function updateCronProcessCursorWith ({ db }) {
   }
 }
 
-export function deleteOldTracesWith ({ db }) {
+export function deleteOldTracesWith ({ db, logger }) {
   return async () => {
     function createQuery ({ overflow }) {
       /**
@@ -123,8 +123,10 @@ export function deleteOldTracesWith ({ db }) {
     const maxBytes = 1024 * 1024 * 1024
     const overflow = maxBytes / totalBytes
     if (overflow >= 1) return
+    logger(({ log: `Deleting old traces, overflow of ${1 - overflow}` }))
     await db.run(createQuery({ overflow: 1 - overflow }))
-    db.run({ sql: 'VACUUM;', parameters: [] })
+    await db.run({ sql: 'VACUUM;', parameters: [] })
+    logger({ log: 'Deleted old traces.' })
   }
 }
 
