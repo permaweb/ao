@@ -84,10 +84,14 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_CHECKPOINT_CREATION_THROTTLE: positiveIntSchema,
   /**
-   * Whether to disable Process Checkpoint creation entirely. Great for when developing locally,
+   * Whether to disable Arweave Process Checkpoint creation. Great for when developing locally,
    * of for an ephemeral CU
    */
   DISABLE_PROCESS_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
+  /**
+   * Whether to disable File Process Checkpoint creation entirely.
+   */
+  DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
    * @deprecated
    * If an evaluation stream evaluates this amount of messages,
@@ -146,10 +150,6 @@ export const domainConfigSchema = z.object({
    */
   IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
   /**
-   * The directory to cache Checkpoints created on Arweave
-   */
-  PROCESS_CHECKPOINT_FILE_DIRECTORY: z.string().min(1),
-  /**
    * The maximum size, in bytes, of the cache used to cache the latest memory
    * evaluated for an ao process
    */
@@ -160,9 +160,15 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
   /**
-   * The directory to store drained process memory files
+   * The directory to store process memory that has been drained
+   * from the LRU In-Memory cache (not to be conflated with file checkpoints -- see below)
    */
   PROCESS_MEMORY_CACHE_FILE_DIR: z.string().min(1),
+  /**
+   * The directory to store process memory associated with file checkpoints.
+   * Process file checkpoints will persist across CU restarts
+   */
+  PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: z.string().min(1),
   /**
    * The interval at which the CU should Checkpoint all processes stored in it's
    * cache.
@@ -233,7 +239,7 @@ export const processSchema = z.object({
 })
 
 export const processCheckpointSchema = z.object({
-  src: z.enum(['memory', 'record', 'arweave', 'cold_start']),
+  src: z.enum(['memory', 'file', 'record', 'arweave', 'cold_start']),
   fromFile: z.string().nullish(),
   Memory: bufferSchema.nullish(),
   moduleId: z.string().nullish(),
