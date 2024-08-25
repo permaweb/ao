@@ -67,7 +67,8 @@ There are a few environment variables that you can set. Besides
 - `WALLET`/`WALLET_FILE`: the JWK Interface stringified JSON that will be used
   by the CU, or a file to load it from
 - `PORT`: Which port the web server should listen on (defaults to port `6363`)
-- `ENABLE_METRICS_ENDPOINT`: Whether the OpenTelemetry endpoint `/metrics` should be enabled. Set to any value to enable. (defaults to disabled)
+- `ENABLE_METRICS_ENDPOINT`: Whether the OpenTelemetry endpoint `/metrics`
+  should be enabled. Set to any value to enable. (defaults to disabled)
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
   `embedded`)
@@ -76,8 +77,11 @@ There are a few environment variables that you can set. Besides
   supported for `ao` processes (defaults to `1GB`)
 - `PROCESS_WASM_COMPUTE_MAX_LIMIT`: The maximum `Compute-Limit`, in bytes,
   supported for `ao` processes (defaults to `9 billion`)
-- `PROCESS_WASM_SUPPORTED_FORMATS`: the wasm module formats that this CU supports, as a comma-delimited string (defaults to `['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2']`)
-- `PROCESS_WASM_SUPPORTED_EXTENSIONS`: the wasm extensions that this CU supports, as a comma-delimited string (defaults to no extensions)
+- `PROCESS_WASM_SUPPORTED_FORMATS`: the wasm module formats that this CU
+  supports, as a comma-delimited string (defaults to
+  `['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2']`)
+- `PROCESS_WASM_SUPPORTED_EXTENSIONS`: the wasm extensions that this CU
+  supports, as a comma-delimited string (defaults to no extensions)
 - `WASM_EVALUATION_MAX_WORKERS`: The number of workers to use for evaluating
   messages (Defaults to `3`)
 - `WASM_BINARY_FILE_DIRECTORY`: The directory to cache wasm binaries downloaded
@@ -86,15 +90,17 @@ There are a few environment variables that you can set. Besides
   Wasm modules (Defaults to `5` wasm modules)
 - `WASM_INSTANCE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used
   for loaded Wasm instances (defaults to `5` loaded wasm instance)
-- `PROCESS_CHECKPOINT_FILE_DIRECTORY`: the directory to cache created/found
-  Checkpoints, from arweave, for quick retrieval later (Defaults to the os temp
-  directory)
 - `PROCESS_MEMORY_CACHE_MAX_SIZE`: The maximum size, in bytes, of the LRU
   In-Memory cache used to cache the latest memory evaluated for ao processes.
 - `PROCESS_MEMORY_CACHE_TTL`: The time-to-live for a cache entry in the process
   latest memory LRU In-Memory cache. An entries age is reset each time it is
   accessed
-- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store drained process memory (Defaults to the os temp directory)
+- `PROCESS_MEMORY_CACHE_FILE_DIR`:The directory to store process memory that has
+  been drained from the LRU In-Memory cache (not to be conflated with file
+  checkpoints -- see below) (Defaults to the os temp directory)
+- `PROCESS_MEMORY_FILE_CHECKPOINTS_DIR`: The directory to store process memory
+  associated with file checkpoints. Process file checkpoints will persist across
+  CU restarts (defaults to os tmp directory `/file_checkpoints`)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
   (defaults to `0`)
@@ -103,16 +109,17 @@ There are a few environment variables that you can set. Besides
   already created a Checkpoint for that process, since it last started. This is
   effectively a throttle on `Checkpoint` creation, for a given process (defaults
   to `30 minutes`)
-- `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint` 
+- `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint`
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
   `DISABLE_PROCESS_CHECKPOINT_CREATION` to `'false'`)
-- `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION`: Where to disable process `Checkpoint` 
-  creation to the file system. (You must explicitly enable `Checkpoint` creation by setting -
-  `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION` to `'false'`)
+- `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION`: Where to disable process
+  `Checkpoint` creation to the file system. (You must explicitly enable
+  `Checkpoint` creation by setting - `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION`
+  to `'false'`)
 - `EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD`: If a process uses this amount of
-  gas, then it will immediately create a Checkpoint at the end of the
-  evaluation stream.
+  gas, then it will immediately create a Checkpoint at the end of the evaluation
+  stream.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
 - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for
@@ -123,10 +130,12 @@ There are a few environment variables that you can set. Besides
 - `RESTRICT_PROCESSES`: A list of process ids that the CU should restrict aka. a
   `blacklist` (defaults to none)
 - `ALLOW_PROCESSES`: The counterpart to RESTRICT_PROCESSES. When configured the
-  CU will only execute these processes aka. a `whitelist` (defaults to allow all processes)
-- `ALLOW_OWNERS`: A list of process owners, whose processes are allowed to execute
-on the CU aka. an owner `whitelist` (defaults to allow all owners)
-- `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are trusted and the CU can start from
+  CU will only execute these processes aka. a `whitelist` (defaults to allow all
+  processes)
+- `ALLOW_OWNERS`: A list of process owners, whose processes are allowed to
+  execute on the CU aka. an owner `whitelist` (defaults to allow all owners)
+- `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are
+  trusted and the CU can start from
 
 ## Tests
 

@@ -150,10 +150,6 @@ export const domainConfigSchema = z.object({
    */
   IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,
   /**
-   * The directory to cache Checkpoints created on Arweave
-   */
-  PROCESS_CHECKPOINT_FILE_DIRECTORY: z.string().min(1),
-  /**
    * The maximum size, in bytes, of the cache used to cache the latest memory
    * evaluated for an ao process
    */
@@ -164,9 +160,15 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_MEMORY_CACHE_TTL: positiveIntSchema,
   /**
-   * The directory to store drained process memory files
+   * The directory to store process memory that has been drained
+   * from the LRU In-Memory cache (not to be conflated with file checkpoints -- see below)
    */
   PROCESS_MEMORY_CACHE_FILE_DIR: z.string().min(1),
+  /**
+   * The directory to store process memory associated with file checkpoints.
+   * Process file checkpoints will persist across CU restarts
+   */
+  PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: z.string().min(1),
   /**
    * The interval at which the CU should Checkpoint all processes stored in it's
    * cache.

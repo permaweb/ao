@@ -10,7 +10,7 @@ import bytes from 'bytes'
 import { createLogger } from '../logger.js'
 import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
 import { PROCESSES_TABLE } from './sqlite.js'
-import { LATEST, createProcessMemoryCache, findCheckpointFileBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveCheckpointWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
+import { LATEST, createProcessMemoryCache, findFileCheckpointBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveCheckpointWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
 
 const gzipP = promisify(gzip)
 const logger = createLogger('ao-cu:ao-process')
@@ -188,7 +188,7 @@ describe('ao-process', () => {
     })
   })
 
-  describe('findCheckpointFileBeforeWith', () => {
+  describe('findFileCheckpointBeforeWith', () => {
     const now = `${new Date().getTime()}`
     const tenSecondsAgo = `${now - 10000}`
     const nineSecondsAgo = tenSecondsAgo + 1000
@@ -204,13 +204,13 @@ describe('ao-process', () => {
     }
 
     test('should return the single checkpoint from a file', async () => {
-      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+      const findFileCheckpointBefore = findFileCheckpointBeforeWith({
         db: {
           query: async () => [{ file: 'state-process-123.dat', evaluation: JSON.stringify(evaluation) }]
         }
       })
 
-      const res = await findCheckpointFileBefore({
+      const res = await findFileCheckpointBefore({
         processId: 'process-123',
         before: {
           timestamp: now,
@@ -222,7 +222,7 @@ describe('ao-process', () => {
     })
 
     test('should return the latest checkpoint from a file BEFORE the before', async () => {
-      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+      const findFileCheckpointBefore = findFileCheckpointBeforeWith({
         db: {
           query: async () => [
             { file: 'state-process-123.dat', evaluation: JSON.stringify({ ...evaluation, timestamp: tenSecondsAgo }) },
@@ -231,7 +231,7 @@ describe('ao-process', () => {
         }
       })
 
-      const res = await findCheckpointFileBefore({
+      const res = await findFileCheckpointBefore({
         processId: 'process-123',
         before: {
           timestamp: now,
@@ -248,13 +248,13 @@ describe('ao-process', () => {
     })
 
     test('should return undefined if no checkpoint is earlier than target', async () => {
-      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+      const findFileCheckpointBefore = findFileCheckpointBeforeWith({
         db: {
           query: async () => [{ file: 'state-process-789.dat', evaluation: JSON.stringify(evaluation) }]
         }
       })
 
-      const res = await findCheckpointFileBefore({
+      const res = await findFileCheckpointBefore({
         processId: 'process-123',
         before: {
           timestamp: tenSecondsAgo,
@@ -268,13 +268,13 @@ describe('ao-process', () => {
 
     test('should return undefined if no checkpoints are present', async () => {
       const now = new Date()
-      const findCheckpointFileBefore = findCheckpointFileBeforeWith({
+      const findFileCheckpointBefore = findFileCheckpointBeforeWith({
         db: {
           query: async () => []
         }
       })
 
-      const res = await findCheckpointFileBefore({
+      const res = await findFileCheckpointBefore({
         processId: 'process-123',
         before: {
           timestamp: now,
@@ -321,7 +321,7 @@ describe('ao-process', () => {
       zipped = await gzipP(Memory)
     })
 
-    describe('checkpoint cached in LRU In-Memory Cache', () => {
+    describe('MEMORY checkpoint', () => {
       const deps = {
         cache: {
           get: () => ({
@@ -330,8 +330,9 @@ describe('ao-process', () => {
           })
         },
         readProcessMemoryFile: async () => assert.fail('should not call if memory is in cache'),
-        findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
-        readCheckpointFile: async () => assert.fail('should not call if found in cache'),
+        readFileCheckpointMemory: async () => assert.fail('should not call if memory is in cache'),
+        findFileCheckpointBefore: async () => assert.fail('should not call if found in cache'),
+        findRecordCheckpointBefore: async () => assert.fail('should not call if found in cache'),
         address: async () => assert.fail('should not call if found in cache'),
         queryGateway: async () => assert.fail('should not call if found in cache'),
         queryCheckpointGateway: async () => assert.fail('should not call if found in cache'),
@@ -340,7 +341,6 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
-        fileExists: () => true,
         DIR: 'fake/directory/'
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -461,21 +461,22 @@ describe('ao-process', () => {
       test.todo('should omit the memory if omitMemory is received', async () => {})
     })
 
-    describe('checkpoint cached in a file', () => {
+    describe('FILE checkpoint', () => {
       const deps = {
         cache: {
           get: () => undefined
         },
-        findCheckpointFileBefore: async ({ processId, before }) => {
+        findFileCheckpointBefore: async ({ processId, before }) => {
           assert.equal(processId, PROCESS)
           assert.equal(before, LATEST)
           return { file: 'state-process-123.dat', ...cachedEval }
         },
-        readProcessMemoryFile: async (file) => {
+        readProcessMemoryFile: async () => assert.fail('should not call if cache not drained to file'),
+        readFileCheckpointMemory: async (file) => {
           assert.equal(file, 'state-process-123.dat')
           return zipped
         },
-        findCheckpointRecordBefore: async () => assert.fail('should not call if file checkpoint'),
+        findRecordCheckpointBefore: async () => assert.fail('should not call if file checkpoint'),
         address: async () => assert.fail('should not call if found in file checkpoint'),
         queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
         queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
@@ -491,7 +492,7 @@ describe('ao-process', () => {
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
       describe('should use if in LRU In-Memory Cache cannot be used', () => {
-        test('Memory failed to drain to a file', async () => {
+        test('LRU In-Memory cache failed to drain to a file', async () => {
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             cache: {
@@ -550,32 +551,17 @@ describe('ao-process', () => {
         })
       })
 
-      test('should move on if file not found', async () => {
-        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
-          ...deps,
-          findCheckpointFileBefore: async () => {
-            return { file: 'state-process123.dat', ...cachedEval }
-          },
-          readProcessMemoryFile: async (path) => {
-            throw new Error('ENOENT')
-          }
-        }))
-        const { Memory, ...res } = await findLatestProcessMemory(latestTarget)
-
-        assert.notEqual(res.src, 'file')
-      })
-
       test('should omit the memory if omitMemory is received', async () => {
         let readFile = false
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
-          findCheckpointFileBefore: async () => {
+          findFileCheckpointBefore: async () => {
             return { file: 'state-process123.dat', ...cachedEval }
           },
-          readProcessMemoryFile: async (path) => {
+          readProcessMemoryFile: async (file) => {
+            assert.equal(file, 'state-process123.dat')
             readFile = true
-          },
-          fileExists: () => true
+          }
         }))
         const { Memory, ...res } = await findLatestProcessMemory({ ...latestTarget, omitMemory: true })
 
@@ -585,12 +571,15 @@ describe('ao-process', () => {
       })
     })
 
-    describe('checkpoint cached in a record', () => {
+    describe('RECORD checkpoint', () => {
       const deps = {
         cache: {
           get: () => undefined
         },
-        findCheckpointRecordBefore: async ({ processId, before }) => {
+        findFileCheckpointBefore: async () => undefined,
+        readProcessMemoryFile: async () => assert.fail('should not call if cache not drained to file'),
+        readFileCheckpointMemory: async (file) => assert.fail('should not call if no file checkpoint'),
+        findRecordCheckpointBefore: async ({ processId, before }) => {
           assert.equal(processId, PROCESS)
           assert.equal(before, LATEST)
 
@@ -599,21 +588,9 @@ describe('ao-process', () => {
             evaluation: cachedEval
           }
         },
-        findCheckpointFileBefore: async ({ processId, before }) => {
-          assert.equal(processId, PROCESS)
-          assert.equal(before, LATEST)
-          return undefined
-        },
-        readCheckpointFile: async (file) => {
-          assert.equal(file, 'foobar.json')
-          return {
-            Memory: { id: 'tx-123', encoding: 'gzip' },
-            evaluation: cachedEval
-          }
-        },
-        address: async () => assert.fail('should not call if found in file checkpoint'),
-        queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
-        queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
+        address: async () => assert.fail('should not call if found in record checkpoint'),
+        queryGateway: async () => assert.fail('should not call if found in record checkpoint'),
+        queryCheckpointGateway: async () => assert.fail('should not call if record checkpoint'),
         loadTransactionData: async (id) => {
           assert.equal(id, 'tx-123')
           return new Response(Readable.toWeb(Readable.from(zipped)))
@@ -622,40 +599,12 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
-        fileExists: () => true,
         DIR: 'fake/directory/'
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
-      describe('should use if in LRU In-Memory Cache cannot be used', () => {
-        test('Memory failed to drain to a file', async () => {
-          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
-            ...deps,
-            readCheckpointFile: async () => assert.fail('should not read memory file if failed to drain'),
-            cache: {
-              get: () => ({
-                File: Promise.resolve(undefined),
-                evaluation: cachedEval
-              })
-            }
-          }))
-
-          const { Memory, ...res } = await findLatestProcessMemory(target)
-
-          assert.ok(Memory)
-          assert.deepStrictEqual(res, {
-            src: 'record',
-            moduleId: cachedEval.moduleId,
-            epoch: cachedEval.epoch,
-            nonce: cachedEval.nonce,
-            timestamp: cachedEval.timestamp,
-            blockHeight: cachedEval.blockHeight,
-            cron: cachedEval.cron,
-            ordinate: cachedEval.ordinate
-          })
-        })
-
-        test('no checkpoint in LRU In-Memory cache', async () => {
+      describe('should use if file checkpoint cannot be used', () => {
+        test('no file checkpoint', async () => {
           const { Memory, ...res } = await findLatestProcessMemory(target)
 
           assert.ok(Memory)
@@ -673,6 +622,31 @@ describe('ao-process', () => {
 
         test('when targeting latest', async () => {
           const { Memory, ...res } = await findLatestProcessMemory(latestTarget)
+
+          assert.ok(Memory)
+          assert.deepStrictEqual(res, {
+            src: 'record',
+            moduleId: cachedEval.moduleId,
+            epoch: cachedEval.epoch,
+            nonce: cachedEval.nonce,
+            timestamp: cachedEval.timestamp,
+            blockHeight: cachedEval.blockHeight,
+            cron: cachedEval.cron,
+            ordinate: cachedEval.ordinate
+          })
+        })
+
+        test('file checkpoint file could not be read', async () => {
+          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
+            ...deps,
+            findFileCheckpointBefore: async () => {
+              return { file: 'state-process123.dat', ...cachedEval }
+            },
+            readProcessMemoryFile: async () => assert.fail('should not call if cache not drained to file'),
+            readFileCheckpointMemory: async (file) => { throw new Error('ENOENT') }
+          }))
+
+          const { Memory, ...res } = await findLatestProcessMemory(target)
 
           assert.ok(Memory)
           assert.deepStrictEqual(res, {
@@ -696,7 +670,7 @@ describe('ao-process', () => {
       test('should NOT decode the memory if not needed', async () => {
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
-          findCheckpointRecordBefore: async () => ({
+          findRecordCheckpointBefore: async () => ({
             Memory: { id: 'tx-not-encoded', encoding: undefined },
             evaluation: {
               ...cachedEval,
@@ -717,7 +691,7 @@ describe('ao-process', () => {
       test.todo('should omit the memory if omitMemory is received', async () => {})
     })
 
-    describe('checkpoint retrieved from the checkpoint gateway', () => {
+    describe('ARWEAVE checkpoint', () => {
       const edges = [
         {
           node: {
@@ -737,8 +711,8 @@ describe('ao-process', () => {
         cache: {
           get: () => undefined
         },
-        findCheckpointFileBefore: async () => undefined,
-        findCheckpointRecordBefore: async () => undefined,
+        findFileCheckpointBefore: async () => undefined,
+        findRecordCheckpointBefore: async () => undefined,
         address: async () => 'address-123',
         queryGateway: async ({ query, variables }) => {
           assert.ok(query)
@@ -762,7 +736,7 @@ describe('ao-process', () => {
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
-      describe('should use if the LRU In-Memory and File checkpoint cannot be used', async () => {
+      describe('should use if the Memory checkpoint, File checkpoint ,and record checkpoint cannot be used', async () => {
         test('no file checkpoint is found', async () => {
           const { Memory, ...res } = await findLatestProcessMemory(target)
 
@@ -795,12 +769,11 @@ describe('ao-process', () => {
           })
         })
 
-        test('file checkpoint points to ignored checkpoint on arweave', async () => {
+        test('record checkpoint points to ignored checkpoint on arweave', async () => {
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
-            findCheckpointRecordBefore: async () => ({ Memory: { id: 'file_ignored' } }),
-            findCheckpointFileBefore: async () => undefined,
-            readCheckpointFile: async () => undefined,
+            findRecordCheckpointBefore: async () => ({ Memory: { id: 'file_ignored' } }),
+            findFileCheckpointBefore: async () => undefined,
             IGNORE_ARWEAVE_CHECKPOINTS: ['file_ignored']
           }))
 
@@ -819,12 +792,11 @@ describe('ao-process', () => {
           })
         })
 
-        test('file checkpoint fails to be downloaded', async () => {
+        test('record checkpoint fails to be downloaded', async () => {
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
-            findCheckpointRecordBefore: async () => ({ Memory: { id: 'fail' } }),
-            findCheckpointFileBefore: async () => undefined,
-            readCheckpointFile: async () => undefined,
+            findRecordCheckpointBefore: async () => ({ Memory: { id: 'fail' } }),
+            findFileCheckpointBefore: async () => undefined,
             loadTransactionData: async (id) => {
               if (id === 'fail') throw new Error('woops')
               return deps.loadTransactionData(id)
@@ -1066,8 +1038,8 @@ describe('ao-process', () => {
         cache: {
           get: () => undefined
         },
-        findCheckpointFileBefore: async () => undefined,
-        findCheckpointRecordBefore: async () => undefined,
+        findFileCheckpointBefore: async () => undefined,
+        findRecordCheckpointBefore: async () => undefined,
         address: async () => 'address-123',
         queryCheckpointGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
         queryGateway: async ({ query, variables }) => ({ data: { transactions: { edges: [] } } }),
@@ -1094,7 +1066,7 @@ describe('ao-process', () => {
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
-      describe('should cold start if LRU In-Memory Cache, File Checkpoint, and Gateway Checkpoints all cannot be used', async () => {
+      describe('should cold start if LRU In-Memory Cache, File Checkpoint, Record Checkpoints, and Gateway Checkpoints all cannot be used', async () => {
         test('no checkpoint found on gateway', async () => {
           const res = await findLatestProcessMemory(target)
           assert.deepStrictEqual(res, COLDSTART)
@@ -1132,7 +1104,7 @@ describe('ao-process', () => {
         nonce: 15
       }
 
-      test('if LRU In-Memory cache checkpoint is later than the target', async () => {
+      test('if the cached checkpoint is later than the target', async () => {
         const deps = {
           cache: {
             get: () => ({
@@ -1140,8 +1112,8 @@ describe('ao-process', () => {
               evaluation: laterCachedEval
             })
           },
-          findCheckpointFileBefore: async () => assert.fail('should not call if found in cache'),
-          findCheckpointRecordBefore: async () => assert.fail('should not call if found in cache'),
+          findFileCheckpointBefore: async () => assert.fail('should not call if found in cache'),
+          findRecordCheckpointBefore: async () => assert.fail('should not call if found in cache'),
           address: async () => assert.fail('should not call if found in file checkpoint'),
           queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
           queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
@@ -1171,14 +1143,14 @@ describe('ao-process', () => {
           cache: {
             get: () => undefined
           },
-          findCheckpointFileBefore: async () => {
+          findFileCheckpointBefore: async () => {
             return { file: 'state-process123.dat', ...laterCachedEval }
           },
-          readProcessMemoryFile: async (path) => {
-            assert.equal(path, 'state-process123.dat')
+          readFileCheckpointMemory: async (file) => {
+            assert.equal(file, 'state-process123.dat')
             return zipped
           },
-          findCheckpointRecordBefore: async () => assert.fail('should not call if found in cache'),
+          findRecordCheckpointBefore: async () => assert.fail('should not call if found in cache'),
           address: async () => assert.fail('should not call if found in file checkpoint'),
           queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
           queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
@@ -1202,13 +1174,14 @@ describe('ao-process', () => {
             message: 'no cached process memory found'
           }))
       })
-      test('if nothing in LRU In-Memory Cache, and no file checkpoint, and record checkpoint is later than the target', async () => {
+
+      test('if nothing in LRU In-Memory Cache, no file checkpoint, and record checkpoint is later than the target', async () => {
         const deps = {
           cache: {
             get: () => undefined
           },
-          findCheckpointFileBefore: async () => undefined,
-          findCheckpointRecordBefore: async ({ processId, before }) => {
+          findFileCheckpointBefore: async () => undefined,
+          findRecordCheckpointBefore: async ({ processId, before }) => {
             assert.equal(processId, PROCESS)
             assert.equal(before, LATEST)
 
@@ -1248,8 +1221,8 @@ describe('ao-process', () => {
           cache: {
             get: () => undefined
           },
-          findCheckpointFileBefore: async () => undefined,
-          findCheckpointRecordBefore: async () => undefined,
+          findFileCheckpointBefore: async () => undefined,
+          findRecordCheckpointBefore: async () => undefined,
           address: async () => 'address-123',
           queryGateway: async () => ({
             data: {
@@ -1556,163 +1529,275 @@ describe('ao-process', () => {
       logger
     }
 
-    test('should not save checkpoint if checkpointing is disabled', async () => {
+    describe('should create an arweave checkpoint and file checkpoint', async () => {
+      const deps = {
+        ...depsAll,
+        queryGateway: () => Promise.resolve(),
+        queryCheckpointGateway: () => Promise.resolve(),
+        address: () => Promise.resolve(),
+        hashWasmMemory: () => Promise.resolve('hash'),
+        readProcessMemoryFile: async (file) => {
+          assert.equal(file, 'file.dat')
+          return Buffer.from([1, 2, 3])
+        },
+        uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
+        buildAndSignDataItem: (...args) => Promise.resolve(...args),
+        writeCheckpointRecord: (d) => Promise.resolve(),
+        writeFileCheckpointMemory: ({ Memory, evaluation }) => {
+          assert.ok(Memory)
+          assert.equal(evaluation.processId, 'process-123')
+          return Promise.resolve('file.dat')
+        },
+        writeFileCheckpointRecord: (_evaluation, file) => {
+          assert.equal(file, 'file.dat')
+          return Promise.resolve(file)
+        },
+        DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+      }
+
+      test('when Memory is provided directly', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...depsAll,
+          ...deps
+        })
+
+        const [fileCheckpointResult, arweaveCheckpointResult] = await saveCheckpoint({ Memory: Buffer.from('Memory'), moduleId: 'module-123', processId: 'process-123' })
+
+        assert.equal(fileCheckpointResult.file, 'file.dat')
+        assert.equal(arweaveCheckpointResult.id, 'tx-123')
+      })
+
+      test('when Memory is provided as a file', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...depsAll,
+          ...deps
+        })
+
+        const [fileCheckpointResult, arweaveCheckpointResult] = await saveCheckpoint({ File: Promise.resolve('file.dat'), moduleId: 'module-123', processId: 'process-123' })
+
+        assert.equal(fileCheckpointResult.file, 'file.dat')
+        assert.equal(arweaveCheckpointResult.id, 'tx-123')
+      })
+    })
+
+    test('should not save checkpoints if all checkpointing is disabled', async () => {
       const saveCheckpoint = saveCheckpointWith({
         ...depsAll,
+        writeFileCheckpointMemory: async () => assert.fail('should not call if file checkpointing is disabled'),
+        writeFileCheckpointRecord: async () => assert.fail('should not call if file checkpointing is disabled'),
+        uploadDataItem: async () => assert.fail('shold not call if arweave checkpoints are disabled'),
         address: () => {
           assert.fail('saving checkpoint process should not have been initiated')
         },
         DISABLE_PROCESS_CHECKPOINT_CREATION: true,
         DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
       })
-      const result = await saveCheckpoint({})
-      assert.equal(result, undefined, 'should immediately resolve if checkpointing is disabled')
+      const res = await saveCheckpoint({ Memory: Buffer.from(['hello world']) })
+
+      assert.ok(Array.isArray(res))
+
+      const [fileCheckpointResult, arweaveCheckpointResults] = res
+      assert.equal(fileCheckpointResult, undefined)
+      assert.equal(arweaveCheckpointResults, undefined)
     })
 
-    test('should not save checkpoint if process was recently checkpointed', async () => {
-      const saveCheckpoint = saveCheckpointWith({
-        ...depsAll,
-        address: () => {
-          assert.fail('saving checkpoint process should not have been initiated')
-        },
-        DISABLE_PROCESS_CHECKPOINT_CREATION: false,
-        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false,
-        recentCheckpoints: new Map([['process-123', true]])
-      })
-      const result = await saveCheckpoint({ processId: 'process-123' })
-      assert.equal(result, undefined, 'should immediately resolve if process was recently checkpointed')
-    })
-
-    test('should not save a checkpoint if there is already a checkpoint for the evaluation on Arweave', async () => {
-      const saveCheckpoint = saveCheckpointWith({
-        ...depsAll,
-        address: () => {
-          return Promise.resolve()
-        },
-        queryGateway: () => Promise.resolve({ data: { transactions: { edges: [{ node: { id: 'tx-123', tags: [] } }] } } }),
-        queryCheckpointGateway: () => Promise.resolve({ data: { transactions: { edges: [{ node: { id: 'tx-123', tags: [] } }] } } }),
-        readProcessMemoryFile: () => {
-          assert.fail('should not attempt to read the process memory file')
-        },
-        writeCheckpointRecord: () => Promise.resolve(),
-        DISABLE_PROCESS_CHECKPOINT_CREATION: false
-      })
-      const result = await saveCheckpoint({ File: Promise.resolve('file') })
-      assert.equal(result.id, 'tx-123', 'should return the id of the checkpoint')
-    })
-
-    describe('should fail if the memory is not provided directly or as a field path', () => {
-      const deps = {
-        ...depsAll,
-        address: () => {
-          return Promise.resolve()
-        },
-        queryGateway: () => Promise.resolve(),
-        queryCheckpointGateway: () => Promise.resolve(),
-        DISABLE_PROCESS_CHECKPOINT_CREATION: false
-      }
-      test('should fail if memory and file are both undefined', async () => {
+    describe('arweave checkpoint', () => {
+      test('should save a checkpoint to arweave and save to record checkpoint', async () => {
+        let writeCheckpointRecordCalled = false
         const saveCheckpoint = saveCheckpointWith({
-          ...deps
+          ...depsAll,
+          queryGateway: () => Promise.resolve(),
+          queryCheckpointGateway: () => Promise.resolve(),
+          address: () => Promise.resolve(),
+          hashWasmMemory: () => Promise.resolve('hash'),
+          readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
+          uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
+          buildAndSignDataItem: (...args) => Promise.resolve(...args),
+          writeCheckpointRecord: (d) => {
+            writeCheckpointRecordCalled = true
+            return Promise.resolve()
+          },
+          DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
         })
-        await saveCheckpoint({}).then(() => assert.fail('should not resolve if no Memory or File is provided')).catch(() => assert.ok(true))
+        const [, result] = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
+        assert.equal(result.id, 'tx-123')
+        assert.ok(writeCheckpointRecordCalled)
       })
-      test('should fail if file promise resolves with undefined', async () => {
+
+      test('should not create if arweave checkpoint was recently created', async () => {
         const saveCheckpoint = saveCheckpointWith({
-          ...deps
+          ...depsAll,
+          address: () => {
+            assert.fail('saving checkpoint process should not have been initiated')
+          },
+          DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+          recentCheckpoints: new Map([['process-123', true]])
         })
-        await saveCheckpoint({ File: Promise.resolve(undefined) }).then(() => assert.fail('should not resolve if File resolves to undefined')).catch(() => assert.ok(true))
+
+        const [, arweaveCheckpointResults] = await saveCheckpoint({ Memory: Buffer.from('hello'), processId: 'process-123' })
+        assert.equal(arweaveCheckpointResults, undefined)
+      })
+
+      test('should not create if checkpoint for evaluation already exists on Arweave', async () => {
+        let writeCheckpointRecordCalled = false
+        const saveCheckpoint = saveCheckpointWith({
+          ...depsAll,
+          address: () => {
+            return Promise.resolve()
+          },
+          queryGateway: () => Promise.resolve({ data: { transactions: { edges: [{ node: { id: 'tx-123', tags: [] } }] } } }),
+          queryCheckpointGateway: () => Promise.resolve({ data: { transactions: { edges: [{ node: { id: 'tx-123', tags: [] } }] } } }),
+          readProcessMemoryFile: async () => Buffer.from('hello'),
+          writeCheckpointRecord: (d) => {
+            writeCheckpointRecordCalled = true
+            return Promise.resolve()
+          },
+          DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
+        })
+
+        const [, result] = await saveCheckpoint({ File: Promise.resolve('file') })
+        assert.equal(result.id, 'tx-123')
+        assert.ok(writeCheckpointRecordCalled)
+      })
+
+      describe('should fail gracefully if memory is not provided directly or as as a file', async () => {
+        const deps = {
+          ...depsAll,
+          address: () => {
+            return Promise.resolve()
+          },
+          writeFileCheckpointMemory: async () => assert.fail('should not call if file checkpointing is disabled'),
+          writeFileCheckpointRecord: async () => assert.fail('should not call if file checkpointing is disabled'),
+          uploadDataItem: async () => assert.fail('shold not call if memory not provided'),
+          queryGateway: async () => assert.fail('shold not call if memory not provided'),
+          queryCheckpointGateway: async () => assert.fail('shold not call if memory not provided'),
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+          DISABLE_PROCESS_CHECKPOINT_CREATION: false
+        }
+
+        test('should fail if memory and file are both undefined', async () => {
+          const saveCheckpoint = saveCheckpointWith({
+            ...deps
+          })
+          await saveCheckpoint({})
+            .then(() => assert.fail('should not resolve if no Memory or File is provided'))
+            .catch(() => assert.ok(true))
+        })
+
+        test('should fail if file promise resolves with undefined', async () => {
+          const saveCheckpoint = saveCheckpointWith({
+            ...deps
+          })
+          await saveCheckpoint({ File: Promise.resolve(undefined) })
+            .then(() => assert.fail('should not resolve if File resolves to undefined'))
+            .catch(() => assert.ok(true))
+        })
+      })
+
+      test('should fail gracefully if uploading to Arweave fails', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...depsAll,
+          queryGateway: () => Promise.resolve(),
+          queryCheckpointGateway: () => Promise.resolve(),
+          address: () => Promise.resolve(),
+          hashWasmMemory: () => Promise.resolve('hash'),
+          readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
+          uploadDataItem: (data) => Promise.reject(new Error('oops')),
+          buildAndSignDataItem: (...args) => Promise.resolve(...args),
+          writeCheckpointRecord: (d) => assert.fail('should not call if upload to arweave fails'),
+          DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
+        })
+        const [, result] = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
+        assert.equal(result, undefined)
+      })
+
+      test('should handle gracefully if fail to save record checkpoint', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...depsAll,
+          queryGateway: () => Promise.resolve(),
+          queryCheckpointGateway: () => Promise.resolve(),
+          address: () => Promise.resolve(),
+          hashWasmMemory: () => Promise.resolve('hash'),
+          readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
+          uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
+          buildAndSignDataItem: (...args) => Promise.resolve(...args),
+          writeCheckpointRecord: (d) => Promise.reject(new Error('oops')),
+          DISABLE_PROCESS_CHECKPOINT_CREATION: false,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
+        })
+        await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
       })
     })
 
-    test('should save a checkpoint to arweave', async () => {
-      const saveCheckpoint = saveCheckpointWith({
-        ...depsAll,
-        queryGateway: () => Promise.resolve(),
-        queryCheckpointGateway: () => Promise.resolve(),
-        address: () => Promise.resolve(),
-        hashWasmMemory: () => Promise.resolve('hash'),
-        readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
-        uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
-        buildAndSignDataItem: (...args) => Promise.resolve(...args),
-        writeCheckpointRecord: (d) => {
-          assert.ok(true)
-          return Promise.resolve()
-        },
-        DISABLE_PROCESS_CHECKPOINT_CREATION: false
+    describe('file checkpoint', () => {
+      test('should save a file checkpoint', async () => {
+        const saveCheckpoint = saveCheckpointWith({
+          ...depsAll,
+          queryGateway: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          queryCheckpointGateway: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          address: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          hashWasmMemory: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          uploadDataItem: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          buildAndSignDataItem: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          writeCheckpointRecord: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          readProcessMemoryFile: () => undefined,
+          writeFileCheckpointMemory: ({ Memory, evaluation }) => {
+            assert.ok(Memory)
+            assert.equal(evaluation.processId, 'process-123')
+            return Promise.resolve('dir/file.dat')
+          },
+          writeFileCheckpointRecord: (_evaluation, file) => {
+            assert.equal(file, 'dir/file.dat')
+            return Promise.resolve(file)
+          },
+          DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+        })
+        const [result] = await saveCheckpoint({ Memory: Buffer.from('Memory'), moduleId: 'module-123', processId: 'process-123' })
+
+        assert.equal(result.file, 'dir/file.dat')
       })
-      const result = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
-      assert.equal(result.id, 'tx-123', 'should return the id of the checkpoint')
-    })
 
-    test('should save a checkpoint to file system if arweave disabled', async () => {
-      let wroteArweaveCheckpointRecord = false
-      const saveCheckpoint = saveCheckpointWith({
-        ...depsAll,
-        queryGateway: () => Promise.resolve(),
-        queryCheckpointGateway: () => Promise.resolve(),
-        address: () => Promise.resolve(),
-        hashWasmMemory: () => Promise.resolve('hash'),
-        readProcessMemoryFile: () => undefined,
-        uploadDataItem: async () => undefined,
-        buildAndSignDataItem: (...args) => Promise.resolve(...args),
-        writeCheckpointRecord: async () => {
-          wroteArweaveCheckpointRecord = true
-        },
-        writeProcessMemoryFile: ({ evaluation }) => {
-          assert.equal(evaluation.processId, 'process-123')
-          return Promise.resolve('dir/file-path.dat')
-        },
-        writeCheckpointFile: () => {
-          return Promise.resolve()
-        },
-        writeFileRecord: (_evaluation, path) => {
-          assert.equal(path, 'dir/file-path.dat')
-          return Promise.resolve(path)
-        },
-        DISABLE_PROCESS_CHECKPOINT_CREATION: true,
-        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+      describe('should fail gracefully if memory is not provided directly or as as a file', async () => {
+        const deps = {
+          ...depsAll,
+          queryGateway: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          queryCheckpointGateway: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          address: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          hashWasmMemory: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          uploadDataItem: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          buildAndSignDataItem: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          writeCheckpointRecord: async () => assert.fail('should not call if arweave checkpoint is disabled'),
+          readProcessMemoryFile: async () => assert.fail('should not call if failing gracefully'),
+          writeFileCheckpointMemory: async () => assert.fail('should not call if failing gracefully'),
+          writeFileCheckpointRecord: async () => assert.fail('should not call if failing gracefully'),
+          DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+        }
+
+        test('should fail if memory and file are both undefined', async () => {
+          const saveCheckpoint = saveCheckpointWith({
+            ...deps
+          })
+          await saveCheckpoint({})
+            .then(() => assert.fail('should not resolve if no Memory or File is provided'))
+            .catch(() => assert.ok(true))
+        })
+
+        test('should fail if file promise resolves with undefined', async () => {
+          const saveCheckpoint = saveCheckpointWith({
+            ...deps
+          })
+          await saveCheckpoint({ File: Promise.resolve(undefined) })
+            .then(() => assert.fail('should not resolve if File resolves to undefined'))
+            .catch(() => assert.ok(true))
+        })
       })
-      const result = await saveCheckpoint({ Memory: Buffer.from('Memory'), moduleId: 'module-123', processId: 'process-123' })
-
-      assert.ok(!wroteArweaveCheckpointRecord)
-      assert.equal(result.path, 'dir/file-path.dat', 'should return the file path of the checkpoint')
-    })
-
-    test('should save a checkpoint to file system if arweave checkpoint fails', async () => {
-      let wroteArweaveCheckpointRecord = false
-      const saveCheckpoint = saveCheckpointWith({
-        ...depsAll,
-        queryGateway: () => Promise.resolve(),
-        queryCheckpointGateway: () => Promise.resolve(),
-        address: () => Promise.resolve(),
-        hashWasmMemory: () => Promise.resolve('hash'),
-        readProcessMemoryFile: () => undefined, // Promise.resolve(Buffer.from([1, 2, 3])),
-        uploadDataItem: async () => {
-          throw new Error('402: Insufficient balance')
-        },
-        buildAndSignDataItem: (...args) => Promise.resolve(...args),
-        writeCheckpointRecord: async () => {
-          wroteArweaveCheckpointRecord = true
-        },
-        writeProcessMemoryFile: ({ evaluation }) => {
-          assert.equal(evaluation.processId, 'process-123')
-          return Promise.resolve('dir/file-path.dat')
-        },
-        writeCheckpointFile: () => {
-          return Promise.resolve()
-        },
-        writeFileRecord: (_evaluation, path) => {
-          assert.equal(path, 'dir/file-path.dat')
-          return Promise.resolve(path)
-        },
-        DISABLE_PROCESS_CHECKPOINT_CREATION: false,
-        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
-      })
-      const result = await saveCheckpoint({ Memory: Buffer.from('Memory'), moduleId: 'module-123', processId: 'process-123' })
-
-      assert.ok(!wroteArweaveCheckpointRecord)
-      assert.equal(result.path, 'dir/file-path.dat', 'should return the file path of the checkpoint')
     })
   })
 })

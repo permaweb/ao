@@ -1,7 +1,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
 
 import pMap from 'p-map'
 import PQueue from 'p-queue'
@@ -141,12 +141,35 @@ export const createApis = async (ctx) => {
     readFile
   })
 
-  const writeProcessMemoryFile = AoProcessClient.writeProcessMemoryFileWith({
-    DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
-    writeFile
+  const readFileCheckpointMemory = AoProcessClient.readProcessMemoryFileWith({
+    readFile,
+    DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR
   })
 
-  ctx.logger('Process Snapshot creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+  const writeProcessMemoryFile = AoProcessClient.writeProcessMemoryFileWith({
+    DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
+    writeFile,
+    mkdir
+  })
+
+  const writeFileCheckpointMemory = AoProcessClient.writeProcessMemoryFileWith({
+    /**
+     * Using separate files between the LRU cache and file checkpoints prevents
+     * race conditions that arise from using the same physical file, meaning that
+     * the LRU cache and SQLite do not have to be kept in sync.
+     *
+     * This also reduces SQLite write operations due to LRU Caches that are constantly
+     * draining to files.
+     *
+     * In other words, file checkpoints only _need_ to be created/updated on shutdown
+     */
+    DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR,
+    writeFile,
+    mkdir
+  })
+
+  ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+  ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Trusting Arweave Checkpoints [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))
@@ -158,10 +181,6 @@ export const createApis = async (ctx) => {
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
-  const writeFileRecord = AoProcessClient.writeFileRecordWith({
-    db: sqlite
-  })
-
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
     readProcessMemoryFile,
@@ -170,15 +189,14 @@ export const createApis = async (ctx) => {
     hashWasmMemory: WasmClient.hashWasmMemory,
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
-    writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({
-      db: sqlite
-    }),
-    writeFileRecord,
-    writeProcessMemoryFile,
+    writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({ db: sqlite }),
+    writeFileCheckpointMemory,
+    writeFileCheckpointRecord: AoProcessClient.writeFileCheckpointRecordWith({ db: sqlite }),
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
-    PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE
+    PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE,
+    PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR
   })
 
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
@@ -188,8 +206,7 @@ export const createApis = async (ctx) => {
     writeProcessMemoryFile,
     logger: ctx.logger,
     setTimeout: (...args) => lt.setTimeout(...args),
-    clearTimeout: (...args) => lt.clearTimeout(...args),
-    writeFileRecord
+    clearTimeout: (...args) => lt.clearTimeout(...args)
   })
 
   const loadWasmModule = WasmClient.loadWasmModuleWith({
@@ -265,10 +282,9 @@ export const createApis = async (ctx) => {
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       readProcessMemoryFile,
-      findCheckpointFileBefore: AoProcessClient.findCheckpointFileBeforeWith({ db: sqlite }),
-      findCheckpointRecordBefore: AoProcessClient.findCheckpointRecordBeforeWith({
-        db: sqlite
-      }),
+      readFileCheckpointMemory,
+      findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db: sqlite }),
+      findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db: sqlite }),
       address,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),

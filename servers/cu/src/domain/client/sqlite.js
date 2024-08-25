@@ -81,12 +81,14 @@ const createCheckpoints = async (db) => db.prepare(
 
 const createCheckpointFiles = async (db) => db.prepare(
   `CREATE TABLE IF NOT EXISTS ${CHECKPOINT_FILES_TABLE}(
-    processId TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
+    processId TEXT UNIQUE,
     timestamp INTEGER,
     ordinate TEXT,
     cron TEXT,
     file TEXT,
-    evaluation TEXT
+    evaluation TEXT,
+    cachedAt INTEGER
   ) WITHOUT ROWID;`
 ).run()
 
