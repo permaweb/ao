@@ -16,7 +16,7 @@ import gatewayClient from './clients/gateway.js'
 import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
-import cronClient, { deleteCronProcessWith, deleteOldTracesWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
+import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
 import { readTracesWith } from './clients/tracer.js'
 
 import { processMsgWith } from './api/processMsg.js'
@@ -151,6 +151,7 @@ export const createApis = async (ctx) => {
             id: workerId,
             queueId,
             DB_URL,
+            TRACE_DB_URL,
             TASK_QUEUE_MAX_RETRIES: ctx.TASK_QUEUE_MAX_RETRIES,
             TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY
           }
@@ -201,6 +202,11 @@ export const createApis = async (ctx) => {
     logger: sendAssignLogger
   })
 
+  // /**
+  //  * Create cron to clear out traces, each hour
+  //  */
+  workerPool.exec('startDeleteTraceCron')
+
   const monitorProcessLogger = logger.child('monitorProcess')
   const fetchCron = fromPromise(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger }))
 
@@ -208,14 +214,6 @@ export const createApis = async (ctx) => {
   const deleteCronProcess = deleteCronProcessWith({ db })
   const updateCronProcessCursor = updateCronProcessCursorWith({ db })
   const getCronProcessCursor = getCronProcessCursorWith({ db })
-  const deleteOldTraces = deleteOldTracesWith({ db: traceDb })
-
-  /**
-   * Create cron to clear out traces, each hour
-   */
-  cron.schedule('* * * * *', async () => {
-    await deleteOldTraces()
-  })
 
   async function getCronProcesses () {
     function createQuery () {
@@ -238,6 +236,7 @@ export const createApis = async (ctx) => {
 
   const startProcessMonitor = cronClient.startMonitoredProcessWith({
     fetch,
+    cron,
     histogram,
     logger: monitorProcessLogger,
     PROC_FILE_PATH,
@@ -281,9 +280,7 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      getCronProcesses,
-      deleteOldTraces,
-      cron
+      getCronProcesses
     })
   }
 }
