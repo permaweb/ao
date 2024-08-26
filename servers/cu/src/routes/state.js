@@ -1,7 +1,7 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
-import { busyIn } from '../domain/utils.js'
+import { arrayBufferFromMaybeView, busyIn } from '../domain/utils.js'
 import { withMetrics, withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
 
 const inputSchema = z.object({
@@ -45,7 +45,7 @@ export const withStateRoutes = (app) => {
             res.status(202)
             return { message: `Evaluation of process "${input.processId}" to "${input.to || 'latest'}" is in progress.` }
           }
-        ).then((output) => res.send(output))
+        ).then((output) => res.send(Buffer.from(arrayBufferFromMaybeView(output))))
       })
     )()
   )
