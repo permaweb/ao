@@ -1,7 +1,8 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { writeFile, mkdir } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
 
 import pMap from 'p-map'
 import PQueue from 'p-queue'
@@ -35,6 +36,22 @@ export { domainConfigSchema, positiveIntSchema } from './model.js'
 export { errFrom } from './utils.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+/**
+ * readFile from NodeJS has a limit of 2GB.
+ *
+ * Since we may need to read files larger than this,
+ * we create simple wrapper around createReadStream
+ * that provides the same api as readFile
+ */
+async function readFile (file) {
+  const stream = createReadStream(file)
+
+  const chunks = []
+  for await (const chunk of stream) chunks.push(chunk)
+
+  return Buffer.concat(chunks)
+}
 
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
