@@ -64,10 +64,6 @@ impl CoreMetrics for PromMetrics {
         self.observe_duration("get_messages", duration);
     }
 
-    fn serialize_json_observe(&self, duration: u128) {
-        self.observe_duration("serialize_json", duration);
-    }
-
     fn read_message_data_observe(&self, duration: u128) {
         self.observe_duration("read_message_data", duration);
     }
