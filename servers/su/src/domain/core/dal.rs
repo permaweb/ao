@@ -125,7 +125,6 @@ pub trait CoreMetrics: Send + Sync {
     fn get_process_observe(&self, duration: u128);
     fn get_message_observe(&self, duration: u128);
     fn get_messages_observe(&self, duration: u128);
-    fn serialize_json_observe(&self, duration: u128);
     fn read_message_data_observe(&self, duration: u128);
     fn write_item_observe(&self, duration: u128);
     fn write_assignment_observe(&self, duration: u128);
