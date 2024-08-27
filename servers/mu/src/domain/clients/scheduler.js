@@ -178,6 +178,19 @@ function fetchSchedulerProcessWith ({
     }),
     logger
   })
+
+  /**
+   * fetchSchedulerProcess
+   * Given a processId and a suUrl, find process information
+   * in the cache or fetch it from the SU.
+   *
+   * @param {string} processId - The processId of to retrieve information of
+   * @param {string} suUrl - The SU location to fetch the information from
+   * @param {string} logId - The logId to aggregate the logs by
+   *
+   * @returns process metadata
+   *
+   */
   return (processId, suUrl, logId) => {
     return getByProcess(processId)
       .then((cached) => {
