@@ -1092,6 +1092,7 @@ mod bytestore {
             &self,
             ids: Vec<(String, Option<String>, String, String)>,
         ) -> Result<DashMap<(String, Option<String>, String, String), Vec<u8>>, String> {
+            let max_memory_usage = self.config.max_read_memory;
             let binaries = Arc::new(DashMap::new());
             let db = match self.db.read() {
                 Ok(r) => r,
@@ -1099,11 +1100,24 @@ mod bytestore {
             };
 
             if let Some(ref db) = *db {
+                let mut total_memory_usage: usize = 0;
+
                 for id in ids {
                     let binaries = binaries.clone();
-
                     let key = ByteStore::create_key(&id.0, &id.1, &id.2, &id.3);
                     if let Ok(Some(value)) = db.get(&key) {
+                        /*
+                          This is added here because really large message lists
+                          with large messages are filling up the machines memory
+                          and freezing it.
+                        */
+                        total_memory_usage += value.len();
+                        if total_memory_usage > max_memory_usage {
+                            return Err(format!(
+                                "Memory usage exceeded the limit: {} bytes",
+                                max_memory_usage
+                            ));
+                        }
                         binaries.insert(id.clone(), value);
                     }
                 }
