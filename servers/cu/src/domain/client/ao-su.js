@@ -302,7 +302,10 @@ export const loadProcessWith = ({ fetch, logger }) => {
          */
         processId: always(processId),
         timestamp: path(['timestamp']),
-        nonce: always(0)
+        nonce: always(0),
+        signature: path(['signature']),
+        data: path(['data']),
+        anchor: path(['anchor'])
       }))
   }
 }
