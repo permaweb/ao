@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
+pub use super::builder::BuildResult;
 pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
 pub use super::router::{ProcessScheduler, Scheduler};
 
@@ -118,7 +119,7 @@ pub trait DataStore: Send + Sync {
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType>;
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType>;
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
-    fn check_existing_message(&self, message: &Message) -> Result<(), StoreErrorType>;
+    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
 }
 
 pub trait CoreMetrics: Send + Sync {
@@ -129,4 +130,5 @@ pub trait CoreMetrics: Send + Sync {
     fn write_item_observe(&self, duration: u128);
     fn write_assignment_observe(&self, duration: u128);
     fn acquire_write_lock_observe(&self, duration: u128);
+    fn failed_message_save(&self);
 }

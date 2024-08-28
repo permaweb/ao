@@ -1,6 +1,6 @@
 use super::super::config::AoConfig;
 use super::super::core::dal::CoreMetrics;
-use prometheus::{HistogramOpts, HistogramVec, Registry};
+use prometheus::{HistogramOpts, HistogramVec, IntCounter, Registry};
 
 /*
   Implementation of metrics
@@ -12,6 +12,7 @@ use prometheus::{HistogramOpts, HistogramVec, Registry};
 pub struct PromMetrics {
     enabled: bool,
     core_metrics: HistogramVec,
+    message_save_failures: IntCounter,
 }
 
 impl PromMetrics {
@@ -33,9 +34,18 @@ impl PromMetrics {
         // Register the HistogramVec with the provided registry
         registry.register(Box::new(core_metrics.clone())).unwrap();
 
+        let message_save_failures: IntCounter =
+            IntCounter::new("message_save_failures", "message save failure count").unwrap();
+
+        // Register the IntCounter with the provided registry
+        registry
+            .register(Box::new(message_save_failures.clone()))
+            .unwrap();
+
         PromMetrics {
             enabled: config.enable_metrics,
             core_metrics,
+            message_save_failures,
         }
     }
 
@@ -53,30 +63,55 @@ impl PromMetrics {
 
 impl CoreMetrics for PromMetrics {
     fn get_process_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("get_process", duration);
     }
 
     fn get_message_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("get_message", duration);
     }
 
     fn get_messages_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("get_messages", duration);
     }
 
     fn read_message_data_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("read_message_data", duration);
     }
 
     fn write_item_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("write_item", duration);
     }
 
     fn write_assignment_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("write_assignment", duration);
     }
 
     fn acquire_write_lock_observe(&self, duration: u128) {
+        if !self.enabled {
+            return;
+        }
         self.observe_duration("acquire_write_lock", duration);
+    }
+
+    fn failed_message_save(&self) {
+        self.message_save_failures.inc();
     }
 }

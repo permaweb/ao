@@ -509,33 +509,34 @@ impl DataStore for StoreClient {
         not just an assignment we need to check that it
         doesnt already exist.
     */
-    fn check_existing_message(&self, message: &Message) -> Result<(), StoreErrorType> {
-        match &message.message {
-            Some(m) => {
-                match self.get_message(&m.id) {
-                    Ok(parsed) => {
-                        /*
-                            If the message already exists and it contains
-                            an actual message (it is not just an assignment)
-                            then throw an error to avoid duplicate data items
-                            being written
-                        */
-                        match parsed.message {
-                            Some(_) => Err(StoreErrorType::MessageExists(
-                                "Message already exists".to_string(),
-                            )),
-                            None => Ok(()),
-                        }
-                    }
-                    // The message wasnt found at all so it can be written
-                    Err(StoreErrorType::NotFound(_)) => Ok(()),
-                    // Some other error happened
-                    Err(_) => Err(StoreErrorType::DatabaseError(
-                        "Error checking message".to_string(),
+    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType> {
+        match self.get_message(&message_id) {
+            Ok(parsed) => {
+                /*
+                    If the message already exists and it contains
+                    an actual message (it is not just an assignment)
+                    then throw an error to avoid duplicate data items
+                    being written
+                */
+                match parsed.message {
+                    Some(_) => Err(StoreErrorType::MessageExists(
+                        "Message already exists".to_string(),
                     )),
+                    /*
+                      this is an assignment so its ok, although currently
+                      this method is not used to check the assingment ids
+                      this is still here in case someone calls it with
+                      the assignment id in the future
+                    */
+                    None => Ok(()),
                 }
             }
-            None => Ok(()),
+            // The message wasnt found at all so it can be written
+            Err(StoreErrorType::NotFound(_)) => Ok(()),
+            // Some other error happened
+            Err(_) => Err(StoreErrorType::DatabaseError(
+                "Error checking message".to_string(),
+            )),
         }
     }
 
@@ -546,8 +547,6 @@ impl DataStore for StoreClient {
     ) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
-
-        self.check_existing_message(message)?;
 
         let new_message = NewMessage {
             process_id: &message.process_id()?,
