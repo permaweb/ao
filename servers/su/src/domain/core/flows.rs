@@ -5,12 +5,15 @@ use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 use dotenv::dotenv;
 use serde_json::json;
 use simd_json::to_string as simd_to_string;
+use tokio::time::{sleep, Duration};
 
 use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
 
-use super::dal::{Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet};
+use super::dal::{
+    BuildResult, Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet,
+};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
@@ -51,6 +54,80 @@ async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, Strin
 }
 
 /*
+  Currently, a failure in the database opration
+  in this function will result in a missing Nonce
+  because write_item will have advanced the scheduling
+  information but if it doesnt make it to the db that
+  Nonce will be missing in message list.
+
+  So here we are retrying the database call
+  and reporting if the retries fail for visibility.
+*/
+async fn handle_message(
+    deps: &Arc<Deps>,
+    build_result: &BuildResult,
+    start_top_level: Instant,
+) -> Result<String, String> {
+    let message = Message::from_bundle(&build_result.bundle)?;
+
+    let max_retries = 5;
+    let mut attempt = 0;
+    let retry_delay = Duration::from_millis(200);
+
+    loop {
+        attempt += 1;
+        match deps
+            .data_store
+            .save_message(&message, &build_result.binary)
+            .await
+        {
+            Ok(_) => {
+                deps.logger.log(format!("saved message - {:?}", &message));
+                break;
+            }
+            Err(e) if attempt < max_retries => {
+                deps.logger.log(format!(
+                    "Attempt {} failed to save message. Retrying in {} seconds. with error {:?}",
+                    attempt,
+                    retry_delay.as_secs(),
+                    e
+                ));
+                sleep(retry_delay).await;
+            }
+            Err(e) => {
+                deps.metrics.failed_message_save();
+                return Err(format!(
+                    "Failed to save message after {} attempts: {:?}",
+                    attempt, e
+                ));
+            }
+        }
+    }
+
+    /*
+      Theres no point in handling the error from this currently
+      because the uploader uploads in the background.
+    */
+    upload(deps, build_result.binary.to_vec()).await?;
+
+    match system_time_u64() {
+        Ok(timestamp) => {
+            let response_json = json!({
+                "timestamp": timestamp,
+                "id": message.message_id()?
+            });
+
+            let elapsed_top_level = start_top_level.elapsed();
+            deps.metrics
+                .write_item_observe(elapsed_top_level.as_millis());
+
+            Ok(response_json.to_string())
+        }
+        Err(e) => Err(format!("{:?}", e)),
+    }
+}
+
+/*
     This writes a message or process data item,
     it detects which it is creating by the tags.
     If the process_id and assign params are set, it
@@ -80,6 +157,14 @@ pub async fn write_item(
             },
             None => return Err("Type tag not present".to_string()),
         }
+    };
+
+    /*
+      Check to see if the message already exists, this
+      doesn't need to run for an assignment
+    */
+    if let Some(ref item) = data_item {
+        deps.data_store.check_existing_message(&item.id())?
     };
 
     /*
@@ -140,21 +225,7 @@ pub async fn write_item(
 
         let build_result = builder.bundle_items(vec![assignment]).await?;
 
-        let message = Message::from_bundle(&build_result.bundle)?;
-        deps.data_store
-            .save_message(&message, &build_result.binary)
-            .await?;
-        deps.logger.log(format!("saved message - {:?}", &message));
-        upload(&deps, build_result.binary.to_vec()).await?;
-
-        match system_time_u64() {
-            Ok(timestamp) => {
-                let response_json =
-                    json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
-                return Ok(response_json.to_string());
-            }
-            Err(e) => return Err(format!("{:?}", e)),
-        }
+        return handle_message(&deps, &build_result, start_top_level).await;
     }
 
     let data_item = match data_item {
@@ -181,11 +252,6 @@ pub async fn write_item(
             }
 
             let build_result = builder.build_process(input, &next_schedule_info).await?;
-            /*
-              We dont commit and schedule info change here
-              because the process is not yet getting a Nonce.
-            */
-            drop(schedule_info);
             upload(&deps, build_result.binary.to_vec()).await?;
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store
@@ -198,6 +264,13 @@ pub async fn write_item(
                     let elapsed_top_level = start_top_level.elapsed();
                     deps.metrics
                         .write_item_observe(elapsed_top_level.as_millis());
+                    /*
+                      We dont commit and schedule info change here
+                      because the process is not yet getting a Nonce.
+                      However we dont drop the lock until the Process
+                      is successfully saved to the database
+                    */
+                    drop(schedule_info);
                     Ok(response_json.to_string())
                 }
                 Err(e) => Err(format!("{:?}", e)),
@@ -226,23 +299,7 @@ pub async fn write_item(
             drop(schedule_info);
 
             let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
-            let message = Message::from_bundle(&build_result.bundle)?;
-            deps.data_store
-                .save_message(&message, &build_result.binary)
-                .await?;
-            deps.logger.log(format!("saved message - {:?}", &message));
-            upload(&deps, build_result.binary.to_vec()).await?;
-            match system_time_u64() {
-                Ok(timestamp) => {
-                    let response_json =
-                        json!({ "timestamp": timestamp, "id": message.message_id()? });
-                    let elapsed_top_level = start_top_level.elapsed();
-                    deps.metrics
-                        .write_item_observe(elapsed_top_level.as_millis());
-                    Ok(response_json.to_string())
-                }
-                Err(e) => Err(format!("{:?}", e)),
-            }
+            return handle_message(&deps, &build_result, start_top_level).await;
         } else {
             return Err("Type tag not present".to_string());
         }

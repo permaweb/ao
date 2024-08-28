@@ -1,4 +1,3 @@
-
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -230,7 +229,6 @@ fn gen_hash_chain(
 
     Ok(base64_url::encode(&result))
 }
-
 
 impl ScheduleProvider for ScheduleInfo {
     fn epoch(&self) -> String {

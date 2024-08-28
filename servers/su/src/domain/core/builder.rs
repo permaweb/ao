@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bundlr_sdk::tags::Tag;
+use dashmap::DashMap;
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
 use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus};
@@ -10,6 +11,7 @@ pub struct Builder<'a> {
     gateway: Arc<dyn Gateway>,
     signer: Arc<dyn Signer>,
     logger: &'a Arc<dyn Log>,
+    cache: Arc<DashMap<String, Result<(), BuilderErrorType>>>,
 }
 
 pub struct BuildResult {
@@ -17,7 +19,7 @@ pub struct BuildResult {
     pub bundle: DataBundle,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BuilderErrorType {
     BuilderError(String),
 }
@@ -50,6 +52,7 @@ impl<'a> Builder<'a> {
             gateway,
             signer,
             logger,
+            cache: Arc::new(DashMap::new()),
         })
     }
 
@@ -192,15 +195,16 @@ impl<'a> Builder<'a> {
         process: &Process,
         base_layer: &Option<String>,
     ) -> Result<(), BuilderErrorType> {
-        match base_layer {
+        // Check if the result is in the DashMap cache
+        if let Some(cached_result) = self.cache.get(tx_id) {
+            return cached_result.clone();
+        }
+
+        // Process the assignment verification
+        let result = match base_layer {
             Some(_) => {
                 let status: TxStatus = self.gateway.status(&tx_id).await?;
 
-                /*
-                    If there is not a Settlement-Depth tag on the Process
-                    we use a default value of 20 because after 18 there is
-                    assurance that it is confirmed.
-                */
                 let threshold = match process
                     .tags
                     .iter()
@@ -221,14 +225,15 @@ impl<'a> Builder<'a> {
                 }
             }
             None => {
-                /*
-                    If this throws an error then the tx
-                    is not available on the gateway
-                */
                 self.gateway.gql_tx(&tx_id).await?;
                 Ok(())
             }
-        }
+        };
+
+        // Store the result in the DashMap cache
+        self.cache.insert(tx_id.clone(), result.clone());
+
+        result
     }
 }
 
