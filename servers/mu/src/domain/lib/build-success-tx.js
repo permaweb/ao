@@ -39,13 +39,7 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
          * by an aos Handler
          */
         { name: 'Process', value: ctx.processTx },
-        { name: 'Action', value: 'Spawned' },
-        /**
-         * The id of the newly spawned Process
-         *
-         * TODO: Maybe be able to remove later, kept for backwards compat.
-         */
-        { name: 'AO-Spawn-Success', value: ctx.processTx }
+        { name: 'Action', value: 'Spawned' }
       ]))
       .chain(fromPromise((tags) => buildAndSign({
         processId: ctx.cachedSpawn.processId,
