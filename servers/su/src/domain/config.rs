@@ -20,6 +20,7 @@ pub struct AoConfig {
     pub db_write_connections: u32,
     pub db_read_connections: u32,
     pub enable_metrics: bool,
+    pub max_read_memory: usize,
 }
 
 impl AoConfig {
@@ -65,6 +66,10 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
+        let max_read_memory = match env::var("MAX_READ_MEMORY") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 1_073_741_824,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -80,6 +85,7 @@ impl AoConfig {
             db_write_connections,
             db_read_connections,
             enable_metrics,
+            max_read_memory,
         })
     }
 }
