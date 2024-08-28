@@ -2,6 +2,7 @@ import { of, fromPromise, Resolved } from 'hyper-async'
 import { __, assoc, identity } from 'ramda'
 import z from 'zod'
 import { checkStage } from '../utils.js'
+import { locateProcessSchema } from '../dal.js'
 
 const ctxSchema = z.object({
   spawnSuccessSequencerTx: z.any()
@@ -10,7 +11,7 @@ const ctxSchema = z.object({
 export function sendSpawnSuccessWith (env) {
   let { logger, writeDataItem, locateProcess } = env
 
-  locateProcess = fromPromise(locateProcess)
+  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
 
   return (ctx) => {
     if (!checkStage('send-spawn-success')(ctx)) return Resolved(ctx)

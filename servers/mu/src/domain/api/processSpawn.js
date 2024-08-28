@@ -38,6 +38,7 @@ export function processSpawnWith ({
          *
          * See: https://github.com/permaweb/ao/issues/730
          */
+        console.log({ res })
         return pullResult({
           processId: res.processTx,
           messageId: res.processTx,
@@ -75,6 +76,7 @@ export function processSpawnWith ({
       .map(setStage('pull-result', 'end'))
       .bimap(
         (e) => {
+          console.log(500)
           return new Error(e, { cause: e.cause })
         },
         logger.tap({ log: 'Successfully processed spawn', end: true })

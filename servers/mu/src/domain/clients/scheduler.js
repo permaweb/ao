@@ -20,6 +20,19 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
     }),
     logger
   })
+  /**
+   * writeDataItem
+   * Given a dataItem and a suUrl, forward the message to the SU
+   * to be posted to Arweave.
+   *
+   * @param data - the data to forward
+   * @param suUrl - the SU to forward the data to
+   * @param logId - The logId to aggregate the logs by
+   *
+   * @returns
+   * id - the tx-id of the data item
+   * timestamp
+   */
   return async ({ data, suUrl, logId }) => {
     return of(Buffer.from(data, 'base64'))
       .map(logger.tap({ log: `Forwarding message to SU ${suUrl}`, logId }))
@@ -90,6 +103,18 @@ function writeAssignmentWith ({ fetch, histogram, logger }) {
     }),
     logger
   })
+
+  /**
+   * writeAssignment
+   * Forward an assignment to the SU
+   *
+   * @param txId - the tx-id of the message to assign
+   * @param processId - the process to assign the message to
+   * @param baseLayer - whether the assignment is part of an L1 transaction
+   * @param exclude - fields to exclude during the assignment
+   * @param suUrl - the SU to forward the assign to
+   * @param logId - The logId to aggregate the logs by
+   */
   return async ({ txId, processId, baseLayer, exclude, suUrl, logId }) => {
     return of({ txId, processId, baseLayer, exclude, suUrl, logId })
       .map(logger.tap({ log: `Forwarding Assignment to SU ${suUrl}`, logId }))
@@ -188,7 +213,16 @@ function fetchSchedulerProcessWith ({
    * @param {string} suUrl - The SU location to fetch the information from
    * @param {string} logId - The logId to aggregate the logs by
    *
-   * @returns process metadata
+   * @returns
+   * processId
+   * block - the block number of the process
+   * owner - the key and address of the process owner
+   * tags
+   * data
+   * anchor
+   * epoch
+   * nonce
+   * signature
    *
    */
   return (processId, suUrl, logId) => {

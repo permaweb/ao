@@ -12,10 +12,13 @@ describe('processSpawnWith', () => {
     let pidDidEqualTxIdCount = 0
     const processSpawn = processSpawnWith({
       logger,
-      locateScheduler: async () => ({ id: 'scheduler-id' }),
+      locateScheduler: async () => ({ url: 'url-123' }),
       locateProcess: async () => ({ id: 'process-id' }),
       locateNoRedirect: async () => false,
-      writeDataItem: async (item) => item,
+      writeDataItem: async (item) => {
+        console.log(501, { item })
+        return { ...item, id: 'id-123', timestamp: '1234567' }
+      },
       buildAndSign: async (tx) => ({ ...tx, signed: true, data: 'data' }),
       fetchResult: async (txId, processId) => {
         if (txId === processId) {
@@ -29,7 +32,16 @@ describe('processSpawnWith', () => {
         }
       },
       fetchSchedulerProcess: async () => ({
+        process_id: 'process-id',
+        block: '1234',
+        owner: {
+          address: 'owner-address-123',
+          key: 'owner-signature'
+        },
         id: 'scheduler-process-id',
+        timestamp: 1234567,
+        data: 'foo',
+        signature: 'signature-123',
         tags: [
           { name: 'Data-Protocol', value: 'existing-protocol' },
           { name: 'Type', value: 'existing-type' },
@@ -43,6 +55,7 @@ describe('processSpawnWith', () => {
 
     const result = await processSpawn({
       initialTxId: 'initial-tx-id',
+      logId: 'log-123',
       cachedSpawn: {
         processId: 'process-id',
         initialTxId: 'initial-tx-id',

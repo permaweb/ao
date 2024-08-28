@@ -24,7 +24,6 @@ describe('cron', () => {
       const initCronProcs = cron.initCronProcsWith({
         getCronProcesses: () => [{ processId: '1', status: 'running' }],
         startMonitoredProcess: async () => {
-          console.log('here ')
           startMonitoredProcessCalls++
           return Promise.resolve()
         }

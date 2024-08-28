@@ -17,8 +17,7 @@ describe('writeProcessTxWith', () => {
 
         return {
           id: 'id-3',
-          timestamp: 1234567,
-          block: 1234567
+          timestamp: 1234567
         }
       },
       locateScheduler: async (walletAddress) => {
@@ -43,8 +42,7 @@ describe('writeProcessTxWith', () => {
 
     assert.deepStrictEqual(result.schedulerTx, {
       id: 'id-3',
-      timestamp: 1234567,
-      block: 1234567
+      timestamp: 1234567
     })
   })
 

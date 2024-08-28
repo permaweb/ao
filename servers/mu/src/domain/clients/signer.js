@@ -16,7 +16,6 @@ function buildAndSignWith ({ MU_WALLET }) {
    * @returns processId
    */
   return async ({ processId, data, tags, anchor }) => {
-    console.log({ processId, data, tags, anchor })
     data = data || ' ' // If no data, send a single space
     const signer = new ArweaveSigner(MU_WALLET)
 

@@ -30,6 +30,7 @@ import { processAssignWith } from './api/processAssign.js'
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
 import { handleWorkerMetricsMessage } from './lib/handle-worker-metrics-message.js'
+import { fetchCronSchema } from './dal.js'
 
 export { errFrom } from './utils.js'
 
@@ -210,7 +211,7 @@ export const createApis = async (ctx) => {
   workerPool.exec('startDeleteTraceCron')
 
   const monitorProcessLogger = logger.child('monitorProcess')
-  const fetchCron = fromPromise(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger }))
+  const fetchCron = fromPromise(fetchCronSchema.implement(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger })))
 
   const saveCronProcess = saveCronProcessWith({ db })
   const deleteCronProcess = deleteCronProcessWith({ db })
