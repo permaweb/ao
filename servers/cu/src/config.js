@@ -7,7 +7,7 @@ import { pipe } from 'ramda'
 import { z, ZodIssueCode } from 'zod'
 import ms from 'ms'
 
-import { domainConfigSchema, positiveIntSchema } from './domain/index.js'
+import { domainConfigSchema, positiveIntSchema } from './domain/model.js'
 import { preprocessUrls } from './domain/utils.js'
 
 /**

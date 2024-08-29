@@ -13,27 +13,23 @@ import { fromPromise } from 'hyper-async'
 import lt from 'long-timeout'
 
 // Precanned clients to use for OOTB apis
-import * as ArweaveClient from './client/arweave.js'
-import * as SqliteClient from './client/sqlite.js'
-import * as AoSuClient from './client/ao-su.js'
-import * as WasmClient from './client/wasm.js'
-import * as AoProcessClient from './client/ao-process.js'
-import * as AoModuleClient from './client/ao-module.js'
-import * as AoEvaluationClient from './client/ao-evaluation.js'
-import * as AoBlockClient from './client/ao-block.js'
-import * as MetricsClient from './client/metrics.js'
+import * as ArweaveClient from './effects/arweave.js'
+import * as SqliteClient from './effects/sqlite.js'
+import * as AoSuClient from './effects/ao-su.js'
+import * as WasmClient from './effects/wasm.js'
+import * as AoProcessClient from './effects/ao-process.js'
+import * as AoModuleClient from './effects/ao-module.js'
+import * as AoEvaluationClient from './effects/ao-evaluation.js'
+import * as AoBlockClient from './effects/ao-block.js'
+import * as MetricsClient from './effects/metrics.js'
 
-import { readResultWith } from './api/readResult.js'
-import { readStateWith, pendingReadStates } from './api/readState.js'
-import { readCronResultsWith } from './api/readCronResults.js'
-import { healthcheckWith } from './api/healthcheck.js'
-import { readResultsWith } from './api/readResults.js'
-import { dryRunWith } from './api/dryRun.js'
-import { statsWith } from './api/perf.js'
-
-export { createLogger } from './logger.js'
-export { domainConfigSchema, positiveIntSchema } from './model.js'
-export { errFrom } from './utils.js'
+import { readResultWith } from './domain/api/readResult.js'
+import { readStateWith, pendingReadStates } from './domain/api/readState.js'
+import { readCronResultsWith } from './domain/api/readCronResults.js'
+import { healthcheckWith } from './domain/api/healthcheck.js'
+import { readResultsWith } from './domain/api/readResults.js'
+import { dryRunWith } from './domain/api/dryRun.js'
+import { statsWith } from './domain/api/perf.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -128,7 +124,8 @@ export const createApis = async (ctx) => {
     Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
   )
 
-  const primaryWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
+  const worker = join(__dirname, 'effects', 'worker', 'evaluator', 'index.js')
+  const primaryWorkerPool = workerpool.pool(worker, {
     maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
   })
@@ -138,7 +135,7 @@ export const createApis = async (ctx) => {
     1,
     Math.floor(ctx.WASM_EVALUATION_MAX_WORKERS * (1 - (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100)))
   )
-  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
+  const dryRunWorkerPool = workerpool.pool(worker, {
     maxWorkers: maxDryRunWorkerTheads,
     onCreateWorker: onCreateWorker('dry-run'),
     maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE

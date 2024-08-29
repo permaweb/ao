@@ -2,10 +2,10 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../dal.js'
+import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
+import { messageSchema } from '../domain/model.js'
+import { createTestLogger } from '../domain/logger.js'
 import { loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
-import { messageSchema } from '../model.js'
-import { createTestLogger } from '../logger.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
 const logger = createTestLogger({ name: 'ao-cu:ao-su' })

@@ -2,7 +2,7 @@ import { T, always, applySpec, assocPath, cond, defaultTo, identity, ifElse, is,
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import WeaveDrive from '@permaweb/weavedrive'
 
-import { saveEvaluationSchema } from '../dal.js'
+import { saveEvaluationSchema } from '../../domain/dal.js'
 
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 

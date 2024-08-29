@@ -2,7 +2,7 @@ import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
 import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head, defaultTo, evolve, pipe } from 'ramda'
 import { z } from 'zod'
 
-import { evaluationSchema } from '../model.js'
+import { evaluationSchema } from '../domain/model.js'
 import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
 
 const evaluationDocSchema = z.object({

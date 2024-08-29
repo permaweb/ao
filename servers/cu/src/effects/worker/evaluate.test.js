@@ -2,14 +2,14 @@
 import { describe, test, before, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { createReadStream } from 'node:fs'
+import { Readable } from 'node:stream'
 
 import { LRUCache } from 'lru-cache'
 import AoLoader from '@permaweb/ao-loader'
 
-import { createTestLogger } from '../logger.js'
+import { createTestLogger } from '../../domain/logger.js'
+import { wasmResponse } from '../wasm.js'
 import { evaluateWith } from './evaluate.js'
-import { Readable } from 'node:stream'
-import { wasmResponse } from '../client/wasm.js'
 
 const logger = createTestLogger({ name: 'ao-cu:worker' })
 

@@ -12,7 +12,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import AoLoader from '@permaweb/ao-loader'
 import WeaveDrive from '@permaweb/weavedrive'
 
-import { joinUrl } from '../utils.js'
+import { joinUrl } from '../domain/utils.js'
 import AsyncLock from 'async-lock'
 
 const pipelineP = promisify(pipeline)

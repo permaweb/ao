@@ -7,8 +7,8 @@ import { Readable } from 'node:stream'
 
 import bytes from 'bytes'
 
-import { createTestLogger } from '../logger.js'
-import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
+import { createTestLogger } from '../domain/logger.js'
+import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../domain/dal.js'
 import { PROCESSES_TABLE } from './sqlite.js'
 import { LATEST, createProcessMemoryCache, findFileCheckpointBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveCheckpointWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
 

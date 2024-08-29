@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
+import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../domain/dal.js'
 import { loadTransactionDataWith, loadTransactionMetaWith } from './arweave.js'
 
 const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'

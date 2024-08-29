@@ -2,7 +2,8 @@ import { fetch, setGlobalDispatcher, Agent } from 'undici'
 
 import { config } from '../../config.js'
 import { logger } from '../../logger.js'
-import { createApis, domainConfigSchema } from '../../domain/index.js'
+import { createApis } from '../../bootstrap.js'
+import { domainConfigSchema } from '../../domain/model.js'
 
 setGlobalDispatcher(new Agent({
   /** the timeout, in milliseconds, after which a socket without active requests will time out. Monitors time between activity on a connected socket. This value may be overridden by *keep-alive* hints from the server */

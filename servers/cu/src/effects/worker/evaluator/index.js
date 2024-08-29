@@ -4,8 +4,8 @@ import { hostname } from 'node:os'
 import { fetch, setGlobalDispatcher, Agent } from 'undici'
 import { worker, Transfer } from 'workerpool'
 
-import { createLogger } from '../../logger.js'
-import { arrayBufferFromMaybeView } from '../../utils.js'
+import { createLogger } from '../../../domain/logger.js'
+import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
 
 import { createApis } from './main.js'
 
