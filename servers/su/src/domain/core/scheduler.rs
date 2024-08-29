@@ -96,7 +96,7 @@ impl ProcessScheduler {
         next_schedule_info: &ScheduleInfo,
         id: String,
         previous_assignment: String,
-    ) -> Result<&mut ScheduleInfo, String> {
+    ) -> &mut ScheduleInfo {
         schedule_info.epoch = next_schedule_info.epoch;
         schedule_info.nonce = next_schedule_info.nonce;
         schedule_info.hash_chain = next_schedule_info.hash_chain.clone();
@@ -109,7 +109,7 @@ impl ProcessScheduler {
 
         self.cache.insert(id.clone(), cached_info);
 
-        Ok(schedule_info)
+        schedule_info
     }
 
     /*

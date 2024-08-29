@@ -63,51 +63,30 @@ impl PromMetrics {
 
 impl CoreMetrics for PromMetrics {
     fn get_process_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("get_process", duration);
     }
 
     fn get_message_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("get_message", duration);
     }
 
     fn get_messages_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("get_messages", duration);
     }
 
     fn read_message_data_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("read_message_data", duration);
     }
 
     fn write_item_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("write_item", duration);
     }
 
     fn write_assignment_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("write_assignment", duration);
     }
 
     fn acquire_write_lock_observe(&self, duration: u128) {
-        if !self.enabled {
-            return;
-        }
         self.observe_duration("acquire_write_lock", duration);
     }
 
