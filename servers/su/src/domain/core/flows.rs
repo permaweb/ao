@@ -5,15 +5,12 @@ use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 use dotenv::dotenv;
 use serde_json::json;
 use simd_json::to_string as simd_to_string;
-use tokio::time::{sleep, Duration};
 
 use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
 
-use super::dal::{
-    BuildResult, Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet,
-};
+use super::dal::{Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
@@ -53,68 +50,12 @@ async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, Strin
     Ok(result)
 }
 
-/*
-  Currently, a failure in the database opration
-  in this function will result in a missing Nonce
-  because write_item will have advanced the scheduling
-  information but if it doesnt make it to the db that
-  Nonce will be missing in message list.
-
-  So here we are retrying the database call
-  and reporting if the retries fail for visibility.
-*/
-async fn handle_message(
-    deps: &Arc<Deps>,
-    build_result: &BuildResult,
-    start_top_level: Instant,
-) -> Result<String, String> {
-    let message = Message::from_bundle(&build_result.bundle)?;
-
-    let max_retries = 5;
-    let mut attempt = 0;
-    let retry_delay = Duration::from_millis(200);
-
-    loop {
-        attempt += 1;
-        match deps
-            .data_store
-            .save_message(&message, &build_result.binary)
-            .await
-        {
-            Ok(_) => {
-                deps.logger.log(format!("saved message - {:?}", &message));
-                break;
-            }
-            Err(e) if attempt < max_retries => {
-                deps.logger.log(format!(
-                    "Attempt {} failed to save message. Retrying in {} seconds. with error {:?}",
-                    attempt,
-                    retry_delay.as_secs(),
-                    e
-                ));
-                sleep(retry_delay).await;
-            }
-            Err(e) => {
-                deps.metrics.failed_message_save();
-                return Err(format!(
-                    "Failed to save message after {} attempts: {:?}",
-                    attempt, e
-                ));
-            }
-        }
-    }
-
-    /*
-      Theres no point in handling the error from this currently
-      because the uploader uploads in the background.
-    */
-    upload(deps, build_result.binary.to_vec()).await?;
-
+fn id_res(deps: &Arc<Deps>, id: String, start_top_level: Instant) -> Result<String, String> {
     match system_time_u64() {
         Ok(timestamp) => {
             let response_json = json!({
                 "timestamp": timestamp,
-                "id": message.message_id()?
+                "id": id
             });
 
             let elapsed_top_level = start_top_level.elapsed();
@@ -160,14 +101,6 @@ pub async fn write_item(
     };
 
     /*
-      Check to see if the message already exists, this
-      doesn't need to run for an assignment
-    */
-    if let Some(ref item) = data_item {
-        deps.data_store.check_existing_message(&item.id())?
-    };
-
-    /*
       Acquire the lock for a given process id. After acquiring the lock
       we can safely increment it and start building/writing data
 
@@ -182,6 +115,17 @@ pub async fn write_item(
     let elapsed_acquire_lock = start_acquire_lock.elapsed();
     deps.metrics
         .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
+
+    /*
+      Check to see if the message already exists, this
+      doesn't need to run for an assignment. If we start
+      dropping the lock after writing the database in the
+      future we need to modify this to check some sort of
+      set cache that gets set before the lock is released
+    */
+    if let Some(ref item) = data_item {
+        deps.data_store.check_existing_message(&item.id())?
+    };
 
     /*
       Increment the scheduling info using the locked mutable reference
@@ -205,10 +149,18 @@ pub async fn write_item(
             )
             .await?;
 
-        let process = deps.data_store.get_process(&process_id)?;
+        let process = deps.data_store.get_process(&process_id).await?;
         builder
             .verify_assignment(&assign, &process, &base_layer)
             .await?;
+
+        let aid = assignment.id();
+        let build_result = builder.bundle_items(vec![assignment]).await?;
+        let message = Message::from_bundle(&build_result.bundle)?;
+        deps.data_store
+            .save_message(&message, &build_result.binary)
+            .await?;
+        deps.logger.log(format!("saved message - {:?}", &message));
 
         /*
           we set the id of the previous assignment
@@ -219,13 +171,12 @@ pub async fn write_item(
             &mut *schedule_info,
             &next_schedule_info,
             process_id.clone(),
-            assignment.id(),
-        )?;
+            aid,
+        );
         drop(schedule_info);
 
-        let build_result = builder.bundle_items(vec![assignment]).await?;
-
-        return handle_message(&deps, &build_result, start_top_level).await;
+        upload(&deps, build_result.binary.to_vec()).await?;
+        return id_res(&deps, message.message_id()?, start_top_level);
     }
 
     let data_item = match data_item {
@@ -257,24 +208,16 @@ pub async fn write_item(
             deps.data_store
                 .save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
-            match system_time_u64() {
-                Ok(timestamp) => {
-                    let response_json =
-                        json!({ "timestamp": timestamp, "id": process.process_id.clone() });
-                    let elapsed_top_level = start_top_level.elapsed();
-                    deps.metrics
-                        .write_item_observe(elapsed_top_level.as_millis());
-                    /*
-                      We dont commit and schedule info change here
-                      because the process is not yet getting a Nonce.
-                      However we dont drop the lock until the Process
-                      is successfully saved to the database
-                    */
-                    drop(schedule_info);
-                    Ok(response_json.to_string())
-                }
-                Err(e) => Err(format!("{:?}", e)),
-            }
+
+            /*
+              We dont commit and schedule info change here
+              because the process is not yet getting a Nonce.
+              However we dont drop the lock until the Process
+              is successfully saved to the database
+            */
+            drop(schedule_info);
+
+            return id_res(&deps, process.process_id.clone(), start_top_level);
         } else if type_tag.value == "Message" {
             let assignment = builder
                 .gen_assignment(
@@ -285,21 +228,26 @@ pub async fn write_item(
                 )
                 .await?;
 
+            let aid = assignment.id();
+            let dtarget = data_item.target();
+            let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
+            let message = Message::from_bundle(&build_result.bundle)?;
+            deps.data_store
+                .save_message(&message, &build_result.binary)
+                .await?;
+            deps.logger.log(format!("saved message - {:?}", &message));
+
             /*
               we set the id of the previous assignment
               for the next message to be able to use
               in its Hash Chain
             */
-            deps.scheduler.commit(
-                &mut *schedule_info,
-                &next_schedule_info,
-                data_item.target(),
-                assignment.id(),
-            )?;
+            deps.scheduler
+                .commit(&mut *schedule_info, &next_schedule_info, dtarget, aid);
             drop(schedule_info);
 
-            let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
-            return handle_message(&deps, &build_result, start_top_level).await;
+            upload(&deps, build_result.binary.to_vec()).await?;
+            return id_res(&deps, message.message_id()?, start_top_level);
         } else {
             return Err("Type tag not present".to_string());
         }
@@ -329,7 +277,7 @@ pub async fn read_message_data(
         }
     }
 
-    if let Ok(_) = deps.data_store.get_process(&tx_id) {
+    if let Ok(_) = deps.data_store.get_process(&tx_id).await {
         let start = Instant::now();
         let messages = deps
             .data_store
@@ -354,7 +302,7 @@ pub async fn read_message_data(
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
     let start = Instant::now();
-    let process = deps.data_store.get_process(&process_id)?;
+    let process = deps.data_store.get_process(&process_id).await?;
     let elapsed = start.elapsed();
     deps.metrics.get_process_observe(elapsed.as_millis());
     let result = match serde_json::to_string(&process) {

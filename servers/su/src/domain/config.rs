@@ -21,6 +21,7 @@ pub struct AoConfig {
     pub db_read_connections: u32,
     pub enable_metrics: bool,
     pub max_read_memory: usize,
+    pub process_cache_size: usize,
 }
 
 impl AoConfig {
@@ -70,6 +71,10 @@ impl AoConfig {
             Ok(val) => val.parse().unwrap(),
             Err(_e) => 1_073_741_824,
         };
+        let process_cache_size = match env::var("PROCESS_CACHE_SIZE") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 20000,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -86,6 +91,7 @@ impl AoConfig {
             db_read_connections,
             enable_metrics,
             max_read_memory,
+            process_cache_size,
         })
     }
 }

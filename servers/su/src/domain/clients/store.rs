@@ -1,4 +1,5 @@
 use std::env::VarError;
+use std::num::NonZeroUsize;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::{env, io};
@@ -11,6 +12,8 @@ use diesel::r2d2::Pool;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dotenv::dotenv;
 use futures::future::join_all;
+use lru::LruCache;
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::interval;
 
@@ -75,6 +78,30 @@ impl From<std::num::ParseIntError> for StoreErrorType {
     }
 }
 
+struct InMemoryCache {
+    process_cache: Mutex<LruCache<String, Process>>,
+}
+
+impl InMemoryCache {
+    pub fn new(size: usize) -> Self {
+        InMemoryCache {
+            process_cache: Mutex::new(LruCache::new(
+                NonZeroUsize::new(size).expect("failed to init cache"),
+            )),
+        }
+    }
+
+    pub async fn get_process(&self, process_id: String) -> Option<Process> {
+        let mut cache = self.process_cache.lock().await;
+        cache.get(&process_id).cloned()
+    }
+
+    pub async fn insert_process(&self, process_id: String, process: Process) {
+        let mut cache = self.process_cache.lock().await;
+        cache.put(process_id, process);
+    }
+}
+
 pub struct StoreClient {
     pool: Pool<ConnectionManager<PgConnection>>,
     read_pool: Pool<ConnectionManager<PgConnection>>,
@@ -85,6 +112,7 @@ pub struct StoreClient {
     */
     pub logger: Arc<dyn Log>,
     pub bytestore: Arc<bytestore::ByteStore>,
+    in_memory_cache: InMemoryCache,
 }
 
 /*
@@ -133,6 +161,7 @@ impl StoreClient {
             read_pool,
             logger,
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
+            in_memory_cache: InMemoryCache::new(config.process_cache_size),
         })
     }
 
@@ -485,7 +514,15 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType> {
+    async fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType> {
+        if let Some(cached_process) = self
+            .in_memory_cache
+            .get_process(process_id_in.to_string())
+            .await
+        {
+            return Ok(cached_process);
+        }
+
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_read_conn()?;
 
@@ -497,6 +534,9 @@ impl DataStore for StoreClient {
         match db_process_result {
             Ok(Some(db_process)) => {
                 let process: Process = serde_json::from_value(db_process.process_data.clone())?;
+                self.in_memory_cache
+                    .insert_process(process_id_in.to_string(), process.clone())
+                    .await;
                 Ok(process)
             }
             Ok(None) => Err(StoreErrorType::NotFound("Process not found".to_string())),
