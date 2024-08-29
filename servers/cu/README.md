@@ -8,7 +8,8 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
 - [Tests](#tests)
-- [Debug Logging](#debug-logging)
+- [Logging](#logging)
+  - [Dynamically Change the Log Level](#dynamically-change-the-log-level)
 - [Manually Trigger Checkpointing](#manually-trigger-checkpointing)
 - [Project Structure](#project-structure)
   - [Business Logic](#business-logic)
@@ -101,6 +102,8 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_FILE_CHECKPOINTS_DIR`: The directory to store process memory
   associated with file checkpoints. Process file checkpoints will persist across
   CU restarts (defaults to os tmp directory `/file_checkpoints`)
+- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store drained process memory
+  (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
   (defaults to `0`)
@@ -136,18 +139,49 @@ There are a few environment variables that you can set. Besides
   execute on the CU aka. an owner `whitelist` (defaults to allow all owners)
 - `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are
   trusted and the CU can start from
+- `DEFAULT_LOG_LEVEL`: the logging level to use (defaults to `debug`)
+- `LOG_CONFIG_PATH`: the path to the file used to dynamically set the logging level (see [here](#dynamically-change-the-log-level))
 
 ## Tests
 
 You can execute unit tests by running `npm test`
 
-## Debug Logging
+## Logging
 
-You can enable verbose debug logging on the Server, by setting the `DEBUG`
-environment variable to the scope of logs you're interested in
+The CU uses logging levels that conform to the severity semantics specified by
+RFC5424:
 
-All logging is scoped under the name `ao-cu*`. You can use wildcards to enable a
-subset of logs ie. `ao-cu:readState*`
+> severity of all levels is assumed to be **numerically ascending from most
+> important to least important**.
+
+The CU uses these logging levels:
+
+```js
+{
+  error: 0,
+  warn: 1,
+  info: 2,
+  http: 3,
+  verbose: 4,
+  debug: 5,
+  silly: 6
+}
+```
+
+You can set your desired logging level by setting the `DEFAULT_LOG_LEVEL`
+environment variable.
+
+### Dynamically Change the Log Level
+
+If you'd like to dynamically change the log level on a running CU, you may set
+the desired level in a `.loglevel` file in the working directory. The CU will
+automatically adjust its logging level accordingly, for all new logs.
+
+If the `.loglevel` file does not exist, is empty, the logging level will be reset
+to the `DEFAULT_LOG_LEVEL`.
+
+> You can also specify the `LOG_CONFIG_PATH` environment variable to configure
+> a different file to use for dynamically setting the log level
 
 ## Manually Trigger Checkpointing
 

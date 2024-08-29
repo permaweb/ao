@@ -244,7 +244,7 @@ export function evaluateWith ({
               output
             })
               .bimap(
-                logger.tap('Failed to save evaluation'),
+                logger.tap('Failed to save evaluation: %O'),
                 identity
               )
               /**

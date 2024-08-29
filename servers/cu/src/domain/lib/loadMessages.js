@@ -420,7 +420,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
        * producing a single merged stream
        */
       return loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl })
-        .map(logger.tap('loaded current timestamp from SU'))
+        .map(logger.tap('loaded current timestamp from SU: %j'))
         /**
          * In order to generate cron messages and merge them with the
          * scheduled messages, we must first determine our boundaries, which is to say,

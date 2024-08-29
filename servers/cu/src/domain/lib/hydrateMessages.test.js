@@ -2,10 +2,10 @@
 import { describe, test, before } from 'node:test'
 import assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { bytesToBase64, maybeAoAssignmentWith, maybeMessageIdWith } from './hydrateMessages.js'
 
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('hydrateMessages', () => {
   describe('bytesToBase64', () => {

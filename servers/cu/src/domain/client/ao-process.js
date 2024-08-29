@@ -1668,7 +1668,7 @@ export function saveCheckpointWith ({
         return createCheckpointDataItem(args)
           .chain((dataItem) => uploadDataItem(dataItem.data))
           .bimap(
-            logger.tap('Failed to upload Checkpoint DataItem'),
+            logger.tap('Failed to upload Checkpoint DataItem, %O'),
             (res) => {
               logger(
                 'Successfully uploaded Checkpoint DataItem for process "%s" on evaluation "%j"',

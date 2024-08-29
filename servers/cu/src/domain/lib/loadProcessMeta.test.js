@@ -2,11 +2,11 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { loadProcessMetaWith } from './loadProcessMeta.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadProcess', () => {
   test('appends suUrl, signature, owner, data, anchor, tags, block to ctx', async () => {

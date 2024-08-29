@@ -11,10 +11,10 @@ import {
   findModuleWith,
   saveModuleWith
 } from './ao-module.js'
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { MODULES_TABLE } from './sqlite.js'
 
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('ao-module', () => {
   describe('findModule', () => {

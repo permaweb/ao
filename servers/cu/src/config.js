@@ -91,6 +91,8 @@ const preprocessedServerConfigSchema = z.preprocess(
 const CONFIG_ENVS = {
   development: {
     MODE,
+    DEFAULT_LOG_LEVEL: process.env.DEFAULT_LOG_LEVEL || 'debug',
+    LOG_CONFIG_PATH: process.env.LOG_CONFIG_PATH || '.loglevel',
     MODULE_MODE: process.env.MODULE_MODE,
     port: process.env.PORT || 6363,
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
@@ -139,6 +141,8 @@ const CONFIG_ENVS = {
   },
   production: {
     MODE,
+    DEFAULT_LOG_LEVEL: process.env.DEFAULT_LOG_LEVEL || 'debug',
+    LOG_CONFIG_PATH: process.env.LOG_CONFIG_PATH || '.loglevel',
     MODULE_MODE: process.env.MODULE_MODE,
     port: process.env.PORT || 6363,
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,

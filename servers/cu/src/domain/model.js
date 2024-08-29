@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { logLevels } from './logger.js'
+
 export const positiveIntSchema = z.preprocess((val) => {
   if (val == null) return -1
   if (typeof val === 'number') return val
@@ -14,6 +16,8 @@ export const commaDelimitedArraySchema = z.preprocess((val) => {
 }, z.array(z.string()))
 
 export const domainConfigSchema = z.object({
+  DEFAULT_LOG_LEVEL: logLevels,
+  LOG_CONFIG_PATH: z.string().default(''),
   /**
    * shim to support llama configurability.
    */

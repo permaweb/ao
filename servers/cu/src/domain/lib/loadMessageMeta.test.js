@@ -2,10 +2,10 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { loadMessageMetaWith } from './loadMessageMeta.js'
 
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadMessageMeta', () => {
   test('should append processId and timestamp to ctx', async () => {

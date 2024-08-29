@@ -5,10 +5,10 @@ import { readFileSync } from 'node:fs'
 
 import AoLoader from '@permaweb/ao-loader'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { evaluateWith } from './evaluate.js'
 
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 async function * toAsyncIterable (iterable) {
   while (iterable.length) yield iterable.shift()
