@@ -7,13 +7,13 @@ import { Readable } from 'node:stream'
 
 import bytes from 'bytes'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { findLatestProcessMemorySchema, findProcessSchema, saveLatestProcessMemorySchema, saveProcessSchema } from '../dal.js'
 import { PROCESSES_TABLE } from './sqlite.js'
 import { LATEST, createProcessMemoryCache, findFileCheckpointBeforeWith, findLatestProcessMemoryWith, findProcessWith, saveCheckpointWith, saveLatestProcessMemoryWith, saveProcessWith } from './ao-process.js'
 
 const gzipP = promisify(gzip)
-const logger = createLogger('ao-cu:ao-process')
+const logger = createTestLogger({ name: 'ao-cu:ao-process' })
 
 describe('ao-process', () => {
   describe('findProcess', () => {
@@ -1524,7 +1524,7 @@ describe('ao-process', () => {
   })
 
   describe('saveCheckpointWith', () => {
-    const logger = createLogger('saveCheckpointWith')
+    const logger = createTestLogger({ name: 'saveCheckpointWith' })
     const depsAll = {
       logger
     }

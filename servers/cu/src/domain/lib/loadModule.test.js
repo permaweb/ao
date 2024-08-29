@@ -4,11 +4,11 @@ import * as assert from 'node:assert'
 
 import { lensIndex, remove, set } from 'ramda'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { LLAMA_ADMISSABLE, loadModuleWith } from './loadModule.js'
 
 const PROCESS = 'contract-123-9HdeqeuYQOgMgWucro'
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadModule', () => {
   const moduleOwner = {

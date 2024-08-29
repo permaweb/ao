@@ -6,12 +6,12 @@ import { createReadStream } from 'node:fs'
 import { LRUCache } from 'lru-cache'
 import AoLoader from '@permaweb/ao-loader'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { evaluateWith } from './evaluate.js'
 import { Readable } from 'node:stream'
 import { wasmResponse } from '../client/wasm.js'
 
-const logger = createLogger('ao-cu:worker')
+const logger = createTestLogger({ name: 'ao-cu:worker' })
 
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 

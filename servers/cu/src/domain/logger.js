@@ -18,6 +18,7 @@ export const logLevels = z.enum(Object.keys(winston.config.npm.levels))
 export const createLogger = ({ MODE, LOG_CONFIG_PATH = '', DEFAULT_LOG_LEVEL, name: rootName }) => {
   let level = DEFAULT_LOG_LEVEL
   LOG_CONFIG_PATH = LOG_CONFIG_PATH && resolve(LOG_CONFIG_PATH)
+
   const root = createWinstonLogger({
     levels: winston.config.npm.levels,
     format: format.combine(
@@ -26,7 +27,7 @@ export const createLogger = ({ MODE, LOG_CONFIG_PATH = '', DEFAULT_LOG_LEVEL, na
       format.printf(({ level, name = rootName, message, timestamp }) =>
         `${timestamp} ${name} [${level}]: ${message}`)
     ),
-    transports: MODE === 'development'
+    transports: MODE !== 'production'
       ? [new transports.Console()]
         /**
          * TODO: add 'production' transports for separate log levels
@@ -74,10 +75,12 @@ export const createLogger = ({ MODE, LOG_CONFIG_PATH = '', DEFAULT_LOG_LEVEL, na
     prev = cur
   }
   /**
-   * Dynamically update the log level based on the config file
+   * Dynamically update the log level based on an optional config file
    */
-  checkConfig()
-  watchFile(LOG_CONFIG_PATH, { persistent: false }, checkConfig)
+  if (LOG_CONFIG_PATH) {
+    checkConfig()
+    watchFile(LOG_CONFIG_PATH, { persistent: false }, checkConfig)
+  }
 
   function log (name) {
     const logger = originalChild({ name })
@@ -120,3 +123,6 @@ export const createLogger = ({ MODE, LOG_CONFIG_PATH = '', DEFAULT_LOG_LEVEL, na
 
   return log(rootName)
 }
+
+export const createTestLogger = ({ name, silent = !process.env.DEBUG }) =>
+  createLogger({ name, MODE: 'test', DEFAULT_LOG_LEVEL: silent ? 'off' : 'debug' })

@@ -2,12 +2,12 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../logger.js'
 import { COLLATION_SEQUENCE_MIN_CHAR } from '../client/sqlite.js'
 import { loadProcessWith } from './loadProcess.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadProcess', () => {
   test('appends result, from, fromCron, fromBlockHeight and evaluatedAt to ctx', async () => {
