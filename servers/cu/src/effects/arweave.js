@@ -4,7 +4,7 @@ import { z } from 'zod'
 import Arweave from 'arweave'
 import WarpArBundles from 'warp-arbundles'
 
-import { joinUrl } from '../utils.js'
+import { joinUrl } from '../domain/utils.js'
 
 const { createData, ArweaveSigner } = WarpArBundles
 

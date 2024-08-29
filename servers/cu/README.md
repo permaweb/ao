@@ -212,11 +212,10 @@ Driving Adapter <--> [Port(Business Logic)Port] <--> Driven Adapter
 ### Business Logic
 
 All business logic is in `src/domain` where each public api is implemented,
-tested, and exposed via a `index.js` (see [Entrypoint](#entrypoint))
+tested, and exposed via a `domain/api/*.js`
 
-`/domain/lib` contains all of the business logic steps that can be composed into
-public apis (ie. `domain/readState.js`, `domain/readResults.js`, and
-`domain/readScheduledMessages.js`)
+`domain/lib` contains all of the business logic steps that can be composed into
+public apis (ie. `apis/readState.js`, `apis/readResults.js`)
 
 `dal.js` contains the contracts for the driven adapters aka side-effects.
 Implementations for those contracts are injected into, then parsed and invoked
@@ -231,19 +230,20 @@ API. Thus our unit tests are simoultaneously contract tests.
 
 #### Driven Adapters
 
-All driven adapters are located in `/domain/client`
+All driven adapters are located in `effects`
 
-`domain/client` contains implementations, of the contracts in `dal.js`, for
-various platforms. The unit tests for the implementations in `client` also
-import contracts from `dal.js` to help ensure that the implementation properly
+`effects` contains implementations, of the contracts in `dal.js`, for
+various platforms. The unit tests for the implementations in `effects` also
+import contracts from `domain/dal.js` to help ensure that the implementation properly
 satisfies the API.
 
 #### Entrypoint
 
-Finally, the entrypoint `/domain/index.js` sets up the appropriate
-implementations from `client` and injects them into the public apis.
+Finally, the entrypoint `bootstrap.js` sets up the appropriate
+implementations from `effects` and injects them into the public apis from `domain/apis`.
 
-Anything outside of domain should only ever import from `domain/index.js`.
+Anything outside of domain should only ever import from the top level of `domain/*` or
+`domain/apis/*`.
 
 ### Routes
 

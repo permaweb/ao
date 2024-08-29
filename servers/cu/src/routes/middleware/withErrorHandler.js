@@ -1,4 +1,4 @@
-import { errFrom } from '../../domain/index.js'
+import { errFrom } from '../../domain/utils.js'
 
 /**
  * A middleware that simply calls the next handler in the chain.

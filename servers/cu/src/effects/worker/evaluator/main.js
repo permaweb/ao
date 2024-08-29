@@ -1,6 +1,6 @@
-import * as WasmClient from '../../client/wasm.js'
-import * as AoEvaluationClient from '../../client/ao-evaluation.js'
-import * as SqliteClient from '../../client/sqlite.js'
+import * as WasmClient from '../../wasm.js'
+import * as AoEvaluationClient from '../../ao-evaluation.js'
+import * as SqliteClient from '../../sqlite.js'
 
 import { evaluateWith } from '../evaluate.js'
 
