@@ -563,9 +563,8 @@ impl DataItem {
 
     pub fn data(&self) -> Option<String> {
         match &self.data {
-            Data::Bytes(d) => match String::from_utf8(d.clone()) {
-                Ok(s) => Some(s),
-                Err(_) => None,
+            Data::Bytes(d) => {
+                Some(String::from_utf8_lossy(d).into_owned())
             },
             Data::None => None,
         }
