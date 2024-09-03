@@ -278,13 +278,11 @@ export function evaluateWith (env) {
                * See https://nodejs.org/api/stream.html#streamfinishedstream-options-callback
                */
               cleanup()
-              if (!err) {
-                /**
-                 * Send a flag to the evaluator that the eval stream is finished.
-                 * This will allow for the WASM instance to be removed from the cache.
-                 */
-                ctx.evaluator({ close: true })
-              }
+              /**
+               * Signal the evaluator to close any resources spun up as part
+               * of handling this eval stream
+               */
+              ctx.evaluator({ close: true })
               err ? reject(err) : resolve()
             }
           )
