@@ -1,7 +1,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
-import { writeFile, mkdir } from 'node:fs/promises'
+import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
@@ -172,6 +172,7 @@ export const createApis = async (ctx) => {
   const writeProcessMemoryFile = AoProcessClient.writeProcessMemoryFileWith({
     DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
     writeFile,
+    renameFile,
     mkdir
   })
 
@@ -188,6 +189,7 @@ export const createApis = async (ctx) => {
      */
     DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR,
     writeFile,
+    renameFile,
     mkdir
   })
 
