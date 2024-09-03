@@ -1,4 +1,4 @@
-import { workerData } from 'node:worker_threads'
+import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { hostname } from 'node:os'
 
 import { fetch, setGlobalDispatcher, Agent } from 'undici'
@@ -23,6 +23,15 @@ const apis = await createApis({
   fetch,
   logger
 })
+
+const broadcast = new BroadcastChannel(workerData.BROADCAST)
+
+broadcast.onmessage = (event) => {
+  const data = event.data
+  if (data.type === 'close-stream') return apis.close(data.streamId)
+
+  logger.warn('Unrecognized event type "%s". Doing nothing...', data.type)
+}
 
 /**
  * Expose our worker api

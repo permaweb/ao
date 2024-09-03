@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import { writeFile, mkdir } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
+import { BroadcastChannel } from 'node:worker_threads'
 
 import pMap from 'p-map'
 import PQueue from 'p-queue'
@@ -76,6 +77,10 @@ export const createApis = async (ctx) => {
   const DB_URL = `${ctx.DB_URL}.sqlite`
   const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
+  const BROADCAST = 'workers'
+  const workerBroadcast = new BroadcastChannel(BROADCAST).unref()
+  const broadcastCloseStream = (streamId) => workerBroadcast.postMessage({ type: 'close-stream', streamId })
+
   const onCreateWorker = (type) => () => {
     const workerId = randomBytes(8).toString('hex')
     ctx.logger('Spinning up "%s" pool worker with id "%s"...', type, workerId)
@@ -83,6 +88,7 @@ export const createApis = async (ctx) => {
     return {
       workerThreadOpts: {
         workerData: {
+          BROADCAST,
           WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
           WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
           WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
@@ -334,7 +340,18 @@ export const createApis = async (ctx) => {
            * prep work is deferred until the work queue tasks is executed
            */
           .then(prep)
-          .then(([args, options]) => primaryWorkerPool.exec('evaluate', [args], options))
+          .then(([args, options]) => {
+            /**
+             * TODO: is this the best place for this?
+             *
+             * It keeps it abstracted away from business logic,
+             * and tied to the specific evaluator, so seems kosher,
+             * but also feels kind of misplaced
+             */
+            if (args.close) return broadcastCloseStream(args.streamId)
+
+            return primaryWorkerPool.exec('evaluate', [args], options)
+          })
       ),
       logger
     }),
@@ -377,7 +394,18 @@ export const createApis = async (ctx) => {
           .then(prep)
           .then(([args, options]) =>
             Promise.resolve()
-              .then(() => dryRunWorkerPool.exec('evaluate', [args], options))
+              .then(() => {
+                /**
+                 * TODO: is this the best place for this?
+                 *
+                 * It keeps it abstracted away from business logic,
+                 * and tied to the specific evaluator, so seems kosher,
+                 * but also feels kind of misplaced
+                 */
+                if (args.close) return broadcastCloseStream(args.streamId)
+
+                return dryRunWorkerPool.exec('evaluate', [args], options)
+              })
               .catch((err) => {
                 /**
                  * Hack to detect when the max queue size is being exceeded and to reject
