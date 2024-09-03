@@ -114,9 +114,31 @@ export const createApis = async (ctx) => {
   const DB_URL = `${ctx.DB_URL}.sqlite`
   const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true, type: 'tasks' })
 
+  // Create task database metrics
+  MetricsClient.gaugeWith({})({
+    name: 'task_db_size',
+    description: 'The size of the log database',
+    collect: async () => {
+      const pageSize = await db.pragma('page_size', { simple: true })
+      const pageCount = await db.pragma('page_count', { simple: true })
+      return pageSize * pageCount
+    }
+  })
+
   // Create log database client
   const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
   const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
+
+  // Create trace database metrics
+  MetricsClient.gaugeWith({})({
+    name: 'trace_db_size',
+    description: 'The size of the task database',
+    collect: async () => {
+      const pageSize = await traceDb.pragma('page_size', { simple: true })
+      const pageCount = await traceDb.pragma('page_count', { simple: true })
+      return pageSize * pageCount
+    }
+  })
 
   /**
    * Select queue ids from database on startup.
