@@ -142,7 +142,7 @@ pub async fn write_item(
     } else if let (Some(process_id), Some(assign)) = (process_id.clone(), assign.clone()) {
         let assignment = builder
             .gen_assignment(
-                assign.clone(),
+                Some(assign.clone()),
                 process_id.clone(),
                 &next_schedule_info,
                 &exclude,
@@ -202,26 +202,33 @@ pub async fn write_item(
                 );
             }
 
-            let build_result = builder.build_process(input, &next_schedule_info).await?;
-            upload(&deps, build_result.binary.to_vec()).await?;
+            let assignment = builder
+                .gen_assignment(
+                    None,
+                    data_item.id(),
+                    &next_schedule_info,
+                    &None,
+                )
+                .await?;
+
+            let aid = assignment.id();
+            let did = data_item.id();
+            let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
             let process = Process::from_bundle(&build_result.bundle)?;
             deps.data_store
                 .save_process(&process, &build_result.binary)?;
             deps.logger.log(format!("saved process - {:?}", &process));
 
-            /*
-              We dont commit and schedule info change here
-              because the process is not yet getting a Nonce.
-              However we dont drop the lock until the Process
-              is successfully saved to the database
-            */
+            deps.scheduler
+                .commit(&mut *schedule_info, &next_schedule_info, did, aid);
             drop(schedule_info);
 
-            return id_res(&deps, process.process_id.clone(), start_top_level);
+            upload(&deps, build_result.binary.to_vec()).await?;
+            return id_res(&deps, process.process.process_id.clone(), start_top_level);
         } else if type_tag.value == "Message" {
             let assignment = builder
                 .gen_assignment(
-                    data_item.id(),
+                    Some(data_item.id()),
                     data_item.target(),
                     &next_schedule_info,
                     &None,
@@ -277,11 +284,11 @@ pub async fn read_message_data(
         }
     }
 
-    if let Ok(_) = deps.data_store.get_process(&tx_id).await {
+    if let Ok(process) = deps.data_store.get_process(&tx_id).await {
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&tx_id, &from, &to, &limit)
+            .get_messages(&process, &from, &to, &limit)
             .await?;
         let duration = start.elapsed();
         deps.logger
@@ -305,7 +312,7 @@ pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String,
     let process = deps.data_store.get_process(&process_id).await?;
     let elapsed = start.elapsed();
     deps.metrics.get_process_observe(elapsed.as_millis());
-    let result = match serde_json::to_string(&process) {
+    let result = match serde_json::to_string(&process.process) {
         Ok(r) => r,
         Err(e) => return Err(format!("{:?}", e)),
     };

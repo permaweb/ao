@@ -98,7 +98,7 @@ pub trait DataStore: Send + Sync {
     ) -> Result<String, StoreErrorType>;
     async fn get_messages(
         &self,
-        process_id_in: &str,
+        process: &Process,
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
