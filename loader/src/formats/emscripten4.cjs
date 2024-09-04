@@ -4084,7 +4084,7 @@ var Module = (() => {
         }
       };
 
-      var _emscripten_date_now = () => Date.now();
+      var _emscripten_date_now = () => 0;
 
       var getHeapMax = () => 4294901760;
 
