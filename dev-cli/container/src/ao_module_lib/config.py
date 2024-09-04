@@ -8,34 +8,34 @@ def mb_to_bytes(megabytes):
 
 presets = {
     'xs': {
-        'stack_size': mb_to_bytes(8),
-        'initial_memory': mb_to_bytes(16),
-        'maximum_memory': mb_to_bytes(64) 
-    },
-    'sm': {
-        'stack_size': mb_to_bytes(16), 
-        'initial_memory': mb_to_bytes(32),  
+        'stack_size': mb_to_bytes(16),
+        'initial_memory': mb_to_bytes(20),
         'maximum_memory': mb_to_bytes(128) 
     },
+    'sm': {
+        'stack_size': mb_to_bytes(32), 
+        'initial_memory': mb_to_bytes(36),  
+        'maximum_memory': mb_to_bytes(256) 
+    },
     'md': {
-        'stack_size': mb_to_bytes(32),
-        'initial_memory': mb_to_bytes(48), 
-        'maximum_memory': mb_to_bytes(256)
-    },
-    'lg': {
-        'stack_size': mb_to_bytes(48), 
-        'initial_memory': mb_to_bytes(64), 
-        'maximum_memory': mb_to_bytes(256)
-    },
-    'xl': {
-        'stack_size': mb_to_bytes(64), 
-        'initial_memory': mb_to_bytes(96), 
+        'stack_size': mb_to_bytes(64),
+        'initial_memory': mb_to_bytes(68), 
         'maximum_memory': mb_to_bytes(512)
     },
-    'xxl': {
+    'lg': {
         'stack_size': mb_to_bytes(96), 
-        'initial_memory': mb_to_bytes(128), 
-        'maximum_memory': mb_to_bytes(4096)
+        'initial_memory': mb_to_bytes(100), 
+        'maximum_memory': mb_to_bytes(1024)
+    },
+    'xl': {
+        'stack_size': mb_to_bytes(128), 
+        'initial_memory': mb_to_bytes(132), 
+        'maximum_memory': mb_to_bytes(8192)
+    },
+    'xxl': {
+        'stack_size': mb_to_bytes(512), 
+        'initial_memory': mb_to_bytes(518), 
+        'maximum_memory': mb_to_bytes(16384)
     },
 }
 

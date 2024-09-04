@@ -60,25 +60,25 @@ async function GetMemoryLimit () {
   if (config) {
     switch (config.preset) {
       case 'xs':
-        memoryLimit = '64-mb'
-        break
-      case 'sm':
         memoryLimit = '128-mb'
         break
+      case 'sm':
+        memoryLimit = '256-mb'
+        break
       case 'md':
-        memoryLimit = '256-mb'
-        break
-      case 'lg':
-        memoryLimit = '256-mb'
-        break
-      case 'xl':
         memoryLimit = '512-mb'
         break
+      case 'lg':
+        memoryLimit = '1024-mb'
+        break
+      case 'xl':
+        memoryLimit = '8192-mb'
+        break
       case 'xxl':
-        memoryLimit = '4096-mb'
+        memoryLimit = '16384-mb'
         break
       default:
-        memoryLimit = '256-mb'
+        memoryLimit = '512-mb'
         break
     }
   }
