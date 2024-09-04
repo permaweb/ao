@@ -4080,7 +4080,7 @@ function __asyncjs__weavedrive_close(fd) {
         }
       };
 
-      var _emscripten_date_now = () => 0;
+      var _emscripten_date_now = () => Date.now();
 
       function _emscripten_err(str) {
         str = bigintToI53Checked(str);
