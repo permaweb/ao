@@ -120,9 +120,12 @@ impl Process {
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
         let signature = data_bundle.items[0].signature().clone();
+        /*
+        this is commented out because of this issue
+        https://github.com/permaweb/ao/issues/994
         let data = data_bundle.items[0].data().clone();
+        */
         let anchor = data_bundle.items[0].anchor().clone();
-
         let owner_bytes = base64_url::decode(&owner)?;
         let address_hash = hash(&owner_bytes);
         let address = base64_url::encode(&address_hash);
@@ -161,7 +164,7 @@ impl Process {
             tags: tags,
             signature: Some(signature),
             anchor: anchor_r,
-            data: data,
+            data: None,
         })
     }
 }
