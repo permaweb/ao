@@ -4182,7 +4182,7 @@ const Module = (() => {
       abort("native code called abort()");
     };
 
-    var _emscripten_date_now = () => 0;
+    var _emscripten_date_now = () => Date.now();
 
     var getHeapMax = () => 4294901760;
 
