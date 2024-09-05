@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command, basename, resolve } from '../deps.js'
-import { hostArgs, tagsArg } from '../utils.js'
+import { bundlerArgs, tagsArg } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
@@ -52,7 +52,7 @@ function contractSourceArgs (contractWasmPath) {
 export async function publish ({ wallet, bundler, tag, value }, contractWasmPath) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...hostArgs(bundler),
+    ...bundlerArgs(bundler),
     ...contractSourceArgs(contractWasmPath),
     ...tagsArg({ tags: tag, values: value })
   ]

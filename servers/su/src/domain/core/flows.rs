@@ -155,6 +155,7 @@ pub async fn write_item(
             .await?;
 
         let aid = assignment.id();
+        let return_aid = assignment.id();
         let build_result = builder.bundle_items(vec![assignment]).await?;
         let message = Message::from_bundle(&build_result.bundle)?;
         deps.data_store
@@ -176,7 +177,7 @@ pub async fn write_item(
         drop(schedule_info);
 
         upload(&deps, build_result.binary.to_vec()).await?;
-        return id_res(&deps, message.message_id()?, start_top_level);
+        return id_res(&deps, return_aid, start_top_level);
     }
 
     let data_item = match data_item {

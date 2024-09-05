@@ -20,7 +20,6 @@ export class InvalidFundAmountError extends Error {
 }
 
 export const SUPPORTED_BUNDLERS = {
-  IRYS: 'IRYS',
   UP: 'UP'
 }
 
@@ -39,7 +38,6 @@ export const SUPPORTED_BUNDLERS = {
  */
 
 export const determineBundlerHost = (host) => {
-  if (host.includes('irys.xyz')) return SUPPORTED_BUNDLERS.IRYS
   if (host.includes('up.arweave.net')) return SUPPORTED_BUNDLERS.UP
 }
 
