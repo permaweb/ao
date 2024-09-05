@@ -14,7 +14,7 @@ function moduleArgs (src) {
 function schedulerArgs (src) {
   return [
     '-e',
-    `SCHEDULER_TX=${src}`
+    `SCHEDULER_ADDRESS=${src}`
   ]
 }
 
@@ -59,8 +59,8 @@ export const command = new Command()
     { required: true }
   )
   .option(
-    '-s, --scheduler <txId:string>',
-    'the ao scheduler id',
+    '-s, --scheduler <address:string>',
+    'the ao scheduler address',
     { required: true }
   )
   .option(
