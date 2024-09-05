@@ -20,7 +20,7 @@ const uploadAoProcess = spawnProcessWith({
       scheduler,
       tags,
       signer: createDataItemSigner(wallet)
-    }).then((contractId) => ({ contractId }))
+    }).then((processId) => ({ processId }))
   }
 })
 
@@ -36,7 +36,7 @@ Promise.resolve()
     uploadAoProcess({
       walletPath: process.env.WALLET_PATH,
       module: process.env.MODULE_TX,
-      scheduler: process.env.SCHEDULER_TX,
+      scheduler: process.env.SCHEDULER_ADDRESS,
       tags: parseTags(process.env.TAGS || JSON.stringify([[], []]))
     })
   )
