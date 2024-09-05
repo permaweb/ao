@@ -4,10 +4,17 @@ import { Command } from '../deps.js'
 import { tagsArg, walletArgs } from '../utils.js'
 import { VERSION } from '../versions.js'
 
-function sourceArgs (src) {
+function moduleArgs (src) {
   return [
     '-e',
     `MODULE_TX=${src}`
+  ]
+}
+
+function schedulerArgs (src) {
+  return [
+    '-e',
+    `SCHEDULER_TX=${src}`
   ]
 }
 
@@ -16,10 +23,11 @@ function sourceArgs (src) {
  * - Validate existence of wallet
  * - require confirmation and bypass with --yes
  */
-export async function spawn ({ wallet, tag, value, source }) {
+export async function spawn ({ wallet, tag, value, module, scheduler }) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...sourceArgs(source),
+    ...moduleArgs(module),
+    ...schedulerArgs(scheduler),
     ...tagsArg({ tags: tag, values: value })
   ]
 
@@ -48,6 +56,11 @@ export const command = new Command()
   .option(
     '-m, --module <txId:string>',
     'the transaction that contains the ao Module',
+    { required: true }
+  )
+  .option(
+    '-s, --scheduler <txId:string>',
+    'the ao scheduler id',
     { required: true }
   )
   .option(

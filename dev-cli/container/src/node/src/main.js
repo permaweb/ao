@@ -167,12 +167,13 @@ export const uploadModuleWith =
  */
 export const spawnProcessWith =
   ({ walletExists, readWallet, create }) =>
-    async ({ walletPath, module, tags }) => {
+    async ({ walletPath, module, scheduler, tags }) => {
       if (!(await walletExists(walletPath))) throw new WalletNotFoundError()
 
       const wallet = await readWallet(walletPath)
       const res = await create({
         module,
+        scheduler,
         tags,
         wallet
       })
