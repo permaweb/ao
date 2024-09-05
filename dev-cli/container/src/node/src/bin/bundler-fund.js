@@ -45,7 +45,7 @@ Promise.resolve()
         return process.exit(1)
       }
       case BundlerHostNotSupportedError.code: {
-        console.error('The bundler host is not supported. The only currently supported bundler is Irys')
+        console.error('The bundler host is not supported. The only currently supported bundler is Turbo')
         return process.exit(1)
       }
       case InvalidFundAmountError.code: {

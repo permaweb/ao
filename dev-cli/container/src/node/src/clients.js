@@ -4,7 +4,6 @@ import { randomBytes } from 'node:crypto'
 import urlJoin from 'url-join'
 import mime from 'mime-types'
 import Arweave from 'arweave'
-import Irys from '@irys/sdk'
 import WarpArBundles from 'warp-arbundles'
 
 import { SUPPORTED_BUNDLERS } from './main.js'
@@ -18,13 +17,6 @@ const { createData, ArweaveSigner } = WarpArBundles
  * TODO implement more clients for various apis
  */
 export const UPLOADERS = {
-  [SUPPORTED_BUNDLERS.IRYS]: ({ path, wallet, to: irysNode, ...rest }) => {
-    const irys = new Irys({ url: irysNode, token: 'arweave', key: wallet })
-    /**
-     * Response implements { id }
-     */
-    return irys.uploadFile(path, rest)
-  },
   /**
    * TODO: impl could be better
    */
@@ -67,10 +59,6 @@ export const UPLOADERS = {
 }
 
 export const BALANCERS = {
-  [SUPPORTED_BUNDLERS.IRYS]: ({ wallet, to: irysNode }) => {
-    const irys = new Irys({ url: irysNode, token: 'arweave', key: wallet })
-    return irys.getLoadedBalance().then(balance => ({ balance }))
-  },
   [SUPPORTED_BUNDLERS.UP]: async ({ wallet, to }) => {
     const arweave = Arweave.init()
     const address = await arweave.wallets.jwkToAddress(wallet)
@@ -82,10 +70,10 @@ export const BALANCERS = {
 }
 
 export const FUNDERS = {
-  [SUPPORTED_BUNDLERS.IRYS]: ({ wallet, to: irysNode, amount }) => {
-    const irys = new Irys({ url: irysNode, token: 'arweave', key: wallet })
-    return irys.fund(amount).then(res => ({ id: res.id }))
-  },
+  /**
+   * TODO: needs to be implemented, now that uploads >100kb are not subsidized
+   * See https://github.com/permaweb/ao/issues/1000
+   */
   [SUPPORTED_BUNDLERS.UP]: () => {
     return { id: 'up.arweave.net is 100% subsidized and requires no funding' }
   }
