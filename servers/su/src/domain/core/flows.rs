@@ -202,29 +202,57 @@ pub async fn write_item(
                 );
             }
 
-            let assignment = builder
-                .gen_assignment(
-                    None,
-                    data_item.id(),
-                    &next_schedule_info,
-                    &None,
-                )
-                .await?;
+            /*
+              If we dont enable_process_assignment, the
+              su will follow the old flow and not generate
+              an assignment for the process.
 
-            let aid = assignment.id();
-            let did = data_item.id();
-            let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
-            let process = Process::from_bundle(&build_result.bundle)?;
-            deps.data_store
-                .save_process(&process, &build_result.binary)?;
-            deps.logger.log(format!("saved process - {:?}", &process));
+              As a result, no process will be returned
+              in the messages list either, and the Nonce
+              will start at 0 for the first message
+            */
+            if deps.config.enable_process_assignment() {
+                let assignment = builder
+                    .gen_assignment(
+                        None,
+                        data_item.id(),
+                        &next_schedule_info,
+                        &None,
+                    )
+                    .await?;
+    
+                let aid = assignment.id();
+                let did = data_item.id();
+                let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
+                let process = Process::from_bundle(&build_result.bundle)?;
+                deps.data_store
+                    .save_process(&process, &build_result.binary)?;
+                deps.logger.log(format!("saved process - {:?}", &process));
+    
+                deps.scheduler
+                    .commit(&mut *schedule_info, &next_schedule_info, did, aid);
+                drop(schedule_info);
 
-            deps.scheduler
-                .commit(&mut *schedule_info, &next_schedule_info, did, aid);
-            drop(schedule_info);
+                upload(&deps, build_result.binary.to_vec()).await?;
+                return id_res(&deps, process.process.process_id.clone(), start_top_level);
+            } else {
+                let build_result = builder.build_process(input, &next_schedule_info).await?;
+                let process = Process::from_bundle_no_assign(&build_result.bundle)?;
+                deps.data_store
+                    .save_process(&process, &build_result.binary)?;
+                deps.logger.log(format!("saved process - {:?}", &process));
 
-            upload(&deps, build_result.binary.to_vec()).await?;
-            return id_res(&deps, process.process.process_id.clone(), start_top_level);
+                /*
+                  We dont commit and schedule info change here
+                  because the process is not getting a Nonce.
+                  However we dont drop the lock until the Process
+                  is successfully saved to the database
+                */
+                drop(schedule_info);
+
+                upload(&deps, build_result.binary.to_vec()).await?;
+                return id_res(&deps, process.process.process_id.clone(), start_top_level);
+            }
         } else if type_tag.value == "Message" {
             let assignment = builder
                 .gen_assignment(

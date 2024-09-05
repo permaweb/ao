@@ -217,6 +217,72 @@ impl Process {
       })
   }
 
+  /*
+    for Processes pre aop6
+  */
+  pub fn from_bundle_no_assign(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
+      let id = data_bundle.items[0].id().clone();
+      let tags = data_bundle.items[0].tags();
+      let owner = data_bundle.items[0].owner().clone();
+      let signature = data_bundle.items[0].signature().clone();
+      let target = match data_bundle.items[0].target().as_str() {
+          "" => None,
+          _ => Some(data_bundle.items[0].target().clone()),
+      };
+      /*
+      this is commented out because of this issue
+      https://github.com/permaweb/ao/issues/994
+      let data = data_bundle.items[0].data().clone();
+      */
+      let anchor = data_bundle.items[0].anchor().clone();
+      let owner_bytes = base64_url::decode(&owner)?;
+      let address_hash = hash(&owner_bytes);
+      let address = base64_url::encode(&address_hash);
+
+      let bundle_tags = data_bundle.tags.clone();
+
+      let block_tag = bundle_tags
+          .iter()
+          .find(|tag| tag.name == "Block-Height")
+          .ok_or("Block-Height tag not found")?;
+
+      let timestamp_tag = bundle_tags
+          .iter()
+          .find(|tag| tag.name == "Timestamp")
+          .ok_or("Timestamp tag not found")?;
+
+      let block = block_tag.value.clone();
+      let timestamp = timestamp_tag.value.clone().parse::<i64>()?;
+
+      let owner = Owner {
+          address: address,
+          key: owner,
+      };
+
+      let ac = anchor.clone();
+      let anchor_r = match &*anchor {
+          "" => None,
+          _ => Some(ac),
+      };
+
+      let process_inner = ProcessInner {
+          process_id: id,
+          block: block,
+          timestamp: timestamp,
+          owner: owner,
+          tags: tags,
+          signature: Some(signature),
+          anchor: anchor_r,
+          data: None,
+          target
+      };
+
+      Ok(Process {
+        process: process_inner,
+        assignment: None
+      })
+  }
+
   pub fn epoch(&self) -> Result<i32, JsonErrorType> {
       match &self.assignment {
           Some(a) => {

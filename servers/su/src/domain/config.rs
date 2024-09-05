@@ -22,6 +22,7 @@ pub struct AoConfig {
     pub enable_metrics: bool,
     pub max_read_memory: usize,
     pub process_cache_size: usize,
+    pub enable_process_assignment: bool,
 }
 
 impl AoConfig {
@@ -75,6 +76,10 @@ impl AoConfig {
             Ok(val) => val.parse().unwrap(),
             Err(_e) => 20000,
         };
+        let enable_process_assignment = match env::var("ENABLE_PROCESS_ASSIGNMENT") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -92,6 +97,7 @@ impl AoConfig {
             enable_metrics,
             max_read_memory,
             process_cache_size,
+            enable_process_assignment
         })
     }
 }
@@ -102,5 +108,8 @@ impl Config for AoConfig {
     }
     fn scheduler_list_path(&self) -> String {
         self.scheduler_list_path.clone()
+    }
+    fn enable_process_assignment(&self) -> bool {
+        self.enable_process_assignment.clone()
     }
 }
