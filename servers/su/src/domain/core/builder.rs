@@ -140,21 +140,57 @@ impl<'a> Builder<'a> {
         })
     }
 
+    /*
+      for building processes pre aop6 with
+      enable_process_assignment disabled
+    */
     pub async fn build_process(
         &self,
         tx: Vec<u8>,
         schedule_info: &dyn ScheduleProvider,
     ) -> Result<BuildResult, BuilderErrorType> {
-        let process_item = DataItem::from_bytes(tx)?;
+        let item = DataItem::from_bytes(tx)?;
 
-        match self
-            .gen_assignment(None, process_item.id(), schedule_info, &None)
-            .await
-        {
-            // bundle both the assignment and the message
-            Ok(a) => self.bundle_items(vec![a, process_item]).await,
-            Err(e) => Err(e),
-        }
+        self.logger.log(format!(
+            "attempting to verify data item id - {}",
+            &item.id()
+        ));
+        self.logger.log(format!("owner - {}", &item.owner()));
+        self.logger.log(format!("target - {}", &item.target()));
+        self.logger.log(format!("tags - {:?}", &item.tags()));
+
+        self.logger
+            .log(format!("verified data item id - {}", &item.id()));
+
+        let network_info = self.gateway.network_info().await?;
+        let height = network_info.height.clone();
+
+        let tags = vec![
+            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
+            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
+            Tag::new(&"Block-Height".to_string(), &height.to_string()),
+            Tag::new(&"Timestamp".to_string(), &schedule_info.timestamp()),
+        ];
+        self.logger.log(format!("generated tags - {:?}", &tags));
+
+        let mut data_bundle = DataBundle::new(tags.clone());
+        data_bundle.add_item(item);
+        let buffer = data_bundle.to_bytes()?;
+
+        let pub_key = self.signer.get_public_key();
+        let mut new_data_item = DataItem::new(vec![], buffer, tags, pub_key)?;
+        let message = new_data_item.get_message()?.to_vec();
+
+        let signature = self.signer.sign_tx(message).await?;
+
+        new_data_item.signature = signature;
+
+        self.logger.log(format!("signature succeeded {}", ""));
+
+        Ok(BuildResult {
+            binary: new_data_item.as_bytes()?,
+            bundle: data_bundle,
+        })
     }
 
     pub fn parse_data_item(&self, tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {

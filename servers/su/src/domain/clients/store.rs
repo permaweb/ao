@@ -113,6 +113,7 @@ pub struct StoreClient {
     pub logger: Arc<dyn Log>,
     pub bytestore: Arc<bytestore::ByteStore>,
     in_memory_cache: InMemoryCache,
+    enable_process_assignment: bool
 }
 
 /*
@@ -162,6 +163,7 @@ impl StoreClient {
             logger,
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
             in_memory_cache: InMemoryCache::new(config.process_cache_size),
+            enable_process_assignment: config.enable_process_assignment
         })
     }
 
@@ -497,12 +499,16 @@ impl DataStore for StoreClient {
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_conn()?;
 
-        let (process_epoch, process_hash_chain, process_timestamp, process_nonce) = (
-            process.epoch().ok(),
-            process.hash_chain().ok(),
-            process.timestamp().ok(),
-            process.nonce().ok(),
-        );
+        let (process_epoch, process_hash_chain, process_timestamp, process_nonce) = 
+          match self.enable_process_assignment {
+            true => (
+                process.epoch().ok(),
+                process.hash_chain().ok(),
+                process.timestamp().ok(),
+                process.nonce().ok(),
+            ),
+            false => (None, None, None, None)
+          };
 
         let new_process = NewProcess {
             process_id: &process.process.process_id,

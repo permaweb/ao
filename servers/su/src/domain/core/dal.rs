@@ -60,6 +60,7 @@ pub trait ScheduleProvider {
 pub trait Config: Send + Sync {
     fn mode(&self) -> String;
     fn scheduler_list_path(&self) -> String;
+    fn enable_process_assignment(&self) -> bool;
 }
 
 #[derive(Debug)]
