@@ -33,11 +33,11 @@ export function tagsArg ({ tags, values }) {
   return ['-e', `TAGS=${JSON.stringify([tags, values])}`]
 }
 
-export function hostArgs (host) {
-  return host
+export function bundlerArgs (bundler) {
+  return bundler
     ? [
         '-e',
-        `BUNDLER_HOST=${host}`
+        `BUNDLER_HOST=${bundler}`
       ]
     : []
 }

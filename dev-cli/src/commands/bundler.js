@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command } from '../deps.js'
-import { hostArgs, walletArgs } from '../utils.js'
+import { bundlerArgs, walletArgs } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function amountArgs (amount) {
@@ -14,7 +14,7 @@ function amountArgs (amount) {
 export async function balance ({ wallet, host }) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...hostArgs(host)
+    ...bundlerArgs(host)
   ]
 
   const p = Deno.run({
@@ -32,10 +32,10 @@ export async function balance ({ wallet, host }) {
   await p.status()
 }
 
-export async function fund ({ wallet, host }, amount) {
+export async function fund ({ wallet, bundler }, amount) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...hostArgs(host),
+    ...bundlerArgs(bundler),
     ...amountArgs(amount)
   ]
 

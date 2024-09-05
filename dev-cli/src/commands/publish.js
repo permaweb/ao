@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command, basename, resolve } from '../deps.js'
-import { hostArgs, tagsArg } from '../utils.js'
+import { bundlerArgs, tagsArg } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
@@ -49,10 +49,10 @@ function contractSourceArgs (contractWasmPath) {
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
-export async function publish ({ wallet, host, tag, value }, contractWasmPath) {
+export async function publish ({ wallet, bundler, tag, value }, contractWasmPath) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...hostArgs(host),
+    ...bundlerArgs(bundler),
     ...contractSourceArgs(contractWasmPath),
     ...tagsArg({ tags: tag, values: value })
   ]
