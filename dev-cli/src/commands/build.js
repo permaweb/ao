@@ -13,7 +13,7 @@ export async function build () {
       'linux/amd64',
       '-v',
       `${pwd}:/src`,
-      `p3rmaw3b/ao:${VERSION.IMAGE}`,
+      `p3rmaw3b/ao`,
       'ao-build-module'
     ]
   })
