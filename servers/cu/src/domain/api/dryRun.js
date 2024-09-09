@@ -74,14 +74,7 @@ export function dryRunWith (env) {
            * So we explicitly set cron to undefined, for posterity
            */
           cron: undefined,
-          /**
-           * If we are evaluating up to a specific message, as indicated by
-           * the presence of messageTxId, then we make sure we get an exact match.
-           *
-           * Otherwise, we are evaluating up to the latest
-           */
-          exact: !!messageTxId,
-          needsMemory: true
+          needsOnlyMemory: true
         })
       )
       /**
