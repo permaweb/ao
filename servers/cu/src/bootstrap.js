@@ -53,6 +53,9 @@ async function readFile (file) {
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
 
+  const setTimeout = (...args) => lt.setTimeout(...args)
+  const clearTimeout = (...args) => lt.clearTimeout(...args)
+
   const { locate } = schedulerUtilsConnect({
     cacheSize: 100,
     GRAPHQL_URL: ctx.GRAPHQL_URL,
@@ -230,8 +233,8 @@ export const createApis = async (ctx) => {
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
     writeProcessMemoryFile,
     logger: ctx.logger,
-    setTimeout: (...args) => lt.setTimeout(...args),
-    clearTimeout: (...args) => lt.clearTimeout(...args)
+    setTimeout,
+    clearTimeout
   })
 
   const loadWasmModule = WasmClient.loadWasmModuleWith({
@@ -381,6 +384,8 @@ export const createApis = async (ctx) => {
   const dryRunLogger = ctx.logger.child('dryRun')
   const dryRun = dryRunWith({
     ...sharedDeps(dryRunLogger),
+    setTimeout,
+    clearTimeout,
     loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger }),
     /**
      * Dry-runs use a separate worker thread pool, so as to not block
