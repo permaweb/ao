@@ -61,7 +61,7 @@ export function pullResultWith (env) {
   const fetchResult = fetchResultWith(env)
 
   return (ctx) => {
-    if (!checkStage('pull-result')(ctx)) return Resolved(ctx)
+    if (!checkStage('pull-result')(ctx) && !checkStage('pull-initial-result')(ctx)) return Resolved(ctx)
     return of(ctx)
       .map((ctx) => ({ ...ctx, tx: ctx.tx ?? ctx.spawnSuccessTx }))
       .chain((ctx) => {
