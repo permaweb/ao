@@ -24,7 +24,8 @@ export function sendDataItemWith ({
   crank,
   logger,
   fetchSchedulerProcess,
-  writeDataItemArweave
+  writeDataItemArweave,
+  spawnPushEnabled
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -107,17 +108,26 @@ export function sendDataItemWith ({
        * boot loader evaluation.
        */
       crank: () => of({ res })
-        /**
-         * Override the processId fields of tx and res, because parse-data-item sets it
-         * to the target, but on a spawn we want it to be the id of the Data Item
-         *
-         * This is so getCuAddress and pullResult both operate properly.
-         */
-        .map(({ res }) => {
-          return { ...res, tx: { ...res.tx, processId: res.tx.id }, processId: res.tx.id, initialTxId: res.tx.id }
+        .chain(({ res }) => {
+          if (!spawnPushEnabled) {
+            return Resolved({
+              ...res,
+              msgs: [],
+              spawns: [],
+              assigns: [],
+              initialTxId: res.initialTxId
+            })
+          }
+          /**
+           * Override the processId fields of tx and res, because parse-data-item sets it
+           * to the target, but on a spawn we want it to be the id of the Data Item
+           *
+           * This is so getCuAddress and pullResult both operate properly.
+           */
+          return of({ ...res, tx: { ...res.tx, processId: res.tx.id }, processId: res.tx.id, initialTxId: res.tx.id })
+            .chain(getCuAddress)
+            .chain(pullResult)
         })
-        .chain(getCuAddress)
-        .chain(pullResult)
         .chain((res) => {
           const hasTarget = Boolean(res.dataItem.target)
           if (hasTarget) {

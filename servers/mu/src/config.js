@@ -56,7 +56,8 @@ export const domainConfigSchema = z.object({
   TRACE_DB_URL: z.string(),
   TASK_QUEUE_MAX_RETRIES: z.number(),
   TASK_QUEUE_RETRY_DELAY: z.number(),
-  DISABLE_TRACE: z.boolean()
+  DISABLE_TRACE: z.boolean(),
+  SPAWN_PUSH_ENABLED: z.boolean()
 })
 
 /**
@@ -100,7 +101,8 @@ const CONFIG_ENVS = {
     TRACE_DB_URL: process.env.TRACE_DB_URL || 'trace',
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
-    DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false'
+    DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
+    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true'
   },
   production: {
     MODE,
@@ -121,7 +123,8 @@ const CONFIG_ENVS = {
     TRACE_DB_URL: process.env.TRACE_DB_URL || 'trace',
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
-    DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false'
+    DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
+    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true'
   }
 }
 

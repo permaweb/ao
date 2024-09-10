@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { of, Resolved } from 'hyper-async'
 
 import { spawnProcessWith } from '../lib/spawn-process.js'
 import { sendSpawnSuccessWith } from '../lib/send-spawn-success.js'
@@ -17,7 +17,8 @@ export function processSpawnWith ({
   writeDataItem,
   buildAndSign,
   fetchResult,
-  fetchSchedulerProcess
+  fetchSchedulerProcess,
+  spawnPushEnabled
 }) {
   const spawnProcess = spawnProcessWith({ logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign, fetchSchedulerProcess })
   const buildSuccessTx = buildSuccessTxWith({ logger, buildAndSign })
@@ -30,6 +31,7 @@ export function processSpawnWith ({
       .chain(spawnProcess)
       .map(setStage('spawn-process', 'pull-initial-result'))
       .chain((res) => {
+        if (!spawnPushEnabled) { return Resolved(res) }
         /**
          * Fetch the initial boot result for the process
          * itself as per aop6 Boot Loader, add it to ctx
