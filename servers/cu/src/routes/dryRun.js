@@ -7,6 +7,7 @@ import { withMetrics, withMiddleware, withProcessRestrictionFromQuery } from './
 const inputSchema = z.object({
   processId: z.string().min(1, 'a process-id query parameter is required'),
   messageTxId: z.string().min(1, 'to must be a transaction id').optional(),
+  maxProcessAge: z.coerce.number().nullish(),
   dryRun: z.object({
     Id: z.string().nullish(),
     Signature: z.string().nullish(),
@@ -32,12 +33,13 @@ export const withDryRunRoutes = app => {
       withProcessRestrictionFromQuery,
       always(async (req, res) => {
         const {
+          headers: { 'x-max-age': maxProcessAge },
           query: { 'process-id': processId, to: messageTxId },
           body,
           domain: { BUSY_THRESHOLD, apis: { dryRun } }
         } = req
 
-        const input = inputSchema.parse({ processId, messageTxId, dryRun: body })
+        const input = inputSchema.parse({ processId, messageTxId, maxProcessAge, dryRun: body })
 
         await busyIn(
           BUSY_THRESHOLD,
