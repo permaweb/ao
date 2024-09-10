@@ -144,7 +144,8 @@ describe('sendDataItemWith', () => {
           },
           logger,
           fetchSchedulerProcess: (res) => res,
-          writeDataItemArweave: (res) => res
+          writeDataItemArweave: (res) => res,
+          spawnPushEnabled: true
         })
 
         const { crank, ...result } = await sendDataItem({

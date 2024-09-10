@@ -37,7 +37,8 @@ describe('processSpawnWith', () => {
           { name: 'Module', value: 'moduleid' },
           { name: 'Scheduler', value: 'sched' }
         ]
-      })
+      }),
+      spawnPushEnabled: true
     })
 
     const result = await processSpawn({
