@@ -5,7 +5,11 @@ import * as assert from 'node:assert'
 import ms from 'ms'
 import { countBy, uniqBy } from 'ramda'
 
-import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith, mergeBlocks } from './loadMessages.js'
+import { createTestLogger } from '../logger.js'
+import { CRON_INTERVAL, parseCrons, isBlockOnCron, isTimestampOnCron, cronMessagesBetweenWith, mergeBlocks, maybePrependProcessMessage } from './loadMessages.js'
+import { Readable } from 'node:stream'
+
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadMessages', () => {
   describe('parseCrons', () => {
@@ -457,6 +461,97 @@ describe('loadMessages', () => {
           { height: 16, timestamp: 1234 }
         ]
       )
+    })
+  })
+
+  describe('maybePrependProcessMessage', () => {
+    const ctx = {
+      id: 'process-123',
+      tags: [],
+      owner: 'owner-123',
+      block: {
+        timestamp: new Date().getTime(),
+        height: 123
+      }
+    }
+
+    describe('should prepend the process message on cold start', () => {
+      test('if first stream message is not the process', async () => {
+        const $messages = Readable.from([
+          {
+            message: {
+              Tags: [
+                { name: 'Type', value: 'Message' }
+              ]
+            }
+          }
+        ])
+        const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+
+        const results = []
+        for await (const m of $merged) results.push(m)
+
+        assert.equal(results.length, 2)
+        assert.equal(results[0].name, 'Process Message process-123')
+      })
+
+      test('if the first stream message is a cron message', async () => {
+        const $messages = Readable.from([
+          {
+            message: {
+              Cron: true,
+              Tags: [
+                { name: 'Type', value: 'Foobar' }
+              ]
+            }
+          }
+        ])
+        const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+
+        const results = []
+        for await (const m of $merged) results.push(m)
+
+        assert.equal(results.length, 2)
+        assert.equal(results[0].name, 'Process Message process-123')
+      })
+
+      test('if there are no messages', async () => {
+        const $messages = Readable.from([])
+        const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+
+        const results = []
+        for await (const m of $merged) results.push(m)
+
+        assert.equal(results.length, 1)
+        assert.equal(results[0].name, 'Process Message process-123')
+      })
+    })
+
+    test('should not prepend the process message if the first stream message is the process', async () => {
+      const $messages = Readable.from([
+        {
+          message: {
+            Cron: false,
+            Tags: [
+              { name: 'Type', value: 'Process' }
+            ]
+          }
+        },
+        {
+          message: {
+            Cron: false,
+            Tags: [
+              { name: 'Type', value: 'Message' }
+            ]
+          }
+        }
+      ])
+      const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+
+      const results = []
+      for await (const m of $merged) results.push(m)
+
+      assert.equal(results.length, 2)
     })
   })
 
