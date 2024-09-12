@@ -83,6 +83,7 @@ export const createApis = async (ctx) => {
   const ARWEAVE_URL = ctx.ARWEAVE_URL
   const PROC_FILE_PATH = ctx.PROC_FILE_PATH
   const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
+  const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -189,7 +190,8 @@ export const createApis = async (ctx) => {
     crank,
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram })
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
+    spawnPushEnabled: SPAWN_PUSH_ENABLED
   })
 
   const sendAssignLogger = logger.child('sendAssign')
@@ -297,6 +299,7 @@ export const createResultApis = async (ctx) => {
   const UPLOADER_URL = ctx.UPLOADER_URL
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
+  const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -342,7 +345,8 @@ export const createResultApis = async (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
-    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger })
+    fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
+    spawnPushEnabled: SPAWN_PUSH_ENABLED
   })
 
   const processAssignLogger = logger.child('processAssign')

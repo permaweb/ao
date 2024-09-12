@@ -61,7 +61,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
      * We also need the Memory for the evaluation,
      * we need to either fetch from cache or perform an evaluation
      */
-    if (ctx.needsMemory) return Rejected(ctx)
+    if (ctx.needsOnlyMemory) return Rejected(ctx)
 
     return findEvaluation({
       processId: ctx.id,

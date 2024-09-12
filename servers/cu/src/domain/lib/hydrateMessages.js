@@ -1,7 +1,7 @@
 import { compose as composeStreams, PassThrough, Transform } from 'node:stream'
 
 import { of } from 'hyper-async'
-import { mergeRight } from 'ramda'
+import { mergeRight, isNil } from 'ramda'
 import { z } from 'zod'
 import WarpArBundles from 'warp-arbundles'
 
@@ -109,7 +109,16 @@ export function maybeMessageIdWith ({ logger }) {
    */
   async function calcDataItemDeepHash ({ data, tags, target, anchor }) {
     return Promise.resolve()
-      .then(() => createData(data, signer, { tags, target, anchor }))
+      /**
+       * isNil(data) ? '' : data was added to handle the case
+       * where data is null or undefined. After aop 6, the Data
+       * field of the first Message is the Data field of the Process
+       * because the Process is the first Message. Because it is not
+       * string data in many cases the SU is outputting null.
+       *
+       * See: https://github.com/permaweb/ao/issues/730
+       */
+      .then(() => createData(isNil(data) ? '' : data, signer, { tags, target, anchor }))
       .then((dataItem) => dataItem.getSignatureData())
       .then(bytesToBase64)
   }

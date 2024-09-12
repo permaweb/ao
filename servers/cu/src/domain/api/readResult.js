@@ -41,10 +41,7 @@ export function readResultWith (env) {
          * So we explicitly set cron to undefined, for posterity
          */
         cron: undefined,
-        /**
-         * We want an exact match to this messages evaluation
-         */
-        exact: true
+        needsOnlyMemory: false
       }))
       .map((res) => res.output)
       .map(omit(['Memory']))
