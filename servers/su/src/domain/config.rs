@@ -23,6 +23,7 @@ pub struct AoConfig {
     pub max_read_memory: usize,
     pub process_cache_size: usize,
     pub enable_process_assignment: bool,
+    pub arweave_url_list: Vec<String>
 }
 
 impl AoConfig {
@@ -80,6 +81,15 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
+        let arweave_url_list: Vec<String> = match env::var("ARWEAVE_URL_LIST") {
+            Ok(val) => val.split(',')
+                          .map(|s| s.trim().to_string())
+                          .collect(),
+            Err(_e) => vec![
+                "https://arweave.net".to_string(), 
+                "https://g8way.io".to_string()
+            ],
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -97,7 +107,8 @@ impl AoConfig {
             enable_metrics,
             max_read_memory,
             process_cache_size,
-            enable_process_assignment
+            enable_process_assignment,
+            arweave_url_list
         })
     }
 }
