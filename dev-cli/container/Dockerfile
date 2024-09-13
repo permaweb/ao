@@ -12,6 +12,12 @@ RUN apt-get install -y curl vim make gcc libreadline6-dev libssl-dev zlib1g-dev 
 ENV LUA_VERSION=5.3.4
 ENV LUAROCKS_VERSION=2.4.4
 ENV PYTHON_VERSION=3.6.6
+ENV EMCC_FLAGS_BASE="-sWASM=1 -sMEMORY64=1 -sPURE_WASI=1 -fwasm-exceptions -sSUPPORT_LONGJMP=wasm"
+ENV EMCC_PRE_LINK="${EMCC_FLAGS_BASE} -s ERROR_ON_UNDEFINED_SYMBOLS=0 " 
+ENV EMCC_LINK_FLAGS="${EMCC_FLAGS_BASE}"
+ENV EMCC="emcc ${EMCC_PRE_LINK}"
+
+RUN embuilder --wasm64 build libcompiler_rt-wasm-sjlj
 
 # install deno
 # RUN curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -50,7 +56,7 @@ RUN npm --version
 # And, re-compile lua with "generic WASM"
 RUN cd /lua-${LUA_VERSION} && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='${EMCC}'
 
 #############################
 ##### Install Commands ######
@@ -91,10 +97,7 @@ RUN chmod +x /usr/local/bin/ao-build-module
 # BUILD WeaveDrive Extension Helper
 ###################################
 COPY ./src/aolibc /opt/aolibc
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1"
-
-ENV CC='emcc -s WASM=1'
-ENV NM='/emsdk/upstream/bin/llvm-nm'
+RUN cd /opt/aolibc && make CC='${EMCC}'
 
 ###########################################
 ### Publish, Bundler, Process, Contract ###

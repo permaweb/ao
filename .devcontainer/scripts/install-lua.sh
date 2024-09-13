@@ -17,7 +17,7 @@ if [ "$INSTALL_LUA" = "true" ]; then
     # And, re-compile lua with "generic WASM"
     cd /lua-${LUA_VERSION}
     make clean 
-    make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1' 
+    make generic CC=${EMCC}
 else
     echo "Skipping LUA Installation..."
 fi

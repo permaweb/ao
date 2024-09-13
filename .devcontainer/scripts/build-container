@@ -29,7 +29,7 @@ cp -R ./aolibc /opt/aolibc
 
 # BUILD WeaveDrive Extension Helper
 cd /opt/aolibc
-make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1"
+make CC="emcc ${EMCC_FLAGS}"
 
 # BUILD Node
 cd /opt/node
