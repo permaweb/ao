@@ -108,12 +108,11 @@ def main():
       '-s', 'FORCE_FILESYSTEM=1',
       '-msimd128',
       '--pre-js', '/opt/pre.js',
-      '-L/emsdk/upstream/emscripten/cache/sysroot/lib/wasm64-emscripten/',
       '-lcompiler_rt-wasm-sjlj'
     ])
 
     # Link aolibc library
-    cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
+    #cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
 
     # Link Rust library
     if(language == 'rust'):
