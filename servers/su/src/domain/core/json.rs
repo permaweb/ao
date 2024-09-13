@@ -166,7 +166,7 @@ impl Process {
       };
       let owner = data_bundle.items[1].owner().clone();
       let signature = data_bundle.items[1].signature().clone();
-      let data = None;
+      let data = data_bundle.items[1].data_if_string().clone();
       let anchor = data_bundle.items[1].anchor().clone();
 
       let owner_bytes = base64_url::decode(&owner)?;
