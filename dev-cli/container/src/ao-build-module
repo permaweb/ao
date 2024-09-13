@@ -4,7 +4,9 @@ import sys
 import os
 import glob
 import shutil
+from urllib.parse import unquote
 from shlex import quote
+import shlex
 
 sys.path.append('/usr/local/ao-module')
 
@@ -97,25 +99,18 @@ def main():
     debug_print('Start to compile as WASM')
 
     # Setup the compile command
-    cmd = ['emcc', '-O3', 
-      '-g2',
-    #   '-s', 'MAIN_MODULE', # This is required to load dynamic libraries at runtime
-      '-s', 'ASYNCIFY=1',
-      '-s', 'MEMORY64=1',
-      '-s', 'STACK_SIZE=' + str(config.stack_size),
-      '-s', 'ASYNCIFY_STACK_SIZE=' + str(config.stack_size),
-      '-s', 'ALLOW_MEMORY_GROWTH=1', 
+    cmd = ['emcc', '-O3', '-g2']
+    cmd.extend(shlex.split(os.environ.get('EMCC_FLAGS_BASE', '')))
+    cmd.extend(['-s', 'STACK_SIZE=' + str(config.stack_size),
       '-s', 'INITIAL_MEMORY=' + str(config.initial_memory), 
-      '-s', 'MAXIMUM_MEMORY=' + str(config.maximum_memory), 
-      '-s', 'WASM=1', 
-      '-s', 'MODULARIZE',
-      # '-s', 'FILESYSTEM=0', 
-      '-s', 'DETERMINISTIC=1', 
+      '-s', 'DETERMINISTIC=1',
       '-s', 'NODERAWFS=0', 
       '-s', 'FORCE_FILESYSTEM=1',
       '-msimd128',
-      '--pre-js', '/opt/pre.js'
-    ]
+      '--pre-js', '/opt/pre.js',
+      '-L/emsdk/upstream/emscripten/cache/sysroot/lib/wasm64-emscripten/',
+      '-lcompiler_rt-wasm-sjlj'
+    ])
 
     # Link aolibc library
     cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
@@ -124,7 +119,6 @@ def main():
     if(language == 'rust'):
         cmd.extend(['-L/opt/aorustlib', '-l:libaorust.a'])
 
-    cmd.extend(['-s','ASSERTIONS=1'])
     cmd.extend(definition.get_extra_args())
 
     # Add the lua include path
