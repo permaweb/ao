@@ -213,6 +213,17 @@ pub async fn write_item(
               will start at 0 for the first message
             */
             if deps.config.enable_process_assignment() {
+                match data_item.tags().iter().find(|tag| tag.name == "On-Boot") {
+                    Some(boot_tag) => match boot_tag.value.as_str() {
+                        "Data" => (),
+                        tx_id => {
+                            if !deps.gateway.check_head(tx_id.to_string()).await? {
+                              return Err("Invalid tx id for On-Boot tag".to_string());
+                            }
+                        },
+                    },
+                    None => (),
+                };
                 let assignment = builder
                     .gen_assignment(
                         None,

@@ -570,6 +570,20 @@ impl DataItem {
         }
     }
 
+    /*
+      Return the data as a string, if it is a utf8 string
+      otherwise return None
+    */
+    pub fn data_if_string(&self) -> Option<String> {
+        match &self.data {
+            Data::Bytes(d) => match String::from_utf8(d.clone()) {
+                Ok(s) => Some(s),
+                Err(_) => None,
+            },
+            Data::None => None,
+        }
+    }
+
     pub fn data_bytes(&self) -> Option<Vec<u8>> {
         match &self.data {
             Data::Bytes(d) => Some(d.clone()),
