@@ -6,7 +6,8 @@ import { worker, Transfer } from 'workerpool'
 
 import { createLogger } from '../../../domain/logger.js'
 import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
-import { EventVacuum, CompositeTransport, ConsoleTransport, HoneycombTransport } from '../../../domain/event-vacuum.js'
+import { EventVacuum } from '../../../domain/event-vacuum.js'
+import { CompositeTransport, ConsoleTransport, HoneycombTransport } from '../../../domain/event-transport.js'
 
 import { createApis } from './main.js'
 
