@@ -27,6 +27,7 @@
     "helmet": "^8.0.0",
     "hyper-async": "^1.1.2",
     "keccak": "^3.0.4",
+    "libhoney": "^4.3.0",
     "long-timeout": "^0.1.1",
     "lru-cache": "^11.0.2",
     "ms": "^2.1.3",
