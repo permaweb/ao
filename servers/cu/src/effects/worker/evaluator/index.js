@@ -10,54 +10,13 @@ import { eventVacuum } from '../../../domain/event-vacuum.js'
 
 import { createApis } from './main.js'
 
-class EventVacuum {
-  constructor (transport) {
-    this.transport = transport
-  }
-
-  // Method to process log lines and filter events
-  processLogs (logData, processId, nonce) {
-    const events = (logData ?? '')
-      .split('\n')
-      .map(this.parseJson)
-      .filter(this.isEvent)
-      .map(({ _e, ...eventData }) => eventData) // Strip the "_e" flag
-    this.dispatchEvents(events, processId, nonce)
-  }
-
-  // Utility method to parse a JSON line
-  parseJson (line) {
-    try {
-      const parsed = JSON.parse(line)
-      return typeof parsed === 'object' && parsed !== null ? parsed : null
-    } catch (e) {
-      return undefined
-    }
-  }
-
-  // Check if the parsed object is a matching event
-  isEvent (parsed) {
-    return parsed && typeof parsed._e === 'number' && parsed._e === 1
-  }
-
-  // Method to send the event to the transport layer
-  dispatchEvents (events, processId, nonce) {
-    if (events.length === 0) return
-    this.transport.sendEvents(events, processId, nonce)
-  }
-}
-
-// Example Transport Implementation
-class ConsoleTransport {
-  sendEvents (events, processId, nonce) {
-    console.log(
-      `[ProcID: ${processId}; Nonce: ${nonce}]: Sending events to transport:`,
-      events
-    )
-  }
-}
-
-const eventVacuum = new EventVacuum(new ConsoleTransport())
+const eventVacuum = new EventVacuum(new CompositeTransport([
+  new ConsoleTransport(),
+  new HoneycombTransport(
+    process.env.HONEYCOMB_API_KEY,
+    'ao-events-test'
+  )
+]))
 
 setGlobalDispatcher(new Agent({
   /** the timeout, in milliseconds, after which a socket without active requests will time out. Monitors time between activity on a connected socket. This value may be overridden by *keep-alive* hints from the server */
