@@ -6,18 +6,9 @@ import { worker, Transfer } from 'workerpool'
 
 import { createLogger } from '../../../domain/logger.js'
 import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
-import { EventVacuum } from '../../../domain/event-vacuum.js'
-import { CompositeTransport, ConsoleTransport, HoneycombTransport } from '../../../domain/event-transport.js'
+import { eventVacuum } from '../../../domain/event-vacuum.js'
 
 import { createApis } from './main.js'
-
-const eventVacuum = new EventVacuum(new CompositeTransport([
-  new ConsoleTransport(),
-  new HoneycombTransport(
-    process.env.HONEYCOMB_API_KEY,
-    'ao-events-test'
-  )
-]))
 
 setGlobalDispatcher(new Agent({
   /** the timeout, in milliseconds, after which a socket without active requests will time out. Monitors time between activity on a connected socket. This value may be overridden by *keep-alive* hints from the server */
@@ -83,17 +74,17 @@ worker({
        */
       output.Memory = arrayBufferFromMaybeView(output.Memory)
 
-      const { processId, ordinate, message } = args[0]
-      if (message && !message['Read-Only']) {
-        eventVacuum.processLogs(
-          output.Output.data,
-          processId,
-          +ordinate
-        )
-      } else {
-        console.log(
-          `[ProcID: ${processId}; Nonce: ${ordinate}]: Not vacuuming read-only message.`
-        )
+      if (eventVacuum) {
+        const { processId, ordinate, message } = args[0]
+
+        // Don't event vacuum on dry runs
+        if (message && !message['Read-Only']) {
+          eventVacuum.processLogs(
+            output.Output.data,
+            processId,
+            +ordinate
+          )
+        }
       }
 
       return new Transfer(output, [output.Memory])
