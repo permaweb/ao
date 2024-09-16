@@ -1,3 +1,5 @@
+import { ConsoleTransport, HoneycombTransport, CompositeTransport } from './event-transport.js'
+
 export class EventVacuum {
   constructor (transport) {
     this.transport = transport
@@ -31,3 +33,20 @@ export class EventVacuum {
     this.transport.sendEvents(events, processId, nonce)
   }
 }
+
+const transportNames = (process.env.EVENT_VACUUM_TRANSPORTS ?? '').split(';')
+const transports = transportNames.map((transportName) => {
+  switch (transportName) {
+    case 'console':
+      return new ConsoleTransport()
+    case 'honeycomb':
+      return new HoneycombTransport(
+        process.env.HONEYCOMB_API_KEY,
+        process.env.HONEYCOMB_DATASET
+      )
+    default:
+      throw new Error(`Unknown event transport "${transportName}"`)
+  }
+})
+
+export const eventVacuum = transports.length > 0 ? new EventVacuum(new CompositeTransport(transports)) : undefined
