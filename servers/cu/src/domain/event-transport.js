@@ -1,6 +1,7 @@
 import Libhoney from 'libhoney'
 import Database from 'better-sqlite3'
 import fs from 'fs'
+import { logger as _logger } from '../logger.js'
 
 export class CompositeTransport {
   constructor (transports) {
@@ -15,8 +16,12 @@ export class CompositeTransport {
 }
 
 export class ConsoleTransport {
+  constructor () {
+    this.logger = _logger.child('console-transport')
+  }
+
   sendEvents (events, processId, nonce) {
-    console.log(
+    this.logger.info(
       `[ProcID: ${processId}; Nonce: ${nonce}]: Vacuumed events:`,
       events
     )
@@ -36,11 +41,12 @@ export class HoneycombTransport {
     this.dbInitialized = false
     this.db = undefined
     this.largestNonces = {}
+    this.logger = _logger.child('hc-transport')
   }
 
   ensureLargestNonces () {
     if (!this.dbInitialized) {
-      console.log('[hc-transport]: Initializing SQLite database...')
+      this.logger.info('Initializing SQLite database...')
       if (!fs.existsSync(this.dbFilePath)) {
         this.createDatabase()
       } else {
@@ -52,7 +58,7 @@ export class HoneycombTransport {
   }
 
   createDatabase () {
-    console.log('[hc-transport]: Creating, if necessary, SQLite database and table for largest nonces...')
+    this.logger.info('Creating, if necessary, SQLite database and table for largest nonces...')
     this.db = new Database(this.dbFilePath)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS largest_nonces (
@@ -68,7 +74,7 @@ export class HoneycombTransport {
     for (const row of rows) {
       this.largestNonces[row.processId] = row.nonce
     };
-    console.log(`[hc-transport]: Loaded largest nonces:\n${JSON.stringify(this.largestNonces, null, 2)}`)
+    this.logger.info(`Loaded largest nonces:\n${JSON.stringify(this.largestNonces, null, 2)}`)
   }
 
   getLargestNonce (processId) {
@@ -82,7 +88,7 @@ export class HoneycombTransport {
     ON CONFLICT(processId) DO UPDATE SET nonce = excluded.nonce WHERE excluded.nonce > largest_nonces.nonce;
     `)
     stmt.run(processId, nonce)
-    console.log(`[hc-transport]: [ProcID: ${processId}; Nonce: ${nonce}]: Updated largest nonce in db.`)
+    this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Updated largest nonce in db.`)
     this.largestNonces[processId] = nonce
   }
 
@@ -99,13 +105,9 @@ export class HoneycombTransport {
         }).send()
         this.updateLargestNonce(processId, nonce)
       })
-      console.log(
-        `[hc-transport]: [ProcID: ${processId}; Nonce: ${nonce}]: Sent events to Honeycomb.`
-      )
+      this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Sent events to Honeycomb.`)
     } else {
-      console.log(
-        `[hc-transport]: [ProcID: ${processId}; Nonce: ${nonce}]: Skipped event since nonce is not larger than the max known nonce ${currentMaxNonce}.`
-      )
+      this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Skipped event since nonce is not larger than the max known nonce ${currentMaxNonce}.`)
     }
   }
 }
