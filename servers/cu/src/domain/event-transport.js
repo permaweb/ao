@@ -35,6 +35,7 @@ export class HoneycombTransport {
     this.dbFilePath = dbFilePath
     this.dbInitialized = false
     this.db = undefined
+    this.largestNonces = {}
   }
 
   ensureLargestNonces () {
@@ -44,6 +45,7 @@ export class HoneycombTransport {
         this.createDatabase()
       } else {
         this.db = new Database(this.dbFilePath)
+        this.loadLargestNonces()
       }
       this.dbInitialized = true
     }
@@ -60,10 +62,17 @@ export class HoneycombTransport {
     `)
   }
 
+  loadLargestNonces () {
+    const stmt = this.db.prepare('SELECT processId, nonce FROM largest_nonces')
+    const rows = stmt.all()
+    for (const row of rows) {
+      this.largestNonces[row.processId] = row.nonce
+    };
+    console.log(`[hc-transport]: Loaded largest nonces:\n${JSON.stringify(this.largestNonces, null, 2)}`)
+  }
+
   getLargestNonce (processId) {
-    const stmt = this.db.prepare('SELECT nonce FROM largest_nonces WHERE processId = ?')
-    const row = stmt.get(processId)
-    return row ? row.nonce : 0
+    return this.largestNonces[processId] || 0 // TODO: is -1 more appropriate?
   }
 
   updateLargestNonce (processId, nonce) {
@@ -74,6 +83,7 @@ export class HoneycombTransport {
     `)
     stmt.run(processId, nonce)
     console.log(`[hc-transport]: [ProcID: ${processId}; Nonce: ${nonce}]: Updated largest nonce in db.`)
+    this.largestNonces[processId] = nonce
   }
 
   async sendEvents (events, processId, nonce) {
