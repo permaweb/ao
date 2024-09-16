@@ -7,16 +7,9 @@ import { worker, Transfer } from 'workerpool'
 import { createLogger } from '../../../domain/logger.js'
 import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
 import { eventVacuum } from '../../../domain/event-vacuum.js'
+import { eventVacuum } from '../../../domain/event-vacuum.js'
 
 import { createApis } from './main.js'
-
-const eventVacuum = new EventVacuum(new CompositeTransport([
-  new ConsoleTransport(),
-  new HoneycombTransport(
-    process.env.HONEYCOMB_API_KEY,
-    'ao-events-test'
-  )
-]))
 
 setGlobalDispatcher(new Agent({
   /** the timeout, in milliseconds, after which a socket without active requests will time out. Monitors time between activity on a connected socket. This value may be overridden by *keep-alive* hints from the server */
