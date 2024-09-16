@@ -67,6 +67,7 @@ class NonceTracker {
         this.db = this.createDatabase()
       } else {
         this.db = new Database(this.dbFilePath)
+        this.loadLargestNonces()
       }
       this.loadLargestNonces()
       this.updateNonceStmt = this.db.prepare(`
