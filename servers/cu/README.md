@@ -84,7 +84,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_WASM_SUPPORTED_EXTENSIONS`: the wasm extensions that this CU
   supports, as a comma-delimited string (defaults to no extensions)
 - `WASM_EVALUATION_MAX_WORKERS`: The number of workers to use for evaluating
-  messages (Defaults to `3`)
+  messages (Defaults to `os.cpus() - 1`)
 - `WASM_BINARY_FILE_DIRECTORY`: The directory to cache wasm binaries downloaded
   from arweave. (Defaults to the os temp directory)
 - `WASM_MODULE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for
