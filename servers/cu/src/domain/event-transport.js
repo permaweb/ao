@@ -29,7 +29,13 @@ export class ConsoleTransport {
 }
 
 export class HoneycombTransport {
-  constructor (writeKey, dataset, apiHost = 'https://api.honeycomb.io', dbFilePath = './largest_nonces.db') {
+  constructor ({
+    writeKey,
+    dataset,
+    apiHost = 'https://api.honeycomb.io',
+    dbFilePath = './largest_nonces.db',
+    logger = _logger.child('hc-transport')
+  }) {
     this.apiHost = apiHost
     this.writeKey = writeKey
     this.honey = new Libhoney({
@@ -41,7 +47,7 @@ export class HoneycombTransport {
     this.dbInitialized = false
     this.db = undefined
     this.largestNonces = {}
-    this.logger = _logger.child('hc-transport')
+    this.logger = logger
     this.updateNonceStmt = undefined
   }
 
