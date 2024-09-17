@@ -22,7 +22,7 @@ export class ConsoleTransport {
 
   sendEvents (events, processId, nonce) {
     this.logger.info(
-      `[ProcID: ${processId}; Nonce: ${nonce}]: Vacuumed events:`,
+      `[ProcID: ${processId}; Nonce: ${nonce}]: Vacuumed events:\n%O`,
       events
     )
   }
@@ -110,7 +110,7 @@ export class HoneycombTransport {
       })
       this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Sent events to Honeycomb.`)
     } else {
-      this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Skipped event since nonce is not larger than the max known nonce ${currentMaxNonce}.`)
+      this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Skipping previous event (max nonce ${currentMaxNonce}).`)
     }
   }
 }
