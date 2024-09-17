@@ -9,7 +9,7 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { mapFrom } from '../utils.js'
 import { readStateWith } from './readState.js'
 
-const DEFAULT_MAX_PROCESS_AGE = 2000
+const DEFAULT_MAX_PROCESS_AGE = 100
 /**
  * TODO: should this be an effect or shared util?
  * just keeping here for sake of locality for now
@@ -135,7 +135,7 @@ export function dryRunWith (env) {
            * the overhead of maintaining the map, timers, for the specified
            * age
            */
-          readStateCache.set(res.id, cached, 4000)
+          readStateCache.set(res.id, cached, 2000)
           return res
         }),
         Resolved
