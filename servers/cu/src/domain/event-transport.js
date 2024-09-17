@@ -42,6 +42,7 @@ export class HoneycombTransport {
     this.db = undefined
     this.largestNonces = {}
     this.logger = _logger.child('hc-transport')
+    this.updateNonceStmt = undefined
   }
 
   ensureLargestNonces () {
@@ -82,12 +83,14 @@ export class HoneycombTransport {
   }
 
   updateLargestNonce (processId, nonce) {
-    const stmt = this.db.prepare(`
-    INSERT INTO largest_nonces (processId, nonce)
-    VALUES (?, ?)
-    ON CONFLICT(processId) DO UPDATE SET nonce = excluded.nonce WHERE excluded.nonce > largest_nonces.nonce;
-    `)
-    stmt.run(processId, nonce)
+    if (!this.updateNonceStmt) {
+      this.updateNonceStmt = this.db.prepare(`
+        INSERT INTO largest_nonces (processId, nonce)
+        VALUES (?, ?)
+        ON CONFLICT(processId) DO UPDATE SET nonce = excluded.nonce WHERE excluded.nonce > largest_nonces.nonce;
+      `)
+    }
+    this.updateNonceStmt.run(processId, nonce)
     this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Updated largest nonce in db.`)
     this.largestNonces[processId] = nonce
   }
