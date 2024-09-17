@@ -40,10 +40,10 @@ const transports = transportNames.map((transportName) => {
     case 'console':
       return new ConsoleTransport()
     case 'honeycomb':
-      return new HoneycombTransport(
-        process.env.HONEYCOMB_API_KEY,
-        process.env.HONEYCOMB_DATASET
-      )
+      return new HoneycombTransport({
+        writeKey: process.env.HONEYCOMB_API_KEY,
+        dataset: process.env.HONEYCOMB_DATASET
+      })
     default:
       throw new Error(`Unknown event transport "${transportName}"`)
   }
