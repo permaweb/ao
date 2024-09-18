@@ -117,6 +117,8 @@ export class HoneycombTransport {
       events.forEach((event) => {
         const honeyEvent = this.honey.newEvent()
         honeyEvent.add({
+        const honeyEvent = this.honey.newEvent()
+        honeyEvent.add({
           processId,
           nonce,
           gasUsed,

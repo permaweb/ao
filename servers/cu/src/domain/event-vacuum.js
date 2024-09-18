@@ -45,6 +45,21 @@ export class EventVacuum {
     return event
   }
 
+  normalizeTimestamps (event) {
+    // Normalize timestamp fields to ISO strings
+    for (const timestampKey of ['timestamp', 'Timestamp']) {
+      if (event[timestampKey]) {
+        try {
+          const date = new Date(event[timestampKey])
+          event[timestampKey] = date.toISOString()
+        } catch (e) {
+          delete event[timestampKey]
+        }
+      }
+    }
+    return event
+  }
+
   async dispatchEvents (events, processId, nonce, gasUsed, memorySize) {
     if (events.length === 0) return
     await this.transport.sendEvents(events, processId, nonce, gasUsed, memorySize)
