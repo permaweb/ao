@@ -107,11 +107,21 @@ export class HoneycombTransport {
 
     if (nonce > currentMaxNonce) {
       events.forEach((event) => {
-        this.honey.newEvent().add({
+        const honeyEvent = this.honey.newEvent()
+        honeyEvent.add({
           processId,
           nonce,
           ...event
-        }).send()
+        })
+
+        // Set the ingest timestamp for the event if one is provided
+        if (event.timestamp || event.Timestamp) {
+          honeyEvent.timestamp = event.timestamp ?? event.Timestamp
+        }
+        if (event.sampleRate !== undefined) {
+          honeyEvent.sampleRate = event.sampleRate
+        }
+        honeyEvent.send()
         this.updateLargestNonce(processId, nonce)
       })
       this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Sent events to Honeycomb.`)

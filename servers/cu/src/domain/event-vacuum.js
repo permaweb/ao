@@ -11,6 +11,7 @@ export class EventVacuum {
       .map(this.parseJson)
       .filter(this.isEvent)
       .map(({ _e, ...eventData }) => eventData) // Strip the "_e" flag
+      .map(this.normalizeTimestamps)
     this.dispatchEvents(events, processId, nonce)
   }
 
@@ -26,6 +27,21 @@ export class EventVacuum {
   // Check if the parsed object is a matching event
   isEvent (parsed) {
     return parsed && typeof parsed._e === 'number' && parsed._e === 1
+  }
+
+  normalizeTimestamps (event) {
+    // Normalize timestamp fields to ISO strings
+    for (const timestampKey of ['timestamp', 'Timestamp']) {
+      if (event[timestampKey]) {
+        try {
+          const date = new Date(event[timestampKey])
+          event[timestampKey] = date.toISOString()
+        } catch (e) {
+          delete event[timestampKey]
+        }
+      }
+    }
+    return event
   }
 
   dispatchEvents (events, processId, nonce) {
