@@ -6,6 +6,7 @@ import { worker, Transfer } from 'workerpool'
 
 import { createLogger } from '../../../domain/logger.js'
 import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
+import { eventVacuum } from '../../../domain/event-vacuum.js'
 
 import { createApis } from './main.js'
 
@@ -72,6 +73,19 @@ worker({
        * as Memory, instead of a View?
        */
       output.Memory = arrayBufferFromMaybeView(output.Memory)
+
+      if (eventVacuum) {
+        const { processId, ordinate, message } = args[0]
+
+        // Don't event vacuum on dry runs
+        if (message && !message['Read-Only']) {
+          eventVacuum.processLogs(
+            output.Output.data,
+            processId,
+            +ordinate
+          )
+        }
+      }
 
       return new Transfer(output, [output.Memory])
     })
