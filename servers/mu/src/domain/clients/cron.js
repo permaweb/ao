@@ -1,6 +1,5 @@
-import cron from 'node-cron'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
-import { CRON_PROCESSES_TABLE, TRACES_TABLE } from './sqlite.js'
+import { CRON_PROCESSES_TABLE } from './sqlite.js'
 /**
  * cronsRunning stores the node cron response
  * which can be used to stop a cron that is running
@@ -52,6 +51,11 @@ export function deleteCronProcessWith ({ db }) {
   }
 }
 
+/**
+ * Given a processId, retrieve its cursor
+ * @param {{ processId: string }} processId - the processId to retrieve the cursor of
+ * @returns the cron process's cursor
+ */
 export function getCronProcessCursorWith ({ db }) {
   return async ({ processId }) => {
     function createQuery ({ processId }) {
@@ -69,6 +73,11 @@ export function getCronProcessCursorWith ({ db }) {
   }
 }
 
+/**
+ * Updates a cron process's cursor in the database
+ * @param {{ processId: string }} processId - the processId to update the cursor of
+ * @param {{ cursor: string }} cursor - the new cursor of the cron process
+ */
 export function updateCronProcessCursorWith ({ db }) {
   return async ({ processId, cursor }) => {
     function createQuery ({ processId, cursor }) {
@@ -88,49 +97,11 @@ export function updateCronProcessCursorWith ({ db }) {
   }
 }
 
-export function deleteOldTracesWith ({ db, logger }) {
-  return async () => {
-    function createQuery ({ overflow }) {
-      /**
-       * Check if the database has grown to greater than 1GB.
-       * If it has, delete the least recent 10% of traces.
-       */
-      return {
-        sql: `
-          WITH delete_entries AS (
-            SELECT COUNT(*) AS total_rows, CEILING(COUNT(*) * ?) AS rows_to_delete
-            FROM ${TRACES_TABLE}
-          )
-          DELETE FROM ${TRACES_TABLE}
-          WHERE timestamp IN (
-            SELECT timestamp
-            FROM ${TRACES_TABLE}
-            ORDER BY timestamp ASC
-            LIMIT (SELECT rows_to_delete FROM delete_entries)
-          )
-        `,
-        parameters: [overflow]
-      }
-    }
-    const pageSize = await db.pragma('page_size', { simple: true })
-    const pageCount = await db.pragma('page_count', { simple: true })
-    /**
-     * Calculate if we are over the maximum amount of bytes allocated
-     * to the trace database. If we are, we will remove the oldest traces
-     * such that we will return to below the maximum amount.
-     */
-    const totalBytes = pageSize * pageCount
-    const maxBytes = 1024 * 1024 * 1024
-    const overflow = maxBytes / totalBytes
-    if (overflow >= 1) return
-    logger(({ log: `Deleting old traces, overflow of ${1 - overflow}` }))
-    await db.run(createQuery({ overflow: 1 - overflow }))
-    await db.run({ sql: 'VACUUM;', parameters: [] })
-    logger({ log: 'Deleted old traces.' })
-  }
-}
-
 function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
+  /**
+   * Run upon server initialization.
+   * Checks the database for cron processes. If found, start those processes.
+   */
   return async () => {
     /**
      * If no cron processes are found, continue
@@ -139,8 +110,7 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
     if (!cronProcesses) return
 
     /*
-     * start new os procs when the server starts because
-     * the server has either restarted or been redeployed.
+     * Iterate through new processes when the server starts
      */
     for (const { processId } of cronProcesses) {
       try {
@@ -152,7 +122,7 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
   }
 }
 
-function startMonitoredProcessWith ({ fetch, histogram, logger, CU_URL, fetchCron, crank, monitorGauge, saveCronProcess, getCronProcessCursor, updateCronProcessCursor }) {
+function startMonitoredProcessWith ({ fetch, cron, histogram, logger, CU_URL, fetchCron, crank, monitorGauge, saveCronProcess, getCronProcessCursor, updateCronProcessCursor }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,

@@ -205,9 +205,9 @@ export const createApis = async (ctx) => {
     logger: sendAssignLogger
   })
 
-  // /**
-  //  * Create cron to clear out traces, each hour
-  //  */
+  /**
+   * Create cron to clear out traces, each hour
+   */
   workerPool.exec('startDeleteTraceCron')
 
   const monitorProcessLogger = logger.child('monitorProcess')
