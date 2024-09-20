@@ -4,3 +4,5 @@
 .env.router
 .wallet.json
 .schedulers.json
+sufiles/
+suindex/

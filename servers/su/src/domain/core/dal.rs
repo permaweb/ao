@@ -106,6 +106,11 @@ pub trait DataStore: Send + Sync {
     ) -> Result<PaginatedMessages, StoreErrorType>;
     fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
     fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType>;
+    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
+}
+
+#[async_trait]
+pub trait RouterDataStore: Send + Sync {
     fn save_process_scheduler(
         &self,
         process_scheduler: &ProcessScheduler,
@@ -119,7 +124,6 @@ pub trait DataStore: Send + Sync {
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType>;
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType>;
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
-    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
 }
 
 pub trait CoreMetrics: Send + Sync {

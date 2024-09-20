@@ -10,10 +10,13 @@ use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
 
-use super::dal::{Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet};
+use super::dal::{
+    Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet,
+};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
+    pub router_data_store: Arc<dyn RouterDataStore>,
     pub logger: Arc<dyn Log>,
     pub config: Arc<dyn Config>,
     pub gateway: Arc<dyn Gateway>,
@@ -218,21 +221,16 @@ pub async fn write_item(
                         "Data" => (),
                         tx_id => {
                             if !deps.gateway.check_head(tx_id.to_string()).await? {
-                              return Err("Invalid tx id for On-Boot tag".to_string());
+                                return Err("Invalid tx id for On-Boot tag".to_string());
                             }
-                        },
+                        }
                     },
                     None => (),
                 };
                 let assignment = builder
-                    .gen_assignment(
-                        None,
-                        data_item.id(),
-                        &next_schedule_info,
-                        &None,
-                    )
+                    .gen_assignment(None, data_item.id(), &next_schedule_info, &None)
                     .await?;
-    
+
                 let aid = assignment.id();
                 let did = data_item.id();
                 let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
@@ -240,7 +238,7 @@ pub async fn write_item(
                 deps.data_store
                     .save_process(&process, &build_result.binary)?;
                 deps.logger.log(format!("saved process - {:?}", &process));
-    
+
                 deps.scheduler
                     .commit(&mut *schedule_info, &next_schedule_info, did, aid);
                 drop(schedule_info);
