@@ -9,10 +9,10 @@ mod logger;
 
 use clients::{
     gateway::ArweaveGateway, signer::ArweaveSigner, store, uploader::UploaderClient,
-    wallet::FileWallet,
+    wallet::FileWallet, local_store
 };
 use config::AoConfig;
-use core::dal::{Config, Gateway, Log};
+use core::dal::{Config, Gateway, Log, DataStore};
 use logger::SuLog;
 
 pub use clients::metrics::PromMetrics;
@@ -26,6 +26,7 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
 
     let data_store = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
     let d_clone = data_store.clone();
+    let router_data_store = data_store.clone();
 
     match data_store.run_migrations() {
         Ok(m) => logger.log(m),
@@ -33,6 +34,12 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
     }
 
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
+
+    let main_data_store: Arc<dyn DataStore> = if config.use_local_store {
+      Arc::new(local_store::LocalStoreClient::new().expect("Failed to create LocalStoreClient")) as Arc<dyn DataStore>
+    } else {
+      data_store.clone()
+    };
 
     if config.use_disk && config.mode != "router" {
         let logger_clone = logger.clone();
@@ -51,7 +58,7 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
     }
 
     let scheduler_deps = Arc::new(core::scheduler::SchedulerDeps {
-        data_store: data_store.clone(),
+        data_store: main_data_store.clone(),
         logger: logger.clone(),
     });
     let scheduler = Arc::new(core::scheduler::ProcessScheduler::new(scheduler_deps));
@@ -77,7 +84,8 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
     ));
 
     Arc::new(Deps {
-        data_store,
+        data_store: main_data_store,
+        router_data_store,
         logger,
         config,
         scheduler,

@@ -9,7 +9,6 @@ pub enum TagError {
     InvalidTagEncoding,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Tag {
     pub name: String,

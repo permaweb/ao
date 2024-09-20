@@ -55,14 +55,16 @@ pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
         if the scheduler doesnt exist yet create it
     */
     for entry in urls {
-        if let Err(StoreErrorType::NotFound(_)) = deps.data_store.get_scheduler_by_url(&entry.url) {
+        if let Err(StoreErrorType::NotFound(_)) =
+            deps.router_data_store.get_scheduler_by_url(&entry.url)
+        {
             let scheduler = Scheduler {
                 row_id: None,
                 url: entry.url.clone(),
                 process_count: 0,
                 no_route: entry.no_route,
             };
-            deps.data_store.save_scheduler(&scheduler)?;
+            deps.router_data_store.save_scheduler(&scheduler)?;
             deps.logger
                 .log(format!("saved new scheduler: {}", entry.url));
         }
@@ -71,9 +73,9 @@ pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
           If we no longer what to route any process to this su
           we can set no_route to true.
         */
-        let mut sched = deps.data_store.get_scheduler_by_url(&entry.url)?;
+        let mut sched = deps.router_data_store.get_scheduler_by_url(&entry.url)?;
         sched.no_route = entry.no_route;
-        deps.data_store.update_scheduler(&sched)?;
+        deps.router_data_store.update_scheduler(&sched)?;
     }
 
     Ok("schedulers initialized".to_string())
@@ -91,9 +93,9 @@ pub async fn redirect_process_id(
     let pid = process_id.ok_or("No process-id query parameter provided")?;
 
     // every other process_id, redirect
-    let process_scheduler = deps.data_store.get_process_scheduler(&pid)?;
+    let process_scheduler = deps.router_data_store.get_process_scheduler(&pid)?;
     let scheduler = deps
-        .data_store
+        .router_data_store
         .get_scheduler(&process_scheduler.scheduler_row_id)?;
     Ok(Some(scheduler.url))
 }
@@ -108,7 +110,7 @@ pub async fn redirect_tx_id(
         return Ok(None);
     }
 
-    let process_to_query = match deps.data_store.get_process_scheduler(&tx_id) {
+    let process_to_query = match deps.router_data_store.get_process_scheduler(&tx_id) {
         Ok(_) => tx_id,
         /*
             we didn't find a process scheduler based on the tx_id
@@ -117,9 +119,11 @@ pub async fn redirect_tx_id(
         Err(_) => process_id.ok_or("Unable to locate process, if this is a message id query be sure to pass the process-id query parameter")?,
     };
 
-    let process_scheduler = deps.data_store.get_process_scheduler(&process_to_query)?;
+    let process_scheduler = deps
+        .router_data_store
+        .get_process_scheduler(&process_to_query)?;
     let scheduler = deps
-        .data_store
+        .router_data_store
         .get_scheduler(&process_scheduler.scheduler_row_id)?;
     Ok(Some(scheduler.url))
 }
@@ -139,10 +143,10 @@ pub async fn redirect_data_item(
     if process_id.is_some() ^ assign.is_some() {
         return Err("If sending assign or process-id, you must send both.".to_string());
     } else if let (Some(process_id), Some(_assign)) = (process_id, assign) {
-        match deps.data_store.get_process_scheduler(&process_id) {
+        match deps.router_data_store.get_process_scheduler(&process_id) {
             Ok(process_scheduler) => {
                 let scheduler = deps
-                    .data_store
+                    .router_data_store
                     .get_scheduler(&process_scheduler.scheduler_row_id)?;
                 return Ok(Some(scheduler.url));
             }
@@ -167,7 +171,7 @@ pub async fn redirect_data_item(
                 process_schedulers record and return the url
             */
             let mut schedulers = deps
-                .data_store
+                .router_data_store
                 .get_all_schedulers()?
                 .into_iter()
                 .filter(|scheduler| scheduler.no_route.unwrap_or(false) == false)
@@ -175,7 +179,7 @@ pub async fn redirect_data_item(
 
             if let Some(min_scheduler) = schedulers.iter_mut().min_by_key(|s| s.process_count) {
                 min_scheduler.process_count += 1;
-                deps.data_store.update_scheduler(min_scheduler)?;
+                deps.router_data_store.update_scheduler(min_scheduler)?;
 
                 let scheduler_row_id = if let Some(min_scheduler_row_id) = min_scheduler.row_id {
                     min_scheduler_row_id
@@ -192,7 +196,8 @@ pub async fn redirect_data_item(
                     scheduler_row_id: scheduler_row_id,
                     process_id: id,
                 };
-                deps.data_store.save_process_scheduler(&process_scheduler)?;
+                deps.router_data_store
+                    .save_process_scheduler(&process_scheduler)?;
 
                 Ok(Some(min_scheduler.url.clone()))
             } else {
@@ -204,10 +209,10 @@ pub async fn redirect_data_item(
                 otherwise, fetch the correct scheduler based
                 on the messages's target
             */
-            match deps.data_store.get_process_scheduler(&target) {
+            match deps.router_data_store.get_process_scheduler(&target) {
                 Ok(process_scheduler) => {
                     let scheduler = deps
-                        .data_store
+                        .router_data_store
                         .get_scheduler(&process_scheduler.scheduler_row_id)?;
                     Ok(Some(scheduler.url))
                 }

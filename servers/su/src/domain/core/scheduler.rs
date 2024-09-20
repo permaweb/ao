@@ -159,42 +159,42 @@ impl ProcessScheduler {
                   at the process
                 */
                 None => match self.deps.data_store.get_process(&id).await {
-                  Ok(process) => {
-                      /*
-                        Handling the old vs new process structure
-                        processes created before the boot loader update
-                        did not have an assignment
-                      */
-                      match process.assignment {
-                          Some(_) => {
-                              // this is the first message on a new process
-                              let epoch = process.epoch()?;
-                              let nonce = process.nonce()? + 1;
-                              let hash_chain = gen_hash_chain(
-                                  &process.hash_chain()?,
-                                  Some(&process.assignment_id()?),
-                              )?;
-                              (epoch as i32, nonce as i32, hash_chain)
-                          }
-                          None => {
-                              // this is the first message on an old process
-                              let hash_chain = gen_hash_chain(&process.process.process_id, None)?;
-                              (0 as i32, 0 as i32, hash_chain)
-                          }
-                      }
-                  }
-                  /*
-                    There is no process saved yet so the Nonce 
-                    will start at 0
-                  */
-                  Err(e) => match e {
-                      StoreErrorType::NotFound(_) => {
-                          let hash_chain = gen_hash_chain(&id, None)?;
-                          (0 as i32, 0 as i32, hash_chain)
-                      }
-                      _ => return Err(format!("{:?}", e)),
-                  },
-              },
+                    Ok(process) => {
+                        /*
+                          Handling the old vs new process structure
+                          processes created before the boot loader update
+                          did not have an assignment
+                        */
+                        match process.assignment {
+                            Some(_) => {
+                                // this is the first message on a new process
+                                let epoch = process.epoch()?;
+                                let nonce = process.nonce()? + 1;
+                                let hash_chain = gen_hash_chain(
+                                    &process.hash_chain()?,
+                                    Some(&process.assignment_id()?),
+                                )?;
+                                (epoch as i32, nonce as i32, hash_chain)
+                            }
+                            None => {
+                                // this is the first message on an old process
+                                let hash_chain = gen_hash_chain(&process.process.process_id, None)?;
+                                (0 as i32, 0 as i32, hash_chain)
+                            }
+                        }
+                    }
+                    /*
+                      There is no process saved yet so the Nonce
+                      will start at 0
+                    */
+                    Err(e) => match e {
+                        StoreErrorType::NotFound(_) => {
+                            let hash_chain = gen_hash_chain(&id, None)?;
+                            (0 as i32, 0 as i32, hash_chain)
+                        }
+                        _ => return Err(format!("{:?}", e)),
+                    },
+                },
             }
         };
 

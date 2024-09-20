@@ -15,9 +15,9 @@ pub enum ByteErrorType {
 }
 
 impl From<TagError> for ByteErrorType {
-  fn from(error: TagError) -> Self {
-      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
-  }
+    fn from(error: TagError) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {:?}", error))
+    }
 }
 
 impl From<&str> for ByteErrorType {
@@ -563,9 +563,7 @@ impl DataItem {
 
     pub fn data(&self) -> Option<String> {
         match &self.data {
-            Data::Bytes(d) => {
-                Some(String::from_utf8_lossy(d).into_owned())
-            },
+            Data::Bytes(d) => Some(String::from_utf8_lossy(d).into_owned()),
             Data::None => None,
         }
     }
