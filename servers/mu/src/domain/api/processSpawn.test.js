@@ -16,7 +16,6 @@ describe('processSpawnWith', () => {
       locateProcess: async () => ({ id: 'process-id', url: 'url-123' }),
       locateNoRedirect: async () => false,
       writeDataItem: async (item) => {
-        console.log(501, { item })
         return { ...item, id: 'id-123', timestamp: '1234567' }
       },
       buildAndSign: async (tx) => ({ ...tx, signed: true, data: 'data', id: 'id-123' }),
