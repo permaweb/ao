@@ -174,7 +174,7 @@ export const fetchSchedulerProcessSchema = z.function()
         owner: processOwnerSchema,
         tags: tagArraySchema,
         timestamp: z.coerce.number(),
-        data: z.string(),
+        data: z.string().nullish(),
         anchor: z.string().nullish(),
         epoch: z.coerce.number().nullish(),
         nonce: z.coerce.number().nullish(),

@@ -62,7 +62,6 @@ export function pullResultWith (env) {
   const fetchResult = fetchResultWith(env)
 
   return (ctx) => {
-    console.log(600, { ctx })
     if (!checkStage('pull-result')(ctx) && !checkStage('pull-initial-result')(ctx)) return Resolved(ctx)
     return of(ctx)
       .map((ctx) => ({ ...ctx, tx: ctx.tx }))

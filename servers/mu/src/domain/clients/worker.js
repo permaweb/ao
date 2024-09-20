@@ -4,12 +4,12 @@ import { tap } from 'ramda'
 import cron from 'node-cron'
 
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
-import { deleteOldTracesWith } from './cron.js'
 import { domainConfigSchema, config } from '../../config.js'
 // Without this import the worker crashes
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
 import { broadcastEnqueueWith, enqueueResultsWith, processResultWith, processResultsWith } from './worker-fn.js'
+import { deleteOldTracesWith } from './tracer.js'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
 
