@@ -11,6 +11,19 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
     }),
     logger
   })
+  /**
+   * uploadDataItem
+   * Upload a Data Item directly to Arweave
+   *
+   * @param data - the Data Item to upload
+   *
+   * @returns
+   * id - The Arweave tx-id of the uploaded data
+   * timestamp
+   * signature
+   * owner
+   *
+   */
   return async (data) => {
     return of(data)
       .map(logger.tap({ log: `Forwarding message to uploader ${UPLOADER_URL}` }))

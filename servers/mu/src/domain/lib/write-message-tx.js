@@ -2,6 +2,7 @@ import { Resolved, fromPromise } from 'hyper-async'
 import { __, assoc } from 'ramda'
 import z from 'zod'
 import { checkStage, setStage } from '../utils.js'
+import { uploadDataItemSchema, writeDataItemSchema } from '../dal.js'
 
 const ctxSchema = z.object({
   schedulerTx: z.object({
@@ -20,8 +21,8 @@ const ctxSchemaArweave = z.object({
 export function writeMessageTxWith (env) {
   let { logger, writeDataItem, writeDataItemArweave } = env
 
-  writeDataItem = fromPromise(writeDataItem)
-  writeDataItemArweave = fromPromise(writeDataItemArweave)
+  writeDataItem = fromPromise(writeDataItemSchema.implement(writeDataItem))
+  writeDataItemArweave = fromPromise(uploadDataItemSchema.implement(writeDataItemArweave))
 
   return (ctx) => {
     /*

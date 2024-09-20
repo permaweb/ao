@@ -161,6 +161,12 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CU_URL, fetchCro
     }),
     logger
   })
+  /**
+   * startMonitoredProcess
+   * Given a process ID, begin monitoring it every 10 seconds
+   *
+   * @param processId - the process to monitor
+   */
   return async ({ processId }) => {
     /**
      * If we have an existing cron running for this process,
@@ -262,6 +268,12 @@ function startMonitoredProcessWith ({ fetch, histogram, logger, CU_URL, fetchCro
 }
 
 function killMonitoredProcessWith ({ logger, monitorGauge, deleteCronProcess }) {
+  /**
+   * killMonitoredProcess
+   * Given a process ID, stop monitoring it
+   *
+   * @param processId - the process to unmonitor
+   */
   return async ({ processId }) => {
     const ct = cronsRunning[processId]
     if (!ct) {

@@ -3,6 +3,7 @@ import { assoc, find, identity, is, map, prop, propEq, when } from 'ramda'
 // import z from 'zod'
 
 import { checkStage, parseTags } from '../utils.js'
+import { fetchSchedulerProcessSchema, locateProcessSchema, rawSchema, writeDataItemSchema } from '../dal.js'
 
 // const ctxSchema = z.object({
 //   processTx: z.any()
@@ -11,10 +12,10 @@ import { checkStage, parseTags } from '../utils.js'
 export function spawnProcessWith (env) {
   let { logger, writeDataItem, locateScheduler, locateNoRedirect, buildAndSign, fetchSchedulerProcess } = env
 
-  fetchSchedulerProcess = fromPromise(fetchSchedulerProcess)
-  writeDataItem = fromPromise(writeDataItem)
-  locateScheduler = fromPromise(locateScheduler)
-  locateNoRedirect = fromPromise(locateNoRedirect)
+  fetchSchedulerProcess = fromPromise(fetchSchedulerProcessSchema.implement(fetchSchedulerProcess))
+  writeDataItem = fromPromise(writeDataItemSchema.implement(writeDataItem))
+  locateScheduler = fromPromise(rawSchema.implement(locateScheduler))
+  locateNoRedirect = fromPromise(locateProcessSchema.implement(locateNoRedirect))
 
   function findSchedulerTag (tags) {
     return of(tags)

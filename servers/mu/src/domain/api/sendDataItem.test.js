@@ -26,18 +26,16 @@ describe('sendDataItemWith', () => {
           writeDataItem: async (res) => ({
             ...res,
             id: 'scheduler-id',
-            timestamp: 1234
+            timestamp: 1234567
           }),
           locateScheduler: async () => ({ url: 'url-123' }),
-          locateProcess: (res) => res,
-          fetchResult: async (res) => {
-            return {
-              Messages: [],
-              Spawns: [],
-              Assignments: [],
-              Output: ''
-            }
+          locateProcess: async (res) => {
+            return ({
+              url: 'url-1234',
+              address: 'address-123'
+            })
           },
+          fetchResult: (res) => res,
           crank: (res) => {
             assert.ok(res.assigns.length === 0)
             return Resolved()
@@ -53,7 +51,7 @@ describe('sendDataItemWith', () => {
         }).toPromise()
 
         assert.equal(result.schedulerTx.id, 'scheduler-id')
-        assert.equal(result.schedulerTx.suUrl, 'url-123')
+        assert.equal(result.schedulerTx.timestamp, 1234567)
 
         await crank().toPromise()
       })
@@ -73,7 +71,7 @@ describe('sendDataItemWith', () => {
           writeDataItem: async (res) => ({
             ...res,
             id: 'scheduler-id',
-            timestamp: 1234
+            timestamp: 1234567
           }),
           locateScheduler: async () => ({ url: 'url-123' }),
           locateProcess: (res) => res,
@@ -100,7 +98,7 @@ describe('sendDataItemWith', () => {
         }).toPromise()
 
         assert.equal(result.schedulerTx.id, 'scheduler-id')
-        assert.equal(result.schedulerTx.suUrl, 'url-123')
+        assert.equal(result.schedulerTx.timestamp, 1234567)
 
         await crank().toPromise()
       })
@@ -120,7 +118,7 @@ describe('sendDataItemWith', () => {
           writeDataItem: async (res) => ({
             ...res,
             id: 'scheduler-id',
-            timestamp: 1234
+            timestamp: 1234567
           }),
           locateScheduler: async () => ({ url: 'url-123' }),
           locateProcess: (res) => res,
@@ -129,7 +127,8 @@ describe('sendDataItemWith', () => {
               Messages: [{
                 Tags: [],
                 Target: 'target',
-                Data: 'Data'
+                Data: 'Data',
+                Anchor: '0000'
               }],
               Spawns: [],
               Assignments: [],
@@ -150,11 +149,12 @@ describe('sendDataItemWith', () => {
 
         const { crank, ...result } = await sendDataItem({
           raw: '1234',
-          tx: { id: 'process-id' }
+          tx: { id: 'process-id' },
+          logId: 'log-123'
         }).toPromise()
 
         assert.equal(result.schedulerTx.id, 'scheduler-id')
-        assert.equal(result.schedulerTx.suUrl, 'url-123')
+        assert.equal(result.schedulerTx.timestamp, 1234567)
 
         await crank().toPromise()
       })

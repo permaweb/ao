@@ -1,6 +1,7 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
 import { checkStage } from '../utils.js'
+import { buildAndSignSchema, fetchSchedulerProcessSchema, isWalletSchema, locateProcessSchema } from '../dal.js'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -14,10 +15,10 @@ const ctxSchema = z.object({
 
 export function buildTxWith (env) {
   let { buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet } = env
-  locateProcess = fromPromise(locateProcess)
-  fetchSchedulerProcess = fromPromise(fetchSchedulerProcess)
-  buildAndSign = fromPromise(buildAndSign)
-  isWallet = fromPromise(isWallet)
+  locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
+  fetchSchedulerProcess = fromPromise(fetchSchedulerProcessSchema.implement(fetchSchedulerProcess))
+  buildAndSign = fromPromise(buildAndSignSchema.implement(buildAndSign))
+  isWallet = fromPromise(isWalletSchema.implement(isWallet))
 
   return (ctx) => {
     if (!checkStage('build-tx')(ctx)) return Resolved(ctx)

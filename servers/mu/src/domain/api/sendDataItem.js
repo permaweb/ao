@@ -7,6 +7,7 @@ import { pullResultWith } from '../lib/pull-result.js'
 import { parseDataItemWith } from '../lib/parse-data-item.js'
 import { verifyParsedDataItemWith } from '../lib/verify-parsed-data-item.js'
 import { writeProcessTxWith } from '../lib/write-process-tx.js'
+import { locateProcessSchema } from '../dal.js'
 
 /**
  * Forward along the DataItem to the SU,
@@ -34,7 +35,7 @@ export function sendDataItemWith ({
   const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
 
-  const locateProcessLocal = fromPromise(locateProcess)
+  const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
 
   /**
      * If the data item is a Message, then cranking and tracing
@@ -179,6 +180,9 @@ export function sendDataItemWith ({
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
+      .map((ctx) => {
+        return ctx
+      })
       .chain((ctx) =>
         verifyParsedDataItem(ctx.dataItem)
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
