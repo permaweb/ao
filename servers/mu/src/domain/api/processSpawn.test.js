@@ -13,20 +13,20 @@ describe('processSpawnWith', () => {
     const processSpawn = processSpawnWith({
       logger,
       locateScheduler: async () => ({ url: 'url-123' }),
-      locateProcess: async () => ({ id: 'process-id' }),
+      locateProcess: async () => ({ id: 'process-id', url: 'url-123' }),
       locateNoRedirect: async () => false,
       writeDataItem: async (item) => {
         console.log(501, { item })
         return { ...item, id: 'id-123', timestamp: '1234567' }
       },
-      buildAndSign: async (tx) => ({ ...tx, signed: true, data: 'data' }),
+      buildAndSign: async (tx) => ({ ...tx, signed: true, data: 'data', id: 'id-123' }),
       fetchResult: async (txId, processId) => {
         if (txId === processId) {
           pidDidEqualTxIdCount += 1
         }
         return {
-          Messages: [{ Tags: [], Data: '' }],
-          Spawns: [{ Tags: '', Data: '' }],
+          Messages: [{ Tags: [], Data: '', Target: '', Anchor: '' }],
+          Spawns: [{ Tags: [], Data: '', Anchor: '' }],
           Assignments: [{ Message: 'm', Processes: ['a', 'b'] }],
           initialTxId: 'initial-tx-id'
         }
@@ -78,18 +78,18 @@ describe('processSpawnWith', () => {
      */
     assert.deepStrictEqual(result.msgs, [
       {
-        msg: { Tags: [], Data: '' },
-        processId: undefined,
+        msg: { Tags: [], Data: '', Target: '', Anchor: '' },
+        processId: '',
         initialTxId: 'initial-tx-id',
-        fromProcessId: undefined,
-        parentId: 'initial-tx-id'
+        fromProcessId: 'id-123',
+        parentId: 'id-123'
       },
       {
-        msg: { Tags: [], Data: '' },
-        processId: undefined,
+        msg: { Tags: [], Data: '', Target: '', Anchor: '' },
+        processId: '',
         initialTxId: 'initial-tx-id',
         fromProcessId: 'process-id',
-        parentId: 'initial-tx-id'
+        parentId: 'id-123'
       }
     ])
 
@@ -100,18 +100,18 @@ describe('processSpawnWith', () => {
 
     assert.deepStrictEqual(result.spawns, [
       {
-        spawn: { Tags: '', Data: '' },
-        processId: undefined,
+        spawn: { Tags: [], Data: '', Anchor: '' },
+        processId: 'id-123',
         initialTxId: 'initial-tx-id',
-        fromProcessId: undefined,
-        parentId: 'initial-tx-id'
+        fromProcessId: 'id-123',
+        parentId: 'id-123'
       },
       {
-        spawn: { Tags: '', Data: '' },
+        spawn: { Tags: [], Data: '', Anchor: '' },
         processId: 'process-id',
         initialTxId: 'initial-tx-id',
         fromProcessId: undefined,
-        parentId: 'initial-tx-id'
+        parentId: 'id-123'
       }
     ])
     // we should have fetched a result for the process id itself only once

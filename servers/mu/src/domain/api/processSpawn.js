@@ -43,7 +43,8 @@ export function processSpawnWith ({
           processId: res.processTx,
           messageId: res.processTx,
           initialTxId: ctx.initialTxId,
-          tx: { id: res.processTx, processId: res.processTx }
+          tx: { id: res.processTx, processId: res.processTx },
+          logId: ctx.logId
         }).map((result) => ({
           ...res,
           msgs: result.msgs,
