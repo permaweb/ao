@@ -20,7 +20,7 @@ var Module = (() => {
         limit: Module.computeLimit || DEFAULT_GAS_LIMIT,
         used: 0,
         use: (amount) => {
-          Module.gas.used += amount;
+          Module.gas.used += Number(amount);
         },
         refill: (amount) => {
           if (!amount) Module.gas.used = 0;
