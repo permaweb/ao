@@ -3,6 +3,7 @@ const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
 const Emscripten4 = require('./formats/emscripten4.cjs')
 const Wasm64 = require('./formats/wasm64-emscripten.cjs')
+const metering = require('@permaweb/wasm-metering')
 
 /* eslint-enable */
 
@@ -93,6 +94,10 @@ const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 module.exports = async function (binary, options) {
   let instance = null
   let doHandle = null
+
+  let meterType = options.format.startsWith("wasm32") ? "i32" : "i64";
+  const originalInstantiate = WebAssembly.instantiate;
+
   if (options === null) {
     options = { format: 'wasm32-unknown-emscripten' }
   }
@@ -105,15 +110,20 @@ module.exports = async function (binary, options) {
   } else {
 
     if (typeof binary === "function") {
+      WebAssembly.instantiate = async function (wasm, info) {
+        const meteredWasm = metering.meterWASM(wasm, { meterType });
+        return originalInstantiate(meteredWasm, info);
+      };
       options.instantiateWasm = binary
     } else {
+      binary = metering.meterWASM(binary, { meterType })
       options.wasmBinary = binary
     }
 
     if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
       instance = await Wasm64(options)
     } else if (options.format === "wasm32-unknown-emscripten4") {
-      instance = await Emscripten4(binary, options)
+      instance = await Emscripten4(options)
     }
 
     await instance['FS_createPath']('/', 'data')
@@ -141,6 +151,9 @@ module.exports = async function (binary, options) {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }
 
+  if (typeof binary === "function") {
+    WebAssembly.instantiate = originalInstantiate;
+  }
 
   return async (buffer, msg, env) => {
     const originalRandom = Math.random

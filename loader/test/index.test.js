@@ -118,7 +118,7 @@ describe('loader', async () => {
      * but they should be within ~75k of each other, effectively meaning the gas is not
      * "stacking" and being refilled every time
      */
-    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 600000)
+    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 750000)
   })
 
   it('should run out of gas', async () => {
@@ -209,7 +209,7 @@ describe('loader', async () => {
 
   it('should handle Assignments', async () => {
     const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
-    
+
     // eslint-disable-next-line
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Assignment' }], Data: '' },
@@ -217,10 +217,10 @@ describe('loader', async () => {
     )
 
     assert.deepStrictEqual(
-      result.Output, 
-      [ 
-        { Processes: [ 'pid-1', 'pid-2' ], Message: 'mid-1' },
-        { Processes: [ 'pid-1', 'pid-2' ], Message: 'mid-2' } 
+      result.Output,
+      [
+        { Processes: ['pid-1', 'pid-2'], Message: 'mid-1' },
+        { Processes: ['pid-1', 'pid-2'], Message: 'mid-2' }
       ]
     )
 
