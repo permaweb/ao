@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command, basename, resolve, parse } from '../deps.js'
-import { hostArgs, bundlerArgs, tagsArg } from '../utils.js'
+import { bundlerArgs, tagsArg } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
