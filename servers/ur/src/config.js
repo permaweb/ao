@@ -39,7 +39,7 @@ const serverConfigSchema = z.object({
   ),
   aoUnit: z.enum(['cu', 'mu']),
   strategy: z.enum(['proxy', 'redirect']),
-  surUrl: z.string().nullable().optional(),
+  surUrl: z.string().url(),
   /**
    * @deprecated - use ownerToHost or processToHost to
    * achieve subrouting

@@ -2,7 +2,7 @@ import { T, always, applySpec, assocPath, cond, defaultTo, identity, ifElse, is,
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import WeaveDrive from '@permaweb/weavedrive'
 
-import { saveEvaluationSchema } from '../dal.js'
+import { saveEvaluationSchema } from '../../domain/dal.js'
 
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
@@ -162,15 +162,7 @@ export function evaluateWith ({
    *
    * Finally, evaluates the message and returns the result of the evaluation.
    */
-  return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal, close }) => {
-    /**
-     * If we receive the close flag, it means we have reached the end of the eval stream.
-     * We will remove the WASM instance from the cache and skip loading the module.
-     */
-    if (close) {
-      wasmInstanceCache.delete(streamId)
-      return Promise.resolve()
-    }
+  return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) => {
     /**
      * Dynamically load the module, either from cache,
      * or from a file
@@ -244,7 +236,7 @@ export function evaluateWith ({
               output
             })
               .bimap(
-                logger.tap('Failed to save evaluation'),
+                logger.tap('Failed to save evaluation: %O'),
                 identity
               )
               /**

@@ -6,7 +6,7 @@ use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
-use crate::domain::core::dal::{DataStore, Log, ScheduleProvider};
+use crate::domain::core::dal::{DataStore, Log, ScheduleProvider, StoreErrorType};
 
 pub struct SchedulerDeps {
     pub data_store: Arc<dyn DataStore>,
@@ -17,11 +17,18 @@ pub struct SchedulerDeps {
     information used to build a proper item
     in the schedule aka the proper tags
 */
+#[derive(Clone, Debug)]
 pub struct ScheduleInfo {
     pub epoch: i32,
     pub nonce: i32,
     pub timestamp: i64,
     pub hash_chain: String,
+}
+
+#[derive(Clone)]
+pub struct CachedScheduleInfo {
+    pub schedule_info: ScheduleInfo,
+    pub previous_assignment: Option<String>,
 }
 
 pub type LockedScheduleInfo = Arc<Mutex<ScheduleInfo>>;
@@ -37,6 +44,7 @@ pub struct ProcessScheduler {
     */
     locks: Arc<DashMap<String, LockedScheduleInfo>>,
     deps: Arc<SchedulerDeps>,
+    cache: Arc<DashMap<String, CachedScheduleInfo>>,
 }
 
 impl ProcessScheduler {
@@ -44,6 +52,7 @@ impl ProcessScheduler {
         ProcessScheduler {
             locks: Arc::new(DashMap::new()),
             deps,
+            cache: Arc::new(DashMap::new()),
         }
     }
 
@@ -71,21 +80,136 @@ impl ProcessScheduler {
         Ok(locked_schedule_info)
     }
 
-    pub async fn update_schedule_info<'a>(
+    /*
+      Commit the schedule info change to the locked mutable
+      reference, this way we can determine the code using
+      this module exactly if and when we want to incorporate
+      the change ot the scheduling info.
+
+      That was if there is an error the change wont be
+      committed before releasing the lock and there wont
+      be missing Nonces etc...
+    */
+    pub fn commit<'a>(
         &'a self,
         schedule_info: &'a mut ScheduleInfo,
+        next_schedule_info: &ScheduleInfo,
         id: String,
-    ) -> Result<&mut ScheduleInfo, String> {
-        let (current_epoch, current_nonce, current_hash_chain, current_timestamp) =
-            match fetch_values(self.deps.clone(), &id).await {
-                Ok(vals) => vals,
-                Err(e) => return Err(format!("error acquiring scheduler lock {}", e)),
+        previous_assignment: String,
+    ) -> &mut ScheduleInfo {
+        schedule_info.epoch = next_schedule_info.epoch;
+        schedule_info.nonce = next_schedule_info.nonce;
+        schedule_info.hash_chain = next_schedule_info.hash_chain.clone();
+        schedule_info.timestamp = next_schedule_info.timestamp;
+
+        let cached_info = CachedScheduleInfo {
+            schedule_info: schedule_info.clone(),
+            previous_assignment: Some(previous_assignment),
+        };
+
+        self.cache.insert(id.clone(), cached_info);
+
+        schedule_info
+    }
+
+    /*
+      Get the incremented scheduling info for a Process.
+      We pass te metable reference to schedule info to
+      help ensure the user has the lock.
+
+      Although there is a way around this by defining your
+      own mutable reference to ScheduleInfor. You wont be
+      able to commit to a reference that is guarded by
+      a lock unless you have obtained one via acquire_lock.
+    */
+    pub async fn increment<'a>(
+        &'a self,
+        _schedule_info: &'a mut ScheduleInfo,
+        id: String,
+    ) -> Result<ScheduleInfo, String> {
+        let timestamp = Self::current_system_time();
+        let (epoch, nonce, hash_chain) = if let Some(cached_info) = self.cache.get(&id) {
+            // Use the cached info but still increment nonce and regenerate hash_chain
+            let new_nonce = cached_info.schedule_info.nonce + 1;
+
+            let assignment = cached_info.previous_assignment.clone();
+
+            let new_hash_chain =
+                gen_hash_chain(&cached_info.schedule_info.hash_chain, assignment.as_deref())?;
+
+            (cached_info.schedule_info.epoch, new_nonce, new_hash_chain)
+        } else {
+            let latest_message = match self.deps.data_store.get_latest_message(&id) {
+                Ok(m) => m,
+                Err(e) => return Err(format!("{:?}", e)),
             };
-        schedule_info.epoch = current_epoch;
-        schedule_info.nonce = current_nonce;
-        schedule_info.hash_chain = current_hash_chain;
-        schedule_info.timestamp = current_timestamp;
-        Ok(schedule_info)
+
+            match latest_message {
+                Some(previous_message) => {
+                    let epoch = previous_message.epoch()?;
+                    let nonce = previous_message.nonce()? + 1;
+                    let hash_chain = gen_hash_chain(
+                        &previous_message.hash_chain()?,
+                        Some(&previous_message.assignment_id()?),
+                    )?;
+                    (epoch, nonce, hash_chain)
+                }
+                /*
+                  There is no message yet so the Nonce will start
+                  at the process
+                */
+                None => match self.deps.data_store.get_process(&id).await {
+                  Ok(process) => {
+                      /*
+                        Handling the old vs new process structure
+                        processes created before the boot loader update
+                        did not have an assignment
+                      */
+                      match process.assignment {
+                          Some(_) => {
+                              // this is the first message on a new process
+                              let epoch = process.epoch()?;
+                              let nonce = process.nonce()? + 1;
+                              let hash_chain = gen_hash_chain(
+                                  &process.hash_chain()?,
+                                  Some(&process.assignment_id()?),
+                              )?;
+                              (epoch as i32, nonce as i32, hash_chain)
+                          }
+                          None => {
+                              // this is the first message on an old process
+                              let hash_chain = gen_hash_chain(&process.process.process_id, None)?;
+                              (0 as i32, 0 as i32, hash_chain)
+                          }
+                      }
+                  }
+                  /*
+                    There is no process saved yet so the Nonce 
+                    will start at 0
+                  */
+                  Err(e) => match e {
+                      StoreErrorType::NotFound(_) => {
+                          let hash_chain = gen_hash_chain(&id, None)?;
+                          (0 as i32, 0 as i32, hash_chain)
+                      }
+                      _ => return Err(format!("{:?}", e)),
+                  },
+              },
+            }
+        };
+
+        Ok(ScheduleInfo {
+            epoch,
+            nonce,
+            hash_chain,
+            timestamp,
+        })
+    }
+
+    fn current_system_time() -> i64 {
+        let start_time = SystemTime::now();
+        let duration = start_time.duration_since(UNIX_EPOCH).unwrap();
+        duration.as_secs() as i64 * 1000 + i64::from(duration.subsec_millis())
     }
 }
 
@@ -137,44 +261,6 @@ fn gen_hash_chain(
     let result = hasher.finalize();
 
     Ok(base64_url::encode(&result))
-}
-
-/*
-    retrieve the epoch, nonce, hash_chain and timestamp
-    increment the values here because this wont be called
-    again until the lock is released.
-*/
-async fn fetch_values(
-    deps: Arc<SchedulerDeps>,
-    process_id: &String,
-) -> Result<(i32, i32, String, i64), String> {
-    let start_time = SystemTime::now();
-    let duration = match start_time.duration_since(UNIX_EPOCH) {
-        Ok(d) => d,
-        Err(e) => return Err(format!("{:?}", e)),
-    };
-    let millis: i64 = duration.as_secs() as i64 * 1000 + i64::from(duration.subsec_millis());
-
-    let latest_message = match deps.data_store.get_latest_message(process_id) {
-        Ok(m) => m,
-        Err(e) => return Err(format!("{:?}", e)),
-    };
-
-    match latest_message {
-        Some(previous_message) => {
-            let epoch = previous_message.epoch().unwrap();
-            let nonce = previous_message.nonce().unwrap() + 1;
-            let hash_chain = gen_hash_chain(
-                &previous_message.hash_chain().unwrap(),
-                Some(&previous_message.assignment_id().unwrap()),
-            )?;
-            Ok((epoch, nonce, hash_chain, millis))
-        }
-        None => {
-            let hash_chain = gen_hash_chain(&process_id, None)?;
-            Ok((0, 0, hash_chain, millis))
-        }
-    }
 }
 
 impl ScheduleProvider for ScheduleInfo {

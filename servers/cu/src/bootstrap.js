@@ -1,8 +1,9 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
-import { writeFile, mkdir } from 'node:fs/promises'
+import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
+import { BroadcastChannel } from 'node:worker_threads'
 
 import pMap from 'p-map'
 import PQueue from 'p-queue'
@@ -13,27 +14,23 @@ import { fromPromise } from 'hyper-async'
 import lt from 'long-timeout'
 
 // Precanned clients to use for OOTB apis
-import * as ArweaveClient from './client/arweave.js'
-import * as SqliteClient from './client/sqlite.js'
-import * as AoSuClient from './client/ao-su.js'
-import * as WasmClient from './client/wasm.js'
-import * as AoProcessClient from './client/ao-process.js'
-import * as AoModuleClient from './client/ao-module.js'
-import * as AoEvaluationClient from './client/ao-evaluation.js'
-import * as AoBlockClient from './client/ao-block.js'
-import * as MetricsClient from './client/metrics.js'
+import * as ArweaveClient from './effects/arweave.js'
+import * as SqliteClient from './effects/sqlite.js'
+import * as AoSuClient from './effects/ao-su.js'
+import * as WasmClient from './effects/wasm.js'
+import * as AoProcessClient from './effects/ao-process.js'
+import * as AoModuleClient from './effects/ao-module.js'
+import * as AoEvaluationClient from './effects/ao-evaluation.js'
+import * as AoBlockClient from './effects/ao-block.js'
+import * as MetricsClient from './effects/metrics.js'
 
-import { readResultWith } from './api/readResult.js'
-import { readStateWith, pendingReadStates } from './api/readState.js'
-import { readCronResultsWith } from './api/readCronResults.js'
-import { healthcheckWith } from './api/healthcheck.js'
-import { readResultsWith } from './api/readResults.js'
-import { dryRunWith } from './api/dryRun.js'
-import { statsWith } from './api/perf.js'
-
-export { createLogger } from './logger.js'
-export { domainConfigSchema, positiveIntSchema } from './model.js'
-export { errFrom } from './utils.js'
+import { readResultWith } from './domain/api/readResult.js'
+import { readStateWith, pendingReadStates } from './domain/api/readState.js'
+import { readCronResultsWith } from './domain/api/readCronResults.js'
+import { healthcheckWith } from './domain/api/healthcheck.js'
+import { readResultsWith } from './domain/api/readResults.js'
+import { dryRunWith } from './domain/api/dryRun.js'
+import { statsWith } from './domain/api/perf.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -55,6 +52,9 @@ async function readFile (file) {
 
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
+
+  const setTimeout = (...args) => lt.setTimeout(...args)
+  const clearTimeout = (...args) => lt.clearTimeout(...args)
 
   const { locate } = schedulerUtilsConnect({
     cacheSize: 100,
@@ -80,6 +80,10 @@ export const createApis = async (ctx) => {
   const DB_URL = `${ctx.DB_URL}.sqlite`
   const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
 
+  const BROADCAST = 'workers'
+  const workerBroadcast = new BroadcastChannel(BROADCAST).unref()
+  const broadcastCloseStream = (streamId) => workerBroadcast.postMessage({ type: 'close-stream', streamId })
+
   const onCreateWorker = (type) => () => {
     const workerId = randomBytes(8).toString('hex')
     ctx.logger('Spinning up "%s" pool worker with id "%s"...', type, workerId)
@@ -87,12 +91,16 @@ export const createApis = async (ctx) => {
     return {
       workerThreadOpts: {
         workerData: {
+          BROADCAST,
           WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
           WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
           WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
           ARWEAVE_URL: ctx.ARWEAVE_URL,
           DB_URL,
-          id: workerId
+          id: workerId,
+          MODE: ctx.MODE,
+          LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
+          DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL
         }
       }
     }
@@ -125,7 +133,8 @@ export const createApis = async (ctx) => {
     Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
   )
 
-  const primaryWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
+  const worker = join(__dirname, 'effects', 'worker', 'evaluator', 'index.js')
+  const primaryWorkerPool = workerpool.pool(worker, {
     maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
   })
@@ -135,7 +144,7 @@ export const createApis = async (ctx) => {
     1,
     Math.floor(ctx.WASM_EVALUATION_MAX_WORKERS * (1 - (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100)))
   )
-  const dryRunWorkerPool = workerpool.pool(join(__dirname, 'worker', 'evaluator', 'index.js'), {
+  const dryRunWorkerPool = workerpool.pool(worker, {
     maxWorkers: maxDryRunWorkerTheads,
     onCreateWorker: onCreateWorker('dry-run'),
     maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE
@@ -166,6 +175,7 @@ export const createApis = async (ctx) => {
   const writeProcessMemoryFile = AoProcessClient.writeProcessMemoryFileWith({
     DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
     writeFile,
+    renameFile,
     mkdir
   })
 
@@ -182,6 +192,7 @@ export const createApis = async (ctx) => {
      */
     DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR,
     writeFile,
+    renameFile,
     mkdir
   })
 
@@ -203,7 +214,7 @@ export const createApis = async (ctx) => {
     readProcessMemoryFile,
     queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: ctx.logger }),
     queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger: ctx.logger }),
-    hashWasmMemory: WasmClient.hashWasmMemory,
+    hashWasmMemory: WasmClient.hashWasmMemoryWith({ logger: ctx.logger }),
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
     writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({ db: sqlite }),
@@ -222,8 +233,8 @@ export const createApis = async (ctx) => {
     TTL: ctx.PROCESS_MEMORY_CACHE_TTL,
     writeProcessMemoryFile,
     logger: ctx.logger,
-    setTimeout: (...args) => lt.setTimeout(...args),
-    clearTimeout: (...args) => lt.clearTimeout(...args)
+    setTimeout,
+    clearTimeout
   })
 
   const loadWasmModule = WasmClient.loadWasmModuleWith({
@@ -334,7 +345,18 @@ export const createApis = async (ctx) => {
            * prep work is deferred until the work queue tasks is executed
            */
           .then(prep)
-          .then(([args, options]) => primaryWorkerPool.exec('evaluate', [args], options))
+          .then(([args, options]) => {
+            /**
+             * TODO: is this the best place for this?
+             *
+             * It keeps it abstracted away from business logic,
+             * and tied to the specific evaluator, so seems kosher,
+             * but also feels kind of misplaced
+             */
+            if (args.close) return broadcastCloseStream(args.streamId)
+
+            return primaryWorkerPool.exec('evaluate', [args], options)
+          })
       ),
       logger
     }),
@@ -362,6 +384,8 @@ export const createApis = async (ctx) => {
   const dryRunLogger = ctx.logger.child('dryRun')
   const dryRun = dryRunWith({
     ...sharedDeps(dryRunLogger),
+    setTimeout,
+    clearTimeout,
     loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger }),
     /**
      * Dry-runs use a separate worker thread pool, so as to not block
@@ -377,7 +401,18 @@ export const createApis = async (ctx) => {
           .then(prep)
           .then(([args, options]) =>
             Promise.resolve()
-              .then(() => dryRunWorkerPool.exec('evaluate', [args], options))
+              .then(() => {
+                /**
+                 * TODO: is this the best place for this?
+                 *
+                 * It keeps it abstracted away from business logic,
+                 * and tied to the specific evaluator, so seems kosher,
+                 * but also feels kind of misplaced
+                 */
+                if (args.close) return broadcastCloseStream(args.streamId)
+
+                return dryRunWorkerPool.exec('evaluate', [args], options)
+              })
               .catch((err) => {
                 /**
                  * Hack to detect when the max queue size is being exceeded and to reject

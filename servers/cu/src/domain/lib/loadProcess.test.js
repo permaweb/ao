@@ -2,12 +2,11 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
-import { COLLATION_SEQUENCE_MIN_CHAR } from '../client/sqlite.js'
+import { createTestLogger } from '../logger.js'
 import { loadProcessWith } from './loadProcess.js'
 
 const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadProcess', () => {
   test('appends result, from, fromCron, fromBlockHeight and evaluatedAt to ctx', async () => {
@@ -22,7 +21,7 @@ describe('loadProcess', () => {
         nonce: undefined,
         blockHeight: undefined,
         cron: undefined,
-        ordinate: COLLATION_SEQUENCE_MIN_CHAR
+        ordinate: '0'
       }),
       saveLatestProcessMemory: async () => assert.fail('should not be called on cold_start'),
       logger
@@ -33,7 +32,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.result, { Memory: null })
     assert.equal(res.from, undefined)
     assert.equal(res.fromCron, undefined)
-    assert.equal(res.ordinate, COLLATION_SEQUENCE_MIN_CHAR)
+    assert.equal(res.ordinate, '0')
     assert.equal(res.fromBlockHeight, undefined)
     assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)

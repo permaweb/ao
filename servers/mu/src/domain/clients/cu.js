@@ -11,6 +11,21 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
     logger
   })
 
+  /**
+   * result (fetchResult)
+   * Given a tx-id and a processId, retrieve the result of that tx from the CU
+   *
+   * @param txId - the tx-id to query
+   * @param processId - the processId to query
+   * @param logId - The logId to aggregate the logs by
+   *
+   * @returns
+   * Messages - An array of messages to be pushed
+   * Assignments - An array of assignments to be pushed
+   * Spawns - An array of spawns to be pushed
+   * Output - The message's output
+   * GasUsed - The gas used to process the current message
+   */
   return async (txId, processId, logId) => {
     logger({ log: `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
 
@@ -38,6 +53,9 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
       }
     )
       .then((res) => res.json())
+      .then((res) => {
+        return res
+      })
       .then(
         (res) =>
           res || {
@@ -66,6 +84,17 @@ function fetchCronWith ({ fetch, histogram, CU_URL, logger }) {
     }),
     logger
   })
+  /**
+   * fetchCron
+   * Given a process and a cursor, fetch the cron from the CU
+   *
+   * @param processId - The process to fetch the cron of
+   * @param cursor - The cursor to begin at
+   *
+   * @returns
+   * hasNextPage - whether the cron results has another page
+   * edges - an array of cron output. Includes Messages, Assignments, Spawns, and Output
+   */
   return async ({ processId, cursor }) => {
     let requestUrl = `${CU_URL}/cron/${processId}`
     if (cursor) {

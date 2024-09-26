@@ -59,13 +59,15 @@ impl Uploader for UploaderClient {
 
         spawn(async move {
             let client = Client::new();
+            let mut delay = Duration::from_secs(1);
+            let max_delay = Duration::from_secs(32);
 
-            for _attempt in 0..100 {
+            for attempt in 0..100 {
                 let response = client
                     .post(
                         node_url_clone
                             .join(&format!("tx/{}", "arweave".to_string()))
-                            .expect("Failed to join URL"), // Handle URL joining error
+                            .expect("Failed to join URL"),
                     )
                     .header("Content-Type", "application/octet-stream")
                     .body(tx_clone.clone())
@@ -74,21 +76,27 @@ impl Uploader for UploaderClient {
 
                 match response {
                     Ok(resp) if resp.status().is_success() => {
-                        // Handle success
                         logger_clone.log("Upload successful".to_string());
-                        break; // Exit the loop on success
+                        break;
                     }
                     Ok(resp) => {
-                        // Handle non-success HTTP status
                         logger_clone.error(format!("Non-success status: {}", resp.status()));
-                        sleep(Duration::from_secs(1)).await;
                     }
                     Err(e) => {
-                        // Handle request error
                         logger_clone.error(format!("Request error: {}", e));
-                        sleep(Duration::from_secs(1)).await;
                     }
                 }
+
+                // Exponential backoff logic
+                logger_clone.log(format!(
+                    "Attempt {} failed, retrying in {:?}",
+                    attempt + 1,
+                    delay
+                ));
+                sleep(delay).await;
+
+                // Double the delay for the next attempt, but don't exceed the max delay
+                delay = (delay * 2).min(max_delay);
             }
         });
 

@@ -1,11 +1,11 @@
-import { workerData } from 'node:worker_threads'
+import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { hostname } from 'node:os'
 
 import { fetch, setGlobalDispatcher, Agent } from 'undici'
 import { worker, Transfer } from 'workerpool'
 
-import { createLogger } from '../../logger.js'
-import { arrayBufferFromMaybeView } from '../../utils.js'
+import { createLogger } from '../../../domain/logger.js'
+import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
 
 import { createApis } from './main.js'
 
@@ -16,13 +16,22 @@ setGlobalDispatcher(new Agent({
   keepAliveMaxTimeout: 10 * 60 * 1000 // 10 mins
 }))
 
-const logger = createLogger(`ao-cu:${hostname()}:worker-${workerData.id}`)
+const logger = createLogger({ ...workerData, name: `ao-cu:${hostname()}:worker-${workerData.id}` })
 
 const apis = await createApis({
   ...workerData,
   fetch,
   logger
 })
+
+const broadcast = new BroadcastChannel(workerData.BROADCAST)
+
+broadcast.onmessage = (event) => {
+  const data = event.data
+  if (data.type === 'close-stream') return apis.close(data.streamId)
+
+  logger.warn('Unrecognized event type "%s". Doing nothing...', data.type)
+}
 
 /**
  * Expose our worker api

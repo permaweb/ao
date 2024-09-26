@@ -1,6 +1,7 @@
 import { Resolved, fromPromise } from 'hyper-async'
 import z from 'zod'
 import { checkStage } from '../utils.js'
+import { writeAssignmentSchema } from '../dal.js'
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -12,7 +13,7 @@ const ctxSchema = z.object({
 export function writeAssignWith (env) {
   let { logger, writeAssignment } = env
 
-  writeAssignment = fromPromise(writeAssignment)
+  writeAssignment = fromPromise(writeAssignmentSchema.implement(writeAssignment))
 
   return (ctx) => {
     if (!checkStage('write-assign')(ctx)) return Resolved(ctx)

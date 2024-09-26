@@ -4,7 +4,7 @@ import { z } from 'zod'
 import Arweave from 'arweave'
 import WarpArBundles from 'warp-arbundles'
 
-import { joinUrl } from '../utils.js'
+import { joinUrl } from '../domain/utils.js'
 
 const { createData, ArweaveSigner } = WarpArBundles
 
@@ -191,7 +191,7 @@ export function uploadDataItemWith ({ UPLOADER_URL, fetch, logger }) {
         })
       ))
       .bimap(
-        logger.tap('Error while communicating with uploader:'),
+        logger.tap('Error while communicating with uploader: %O'),
         identity
       )
       .bichain(

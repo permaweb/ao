@@ -5,16 +5,16 @@ import { readFileSync } from 'node:fs'
 
 import AoLoader from '@permaweb/ao-loader'
 
-import { findModuleSchema, saveModuleSchema } from '../dal.js'
+import { findModuleSchema, saveModuleSchema } from '../domain/dal.js'
 import {
   evaluatorWith,
   findModuleWith,
   saveModuleWith
 } from './ao-module.js'
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../domain/logger.js'
 import { MODULES_TABLE } from './sqlite.js'
 
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('ao-module', () => {
   describe('findModule', () => {

@@ -53,7 +53,7 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
   saveModule = fromPromise(saveModuleSchema.implement(saveModule))
 
   function loadFromGateway (moduleId) {
-    logger.tap('Could not find module in db. Loading from gateway...')
+    logger('Could not find module "%s" in db. Loading from gateway...', moduleId)
 
     return of(moduleId)
       .chain(loadTransactionMeta)
@@ -65,8 +65,8 @@ function getModuleWith ({ findModule, saveModule, loadTransactionMeta, logger })
       .chain((module) =>
         saveModule(module)
           .bimap(
-            logger.tap('Could not save module to db. Nooping'),
-            logger.tap('Saved module')
+            logger.tap('Could not save module to db. Nooping: %O'),
+            logger.tap('Saved module "%s"')
           )
           .bichain(
             always(Resolved(module)),

@@ -1,6 +1,7 @@
 const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
+const Emscripten4 = require('./formats/emscripten4.cjs')
 const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 
 /* eslint-enable */
@@ -101,14 +102,19 @@ module.exports = async function (binary, options) {
     instance = await Emscripten2(binary, options)
   } else if (options.format === "wasm32-unknown-emscripten3") {
     instance = await Emscripten3(binary, options)
-  } else if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
+  } else {
+
     if (typeof binary === "function") {
       options.instantiateWasm = binary
     } else {
       options.wasmBinary = binary
     }
 
-    instance = await Wasm64(options)
+    if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
+      instance = await Wasm64(options)
+    } else if (options.format === "wasm32-unknown-emscripten4") {
+      instance = await Emscripten4(binary, options)
+    }
 
     await instance['FS_createPath']('/', 'data')
 
@@ -131,7 +137,7 @@ module.exports = async function (binary, options) {
   if (instance.cleanupListeners) {
     instance.cleanupListeners()
   }
-  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15") {
+  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15" && options.format !== "wasm32-unknown-emscripten4") {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }
 

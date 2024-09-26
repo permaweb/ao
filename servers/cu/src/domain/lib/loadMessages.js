@@ -1,7 +1,7 @@
 import { Transform, compose as composeStreams } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, identity, ifElse, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
+import { T, always, ascend, cond, equals, identity, ifElse, isNil, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
 import { z } from 'zod'
 import ms from 'ms'
 
@@ -369,6 +369,97 @@ function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   }
 }
 
+export function maybePrependProcessMessage (ctx, logger) {
+  return async function * ($messages) {
+    const isColdStart = isNil(ctx.from)
+
+    /**
+     * Generate and emit a message that represents the process itself
+     * if the Process was started before the aop6 Boot Loader change
+     *
+     * It will be the first message evaluated by the module
+     */
+
+    const messages = $messages[Symbol.asyncIterator]()
+
+    /**
+     * { value: any, done: boolean }
+     */
+    let message = await messages.next()
+
+    if (isColdStart) {
+      const { value, done } = message
+      /**
+       * This condition is to handle 3 cases. Before aop6 ECHO Boot loader,
+       * The first Message in a stream will be an actual Message. But after
+       * aop6 the first Message is now the process itself, shaped like a Message
+       *
+       * As a result, old Processes that were started before the boot loader
+       * change, can either 1. have no Messages, 2. have the first Message with a tag
+       * of type Message, as opposed to Process, Or 3. an old Process can have a its
+       * first Message be a Cron. In these cases on a cold start we need to
+       * inject the Process as the first Message in the stream, as was done
+       * prior to the Boot Loader change.
+       *
+       * See https://github.com/permaweb/ao/issues/730
+       */
+      if (done || (parseTags(value.message.Tags).Type !== 'Process') || value.message.Cron) {
+        logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
+        yield {
+          /**
+           * Ensure the noSave flag is set, so evaluation does not persist
+           * this process message
+           */
+          noSave: true,
+          ordinate: '0',
+          name: `Process Message ${ctx.id}`,
+          message: {
+            Id: ctx.id,
+            Signature: ctx.signature,
+            Data: ctx.data,
+            Owner: ctx.owner,
+            /**
+             * the target of the process message is itself
+             */
+            Target: ctx.id,
+            Anchor: ctx.anchor,
+            /**
+             * Since a process may be spawned from another process,
+             * the owner may not always be an "end user" wallet,
+             * but the MU wallet that signed and pushed the spawn.
+             *
+             * The MU sets From-Process on any data item it pushes
+             * on behalf of a process, including spawns.
+             *
+             * So we can set From here using the Process tags
+             * and owner, just like we do for any other message
+             */
+            From: mapFrom({ tags: ctx.tags, owner: ctx.owner }),
+            Tags: ctx.tags,
+            Epoch: undefined,
+            Nonce: undefined,
+            Timestamp: ctx.block.timestamp,
+            'Block-Height': ctx.block.height,
+            Cron: false
+          },
+          AoGlobal: {
+            Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags },
+            Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
+          }
+        }
+      }
+    }
+
+    /**
+     * Emit the merged stream of Cron and Scheduled Messages
+     */
+    while (!message.done) {
+      yield message.value
+      message = await messages.next()
+    }
+  }
+}
+
 function loadScheduledMessagesWith ({ loadMessages, logger }) {
   loadMessages = fromPromise(loadMessagesSchema.implement(loadMessages))
 
@@ -420,7 +511,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
        * producing a single merged stream
        */
       return loadTimestamp({ processId: ctx.id, suUrl: ctx.suUrl })
-        .map(logger.tap('loaded current timestamp from SU'))
+        .map(logger.tap('loaded current timestamp from SU: %j'))
         /**
          * In order to generate cron messages and merge them with the
          * scheduled messages, we must first determine our boundaries, which is to say,
@@ -606,94 +697,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
     .map($messages => {
       return composeStreams(
         $messages,
-        Transform.from(async function * maybeEmitColdStart ($messages) {
-          const isColdStart = !ctx.from
-
-          /**
-           * Generate and emit a message that represents the process itself
-           * if the Process was started before the aop6 Boot Loader change
-           *
-           * It will be the first message evaluated by the module
-           */
-
-          const messages = $messages[Symbol.asyncIterator]()
-
-          /**
-           * { value: any, done: boolean }
-           */
-          let message = await messages.next()
-
-          if (isColdStart) {
-            const { value, done } = message
-            /**
-             * This condition is to handle 3 cases. Before aop6 ECHO Boot loader,
-             * The first Message in a stream will be an actual Message. But after
-             * aop6 the first Message is now the process itself, shaped like a Message
-             *
-             * As a result, old Processes that were started before the boot loader
-             * change, can either 1. have no Messages, 2. have the first Message with a tag
-             * of type Message, as opposed to Process, Or 3. an old Process can have a its
-             * first Message be a Cron. In these cases on a cold start we need to
-             * inject the Process as the first Message in the stream, as was done
-             * prior to the Boot Loader change.
-             *
-             * See https://github.com/permaweb/ao/issues/730
-             */
-            if (done || (parseTags(value.message.Tags).Type !== 'Process') || value.message.Cron) {
-              logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
-              yield {
-                /**
-                 * Ensure the noSave flag is set, so evaluation does not persist
-                 * this process message
-                 */
-                noSave: true,
-                ordinate: '^',
-                name: `Process Message ${ctx.id}`,
-                message: {
-                  Id: ctx.id,
-                  Signature: ctx.signature,
-                  Data: ctx.data,
-                  Owner: ctx.owner,
-                  /**
-                   * the target of the process message is itself
-                   */
-                  Target: ctx.id,
-                  Anchor: ctx.anchor,
-                  /**
-                   * Since a process may be spawned from another process,
-                   * the owner may not always be an "end user" wallet,
-                   * but the MU wallet that signed and pushed the spawn.
-                   *
-                   * The MU sets From-Process on any data item it pushes
-                   * on behalf of a process, including spawns.
-                   *
-                   * So we can set From here using the Process tags
-                   * and owner, just like we do for any other message
-                   */
-                  From: mapFrom({ tags: ctx.tags, owner: ctx.owner }),
-                  Tags: ctx.tags,
-                  Epoch: undefined,
-                  Nonce: undefined,
-                  Timestamp: ctx.block.timestamp,
-                  'Block-Height': ctx.block.height,
-                  Cron: false
-                },
-                AoGlobal: {
-                  Process: { Id: ctx.id, Owner: ctx.owner, Tags: ctx.tags },
-                  Module: { Id: ctx.moduleId, Owner: ctx.moduleOwner, Tags: ctx.moduleTags }
-                }
-              }
-            }
-          }
-
-          /**
-           * Emit the merged stream of Cron and Scheduled Messages
-           */
-          while (!message.done) {
-            yield message.value
-            message = await messages.next()
-          }
-        })
+        Transform.from(maybePrependProcessMessage(ctx, logger))
       )
     })
     .map(messages => ({ messages }))

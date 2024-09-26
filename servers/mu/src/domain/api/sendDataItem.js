@@ -7,6 +7,7 @@ import { pullResultWith } from '../lib/pull-result.js'
 import { parseDataItemWith } from '../lib/parse-data-item.js'
 import { verifyParsedDataItemWith } from '../lib/verify-parsed-data-item.js'
 import { writeProcessTxWith } from '../lib/write-process-tx.js'
+import { locateProcessSchema } from '../dal.js'
 
 /**
  * Forward along the DataItem to the SU,
@@ -24,7 +25,8 @@ export function sendDataItemWith ({
   crank,
   logger,
   fetchSchedulerProcess,
-  writeDataItemArweave
+  writeDataItemArweave,
+  spawnPushEnabled
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -33,7 +35,7 @@ export function sendDataItemWith ({
   const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
 
-  const locateProcessLocal = fromPromise(locateProcess)
+  const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
 
   /**
      * If the data item is a Message, then cranking and tracing
@@ -89,43 +91,87 @@ export function sendDataItemWith ({
     )
 
   /**
-     * Simply write the process to the SU
-     * and return a noop crank
-     */
+   * If the Data Item is a Process, we push an Assignment
+   * if the target is present. And as per aop6 Boot Loader
+   * a result is also pulled from the CU for the process id.
+   *
+   * see https://github.com/permaweb/ao/issues/730
+   */
   const sendProcess = (ctx) => of(ctx)
     .map(logger.tap({ log: 'Sending process...' }))
     .chain(writeProcess)
     .map((res) => ({
       ...res,
       /**
-         * There is nothing to crank for a process sent to the MU,
-         * so the crank method will simply noop, keeping the behavior
-         * a black box - unless there is an Target tag on the spawn.
-         */
+       * If there is a Target tag on the spawn, push an Assignment.
+       * In all cases for new processes, a result will be called on the
+       * CU for the process id itself, in order to trigger an initial
+       * boot loader evaluation.
+       */
       crank: () => of({ res })
         .chain(({ res }) => {
+          if (!spawnPushEnabled) {
+            return Resolved({
+              ...res,
+              msgs: [],
+              spawns: [],
+              assigns: [],
+              initialTxId: res.initialTxId
+            })
+          }
+          /**
+           * Override the processId fields of tx and res, because parse-data-item sets it
+           * to the target, but on a spawn we want it to be the id of the Data Item
+           *
+           * This is so getCuAddress and pullResult both operate properly.
+           */
+          return of({ ...res, tx: { ...res.tx, processId: res.tx.id }, processId: res.tx.id, initialTxId: res.tx.id })
+            .chain(getCuAddress)
+            .chain(pullResult)
+        })
+        .chain((res) => {
           const hasTarget = Boolean(res.dataItem.target)
           if (hasTarget) {
             return Rejected({ res })
           }
-          return Resolved()
+          return Resolved({ res })
         })
-        .bichain(({ res }) => {
-          const assigns = [{ Message: res.dataItem.id, Processes: [res.dataItem.target] }]
-          return crank({
-            msgs: [],
-            spawns: [],
-            assigns,
-            initialTxId: res.tx.id
-          })
-        }, Resolved)
+        .bichain(
+          ({ res }) => {
+            /**
+             * If there is a target add this assignment
+             */
+            const assigns = [
+              { Message: res.dataItem.id, Processes: [res.dataItem.target] },
+              ...res.assigns
+            ]
+            return crank({
+              msgs: res.msgs,
+              spawns: res.spawns,
+              assigns,
+              initialTxId: res.tx.id
+            })
+          },
+          ({ res }) => {
+            /**
+             * If no target just push the result of the boot loader
+             * result call
+             */
+            return crank({
+              msgs: res.msgs,
+              spawns: res.spawns,
+              assigns: res.assigns,
+              initialTxId: res.tx.id
+            })
+          }
+        )
         .bimap(
           (res) => {
             logger({ log: 'Assignments pushed for Process DataItem.', end: true }, ctx)
             return res
           },
           (res) => {
-            logger({ log: 'No pushing for a Process DataItem without target required. Nooping...', end: true }, ctx)
+            logger({ log: 'No pushing an Assignment for a Process DataItem without target required.', end: true }, ctx)
             return res
           }
         )
@@ -134,6 +180,9 @@ export function sendDataItemWith ({
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
+      .map((ctx) => {
+        return ctx
+      })
       .chain((ctx) =>
         verifyParsedDataItem(ctx.dataItem)
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))

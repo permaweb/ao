@@ -9,8 +9,8 @@ import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
 
-import { isEarlierThan, isEqualTo, isJsonString, isLaterThan, maybeParseInt, parseTags } from '../utils.js'
-import { processSchema } from '../model.js'
+import { isEarlierThan, isEqualTo, isJsonString, isLaterThan, maybeParseInt, parseTags } from '../domain/utils.js'
+import { processSchema } from '../domain/model.js'
 import { PROCESSES_TABLE, CHECKPOINTS_TABLE, CHECKPOINT_FILES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
 import { timer } from './metrics.js'
 
@@ -472,17 +472,26 @@ export function readProcessMemoryFileWith ({ DIR, readFile }) {
   }
 }
 
-export function writeProcessMemoryFileWith ({ DIR, writeFile, mkdir }) {
+export function writeProcessMemoryFileWith ({ DIR, writeFile, renameFile, mkdir }) {
   return ({ Memory, evaluation }) => {
-    const file = `state-${evaluation.processId}.dat`
+    const dest = `state-${evaluation.processId}.dat`
+    const tmp = `${dest}.tmp`
 
-    return lock.acquire(file, () => {
-      const { stop: stopTimer } = timer('writeProcessMemoryFile', { file })
-      const path = join(DIR, file)
+    return lock.acquire(dest, () => {
+      const { stop: stopTimer } = timer('writeProcessMemoryFile', { file: tmp })
 
+      const tmpPath = join(DIR, tmp)
+      const destPath = join(DIR, dest)
+      /**
+       * By first writing to a temp file, we prevent corrupting a previous file checkpoint
+       * if for whatever reason the writing is not successful ie. node process is terminated
+       *
+       * Then we rename the tmp to the dest file, effectively overwriting it, atomically.
+       */
       return mkdir(DIR, { recursive: true })
-        .then(() => writeFile(path, Memory))
-        .then(() => file)
+        .then(() => writeFile(tmpPath, Memory))
+        .then(() => renameFile(tmpPath, destPath))
+        .then(() => dest)
         .finally(stopTimer)
     })
   }
@@ -1668,7 +1677,7 @@ export function saveCheckpointWith ({
         return createCheckpointDataItem(args)
           .chain((dataItem) => uploadDataItem(dataItem.data))
           .bimap(
-            logger.tap('Failed to upload Checkpoint DataItem'),
+            logger.tap('Failed to upload Checkpoint DataItem, %O'),
             (res) => {
               logger(
                 'Successfully uploaded Checkpoint DataItem for process "%s" on evaluation "%j"',

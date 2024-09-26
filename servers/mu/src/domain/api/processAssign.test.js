@@ -25,12 +25,21 @@ describe('processAssignWith', () => {
         assert.equal(processId, 'pid-1')
         return { url: 'https://foo.bar' }
       },
-      fetchResult: async (txId, processId) => {
+      fetchResult: async (txId, processId, logId) => {
         assert.equal(txId, 'id-2')
         assert.equal(processId, 'pid-1')
         return {
           Messages: [
-            { id: 'return-message-id' }
+            {
+              Tags: [
+                {
+                  name: 'return-message-tag-name',
+                  value: 'return-message-tag-value'
+                }
+              ],
+              Target: 'target-1',
+              Anchor: '00000001'
+            }
           ],
           Spawns: [],
           Assignments: [],
@@ -45,11 +54,19 @@ describe('processAssignWith', () => {
         txId: 'id-1',
         processId: 'pid-1'
       },
-      initialTxId: 'initial-id'
+      initialTxId: 'initial-id',
+      logId: 'log-123'
     }).toPromise()
 
     assert.deepStrictEqual(result.msgs[0].msg, {
-      id: 'return-message-id'
+      Tags: [
+        {
+          name: 'return-message-tag-name',
+          value: 'return-message-tag-value'
+        }
+      ],
+      Target: 'target-1',
+      Anchor: '00000001'
     })
   })
 })

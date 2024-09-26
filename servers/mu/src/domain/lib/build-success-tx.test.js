@@ -31,8 +31,7 @@ describe('buildSuccessTx', () => {
             { name: 'Variant', value: 'ao.TN.1' },
             { name: 'Type', value: 'Message' },
             { name: 'Process', value: 'pid-2' },
-            { name: 'Action', value: 'Spawned' },
-            { name: 'AO-Spawn-Success', value: 'pid-2' }
+            { name: 'Action', value: 'Spawned' }
           ]
         )
         return {

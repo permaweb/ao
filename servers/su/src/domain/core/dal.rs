@@ -60,6 +60,7 @@ pub trait ScheduleProvider {
 pub trait Config: Send + Sync {
     fn mode(&self) -> String;
     fn scheduler_list_path(&self) -> String;
+    fn enable_process_assignment(&self) -> bool;
 }
 
 #[derive(Debug)]
@@ -90,7 +91,7 @@ pub enum StoreErrorType {
 #[async_trait]
 pub trait DataStore: Send + Sync {
     fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType>;
-    fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType>;
+    async fn get_process(&self, process_id_in: &str) -> Result<Process, StoreErrorType>;
     async fn save_message(
         &self,
         message: &Message,
@@ -98,7 +99,7 @@ pub trait DataStore: Send + Sync {
     ) -> Result<String, StoreErrorType>;
     async fn get_messages(
         &self,
-        process_id_in: &str,
+        process: &Process,
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
@@ -118,16 +119,16 @@ pub trait DataStore: Send + Sync {
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType>;
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType>;
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
-    fn check_existing_message(&self, message: &Message) -> Result<(), StoreErrorType>;
+    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
 }
 
 pub trait CoreMetrics: Send + Sync {
     fn get_process_observe(&self, duration: u128);
     fn get_message_observe(&self, duration: u128);
     fn get_messages_observe(&self, duration: u128);
-    fn serialize_json_observe(&self, duration: u128);
     fn read_message_data_observe(&self, duration: u128);
     fn write_item_observe(&self, duration: u128);
     fn write_assignment_observe(&self, duration: u128);
     fn acquire_write_lock_observe(&self, duration: u128);
+    fn failed_message_save(&self);
 }

@@ -1,7 +1,7 @@
 /* global Deno */
 
 import { Command, basename, resolve, parse } from '../deps.js'
-import { hostArgs, tagsArg } from '../utils.js'
+import { hostArgs, bundlerArgs, tagsArg } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
@@ -95,12 +95,13 @@ async function GetMemoryLimit () {
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
-export async function publish ({ wallet, host, tag, value }, contractWasmPath) {
+
+export async function publish ({ wallet, bundler, tag, value }, contractWasmPath) {
   tag.push('Memory-Limit')
   value.push(await GetMemoryLimit())
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...hostArgs(host),
+    ...bundlerArgs(bundler),
     ...contractSourceArgs(contractWasmPath),
     ...tagsArg({ tags: tag, values: value })
   ]

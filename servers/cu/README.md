@@ -8,7 +8,8 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
 - [Tests](#tests)
-- [Debug Logging](#debug-logging)
+- [Logging](#logging)
+  - [Dynamically Change the Log Level](#dynamically-change-the-log-level)
 - [Manually Trigger Checkpointing](#manually-trigger-checkpointing)
 - [Project Structure](#project-structure)
   - [Business Logic](#business-logic)
@@ -83,7 +84,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_WASM_SUPPORTED_EXTENSIONS`: the wasm extensions that this CU
   supports, as a comma-delimited string (defaults to no extensions)
 - `WASM_EVALUATION_MAX_WORKERS`: The number of workers to use for evaluating
-  messages (Defaults to `3`)
+  messages (Defaults to `os.cpus() - 1`)
 - `WASM_BINARY_FILE_DIRECTORY`: The directory to cache wasm binaries downloaded
   from arweave. (Defaults to the os temp directory)
 - `WASM_MODULE_CACHE_MAX_SIZE`: The maximum size of the in-memory cache used for
@@ -101,6 +102,8 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_FILE_CHECKPOINTS_DIR`: The directory to store process memory
   associated with file checkpoints. Process file checkpoints will persist across
   CU restarts (defaults to os tmp directory `/file_checkpoints`)
+- `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store drained process memory
+  (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
   should Checkpoint all processes stored in it's cache. Set to `0` to disabled
   (defaults to `0`)
@@ -136,18 +139,49 @@ There are a few environment variables that you can set. Besides
   execute on the CU aka. an owner `whitelist` (defaults to allow all owners)
 - `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are
   trusted and the CU can start from
+- `DEFAULT_LOG_LEVEL`: the logging level to use (defaults to `debug`)
+- `LOG_CONFIG_PATH`: the path to the file used to dynamically set the logging level (see [here](#dynamically-change-the-log-level))
 
 ## Tests
 
 You can execute unit tests by running `npm test`
 
-## Debug Logging
+## Logging
 
-You can enable verbose debug logging on the Server, by setting the `DEBUG`
-environment variable to the scope of logs you're interested in
+The CU uses logging levels that conform to the severity semantics specified by
+RFC5424:
 
-All logging is scoped under the name `ao-cu*`. You can use wildcards to enable a
-subset of logs ie. `ao-cu:readState*`
+> severity of all levels is assumed to be **numerically ascending from most
+> important to least important**.
+
+The CU uses these logging levels:
+
+```js
+{
+  error: 0,
+  warn: 1,
+  info: 2,
+  http: 3,
+  verbose: 4,
+  debug: 5,
+  silly: 6
+}
+```
+
+You can set your desired logging level by setting the `DEFAULT_LOG_LEVEL`
+environment variable.
+
+### Dynamically Change the Log Level
+
+If you'd like to dynamically change the log level on a running CU, you may set
+the desired level in a `.loglevel` file in the working directory. The CU will
+automatically adjust its logging level accordingly, for all new logs.
+
+If the `.loglevel` file does not exist, is empty, the logging level will be reset
+to the `DEFAULT_LOG_LEVEL`.
+
+> You can also specify the `LOG_CONFIG_PATH` environment variable to configure
+> a different file to use for dynamically setting the log level
 
 ## Manually Trigger Checkpointing
 
@@ -178,11 +212,10 @@ Driving Adapter <--> [Port(Business Logic)Port] <--> Driven Adapter
 ### Business Logic
 
 All business logic is in `src/domain` where each public api is implemented,
-tested, and exposed via a `index.js` (see [Entrypoint](#entrypoint))
+tested, and exposed via a `domain/api/*.js`
 
-`/domain/lib` contains all of the business logic steps that can be composed into
-public apis (ie. `domain/readState.js`, `domain/readResults.js`, and
-`domain/readScheduledMessages.js`)
+`domain/lib` contains all of the business logic steps that can be composed into
+public apis (ie. `apis/readState.js`, `apis/readResults.js`)
 
 `dal.js` contains the contracts for the driven adapters aka side-effects.
 Implementations for those contracts are injected into, then parsed and invoked
@@ -197,19 +230,20 @@ API. Thus our unit tests are simoultaneously contract tests.
 
 #### Driven Adapters
 
-All driven adapters are located in `/domain/client`
+All driven adapters are located in `effects`
 
-`domain/client` contains implementations, of the contracts in `dal.js`, for
-various platforms. The unit tests for the implementations in `client` also
-import contracts from `dal.js` to help ensure that the implementation properly
+`effects` contains implementations, of the contracts in `dal.js`, for
+various platforms. The unit tests for the implementations in `effects` also
+import contracts from `domain/dal.js` to help ensure that the implementation properly
 satisfies the API.
 
 #### Entrypoint
 
-Finally, the entrypoint `/domain/index.js` sets up the appropriate
-implementations from `client` and injects them into the public apis.
+Finally, the entrypoint `bootstrap.js` sets up the appropriate
+implementations from `effects` and injects them into the public apis from `domain/apis`.
 
-Anything outside of domain should only ever import from `domain/index.js`.
+Anything outside of domain should only ever import from the top level of `domain/*` or
+`domain/apis/*`.
 
 ### Routes
 

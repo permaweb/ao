@@ -20,6 +20,10 @@ pub struct AoConfig {
     pub db_write_connections: u32,
     pub db_read_connections: u32,
     pub enable_metrics: bool,
+    pub max_read_memory: usize,
+    pub process_cache_size: usize,
+    pub enable_process_assignment: bool,
+    pub arweave_url_list: Vec<String>
 }
 
 impl AoConfig {
@@ -65,6 +69,27 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
+        let max_read_memory = match env::var("MAX_READ_MEMORY") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 1_073_741_824,
+        };
+        let process_cache_size = match env::var("PROCESS_CACHE_SIZE") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 20000,
+        };
+        let enable_process_assignment = match env::var("ENABLE_PROCESS_ASSIGNMENT") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
+        let arweave_url_list: Vec<String> = match env::var("ARWEAVE_URL_LIST") {
+            Ok(val) => val.split(',')
+                          .map(|s| s.trim().to_string())
+                          .collect(),
+            Err(_e) => vec![
+                "https://arweave.net".to_string(), 
+                "https://g8way.io".to_string()
+            ],
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -80,6 +105,10 @@ impl AoConfig {
             db_write_connections,
             db_read_connections,
             enable_metrics,
+            max_read_memory,
+            process_cache_size,
+            enable_process_assignment,
+            arweave_url_list
         })
     }
 }
@@ -90,5 +119,8 @@ impl Config for AoConfig {
     }
     fn scheduler_list_path(&self) -> String {
         self.scheduler_list_path.clone()
+    }
+    fn enable_process_assignment(&self) -> bool {
+        self.enable_process_assignment.clone()
     }
 }

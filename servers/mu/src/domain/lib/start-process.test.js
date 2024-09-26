@@ -11,8 +11,8 @@ logger.tap = () => (args) => {
 describe('startWith', () => {
   test('start a process monitor', async () => {
     const start = startWith({
-      startProcessMonitor: async (process) => {
-        assert.equal(process.id, 'pid-1')
+      startProcessMonitor: async ({ processId }) => {
+        assert.equal(processId, 'pid-1')
       },
       logger
     })

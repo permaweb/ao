@@ -4,6 +4,7 @@ import { identity } from 'ramda'
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
 import { writeAssignWith } from '../lib/write-assign.js'
+import { locateProcessSchema } from '../dal.js'
 
 /**
  * Forward along the Assignment to the SU then return crank
@@ -20,7 +21,7 @@ export function sendAssignWith ({
   const pullResult = pullResultWith({ fetchResult, logger })
   const writeAssign = writeAssignWith({ writeAssignment, logger })
 
-  const locateProcessLocal = fromPromise(locateProcess)
+  const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
 
   const sendAssign = (ctx) => writeAssign(ctx)
     .bichain(

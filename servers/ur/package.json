@@ -10,12 +10,12 @@
     "test": "node --test"
   },
   "dependencies": {
-    "arbundles": "^0.11.1",
+    "arbundles": "0.11.1",
     "cors": "^2.8.5",
-    "debug": "^4.3.5",
-    "express": "^4.19.2",
-    "http-proxy-node16": "^1.0.4",
-    "lru-cache": "^11.0.0",
+    "debug": "^4.3.7",
+    "express": "^4.21.0",
+    "http-proxy-node16": "^1.0.5",
+    "lru-cache": "^11.0.1",
     "ramda": "^0.30.1",
     "zod": "^3.23.8"
   },

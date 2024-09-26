@@ -2,16 +2,16 @@
 import { describe, test, before, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { createReadStream } from 'node:fs'
+import { Readable } from 'node:stream'
 
 import { LRUCache } from 'lru-cache'
 import AoLoader from '@permaweb/ao-loader'
 
-import { createLogger } from '../logger.js'
+import { createTestLogger } from '../../domain/logger.js'
+import { wasmResponse } from '../wasm.js'
 import { evaluateWith } from './evaluate.js'
-import { Readable } from 'node:stream'
-import { wasmResponse } from '../client/wasm.js'
 
-const logger = createLogger('ao-cu:worker')
+const logger = createTestLogger({ name: 'ao-cu:worker' })
 
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
@@ -427,35 +427,6 @@ describe('evaluate', async () => {
 
         assert.equal(cache.size, 0)
       })
-    })
-
-    test('returns nothing, removes from cache if close flag received', async () => {
-      const wasmInstanceCache = new LRUCache({ max: 1 })
-      wasmInstanceCache.set('stream-123', 'foo')
-
-      const evaluate = evaluateWith({
-        saveEvaluation: async (evaluation) => evaluation,
-        wasmInstanceCache,
-        loadWasmModule: () => assert.fail('should not call if close flag received'),
-        bootstrapWasmInstance: () => assert.fail('should not call if close flag received'),
-        ARWEAVE_URL: 'https://foo.bar',
-        logger
-      })
-
-      const args = {
-        streamId: 'stream-123',
-        close: true
-      }
-
-      /**
-       * Should return undefined if close flag is received
-       */
-      const res = await evaluate(args)
-      assert.ok(!res)
-      /**
-       * Should remove stream-123 from cache, leaving size of 0 remaining.
-       */
-      assert.equal(wasmInstanceCache.size, 0)
     })
   })
 })

@@ -50,53 +50,18 @@ async fn upload(deps: &Arc<Deps>, build_result: Vec<u8>) -> Result<String, Strin
     Ok(result)
 }
 
-async fn assignment_only(
-    deps: Arc<Deps>,
-    process_id: String,
-    assign: String,
-    base_layer: Option<String>,
-    exclude: Option<String>,
-) -> Result<String, String> {
-    let start_top_level = Instant::now();
-    let builder = init_builder(&deps)?;
-
-    let start_acquire_lock = Instant::now();
-    let locked_schedule_info = deps.scheduler.acquire_lock(process_id.clone()).await?;
-    let mut schedule_info = locked_schedule_info.lock().await;
-    let elapsed_acquire_lock = start_acquire_lock.elapsed();
-    deps.metrics
-        .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
-    let updated_info = deps
-        .scheduler
-        .update_schedule_info(&mut *schedule_info, process_id.clone())
-        .await?;
-
-    let process = deps.data_store.get_process(&process_id)?;
-    let build_result = builder
-        .build_assignment(
-            assign.clone(),
-            &process,
-            &*updated_info,
-            &base_layer,
-            &exclude,
-        )
-        .await?;
-
-    let message = Message::from_bundle(&build_result.bundle)?;
-    deps.data_store
-        .save_message(&message, &build_result.binary)
-        .await?;
-    deps.logger.log(format!("saved message - {:?}", &message));
-    upload(&deps, build_result.binary.to_vec()).await?;
-    drop(schedule_info);
-
+fn id_res(deps: &Arc<Deps>, id: String, start_top_level: Instant) -> Result<String, String> {
     match system_time_u64() {
         Ok(timestamp) => {
-            let response_json =
-                json!({ "timestamp": timestamp, "id": message.assignment.id.clone() });
+            let response_json = json!({
+                "timestamp": timestamp,
+                "id": id
+            });
+
             let elapsed_top_level = start_top_level.elapsed();
             deps.metrics
-                .write_assignment_observe(elapsed_top_level.as_millis());
+                .write_item_observe(elapsed_top_level.as_millis());
+
             Ok(response_json.to_string())
         }
         Err(e) => Err(format!("{:?}", e)),
@@ -119,16 +84,106 @@ pub async fn write_item(
     exclude: Option<String>,
 ) -> Result<String, String> {
     let start_top_level = Instant::now();
+    let builder = init_builder(&deps)?;
+
+    let (target_id, data_item) = if let (Some(ref process_id), Some(_)) = (&process_id, &assign) {
+        (process_id.clone(), None)
+    } else {
+        let data_item = builder.parse_data_item(input.clone())?;
+        match data_item.tags().iter().find(|tag| tag.name == "Type") {
+            Some(type_tag) => match type_tag.value.as_str() {
+                "Process" => (data_item.id(), Some(data_item)),
+                "Message" => (data_item.target(), Some(data_item)),
+                _ => return Err("Unsupported Type tag value".to_string()),
+            },
+            None => return Err("Type tag not present".to_string()),
+        }
+    };
+
+    /*
+      Acquire the lock for a given process id. After acquiring the lock
+      we can safely increment it and start building/writing data
+
+      The locked will be dropped after data is parsed and signed so
+      that we know the item wont fail and then we will have a missing
+      Nonce
+    */
+    let start_acquire_lock = Instant::now();
+    let locked_schedule_info = deps.scheduler.acquire_lock(target_id.clone()).await?;
+    let mut schedule_info = locked_schedule_info.lock().await;
+
+    let elapsed_acquire_lock = start_acquire_lock.elapsed();
+    deps.metrics
+        .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
+
+    /*
+      Check to see if the message already exists, this
+      doesn't need to run for an assignment. If we start
+      dropping the lock after writing the database in the
+      future we need to modify this to check some sort of
+      set cache that gets set before the lock is released
+    */
+    if let Some(ref item) = data_item {
+        deps.data_store.check_existing_message(&item.id())?
+    };
+
+    /*
+      Increment the scheduling info using the locked mutable reference
+      to schedule_info
+    */
+    let next_schedule_info = deps
+        .scheduler
+        .increment(&mut *schedule_info, target_id.clone())
+        .await?;
+
     // XOR, if we have one of these, we must have both.
     if process_id.is_some() ^ assign.is_some() {
         return Err("If sending assign or process-id, you must send both.".to_string());
-    } else if let (Some(process_id), Some(assign)) = (process_id, assign) {
-        return assignment_only(deps, process_id, assign, base_layer, exclude).await;
+    } else if let (Some(process_id), Some(assign)) = (process_id.clone(), assign.clone()) {
+        let assignment = builder
+            .gen_assignment(
+                Some(assign.clone()),
+                process_id.clone(),
+                &next_schedule_info,
+                &exclude,
+            )
+            .await?;
+
+        let process = deps.data_store.get_process(&process_id).await?;
+        builder
+            .verify_assignment(&assign, &process, &base_layer)
+            .await?;
+
+        let aid = assignment.id();
+        let return_aid = assignment.id();
+        let build_result = builder.bundle_items(vec![assignment]).await?;
+        let message = Message::from_bundle(&build_result.bundle)?;
+        deps.data_store
+            .save_message(&message, &build_result.binary)
+            .await?;
+        deps.logger.log(format!("saved message - {:?}", &message));
+
+        /*
+          we set the id of the previous assignment
+          for the next message to be able to use
+          in its Hash Chain
+        */
+        deps.scheduler.commit(
+            &mut *schedule_info,
+            &next_schedule_info,
+            process_id.clone(),
+            aid,
+        );
+        drop(schedule_info);
+
+        upload(&deps, build_result.binary.to_vec()).await?;
+        return id_res(&deps, return_aid, start_top_level);
     }
 
-    let builder = init_builder(&deps)?;
-
-    let data_item = builder.parse_data_item(input.clone())?;
+    let data_item = match data_item {
+        Some(d) => d,
+        None => return Err("Unable to parse data item".to_string()),
+    };
 
     let tags = data_item.tags().clone();
     let type_tag = tags.iter().find(|tag| tag.name == "Type");
@@ -149,75 +204,97 @@ pub async fn write_item(
             }
 
             /*
-                acquire the mutex locked scheduling info for the
-                process we are creating. So if a message is written
-                while the process is still being created it will wait
-            */
-            let start_acquire_lock = Instant::now();
-            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.id()).await?;
-            let mut schedule_info = locked_schedule_info.lock().await;
-            let elapsed_acquire_lock = start_acquire_lock.elapsed();
-            deps.metrics
-                .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
-            let updated_info = deps
-                .scheduler
-                .update_schedule_info(&mut *schedule_info, data_item.id())
-                .await?;
+              If we dont enable_process_assignment, the
+              su will follow the old flow and not generate
+              an assignment for the process.
 
-            let build_result = builder.build_process(input, &*updated_info).await?;
-            upload(&deps, build_result.binary.to_vec()).await?;
-            let process = Process::from_bundle(&build_result.bundle)?;
-            deps.data_store
-                .save_process(&process, &build_result.binary)?;
-            deps.logger.log(format!("saved process - {:?}", &process));
-            drop(schedule_info);
-            match system_time_u64() {
-                Ok(timestamp) => {
-                    let response_json =
-                        json!({ "timestamp": timestamp, "id": process.process_id.clone() });
-                    let elapsed_top_level = start_top_level.elapsed();
-                    deps.metrics
-                        .write_item_observe(elapsed_top_level.as_millis());
-                    Ok(response_json.to_string())
-                }
-                Err(e) => Err(format!("{:?}", e)),
+              As a result, no process will be returned
+              in the messages list either, and the Nonce
+              will start at 0 for the first message
+            */
+            if deps.config.enable_process_assignment() {
+                match data_item.tags().iter().find(|tag| tag.name == "On-Boot") {
+                    Some(boot_tag) => match boot_tag.value.as_str() {
+                        "Data" => (),
+                        tx_id => {
+                            if !deps.gateway.check_head(tx_id.to_string()).await? {
+                              return Err("Invalid tx id for On-Boot tag".to_string());
+                            }
+                        },
+                    },
+                    None => (),
+                };
+                let assignment = builder
+                    .gen_assignment(
+                        None,
+                        data_item.id(),
+                        &next_schedule_info,
+                        &None,
+                    )
+                    .await?;
+    
+                let aid = assignment.id();
+                let did = data_item.id();
+                let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
+                let process = Process::from_bundle(&build_result.bundle)?;
+                deps.data_store
+                    .save_process(&process, &build_result.binary)?;
+                deps.logger.log(format!("saved process - {:?}", &process));
+    
+                deps.scheduler
+                    .commit(&mut *schedule_info, &next_schedule_info, did, aid);
+                drop(schedule_info);
+
+                upload(&deps, build_result.binary.to_vec()).await?;
+                return id_res(&deps, process.process.process_id.clone(), start_top_level);
+            } else {
+                let build_result = builder.build_process(input, &next_schedule_info).await?;
+                let process = Process::from_bundle_no_assign(&build_result.bundle)?;
+                deps.data_store
+                    .save_process(&process, &build_result.binary)?;
+                deps.logger.log(format!("saved process - {:?}", &process));
+
+                /*
+                  We dont commit and schedule info change here
+                  because the process is not getting a Nonce.
+                  However we dont drop the lock until the Process
+                  is successfully saved to the database
+                */
+                drop(schedule_info);
+
+                upload(&deps, build_result.binary.to_vec()).await?;
+                return id_res(&deps, process.process.process_id.clone(), start_top_level);
             }
         } else if type_tag.value == "Message" {
-            /*
-                acquire the mutex locked scheduling info for the
-                process we are writing a message to. this ensures
-                no conflicts in the schedule
-            */
-            let start_acquire_lock = Instant::now();
-            let locked_schedule_info = deps.scheduler.acquire_lock(data_item.target()).await?;
-            let mut schedule_info = locked_schedule_info.lock().await;
-            let elapsed_acquire_lock = start_acquire_lock.elapsed();
-            deps.metrics
-                .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
-            let updated_info = deps
-                .scheduler
-                .update_schedule_info(&mut *schedule_info, data_item.target())
+            let assignment = builder
+                .gen_assignment(
+                    Some(data_item.id()),
+                    data_item.target(),
+                    &next_schedule_info,
+                    &None,
+                )
                 .await?;
 
-            let build_result = builder.build_message(input, &*updated_info).await?;
+            let aid = assignment.id();
+            let dtarget = data_item.target();
+            let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
             deps.data_store
                 .save_message(&message, &build_result.binary)
                 .await?;
             deps.logger.log(format!("saved message - {:?}", &message));
-            upload(&deps, build_result.binary.to_vec()).await?;
+
+            /*
+              we set the id of the previous assignment
+              for the next message to be able to use
+              in its Hash Chain
+            */
+            deps.scheduler
+                .commit(&mut *schedule_info, &next_schedule_info, dtarget, aid);
             drop(schedule_info);
-            match system_time_u64() {
-                Ok(timestamp) => {
-                    let response_json =
-                        json!({ "timestamp": timestamp, "id": message.message_id()? });
-                    let elapsed_top_level = start_top_level.elapsed();
-                    deps.metrics
-                        .write_item_observe(elapsed_top_level.as_millis());
-                    Ok(response_json.to_string())
-                }
-                Err(e) => Err(format!("{:?}", e)),
-            }
+
+            upload(&deps, build_result.binary.to_vec()).await?;
+            return id_res(&deps, message.message_id()?, start_top_level);
         } else {
             return Err("Type tag not present".to_string());
         }
@@ -247,23 +324,18 @@ pub async fn read_message_data(
         }
     }
 
-    if let Ok(_) = deps.data_store.get_process(&tx_id) {
+    if let Ok(process) = deps.data_store.get_process(&tx_id).await {
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&tx_id, &from, &to, &limit)
+            .get_messages(&process, &from, &to, &limit)
             .await?;
         let duration = start.elapsed();
         deps.logger
             .log(format!("Time elapsed in get_messages() is: {:?}", duration));
         deps.metrics.get_messages_observe(duration.as_millis());
 
-        let startj = Instant::now();
         let result = simd_to_string(&messages).map_err(|e| format!("{:?}", e))?;
-        let durationj = startj.elapsed();
-        deps.logger
-            .log(format!("Time elapsed in json mapping is: {:?}", durationj));
-        deps.metrics.serialize_json_observe(durationj.as_millis());
 
         let elapsed_top_level = start_top_level.elapsed();
         deps.metrics
@@ -277,10 +349,10 @@ pub async fn read_message_data(
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
     let start = Instant::now();
-    let process = deps.data_store.get_process(&process_id)?;
+    let process = deps.data_store.get_process(&process_id).await?;
     let elapsed = start.elapsed();
     deps.metrics.get_process_observe(elapsed.as_millis());
-    let result = match serde_json::to_string(&process) {
+    let result = match serde_json::to_string(&process.process) {
         Ok(r) => r,
         Err(e) => return Err(format!("{:?}", e)),
     };

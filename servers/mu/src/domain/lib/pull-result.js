@@ -1,6 +1,7 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
 import { checkStage } from '../utils.js'
+import { resultSchema } from '../dal.js'
 
 const ctxSchema = z.object({
   msgs: z.any(),
@@ -10,7 +11,7 @@ const ctxSchema = z.object({
 }).passthrough()
 
 function fetchResultWith ({ fetchResult }) {
-  const fetchResultAsync = fromPromise(fetchResult)
+  const fetchResultAsync = fromPromise(resultSchema.implement(fetchResult))
 
   return (ctx) => {
     return of(ctx)
@@ -61,9 +62,9 @@ export function pullResultWith (env) {
   const fetchResult = fetchResultWith(env)
 
   return (ctx) => {
-    if (!checkStage('pull-result')(ctx)) return Resolved(ctx)
+    if (!checkStage('pull-result')(ctx) && !checkStage('pull-initial-result')(ctx)) return Resolved(ctx)
     return of(ctx)
-      .map((ctx) => ({ ...ctx, tx: ctx.tx ?? ctx.spawnSuccessTx }))
+      .map((ctx) => ({ ...ctx, tx: ctx.tx }))
       .chain((ctx) => {
         return of(ctx)
           .chain(fromPromise(fetchResult))

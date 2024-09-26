@@ -2,7 +2,7 @@ use std::clone::Clone;
 
 use bytes::{BufMut, Bytes};
 
-use bundlr_sdk::{error::BundlrError, tags::*};
+use super::tags::*;
 
 use base64_url;
 use sha2::{Digest, Sha256, Sha384};
@@ -14,10 +14,10 @@ pub enum ByteErrorType {
     ByteError(String),
 }
 
-impl From<BundlrError> for ByteErrorType {
-    fn from(error: BundlrError) -> Self {
-        ByteErrorType::ByteError(format!("Byte error: {}", error))
-    }
+impl From<TagError> for ByteErrorType {
+  fn from(error: TagError) -> Self {
+      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
+  }
 }
 
 impl From<&str> for ByteErrorType {
@@ -562,6 +562,19 @@ impl DataItem {
     }
 
     pub fn data(&self) -> Option<String> {
+        match &self.data {
+            Data::Bytes(d) => {
+                Some(String::from_utf8_lossy(d).into_owned())
+            },
+            Data::None => None,
+        }
+    }
+
+    /*
+      Return the data as a string, if it is a utf8 string
+      otherwise return None
+    */
+    pub fn data_if_string(&self) -> Option<String> {
         match &self.data {
             Data::Bytes(d) => match String::from_utf8(d.clone()) {
                 Ok(s) => Some(s),

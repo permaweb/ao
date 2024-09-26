@@ -5,13 +5,13 @@ use async_trait::async_trait;
 use reqwest::{Client, Url};
 use serde_derive::Deserialize;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tokio::time::{sleep, Duration};
 
 pub struct ArweaveGateway {
-    // Use Mutex to safely share and update state across tasks
-    height: Arc<Mutex<String>>,
-    current: Arc<Mutex<String>>,
+    // Use RwLock to safely share and update state across tasks
+    height: Arc<RwLock<String>>,
+    current: Arc<RwLock<String>>,
 }
 
 #[derive(Debug)]
@@ -62,8 +62,8 @@ impl ArweaveGateway {
     pub async fn new() -> Result<Self, String> {
         let network_info = ArweaveGateway::network_info_fetch().await?;
 
-        let height = Arc::new(Mutex::new(network_info.height.clone()));
-        let current = Arc::new(Mutex::new(network_info.current.clone()));
+        let height = Arc::new(RwLock::new(network_info.height.clone()));
+        let current = Arc::new(RwLock::new(network_info.current.clone()));
 
         let gateway = ArweaveGateway {
             height: height.clone(),
@@ -75,9 +75,9 @@ impl ArweaveGateway {
             loop {
                 sleep(Duration::from_secs(5)).await;
                 if let Ok(updated_info) = ArweaveGateway::network_info_fetch().await {
-                    let mut height_lock = height.lock().await;
+                    let mut height_lock = height.write().await;
                     *height_lock = updated_info.height.clone();
-                    let mut current_lock = current.lock().await;
+                    let mut current_lock = current.write().await;
                     *current_lock = updated_info.current.clone();
                 }
             }
@@ -131,36 +131,50 @@ impl ArweaveGateway {
 impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-        let arweave_url = config.arweave_url;
-
-        let url = match Url::parse(&arweave_url) {
-            Ok(u) => u,
-            Err(e) => return Err(format!("{}", e)),
-        };
-
+        let arweave_urls = config.arweave_url_list;
+    
         let client = Client::new();
-
-        let response = client
-            .head(
-                url.join(&format!("{}", tx_id))
-                    .map_err(|e| GatewayErrorType::CheckHeadError(e.to_string()))?,
-            )
-            .send()
-            .await
-            .map_err(|e| GatewayErrorType::CheckHeadError(e.to_string()))?;
-
-        let response_status = response.status();
-
-        if response_status.is_success() {
-            return Ok(true);
+    
+        for arweave_url in arweave_urls {
+            let url = match Url::parse(&arweave_url) {
+                Ok(u) => u,
+                Err(e) => {
+                    eprintln!("Invalid URL {}: {}", arweave_url, e);
+                    continue; // Skip this URL and try the next one
+                }
+            };
+    
+            let response = client
+                .head(
+                    url.join(&format!("{}", tx_id))
+                        .map_err(|e| GatewayErrorType::CheckHeadError(e.to_string()))?,
+                )
+                .send()
+                .await;
+    
+            match response {
+                Ok(res) if res.status().is_success() => {
+                    return Ok(true); // Return success if the request was successful
+                }
+                Ok(_) => {
+                    eprintln!("Request failed with non-success status for URL: {}", arweave_url);
+                }
+                Err(e) => {
+                    eprintln!("Error requesting URL {}: {}", arweave_url, e);
+                }
+            }
         }
-
-        Ok(false)
+    
+        Ok(false) // If none of the URLs worked, return false
     }
+  
 
     async fn network_info(&self) -> Result<NetworkInfo, String> {
-        let height = self.height.lock().await.clone();
-        let current = self.current.lock().await.clone();
+        // bind these with let so they dont drop until returning
+        let hl = self.height.read().await;
+        let cl = self.current.read().await;
+        let height = hl.clone();
+        let current = cl.clone();
         Ok(NetworkInfo { height, current })
     }
 

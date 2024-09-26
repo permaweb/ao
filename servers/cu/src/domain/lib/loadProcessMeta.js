@@ -77,7 +77,6 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
       .bimap(
         logger.tap('Could not find process in db. Loading from chain...'),
         identity
-        // logger.tap('found process in db %j')
       )
       /**
        * Locate the scheduler for the process and attach to context
@@ -110,8 +109,8 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
               .chain(checkTag('Module', isNotNil, 'was not found on process'))
               .map(always({ id: processId, ...ctx }))
               .bimap(
-                logger.tap('Verifying process failed: %s'),
-                logger.tap('Verified process. Saving to db...')
+                logger.tap('Verifying process failed: %O'),
+                logger.tap('Verified process. Saving to db: %O')
               )
           )
           /**
@@ -120,8 +119,8 @@ function getProcessMetaWith ({ loadProcess, locateProcess, findProcess, saveProc
           .chain((process) =>
             saveProcess(process)
               .bimap(
-                logger.tap('Could not save process to db. Nooping'),
-                logger.tap('Saved process')
+                logger.tap('Could not save process to db. Skipping due to: %O'),
+                logger.tap('Saved process "%s"')
               )
               .bichain(
                 always(Resolved(process)),

@@ -7,7 +7,7 @@ import { pipe } from 'ramda'
 import { z, ZodIssueCode } from 'zod'
 import ms from 'ms'
 
-import { domainConfigSchema, positiveIntSchema } from './domain/index.js'
+import { domainConfigSchema, positiveIntSchema } from './domain/model.js'
 import { preprocessUrls } from './domain/utils.js'
 
 /**
@@ -44,17 +44,18 @@ const serverConfigSchema = domainConfigSchema.extend({
 /* eslint-disable no-throw-literal */
 
 /**
- * If the WALLET_FILE env var is defined, load the contents from the file.
- * Refuse to boot the app if both or none of WALLET and WALLET_FILE are defined.
+ * If the WALLET is defined, then do nothing.
+ *
+ * Otherwise, check whether the WALLET_FILE env var is defined and load it contents
+ * as WALLET
  */
 export const preprocessWallet = (envConfig) => {
   const { WALLET, WALLET_FILE, ...theRestOfTheConfig } = envConfig
 
-  // nothing to do here
-  if (!!WALLET && !WALLET_FILE) return envConfig
+  //  WALLET takes precendent. nothing to do here
+  if (WALLET) return envConfig
 
   if (!WALLET && !WALLET_FILE) throw 'One of WALLET or WALLET_FILE is required'
-  if (!!WALLET && !!WALLET_FILE) throw 'Do not define both WALLET and WALLET_FILE'
 
   const walletPath = path.resolve(WALLET_FILE)
   if (!existsSync(walletPath)) throw `WALLET_FILE does not exist: ${walletPath}`
@@ -91,6 +92,8 @@ const preprocessedServerConfigSchema = z.preprocess(
 const CONFIG_ENVS = {
   development: {
     MODE,
+    DEFAULT_LOG_LEVEL: process.env.DEFAULT_LOG_LEVEL || 'debug',
+    LOG_CONFIG_PATH: process.env.LOG_CONFIG_PATH || '.loglevel',
     MODULE_MODE: process.env.MODULE_MODE,
     port: process.env.PORT || 6363,
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
@@ -139,6 +142,8 @@ const CONFIG_ENVS = {
   },
   production: {
     MODE,
+    DEFAULT_LOG_LEVEL: process.env.DEFAULT_LOG_LEVEL || 'debug',
+    LOG_CONFIG_PATH: process.env.LOG_CONFIG_PATH || '.loglevel',
     MODULE_MODE: process.env.MODULE_MODE,
     port: process.env.PORT || 6363,
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,

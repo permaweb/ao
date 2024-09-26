@@ -10,8 +10,8 @@ logger.tap = () => (args) => {
 
 describe('pullResultWith', () => {
   test('fetch result by transaction id', async () => {
-    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }], Target: 'target-pid' }
-    const spawn1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }] }
+    const msg1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }], Target: 'target-pid', Anchor: '0000001' }
+    const spawn1 = { Tags: [{ name: 'Data-Protocol', value: 'ao' }], Anchor: '00000002' }
     const assign1 = { Processes: ['p1'], Message: 'm1' }
     const cachedMsg1 = {
       msg: msg1,
@@ -46,7 +46,8 @@ describe('pullResultWith', () => {
       },
       initialTxId: 'i-1',
       processId: 'from-pid',
-      tagAssignments: [{ Processes: ['p2'], Message: 'm2' }]
+      tagAssignments: [{ Processes: ['p2'], Message: 'm2' }],
+      logId: 'log-123'
     }).toPromise()
 
     assert.deepStrictEqual(result.msgs[0], cachedMsg1)

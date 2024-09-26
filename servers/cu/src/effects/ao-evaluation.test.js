@@ -2,12 +2,12 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { createLogger } from '../logger.js'
-import { findEvaluationSchema, findEvaluationsSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../dal.js'
+import { createTestLogger } from '../domain/logger.js'
+import { findEvaluationSchema, findEvaluationsSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../domain/dal.js'
 import { findMessageBeforeWith, findEvaluationWith, findEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
 import { COLLATION_SEQUENCE_MAX_CHAR, EVALUATIONS_TABLE, MESSAGES_TABLE } from './sqlite.js'
 
-const logger = createLogger('ao-cu:readState')
+const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('ao-evaluation', () => {
   describe('findEvaluation', () => {

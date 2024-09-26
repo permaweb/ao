@@ -36,7 +36,18 @@ async function locateProcess () {
 }
 
 async function fetchSchedulerProcess () {
-  return { tags: [{ name: 'Module', value: 'mod-1' }] }
+  return {
+    process_id: 'pid-1',
+    block: 'block-1',
+    owner: {
+      address: 'address-1',
+      key: 'key-1'
+    },
+    tags: [{ name: 'Module', value: 'mod-1' }],
+    timestamp: 1234,
+    data: '1984',
+    signature: 'signature-1'
+  }
 }
 
 async function isWallet (_id) {
@@ -63,8 +74,10 @@ describe('buildTx', () => {
           Anchor: 'anchor-1',
           Data: 'data-1'
         },
+        processId: 'pid-1',
         fromProcessId: 'process-123'
-      }
+      },
+      logId: 'log-1'
     }).toPromise()
 
     assert.equal(result.tx.processId, 'id-1')
@@ -92,8 +105,10 @@ describe('buildTx', () => {
           Anchor: 'anchor-1',
           Data: 'data-1'
         },
+        processId: 'pid-1',
         fromProcessId: 'process-123'
-      }
+      },
+      logId: 'log-1'
     }).toPromise()
 
     assert.equal(result.tx.processId, 'id-1')

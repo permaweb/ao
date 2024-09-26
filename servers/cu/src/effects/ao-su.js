@@ -4,7 +4,7 @@ import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
-import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError } from '../utils.js'
+import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError } from '../domain/utils.js'
 
 const okRes = (res) => {
   if (res.ok) return res
@@ -302,7 +302,10 @@ export const loadProcessWith = ({ fetch, logger }) => {
          */
         processId: always(processId),
         timestamp: path(['timestamp']),
-        nonce: always(0)
+        nonce: always(0),
+        signature: path(['signature']),
+        data: path(['data']),
+        anchor: path(['anchor'])
       }))
   }
 }

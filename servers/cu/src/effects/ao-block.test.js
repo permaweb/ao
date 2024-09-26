@@ -4,12 +4,12 @@ import * as assert from 'node:assert'
 
 import { prop, uniqBy } from 'ramda'
 
-import { createLogger } from '../logger.js'
-import { findBlocksSchema, loadBlocksMetaSchema, saveBlocksSchema } from '../dal.js'
+import { createTestLogger } from '../domain/logger.js'
+import { findBlocksSchema, loadBlocksMetaSchema, saveBlocksSchema } from '../domain/dal.js'
 import { findBlocksWith, loadBlocksMetaWith, saveBlocksWith } from './ao-block.js'
 
 const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
-const logger = createLogger('ao-cu')
+const logger = createTestLogger({ name: 'ao-cu' })
 
 describe('ao-block', () => {
   describe('findBlocks', () => {

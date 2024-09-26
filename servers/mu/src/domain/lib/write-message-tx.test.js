@@ -19,7 +19,13 @@ describe('writeMessageTxWith', () => {
           timestamp: 1234567
         }
       },
-      logger
+      logger,
+      writeDataItemArweave: async (buffer) => {
+        return {
+          id: 'arweave-id-3',
+          timestamp: 1234567
+        }
+      }
     })
 
     const result = await writeMessageTx({
@@ -35,6 +41,39 @@ describe('writeMessageTxWith', () => {
 
     assert.deepStrictEqual(result.schedulerTx, {
       id: 'id-3',
+      timestamp: 1234567
+    })
+  })
+
+  test('write a tx to arweave', async () => {
+    const writeMessageTx = writeMessageTxWith({
+      writeDataItem: async ({ data }) => {
+        assert.equal(data, 'raw-123')
+
+        return {
+          id: 'id-3',
+          timestamp: 1234567
+        }
+      },
+      logger,
+      writeDataItemArweave: async (buffer) => {
+        return {
+          id: 'arweave-id-3',
+          timestamp: 1234567
+        }
+      }
+    })
+
+    const result = await writeMessageTx({
+      tx: {
+        processId: 'id-1',
+        id: 'arweave-id-3',
+        data: Buffer.from('raw-123')
+      }
+    }).toPromise()
+
+    assert.deepStrictEqual(result.arweaveTx, {
+      id: 'arweave-id-3',
       timestamp: 1234567
     })
   })

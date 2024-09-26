@@ -3,6 +3,7 @@ import { of, fromPromise, Resolved } from 'hyper-async'
 import { pullResultWith } from '../lib/pull-result.js'
 import { writeAssignWith } from '../lib/write-assign.js'
 import { checkStage, setStage } from '../utils.js'
+import { locateProcessSchema } from '../dal.js'
 
 /**
  * process an assignment that comes from the cu result endpoint
@@ -19,7 +20,7 @@ export function processAssignWith ({
   const writeAssign = writeAssignWith({ writeAssignment, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
 
-  const locateProcessLocal = fromPromise(locateProcess)
+  const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
 
   return (ctx) => {
     return of(ctx)

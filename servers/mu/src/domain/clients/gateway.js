@@ -18,6 +18,15 @@ function isWalletWith ({
     logger
   })
 
+  /**
+   * @name isWallet
+   * Given an id, check if it is a process or a wallet.
+   * First, check the cache. Then, check Arweave.
+   *
+   * @param id - The id to check if it is a process or a wallet
+   * @param logId - The logId to aggregate the logs by
+   * @returns isWallet - If the id is a wallet, return true. Otherwise, return false.
+   */
   return async (id, logId) => {
     logger({ log: `Checking if id is a wallet ${id}`, logId })
 
@@ -32,7 +41,7 @@ function isWalletWith ({
 
     /*
       Only if this is actually a tx will this
-      return true. That means if it doesnt its
+      return true. That means if it doesn't its
       either a wallet or something else.
     */
     return backoff(

@@ -2,13 +2,13 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { loadMessageMetaSchema } from '../dal.js'
-import { loadMessageMetaWith, mapNode } from './ao-su.js'
-import { messageSchema } from '../model.js'
-import { createLogger } from '../logger.js'
+import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
+import { messageSchema } from '../domain/model.js'
+import { createTestLogger } from '../domain/logger.js'
+import { loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
-const logger = createLogger('ao-cu:ao-su')
+const logger = createTestLogger({ name: 'ao-cu:ao-su' })
 
 describe('ao-su', () => {
   describe('mapNode', () => {
@@ -248,6 +248,88 @@ describe('ao-su', () => {
         processId: 'process-123',
         timestamp: 12345,
         nonce: 3
+      })
+    })
+  })
+
+  describe('loadProcessesWith', () => {
+    test('load the process metadata', async () => {
+      const loadProcess = loadProcessSchema.implement(loadProcessWith({
+        fetch: async () => {
+          return {
+            ok: true,
+            json: () => {
+              return {
+                process_id: 'pid-2',
+                block: '000000001',
+                owner: {
+                  address: 'owner-address-1',
+                  key: 'owner-key-1'
+                },
+                tags: [
+                  { name: 'Foo', value: 'Bar' }
+                ],
+                timestamp: 123456,
+                data: '1984',
+                anchor: null,
+                signature: 'signature-1'
+              }
+            }
+          }
+        },
+        logger
+      }))
+      const result = await loadProcess({
+        suUrl: 'https://foo.bar',
+        processId: 'pid-1'
+      })
+      assert.deepStrictEqual(result, {
+        owner: {
+          address: 'owner-address-1',
+          key: 'owner-key-1'
+        },
+        tags: [
+          { name: 'Foo', value: 'Bar' }
+        ],
+        block: {
+          height: 1,
+          timestamp: 123456
+        },
+        processId: 'pid-1',
+        timestamp: 123456,
+        signature: 'signature-1',
+        data: '1984',
+        nonce: 0,
+        anchor: null
+      })
+    })
+  })
+
+  describe('loadTimestampWith', () => {
+    test('load process timestamp and block height', async () => {
+      const loadTimestamp = loadTimestampSchema.implement(loadTimestampWith({
+        fetch: async () => {
+          return {
+            ok: true,
+            json: () => {
+              return {
+                block_height: '0000001',
+                timestamp: '123456'
+              }
+            }
+          }
+        },
+        logger
+      }))
+
+      const result = await loadTimestamp({
+        suUrl: 'https://foo.bar',
+        processId: 'pid-1'
+      })
+
+      assert.deepStrictEqual(result, {
+        timestamp: 123456,
+        height: 1
       })
     })
   })
