@@ -1,7 +1,7 @@
 /* global Deno */
 
-import { Command, basename, resolve } from '../deps.js'
-import { bundlerArgs, tagsArg } from '../utils.js'
+import { Command, basename, resolve, parse } from '../deps.js'
+import { hostArgs, bundlerArgs, tagsArg } from '../utils.js'
 import { VERSION } from '../versions.js'
 
 function walletArgs (wallet) {
@@ -43,13 +43,62 @@ function contractSourceArgs (contractWasmPath) {
 }
 
 /**
+ * Retrieves the memory limit based on the configuration preset or custom memory limit.
+ * @returns {string} The memory limit
+ */
+async function GetMemoryLimit () {
+  let memoryLimit = '256-mb'
+
+  const configPath = `${Deno.cwd()}/config.yml`
+  let config = null
+  try {
+    config = parse(await Deno.readTextFile(configPath))
+  } catch {
+    return memoryLimit
+  }
+
+  if (config) {
+    switch (config.preset) {
+      case 'xs':
+        memoryLimit = '128-mb'
+        break
+      case 'sm':
+        memoryLimit = '256-mb'
+        break
+      case 'md':
+        memoryLimit = '512-mb'
+        break
+      case 'lg':
+        memoryLimit = '1024-mb'
+        break
+      case 'xl':
+        memoryLimit = '8192-mb'
+        break
+      case 'xxl':
+        memoryLimit = '16384-mb'
+        break
+      default:
+        memoryLimit = '512-mb'
+        break
+    }
+  }
+  if (config?.memory_limit) {
+    memoryLimit = `${config.memoryLimit}-b`
+  }
+  return memoryLimit
+}
+
+/**
  * TODO:
  * - Validate existence of wallet
  * - Validate existence of contract wasm
  * - allow using environment variables to set things like path to wallet
  * - require confirmation and bypass with --yes
  */
+
 export async function publish ({ wallet, bundler, tag, value }, contractWasmPath) {
+  tag.push('Memory-Limit')
+  value.push(await GetMemoryLimit())
   const cmdArgs = [
     ...walletArgs(wallet),
     ...bundlerArgs(bundler),
