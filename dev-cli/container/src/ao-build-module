@@ -81,7 +81,7 @@ def main():
         c_program = inject_lua_files(definition, c_program, injected_lua_files)
     
     # Load all libraries
-    c_program = load_libraries(definition, c_program, link_libraries, c_source_files, injected_lua_files,dependency_libraries)
+    c_program = load_libraries(config, definition, c_program, link_libraries, c_source_files, injected_lua_files,dependency_libraries)
                     
     # Inject the lua files into the c program
     c_program = c_program.replace(
@@ -119,12 +119,10 @@ def main():
     # If the target is 64 bit, add the MEMORY64 flag and link against 64 bit libraries
     if config.target == 64:
         cmd.extend(['-sMEMORY64=1'])
-        cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
         cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
         cmd.extend([quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
     # If the target is 32 bit, link against 32 bit libraries
     else:
-        cmd.extend(['-L/opt/aolibc', '-l:aolibc32.a'])
         cmd.extend(['-I', quote('/lua-{}-32/src'.format(os.environ.get('LUA_VERSION')))])
         cmd.extend([quote('/lua-{}-32/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
 

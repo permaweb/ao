@@ -101,11 +101,11 @@ RUN chmod +x /usr/local/bin/ao-build-module
 ###################################
 COPY ./src/aolibc /opt/aolibc
 ## Build aolibc for 32-bit and rename to aolibc32
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s SUPPORT_LONGJMP=1" && cp ./aolibc.a ./aolibc32.a
+RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4-32/src/liblua.a -I/lua-5.3.4-32/src" && cp ./aolibc.a ./aolibc32.a
 RUN rm /opt/aolibc/aolibc.a
 RUN rm /opt/aolibc/aostdio.o
 # Build aolibc for 64-bit
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1"
+RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua.a -I/lua-5.3.4/src"
 
 ENV CC='emcc -s WASM=1'
 ENV NM='/emsdk/upstream/bin/llvm-nm'
