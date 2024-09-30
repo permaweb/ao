@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     libclang-dev \
     clang \
     librocksdb-dev \
-    libpq-dev \
+    libpq5 \
     libssl-dev
 COPY --from=planner /app/recipe.json recipe.json
 RUN ls /lib/
