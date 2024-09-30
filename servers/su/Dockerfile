@@ -1,52 +1,38 @@
-# Stage 1: Build the dynamic binary
-FROM rust:1.75.0 as builder
+# Stage 1: Planner
+FROM rust:1.75.0 AS planner
+WORKDIR /app
+RUN cargo install cargo-chef
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Set the working directory in the container
-WORKDIR /usr/src/su
-
-# Install required dependencies for building
+# Stage 2: Cache the build of the dependencies
+FROM rust:1.75.0 AS cacher
+WORKDIR /app
+RUN cargo install cargo-chef
 RUN apt-get update && apt-get install -y \
     llvm-dev \
     libclang-dev \
     clang \
-    librocksdb-dev
+    librocksdb-dev \
+    libpq-dev \
+    libssl-dev
+COPY --from=planner /app/recipe.json recipe.json
+RUN ls /lib/
+RUN cargo chef cook --release --recipe-path recipe.json
 
-# Copy the manifests
-COPY Cargo.toml Cargo.lock ./
-
-# This step is to cache your dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -f target/release/deps/su*
-
-# Now copy the actual source code and build the application
-COPY src ./src
-COPY migrations ./migrations
-RUN cargo build --release
-
-# The final output binary will be in /usr/src/su/target/release/su
-
-
-# Stage 2: Create the runnable image using the binary
-FROM scratch as runner
-
-# Set the working directory in the container
+# Stage 3: Build binary with pre-built and cached dependencies
+FROM rust:1.75.0 AS builder
+COPY . /app
 WORKDIR /app
+COPY --from=cacher /app/target target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+COPY --from=cacher /lib/x86_64-unknown-linux-gnu/*  /lib/x86_64-unknown-linux-gnu
+# Set the correct Rust target based on architecture
+RUN rustup target add x86_64-unknown-linux-gnu && \
+        cargo build --release --target x86_64-unknown-linux-gnu
 
-# Copy the binary from your local file system to the container
-COPY --from=builder /usr/src/su/target/release/su /app/su
-
-# Copy necessary libraries from the builder
-COPY --from=builder /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/
-COPY --from=builder /lib64/ /lib64/
-
-# Provide instructions for building the binary
-# (This will be displayed when someone runs `docker build`)
-LABEL build_instructions="To build just the binary, run the following command: docker build --target builder -t su ."
-
-# Run the binary - provide args on execution
-ENTRYPOINT [ "/app/su" ]
-
-# Run time command arguments, default is empty
-CMD []
+# Stage 4: Runner 
+FROM gcr.io/distroless/cc-debian12 
+COPY --from=builder /app/target/release/su /
+COPY --from=cacher /lib/x86_64-unknown-linux-gnu/*  /lib/x86_64-unknown-linux-gnu
+CMD ["./su"]
