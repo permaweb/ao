@@ -43,7 +43,7 @@ worker({
      * Transfer the ownership of the underlying ArrayBuffer back to the main thread
      * to prevent copying it over
      */
-    .then((output) => {
+    .then(async (output) => {
       /**
        * The evaluation stream is being closed,
        * so no output is returned, so nothing
@@ -79,7 +79,7 @@ worker({
 
         // Don't event vacuum on dry runs
         if (message && !message['Read-Only']) {
-          eventVacuum.processLogs(
+          await eventVacuum.processLogs(
             output.Output.data,
             processId,
             +ordinate
