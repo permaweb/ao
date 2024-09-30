@@ -126,6 +126,45 @@ pub fn hash(data: &[u8]) -> Vec<u8> {
 }
 
 impl Process {
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, JsonErrorType> {
+        let data_item = DataItem::from_bytes(bytes)?;
+        let top_level_tags = data_item.tags();
+
+        /*
+          using arbitrary tag at the top level to check if
+          old structure, old structure had protocol tags on
+          the top level DataItem
+        */
+        let epoch_tag = top_level_tags.iter().find(|tag| tag.name == "Block-Height");
+
+        match epoch_tag {
+            None => {
+                /*
+                  Current process structure, because protocol tags are
+                  not present at the top level data item.
+                */
+                let bundle_data = DataBundle::from_bytes(
+                    &data_item
+                        .data_bytes()
+                        .ok_or("Bundle data not present in DataItem")?,
+                )?;
+                Ok(Process::from_bundle(&bundle_data)?)
+            }
+            Some(_) => {
+                /*
+                  This is an old message structure so we have to
+                  parse it differently.
+                */
+                let bundle_data = DataBundle::from_bytes(
+                    &data_item
+                        .data_bytes()
+                        .ok_or("Bundle data not present in DataItem")?,
+                )?;
+                Ok(Process::from_bundle_no_assign(&bundle_data)?)
+            }
+        }
+    }
+
     pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
         let id_assign = data_bundle.items[0].id().clone();
         let tags_assign = data_bundle.items[0].tags();

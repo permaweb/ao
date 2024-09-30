@@ -8,11 +8,11 @@ mod core;
 mod logger;
 
 use clients::{
-    gateway::ArweaveGateway, signer::ArweaveSigner, store, uploader::UploaderClient,
-    wallet::FileWallet, local_store
+    gateway::ArweaveGateway, local_store, signer::ArweaveSigner, store, uploader::UploaderClient,
+    wallet::FileWallet,
 };
 use config::AoConfig;
-use core::dal::{Config, Gateway, Log, DataStore};
+use core::dal::{Config, DataStore, Gateway, Log};
 use logger::SuLog;
 
 pub use clients::metrics::PromMetrics;
@@ -20,6 +20,7 @@ pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
 pub use store::migrate_to_disk;
+pub use local_store::migration::migrate_to_local;
 
 pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Registry) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
@@ -36,9 +37,10 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
 
     let main_data_store: Arc<dyn DataStore> = if config.use_local_store {
-      Arc::new(local_store::LocalStoreClient::new().expect("Failed to create LocalStoreClient")) as Arc<dyn DataStore>
+        Arc::new(local_store::LocalStoreClient::new().expect("Failed to create LocalStoreClient"))
+            as Arc<dyn DataStore>
     } else {
-      data_store.clone()
+        data_store.clone()
     };
 
     if config.use_disk && config.mode != "router" {

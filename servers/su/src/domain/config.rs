@@ -42,34 +42,34 @@ pub struct AoConfig {
 }
 
 fn get_db_dirs() -> (String, String) {
-  // Get the user's home directory based on platform
-  let home_dir = if cfg!(target_os = "windows") {
-      env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string())
-  } else {
-      env::var("HOME").unwrap_or_else(|_| ".".to_string())
-  };
+    // Get the user's home directory based on platform
+    let home_dir = if cfg!(target_os = "windows") {
+        env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string())
+    } else {
+        env::var("HOME").unwrap_or_else(|_| ".".to_string())
+    };
 
-  // Check for SU_FILE_DB_DIR environment variable, default to ~/sudata
-  let su_file_db_dir = match env::var("SU_FILE_DB_DIR") {
-      Ok(val) => val,
-      Err(_) => {
-          let mut path = PathBuf::from(&home_dir);
-          path.push("sudata");
-          path.to_string_lossy().to_string()
-      }
-  };
+    // Check for SU_FILE_DB_DIR environment variable, default to ~/sudata
+    let su_file_db_dir = match env::var("SU_FILE_DB_DIR") {
+        Ok(val) => val,
+        Err(_) => {
+            let mut path = PathBuf::from(&home_dir);
+            path.push("sudata");
+            path.to_string_lossy().to_string()
+        }
+    };
 
-  // Check for SU_INDEX_DB_DIR environment variable, default to ~/suindex
-  let su_index_db_dir = match env::var("SU_INDEX_DB_DIR") {
-      Ok(val) => val,
-      Err(_) => {
-          let mut path = PathBuf::from(&home_dir);
-          path.push("suindex");
-          path.to_string_lossy().to_string()
-      }
-  };
+    // Check for SU_INDEX_DB_DIR environment variable, default to ~/suindex
+    let su_index_db_dir = match env::var("SU_INDEX_DB_DIR") {
+        Ok(val) => val,
+        Err(_) => {
+            let mut path = PathBuf::from(&home_dir);
+            path.push("suindex");
+            path.to_string_lossy().to_string()
+        }
+    };
 
-  (su_file_db_dir, su_index_db_dir)
+    (su_file_db_dir, su_index_db_dir)
 }
 
 impl AoConfig {

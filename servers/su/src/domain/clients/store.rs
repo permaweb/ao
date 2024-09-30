@@ -37,9 +37,9 @@ impl From<DieselError> for StoreErrorType {
 }
 
 impl From<JsonErrorType> for StoreErrorType {
-  fn from(error: JsonErrorType) -> Self {
-      StoreErrorType::JsonError(format!("data store json error: {:?}", error))
-  }
+    fn from(error: JsonErrorType) -> Self {
+        StoreErrorType::JsonError(format!("data store json error: {:?}", error))
+    }
 }
 
 impl From<VarError> for StoreErrorType {
@@ -131,6 +131,43 @@ impl StoreClient {
 
         let read_pool = Pool::builder()
             .max_size(config.db_read_connections)
+            .test_on_check_out(true)
+            .build(read_manager)
+            .map_err(|_| {
+                StoreErrorType::DatabaseError(
+                    "Failed to initialize read connection pool.".to_string(),
+                )
+            })?;
+
+        Ok(StoreClient {
+            pool,
+            read_pool,
+            logger,
+            bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
+            in_memory_cache: InMemoryCache::new(config.process_cache_size),
+            enable_process_assignment: config.enable_process_assignment,
+        })
+    }
+
+    pub fn new_single_connection() -> Result<Self, StoreErrorType> {
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+        let c_clone = config.clone();
+        let database_url = config.database_url;
+        let database_read_url = config.database_read_url;
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
+        let logger = SuLog::init();
+
+        let pool = Pool::builder()
+            .max_size(1)
+            .test_on_check_out(true)
+            .build(manager)
+            .map_err(|_| {
+                StoreErrorType::DatabaseError("Failed to initialize connection pool.".to_string())
+            })?;
+
+        let read_pool = Pool::builder()
+            .max_size(1)
             .test_on_check_out(true)
             .build(read_manager)
             .map_err(|_| {
@@ -274,6 +311,82 @@ impl StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+
+    pub fn get_all_messages_no_bundle(
+        &self,
+        from: i64,
+        to: Option<i64>,
+    ) -> Result<
+        Vec<(
+            String,              // message_id
+            Option<String>,      // assignment_id
+            String,              // process_id
+            i64, // timestamp
+            i32,                 // epoch
+            i32,                 // nonce
+            String,              // hash_chain
+        )>,
+        StoreErrorType,
+    > {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = messages.into_boxed();
+    
+        // Apply the offset
+        query = query.offset(from);
+    
+        // Apply the limit if `to` is provided
+        if let Some(to) = to {
+            let limit = to - from;
+            query = query.limit(limit);
+        }
+    
+        // Select only the fields that you are using
+        let selected_fields = query.select((
+            message_id,
+            assignment_id,
+            process_id,
+            timestamp,
+            epoch,
+            nonce,
+            hash_chain,
+        ));
+    
+        // Load only the selected fields
+        let db_messages_result: Result<
+            Vec<(
+                String,              // message_id
+                Option<String>,      // assignment_id
+                String,              // process_id
+                i64, // timestamp
+                i32,                 // epoch
+                i32,                 // nonce
+                String,              // hash_chain
+            )>, 
+            DieselError
+        > = selected_fields.order(timestamp.asc()).load(conn);
+    
+        match db_messages_result {
+            Ok(db_messages) => {
+                // Map the result into the desired tuple with timestamp as String
+                let messages_mapped = db_messages.into_iter().map(|db_message| {
+                    (
+                        db_message.0,                     // message_id
+                        db_message.1,                     // assignment_id
+                        db_message.2,                     // process_id
+                        db_message.3,                     // timestamp as chrono::NaiveDateTime
+                        db_message.4,                     // epoch
+                        db_message.5,                     // nonce
+                        db_message.6,                     // hash_chain
+                    )
+                }).collect::<Vec<_>>();
+    
+                Ok(messages_mapped)
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+  
 
     /*
       Used as a fallback when USE_DISK is true. If the
@@ -1159,6 +1272,20 @@ mod bytestore {
             let mut db_write = self.db.write().unwrap();
             *db_write = Some(new_db);
 
+            Ok(())
+        }
+
+        pub fn try_read_instance_connect(&self) -> Result<(), String> {
+            let mut opts = Options::default();
+            opts.set_enable_blob_files(true); // Enable blob files
+        
+            // Open the database in read-only mode
+            let new_db = DB::open_for_read_only(&opts, &self.config.su_data_dir, false)
+                .map_err(|e| format!("Failed to open RocksDB in read-only mode: {:?}", e))?;
+        
+            let mut db_write = self.db.write().unwrap();
+            *db_write = Some(new_db);
+        
             Ok(())
         }
 
