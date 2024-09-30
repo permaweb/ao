@@ -45,6 +45,7 @@ worker({
      * to prevent copying it over
      */
     .then(async (output) => {
+    .then(async (output) => {
       /**
        * The evaluation stream is being closed,
        * so no output is returned, so nothing

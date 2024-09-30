@@ -1,4 +1,5 @@
 import { ConsoleTransport, HoneycombTransport, KinesisTransport, CompositeTransport } from './event-transport.js'
+import { ConsoleTransport, HoneycombTransport, KinesisTransport, CompositeTransport } from './event-transport.js'
 
 export class EventVacuum {
   constructor (transport) {
