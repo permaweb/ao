@@ -1,14 +1,14 @@
 ### NOTE: THIS WON'T WORK ON AN X86 DEVICE
 
 # Stage 1: Planner
-FROM rust:1.75.0 AS planner
+FROM --platform=linux/arm64  rust:1.75.0 AS planner
 WORKDIR /app
 RUN cargo install cargo-chef
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Stage 2: Cache the build of the dependencies
-FROM rust:1.75.0 AS cacher
+FROM --platform=linux/arm64 rust:1.75.0 AS cacher
 WORKDIR /app
 RUN cargo install cargo-chef
 RUN apt-get update && apt-get install -y \
@@ -23,7 +23,7 @@ RUN ls /lib/
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Stage 3: Build binary with pre-built and cached dependencies
-FROM rust:1.75.0 AS builder
+FROM --platform=linux/arm64 rust:1.75.0 AS builder
 COPY . /app
 WORKDIR /app
 COPY --from=cacher /app/target target
@@ -33,7 +33,7 @@ COPY --from=cacher /lib/aarch64-linux-gnu/*  /lib/aarch64-linux-gnu/
 RUN cargo build --release
 
 # Stage 4: Runner 
-FROM gcr.io/distroless/cc-debian12 
+FROM --platform=linux/arm64 gcr.io/distroless/cc-debian12 
 COPY --from=builder /app/target/release/su /
 COPY --from=cacher /lib/aarch64-linux-gnu/*  /lib/aarch64-linux-gnu/
-CMD ["./su"]
+CMD ["./su su 9000"]
