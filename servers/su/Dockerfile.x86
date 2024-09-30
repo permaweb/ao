@@ -36,4 +36,4 @@ RUN cargo build --release
 FROM --platform=linux/amd64 ubuntu:22.04
 COPY --from=builder /app/target/release/su /
 COPY --from=cacher /lib/x86_64-linux-gnu/*  /lib/x86_64-linux-gnu/
-CMD ["./su su 9000"]
+CMD ["./su",  "su", "9000"]
