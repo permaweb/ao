@@ -2,16 +2,17 @@ import Libhoney from 'libhoney'
 import Database from 'better-sqlite3'
 import fs from 'fs'
 import { logger as _logger } from '../logger.js'
+import { KinesisClient, PutRecordCommand } from '@aws-sdk/client-kinesis'
 
 export class CompositeTransport {
   constructor (transports) {
     this.transports = transports // An array of transport instances
   }
 
-  sendEvents (events, processId, nonce) {
-    this.transports.forEach((transport) => {
-      transport.sendEvents(events, processId, nonce)
-    })
+  async sendEvents (events, processId, nonce) {
+    for (const transport of this.transports) {
+      await transport.sendEvents(events, processId, nonce)
+    }
   }
 }
 
@@ -25,6 +26,67 @@ export class ConsoleTransport {
       `[ProcID: ${processId}; Nonce: ${nonce}]: Vacuumed events:\n%O`,
       events
     )
+  }
+}
+
+class NonceTracker {
+  constructor ({ dbFilePath, logger }) {
+    this.dbFilePath = dbFilePath
+    this.dbInitialized = false
+    this.db = undefined
+    this.largestNonces = {}
+    this.logger = logger
+    this.updateNonceStmt = undefined
+  }
+
+  createDatabase () {
+    const db = new Database(this.dbFilePath)
+    this.logger.info('Creating, if necessary, SQLite database and table for largest nonces...')
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS largest_nonces (
+      processId TEXT PRIMARY KEY,
+      nonce INTEGER
+      );
+    `)
+    return db
+  }
+
+  loadLargestNonces () {
+    const stmt = this.db.prepare('SELECT processId, nonce FROM largest_nonces')
+    const rows = stmt.all()
+    for (const row of rows) {
+      this.largestNonces[row.processId] = row.nonce
+    };
+    this.logger.info(`Loaded largest nonces:\n${JSON.stringify(this.largestNonces, null, 2)}`)
+  }
+
+  ensureLargestNonces () {
+    if (!this.dbInitialized) {
+      this.logger.info('Initializing SQLite database...')
+      if (!fs.existsSync(this.dbFilePath)) {
+        this.db = this.createDatabase()
+      } else {
+        this.db = new Database(this.dbFilePath)
+      }
+      this.largestNonces = this.loadLargestNonces()
+      this.updateNonceStmt = this.db.prepare(`
+        INSERT INTO largest_nonces (processId, nonce)
+        VALUES (?, ?)
+        ON CONFLICT(processId) DO UPDATE SET nonce = excluded.nonce WHERE excluded.nonce > largest_nonces.nonce;
+      `)
+      this.dbInitialized = true
+    }
+  }
+
+  getLargestNonce (processId) {
+    this.ensureLargestNonces()
+    return this.largestNonces[processId] || 0 // TODO: is -1 more appropriate?
+  }
+
+  updateLargestNonce (processId, nonce) {
+    this.updateNonceStmt.run(processId, nonce)
+    this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Updated largest nonce in db.`)
+    this.largestNonces[processId] = nonce
   }
 }
 
@@ -43,67 +105,12 @@ export class HoneycombTransport {
       dataset,
       apiHost
     })
-    this.dbFilePath = dbFilePath
-    this.dbInitialized = false
-    this.db = undefined
-    this.largestNonces = {}
     this.logger = logger
-    this.updateNonceStmt = undefined
-  }
-
-  ensureLargestNonces () {
-    if (!this.dbInitialized) {
-      this.logger.info('Initializing SQLite database...')
-      if (!fs.existsSync(this.dbFilePath)) {
-        this.createDatabase()
-      } else {
-        this.db = new Database(this.dbFilePath)
-        this.loadLargestNonces()
-      }
-      this.dbInitialized = true
-    }
-  }
-
-  createDatabase () {
-    this.logger.info('Creating, if necessary, SQLite database and table for largest nonces...')
-    this.db = new Database(this.dbFilePath)
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS largest_nonces (
-      processId TEXT PRIMARY KEY,
-      nonce INTEGER
-      );
-    `)
-  }
-
-  loadLargestNonces () {
-    const stmt = this.db.prepare('SELECT processId, nonce FROM largest_nonces')
-    const rows = stmt.all()
-    for (const row of rows) {
-      this.largestNonces[row.processId] = row.nonce
-    };
-    this.logger.info(`Loaded largest nonces:\n${JSON.stringify(this.largestNonces, null, 2)}`)
-  }
-
-  getLargestNonce (processId) {
-    return this.largestNonces[processId] || 0 // TODO: is -1 more appropriate?
-  }
-
-  updateLargestNonce (processId, nonce) {
-    if (!this.updateNonceStmt) {
-      this.updateNonceStmt = this.db.prepare(`
-        INSERT INTO largest_nonces (processId, nonce)
-        VALUES (?, ?)
-        ON CONFLICT(processId) DO UPDATE SET nonce = excluded.nonce WHERE excluded.nonce > largest_nonces.nonce;
-      `)
-    }
-    this.updateNonceStmt.run(processId, nonce)
-    this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Updated largest nonce in db.`)
-    this.largestNonces[processId] = nonce
+    this.nonceTracker = new NonceTracker({ dbFilePath, logger })
   }
 
   async sendEvents (events, processId, nonce) {
-    this.ensureLargestNonces()
-    const currentMaxNonce = this.getLargestNonce(processId)
+    const currentMaxNonce = this.nonceTracker.getLargestNonce(processId)
 
     if (nonce > currentMaxNonce) {
       events.forEach((event) => {
@@ -122,9 +129,61 @@ export class HoneycombTransport {
           honeyEvent.sampleRate = event.sampleRate
         }
         honeyEvent.send()
-        this.updateLargestNonce(processId, nonce)
+        this.nonceTracker.updateLargestNonce(processId, nonce)
       })
       this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Sent events to Honeycomb.`)
+    } else {
+      this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Skipping previous event (max nonce ${currentMaxNonce}).`)
+    }
+  }
+}
+
+export class KinesisTransport {
+  constructor ({
+    region = 'us-east-1',
+    streamName = 'ao-event-stream-test',
+    partitionKey = 'test-key',
+    credentials = undefined,
+    dbFilePath = './kinesis_largest_nonces.db',
+    logger = _logger.child('kinesis-transport')
+  }) {
+    this.client = new KinesisClient({
+      region,
+      credentials
+    })
+    this.streamName = streamName
+    this.partitionKey = partitionKey
+    this.logger = logger
+    this.nonceTracker = new NonceTracker({ dbFilePath, logger })
+  }
+
+  async sendEvents (events, processId, nonce) {
+    const currentMaxNonce = this.nonceTracker.getLargestNonce(processId)
+
+    if (nonce > currentMaxNonce) {
+      for (const event of events) {
+        const kinesisRecordData = {
+          processId,
+          nonce,
+          ...event
+        }
+
+        try {
+          const params = {
+            StreamName: this.streamName,
+            PartitionKey: this.partitionKey,
+            Data: JSON.stringify(kinesisRecordData)
+          }
+
+          const command = new PutRecordCommand(params)
+          await this.client.send(command)
+          this.nonceTracker.updateLargestNonce(processId, nonce)
+          this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Sent event to Kinesis.`)
+        } catch (error) {
+          this.logger.error(`[ProcID: ${processId}; Nonce: ${nonce}]: Error sending record to Kinesis: ${error}`)
+          throw error
+        }
+      }
     } else {
       this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Skipping previous event (max nonce ${currentMaxNonce}).`)
     }
