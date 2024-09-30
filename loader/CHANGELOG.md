@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.37](https://github.com/permaweb/ao/compare/loader@v0.0.36...loader@v0.0.37) (2024-09-26)
+
+
+### Features
+
+* **dev-cli:** added a gasused function to aolibc thats exposed to lua ([dceb3b7](https://github.com/permaweb/ao/commit/dceb3b79592e54af9d14ecdd7b8f1ab2bb36a953))
+* **loader:** new wasm32-unknown-emscripten format with support for ao-physics and weavedrive [#997](https://github.com/permaweb/ao/issues/997) ([384a63a](https://github.com/permaweb/ao/commit/384a63a121113e15b11653f576f9037a33b6e581))
+
+
+### Bug Fixes
+
+* **loader:** _emscripten_date_now to return 0 ([d4b80a9](https://github.com/permaweb/ao/commit/d4b80a930f41a697cd475fb85d4b397beb305f37))
+* **loader:** reverting change as Date.now is overridden to be an incrementing deterministic num ([ddeb4d3](https://github.com/permaweb/ao/commit/ddeb4d393493afb15db9066a00e6af6fb1bb4747))
+
 ## [0.0.36](https://github.com/permaweb/ao/compare/loader@v0.0.35...loader@v0.0.36) (2024-08-09)
 
 

@@ -4,6 +4,7 @@ import re
 import subprocess
 import shutil
 from ao_module_lib.definition import Definition
+from ao_module_lib.config import Config
 from ao_module_lib.file import LuaFile, ModuleFile, BundleFile
 from ao_module_lib.helper import is_lua_source_file, is_binary_library, encode_hex_literals, shell_exec, debug_print
 
@@ -23,7 +24,7 @@ def __get_uname():
     return uname
 
 
-def load_libraries(definition: Definition, c_program: str, link_libraries: list, c_source_files: list, injected_lua_files: list, dependency_libraries: list):
+def load_libraries(config: Config, definition: Definition, c_program: str, link_libraries: list, c_source_files: list, injected_lua_files: list, dependency_libraries: list):
 
     uname = __get_uname()
 
@@ -45,6 +46,12 @@ def load_libraries(definition: Definition, c_program: str, link_libraries: list,
     bundle_files += glob.glob('/src/libs/**/*.a', recursive=True)
     bundle_files += glob.glob('/src/libs/**/*.o', recursive=True)
     bundle_files += glob.glob('/src/libs/**/*.dylib', recursive=True)
+    
+    # Load aolib from /opt/aolibc/
+    if(config.target == 64):
+        bundle_files += glob.glob('/opt/aolibc/aolibc.a', recursive=True)
+    else:
+        bundle_files += glob.glob('/opt/aolibc/aolibc32.a', recursive=True)
     
     bundle_files += glob.glob('/src/libs/**/*.lua', recursive=True)
     # bundle_files += glob.glob(local_include_dir + '/**/*.so', recursive=True)

@@ -36,7 +36,7 @@ var Module = (() => {
         readyPromiseReject = reject;
       });
 
-      ["_malloc", "_memory", "___asyncjs__weavedrive_open", "___asyncjs__weavedrive_read", "___asyncjs__weavedrive_close", "_handle", "___indirect_function_table", "onRuntimeInitialized"].forEach(prop => {
+      ["_malloc", "_memory", "___asyncjs__weavedrive_open", "___asyncjs__weavedrive_read", "___asyncjs__weavedrive_close", "_metering_gasUsed", "_handle", "___indirect_function_table", "onRuntimeInitialized"].forEach(prop => {
         if (!Object.getOwnPropertyDescriptor(readyPromise, prop)) {
           Object.defineProperty(readyPromise, prop, {
             get: () => abort("You are getting " + prop + " on the Promise object, instead of the instance. Use .then() to get called back with the instance, see the MODULARIZE docs in src/settings.js"),
@@ -689,6 +689,9 @@ var Module = (() => {
           const drive = Module.WeaveDrive(Module, FS);
           return drive.close(fd);
         });
+      }
+      function metering_gasUsed() {
+        return Module.gas.used;
       }
 
 /** @constructor */ function ExitStatus(status) {
@@ -4943,6 +4946,7 @@ var Module = (() => {
 
       var wasmImports = {
       /** @export */ __assert_fail: ___assert_fail,
+      /** @export */ metering_gasUsed: metering_gasUsed,
       /** @export */ __asyncjs__weavedrive_close: __asyncjs__weavedrive_close,
       /** @export */ __asyncjs__weavedrive_open: __asyncjs__weavedrive_open,
       /** @export */ __asyncjs__weavedrive_read: __asyncjs__weavedrive_read,
