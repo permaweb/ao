@@ -34,7 +34,7 @@ RUN rustup target add x86_64-unknown-linux-gnu && \
         cargo build --release --target x86_64-unknown-linux-gnu
 
 # Stage 4: Runner 
-FROM gcr.io/distroless/cc-debian12 
+FROM ubuntu:22.04
 COPY --from=builder /app/target/release/su /
 COPY --from=cacher /lib/x86_64-unknown-linux-gnu/*  /lib/x86_64-unknown-linux-gnu
 CMD ["./su"]
