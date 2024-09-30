@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     libclang-dev \
     clang \
     librocksdb-dev \
-    libpq-dev \
+    libpq5 \
     libssl-dev
 COPY --from=planner /app/recipe.json recipe.json
 RUN ls /lib/
@@ -30,8 +30,7 @@ COPY --from=cacher /app/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
 COPY --from=cacher /lib/x86_64-linux-gnu/* /lib/x86_64-linux-gnu/
 # Set the correct Rust target based on architecture
-RUN rustup target add x86_64-unknown-linux-gnu && \
-        cargo build --release --target x86_64-unknown-linux-gnu/
+RUN cargo build --release
 
 # Stage 4: Runner 
 FROM ubuntu:22.04
