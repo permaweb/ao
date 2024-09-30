@@ -28,7 +28,7 @@ COPY . /app
 WORKDIR /app
 COPY --from=cacher /app/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
-COPY --from=cacher /lib/aarch64-unknown-linux-gnu/*  /lib/aarch64-unknown-linux-gnu
+COPY --from=cacher /lib/aarch64-linux-gnu/*  /lib/aarch64-linux-gnu
 # Set the correct Rust target based on architecture
 RUN rustup target add aarch64-unknown-linux-gnu && \
         cargo build --release --target aarch64-unknown-linux-gnu
@@ -36,5 +36,5 @@ RUN rustup target add aarch64-unknown-linux-gnu && \
 # Stage 4: Runner 
 FROM gcr.io/distroless/cc-debian12 
 COPY --from=builder /app/target/release/su /
-COPY --from=cacher /lib/aarch64-unknown-linux-gnu/*  /lib/aarch64-unknown-linux-gnu
+COPY --from=cacher /lib/aarch64-linux-gnu/*  /lib/aarch64-linux-gnu
 CMD ["./su"]
