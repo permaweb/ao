@@ -68,7 +68,7 @@ class NonceTracker {
       } else {
         this.db = new Database(this.dbFilePath)
       }
-      this.largestNonces = this.loadLargestNonces()
+      this.loadLargestNonces()
       this.updateNonceStmt = this.db.prepare(`
         INSERT INTO largest_nonces (processId, nonce)
         VALUES (?, ?)
