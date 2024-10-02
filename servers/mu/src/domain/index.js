@@ -120,6 +120,26 @@ export const createApis = async (ctx) => {
   const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
   const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
 
+  // Create trace database metrics
+  MetricsClient.gaugeWith({})({
+    name: 'db_size',
+    description: 'The size of the databases',
+    labelNames: ['database'],
+    labeledCollect: async () => {
+      const taskPageSize = await db.pragma('page_size', { simple: true })
+      const taskPageCount = await db.pragma('page_count', { simple: true })
+
+      const tracePageSize = await traceDb.pragma('page_size', { simple: true })
+      const tracePageCount = await traceDb.pragma('page_count', { simple: true })
+
+      const labelValues = [
+        { labelName: 'database', labelValue: 'task', value: taskPageSize * taskPageCount },
+        { labelName: 'database', labelValue: 'trace', value: tracePageSize * tracePageCount }
+      ]
+      return labelValues
+    }
+  })
+
   /**
    * Select queue ids from database on startup.
    * This will allow us to "pick up" persisted tasks
