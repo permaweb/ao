@@ -1,18 +1,19 @@
-import { ConsoleTransport, HoneycombTransport, CompositeTransport } from './event-transport.js'
+import { ConsoleTransport, HoneycombTransport, KinesisTransport, CompositeTransport } from './event-transport.js'
 
 export class EventVacuum {
   constructor (transport) {
     this.transport = transport
   }
 
-  processLogs (logData, processId, nonce) {
+  async processLogs (logData, processId, nonce) {
+    if (typeof logData !== 'string') return
     const events = (logData ?? '')
       .split('\n')
       .map(this.parseJson)
       .filter(this.isEvent)
       .map(({ _e, ...eventData }) => eventData) // Strip the "_e" flag
       .map(this.normalizeTimestamps)
-    this.dispatchEvents(events, processId, nonce)
+    await this.dispatchEvents(events, processId, nonce)
   }
 
   parseJson (line) {
@@ -44,9 +45,9 @@ export class EventVacuum {
     return event
   }
 
-  dispatchEvents (events, processId, nonce) {
+  async dispatchEvents (events, processId, nonce) {
     if (events.length === 0) return
-    this.transport.sendEvents(events, processId, nonce)
+    await this.transport.sendEvents(events, processId, nonce)
   }
 }
 
@@ -59,6 +60,14 @@ const transports = transportNames.map((transportName) => {
       return new HoneycombTransport({
         writeKey: process.env.HONEYCOMB_API_KEY,
         dataset: process.env.HONEYCOMB_DATASET
+      })
+    case 'kinesis':
+      return new KinesisTransport({
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+        },
+        streamName: process.env.KINESIS_STREAM_NAME
       })
     default:
       throw new Error(`Unknown event transport "${transportName}"`)

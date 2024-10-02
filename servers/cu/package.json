@@ -11,6 +11,7 @@
     "test": "node --experimental-wasm-memory64 --test"
   },
   "dependencies": {
+    "@aws-sdk/client-kinesis": "^3.658.1",
     "@fastify/middie": "^8.3.1",
     "@permaweb/ao-loader": "^0.0.35",
     "@permaweb/ao-scheduler-utils": "^0.0.19",
