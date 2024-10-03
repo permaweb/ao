@@ -110,13 +110,14 @@ module.exports = async function (binary, options) {
   } else {
 
     if (typeof binary === "function") {
-      WebAssembly.instantiate = async function (wasm, info) {
-        const meteredWasm = metering.meterWASM(wasm, { meterType });
-        return originalInstantiate(meteredWasm, info);
-      };
+      // TODO: wasmMetering is currently disabled on 
+      // WebAssembly.instantiate = async function (wasm, info) {
+      //   const meteredWasm = metering.meterWASM(wasm, { meterType });
+      //   return originalInstantiate(wasm, info);
+      // };
       options.instantiateWasm = binary
     } else {
-      binary = metering.meterWASM(binary, { meterType })
+      //binary = metering.meterWASM(binary, { meterType })
       options.wasmBinary = binary
     }
 
@@ -156,6 +157,7 @@ module.exports = async function (binary, options) {
   }
 
   return async (buffer, msg, env) => {
+
     const originalRandom = Math.random
     // const OriginalDate = Date
     const originalLog = console.log
