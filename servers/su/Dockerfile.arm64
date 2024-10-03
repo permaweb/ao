@@ -34,6 +34,7 @@ RUN cargo build --release
 
 # Stage 4: Runner 
 FROM --platform=linux/arm64 gcr.io/distroless/cc-debian12 
+RUN apt-get update && apt install ca-certificates openssl -y
 COPY --from=builder /app/target/release/su /
 COPY --from=cacher /lib/aarch64-linux-gnu/*  /lib/aarch64-linux-gnu/
-CMD ["./su",  "su", "9000"]
+CMD ["sh", "-c", "sleep 10 && ./su su 9000"]
