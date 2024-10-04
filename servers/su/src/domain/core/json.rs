@@ -1,3 +1,4 @@
+use actix_web::web::Json;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -128,39 +129,36 @@ pub fn hash(data: &[u8]) -> Vec<u8> {
 impl Process {
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, JsonErrorType> {
         let data_item = DataItem::from_bytes(bytes)?;
-        let top_level_tags = data_item.tags();
 
         /*
-          using arbitrary tag at the top level to check if
-          old structure, old structure had protocol tags on
-          the top level DataItem
+          Parse bundle to determine if old or new
+          structure. The old structure had no assignment.
         */
-        let epoch_tag = top_level_tags.iter().find(|tag| tag.name == "Block-Height");
+        let bundle_data = DataBundle::from_bytes(
+            &data_item
+                .data_bytes()
+                .ok_or("Bundle data not present in DataItem")?,
+        )?;
 
-        match epoch_tag {
-            None => {
+        match bundle_data.items.len() {
+            2 => {
                 /*
-                  Current process structure, because protocol tags are
-                  not present at the top level data item.
+                  Current process structure, because it has an
+                  assignment and a message
                 */
-                let bundle_data = DataBundle::from_bytes(
-                    &data_item
-                        .data_bytes()
-                        .ok_or("Bundle data not present in DataItem")?,
-                )?;
                 Ok(Process::from_bundle(&bundle_data)?)
             }
-            Some(_) => {
+            1 => {
                 /*
                   This is an old message structure so we have to
                   parse it differently.
                 */
-                let bundle_data = DataBundle::from_bytes(
-                    &data_item
-                        .data_bytes()
-                        .ok_or("Bundle data not present in DataItem")?,
-                )?;
-                Ok(Process::from_bundle_no_assign(&bundle_data)?)
+                Ok(Process::from_bundle_no_assign(&bundle_data, &data_item)?)
+            }
+            _ => {
+                return Err(JsonErrorType::JsonError(
+                    "Invalid Process Bundle".to_string(),
+                ))
             }
         }
     }
@@ -259,7 +257,10 @@ impl Process {
     /*
       for Processes pre aop6
     */
-    pub fn from_bundle_no_assign(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
+    pub fn from_bundle_no_assign(
+        data_bundle: &DataBundle,
+        bundle_data_item: &DataItem,
+    ) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
@@ -278,7 +279,7 @@ impl Process {
         let address_hash = hash(&owner_bytes);
         let address = base64_url::encode(&address_hash);
 
-        let bundle_tags = data_bundle.tags.clone();
+        let bundle_tags = bundle_data_item.tags().clone();
 
         let block_tag = bundle_tags
             .iter()

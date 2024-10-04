@@ -41,15 +41,11 @@ impl From<String> for ByteErrorType {
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
-    pub tags: Vec<Tag>,
 }
 
 impl DataBundle {
     pub fn new(tags: Vec<Tag>) -> Self {
-        DataBundle {
-            items: Vec::new(),
-            tags: tags,
-        }
+        DataBundle { items: Vec::new() }
     }
 
     pub fn add_item(&mut self, item: DataItem) {
@@ -108,10 +104,7 @@ impl DataBundle {
             items.push(item);
         }
 
-        Ok(Self {
-            items,
-            tags: Vec::new(), // Assuming tags are not used in to_bytes
-        })
+        Ok(Self { items })
     }
 }
 

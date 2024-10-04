@@ -13,14 +13,16 @@ pub struct LocalStoreClient {
     logger: Arc<dyn Log>,
     /*
       A RocksDB instance that is a key value store
-      of ANS-104 bundles
+      of ANS-104 bundles, only public for migration
+      purposes
     */
-    file_db: DB,
+    pub file_db: DB,
     /*
       A RocksDB instance that is an index for querying
-      and ordering of Process's and Messages
+      and ordering of Process's and Messages, only public
+      for migration purposes
     */
-    index_db: DB,
+    pub index_db: DB,
 }
 
 impl From<serde_json::Error> for StoreErrorType {
@@ -98,6 +100,59 @@ impl LocalStoreClient {
         })
     }
 
+    // Helper method to generate process key
+    fn generate_process_key(&self, process_id: &str) -> String {
+        format!("process:{}", process_id)
+    }
+
+    // Helper method to generate message composite key
+    fn msg_composite_key(&self, message_id: &str, assignment_id: &str) -> String {
+        format!("messages:{}:{}", message_id, assignment_id)
+    }
+
+    // Helper method to generate message key
+    fn msg_prefix_key(&self, message_id: &str) -> String {
+        format!("messages:{}:", message_id)
+    }
+
+    // Helper method to generate process assignment key
+    fn assignment_key(&self, assignment_id: &str) -> String {
+        format!("assignments:{}", assignment_id)
+    }
+
+    // Helper method to generate process assignment key
+    fn proc_assignment_key(&self, assignment_id: &str) -> String {
+        format!("process_assignments:{}", assignment_id)
+    }
+
+    // Helper method to generate process order key, taking the whole Process
+    fn proc_order_key(&self, process: &Process) -> Result<String, StoreErrorType> {
+        let process_id = &process.process.process_id;
+        let assignment_id = process.assignment_id()?;
+        let timestamp = process.timestamp()?;
+        let epoch = process.epoch()?;
+        let nonce = process.nonce()?;
+
+        Ok(format!(
+            "processes:{}:{:010}:{:010}:{:015}:{}",
+            process_id, epoch, nonce, timestamp, assignment_id
+        ))
+    }
+
+    // Helper method to generate message order key, taking the whole Message
+    fn msg_order_key(&self, message: &Message) -> Result<String, StoreErrorType> {
+        let process_id = message.process_id()?;
+        let assignment_id = message.assignment_id()?;
+        let timestamp = message.timestamp()?;
+        let epoch = message.epoch()?;
+        let nonce = message.nonce()?;
+
+        Ok(format!(
+            "process_messages:{}:{:010}:{:010}:{:015}:{}",
+            process_id, epoch, nonce, timestamp, assignment_id
+        ))
+    }
+
     fn fetch_message_range(
         &self,
         process_id: &String,
@@ -169,34 +224,47 @@ impl DataStore for LocalStoreClient {
     fn save_process(&self, process: &Process, bundle: &[u8]) -> Result<String, StoreErrorType> {
         let process_id = &process.process.process_id;
         let assignment_id = process.assignment_id()?;
-        let timestamp = process.timestamp()?;
-        let epoch = process.epoch()?;
-        let nonce = process.nonce()?;
 
-        // Save by process_id, but only store a reference to the assignment_id
-        let process_key = format!("process:{}", process_id);
+        let process_key = self.generate_process_key(process_id);
         self.index_db
             .put(process_key.as_bytes(), assignment_id.as_bytes())?;
 
-        // Store by process_id, epoch, nonce, and timestamp, storing a reference to assignment_id
-        let process_order_key = format!(
-            "processes:{}:{:010}:{:010}:{:015}:{}",
-            process_id, epoch, nonce, timestamp, assignment_id
-        );
-
+        let process_order_key = self.proc_order_key(process)?;
         self.index_db
             .put(process_order_key.as_bytes(), assignment_id.as_bytes())?;
 
-        // Store the binary bundle in file_db (by assignment_id)
-        let assignment_key = format!("process_assignments:{}", assignment_id);
+        let assignment_key = self.proc_assignment_key(&assignment_id);
         self.file_db.put(assignment_key.as_bytes(), bundle)?;
 
         Ok("Process saved".to_string())
     }
 
+    // Modify save_message to use the new msg_order_key method
+    async fn save_message(
+        &self,
+        message: &Message,
+        bundle_in: &[u8],
+    ) -> Result<String, StoreErrorType> {
+        let message_id = message.message_id()?;
+        let assignment_id = message.assignment_id()?;
+
+        let message_composite_key = self.msg_composite_key(&message_id, &assignment_id);
+        self.index_db
+            .put(message_composite_key.as_bytes(), assignment_id.as_bytes())?;
+
+        let process_order_key = self.msg_order_key(message)?;
+        self.index_db
+            .put(process_order_key.as_bytes(), assignment_id.as_bytes())?;
+
+        let assignment_key = self.assignment_key(&assignment_id);
+        self.file_db.put(assignment_key.as_bytes(), bundle_in)?;
+
+        Ok("Message saved".to_string())
+    }
+
     async fn get_process(&self, tx_id: &str) -> Result<Process, StoreErrorType> {
-        // First, try to fetch the process by assignment_id directly
-        let assignment_key = format!("process_assignments:{}", tx_id);
+        // Use assignment_key for assignment_id
+        let assignment_key = self.assignment_key(tx_id);
         if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
             // Found the process by assignment_id, deserialize and return it
             let process: Process = Process::from_bytes(process_bundle)?;
@@ -204,14 +272,13 @@ impl DataStore for LocalStoreClient {
         }
 
         // If not found by assignment_id, assume tx_id is a process_id
-        let process_key = format!("process:{}", tx_id);
+        let process_key = self.generate_process_key(tx_id);
         if let Some(assignment_id_bytes) = self.index_db.get(process_key.as_bytes())? {
             let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
 
             // Now fetch the process by assignment_id
-            let assignment_key = format!("process_assignments:{}", assignment_id);
+            let assignment_key = self.assignment_key(&assignment_id);
             if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
-                // Found the process by assignment_id, deserialize and return it
                 let process: Process = Process::from_bytes(process_bundle)?;
                 return Ok(process);
             }
@@ -230,48 +297,16 @@ impl DataStore for LocalStoreClient {
         }
     }
 
-    async fn save_message(
-        &self,
-        message: &Message,
-        bundle_in: &[u8],
-    ) -> Result<String, StoreErrorType> {
-        let process_id = message.process_id()?;
-        let message_id = message.message_id()?;
-        let assignment_id = message.assignment_id()?;
-        let timestamp = message.timestamp()?;
-        let epoch = message.epoch()?;
-        let nonce = message.nonce()?;
-
-        // Save by message_id, but only store a reference to the assignment_id
-        let message_composite_key = format!("messages:{}:{}", message_id, assignment_id);
-        self.index_db
-            .put(message_composite_key.as_bytes(), assignment_id.as_bytes())?;
-
-        // Store by process_id, epoch, nonce, and timestamp, storing a reference to assignment_id
-        let process_order_key = format!(
-            "process_messages:{}:{:010}:{:010}:{:015}:{}",
-            process_id, epoch, nonce, timestamp, assignment_id
-        );
-        self.index_db
-            .put(process_order_key.as_bytes(), assignment_id.as_bytes())?;
-
-        // Store the binary bundle in file_db (by assignment_id)
-        let assignment_key = format!("assignments:{}", assignment_id);
-        self.file_db.put(assignment_key.as_bytes(), bundle_in)?;
-
-        Ok("Message saved".to_string())
-    }
-
     fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
-        // Try to fetch the message directly by assignment_id
-        let assignment_key = format!("assignments:{}", tx_id);
+        // Use assignment_key for assignment_id
+        let assignment_key = self.assignment_key(tx_id);
         if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
             let message: Message = Message::from_bytes(message_bundle)?;
             return Ok(message);
         }
 
         // If not found by assignment_id, assume tx_id is a message_id
-        let message_key_prefix = format!("messages:{}:", tx_id);
+        let message_key_prefix = self.msg_prefix_key(tx_id);
         let mut iter = self.index_db.prefix_iterator(message_key_prefix.as_bytes());
 
         // Look for the assignment_id for this message_id
@@ -279,8 +314,8 @@ impl DataStore for LocalStoreClient {
             let (_key, assignment_id_bytes) = result?;
             let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
 
-            // Now fetch the message by assignment_id
-            let assignment_key = format!("assignments:{}", assignment_id);
+            // Fetch the message using the generated assignment key
+            let assignment_key = self.assignment_key(&assignment_id);
             if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
                 let message: Message = Message::from_bytes(message_bundle)?;
                 return Ok(message);
@@ -322,12 +357,8 @@ impl DataStore for LocalStoreClient {
 
         // Fetch the messages for each paginated key
         for (_, assignment_id) in paginated_keys {
-            let assignment_key = format!("assignments:{}", assignment_id);
-            /*
-              This loop is necessary because it may be that the index
-              has been built but the message data hasnt finished writing
-              yet.
-            */
+            let assignment_key = self.assignment_key(&assignment_id);
+
             for _ in 0..10 {
                 if let Some(message_data) = self.index_db.get(assignment_key.as_bytes())? {
                     // Found the message by assignment_id, deserialize and return it
@@ -344,12 +375,6 @@ impl DataStore for LocalStoreClient {
         Ok(PaginatedMessages::from_messages(messages, has_next_page)?)
     }
 
-    /*
-      Currently this is only running once for each process
-      that is written to, so it doesn't need to be that
-      efficient. So it is just pulling the index for the
-      process into memory and grabbing the last one.
-    */
     fn get_latest_message(&self, process_id: &str) -> Result<Option<Message>, StoreErrorType> {
         let (paginated_keys, _) =
             self.fetch_message_range(&process_id.to_string(), &None, &None, &None)?;
@@ -369,10 +394,15 @@ impl DataStore for LocalStoreClient {
     }
 }
 
+/*
+  This is a migration which moves all data
+  out of the old data store and into the
+  local store.
+*/
 pub mod migration {
-    use std::{env, io};
-    use std::sync::Arc;
+    use std::io;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
     use std::time::{Duration, Instant};
 
     use futures::future::join_all;
@@ -380,105 +410,216 @@ pub mod migration {
     use tokio::time::interval;
 
     use super::super::store::StoreClient;
+    use crate::domain::core::dal::{DataItem, Message, Process};
 
     pub async fn migrate_to_local() -> io::Result<()> {
         let start = Instant::now();
-        let data_store = Arc::new(
-          StoreClient::new_single_connection().expect("Failed to create StoreClient")
-        );
+        let data_store =
+            Arc::new(StoreClient::new_single_connection().expect("Failed to create StoreClient"));
 
         data_store
             .bytestore
             .try_read_instance_connect()
             .expect("Failed to connect to bytestore");
 
-        let local_data_store = Arc::new(super::LocalStoreClient::new().expect("Failed to create LocalStoreClient"));
+        let local_data_store =
+            Arc::new(super::LocalStoreClient::new().expect("Failed to create LocalStoreClient"));
 
+        let batch_size = 100;
         let total_count = data_store
-          .get_message_count()
-          .expect("Failed to get message count");
-    
-        data_store.logger.log(format!("Total messages to process: {}", total_count));
+            .get_message_count()
+            .expect("Failed to get message count");
+
+        data_store
+            .logger
+            .log(format!("Total messages to process: {}", total_count));
 
         let processed_count = Arc::new(AtomicUsize::new(0));
-
         let processed_count_clone = Arc::clone(&processed_count);
         let data_store_c = Arc::clone(&data_store);
+
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(10));
-            loop {
+            while processed_count_clone.load(Ordering::Relaxed) < total_count as usize {
                 interval.tick().await;
                 data_store_c.logger.log(format!(
                     "Messages processed update: {}",
-                    processed_count_clone.load(Ordering::SeqCst)
+                    processed_count_clone.load(Ordering::Relaxed)
                 ));
-                if processed_count_clone.load(Ordering::SeqCst) >= total_count as usize {
-                    break;
-                }
             }
         });
 
-        for batch_start in (0..total_count).step_by(20) {
-            let batch_end = batch_start + 20 as i64;
-    
-            let data_store = Arc::clone(&data_store);
-            let processed_count = Arc::clone(&processed_count);
-    
-            let result = data_store.get_all_messages_no_bundle(batch_start, Some(batch_end));
-    
-            match result {
-                Ok(messages) => {
-                    let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
-                    for message in messages {
-                        let msg_id = message.0;
-                        let assignment_id = message.1;
-                        let process_id = message.2;
-                        let timestamp = message.3;
-                        let epoch = message.4;
-                        let nonce = message.5;
-                        let hash_chain = message.6;
-                        let data_store = Arc::clone(&data_store);
-                        let processed_count = Arc::clone(&processed_count);
+        for batch_start in (0..total_count).step_by(batch_size) {
+            if let Ok(messages) = data_store
+                .get_all_messages_using_bytestore(
+                    batch_start,
+                    Some(batch_start + batch_size as i64),
+                )
+                .await
+            {
+                let save_handles: Vec<JoinHandle<()>> =
+                    messages
+                        .into_iter()
+                        .map(|message| {
+                            let (
+                                msg_id,
+                                assignment_id,
+                                process_id,
+                                timestamp,
+                                epoch,
+                                nonce,
+                                _,
+                                bundle,
+                            ) = message;
+                            let processed_count = Arc::clone(&processed_count);
+                            let local_data_store_clone = Arc::clone(&local_data_store);
 
-                        let binary_key = (
-                            msg_id.clone(),
-                            assignment_id.clone(),
-                            process_id.clone(),
-                            timestamp.to_string().clone(),
-                        );
-    
-                        let handle = tokio::spawn(async move {
-                            // data_store
-                            //     .bytestore
-                            //     .clone()
-                            //     .save_binary(
-                            //         msg_id.clone(),
-                            //         assignment_id.clone(),
-                            //         process_id.clone(),
-                            //         timestamp.clone(),
-                            //         bundle,
-                            //     )
-                            //     .unwrap();
-                            processed_count.fetch_add(1, Ordering::SeqCst);
-                        });
-    
-                        save_handles.push(handle);
-                    }
-                    join_all(save_handles).await;
-                }
-                Err(e) => {
-                    data_store
-                        .logger
-                        .error(format!("Error fetching messages: {:?}", e));
-                }
+                            let (assignment, composite_key, order_key, assignment_key) =
+                                match assignment_id {
+                                    Some(a_id) => (
+                                        a_id.clone(),
+                                        format!("messages:{}:{}", msg_id, a_id),
+                                        format!(
+                                            "process_messages:{}:{:010}:{:010}:{:015}:{}",
+                                            process_id, epoch, nonce, timestamp, a_id
+                                        ),
+                                        format!("assignments:{}", a_id),
+                                    ),
+                                    None => {
+                                        let parsed_message =
+                                            Message::from_bytes(bundle.clone()).unwrap();
+                                        (
+                                            parsed_message.assignment.id.clone(),
+                                            format!(
+                                                "messages:{}:{}",
+                                                msg_id, parsed_message.assignment.id
+                                            ),
+                                            format!(
+                                                "process_messages:{}:{:010}:{:010}:{:015}:{}",
+                                                process_id,
+                                                epoch,
+                                                nonce,
+                                                timestamp,
+                                                parsed_message.assignment.id
+                                            ),
+                                            format!("assignments:{}", parsed_message.assignment.id),
+                                        )
+                                    }
+                                };
+
+                            tokio::task::spawn_blocking(move || {
+                                local_data_store_clone
+                                    .index_db
+                                    .put(composite_key.as_bytes(), assignment.as_bytes())
+                                    .unwrap();
+                                local_data_store_clone
+                                    .index_db
+                                    .put(order_key.as_bytes(), assignment.as_bytes())
+                                    .unwrap();
+                                local_data_store_clone
+                                    .file_db
+                                    .put(assignment_key.as_bytes(), bundle)
+                                    .unwrap();
+                                processed_count.fetch_add(1, Ordering::Relaxed);
+                            })
+                        })
+                        .collect();
+                join_all(save_handles).await;
+            } else {
+                data_store.logger.error(format!("Error fetching messages"));
             }
         }
 
-        let duration = start.elapsed();
-        data_store
-            .logger
-            .log(format!("Time elapsed in data migration is: {:?}", duration));
-        
+        let total_process_count = data_store
+            .get_process_count()
+            .expect("Failed to get process count");
+        data_store.logger.log(format!(
+            "Total processes to process: {}",
+            total_process_count
+        ));
+
+        for batch_start in (0..total_process_count).step_by(batch_size) {
+            if let Ok(processes) =
+                data_store.get_all_processes(batch_start, Some(batch_start + batch_size as i64))
+            {
+                let save_handles: Vec<JoinHandle<()>> = processes
+                    .into_iter()
+                    .map(|process| {
+                        let parsed_process = Process::from_bytes(process.clone()).unwrap();
+                        let parsed_clone = parsed_process.clone();
+                        let local_data_store_clone = Arc::clone(&local_data_store);
+
+                        let (assignment_id, process_key, order_key, assignment_key) =
+                            match parsed_process.assignment {
+                                Some(assignment) => {
+                                    let timestamp = parsed_clone.timestamp().unwrap();
+                                    (
+                                        assignment.id.clone(),
+                                        format!("processes:{}", parsed_process.process.process_id),
+                                        format!(
+                                            "processes:{}:{:010}:{:010}:{:015}:{}",
+                                            parsed_process.process.process_id,
+                                            0,
+                                            0,
+                                            timestamp,
+                                            assignment.id
+                                        ),
+                                        format!("process_assignments:{}", assignment.id),
+                                    )
+                                }
+                                None => {
+                                    let bundle_data_item =
+                                        DataItem::from_bytes(process.clone()).unwrap();
+                                    let timestamp = bundle_data_item
+                                        .tags()
+                                        .iter()
+                                        .find(|tag| tag.name == "Timestamp")
+                                        .unwrap()
+                                        .value
+                                        .parse::<i64>()
+                                        .unwrap();
+                                    (
+                                        bundle_data_item.id().clone(),
+                                        format!("processes:{}", parsed_process.process.process_id),
+                                        format!(
+                                            "processes:{}:{:010}:{:010}:{:015}:{}",
+                                            parsed_process.process.process_id,
+                                            0,
+                                            0,
+                                            timestamp,
+                                            bundle_data_item.id()
+                                        ),
+                                        format!("process_assignments:{}", bundle_data_item.id()),
+                                    )
+                                }
+                            };
+
+                        tokio::task::spawn_blocking(move || {
+                            local_data_store_clone
+                                .index_db
+                                .put(process_key.as_bytes(), assignment_id.as_bytes())
+                                .unwrap();
+                            local_data_store_clone
+                                .index_db
+                                .put(order_key.as_bytes(), assignment_id.as_bytes())
+                                .unwrap();
+                            local_data_store_clone
+                                .file_db
+                                .put(assignment_key.as_bytes(), process.clone())
+                                .unwrap();
+                        })
+                    })
+                    .collect();
+                join_all(save_handles).await;
+            } else {
+                data_store.logger.error(format!("Error fetching processes"));
+            }
+        }
+
+        data_store.logger.log(format!(
+            "Time elapsed in data migration is: {:?}",
+            start.elapsed()
+        ));
         Ok(())
     }
 }

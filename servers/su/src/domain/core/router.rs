@@ -1,3 +1,4 @@
+use super::builder::Builder;
 use crate::domain::core::dal::StoreErrorType;
 use crate::domain::flows::{init_builder, Deps};
 use serde::Deserialize;
@@ -155,7 +156,7 @@ pub async fn redirect_data_item(
     }
 
     let builder = init_builder(&deps)?;
-    let item = builder.parse_data_item(input.clone())?;
+    let item = Builder::parse_data_item(input.clone())?;
     let tags = item.tags().clone();
     let id = item.id().clone();
     let target = item.target().clone();
