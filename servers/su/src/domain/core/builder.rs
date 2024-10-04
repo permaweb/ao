@@ -17,6 +17,7 @@ pub struct Builder<'a> {
 pub struct BuildResult {
     pub binary: Vec<u8>,
     pub bundle: DataBundle,
+    pub bundle_data_item: DataItem,
 }
 
 #[derive(Debug, Clone)]
@@ -137,6 +138,7 @@ impl<'a> Builder<'a> {
         Ok(BuildResult {
             binary: bundle_data_item.as_bytes()?,
             bundle: data_bundle,
+            bundle_data_item,
         })
     }
 
@@ -190,10 +192,11 @@ impl<'a> Builder<'a> {
         Ok(BuildResult {
             binary: new_data_item.as_bytes()?,
             bundle: data_bundle,
+            bundle_data_item: new_data_item,
         })
     }
 
-    pub fn parse_data_item(&self, tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
+    pub fn parse_data_item(tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
         Ok(DataItem::from_bytes(tx)?)
     }
 

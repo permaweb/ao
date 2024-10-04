@@ -19,8 +19,8 @@ pub use clients::metrics::PromMetrics;
 pub use core::flows;
 pub use core::router;
 pub use flows::Deps;
-pub use store::migrate_to_disk;
 pub use local_store::migration::migrate_to_local;
+pub use store::migrate_to_disk;
 
 pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Registry) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();

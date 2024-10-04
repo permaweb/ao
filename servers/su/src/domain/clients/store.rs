@@ -250,6 +250,60 @@ impl StoreClient {
     }
 
     /*
+      Method to get the total number of processes
+      in the database, this is used by the mig_local migration.
+    */
+    pub fn get_process_count(&self) -> Result<i64, StoreErrorType> {
+        use super::schema::processes::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+
+        let count_result: Result<i64, DieselError> = processes.count().get_result(conn);
+
+        match count_result {
+            Ok(count) => Ok(count),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    /*
+      Get all processes in the database, within a
+      certain range. This is used for migrations.
+    */
+    pub fn get_all_processes(
+        &self,
+        from: i64,
+        to: Option<i64>,
+    ) -> Result<Vec<Vec<u8>>, StoreErrorType> {
+        use super::schema::processes::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = processes.into_boxed();
+
+        // Apply the offset
+        query = query.offset(from);
+
+        // Apply the limit if `to` is provided
+        if let Some(to) = to {
+            let limit = to - from;
+            query = query.limit(limit);
+        }
+
+        let db_processes_result: Result<Vec<DbProcess>, DieselError> = query.load(conn);
+
+        match db_processes_result {
+            Ok(db_processes) => {
+                let mut processes_mapped: Vec<Vec<u8>> = vec![];
+                for db_process in db_processes.iter() {
+                    let bytes: Vec<u8> = db_process.bundle.clone();
+                    processes_mapped.push(bytes);
+                }
+
+                Ok(processes_mapped)
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    /*
       Get all messages in the database, within a
       certain range. This is used for the migration.
     */
@@ -312,35 +366,37 @@ impl StoreClient {
         }
     }
 
-    pub fn get_all_messages_no_bundle(
+    // used by the mig_local migration
+    pub async fn get_all_messages_using_bytestore(
         &self,
         from: i64,
         to: Option<i64>,
     ) -> Result<
         Vec<(
-            String,              // message_id
-            Option<String>,      // assignment_id
-            String,              // process_id
-            i64, // timestamp
-            i32,                 // epoch
-            i32,                 // nonce
-            String,              // hash_chain
+            String,         // message_id
+            Option<String>, // assignment_id
+            String,         // process_id
+            i64,            // timestamp
+            i32,            // epoch
+            i32,            // nonce
+            String,         // hash_chain
+            Vec<u8>,        // bundle
         )>,
         StoreErrorType,
     > {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn()?;
         let mut query = messages.into_boxed();
-    
+
         // Apply the offset
         query = query.offset(from);
-    
+
         // Apply the limit if `to` is provided
         if let Some(to) = to {
             let limit = to - from;
             query = query.limit(limit);
         }
-    
+
         // Select only the fields that you are using
         let selected_fields = query.select((
             message_id,
@@ -351,42 +407,108 @@ impl StoreClient {
             nonce,
             hash_chain,
         ));
-    
+
         // Load only the selected fields
         let db_messages_result: Result<
             Vec<(
-                String,              // message_id
-                Option<String>,      // assignment_id
-                String,              // process_id
-                i64, // timestamp
-                i32,                 // epoch
-                i32,                 // nonce
-                String,              // hash_chain
-            )>, 
-            DieselError
+                String,         // message_id
+                Option<String>, // assignment_id
+                String,         // process_id
+                i64,            // timestamp
+                i32,            // epoch
+                i32,            // nonce
+                String,         // hash_chain
+            )>,
+            DieselError,
         > = selected_fields.order(timestamp.asc()).load(conn);
-    
+
         match db_messages_result {
             Ok(db_messages) => {
                 // Map the result into the desired tuple with timestamp as String
-                let messages_mapped = db_messages.into_iter().map(|db_message| {
-                    (
-                        db_message.0,                     // message_id
-                        db_message.1,                     // assignment_id
-                        db_message.2,                     // process_id
-                        db_message.3,                     // timestamp as chrono::NaiveDateTime
-                        db_message.4,                     // epoch
-                        db_message.5,                     // nonce
-                        db_message.6,                     // hash_chain
-                    )
-                }).collect::<Vec<_>>();
-    
-                Ok(messages_mapped)
+                let messages_mapped = db_messages
+                    .into_iter()
+                    .map(|db_message| {
+                        (
+                            db_message.0, // message_id
+                            db_message.1, // assignment_id
+                            db_message.2, // process_id
+                            db_message.3, // timestamp
+                            db_message.4, // epoch
+                            db_message.5, // nonce
+                            db_message.6, // hash_chain
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                let message_ids: Vec<(String, Option<String>, String, String)> = messages_mapped
+                    .iter()
+                    .map(|msg| {
+                        (
+                            msg.0.clone(),
+                            msg.1.clone(),
+                            msg.2.clone(),
+                            msg.3.to_string().clone(),
+                        )
+                    })
+                    .collect();
+
+                let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
+                let mut messages_with_bundles = vec![];
+
+                for db_message in messages_mapped.iter() {
+                    match binaries.get(&(
+                        db_message.0.clone(),             // message id
+                        db_message.1.clone(),             // assignment id
+                        db_message.2.clone(),             // process id
+                        db_message.3.to_string().clone(), // timestamp
+                    )) {
+                        Some(bytes_result) => {
+                            messages_with_bundles.push((
+                                db_message.0.clone(), // message_id
+                                db_message.1.clone(), // assignment_id
+                                db_message.2.clone(), // process_id
+                                db_message.3.clone(), // timestamp
+                                db_message.4.clone(), // epoch
+                                db_message.5.clone(), // nonce
+                                db_message.6.clone(), // hash_chain
+                                bytes_result.clone(), // bundle
+                            ));
+                        }
+                        None => {
+                            // Fall back to the database if the binary isn't available
+                            let db_message_with_bundle: DbMessage = match db_message.1.clone() {
+                                Some(assignment_id_d) => messages
+                                    .filter(
+                                        message_id
+                                            .eq(db_message.0.clone())
+                                            .and(assignment_id.eq(assignment_id_d)),
+                                    )
+                                    .order(timestamp.asc())
+                                    .first(conn)?,
+                                None => messages
+                                    .filter(message_id.eq(db_message.0.clone()))
+                                    .order(timestamp.asc())
+                                    .first(conn)?,
+                            };
+                            messages_with_bundles.push((
+                                db_message.0.clone(),                  // message_id
+                                db_message.1.clone(),                  // assignment_id
+                                db_message.2.clone(),                  // process_id
+                                db_message.3.clone(),                  // timestamp
+                                db_message.4.clone(),                  // epoch
+                                db_message.5.clone(),                  // nonce
+                                db_message.6.clone(),                  // hash_chain
+                                db_message_with_bundle.bundle.clone(), // bundle
+                            ));
+                        }
+                    }
+                }
+
+                Ok(messages_with_bundles)
             }
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
-  
 
     /*
       Used as a fallback when USE_DISK is true. If the
@@ -1278,14 +1400,14 @@ mod bytestore {
         pub fn try_read_instance_connect(&self) -> Result<(), String> {
             let mut opts = Options::default();
             opts.set_enable_blob_files(true); // Enable blob files
-        
+
             // Open the database in read-only mode
             let new_db = DB::open_for_read_only(&opts, &self.config.su_data_dir, false)
                 .map_err(|e| format!("Failed to open RocksDB in read-only mode: {:?}", e))?;
-        
+
             let mut db_write = self.db.write().unwrap();
             *db_write = Some(new_db);
-        
+
             Ok(())
         }
 
