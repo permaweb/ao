@@ -56,7 +56,6 @@ async function GetMemoryLimit () {
   } catch {
     return memoryLimit
   }
-
   if (config) {
     switch (config.preset) {
       case 'xs':
@@ -82,8 +81,9 @@ async function GetMemoryLimit () {
         break
     }
   }
-  if (config?.memory_limit) {
-    memoryLimit = `${config.memoryLimit}-b`
+
+  if (config?.maximum_memory) {
+    memoryLimit = `${config.maximum_memory}-b`
   }
   return memoryLimit
 }
@@ -97,8 +97,12 @@ async function GetMemoryLimit () {
  */
 
 export async function publish ({ wallet, bundler, tag, value }, contractWasmPath) {
-  tag.push('Memory-Limit')
-  value.push(await GetMemoryLimit())
+  tag = tag || []
+  value = value || []
+  if (!tag.includes('Memory-Limit')) {
+    tag.push('Memory-Limit')
+    value.push(await GetMemoryLimit())
+  }
   const cmdArgs = [
     ...walletArgs(wallet),
     ...bundlerArgs(bundler),
