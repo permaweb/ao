@@ -7,15 +7,23 @@ PATCHED_LIBC_A_PATH ?= $(shell pwd)/libc.ao.a
 
 # Path to your custom stdlib object file
 CUSTOM_LIB_OBJ = aostdio.o
+LOADER_LIB_OBJ= aoloader.o
+METERING_LIB_OBJ= aometering.o
 
 .PHONY: build
 build: aolibc.a
 
-aolibc.a: $(CUSTOM_LIB_OBJ)
-	emar r aolibc.a $(CUSTOM_LIB_OBJ)
+aolibc.a: $(CUSTOM_LIB_OBJ)  $(METERING_LIB_OBJ) $(LOADER_LIB_OBJ)
+	emar r aolibc.a $(CUSTOM_LIB_OBJ) $(METERING_LIB_OBJ) $(LOADER_LIB_OBJ)
 
 CUSTOM_LIB_OBJ: aostdio.c
 	emcc -s -c aostdio.c -o aostdio.o
+
+LOADER_LIB_OBJ: aoloader.c
+	emcc -s -c aoloader.c -o aoloader.o
+
+METERING_LIB_OBJ: aometering.c
+	emcc -s -c aometering.c -o aometering.o
 
 # Default target
 install: build-patched update-libc

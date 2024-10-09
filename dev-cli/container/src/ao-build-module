@@ -97,24 +97,65 @@ def main():
     debug_print('Start to compile as WASM')
 
     # Setup the compile command
-    cmd = ['emcc', '-O3', 
-      '-g2',
-    #   '-s', 'MAIN_MODULE', # This is required to load dynamic libraries at runtime
-      '-s', 'ASYNCIFY=1',
-      '-s', 'STACK_SIZE=' + str(config.stack_size),
-      '-s', 'ASYNCIFY_STACK_SIZE=' + str(config.stack_size),
-      '-s', 'ALLOW_MEMORY_GROWTH=1', 
-      '-s', 'INITIAL_MEMORY=' + str(config.initial_memory), 
-      '-s', 'MAXIMUM_MEMORY=' + str(config.maximum_memory), 
-      '-s', 'WASM=1', 
-      '-s', 'MODULARIZE',
-      # '-s', 'FILESYSTEM=0', 
-      '-s', 'DETERMINISTIC=1', 
-      '-s', 'NODERAWFS=0', 
-      '-s', 'FORCE_FILESYSTEM=1',
-      '-msimd128',
-      '--pre-js', '/opt/pre.js'
+    cmd = [
+        "emcc",
+        "-O3", # Optimize the code
+        "-g2", # Generate source maps
+        # Enable asyncify (Allows to run synchronous code in an asynchronous way)
+        "-sASYNCIFY=1",
+        "-sSTACK_SIZE=" + str(config.stack_size), # Set the stack size
+        "-sASYNCIFY_STACK_SIZE=" + str(config.stack_size), # Set the asyncify stack size
+        # Allow memory growth ( Defaults to GEOMETRIC growth with a value of 0.20 )
+        "-sALLOW_MEMORY_GROWTH=1", 
+        # Memory growth geometric step (Defaults to 0.20)
+        # A value of 0.20 means that the memory will grow by 20% each time it needs to grow
+        "-sMEMORY_GROWTH_GEOMETRIC_STEP=0.20",
+        # Memory growth geometric cap (Defaults to 96MB)
+        # The maximum amount of memory that can be grown in a single step
+        "-sMEMORY_GROWTH_GEOMETRIC_CAP=" + str(96*1024*1024),
+        "-sINITIAL_MEMORY=" + str(config.initial_memory), # Set the initial memory
+        "-sMAXIMUM_MEMORY=" + str(config.maximum_memory), # Set the maximum memory
+        # Enable WASM (Web Assembly)
+        "-sWASM=1",
+        # Enable MODULARIZE (Wrap the module in a function)
+        "-sMODULARIZE=1",
+        # Deterministic mode ( Forces Date.now(), Math.random, etc to be deterministic )
+        # Also tries to make execution deterministic accross machinnes and environments
+        "-sDETERMINISTIC=1",
+        # Disable Node.js raw filesystem access (Use the filesystem API)
+        "-sNODERAWFS=0",
+        # Force filesystem (Use the filesystem API)
+        "-sFORCE_FILESYSTEM=1",
+        # Main module is a file compiled in a way to allow us to link it to a side module at runtime.
+        "-sMAIN_MODULE=1",
+        # Allow table growth makes it so more functions can be added to the table at runtime, nessesary for dynamic linking.
+        "-sALLOW_TABLE_GROWTH=1",
+        # Assertions add runtime checks to the code. ( Setting this to 2 will add more checks, that may slow down the code )
+        "-sASSERTIONS=1",
+        # Export Runtime Methods (cwrap, dynCall, ccall)
+        "-sEXPORTED_RUNTIME_METHODS=[\"cwrap\", \"dynCall\", \"ccall\"]",
+        # Include The LLVM headers ( Needed to load lib symbols at runtime )
+        "-I/opt/aolibc/include",
+        "-msimd128",
+        "--pre-js",
+        "/opt/pre.js",
     ]
+
+    # Add all c source files if there are any
+    for f in c_source_files:
+        cmd.append(quote(f))
+        
+    # Add the compile file and link libraries
+    cmd.extend(['/tmp/compile.c'])
+    cmd.extend([quote(v.filepath) for v in link_libraries])
+    cmd.extend([quote(v.filepath) for v in dependency_libraries])
+    cmd.extend(config.get_extra_args())
+    cmd.extend(definition.get_extra_args())
+    
+    # Print all files in /lua-{}/src/
+    luasrc = glob.glob('/lua-{}/src/*.a', recursive=True)
+    for f in luasrc:
+        print(f)
     
     # If the target is 64 bit, add the MEMORY64 flag and link against 64 bit libraries
     if config.target == 64:
@@ -123,33 +164,15 @@ def main():
         cmd.extend([quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
     # If the target is 32 bit, link against 32 bit libraries
     else:
-        cmd.extend(['-I', quote('/lua-{}-32/src'.format(os.environ.get('LUA_VERSION')))])
-        cmd.extend([quote('/lua-{}-32/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
+        cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
+        cmd.extend([quote('/lua-{}/src/liblua32.a'.format(os.environ.get('LUA_VERSION')))])
 
     # Link Rust library
     if(language == 'rust'):
         cmd.extend(['-L/opt/aorustlib', '-l:libaorust.a'])
-
-    cmd.extend(['-s','ASSERTIONS=1'])
-    cmd.extend(definition.get_extra_args())
-
-    # Add the lua include path
-
-    # Add all c source files if there are any
-    for f in c_source_files:
-        cmd.append(quote(f))
     
-    # Add the compile file and link libraries
-    cmd.extend(['/tmp/compile.c'])
-    cmd.extend([quote(v.filepath) for v in link_libraries])
-    cmd.extend([quote(v.filepath) for v in dependency_libraries])
-    cmd.extend(config.get_extra_args())
-
-    # Export the main function and malloc for the runtime
-    cmd.extend(['-s', 'EXPORTED_FUNCTIONS=["_malloc", "_main"]'])
-
     # Export the runtime methods cwrap
-    cmd.extend(['-lm', '-ldl', '-o', definition.get_output_file(), '-s', 'EXPORTED_RUNTIME_METHODS=["cwrap"]'])
+    cmd.extend(['-lm', '-ldl', '-o', definition.get_output_file()])
 
     debug_print('Compile command is {}'.format(' '.join(cmd)))
     shell_exec(*cmd)

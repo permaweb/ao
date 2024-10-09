@@ -53,12 +53,13 @@ RUN cp -r /lua-${LUA_VERSION} /lua-${LUA_VERSION}-32
 # And, re-compile lua with "generic WASM"
 RUN cd /lua-${LUA_VERSION} && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='emcc -sWASM=1 -sSUPPORT_LONGJMP=1 -fPIC' && \
+  cp src/liblua.a src/liblua32.a
 
-# And, re-compile lua with "generic WASM 32-bit"
-RUN cd /lua-${LUA_VERSION}-32 && \
+# And, re-compile lua with "generic WASM 64-bit"
+RUN cd /lua-${LUA_VERSION} && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='emcc -sWASM=1 -sMEMORY64=1 -sSUPPORT_LONGJMP=1 -fPIC' 
 
 
 #############################
@@ -101,11 +102,13 @@ RUN chmod +x /usr/local/bin/ao-build-module
 ###################################
 COPY ./src/aolibc /opt/aolibc
 ## Build aolibc for 32-bit and rename to aolibc32
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4-32/src/liblua.a -I/lua-5.3.4-32/src" && cp ./aolibc.a ./aolibc32.a
+RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua32.a -I/lua-5.3.4/src  -fPIC" && cp ./aolibc.a ./aolibc32.a
 RUN rm /opt/aolibc/aolibc.a
 RUN rm /opt/aolibc/aostdio.o
+RUN rm /opt/aolibc/aometering.o
+RUN rm /opt/aolibc/aoloader.o
 # Build aolibc for 64-bit
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua.a -I/lua-5.3.4/src"
+RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua.a -I/lua-5.3.4/src -fPIC"
 
 ENV CC='emcc -s WASM=1'
 ENV NM='/emsdk/upstream/bin/llvm-nm'
