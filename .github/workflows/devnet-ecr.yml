@@ -1,0 +1,38 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set region $AWS_REGION
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:latest .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
+
+      - name: Log out of Docker
+        run: docker logout
+  
+   
