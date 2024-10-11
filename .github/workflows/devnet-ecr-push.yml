@@ -2,8 +2,8 @@ name: Build and Push ao/server images to ECR when raising a PR
 
 on:
   pull_request:
-    branches:
-      - '*'
+    paths:
+        - 'servers/**'
 
 jobs:
   build-and-push-cu:
