@@ -113,10 +113,15 @@ WebAssembly.compileStreaming = async function (source, importObject = {}) {
   // Read the response and convert it to an ArrayBuffer
   const arrayBuffer = await source.arrayBuffer();
 
-  let meterType = importObject.format.startsWith("wasm32") ? "i32" : "i64";
-
   // Convert ArrayBuffer to Uint8Array for metering compatibility
   const nodeBuffer = Buffer.from(arrayBuffer);
+
+  if(options.format === "wasm32-unknown-emscripten" || options.format === "wasm32-unknown-emscripten2" || options.format === "wasm32-unknown-emscripten3") {
+    return WebAssembly.compile(nodeBuffer);
+  }
+
+  let meterType = importObject.format.startsWith("wasm32") ? "i32" : "i64";
+
 
   // Apply metering with the Uint8Array buffer
   const meteredView = metering.meterWASM(nodeBuffer, { meterType });
