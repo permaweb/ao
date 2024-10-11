@@ -5,10 +5,22 @@ on:
     branches:
         - '*'
 
-jobs:
-  login:
+jobs:  
+  build-and-push-cu:
     runs-on: ubuntu-latest
+    env:
+      REPOSITORY: devnet-ecr
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Extract shortened commit hash
+        id: vars
+        run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
       - name: Log in to Amazon ECR
         id: login-devnet-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -22,30 +34,13 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
           AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
 
-  build-and-push-cu:
-    runs-on: ubuntu-latest
-    env:
-      REGISTRY: ${{ steps.login-devnet-ecr.outputs.registry }}
-      REPOSITORY: devnet-ecr
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Extract shortened commit hash
-        id: vars
-        run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
-
       - name: Build and push CU Docker image
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:ao-cu-$COMMIT_HASH -f servers/cu/Dockerfile servers/cu/
-          docker push $REGISTRY/$REPOSITORY:ao-cu-$COMMIT_HASH
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-cu-$COMMIT_HASH -f servers/cu/Dockerfile servers/cu/
+          docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-cu-$COMMIT_HASH
 
   build-and-push-mu:
     env:
-      REGISTRY: ${{ steps.login-devnet-ecr.outputs.registry }}
       REPOSITORY: devnet-ecr
     runs-on: ubuntu-latest
     steps:
@@ -58,15 +53,27 @@ jobs:
       - name: Extract shortened commit hash
         id: vars
         run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Log in to Amazon ECR
+        id: login-devnet-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+          skip-logout: true
+          registry-type: private
+          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
+          AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
 
       - name: Build and push MU Docker image
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile servers/mu/
-          docker push $REGISTRY/$REPOSITORY:ao-mu-$COMMIT_HASH
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile servers/mu/
+          docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-mu-$COMMIT_HASH
 
   build-and-push-su:
     env:
-      REGISTRY: ${{ steps.login-devnet-ecr.outputs.registry }}
       REPOSITORY: devnet-ecr
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +87,20 @@ jobs:
         id: vars
         run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
 
+      - name: Log in to Amazon ECR
+        id: login-devnet-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+          skip-logout: true
+          registry-type: private
+          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
+          AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
+
       - name: Build and push SU Docker image
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 servers/su/
-          docker push $REGISTRY/$REPOSITORY:ao-su-$COMMIT_HASH
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 servers/su/
+          docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-su-$COMMIT_HASH
