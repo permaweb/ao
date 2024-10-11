@@ -28,7 +28,7 @@ jobs:
           mask-password: true
           skip-logout: true
           registry-type: private
-          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
@@ -61,7 +61,7 @@ jobs:
           mask-password: true
           skip-logout: true
           registry-type: private
-          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
@@ -94,7 +94,7 @@ jobs:
           mask-password: true
           skip-logout: true
           registry-type: private
-          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+          registries: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
