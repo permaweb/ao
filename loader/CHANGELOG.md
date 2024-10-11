@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.39](https://github.com/permaweb/ao/compare/loader@v0.0.38...loader@v0.0.39) (2024-10-11)
+
+
+### Bug Fixes
+
+* **loader:** changed options to importObject inside of compileStreaming ([c763232](https://github.com/permaweb/ao/commit/c7632325b5ff583580f6a0248552951e1d3e7c73))
+* **loader:** check to make sure its a supported format before applying metering [#1034](https://github.com/permaweb/ao/issues/1034) ([76ac46d](https://github.com/permaweb/ao/commit/76ac46d19dcb7984c26236153e49277c290ffe61))
+* **loader:** updated test cases to pass format ([5d1f2e3](https://github.com/permaweb/ao/commit/5d1f2e3c550aa9e8e938455de65a34d54ab27d71))
+
 ## [0.0.38](https://github.com/permaweb/ao/compare/loader@v0.0.37...loader@v0.0.38) (2024-10-03)
 
 ## [0.0.37](https://github.com/permaweb/ao/compare/loader@v0.0.36...loader@v0.0.37) (2024-09-26)
