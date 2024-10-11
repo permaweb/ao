@@ -11,6 +11,18 @@ import { TASKS_TABLE } from './sqlite.js'
  */
 export async function createTaskQueue ({ queueId, logger, db }) {
   logger({ log: `Initializing queue for queue index ${queueId}` })
+  function createDeleteQuery () {
+    return {
+      sql: `
+        DELETE FROM ${TASKS_TABLE}
+        WHERE queueId = ? AND timestamp < (strftime('%s', 'now') - 3600) * 1000;
+      `,
+      parameters: [
+        queueId
+      ]
+    }
+  }
+
   function createQuery () {
     return {
       sql: `
@@ -24,6 +36,8 @@ export async function createTaskQueue ({ queueId, logger, db }) {
     }
   }
 
+  await db.run(createDeleteQuery())
+  await db.run({ sql: 'VACUUM;', parameters: [] })
   const queryResults = (await db.query(createQuery())).map((row) => ({ ...JSON.parse(row.data), dbId: row.id }))
   const taskQueue = queryResults || []
   return taskQueue
@@ -92,7 +106,7 @@ export function removeDequeuedTasksWith ({ dequeuedTasks, queueId, db }) {
     return {
       sql: `
         DELETE FROM ${TASKS_TABLE}
-        WHERE id IN (${Array.from(dequeuedTasks).map(() => '?').join(',')})
+        WHERE id IN (${Array.from(dequeuedTasks).map(() => '?').join(',')}) OR timestamp < (strftime('%s', 'now') - 3600) * 1000;
       `,
       parameters: Array.from(dequeuedTasks)
     }
@@ -104,6 +118,7 @@ export function removeDequeuedTasksWith ({ dequeuedTasks, queueId, db }) {
     const query = createQuery(taskCopy)
 
     db.run(query)
+    db.run({ sql: 'VACUUM;', parameters: [] })
     taskCopy.forEach((task) => {
       dequeuedTasks.delete(task)
     })
