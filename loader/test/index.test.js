@@ -55,7 +55,8 @@ describe('loader', async () => {
       new Response(
         Readable.toWeb(createReadStream('./test/legacy/process.wasm')),
         { headers: { 'Content-Type': 'application/wasm' } }
-      )
+      ),
+      { format: 'wasm32-unknown-emscripten' }
     )
 
     const handle = await AoLoader((info, receiveInstance) => {
