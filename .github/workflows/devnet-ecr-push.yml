@@ -40,7 +40,7 @@ jobs:
 
       - name: Build and push CU Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH -f servers/cu/Dockerfile .
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH -f servers/cu/Dockerfile servers/cu/
           docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH
 
   build-and-push-mu:
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build and push MU Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile .
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile servers/mu/
           docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH
 
   build-and-push-su:
@@ -78,5 +78,5 @@ jobs:
 
       - name: Build and push SU Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 .
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 servers/su/
           docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH
