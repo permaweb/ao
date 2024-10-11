@@ -6,24 +6,6 @@ on:
       - '*'
 
 jobs:
-  login:
-    runs-on: ubuntu-latest
-    outputs:
-      ecr_login: ${{ steps.login-ecr.outputs.ecr_login }}
-    steps:
-      - name: Log in to Amazon ECR
-        id: login-devnet-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: true
-          skip-logout: true
-          registry-type: private
-          registry: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
-          AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
-
   build-and-push-cu:
     needs: login
     runs-on: ubuntu-latest
@@ -37,6 +19,19 @@ jobs:
       - name: Extract shortened commit hash
         id: vars
         run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Log in to Amazon ECR
+        id: login-devnet-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+          skip-logout: true
+          registry-type: private
+          registry: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
+          AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
 
       - name: Build and push CU Docker image
         run: |
@@ -57,6 +52,19 @@ jobs:
         id: vars
         run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
 
+      - name: Log in to Amazon ECR
+        id: login-devnet-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+          skip-logout: true
+          registry-type: private
+          registry: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
+          AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
+
       - name: Build and push MU Docker image
         run: |
           docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile servers/mu/
@@ -75,6 +83,19 @@ jobs:
       - name: Extract shortened commit hash
         id: vars
         run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Log in to Amazon ECR
+        id: login-devnet-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+          skip-logout: true
+          registry-type: private
+          registry: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_AO_DEVNET }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AO_DEVNET }}
+          AWS_REGION: ${{ secrets.AWS_REGION_AO_DEVNET }}
 
       - name: Build and push SU Docker image
         run: |
