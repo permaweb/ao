@@ -153,7 +153,7 @@ static int loadLib(lua_State *L) {
     }
 
     // Read the file content into a buffer
-    int buffer[65536];
+    int buffer[5242880]; // About 20mb
     ssize_t bytesRead = weavedrive_read_c(fd, buffer, sizeof(buffer));
     if (bytesRead < 0) {
         perror("Failed to read library contents");
@@ -168,16 +168,10 @@ static int loadLib(lua_State *L) {
         return 1;
     }
 
-    // Extract luaopen symbol and module name
+ // Extract luaopen symbol and module name
     char *module_name = NULL;
     char *symbol = extract_luaopen_symbol(temp_file_path, &module_name);
-    if (!symbol || !module_name) {
-        fprintf(stderr, "Failed to find luaopen symbol in the library\n");
-        unlink(temp_file_path);
-        free(temp_file_path);
-        lua_pushnil(L);
-        return 1;
-    }
+    printf("Symbol: %s, Module: %s\n", symbol ? symbol : "None", module_name ? module_name : "None");
 
     // Dynamically load the WebAssembly .so file
     void *handle = dlopen(temp_file_path, RTLD_LAZY);
@@ -186,6 +180,15 @@ static int loadLib(lua_State *L) {
         unlink(temp_file_path);
         free(temp_file_path);
         lua_pushnil(L);
+        return 1;
+    }
+
+    // If no luaopen symbol, load the library and clean up without Lua registration
+    if (!symbol || !module_name) {
+        printf("No luaopen symbol found, loading library without Lua registration.\n");
+        dlclose(handle);  // Close handle if not registering with Lua
+        unlink(temp_file_path);
+        free(temp_file_path);
         return 1;
     }
 
