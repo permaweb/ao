@@ -133,7 +133,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
   const readWasmFile = fromPromise(readWasmFileWith({ DIR: WASM_BINARY_FILE_DIRECTORY }))
   const writeWasmFile = writeWasmFileWith({ DIR: WASM_BINARY_FILE_DIRECTORY })
 
-  const toWasmResponse = fromPromise((stream) => WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream))))
+  const toWasmResponse = (moduleOptions) => fromPromise((stream) => WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream), moduleOptions)))
 
   function maybeCachedModule (args) {
     const { moduleId } = args
@@ -147,16 +147,16 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
   }
 
   function maybeStoredBinary (args) {
-    const { moduleId } = args
+    const { moduleId, moduleOptions } = args
     logger('Checking for wasm file to load module "%s"...', moduleId)
 
     return of(moduleId)
       .chain(readWasmFile)
-      .chain(toWasmResponse)
+      .chain(toWasmResponse(moduleOptions))
       .bimap(always(args), identity)
   }
 
-  function loadTransaction ({ moduleId }) {
+  function loadTransaction ({ moduleId, moduleOptions }) {
     logger('Loading wasm transaction "%s"...', moduleId)
 
     return of(moduleId)
@@ -169,7 +169,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
       .chain(fromPromise(([s1, s2]) =>
         Promise.all([
           writeWasmFile(moduleId, Readable.fromWeb(s1)),
-          WebAssembly.compileStreaming(wasmResponse(s2))
+          WebAssembly.compileStreaming(wasmResponse(s2), moduleOptions)
         ])
       ))
       .map(([, res]) => res)
@@ -177,7 +177,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
 
   const lock = new AsyncLock()
 
-  return ({ moduleId }) => {
+  return ({ moduleId, moduleOptions }) => {
     /**
      * Prevent multiple eval streams close together
      * from compiling the wasm module multiple times
@@ -190,7 +190,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
            *
            * then create the Wasm instance
            */
-          () => of({ moduleId })
+          () => of({ moduleId, moduleOptions })
             .chain(maybeStoredBinary)
             .bichain(loadTransaction, Resolved)
             /**
