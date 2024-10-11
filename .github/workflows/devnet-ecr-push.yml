@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
         - 'servers/**'
+        - '.github/workflows/devnet-ecr-push.yml'
 
 jobs:
   login:
