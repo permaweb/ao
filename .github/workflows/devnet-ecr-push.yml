@@ -1,4 +1,4 @@
-name: Build and Push ao/server images to ECR when raising a PR
+name: 🏗️ Build and Push Docker images to devnet ECR
 
 on:
   pull_request:
