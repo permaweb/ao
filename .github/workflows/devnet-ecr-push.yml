@@ -7,7 +7,6 @@ on:
 
 jobs:
   build-and-push-cu:
-    needs: login
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,7 +38,6 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH
 
   build-and-push-mu:
-    needs: login
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -71,7 +69,6 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH
 
   build-and-push-su:
-    needs: login
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
