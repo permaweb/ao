@@ -31,8 +31,8 @@ jobs:
 
       - name: Build and push CU Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH -f servers/cu/Dockerfile .
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH
+          docker build -t ${{ secrets.AWS_DEVNET_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEVNET_REGION }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH -f servers/cu/Dockerfile .
+          docker push ${{ secrets.AWS_DEVNET_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEVNET_REGION }}.amazonaws.com/devnet-ecr:ao-cu-$COMMIT_HASH
 
   build-and-push-mu:
     needs: login
@@ -50,8 +50,8 @@ jobs:
 
       - name: Build and push MU Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile .
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH
+          docker build -t ${{ secrets.AWS_DEVNET_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEVNET_REGION }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH -f servers/mu/Dockerfile .
+          docker push ${{ secrets.AWS_DEVNET_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEVNET_REGION }}.amazonaws.com/devnet-ecr:ao-mu-$COMMIT_HASH
 
   build-and-push-su:
     needs: login
@@ -69,5 +69,5 @@ jobs:
 
       - name: Build and push SU Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 .
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH
+          docker build -t ${{ secrets.AWS_DEVNET_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEVNET_REGION }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 .
+          docker push ${{ secrets.AWS_DEVNET_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEVNET_REGION }}.amazonaws.com/devnet-ecr:ao-su-$COMMIT_HASH
