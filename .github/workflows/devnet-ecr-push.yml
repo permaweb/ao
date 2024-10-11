@@ -12,10 +12,11 @@ jobs:
       ecr_login: ${{ steps.login-ecr.outputs.ecr_login }}
     steps:
       - name: Log in to Amazon ECR
-        id: login-ecr
+        id: login-devnet-ecr
         uses: aws-actions/amazon-ecr-login@v1
         with:
           mask-password: true
+          skip-logout: true
           registry-type: private
           registry: ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com
         env:
