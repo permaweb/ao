@@ -115,7 +115,7 @@ jobs:
       steps:
         - name: Checkout Helmfile Repository
           run: git clone https://github.com/permaweb/charts.git
-        - name: Update Helmfile `truncatedCommitSHA`
+        - name: Update commit-sha.yaml
           env:
             TRUNCATED_SHA: ${{ env.COMMIT_HASH }}
           run: |
@@ -123,5 +123,5 @@ jobs:
             sed -i "s/commitSHA: \".*\"/commitSHA: \"${TRUNCATED_SHA}\"/" helmfile/devnet/commit-sha.yaml
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -am "fix: update truncatedCommitSHA to ${TRUNCATED_SHA}"
+            git commit -am "fix: update commit-sha to ${TRUNCATED_SHA} for syncing latest images"
             git push https://${secrets.AO_TO_CHARTS_PAT}@github.com/permaweb/charts.git main
