@@ -128,4 +128,4 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git commit -am "fix: update commit-sha to ${TRUNCATED_SHA} for syncing latest images"
-            git push https://${secrets.AO_TO_CHARTS_PAT}@github.com/permaweb/charts.git main
+            git push https://${{ secrets.AO_TO_CHARTS_PAT }}@github.com/permaweb/charts.git main
