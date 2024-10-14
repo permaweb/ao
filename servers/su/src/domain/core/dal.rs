@@ -89,6 +89,30 @@ pub enum StoreErrorType {
     MessageExists(String),
 }
 
+impl From<serde_json::Error> for StoreErrorType {
+    fn from(error: serde_json::Error) -> Self {
+        StoreErrorType::JsonError(format!("data store json error: {}", error))
+    }
+}
+
+impl From<StoreErrorType> for String {
+    fn from(error: StoreErrorType) -> Self {
+        format!("{:?}", error)
+    }
+}
+
+impl From<String> for StoreErrorType {
+    fn from(error: String) -> Self {
+        StoreErrorType::DatabaseError(format!("{:?}", error))
+    }
+}
+
+impl From<std::string::FromUtf8Error> for StoreErrorType {
+    fn from(err: std::string::FromUtf8Error) -> StoreErrorType {
+        StoreErrorType::JsonError(format!("UTF-8 conversion error: {:?}", err))
+    }
+}
+
 #[async_trait]
 pub trait DataStore: Send + Sync {
     fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType>;

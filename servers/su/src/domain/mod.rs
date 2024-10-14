@@ -37,8 +37,13 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
 
     let main_data_store: Arc<dyn DataStore> = if config.use_local_store {
-        Arc::new(local_store::LocalStoreClient::new().expect("Failed to create LocalStoreClient"))
-            as Arc<dyn DataStore>
+        Arc::new(
+            local_store::store::LocalStoreClient::new(
+                &config.su_file_db_dir,
+                &config.su_index_db_dir,
+            )
+            .expect("Failed to create LocalStoreClient"),
+        ) as Arc<dyn DataStore>
     } else {
         data_store.clone()
     };
