@@ -114,7 +114,11 @@ jobs:
       
       steps:
         - name: Checkout Helmfile Repository
-          run: git clone https://github.com/permaweb/charts.git
+          run: |
+            git clone https://$GITHUB_USERNAME:${{ secrets.AO_TO_CHARTS_PAT }}@github.com/permaweb/charts.git
+          env:
+            GITHUB_USERNAME: bredamatt
+        
         - name: Update commit-sha.yaml
           env:
             TRUNCATED_SHA: ${{ env.COMMIT_HASH }}
