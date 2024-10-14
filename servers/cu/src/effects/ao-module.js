@@ -128,7 +128,7 @@ export function evaluatorWith ({ evaluateWith, loadWasmModule }) {
         return (args) =>
           Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
             .then(async (defer) => {
-              if (!wasmModule) wasmModule = await loadWasmModule({ moduleId })
+              if (!wasmModule) wasmModule = await loadWasmModule({ moduleId, moduleOptions })
               return defer
             })
             .then(async (defer) => {

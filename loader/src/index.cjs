@@ -91,12 +91,50 @@ const metering = require('@permaweb/wasm-metering')
  * @param {Options} [options]
  * @returns {Promise<handleFunction>}
  */
+
+/*
+ * Custom WebAssembly.compileStreaming Implementation with WASM Metering
+ *
+ * This implementation overrides WebAssembly.compileStreaming to add metering 
+ * to WebAssembly binaries. Metering enables tracking of resource usage (e.g., 
+ * CPU or memory) within the WebAssembly runtime, which is critical for monitoring 
+ * performance and managing resource allocation in constrained environments.
+ *
+ * Why Metering?
+ * The CU (Compute Unit) calls WebAssembly.compileStreaming to execute WebAssembly 
+ * modules, but to centralize and streamline metering, we handle it here in the loader 
+ * instead of within each CU instance. By integrating metering directly into the 
+ * loader, we ensure that all WebAssembly binaries are metered consistently across 
+ * different CUs, reducing redundancy and enhancing modularity.
+ */
+
+// Override WebAssembly.compileStreaming to apply metering
+WebAssembly.compileStreaming = async function (source, importObject = {}) {
+  // Read the response and convert it to an ArrayBuffer
+  const arrayBuffer = await source.arrayBuffer();
+
+  // Convert ArrayBuffer to Uint8Array for metering compatibility
+  const nodeBuffer = Buffer.from(arrayBuffer);
+
+  if(importObject.format === "wasm32-unknown-emscripten" || importObject.format === "wasm32-unknown-emscripten2" || importObject.format === "wasm32-unknown-emscripten3") {
+    return WebAssembly.compile(nodeBuffer);
+  }
+
+  let meterType = importObject.format.startsWith("wasm32") ? "i32" : "i64";
+
+  // Apply metering with the Uint8Array buffer
+  const meteredView = metering.meterWASM(nodeBuffer, { meterType });
+
+  // const meteredResponse = new Response(meteredBuffer, { headers: { 'Content-Type': 'application/wasm' } });
+  return  WebAssembly.compile(meteredView.buffer);
+};
+
 module.exports = async function (binary, options) {
   let instance = null
   let doHandle = null
 
   let meterType = options.format.startsWith("wasm32") ? "i32" : "i64";
-  const originalInstantiate = WebAssembly.instantiate;
+
 
   if (options === null) {
     options = { format: 'wasm32-unknown-emscripten' }
@@ -110,14 +148,9 @@ module.exports = async function (binary, options) {
   } else {
 
     if (typeof binary === "function") {
-      // TODO: wasmMetering is currently disabled on 
-      // WebAssembly.instantiate = async function (wasm, info) {
-      //   const meteredWasm = metering.meterWASM(wasm, { meterType });
-      //   return originalInstantiate(wasm, info);
-      // };
       options.instantiateWasm = binary
     } else {
-      //binary = metering.meterWASM(binary, { meterType })
+      binary = metering.meterWASM(binary, { meterType })
       options.wasmBinary = binary
     }
 
@@ -152,9 +185,6 @@ module.exports = async function (binary, options) {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }
 
-  if (typeof binary === "function") {
-    WebAssembly.instantiate = originalInstantiate;
-  }
 
   return async (buffer, msg, env) => {
 
