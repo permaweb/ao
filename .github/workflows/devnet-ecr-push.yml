@@ -105,7 +105,7 @@ jobs:
           docker build -t ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-su-$COMMIT_HASH -f servers/su/Dockerfile.x86 servers/su/
           docker push ${{ secrets.AWS_ACCOUNT_ID_AO_DEVNET }}.dkr.ecr.${{ secrets.AWS_REGION_AO_DEVNET }}.amazonaws.com/$REPOSITORY:ao-su-$COMMIT_HASH
 
-  update-devnet-commit-sha:
+  update-devnet-image-tags:
       runs-on: ubuntu-latest
       needs: 
         - build-and-push-cu
@@ -119,6 +119,10 @@ jobs:
           env:
             GITHUB_USERNAME: bredamatt
         
+        - name: Extract shortened commit hash
+          id: vars
+          run: echo "COMMIT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+          
         - name: Update commit-sha.yaml
           env:
             TRUNCATED_SHA: ${{ env.COMMIT_HASH }}
@@ -127,5 +131,5 @@ jobs:
             sed -i "s/commitSHA: \".*\"/commitSHA: \"${TRUNCATED_SHA}\"/" helmfile/devnet/commit-sha.yaml
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -am "fix: update commit-sha to ${TRUNCATED_SHA} for syncing latest images"
+            git commit -am "fix: from ao-repo - update commit-sha to ${TRUNCATED_SHA} for syncing latest image tags"
             git push https://${{ secrets.AO_TO_CHARTS_PAT }}@github.com/permaweb/charts.git main
