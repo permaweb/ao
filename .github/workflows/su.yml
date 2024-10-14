@@ -27,7 +27,7 @@ jobs:
       - name: ⎔ Setup Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.75.0
 
       - name: Run Tests
         working-directory: servers/su
