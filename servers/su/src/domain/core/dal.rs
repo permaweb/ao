@@ -130,7 +130,10 @@ pub trait DataStore: Send + Sync {
         limit: &Option<i32>,
     ) -> Result<PaginatedMessages, StoreErrorType>;
     fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType>;
+    async fn get_latest_message(
+        &self,
+        process_id_in: &str,
+    ) -> Result<Option<Message>, StoreErrorType>;
     fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
 }
 

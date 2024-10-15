@@ -120,7 +120,6 @@ mod tests {
 
         let (process_bundle, message_bundles) = bundle_list();
         let test_process = Process::from_bytes(process_bundle.clone())?;
-        println!("{:?}", test_process);
         client.save_process(&test_process, &process_bundle)?;
 
         for bundle in message_bundles.iter() {

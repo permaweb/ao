@@ -55,6 +55,12 @@ Create a .env file with the following variables, or set them in the OS:
 - `ENABLE_PROCESS_ASSIGNMENT` enables AOP-6 boot loader, if enabled, the Process on a new spawn will become the first Message/Nonce in its message list. It will get an Assignment.
 - `ARWEAVE_URL_LIST` list of arweave urls that have tx access aka url/txid returns the tx. Used by gateway calls for checking transactions etc...
 
+## Experimental environment variables
+To use the expirimental fully local storage system set the following evnironment variables.
+- `USE_LOCAL_STORE`  if true the SU will operate on purely RocksDB
+- `SU_FILE_DB_DIR` a local RocksDB directory of bundles
+- `SU_INDEX_DB_DIR` a local index of processes and messages
+
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
 
