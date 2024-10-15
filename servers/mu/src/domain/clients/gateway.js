@@ -49,7 +49,7 @@ function isWalletWith ({
         walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
           .then(okRes),
       {
-        maxRetries: 3,
+        maxRetries: 6,
         delay: 500,
         log: logger,
         logId,
