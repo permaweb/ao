@@ -43,6 +43,10 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_WASM_SUPPORTED_EXTENSIONS: commaDelimitedArraySchema,
   /**
+   * Whether or not to apply metering to the wasm execution
+   */
+  PROCESS_WASM_APPLY_METERING: z.preprocess((val) => !!val, z.boolean()),
+  /**
    * The url for the graphql server to be used by the CU
    * to query for metadata from an Arweave Gateway
    *

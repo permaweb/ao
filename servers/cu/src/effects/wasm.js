@@ -128,12 +128,15 @@ export function bootstrapWasmInstanceWith () {
   }
 }
 
-export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIRECTORY, logger, cache }) {
+export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIRECTORY, PROCESS_WASM_APPLY_METERING, logger, cache }) {
   const streamTransactionData = fromPromise(streamTransactionDataWith({ fetch, ARWEAVE_URL, logger }))
   const readWasmFile = fromPromise(readWasmFileWith({ DIR: WASM_BINARY_FILE_DIRECTORY }))
   const writeWasmFile = writeWasmFileWith({ DIR: WASM_BINARY_FILE_DIRECTORY })
 
-  const toWasmResponse = (moduleOptions) => fromPromise((stream) => WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream), moduleOptions)))
+  const compileStreaming = (stream, moduleOptions) => WebAssembly.compileStreaming(
+    wasmResponse(stream),
+    { ...moduleOptions, applyMetering: PROCESS_WASM_APPLY_METERING }
+  )
 
   function maybeCachedModule (args) {
     const { moduleId } = args
@@ -152,7 +155,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
 
     return of(moduleId)
       .chain(readWasmFile)
-      .chain(toWasmResponse(moduleOptions))
+      .chain(fromPromise((nStream) => compileStreaming(Readable.toWeb(nStream), moduleOptions)))
       .bimap(always(args), identity)
   }
 
@@ -169,7 +172,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
       .chain(fromPromise(([s1, s2]) =>
         Promise.all([
           writeWasmFile(moduleId, Readable.fromWeb(s1)),
-          WebAssembly.compileStreaming(wasmResponse(s2), moduleOptions)
+          compileStreaming(s2, moduleOptions)
         ])
       ))
       .map(([, res]) => res)
