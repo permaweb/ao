@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use dashmap::DashMap;
 use rocksdb::{Options, DB};
 use tokio::time::{sleep, Duration};
 
@@ -27,11 +26,6 @@ pub struct LocalStoreClient {
       and Messages, only public for migration purposes
     */
     pub index_db: DB,
-    /*
-      A cache of the latest messages for a process based
-      on the last from parameter that has been queried
-    */
-    pub index_cache: DashMap<String, Vec<(String, String)>>
 }
 
 impl From<rocksdb::Error> for StoreErrorType {
@@ -68,13 +62,10 @@ impl LocalStoreClient {
             Err(e) => panic!("failed to open cf with options: {}", e),
         };
 
-        let index_cache = DashMap::new();
-
         Ok(LocalStoreClient {
             _logger: logger,
             file_db,
             index_db,
-            index_cache
         })
     }
 
@@ -176,7 +167,7 @@ impl LocalStoreClient {
       for querying message ranges for the /processid
       message list
     */
-    fn fetch_message_range(
+    async fn fetch_message_range(
         &self,
         process_id: &String,
         from: &Option<String>,
@@ -235,7 +226,7 @@ impl LocalStoreClient {
                 }
             }
 
-            paginated_keys.push((key_str, assignment_id));
+            paginated_keys.push((key_str.clone(), assignment_id));
             count += 1;
 
             match limit {
@@ -450,8 +441,9 @@ impl DataStore for LocalStoreClient {
             actual_limit -= 1;
         }
 
-        let (paginated_keys, has_next_page) =
-            self.fetch_message_range(process_id, from, to, &Some(actual_limit))?;
+        let (paginated_keys, has_next_page) = self
+            .fetch_message_range(process_id, from, to, &Some(actual_limit))
+            .await?;
 
         /*
           Fetch the messages for each paginated key. This
@@ -482,9 +474,13 @@ impl DataStore for LocalStoreClient {
       were pulling all the message keys into memory and
       picking the latest one.
     */
-    fn get_latest_message(&self, process_id: &str) -> Result<Option<Message>, StoreErrorType> {
-        let (paginated_keys, _) =
-            self.fetch_message_range(&process_id.to_string(), &None, &None, &None)?;
+    async fn get_latest_message(
+        &self,
+        process_id: &str,
+    ) -> Result<Option<Message>, StoreErrorType> {
+        let (paginated_keys, _) = self
+            .fetch_message_range(&process_id.to_string(), &None, &None, &None)
+            .await?;
 
         if paginated_keys.len() < 1 {
             return Ok(None);

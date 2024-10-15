@@ -139,7 +139,7 @@ impl ProcessScheduler {
 
             (cached_info.schedule_info.epoch, new_nonce, new_hash_chain)
         } else {
-            let latest_message = match self.deps.data_store.get_latest_message(&id) {
+            let latest_message = match self.deps.data_store.get_latest_message(&id).await {
                 Ok(m) => m,
                 Err(e) => return Err(format!("{:?}", e)),
             };

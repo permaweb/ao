@@ -1058,7 +1058,10 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
+    async fn get_latest_message(
+        &self,
+        process_id_in: &str,
+    ) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
         /*
             This must use get_conn because it needs
