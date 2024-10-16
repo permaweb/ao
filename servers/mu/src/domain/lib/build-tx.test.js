@@ -17,6 +17,9 @@ async function buildAndSign ({ processId, tags, anchor }) {
   assert.equal(tags.find((tag) =>
     tag.name === 'From-Process'
   ).value, 'process-123')
+  assert.equal(tags.find((tag) =>
+    tag.name === 'Type'
+  ).value, 'Message')
   assert.equal(tags.filter((tag) =>
     tag.name === 'From-Process'
   ).length, 1)
