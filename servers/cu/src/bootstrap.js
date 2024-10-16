@@ -201,7 +201,6 @@ export const createApis = async (ctx) => {
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Trusting Arweave Checkpoint Owners [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))
-  ctx.logger('Process metering applied set to "%s"', ctx.PROCESS_WASM_APPLY_METERING)
   ctx.logger('Allowing only process owners [ %s ]', ctx.ALLOW_OWNERS.join(', '))
   ctx.logger('Restricting processes [ %s ]', ctx.RESTRICT_PROCESSES.join(', '))
   ctx.logger('Allowing only processes [ %s ]', ctx.ALLOW_PROCESSES.join(', '))
@@ -242,7 +241,6 @@ export const createApis = async (ctx) => {
     fetch: ctx.fetch,
     ARWEAVE_URL: ctx.ARWEAVE_URL,
     WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
-    PROCESS_WASM_APPLY_METERING: ctx.PROCESS_WASM_APPLY_METERING,
     logger: ctx.logger,
     cache: WasmClient.createWasmModuleCache({ MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE })
   })
