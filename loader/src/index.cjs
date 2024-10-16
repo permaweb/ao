@@ -110,7 +110,7 @@ const originalCompileStreaming = WebAssembly.compileStreaming
 const originalCompile = WebAssembly.compile
 
 const shouldApplyMetering = (importObject = {}) => {
-  return importObject.applyMetering && ['wasm32-unknown-emscripten4', 'wasm64-unknown-emscripten-draft_2024_02_15'].includes(importObject.format);
+  return ['wasm32-unknown-emscripten-metering', 'wasm64-unknown-emscripten-draft_2024_10_16-metering'].includes(importObject.format);
 }
 
 const applyMetering = (arrayBuffer, importObject) => {
@@ -128,7 +128,7 @@ const applyMetering = (arrayBuffer, importObject) => {
 }
 
 // Override WebAssembly.compileStreaming to apply metering
-WebAssembly.compileStreaming = async function (source, importObject = { applyMetering: false }) {
+WebAssembly.compileStreaming = async function (source, importObject = { }) {
   if (!shouldApplyMetering(importObject)) return originalCompileStreaming(source)
 
   const arrayBuffer = await source.arrayBuffer()
@@ -136,7 +136,7 @@ WebAssembly.compileStreaming = async function (source, importObject = { applyMet
 }
 
 // Override WebAssembly.compile to apply metering
-WebAssembly.compile = async function (source, importObject = { applyMetering: false }) {
+WebAssembly.compile = async function (source, importObject = { }) {
   if (!shouldApplyMetering(importObject)) return originalCompile(source)
 
   return applyMetering(source, importObject)
@@ -167,9 +167,9 @@ module.exports = async function (binary, options) {
       options.wasmBinary = binary
     }
 
-    if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15") {
+    if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15" || options.format === "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
       instance = await Wasm64(options)
-    } else if (options.format === "wasm32-unknown-emscripten4") {
+    } else if (options.format === "wasm32-unknown-emscripten4" || options.format === "wasm32-unknown-emscripten-metering") {
       instance = await Emscripten4(options)
     }
 
