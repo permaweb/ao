@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@fastify/middie": "^9.0.2",
-    "@permaweb/ao-loader": "^0.0.40",
+    "@permaweb/ao-loader": "^0.0.41",
     "@permaweb/ao-scheduler-utils": "^0.0.19",
     "@permaweb/weavedrive": "^0.0.10",
     "arweave": "^1.15.5",
