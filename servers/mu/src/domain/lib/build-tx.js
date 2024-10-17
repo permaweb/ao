@@ -56,18 +56,21 @@ export function buildTxWith (env) {
       )
       .map((res) => {
         const tagsIn = [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
           ...ctx.cachedMsg.msg.Tags?.filter((tag) => {
-            return ![
+            const isExcludedName = [
               'Data-Protocol',
-              'Type',
               'Variant',
               'From-Process',
               'From-Module',
               'Assignments'
             ].includes(tag.name)
+
+            const isTypeMessage = tag.name === 'Type' && tag.value === 'Message'
+
+            return !isExcludedName && !isTypeMessage
           }) ?? [],
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: 'Message' },
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'From-Process', value: ctx.cachedMsg.fromProcessId },
           {
