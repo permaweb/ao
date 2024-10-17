@@ -1,9 +1,9 @@
 name: 🏗️  Build and Push Docker images to devnet ECR
 
 on:
-  pull_request:
+  push:
     branches:
-        - '*'
+        - 'main'
 
 jobs:  
   build-and-push-cu:
