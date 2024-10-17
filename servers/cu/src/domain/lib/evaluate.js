@@ -292,10 +292,16 @@ export function evaluateWith (env) {
          * Make sure to attempt to cache the last result
          * in the process memory cache
          *
+         * Memory being falsey is a special case, in which
+         * _all_ messages, from the beginning resulted in an error,
+         * so all resultant memory was discarded. In this case,
+         * there is no memory to cache, and so nothing to do. Skip.
+         *
          * TODO: could probably make this cleaner
          */
         const { noSave, cron, ordinate, message } = prev
-        if (!noSave) {
+
+        if (!noSave && prev.Memory) {
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,
