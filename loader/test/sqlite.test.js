@@ -26,7 +26,7 @@ const msg = (cmd) => ({
 })
 
 const { default: AoLoader } = await import(MODULE_PATH)
-const wasm = fs.readFileSync('./test/sqlite/process.wasm')
+const wasm = fs.readFileSync('./test/emscripten2_sqlite/process.wasm')
 
 test('create sqlite db, run insert & select', async () => {
   const handle = await AoLoader(wasm, { format: 'wasm32-unknown-emscripten2' })
