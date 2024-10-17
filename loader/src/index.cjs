@@ -163,7 +163,9 @@ module.exports = async function (binary, options) {
     if (typeof binary === "function") {
       options.instantiateWasm = binary
     } else {
-      binary = metering.meterWASM(binary, { meterType })
+      if (options.format === "wasm32-unknown-emscripten-metering" || options.format === "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
+        binary = metering.meterWASM(binary, { meterType })
+      }
       options.wasmBinary = binary
     }
 
@@ -194,7 +196,11 @@ module.exports = async function (binary, options) {
   if (instance.cleanupListeners) {
     instance.cleanupListeners()
   }
-  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15" && options.format !== "wasm32-unknown-emscripten4") {
+
+  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15" && 
+    options.format !== "wasm32-unknown-emscripten4"  && 
+    options.format !== "wasm32-unknown-emscripten-metering" && 
+    options.format !== "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }
 

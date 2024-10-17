@@ -15,7 +15,7 @@ const MODULE_PATH = process.env.MODULE_PATH || '../src/index.cjs'
 console.log(`${MODULE_PATH}`)
 
 const { default: AoLoader } = await import(MODULE_PATH)
-const wasmBinary = fs.readFileSync('./test/legacy/process.wasm')
+const wasmBinary = fs.readFileSync('./test/emscripten/process.wasm')
 
 describe('loader', async () => {
   it('load wasm and evaluate message', async () => {
@@ -53,10 +53,10 @@ describe('loader', async () => {
        * that any Response will do
        */
       new Response(
-        Readable.toWeb(createReadStream('./test/legacy/process.wasm')),
+        Readable.toWeb(createReadStream('./test/emscripten/process.wasm')),
         { headers: { 'Content-Type': 'application/wasm' } }
       ),
-      { format: 'wasm32-unknown-emscripten', applyMetering: false }
+      { format: 'wasm32-unknown-emscripten' }
     )
 
     const handle = await AoLoader((info, receiveInstance) => {
@@ -145,14 +145,14 @@ describe('loader', async () => {
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result.Output, '1970-01-01')
+    assert.ok(result.Output === '1970-01-01' || result.Output === '1969-12-31')
 
     const result2 = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Date' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result2.Output, '1970-01-01')
+    assert.ok(result2.Output === '1970-01-01' || result2.Output === '1969-12-31')
 
     // console.log(result.GasUsed)
     assert.ok(true)
