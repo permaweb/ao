@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
+pub use super::bytes::DataItem;
 pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
 pub use super::router::{ProcessScheduler, Scheduler};
 
@@ -88,6 +89,30 @@ pub enum StoreErrorType {
     MessageExists(String),
 }
 
+impl From<serde_json::Error> for StoreErrorType {
+    fn from(error: serde_json::Error) -> Self {
+        StoreErrorType::JsonError(format!("data store json error: {}", error))
+    }
+}
+
+impl From<StoreErrorType> for String {
+    fn from(error: StoreErrorType) -> Self {
+        format!("{:?}", error)
+    }
+}
+
+impl From<String> for StoreErrorType {
+    fn from(error: String) -> Self {
+        StoreErrorType::DatabaseError(format!("{:?}", error))
+    }
+}
+
+impl From<std::string::FromUtf8Error> for StoreErrorType {
+    fn from(err: std::string::FromUtf8Error) -> StoreErrorType {
+        StoreErrorType::JsonError(format!("UTF-8 conversion error: {:?}", err))
+    }
+}
+
 #[async_trait]
 pub trait DataStore: Send + Sync {
     fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType>;
@@ -105,7 +130,15 @@ pub trait DataStore: Send + Sync {
         limit: &Option<i32>,
     ) -> Result<PaginatedMessages, StoreErrorType>;
     fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType>;
+    async fn get_latest_message(
+        &self,
+        process_id_in: &str,
+    ) -> Result<Option<Message>, StoreErrorType>;
+    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
+}
+
+#[async_trait]
+pub trait RouterDataStore: Send + Sync {
     fn save_process_scheduler(
         &self,
         process_scheduler: &ProcessScheduler,
@@ -119,7 +152,6 @@ pub trait DataStore: Send + Sync {
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType>;
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType>;
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
-    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
 }
 
 pub trait CoreMetrics: Send + Sync {

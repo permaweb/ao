@@ -1,4 +1,5 @@
 use std::env;
+use std::path::PathBuf;
 
 use dotenv::dotenv;
 
@@ -6,24 +7,69 @@ use crate::domain::Config;
 
 #[derive(Debug, Clone)]
 pub struct AoConfig {
-    pub database_url: String,
-    pub database_read_url: String,
     pub su_wallet_path: String,
     pub graphql_url: String,
     pub arweave_url: String,
     pub upload_node_url: String,
     pub mode: String,
     pub scheduler_list_path: String,
+    pub enable_metrics: bool,
+    pub enable_process_assignment: bool,
+    pub arweave_url_list: Vec<String>,
+
+    /*
+      These configurations relate only to the older
+      data storage implementation of only Postgres or the
+      combination of Postgres + RocksDB
+    */
     pub use_disk: bool,
     pub su_data_dir: String,
     pub migration_batch_size: i64,
     pub db_write_connections: u32,
     pub db_read_connections: u32,
-    pub enable_metrics: bool,
+    pub database_url: String,
+    pub database_read_url: String,
     pub max_read_memory: usize,
     pub process_cache_size: usize,
-    pub enable_process_assignment: bool,
-    pub arweave_url_list: Vec<String>
+
+    /*
+      These configurations are for the new local_store
+      implementation that runs on only RocksDB
+    */
+    pub use_local_store: bool,
+    pub su_file_db_dir: String,
+    pub su_index_db_dir: String,
+}
+
+fn get_db_dirs() -> (String, String) {
+    // Get the user's home directory based on platform
+    let home_dir = if cfg!(target_os = "windows") {
+        env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string())
+    } else {
+        env::var("HOME").unwrap_or_else(|_| ".".to_string())
+    };
+
+    // Check for SU_FILE_DB_DIR environment variable, default to ~/sudata
+    let su_file_db_dir = match env::var("SU_FILE_DB_DIR") {
+        Ok(val) => val,
+        Err(_) => {
+            let mut path = PathBuf::from(&home_dir);
+            path.push("sudata");
+            path.to_string_lossy().to_string()
+        }
+    };
+
+    // Check for SU_INDEX_DB_DIR environment variable, default to ~/suindex
+    let su_index_db_dir = match env::var("SU_INDEX_DB_DIR") {
+        Ok(val) => val,
+        Err(_) => {
+            let mut path = PathBuf::from(&home_dir);
+            path.push("suindex");
+            path.to_string_lossy().to_string()
+        }
+    };
+
+    (su_file_db_dir, su_index_db_dir)
 }
 
 impl AoConfig {
@@ -82,14 +128,17 @@ impl AoConfig {
             Err(_e) => false,
         };
         let arweave_url_list: Vec<String> = match env::var("ARWEAVE_URL_LIST") {
-            Ok(val) => val.split(',')
-                          .map(|s| s.trim().to_string())
-                          .collect(),
+            Ok(val) => val.split(',').map(|s| s.trim().to_string()).collect(),
             Err(_e) => vec![
-                "https://arweave.net".to_string(), 
-                "https://g8way.io".to_string()
+                "https://arweave.net".to_string(),
+                "https://g8way.io".to_string(),
             ],
         };
+        let use_local_store = match env::var("USE_LOCAL_STORE") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
+        let (su_file_db_dir, su_index_db_dir) = get_db_dirs();
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -108,7 +157,10 @@ impl AoConfig {
             max_read_memory,
             process_cache_size,
             enable_process_assignment,
-            arweave_url_list
+            arweave_url_list,
+            use_local_store,
+            su_file_db_dir,
+            su_index_db_dir,
         })
     }
 }

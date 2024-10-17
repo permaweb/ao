@@ -10,10 +10,13 @@ use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
 
-use super::dal::{Config, CoreMetrics, DataStore, Gateway, Log, Signer, Uploader, Wallet};
+use super::dal::{
+    Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet,
+};
 
 pub struct Deps {
     pub data_store: Arc<dyn DataStore>,
+    pub router_data_store: Arc<dyn RouterDataStore>,
     pub logger: Arc<dyn Log>,
     pub config: Arc<dyn Config>,
     pub gateway: Arc<dyn Gateway>,
@@ -89,7 +92,7 @@ pub async fn write_item(
     let (target_id, data_item) = if let (Some(ref process_id), Some(_)) = (&process_id, &assign) {
         (process_id.clone(), None)
     } else {
-        let data_item = builder.parse_data_item(input.clone())?;
+        let data_item = Builder::parse_data_item(input.clone())?;
         match data_item.tags().iter().find(|tag| tag.name == "Type") {
             Some(type_tag) => match type_tag.value.as_str() {
                 "Process" => (data_item.id(), Some(data_item)),
@@ -218,21 +221,16 @@ pub async fn write_item(
                         "Data" => (),
                         tx_id => {
                             if !deps.gateway.check_head(tx_id.to_string()).await? {
-                              return Err("Invalid tx id for On-Boot tag".to_string());
+                                return Err("Invalid tx id for On-Boot tag".to_string());
                             }
-                        },
+                        }
                     },
                     None => (),
                 };
                 let assignment = builder
-                    .gen_assignment(
-                        None,
-                        data_item.id(),
-                        &next_schedule_info,
-                        &None,
-                    )
+                    .gen_assignment(None, data_item.id(), &next_schedule_info, &None)
                     .await?;
-    
+
                 let aid = assignment.id();
                 let did = data_item.id();
                 let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
@@ -240,7 +238,7 @@ pub async fn write_item(
                 deps.data_store
                     .save_process(&process, &build_result.binary)?;
                 deps.logger.log(format!("saved process - {:?}", &process));
-    
+
                 deps.scheduler
                     .commit(&mut *schedule_info, &next_schedule_info, did, aid);
                 drop(schedule_info);
@@ -249,7 +247,10 @@ pub async fn write_item(
                 return id_res(&deps, process.process.process_id.clone(), start_top_level);
             } else {
                 let build_result = builder.build_process(input, &next_schedule_info).await?;
-                let process = Process::from_bundle_no_assign(&build_result.bundle)?;
+                let process = Process::from_bundle_no_assign(
+                    &build_result.bundle,
+                    &build_result.bundle_data_item,
+                )?;
                 deps.data_store
                     .save_process(&process, &build_result.binary)?;
                 deps.logger.log(format!("saved process - {:?}", &process));

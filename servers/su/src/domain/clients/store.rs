@@ -21,7 +21,7 @@ use super::super::SuLog;
 
 use super::super::core::dal::{
     DataStore, JsonErrorType, Log, Message, PaginatedMessages, Process, ProcessScheduler,
-    Scheduler, StoreErrorType,
+    RouterDataStore, Scheduler, StoreErrorType,
 };
 
 use crate::domain::config::AoConfig;
@@ -36,27 +36,9 @@ impl From<DieselError> for StoreErrorType {
     }
 }
 
-impl From<serde_json::Error> for StoreErrorType {
-    fn from(error: serde_json::Error) -> Self {
-        StoreErrorType::JsonError(format!("data store json error: {}", error))
-    }
-}
-
 impl From<JsonErrorType> for StoreErrorType {
     fn from(error: JsonErrorType) -> Self {
         StoreErrorType::JsonError(format!("data store json error: {:?}", error))
-    }
-}
-
-impl From<StoreErrorType> for String {
-    fn from(error: StoreErrorType) -> Self {
-        format!("{:?}", error)
-    }
-}
-
-impl From<String> for StoreErrorType {
-    fn from(error: String) -> Self {
-        StoreErrorType::DatabaseError(format!("{:?}", error))
     }
 }
 
@@ -113,7 +95,7 @@ pub struct StoreClient {
     pub logger: Arc<dyn Log>,
     pub bytestore: Arc<bytestore::ByteStore>,
     in_memory_cache: InMemoryCache,
-    enable_process_assignment: bool
+    enable_process_assignment: bool,
 }
 
 /*
@@ -163,7 +145,44 @@ impl StoreClient {
             logger,
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
             in_memory_cache: InMemoryCache::new(config.process_cache_size),
-            enable_process_assignment: config.enable_process_assignment
+            enable_process_assignment: config.enable_process_assignment,
+        })
+    }
+
+    pub fn new_single_connection() -> Result<Self, StoreErrorType> {
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+        let c_clone = config.clone();
+        let database_url = config.database_url;
+        let database_read_url = config.database_read_url;
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        let read_manager = ConnectionManager::<PgConnection>::new(database_read_url);
+        let logger = SuLog::init();
+
+        let pool = Pool::builder()
+            .max_size(1)
+            .test_on_check_out(true)
+            .build(manager)
+            .map_err(|_| {
+                StoreErrorType::DatabaseError("Failed to initialize connection pool.".to_string())
+            })?;
+
+        let read_pool = Pool::builder()
+            .max_size(1)
+            .test_on_check_out(true)
+            .build(read_manager)
+            .map_err(|_| {
+                StoreErrorType::DatabaseError(
+                    "Failed to initialize read connection pool.".to_string(),
+                )
+            })?;
+
+        Ok(StoreClient {
+            pool,
+            read_pool,
+            logger,
+            bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
+            in_memory_cache: InMemoryCache::new(config.process_cache_size),
+            enable_process_assignment: config.enable_process_assignment,
         })
     }
 
@@ -231,6 +250,60 @@ impl StoreClient {
     }
 
     /*
+      Method to get the total number of processes
+      in the database, this is used by the mig_local migration.
+    */
+    pub fn get_process_count(&self) -> Result<i64, StoreErrorType> {
+        use super::schema::processes::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+
+        let count_result: Result<i64, DieselError> = processes.count().get_result(conn);
+
+        match count_result {
+            Ok(count) => Ok(count),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    /*
+      Get all processes in the database, within a
+      certain range. This is used for migrations.
+    */
+    pub fn get_all_processes(
+        &self,
+        from: i64,
+        to: Option<i64>,
+    ) -> Result<Vec<Vec<u8>>, StoreErrorType> {
+        use super::schema::processes::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = processes.into_boxed();
+
+        // Apply the offset
+        query = query.offset(from);
+
+        // Apply the limit if `to` is provided
+        if let Some(to) = to {
+            let limit = to - from;
+            query = query.limit(limit);
+        }
+
+        let db_processes_result: Result<Vec<DbProcess>, DieselError> = query.load(conn);
+
+        match db_processes_result {
+            Ok(db_processes) => {
+                let mut processes_mapped: Vec<Vec<u8>> = vec![];
+                for db_process in db_processes.iter() {
+                    let bytes: Vec<u8> = db_process.bundle.clone();
+                    processes_mapped.push(bytes);
+                }
+
+                Ok(processes_mapped)
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    /*
       Get all messages in the database, within a
       certain range. This is used for the migration.
     */
@@ -288,6 +361,150 @@ impl StoreClient {
                 }
 
                 Ok(messages_mapped)
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    // used by the mig_local migration
+    pub async fn get_all_messages_using_bytestore(
+        &self,
+        from: i64,
+        to: Option<i64>,
+    ) -> Result<
+        Vec<(
+            String,         // message_id
+            Option<String>, // assignment_id
+            String,         // process_id
+            i64,            // timestamp
+            i32,            // epoch
+            i32,            // nonce
+            String,         // hash_chain
+            Vec<u8>,        // bundle
+        )>,
+        StoreErrorType,
+    > {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = messages.into_boxed();
+
+        // Apply the offset
+        query = query.offset(from);
+
+        // Apply the limit if `to` is provided
+        if let Some(to) = to {
+            let limit = to - from;
+            query = query.limit(limit);
+        }
+
+        // Select only the fields that you are using
+        let selected_fields = query.select((
+            message_id,
+            assignment_id,
+            process_id,
+            timestamp,
+            epoch,
+            nonce,
+            hash_chain,
+        ));
+
+        // Load only the selected fields
+        let db_messages_result: Result<
+            Vec<(
+                String,         // message_id
+                Option<String>, // assignment_id
+                String,         // process_id
+                i64,            // timestamp
+                i32,            // epoch
+                i32,            // nonce
+                String,         // hash_chain
+            )>,
+            DieselError,
+        > = selected_fields.order(timestamp.asc()).load(conn);
+
+        match db_messages_result {
+            Ok(db_messages) => {
+                // Map the result into the desired tuple with timestamp as String
+                let messages_mapped = db_messages
+                    .into_iter()
+                    .map(|db_message| {
+                        (
+                            db_message.0, // message_id
+                            db_message.1, // assignment_id
+                            db_message.2, // process_id
+                            db_message.3, // timestamp
+                            db_message.4, // epoch
+                            db_message.5, // nonce
+                            db_message.6, // hash_chain
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                let message_ids: Vec<(String, Option<String>, String, String)> = messages_mapped
+                    .iter()
+                    .map(|msg| {
+                        (
+                            msg.0.clone(),
+                            msg.1.clone(),
+                            msg.2.clone(),
+                            msg.3.to_string().clone(),
+                        )
+                    })
+                    .collect();
+
+                let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
+                let mut messages_with_bundles = vec![];
+
+                for db_message in messages_mapped.iter() {
+                    match binaries.get(&(
+                        db_message.0.clone(),             // message id
+                        db_message.1.clone(),             // assignment id
+                        db_message.2.clone(),             // process id
+                        db_message.3.to_string().clone(), // timestamp
+                    )) {
+                        Some(bytes_result) => {
+                            messages_with_bundles.push((
+                                db_message.0.clone(), // message_id
+                                db_message.1.clone(), // assignment_id
+                                db_message.2.clone(), // process_id
+                                db_message.3.clone(), // timestamp
+                                db_message.4.clone(), // epoch
+                                db_message.5.clone(), // nonce
+                                db_message.6.clone(), // hash_chain
+                                bytes_result.clone(), // bundle
+                            ));
+                        }
+                        None => {
+                            // Fall back to the database if the binary isn't available
+                            let db_message_with_bundle: DbMessage = match db_message.1.clone() {
+                                Some(assignment_id_d) => messages
+                                    .filter(
+                                        message_id
+                                            .eq(db_message.0.clone())
+                                            .and(assignment_id.eq(assignment_id_d)),
+                                    )
+                                    .order(timestamp.asc())
+                                    .first(conn)?,
+                                None => messages
+                                    .filter(message_id.eq(db_message.0.clone()))
+                                    .order(timestamp.asc())
+                                    .first(conn)?,
+                            };
+                            messages_with_bundles.push((
+                                db_message.0.clone(),                  // message_id
+                                db_message.1.clone(),                  // assignment_id
+                                db_message.2.clone(),                  // process_id
+                                db_message.3.clone(),                  // timestamp
+                                db_message.4.clone(),                  // epoch
+                                db_message.5.clone(),                  // nonce
+                                db_message.6.clone(),                  // hash_chain
+                                db_message_with_bundle.bundle.clone(), // bundle
+                            ));
+                        }
+                    }
+                }
+
+                Ok(messages_with_bundles)
             }
             Err(e) => Err(StoreErrorType::from(e)),
         }
@@ -499,16 +716,16 @@ impl DataStore for StoreClient {
         use super::schema::processes::dsl::*;
         let conn = &mut self.get_conn()?;
 
-        let (process_epoch, process_hash_chain, process_timestamp, process_nonce) = 
-          match self.enable_process_assignment {
-            true => (
-                process.epoch().ok(),
-                process.hash_chain().ok(),
-                process.timestamp().ok(),
-                process.nonce().ok(),
-            ),
-            false => (None, None, None, None)
-          };
+        let (process_epoch, process_hash_chain, process_timestamp, process_nonce) =
+            match self.enable_process_assignment {
+                true => (
+                    process.epoch().ok(),
+                    process.hash_chain().ok(),
+                    process.timestamp().ok(),
+                    process.nonce().ok(),
+                ),
+                false => (None, None, None, None),
+            };
 
         let new_process = NewProcess {
             process_id: &process.process.process_id,
@@ -696,121 +913,122 @@ impl DataStore for StoreClient {
         };
 
         if self.bytestore.clone().is_ready() {
-          let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
-              .select((
-                  row_id,
-                  process_id,
-                  message_id,
-                  assignment_id,
-                  epoch,
-                  nonce,
-                  timestamp,
-                  hash_chain,
-              ))
-              .order(timestamp.asc())
-              .limit(adjusted_limit_val + 1) // Fetch one extra record to determine if a next page exists
-              .load(conn);
+            let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
+                .select((
+                    row_id,
+                    process_id,
+                    message_id,
+                    assignment_id,
+                    epoch,
+                    nonce,
+                    timestamp,
+                    hash_chain,
+                ))
+                .order(timestamp.asc())
+                .limit(adjusted_limit_val + 1) // Fetch one extra record to determine if a next page exists
+                .load(conn);
 
-          match db_messages_result {
-              Ok(db_messages) => {
-                  let has_next_page = db_messages.len() as i64 > adjusted_limit_val;
+            match db_messages_result {
+                Ok(db_messages) => {
+                    let has_next_page = db_messages.len() as i64 > adjusted_limit_val;
 
-                  // Take only up to the limit if there's an extra indicating a next page
-                  let messages_o = if has_next_page {
-                      &db_messages[..(adjusted_limit_val as usize)]
-                  } else {
-                      &db_messages[..]
-                  };
+                    // Take only up to the limit if there's an extra indicating a next page
+                    let messages_o = if has_next_page {
+                        &db_messages[..(adjusted_limit_val as usize)]
+                    } else {
+                        &db_messages[..]
+                    };
 
-                  let mut messages_mapped: Vec<Message> = vec![];
+                    let mut messages_mapped: Vec<Message> = vec![];
 
-                  // Include the process as the first message if determined to be on the first page and has assignment
-                  if include_process {
-                      let process_message = Message::from_process(process_in.clone())?;
-                      messages_mapped.push(process_message);
-                  }
+                    // Include the process as the first message if determined to be on the first page and has assignment
+                    if include_process {
+                        let process_message = Message::from_process(process_in.clone())?;
+                        messages_mapped.push(process_message);
+                    }
 
-                  // Map database messages to the Message struct
-                  let message_ids: Vec<(String, Option<String>, String, String)> = messages_o
-                      .iter()
-                      .map(|msg| {
-                          (
-                              msg.message_id.clone(),
-                              msg.assignment_id.clone(),
-                              msg.process_id.clone(),
-                              msg.timestamp.to_string().clone(),
-                          )
-                      })
-                      .collect();
+                    // Map database messages to the Message struct
+                    let message_ids: Vec<(String, Option<String>, String, String)> = messages_o
+                        .iter()
+                        .map(|msg| {
+                            (
+                                msg.message_id.clone(),
+                                msg.assignment_id.clone(),
+                                msg.process_id.clone(),
+                                msg.timestamp.to_string().clone(),
+                            )
+                        })
+                        .collect();
 
-                  let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
+                    let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
 
-                  for db_message in messages_o.iter() {
-                      match binaries.get(&(
-                          db_message.message_id.clone(),
-                          db_message.assignment_id.clone(),
-                          db_message.process_id.clone(),
-                          db_message.timestamp.to_string().clone(),
-                      )) {
-                          Some(bytes_result) => {
-                              let mapped = Message::from_bytes(bytes_result.clone())?;
-                              messages_mapped.push(mapped);
-                          }
-                          None => {
-                              // Fall back to the database if the binary isn't available
-                              let full_message = self.get_message_internal(
-                                  &db_message.message_id,
-                                  &db_message.assignment_id,
-                              )?;
-                              messages_mapped.push(full_message);
-                          }
-                      }
-                  }
+                    for db_message in messages_o.iter() {
+                        match binaries.get(&(
+                            db_message.message_id.clone(),
+                            db_message.assignment_id.clone(),
+                            db_message.process_id.clone(),
+                            db_message.timestamp.to_string().clone(),
+                        )) {
+                            Some(bytes_result) => {
+                                let mapped = Message::from_bytes(bytes_result.clone())?;
+                                messages_mapped.push(mapped);
+                            }
+                            None => {
+                                // Fall back to the database if the binary isn't available
+                                let full_message = self.get_message_internal(
+                                    &db_message.message_id,
+                                    &db_message.assignment_id,
+                                )?;
+                                messages_mapped.push(full_message);
+                            }
+                        }
+                    }
 
-                  // Create paginated result
-                  let paginated = PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
-                  Ok(paginated)
-              }
-              Err(e) => Err(StoreErrorType::from(e)),
-          }
+                    // Create paginated result
+                    let paginated =
+                        PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                    Ok(paginated)
+                }
+                Err(e) => Err(StoreErrorType::from(e)),
+            }
         } else {
-          let db_messages_result: Result<Vec<DbMessage>, DieselError> = query
-              .order(timestamp.asc())
-              .limit(adjusted_limit_val + 1) // Fetch one extra record to determine if a next page exists
-              .load(conn);
+            let db_messages_result: Result<Vec<DbMessage>, DieselError> = query
+                .order(timestamp.asc())
+                .limit(adjusted_limit_val + 1) // Fetch one extra record to determine if a next page exists
+                .load(conn);
 
-          match db_messages_result {
-              Ok(db_messages) => {
-                  let has_next_page = db_messages.len() as i64 > adjusted_limit_val;
+            match db_messages_result {
+                Ok(db_messages) => {
+                    let has_next_page = db_messages.len() as i64 > adjusted_limit_val;
 
-                  // Take only up to the limit if there's an extra indicating a next page
-                  let messages_o = if has_next_page {
-                      &db_messages[..(adjusted_limit_val as usize)]
-                  } else {
-                      &db_messages[..]
-                  };
+                    // Take only up to the limit if there's an extra indicating a next page
+                    let messages_o = if has_next_page {
+                        &db_messages[..(adjusted_limit_val as usize)]
+                    } else {
+                        &db_messages[..]
+                    };
 
-                  let mut messages_mapped: Vec<Message> = vec![];
+                    let mut messages_mapped: Vec<Message> = vec![];
 
-                  // Include the process as the first message if determined to be on the first page and has assignment
-                  if include_process {
-                      let process_message = Message::from_process(process_in.clone())?;
-                      messages_mapped.push(process_message);
-                  }
+                    // Include the process as the first message if determined to be on the first page and has assignment
+                    if include_process {
+                        let process_message = Message::from_process(process_in.clone())?;
+                        messages_mapped.push(process_message);
+                    }
 
-                  for db_message in messages_o.iter() {
-                      let json = serde_json::from_value(db_message.message_data.clone())?;
-                      let bytes: Vec<u8> = db_message.bundle.clone();
-                      let mapped = Message::from_val(&json, bytes)?;
-                      messages_mapped.push(mapped);
-                  }
+                    for db_message in messages_o.iter() {
+                        let json = serde_json::from_value(db_message.message_data.clone())?;
+                        let bytes: Vec<u8> = db_message.bundle.clone();
+                        let mapped = Message::from_val(&json, bytes)?;
+                        messages_mapped.push(mapped);
+                    }
 
-                  let paginated =
-                      PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
-                  Ok(paginated)
-              }
-              Err(e) => Err(StoreErrorType::from(e)),
-          }
+                    let paginated =
+                        PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                    Ok(paginated)
+                }
+                Err(e) => Err(StoreErrorType::from(e)),
+            }
         }
     }
 
@@ -840,7 +1058,10 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_latest_message(&self, process_id_in: &str) -> Result<Option<Message>, StoreErrorType> {
+    async fn get_latest_message(
+        &self,
+        process_id_in: &str,
+    ) -> Result<Option<Message>, StoreErrorType> {
         use super::schema::messages::dsl::*;
         /*
             This must use get_conn because it needs
@@ -871,7 +1092,9 @@ impl DataStore for StoreClient {
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
+}
 
+impl RouterDataStore for StoreClient {
     fn save_process_scheduler(
         &self,
         process_scheduler: &ProcessScheduler,
@@ -1170,6 +1393,20 @@ mod bytestore {
 
             let new_db = DB::open(&opts, &self.config.su_data_dir)
                 .map_err(|e| format!("Failed to open RocksDB: {:?}", e))?;
+
+            let mut db_write = self.db.write().unwrap();
+            *db_write = Some(new_db);
+
+            Ok(())
+        }
+
+        pub fn try_read_instance_connect(&self) -> Result<(), String> {
+            let mut opts = Options::default();
+            opts.set_enable_blob_files(true); // Enable blob files
+
+            // Open the database in read-only mode
+            let new_db = DB::open_for_read_only(&opts, &self.config.su_data_dir, false)
+                .map_err(|e| format!("Failed to open RocksDB in read-only mode: {:?}", e))?;
 
             let mut db_write = self.db.write().unwrap();
             *db_write = Some(new_db);

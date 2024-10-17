@@ -11,6 +11,9 @@ pub mod uploader;
 // database layer
 pub mod store;
 
+// local database layer
+pub mod local_store;
+
 // arweave gateway
 pub mod gateway;
 

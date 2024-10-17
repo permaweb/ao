@@ -17,6 +17,7 @@ pub struct Builder<'a> {
 pub struct BuildResult {
     pub binary: Vec<u8>,
     pub bundle: DataBundle,
+    pub bundle_data_item: DataItem,
 }
 
 #[derive(Debug, Clone)]
@@ -116,7 +117,7 @@ impl<'a> Builder<'a> {
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
         ];
 
-        let mut data_bundle = DataBundle::new(bundle_tags.clone());
+        let mut data_bundle = DataBundle::new();
 
         items.iter().for_each(|item| {
             data_bundle.add_item(item.clone());
@@ -137,6 +138,7 @@ impl<'a> Builder<'a> {
         Ok(BuildResult {
             binary: bundle_data_item.as_bytes()?,
             bundle: data_bundle,
+            bundle_data_item,
         })
     }
 
@@ -173,7 +175,7 @@ impl<'a> Builder<'a> {
         ];
         self.logger.log(format!("generated tags - {:?}", &tags));
 
-        let mut data_bundle = DataBundle::new(tags.clone());
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(item);
         let buffer = data_bundle.to_bytes()?;
 
@@ -190,10 +192,11 @@ impl<'a> Builder<'a> {
         Ok(BuildResult {
             binary: new_data_item.as_bytes()?,
             bundle: data_bundle,
+            bundle_data_item: new_data_item,
         })
     }
 
-    pub fn parse_data_item(&self, tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
+    pub fn parse_data_item(tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
         Ok(DataItem::from_bytes(tx)?)
     }
 

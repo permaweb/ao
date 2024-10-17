@@ -132,9 +132,9 @@ impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let arweave_urls = config.arweave_url_list;
-    
+
         let client = Client::new();
-    
+
         for arweave_url in arweave_urls {
             let url = match Url::parse(&arweave_url) {
                 Ok(u) => u,
@@ -143,7 +143,7 @@ impl Gateway for ArweaveGateway {
                     continue; // Skip this URL and try the next one
                 }
             };
-    
+
             let response = client
                 .head(
                     url.join(&format!("{}", tx_id))
@@ -151,23 +151,25 @@ impl Gateway for ArweaveGateway {
                 )
                 .send()
                 .await;
-    
+
             match response {
                 Ok(res) if res.status().is_success() => {
                     return Ok(true); // Return success if the request was successful
                 }
                 Ok(_) => {
-                    eprintln!("Request failed with non-success status for URL: {}", arweave_url);
+                    eprintln!(
+                        "Request failed with non-success status for URL: {}",
+                        arweave_url
+                    );
                 }
                 Err(e) => {
                     eprintln!("Error requesting URL {}: {}", arweave_url, e);
                 }
             }
         }
-    
+
         Ok(false) // If none of the URLs worked, return false
     }
-  
 
     async fn network_info(&self) -> Result<NetworkInfo, String> {
         // bind these with let so they dont drop until returning

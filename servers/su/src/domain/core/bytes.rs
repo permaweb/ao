@@ -15,9 +15,9 @@ pub enum ByteErrorType {
 }
 
 impl From<TagError> for ByteErrorType {
-  fn from(error: TagError) -> Self {
-      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
-  }
+    fn from(error: TagError) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {:?}", error))
+    }
 }
 
 impl From<&str> for ByteErrorType {
@@ -41,15 +41,11 @@ impl From<String> for ByteErrorType {
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
-    pub tags: Vec<Tag>,
 }
 
 impl DataBundle {
-    pub fn new(tags: Vec<Tag>) -> Self {
-        DataBundle {
-            items: Vec::new(),
-            tags: tags,
-        }
+    pub fn new() -> Self {
+        DataBundle { items: Vec::new() }
     }
 
     pub fn add_item(&mut self, item: DataItem) {
@@ -108,10 +104,7 @@ impl DataBundle {
             items.push(item);
         }
 
-        Ok(Self {
-            items,
-            tags: Vec::new(), // Assuming tags are not used in to_bytes
-        })
+        Ok(Self { items })
     }
 }
 
@@ -563,9 +556,7 @@ impl DataItem {
 
     pub fn data(&self) -> Option<String> {
         match &self.data {
-            Data::Bytes(d) => {
-                Some(String::from_utf8_lossy(d).into_owned())
-            },
+            Data::Bytes(d) => Some(String::from_utf8_lossy(d).into_owned()),
             Data::None => None,
         }
     }
@@ -649,11 +640,7 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        let tags = vec![
-            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
-            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-        ];
-        let mut data_bundle = DataBundle::new(tags);
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(data_item);
         assert_eq!(data_bundle.items.len(), 1);
         let bundle_bytes = data_bundle.to_bytes();
