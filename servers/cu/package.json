@@ -14,7 +14,7 @@
     "@fastify/middie": "^9.0.2",
     "@permaweb/ao-loader": "^0.0.41",
     "@permaweb/ao-scheduler-utils": "^0.0.19",
-    "@permaweb/weavedrive": "^0.0.10",
+    "@permaweb/weavedrive": "^0.0.11",
     "arweave": "^1.15.5",
     "async-lock": "^1.4.1",
     "better-sqlite3": "^11.3.0",
