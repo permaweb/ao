@@ -64,10 +64,16 @@ const metering = require('@permaweb/wasm-metering')
  */
 
 /**
+ * @typedef HandleOptions
+ * @property {boolean} [outputMemory=true]
+ */
+
+/**
  * @callback handleFunction
  * @param {ArrayBuffer | null} buffer
  * @param {Message} msg
  * @param {Environment} env
+ * @param {HandleOptions} [options]
  * @returns {Promise<HandleResponse>}
  */
 
@@ -205,7 +211,8 @@ module.exports = async function (binary, options) {
   }
 
 
-  return async (buffer, msg, env) => {
+  return async (buffer, msg, env, opts) => {
+    const outputMemory = opts?.outputMemory ?? true
 
     const originalRandom = Math.random
     // const OriginalDate = Date
@@ -244,7 +251,9 @@ module.exports = async function (binary, options) {
       /** end unmock */
 
       return {
-        Memory: instance.HEAPU8.slice(),
+        Memory: outputMemory
+          ? instance.HEAPU8.slice()
+          : null,
         Error: response.Error,
         Output: response.Output,
         Messages: response.Messages,
