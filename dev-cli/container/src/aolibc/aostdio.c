@@ -96,26 +96,26 @@ int munmap(void* addr, size_t length) {
     return 0;
 }
 */
-EM_JS(int, metering_gasUsed, (), {
-    return Module.gas.used;
-});
+// EM_JS(int, metering_gasUsed, (), {
+//     return Module.gas.used;
+// });
 
-static int gasUsed(lua_State *L)
-{
-    lua_pushnumber(L, metering_gasUsed());
+// static int gasUsed(lua_State *L)
+// {
+//     lua_pushnumber(L, metering_gasUsed());
 
-    return 1;
-}
+//     return 1;
+// }
 
-// Library registration function
-static const struct luaL_Reg aolib_funcs[] = {
-    {"gasUsed", gasUsed},
-    {NULL, NULL} /* Sentinel */
-};
+// // Library registration function
+// static const struct luaL_Reg aolib_funcs[] = {
+//     {"gasUsed", gasUsed},
+//     {NULL, NULL} /* Sentinel */
+// };
 
-// Initialization function
-int luaopen_metering(lua_State *L)
-{
-    luaL_newlib(L, aolib_funcs);
-    return 1;
-}
+// // Initialization function
+// int luaopen_metering(lua_State *L)
+// {
+//     luaL_newlib(L, aolib_funcs);
+//     return 1;
+// }
