@@ -24,7 +24,15 @@ const MODE = process.env.NODE_CONFIG_ENV
 
 if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 
-const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2', 'wasm32-unknown-emscripten3', 'wasm32-unknown-emscripten4', 'wasm64-unknown-emscripten-draft_2024_02_15']
+const DEFAULT_PROCESS_WASM_MODULE_FORMATS = [
+  'wasm32-unknown-emscripten',
+  'wasm32-unknown-emscripten2',
+  'wasm32-unknown-emscripten3',
+  'wasm32-unknown-emscripten4',
+  'wasm64-unknown-emscripten-draft_2024_02_15',
+  'wasm32-unknown-emscripten-metering',
+  'wasm64-unknown-emscripten-draft_2024_10_16-metering'
+]
 
 /**
  * The server config is an extension of the config required by the domain (business logic).
