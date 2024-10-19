@@ -24,7 +24,7 @@ SmartWeaveContracts written in [Lua](https://www.lua.org/) and
 - [For Developers](#for-developers)
   - [Contributing](#contributing)
   - [Publish a new Version of the CLI](#publish-a-new-version-of-the-cli)
-    - [Need a to also Publish a new Docker Image version?](#need-a-to-also-publish-a-new-docker-image-version)
+    - [Need to also Publish a new Docker Image version?](#need-to-also-publish-a-new-docker-image-version)
 
 <!-- tocstop -->
 
@@ -89,7 +89,7 @@ This will create a new directory, if needed, named `{myproject}`
 
 ### Run a Lua Repl
 
-This gives you a Lua interpeter
+This gives you a Lua interpreter
 
 ```sh
 ao lua
@@ -179,7 +179,7 @@ Workflow Dispatch that will:
 > For now, if Turbo needs more funding, contact `@TillaTheHun0`. (Maybe
 > eventually we add a Workflow Dispatch script to automatically fund Turbo)
 
-#### Need a to also Publish a new Docker Image version?
+#### Need to also Publish a new Docker Image version?
 
 If you need to also publish a new Docker Image, you will currently need to do
 this manually.

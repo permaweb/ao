@@ -93,13 +93,13 @@ let results = await results({
 
 Parameters
 
-| Name    | Description                                                       | Optional? |
-| ------- | ----------------------------------------------------------------- | --------- |
-| process | the process identifier                                            | false     |
-| from    | cursor starting point                                             | true      |
-| to      | cursor ending point                                               | true      |
-| sort    | list results in decending or ascending order, default will be ASC | true      |
-| limit   | the number of results to return (default: 25)                     | true      |
+| Name    | Description                                                        | Optional? |
+| ------- | ------------------------------------------------------------------ | --------- |
+| process | the process identifier                                             | false     |
+| from    | cursor starting point                                              | true      |
+| to      | cursor ending point                                                | true      |
+| sort    | list results in descending or ascending order, default will be ASC | true      |
+| limit   | the number of results to return (default: 25)                      | true      |
 
 #### `message`
 
@@ -181,7 +181,7 @@ connect() == { spawn, message, result }
 
 #### `monitor`
 
-When using cron messages, ao users need a way to start injesting the messages,
+When using cron messages, ao users need a way to start injecting the messages,
 using this monitor method, ao users can initiate the subscription service for
 cron messages.
 
@@ -229,7 +229,7 @@ const processId = await assign({
 });
 ```
 
-Create a Assignment for an `ao` process with an L1 transaction
+Create an Assignment for an `ao` process with an L1 transaction
 
 ```js
 import { assign } from "@permaweb/aoconnect";
@@ -355,7 +355,7 @@ unit test.
 
 Because the contract wrapping is done by the business logic itself, it also
 ensures the stubs we use in our unit tests accurately implement the contract
-API. Thus our unit tests are simoultaneously contract tests.
+API. Thus our unit tests are simultaneously contract tests.
 
 `client` contains implementations, of the contracts in `dal.js`, for various
 platforms. The unit tests for the implementations in `client` also import
