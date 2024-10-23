@@ -206,6 +206,18 @@ module.exports = async function (binary, options) {
 
 
   return async (buffer, msg, env) => {
+    /**
+     * instance is the Module
+     * abstraction for the WebAssembly environnment
+     * 
+     * This is where things like module options, extensions
+     * and other metadata are exposed to things like WeaveDrive.
+     * 
+     * So by setting blockHeight on the instance to the current
+     * msg's blockHeight, it can be made available to WeaveDrive
+     * for admissable checks
+     */
+    instance.blockHeight = msg['Block-Height']
 
     const originalRandom = Math.random
     // const OriginalDate = Date
