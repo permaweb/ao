@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.43](https://github.com/permaweb/ao/compare/loader@v0.0.42...loader@v0.0.43) (2024-10-28)
+
+
+### Features
+
+* **loader:** set blockHeight in handler, based on current message [#1055](https://github.com/permaweb/ao/issues/1055) ([f7dd714](https://github.com/permaweb/ao/commit/f7dd714e5c56d1ca65d4b4dffadaae16302b33ec))
+
 ## [0.0.42](https://github.com/permaweb/ao/compare/loader@v0.0.41...loader@v0.0.42) (2024-10-18)
 
 ## [0.0.41](https://github.com/permaweb/ao/compare/loader@v0.0.40...loader@v0.0.41) (2024-10-16)
