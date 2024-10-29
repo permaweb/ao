@@ -51,15 +51,19 @@ export function parseTags (rawTags) {
  * then only remove tags whose both name and value matches.
  *
  * @param {string} name - the name of the tags to be removed
- * @param {string} [value] - the value of the tags to be removed
+ * @param {string} [valueOrPred] - the value of the tags to be removed
+ * OR a predicate function to apply to the value
  */
-export function removeTagsByNameMaybeValue (name, value) {
+export function removeTagsByNameMaybeValue (name, valueOrPred) {
   return (tags) => reject(
     allPass([
       propEq(name, 'name'),
       ifElse(
-        always(value),
-        propEq(value, 'value'),
+        always(valueOrPred),
+        (tag) => {
+          if (typeof valueOrPred === 'function') return valueOrPred(tag.value)
+          return tag.value === valueOrPred
+        },
         T
       )
     ]),

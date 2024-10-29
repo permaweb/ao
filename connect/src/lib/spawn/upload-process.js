@@ -31,11 +31,11 @@ function buildTagsWith () {
       .map(prop('tags'))
       .map(defaultTo([]))
       .map(removeTagsByNameMaybeValue('Data-Protocol', 'ao'))
-      .map(removeTagsByNameMaybeValue('Variant'))
-      .map(removeTagsByNameMaybeValue('Type'))
+      .map(removeTagsByNameMaybeValue('Variant', 'ao.TN.1'))
+      .map(removeTagsByNameMaybeValue('Type', 'Message'))
       .map(removeTagsByNameMaybeValue('Module'))
       .map(removeTagsByNameMaybeValue('Scheduler'))
-      .map(removeTagsByNameMaybeValue('SDK'))
+      .map(removeTagsByNameMaybeValue('SDK', 'aoconnect'))
       .map(concat(__, [
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'Variant', value: 'ao.TN.1' },

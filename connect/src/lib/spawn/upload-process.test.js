@@ -12,6 +12,9 @@ describe('upload-process', () => {
       deployProcess: async ({ data, tags, signer }) => {
         assert.ok(data)
         assert.deepStrictEqual(tags, [
+          { name: 'Data-Protocol', value: 'zone' },
+          { name: 'Type', value: 'Profile' },
+          { name: 'Variant', value: 'ao.TN.Foo' },
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
@@ -40,6 +43,9 @@ describe('upload-process', () => {
       module: 'module-id-123',
       scheduler: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro',
       tags: [
+        { name: 'Data-Protocol', value: 'zone' },
+        { name: 'Type', value: 'Profile' },
+        { name: 'Variant', value: 'ao.TN.Foo' },
         { name: 'foo', value: 'bar' },
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'Variant', value: 'ao.TN.1' }

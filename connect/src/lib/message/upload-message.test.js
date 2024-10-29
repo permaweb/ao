@@ -13,6 +13,9 @@ describe('upload-message', () => {
         assert.ok(data)
         assert.equal(processId, 'process-asdf')
         assert.deepStrictEqual(tags, [
+          { name: 'Data-Protocol', value: 'zone' },
+          { name: 'Type', value: 'Profile' },
+          { name: 'Variant', value: 'ao.TN.Foo' },
           { name: 'foo', value: 'bar' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
@@ -32,6 +35,9 @@ describe('upload-message', () => {
       id: 'process-asdf',
       signer: () => {},
       tags: [
+        { name: 'Data-Protocol', value: 'zone' },
+        { name: 'Type', value: 'Profile' },
+        { name: 'Variant', value: 'ao.TN.Foo' },
         { name: 'foo', value: 'bar' },
         { name: 'Data-Protocol', value: 'ao' },
         { name: 'Variant', value: 'ao.TN.1' }
