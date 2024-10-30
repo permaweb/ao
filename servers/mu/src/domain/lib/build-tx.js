@@ -55,17 +55,20 @@ export function buildTxWith (env) {
         }
       )
       .map((res) => {
+        const filteredTags = ctx.cachedMsg.msg.Tags
+          .filter((tag) => {
+            return !(
+              (tag.name === 'Data-Protocol' && tag.value === 'ao') ||
+              (tag.name === 'Type' && tag.value === 'Message') ||
+              (tag.name === 'Variant' && tag.value === 'ao.TN.1') ||
+              tag.name === 'From-Process' ||
+              tag.name === 'From-Module' ||
+              tag.name === 'Pushed-For' ||
+              tag.name === 'Assignments'
+            )
+          })
         const tagsIn = [
-          ...ctx.cachedMsg.msg.Tags?.filter((tag) => {
-            return ![
-              'Data-Protocol',
-              'Type',
-              'Variant',
-              'From-Process',
-              'From-Module',
-              'Assignments'
-            ].includes(tag.name)
-          }) ?? [],
+          ...filteredTags,
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
           { name: 'Variant', value: 'ao.TN.1' },
