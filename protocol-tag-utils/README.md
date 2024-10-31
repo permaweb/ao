@@ -1,4 +1,4 @@
-# data-protocols
+# protocol-tag-utils
 
 A _tiny_, zero-dependency, set of utilities for interacting with `Data-Protocol`
 tags. Browser, Node, Bun, and Deno compatible.
@@ -94,7 +94,7 @@ import {
   removeAll,
   removeAllByName,
   update,
-} from "@permaweb/data-protocols";
+} from "@permaweb/protocol-tag-utils";
 
 const tags = [
   { name: "Data-Protocol", value: "ao" },
@@ -127,7 +127,7 @@ Extract the tags associated with the provided `Data-Protocol`.
 If the `Data-Protocol` tag is NOT found, then an empty array is returned
 
 ```js
-import { findAll } from "@permaweb/data-protocols";
+import { findAll } from "@permaweb/protocol-tag-utils";
 
 const tags = [/*...*/];
 
@@ -140,7 +140,7 @@ const aoTags = findAll("ao", tags);
 Extract the tags, with the name, associated with the provided `Data-Protocol`.
 
 ```js
-import { findAllByName } from '@permaweb/data-protocols'
+import { findAllByName } from '@permaweb/protocol-tag-utils'
 
 const tags = [/*...*/]
 
@@ -154,7 +154,7 @@ Extract the FIRST tag, with the name, associated with the provided
 `Data-Protocol`.
 
 ```js
-import { findByName } from '@permaweb/data-protocols'
+import { findByName } from '@permaweb/protocol-tag-utils'
 
 const tags = [/*...*/]
 
@@ -168,7 +168,7 @@ Associate an array of tags associated with the `Data-Protocol`. The
 `Data-Protocol` tag will be prepended to the front of the array.
 
 ```js
-import { create } from "@permaweb/data-protocols";
+import { create } from "@permaweb/protocol-tag-utils";
 
 const pTags = [{ name: "Foo", value: "Bar" }];
 
@@ -191,7 +191,7 @@ concatenated to the end of all tags.
 NO deduplication is performed on the associated tags.
 
 ```js
-import { update } from "@permaweb/data-protocols";
+import { update } from "@permaweb/protocol-tag-utils";
 
 const tags = [
   { name: "Data-Protocol", value: "ao" },
@@ -225,7 +225,7 @@ Same [`update`](#update), except do not replace the associated tags, and instead
 concatenate to them.
 
 ```js
-import { concat } from "@permaweb/data-protocols";
+import { concat } from "@permaweb/protocol-tag-utils";
 
 const tags = [
   { name: "Data-Protocol", value: "ao" },
@@ -261,7 +261,7 @@ concat("ao", pTags, tags);
 Remove the `Data-Protocol` section and all associated tags
 
 ```js
-import { removeAll } from "@permaweb/data-protocols";
+import { removeAll } from "@permaweb/protocol-tag-utils";
 
 const tags = [
   { name: "Unassociated", value: "Tag" },
@@ -297,7 +297,7 @@ removeAll("ao", tags);
 Remove all tags, with the name, associated with the `Data-Protocol`.
 
 ```js
-import { removeAllByName } from "@permaweb/data-protocols";
+import { removeAllByName } from "@permaweb/protocol-tag-utils";
 
 const tags = [
   { name: "Unassociated", value: "Tag" },
@@ -337,7 +337,7 @@ values are discarded. If you'd like to preserve all values, then use
 [`parseAll`](#parseall)
 
 ```js
-import { parse } from "@permaweb/data-protocols";
+import { parse } from "@permaweb/protocol-tag-utils";
 
 const tags = [/*...*/];
 
@@ -353,7 +353,7 @@ pairs of name -> an array of values.
 At each key, the values in each array will be in order of appearance
 
 ```js
-import { parseAll } from "@permaweb/data-protocols";
+import { parseAll } from "@permaweb/protocol-tag-utils";
 
 const tags = [/*...*/];
 
@@ -366,10 +366,10 @@ const aoParsed = parseAll("ao", tags);
 Instead of constantly passing `protocol` as the first argument every time, you
 can use this helper.
 
-Build a `@permaweb/data-protocols` API for a single `Data-Protocol`
+Build a `@permaweb/protocol-tag-utils` API for a single `Data-Protocol`
 
 ```js
-import { proto } from "@permaweb/data-protocols";
+import { proto } from "@permaweb/protocol-tag-utils";
 
 const ao = proto("ao");
 const zone = proto("zone");
@@ -403,7 +403,7 @@ to as "unassociated" tags.
 Add unassociated tags to the end of unassociated section.
 
 ```js
-import { concatUnassoc } from "@permaweb/data-protocols"
+import { concatUnassoc } from "@permaweb/protocol-tag-utils"
 
 const tags = [
   { name: 'Random', value: 'Tag' }
@@ -430,7 +430,7 @@ concatUnassoc([{ name: 'Another', value: 'One' }], tags)
 Same as [`parse`](#parse), but for unassociated tags
 
 ```js
-import { parseUnassoc } from "@permaweb/data-protocols";
+import { parseUnassoc } from "@permaweb/protocol-tag-utils";
 
 const tags = [/*...*/];
 
@@ -443,7 +443,7 @@ parseUnassoc(tags);
 Same as [`parseAll`](#parseAll), but for unassociated tags
 
 ```js
-import { parseAllUnassoc } from "@permaweb/data-protocols";
+import { parseAllUnassoc } from "@permaweb/protocol-tag-utils";
 
 const tags = [/*...*/];
 

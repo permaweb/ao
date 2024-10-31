@@ -1,16 +1,16 @@
-name: 📊🛠 Test & Deploy Data-Protocols Lib
+name: 🔖🛠 Test & Deploy Protocol Tag Utils
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "data-protocols/**"
+      - "protocol-tag-utils/**"
   push:
     branches:
       - main
     paths:
-      - "data-protocols/**"
+      - "protocol-tag-utils/**"
   
   # Perform a release using a workflow dispatch
   workflow_dispatch:
@@ -38,12 +38,12 @@ jobs:
           node-version: 20
 
       - name: 📥 Download deps
-        working-directory: data-protocols
+        working-directory: protocol-tag-utils
         run: |
           npm i
 
       - name: ⚡ Run Tests
-        working-directory: data-protocols
+        working-directory: protocol-tag-utils
         run: |
           npm test
         env:
@@ -87,7 +87,7 @@ jobs:
         uses: hyper63/hyper-ci-bump@v2.0.3
         with:
           bump-to: ${{ github.event.inputs.version }}
-          package: data-protocols
+          package: protocol-tag-utils
 
       - name: ⬆️ Push
         run: |
@@ -95,12 +95,12 @@ jobs:
           git push --tags
 
       - name: 📥 Download deps
-        working-directory: data-protocols
+        working-directory: protocol-tag-utils
         run: |
           npm i
       
       - name: 🦠 Publish to NPM
-        working-directory: data-protocols
+        working-directory: protocol-tag-utils
         run: |
           npm run build
           npm publish --access=public
