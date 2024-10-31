@@ -193,6 +193,17 @@ describe('suite', () => {
       )
     })
 
+    test('should remove protocol, if all tags are removed', () => {
+      assert.deepStrictEqual(
+        removeAllByName(
+          AO,
+          'Variant',
+          removeAllByName(AO, 'Type', TAGS)
+        ),
+        [RAND, ZONE_TAGS].flat(1)
+      )
+    })
+
     test('should do nothing', () => {
       assert.deepStrictEqual(removeAllByName(AO, 'Foo', TAGS), TAGS)
       assert.deepStrictEqual(removeAllByName(AO, 'Random', TAGS), TAGS)

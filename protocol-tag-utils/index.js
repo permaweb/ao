@@ -167,12 +167,8 @@ export const removeAll = (protocol, tags) => update(protocol, [], tags)
  */
 export const removeAllByName = (protocol, name, tags) => {
   const [start, end] = findProtocolBoundaries(protocol)(tags)
-
-  let [before, cur, after] = [tags.slice(0, start), tags.slice(start, end), tags.slice(end)]
-
-  cur = cur.filter(complement(byName(name)))
-
-  return [before, cur, after].flat(1)
+  const [before, cur, after] = [tags.slice(0, start), tags.slice(start, end), tags.slice(end)]
+  return [before, create(protocol, cur.filter(complement(byName(name)))), after].flat(1)
 }
 
 /**
