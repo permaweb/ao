@@ -6,6 +6,7 @@ tags. Browser, Node, Bun, and Deno compatible.
 <!-- toc -->
 
 - [Why](#why)
+- [Solution](#solution)
 - [Usage](#usage)
   - [`findAll`](#findall)
   - [`findAllByName`](#findallbyname)
@@ -50,6 +51,8 @@ const tags = [
 
 This ambuguity can lead to unexpected behavior in workarounds in subsequent
 implementations.
+
+## Solution
 
 By enforcing one additional simple convention, this ambiguity is massively
 curtailed:
