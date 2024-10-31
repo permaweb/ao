@@ -14,11 +14,11 @@ describe('upload-message', () => {
         assert.equal(processId, 'process-asdf')
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
-          { name: 'Type', value: 'Message' },
-          { name: 'SDK', value: 'aoconnect' },
-          { name: 'Content-Type', value: 'text/plain' }
+          { name: 'Type', value: 'Message' }
         ])
         assert.equal(anchor, 'idempotent-123')
         assert.ok(signer)
