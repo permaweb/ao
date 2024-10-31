@@ -1,9 +1,14 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
-import { __, always, append, assoc, concat, defaultTo, ifElse, pipe, prop } from 'ramda'
+import { __, always, assoc, curry, defaultTo, ifElse, pipe, prop } from 'ramda'
+import { proto } from '@permaweb/protocol-tag-utils'
 
 import { deployMessageSchema, signerSchema } from '../../dal.js'
-import { removeTagsByNameMaybeValue } from '../utils.js'
+
+const aoProto = proto('ao')
+const removeAoProtoByName = curry(aoProto.removeAllByName)
+const concatAoProto = curry(aoProto.concat)
+const concatUnassoc = curry(aoProto.concatUnassoc)
 
 const tagSchema = z.array(z.object({
   name: z.string(),
@@ -36,15 +41,11 @@ function buildTagsWith () {
   return (ctx) => {
     return of(ctx.tags)
       .map(defaultTo([]))
-      .map(removeTagsByNameMaybeValue('Data-Protocol', 'ao'))
-      .map(removeTagsByNameMaybeValue('Variant'))
-      .map(removeTagsByNameMaybeValue('Type'))
-      .map(removeTagsByNameMaybeValue('SDK'))
-      .map(concat(__, [
-        { name: 'Data-Protocol', value: 'ao' },
+      .map(removeAoProtoByName('Variant'))
+      .map(removeAoProtoByName('Type'))
+      .map(concatAoProto([
         { name: 'Variant', value: 'ao.TN.1' },
-        { name: 'Type', value: 'Message' },
-        { name: 'SDK', value: 'aoconnect' }
+        { name: 'Type', value: 'Message' }
       ]))
       .map(tagSchema.parse)
       .map(assoc('tags', __, ctx))
@@ -79,13 +80,19 @@ function buildDataWith ({ logger }) {
           .map(
             (ctx) => pipe(
               prop('tags'),
-              removeTagsByNameMaybeValue('Content-Type'),
-              append({ name: 'Content-Type', value: 'text/plain' }),
+              concatUnassoc([{ name: 'Content-Type', value: 'text/plain' }]),
               assoc('tags', __, ctx)
             )(ctx)
           )
           .map(logger.tap('added pseudo-random string as message "data"'))
       ))
+      .map(
+        (ctx) => pipe(
+          prop('tags'),
+          concatUnassoc([{ name: 'SDK', value: 'aoconnect' }]),
+          assoc('tags', __, ctx)
+        )(ctx)
+      )
   }
 }
 

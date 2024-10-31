@@ -13,13 +13,13 @@ describe('upload-process', () => {
         assert.ok(data)
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
+          { name: 'Content-Type', value: 'text/plain' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
-          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
-          { name: 'SDK', value: 'aoconnect' },
-          { name: 'Content-Type', value: 'text/plain' }
+          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' }
         ])
         assert.ok(signer)
 
@@ -53,13 +53,13 @@ describe('upload-process', () => {
     const uploadProcess = uploadProcessWith({
       deployProcess: async ({ tags }) => {
         assert.deepStrictEqual(tags, [
+          { name: 'Content-Type', value: 'text/plain' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
-          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
-          { name: 'SDK', value: 'aoconnect' },
-          { name: 'Content-Type', value: 'text/plain' }
+          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' }
         ])
 
         return { res: 'foobar', processId: 'process-id-123' }
@@ -84,12 +84,12 @@ describe('upload-process', () => {
          */
         assert.deepStrictEqual(tags, [
           { name: 'foo', value: 'bar' },
+          { name: 'SDK', value: 'aoconnect' },
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Process' },
           { name: 'Module', value: 'module-id-123' },
-          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' },
-          { name: 'SDK', value: 'aoconnect' }
+          { name: 'Scheduler', value: 'zVkjFCALjk4xxuCilddKS8ShZ-9HdeqeuYQOgMgWucro' }
         ])
         return {
           res: 'foobar',
