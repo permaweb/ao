@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@permaweb/ao-scheduler-utils": "~0.0.23",
-    "@permaweb/protocol-tag-utils": "~0.0.1",
+    "@permaweb/protocol-tag-utils": "~0.0.2",
     "buffer": "^6.0.3",
     "debug": "^4.3.6",
     "hyper-async": "^1.1.2",
