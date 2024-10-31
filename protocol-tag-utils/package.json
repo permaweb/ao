@@ -1,5 +1,5 @@
 {
-  "name": "@permaweb/data-protocols",
+  "name": "@permaweb/protocol-tag-utils",
   "version": "0.0.1",
   "description": "A utility for extracting and parsing tags associated with ANS-115 Data-Protocols",
   "repository": {
