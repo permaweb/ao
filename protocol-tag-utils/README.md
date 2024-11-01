@@ -7,6 +7,7 @@ tags. Browser, Node, Bun, and Deno compatible.
 
 - [Why](#why)
 - [Solution](#solution)
+- [Install](#install)
 - [Usage](#usage)
   - [`findAll`](#findall)
   - [`findAllByName`](#findallbyname)
@@ -78,6 +79,18 @@ const tags = [
 
 This module provides utilties for interacting with tags, using the above
 convention.
+
+## Install
+
+The module is available on `NPM`
+
+```sh
+npm i @permaweb/protocol-tag-utils
+
+yarn add @permaweb/protocol-tag-utils
+
+pnpm i @permaweb/protocol-tag-utils
+```
 
 ## Usage
 
