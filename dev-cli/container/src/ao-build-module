@@ -56,6 +56,7 @@ def main():
     
     # Load the config file
     config = Config('/src/config.yml')
+    config.setValuesByPreset('xs')
 
     # Determine the language of the source files
     language = determine_language()
@@ -102,7 +103,9 @@ def main():
     cmd = ['emcc', '-O3', '-g2']
     cmd.extend(shlex.split(os.environ.get('EMCC_FLAGS_BASE', '')))
     cmd.extend(['-s', 'STACK_SIZE=' + str(config.stack_size),
-      '-s', 'INITIAL_MEMORY=' + str(config.initial_memory), 
+      '-s', 'INITIAL_MEMORY=' + str(config.initial_memory),
+      '-s', 'STACK_SIZE=' + str(config.stack_size),
+      '-s', 'ALLOW_MEMORY_GROWTH=1', 
       '-s', 'DETERMINISTIC=1',
       '-s', 'NODERAWFS=0', 
       '-s', 'FORCE_FILESYSTEM=1',
@@ -110,6 +113,7 @@ def main():
       '--pre-js', '/opt/pre.js',
       '-lcompiler_rt-wasm-sjlj'
     ])
+
 
     # Link aolibc library
     #cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])

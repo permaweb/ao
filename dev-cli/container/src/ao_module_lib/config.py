@@ -9,8 +9,8 @@ def mb_to_bytes(megabytes):
 presets = {
     'xs': {
         'stack_size': mb_to_bytes(8),
-        'initial_memory': mb_to_bytes(16),
-        'maximum_memory': mb_to_bytes(64) 
+        'initial_memory': mb_to_bytes(12),
+        'maximum_memory': mb_to_bytes(32) 
     },
     'sm': {
         'stack_size': mb_to_bytes(16), 
