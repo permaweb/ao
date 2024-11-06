@@ -12,7 +12,11 @@ export const createApis = async (ctx) => {
 
   const evaluate = evaluateWith({
     wasmInstanceCache,
-    addExtension: WasmClient.addExtensionWith({ ARWEAVE_URL: ctx.ARWEAVE_URL }),
+    addExtension: WasmClient.addExtensionWith({
+      ARWEAVE_URL: ctx.ARWEAVE_URL,
+      GRAPHQL_URL: ctx.GRAPHQL_URL,
+      CHECKPOINT_GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL
+    }),
     bootstrapWasmInstance: WasmClient.bootstrapWasmInstanceWith(),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db: sqlite, logger: ctx.logger }),
     ARWEAVE_URL: ctx.ARWEAVE_URL,
