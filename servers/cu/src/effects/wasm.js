@@ -108,13 +108,32 @@ export function createWasmInstanceCache ({ MAX_SIZE }) {
   })
 }
 
-export function addExtensionWith ({ ARWEAVE_URL }) {
+export function addExtensionWith ({ ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL }) {
+  /**
+   * WeaveDrive supports passing multiple urls to use for arweave and gateway
+   * related operations, within the extension.
+   *
+   * NOTE: WeaveDrive doesn't distinguish between a host for the Arweave HTTP API
+   * and a host for the Arweave GraphQL gateway api (it conflates the two). So certain
+   * operations will always fail for certain hosts ie. Arweave HTTP API operations sent to a host
+   * that only hosts the GraphQL gateway api. Until WeaveDrive allows passing distinct urls
+   * for each use case, passing a _first_ host that implements both is the best we can do to mitigate.
+   */
+  const weaveDriveUrls = Array.from(
+    /**
+     * dedupe in the case that the CU is configured to use the same host for multiple
+     * use-cases. This prevents WeaveDrive from falling back to the same url, and dictating
+     * its own retry mechanisms
+     */
+    new Set([ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL].map(s => new URL(s).origin))
+  ).join(',')
+
   return async ({ extension }) => {
     /**
-       * TODO: make this cleaner. Should we attach only api impls
-       * or other options (ie. ARWEAVE) as well here?
-       */
-    if (extension === 'WeaveDrive') return { WeaveDrive, ARWEAVE: ARWEAVE_URL }
+     * TODO: make this cleaner. Should we attach only api impls
+     * or other options (ie. ARWEAVE) as well here?
+     */
+    if (extension === 'WeaveDrive') return { WeaveDrive, ARWEAVE: weaveDriveUrls }
     throw new Error(`Extension ${extension} api not found`)
   }
 }
