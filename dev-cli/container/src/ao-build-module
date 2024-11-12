@@ -54,9 +54,12 @@ def main():
     
     # Load the config file
     config = Config('/src/config.yml')
+    debug_print('Build config is {}'.format(' '.join(str(config))))
+
 
     # Determine the language of the source files
     language = determine_language()
+    debug_print('Determined the language to be {}'.format(language))
 
     # Read the main.c file into c_program
     c_program = ''
@@ -125,6 +128,10 @@ def main():
     else:
         cmd.extend(['-I', quote('/lua-{}-32/src'.format(os.environ.get('LUA_VERSION')))])
         cmd.extend([quote('/lua-{}-32/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
+
+    cmd.extend(['-I', quote('/opt')])
+    cmd.extend(['-L/opt/vlad_rusty/target/wasm32-unknown-unknown/release', '-l:libvlad_rusty.a'])
+    
 
     # Link Rust library
     if(language == 'rust'):
