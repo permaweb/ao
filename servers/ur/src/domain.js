@@ -1,5 +1,6 @@
 import { defaultTo, isEmpty, complement, path, propEq } from 'ramda'
 import { LRUCache } from 'lru-cache'
+import ConsistentHash from 'consistent-hash'
 
 const isNotEmpty = complement(isEmpty)
 
@@ -111,18 +112,13 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
  */
 export function determineHostWith ({ hosts = [], bailout }) {
   /**
-   * TODO: should we inject this cache?
+   * A consistent hashing hashring is used, to minimize the amount of
+   * processes that must swap hosts when hosts are added or removed
    */
-  const processToHostCache = new LRUCache({
-    /**
-       * 10MB
-       */
-    maxSize: 10_000_000,
-    /**
-       * A number is 8 bytes
-       */
-    sizeCalculation: () => 8
-  })
+  const hashring = new ConsistentHash({ weight: 400, distribution: 'uniform' })
+  const processToHostCache = new LRUCache({ maxSize: 10_000_000, sizeCalculation: () => 8 })
+
+  hosts.forEach(host => hashring.add(host))
 
   return async ({ processId, failoverAttempt = 0 }) => {
     if (failoverAttempt >= hosts.length) return
@@ -132,43 +128,23 @@ export function determineHostWith ({ hosts = [], bailout }) {
       if (bail) return bail
     }
 
-    /**
-     * Check cache, and hydrate if necessary
-     */
-    let hashSum = processToHostCache.get(processId)
-    if (!hashSum) {
+    if (failoverAttempt) {
       /**
-       * Only perform the expensive computation of hash -> idx once and cache
+       * Passing in a count will return an array of nodes,
+       * first the one that handles the named resource,
+       * then the following closest nodes around the hash ring.
        */
-      hashSum = computeHashSumFromProcessId({ processId, length: hosts.length })
-      processToHostCache.set(processId, hashSum)
+      const hosts = hashring.get(processId, failoverAttempt + 1)
+      return hosts.pop()
     }
 
-    return hosts[(hashSum + failoverAttempt) % hosts.length]
-  }
-}
+    if (processToHostCache.has(processId)) return processToHostCache.get(processId)
 
-export function computeHashSumFromProcessId ({ processId, length }) {
-  // return processId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return Number(BigInt(cyrb53(processId)) % BigInt(length))
-}
-
-/**
-  cyrb53 (c) 2018 bryc (github.com/bryc)
-  License: Public domain (or MIT if needed). Attribution appreciated.
-  A fast and simple 53-bit string hash function with decent collision resistance.
-  Largely inspired by MurmurHash2/3, but with a focus on speed/simplicity.
-*/
-const cyrb53 = (str, seed = 0) => {
-  let h1 = 0xdeadbeef ^ seed; let h2 = 0x41c6ce57 ^ seed
-  for (let i = 0, ch; i < str.length; i++) {
-    ch = str.charCodeAt(i)
-    h1 = Math.imul(h1 ^ ch, 2654435761)
-    h2 = Math.imul(h2 ^ ch, 1597334677)
+    /**
+     * Only perform the expensive computation of hash once
+     */
+    const host = hashring.get(processId)
+    processToHostCache.set(processId, host)
+    return host
   }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
-  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909)
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
-  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-  return 4294967296 * (2097151 & h2) + (h1 >>> 0)
 }
