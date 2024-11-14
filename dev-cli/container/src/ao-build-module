@@ -96,12 +96,17 @@ def main():
     with open('/tmp/compile.c', mode='w') as build:
         build.write(c_program)
 
+    # copy the generated file to be able to step through it
+    shutil.copy('/tmp/compile.c', os.path.join(os.getcwd(), './build_src/compile.c'))
+    # shutil.copy('/tmp/compile.c', os.path.join(os.getcwd(), './build_src/compile.c'))
+
     # Compile the module to a WASM file using emcc
     debug_print('Start to compile as WASM')
 
     # Setup the compile command
     cmd = ['emcc', '-O3', 
-      '-g2',
+      '-g4',
+      '--source-map-base', './build_src',
     #   '-s', 'MAIN_MODULE', # This is required to load dynamic libraries at runtime
       '-s', 'ASYNCIFY=1',
       '-s', 'STACK_SIZE=' + str(config.stack_size),
@@ -129,8 +134,8 @@ def main():
         cmd.extend(['-I', quote('/lua-{}-32/src'.format(os.environ.get('LUA_VERSION')))])
         cmd.extend([quote('/lua-{}-32/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
 
-    cmd.extend(['-I', quote('/opt')])
-    cmd.extend(['-L/opt/vlad_rusty/target/wasm32-unknown-unknown/release', '-l:libvlad_rusty.a'])
+    # cmd.extend(['-I', quote('/opt')])
+    # cmd.extend(['-L/opt/vlad_rusty/target/wasm32-unknown-unknown/release', '-l:libvlad_rusty.a'])
     
 
     # Link Rust library

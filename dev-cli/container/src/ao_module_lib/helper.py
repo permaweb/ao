@@ -39,8 +39,8 @@ def shell_exec(*cmd_args):
     return proc.stdout.decode('utf-8').strip('\n'), proc.returncode
 
 def debug_print(message):
-    if IS_DEBUG:
-        print(message)
+    # if IS_DEBUG:
+    print(message)
 
 
 def __get_output(output, entry_file):

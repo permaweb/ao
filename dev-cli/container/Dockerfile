@@ -111,10 +111,17 @@ ENV CC='emcc -s WASM=1'
 ENV NM='/emsdk/upstream/bin/llvm-nm'
 
 # VLAD: adding Rust compilation tools (rustup + cargo WASM32 targets)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-RUN ~/.cargo/bin/rustup target add wasm32-unknown-unknown
-# VLAD: compiling a custom Rust library to WASM32 target
-RUN cd /opt/vlad_rusty && ~/.cargo/bin/cargo build --target=wasm32-unknown-unknown --release
+# RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# RUN ~/.cargo/bin/rustup target add wasm32-unknown-unknown
+# # VLAD: compiling a custom Rust library to WASM32 target
+# RUN cd /opt/vlad_rusty && ~/.cargo/bin/cargo build --target=wasm32-unknown-unknown --release
+
+# VIC: copy the didkit.a file to be built by ao-build-module
+COPY ./src/core/didkit.h /opt/didkit.h
+COPY ./src/core/didkit.a /opt/didkit.a
+
+# note that the build lib will just include this library in the linking process as a dependancy
+# the build module flags libraries with the wrapper, but we will assume the library is linked in main.c instead
 
 ###########################################
 ### Publish, Bundler, Process, Contract ###
