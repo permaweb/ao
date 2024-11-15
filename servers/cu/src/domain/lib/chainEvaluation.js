@@ -156,7 +156,25 @@ export function chainEvaluationWith (env) {
         pending: Promise.resolve()
       }
 
-      const pendingForProcessBefore = findPendingForProcessBefore({ processId, timestamp: to })
+      /**
+       * There are cases where many messages, scheduled in close proximity are sent to a CU
+       * at one time. These requests can arrive jumbled to the CU resulting in later messages
+       * obtaining the lock first, spinning up eval streams.
+       *
+       * Then when earlier message (whose request
+       * just so happend to arrive at the CU milliseconds later) will detect no earlier pending eval stream
+       * to chain to, and start up it's own eval stream, thus achieving poor deduplication.
+       *
+       * To help mitigate this, we add 10 seconds to 'to', to give room for this jumble of messages.
+       * So this could potentially chain an earlier message eval to a later message eval, thus delaying it,
+       * but only by 10 seconds worth of messages, NOT actually 10 seconds. And in this case, the earlier
+       * message should then be in the cache, and so won't spin up another eval stream
+       *
+       * TODO: perhaps we could rearrange the pendingReadState key to place 'ordinate' in front of 'to'
+       * then adjust to comparing 'ordinate' first here -- thus making the buffer message based,
+       * and not time based. See ln.65 in readState.js
+       */
+      const pendingForProcessBefore = findPendingForProcessBefore({ processId, timestamp: to ? to + 10000 : to })
       /**
        * No pending evaluation stream was found, so there is no reason to check the process
        * memory cache for an entry and then to compare it to the pending evalaution stream,
