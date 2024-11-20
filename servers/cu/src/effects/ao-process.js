@@ -813,6 +813,7 @@ export function findLatestProcessMemoryWith ({
 
   const queryCheckpoints = queryCheckpointsWith({ queryGateway, queryCheckpointGateway, logger })
 
+  // Modify this query to clamp the range of checkpoints to bootstrap from
   const GET_AO_PROCESS_CHECKPOINTS = `
     query GetAoProcessCheckpoints(
       $owners: [String!]!
