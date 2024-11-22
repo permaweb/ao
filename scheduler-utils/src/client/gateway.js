@@ -56,7 +56,24 @@ export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETR
     }
   `
 
+  const TESTNET_SU_ROUTER = 'https://su-router.ao-testnet.xyz'
   return async (process) => {
+    /**
+     * TODO: remove eagerly checking testnet su router once
+     * gateway issues have been mitigated
+     */
+    const eagerTestnet = await fetch(`https://su-router.ao-testnet.xyz?process-id=${process}`)
+      .then((res) => !res.ok
+        ? undefined
+        : res.json()
+          .then(({ address }) => ({
+            url: TESTNET_SU_ROUTER,
+            ttl: 1000 * 60 * 60 * 48,
+            address
+          }))
+      )
+    if (eagerTestnet) return eagerTestnet
+
     return gateway({ query: GET_TRANSACTIONS_QUERY, variables: { transactionIds: [process] } })
       .then(path(['data', 'transactions', 'edges', '0', 'node']))
       .then(findTransactionTags(`Process ${process} was not found on gateway`))

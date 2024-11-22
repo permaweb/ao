@@ -9,8 +9,19 @@ const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
 const PROCESS = 'zc24Wpv_i6NNCEdxeKt7dcNrqL5w0hrShtSCcFGGL24'
 const SCHEDULER = 'gnVg6A6S8lfB10P38V7vOia52lEhTX3Uol8kbTGUT8w'
 const TWO_DAYS = 1000 * 60 * 60 * 48
+const TESTNET_SU_ROUTER = 'https://su-router.ao-testnet.xyz'
 
 const mockFetch = async (url, options) => {
+  /**
+   * TODO: remove eagerly checking testnet su router once
+   * gateway issues have been mitigated
+   */
+  if (url.startsWith(TESTNET_SU_ROUTER)) {
+    const [, process] = url.split('process-id=')
+    if (process === 'Found') return new Response(JSON.stringify({ address: 'su-router', timestamp: new Date().getTime() }))
+    return new Response('', { status: 400 })
+  }
+
   assert.equal(url, GRAPHQL_URL)
   const body = JSON.parse(options.body)
   if (body.query.includes('GetTransactions')) return new Response(JSON.stringify(mockFetch.GetTransactions))
@@ -20,6 +31,26 @@ const mockFetch = async (url, options) => {
 
 describe('gateway', () => {
   describe('loadProcessSchedulerWith', () => {
+    /**
+     * TODO: remove eagerly checking testnet su router once
+     * gateway issues have been mitigated
+     */
+    test('eagerly load the su-router if found on router', async () => {
+      const loadProcessScheduler = loadProcessSchedulerSchema.implement(
+        loadProcessSchedulerWith({
+          GRAPHQL_URL,
+          fetch: mockFetch
+        })
+      )
+
+      await loadProcessScheduler('Found')
+        .then((res) => {
+          assert.equal(res.url, TESTNET_SU_ROUTER)
+          assert.equal(res.ttl, `${TWO_DAYS}`)
+          assert.equal(res.address, 'su-router')
+        })
+    })
+
     test('load the Scheduler-Location for the process', async () => {
       mockFetch.GetTransactions = {
         data: {
