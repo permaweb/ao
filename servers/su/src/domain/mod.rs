@@ -1,3 +1,4 @@
+use core::dal::RouterDataStore;
 use std::sync::Arc;
 
 use tokio::task::spawn_blocking;
@@ -12,7 +13,7 @@ use clients::{
     wallet::FileWallet,
 };
 use config::AoConfig;
-use core::dal::{Config, DataStore, Gateway, Log};
+use core::dal::{Config, DataStore, Gateway, Log, MockRouterDataStore};
 use logger::SuLog;
 
 pub use clients::metrics::PromMetrics;
@@ -25,16 +26,26 @@ pub use store::migrate_to_disk;
 pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Registry) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
 
-    let data_store = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
-    let d_clone = data_store.clone();
-    let router_data_store = data_store.clone();
-
-    match data_store.run_migrations() {
-        Ok(m) => logger.log(m),
-        Err(e) => logger.log(format!("{:?}", e)),
-    }
-
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
+
+    let data_store = if !config.use_local_store {
+      let ds = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
+      match ds.run_migrations() {
+          Ok(m) => logger.log(m),
+          Err(e) => logger.log(format!("{:?}", e)),
+      }
+      Some(ds)
+    } else {
+      None
+    };
+
+    let router_data_store: Arc<dyn RouterDataStore> = if !config.use_local_store {
+      data_store.clone().unwrap().clone()
+    } else {
+      Arc::new(
+        MockRouterDataStore {}
+      ) as Arc<dyn RouterDataStore>
+    };
 
     let main_data_store: Arc<dyn DataStore> = if config.use_local_store {
         Arc::new(
@@ -45,11 +56,12 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
             .expect("Failed to create LocalStoreClient"),
         ) as Arc<dyn DataStore>
     } else {
-        data_store.clone()
+        data_store.clone().unwrap().clone()
     };
 
     if config.use_disk && config.mode != "router" {
         let logger_clone = logger.clone();
+        let d_clone = data_store.clone().unwrap().clone();
         /*
           sync_bytestore is a blocking routine so we must
           call spawn_blocking or the server wont start until

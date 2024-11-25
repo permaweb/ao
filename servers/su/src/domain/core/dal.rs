@@ -154,6 +154,46 @@ pub trait RouterDataStore: Send + Sync {
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType>;
 }
 
+pub struct MockRouterDataStore;
+
+#[async_trait]
+impl RouterDataStore for MockRouterDataStore {
+    fn save_process_scheduler(
+        &self,
+        _process_scheduler: &ProcessScheduler,
+    ) -> Result<String, StoreErrorType> {
+        unreachable!("save_process_scheduler is not implemented in MockRouterDataStore");
+    }
+
+    fn get_process_scheduler(
+        &self,
+        _process_id_in: &str,
+    ) -> Result<ProcessScheduler, StoreErrorType> {
+        unreachable!("get_process_scheduler is not implemented in MockRouterDataStore");
+    }
+
+    fn save_scheduler(&self, _scheduler: &Scheduler) -> Result<String, StoreErrorType> {
+        unreachable!("save_scheduler is not implemented in MockRouterDataStore");
+    }
+
+    fn update_scheduler(&self, _scheduler: &Scheduler) -> Result<String, StoreErrorType> {
+        unreachable!("update_scheduler is not implemented in MockRouterDataStore");
+    }
+
+    fn get_scheduler(&self, _row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
+        unreachable!("get_scheduler is not implemented in MockRouterDataStore");
+    }
+
+    fn get_scheduler_by_url(&self, _url_in: &String) -> Result<Scheduler, StoreErrorType> {
+        unreachable!("get_scheduler_by_url is not implemented in MockRouterDataStore");
+    }
+
+    fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType> {
+        unreachable!("get_all_schedulers is not implemented in MockRouterDataStore");
+    }
+}
+
+
 pub trait CoreMetrics: Send + Sync {
     fn get_process_observe(&self, duration: u128);
     fn get_message_observe(&self, duration: u128);
