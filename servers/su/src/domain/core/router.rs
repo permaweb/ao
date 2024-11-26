@@ -32,6 +32,8 @@ pub struct ProcessScheduler {
 struct SchedulerEntry {
     url: String,
     no_route: Option<bool>,
+    wallets_to_route: Option<Vec<String>>,
+    wallets_only: Option<bool>,
 }
 
 /*
