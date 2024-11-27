@@ -1154,6 +1154,8 @@ impl RouterDataStore for StoreClient {
             url: &scheduler.url,
             process_count: &scheduler.process_count,
             no_route: scheduler.no_route.as_ref(),
+            wallets_to_route: scheduler.wallets_to_route.as_deref(),
+            wallets_only: scheduler.wallets_only.as_ref(),
         };
 
         match diesel::insert_into(schedulers)
@@ -1177,6 +1179,8 @@ impl RouterDataStore for StoreClient {
                 process_count.eq(scheduler.process_count),
                 url.eq(&scheduler.url),
                 no_route.eq(&scheduler.no_route),
+                wallets_to_route.eq(&scheduler.wallets_to_route),
+                wallets_only.eq(&scheduler.wallets_only)
             ))
             .execute(conn)
         {
@@ -1201,6 +1205,8 @@ impl RouterDataStore for StoreClient {
                     url: db_scheduler.url,
                     process_count: db_scheduler.process_count,
                     no_route: db_scheduler.no_route,
+                    wallets_to_route: db_scheduler.wallets_to_route,
+                    wallets_only: db_scheduler.wallets_only,
                 };
                 Ok(scheduler)
             }
@@ -1223,6 +1229,8 @@ impl RouterDataStore for StoreClient {
                     url: db_scheduler.url,
                     process_count: db_scheduler.process_count,
                     no_route: db_scheduler.no_route,
+                    wallets_to_route: db_scheduler.wallets_to_route,
+                    wallets_only: db_scheduler.wallets_only,
                 };
                 Ok(scheduler)
             }
@@ -1244,6 +1252,8 @@ impl RouterDataStore for StoreClient {
                         url: db_scheduler.url,
                         process_count: db_scheduler.process_count,
                         no_route: db_scheduler.no_route,
+                        wallets_to_route: db_scheduler.wallets_to_route,
+                        wallets_only: db_scheduler.wallets_only,
                     })
                     .collect();
                 Ok(schedulers_out)
@@ -1331,6 +1341,8 @@ pub struct DbScheduler {
     pub url: String,
     pub process_count: i32,
     pub no_route: Option<bool>,
+    pub wallets_to_route: Option<String>,
+    pub wallets_only: Option<bool>,
 }
 
 #[derive(Insertable)]
@@ -1339,6 +1351,8 @@ pub struct NewScheduler<'a> {
     pub url: &'a str,
     pub process_count: &'a i32,
     pub no_route: Option<&'a bool>,
+    pub wallets_to_route: Option<&'a str>,
+    pub wallets_only: Option<&'a bool>,
 }
 
 #[derive(Queryable, Selectable)]
