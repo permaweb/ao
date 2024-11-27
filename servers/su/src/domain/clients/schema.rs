@@ -34,6 +34,8 @@ table! {
         url -> Varchar,
         process_count -> Int4,
         no_route -> Nullable<Bool>,
+        wallets_to_route -> Nullable<Text>,
+        wallets_only -> Nullable<Bool>,
     }
 }
 
