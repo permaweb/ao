@@ -4543,10 +4543,112 @@ var Module = (() => {
         return BigInt(ret);
       };
 
+      var _strftime_l = function(s, maxsize, format, tm, loc) {
+        s = bigintToI53Checked(s);
+        maxsize = bigintToI53Checked(maxsize);
+        format = bigintToI53Checked(format);
+        tm = bigintToI53Checked(tm);
+        loc = bigintToI53Checked(loc);
+        var ret = (() => _strftime(s, maxsize, format, tm))();
+        return BigInt(ret);
+      };
+
       function _wgpuCommandBufferRelease(id) {
         id = bigintToI53Checked(id);
         return WebGPU.mgrCommandBuffer.release(id);
       }
+
+      var _wgpuCommandEncoderBeginRenderPass = function(encoderId, descriptor) {
+        encoderId = bigintToI53Checked(encoderId);
+        descriptor = bigintToI53Checked(descriptor);
+        var ret = (() => {
+          assert(descriptor);
+
+          function makeColorAttachment(caPtr) {
+            var viewPtr = HEAPU32[(((caPtr) + (8)) / 4)];
+            if (viewPtr === 0) {
+              return undefined;
+            }
+            var depthSlice = HEAP32[(((caPtr) + (16)) / 4)];
+            if (depthSlice == -1) depthSlice = undefined;
+            var loadOpInt = HEAPU32[(((caPtr) + (32)) / 4)];
+            assert(loadOpInt !== 0);
+            var storeOpInt = HEAPU32[(((caPtr) + (36)) / 4)];
+            assert(storeOpInt !== 0);
+            var clearValue = WebGPU.makeColor(caPtr + 40);
+            return {
+              "view": WebGPU.mgrTextureView.get(viewPtr),
+              "depthSlice": depthSlice,
+              "resolveTarget": WebGPU.mgrTextureView.get(HEAPU32[(((caPtr) + (24)) / 4)]),
+              "clearValue": clearValue,
+              "loadOp": WebGPU.LoadOp[loadOpInt],
+              "storeOp": WebGPU.StoreOp[storeOpInt]
+            };
+          }
+
+          function makeColorAttachments(count, caPtr) {
+            var attachments = [];
+            for (var i = 0; i < count; ++i) {
+              attachments.push(makeColorAttachment(caPtr + 72 * i));
+            }
+            return attachments;
+          }
+
+          function makeDepthStencilAttachment(dsaPtr) {
+            if (dsaPtr === 0) return undefined;
+            return {
+              "view": WebGPU.mgrTextureView.get(HEAPU32[((dsaPtr) / 4)]),
+              "depthClearValue": HEAPF32[(((dsaPtr) + (16)) / 4)],
+              "depthLoadOp": WebGPU.LoadOp[HEAPU32[(((dsaPtr) + (8)) / 4)]],
+              "depthStoreOp": WebGPU.StoreOp[HEAPU32[(((dsaPtr) + (12)) / 4)]],
+              "depthReadOnly": !!(HEAPU32[(((dsaPtr) + (20)) / 4)]),
+              "stencilClearValue": HEAPU32[(((dsaPtr) + (32)) / 4)],
+              "stencilLoadOp": WebGPU.LoadOp[HEAPU32[(((dsaPtr) + (24)) / 4)]],
+              "stencilStoreOp": WebGPU.StoreOp[HEAPU32[(((dsaPtr) + (28)) / 4)]],
+              "stencilReadOnly": !!(HEAPU32[(((dsaPtr) + (36)) / 4)])
+            };
+          }
+
+          function makeRenderPassTimestampWrites(twPtr) {
+            if (twPtr === 0) return undefined;
+            return {
+              "querySet": WebGPU.mgrQuerySet.get(Number(HEAPU64[((twPtr) / 8)])),
+              "beginningOfPassWriteIndex": HEAPU32[(((twPtr) + (8)) / 4)],
+              "endOfPassWriteIndex": HEAPU32[(((twPtr) + (12)) / 4)]
+            };
+          }
+
+          function makeRenderPassDescriptor(descriptor) {
+            assert(descriptor);
+            var nextInChainPtr = Number(HEAPU64[((descriptor) / 8)]);
+            var maxDrawCount = undefined;
+            if (nextInChainPtr !== 0) {
+              var sType = HEAPU32[(((nextInChainPtr) + (8)) / 4)];
+              assert(sType === 15);
+              assert(0 === Number(HEAPU64[((nextInChainPtr) / 8)]));
+              var renderPassDescriptorMaxDrawCount = nextInChainPtr;
+              assert(renderPassDescriptorMaxDrawCount);
+              assert(Number(HEAPU64[((renderPassDescriptorMaxDrawCount) / 8)]) === 0);
+              maxDrawCount = HEAPU32[((((renderPassDescriptorMaxDrawCount + 4)) + (16)) / 4)] * 4294967296 + HEAPU32[(((renderPassDescriptorMaxDrawCount) + (16)) / 4)];
+            }
+            var desc = {
+              "label": undefined,
+              "colorAttachments": makeColorAttachments(HEAPU32[(((descriptor) + (16)) / 4)], Number(HEAPU64[(((descriptor) + (24)) / 8)])),
+              "depthStencilAttachment": makeDepthStencilAttachment(Number(HEAPU64[(((descriptor) + (32)) / 8)])),
+              "occlusionQuerySet": WebGPU.mgrQuerySet.get(Number(HEAPU64[(((descriptor) + (40)) / 8)])),
+              "timestampWrites": makeRenderPassTimestampWrites(Number(HEAPU64[(((descriptor) + (48)) / 8)])),
+              "maxDrawCount": maxDrawCount
+            };
+            var labelPtr = Number(HEAPU64[(((descriptor) + (8)) / 8)]);
+            if (labelPtr) desc["label"] = UTF8ToString(labelPtr);
+            return desc;
+          }
+          var desc = makeRenderPassDescriptor(descriptor);
+          var commandEncoder = WebGPU.mgrCommandEncoder.get(encoderId);
+          return WebGPU.mgrRenderPassEncoder.create(commandEncoder.beginRenderPass(desc));
+        })();
+        return BigInt(ret);
+      };
 
       var _wgpuCommandEncoderFinish = function(encoderId, descriptor) {
         encoderId = bigintToI53Checked(encoderId);
@@ -4579,6 +4681,226 @@ var Module = (() => {
           }
           var device = WebGPU.mgrDevice.get(deviceId);
           return WebGPU.mgrCommandEncoder.create(device.createCommandEncoder(desc));
+        })();
+        return BigInt(ret);
+      };
+
+      var generateRenderPipelineDesc = descriptor => {
+        assert(descriptor);
+        assert(Number(HEAPU64[((descriptor) / 8)]) === 0);
+
+        function makePrimitiveState(rsPtr) {
+          if (!rsPtr) return undefined;
+          assert(rsPtr);
+          var nextInChainPtr = Number(HEAPU64[((rsPtr) / 8)]);
+          var sType = nextInChainPtr ? HEAPU32[(((nextInChainPtr) + (8)) / 4)] : 0;
+          return {
+            "topology": WebGPU.PrimitiveTopology[HEAPU32[(((rsPtr) + (8)) / 4)]],
+            "stripIndexFormat": WebGPU.IndexFormat[HEAPU32[(((rsPtr) + (12)) / 4)]],
+            "frontFace": WebGPU.FrontFace[HEAPU32[(((rsPtr) + (16)) / 4)]],
+            "cullMode": WebGPU.CullMode[HEAPU32[(((rsPtr) + (20)) / 4)]],
+            "unclippedDepth": sType === 7 && !!(HEAPU32[(((nextInChainPtr) + (16)) / 4)])
+          };
+        }
+
+        function makeBlendComponent(bdPtr) {
+          if (!bdPtr) return undefined;
+          return {
+            "operation": WebGPU.BlendOperation[HEAPU32[((bdPtr) / 4)]],
+            "srcFactor": WebGPU.BlendFactor[HEAPU32[(((bdPtr) + (4)) / 4)]],
+            "dstFactor": WebGPU.BlendFactor[HEAPU32[(((bdPtr) + (8)) / 4)]]
+          };
+        }
+
+        function makeBlendState(bsPtr) {
+          if (!bsPtr) return undefined;
+          return {
+            "alpha": makeBlendComponent(bsPtr + 12),
+            "color": makeBlendComponent(bsPtr + 0)
+          };
+        }
+
+        function makeColorState(csPtr) {
+          assert(csPtr);
+          assert(Number(HEAPU64[((csPtr) / 8)]) === 0);
+          var formatInt = HEAPU32[(((csPtr) + (8)) / 4)];
+          return formatInt === 0 ? undefined : {
+            "format": WebGPU.TextureFormat[formatInt],
+            "blend": makeBlendState(Number(HEAPU64[(((csPtr) + (16)) / 8)])),
+            "writeMask": HEAPU32[(((csPtr) + (24)) / 4)]
+          };
+        }
+
+        function makeColorStates(count, csArrayPtr) {
+          var states = [];
+          for (var i = 0; i < count; ++i) {
+            states.push(makeColorState(csArrayPtr + 32 * i));
+          }
+          return states;
+        }
+
+        function makeStencilStateFace(ssfPtr) {
+          assert(ssfPtr);
+          return {
+            "compare": WebGPU.CompareFunction[HEAPU32[((ssfPtr) / 4)]],
+            "failOp": WebGPU.StencilOperation[HEAPU32[(((ssfPtr) + (4)) / 4)]],
+            "depthFailOp": WebGPU.StencilOperation[HEAPU32[(((ssfPtr) + (8)) / 4)]],
+            "passOp": WebGPU.StencilOperation[HEAPU32[(((ssfPtr) + (12)) / 4)]]
+          };
+        }
+
+        function makeDepthStencilState(dssPtr) {
+          if (!dssPtr) return undefined;
+          assert(dssPtr);
+          return {
+            "format": WebGPU.TextureFormat[HEAPU32[(((dssPtr) + (8)) / 4)]],
+            "depthWriteEnabled": !!(HEAPU32[(((dssPtr) + (12)) / 4)]),
+            "depthCompare": WebGPU.CompareFunction[HEAPU32[(((dssPtr) + (16)) / 4)]],
+            "stencilFront": makeStencilStateFace(dssPtr + 20),
+            "stencilBack": makeStencilStateFace(dssPtr + 36),
+            "stencilReadMask": HEAPU32[(((dssPtr) + (52)) / 4)],
+            "stencilWriteMask": HEAPU32[(((dssPtr) + (56)) / 4)],
+            "depthBias": HEAP32[(((dssPtr) + (60)) / 4)],
+            "depthBiasSlopeScale": HEAPF32[(((dssPtr) + (64)) / 4)],
+            "depthBiasClamp": HEAPF32[(((dssPtr) + (68)) / 4)]
+          };
+        }
+
+        function makeVertexAttribute(vaPtr) {
+          assert(vaPtr);
+          return {
+            "format": WebGPU.VertexFormat[HEAPU32[((vaPtr) / 4)]],
+            "offset": HEAPU32[((((vaPtr + 4)) + (8)) / 4)] * 4294967296 + HEAPU32[(((vaPtr) + (8)) / 4)],
+            "shaderLocation": HEAPU32[(((vaPtr) + (16)) / 4)]
+          };
+        }
+
+        function makeVertexAttributes(count, vaArrayPtr) {
+          var vas = [];
+          for (var i = 0; i < count; ++i) {
+            vas.push(makeVertexAttribute(vaArrayPtr + i * 24));
+          }
+          return vas;
+        }
+
+        function makeVertexBuffer(vbPtr) {
+          if (!vbPtr) return undefined;
+          var stepModeInt = HEAPU32[(((vbPtr) + (8)) / 4)];
+          return stepModeInt === 1 ? null : {
+            "arrayStride": HEAPU32[(((vbPtr + 4)) / 4)] * 4294967296 + HEAPU32[((vbPtr) / 4)],
+            "stepMode": WebGPU.VertexStepMode[stepModeInt],
+            "attributes": makeVertexAttributes(HEAPU32[(((vbPtr) + (16)) / 4)], Number(HEAPU64[(((vbPtr) + (24)) / 8)]))
+          };
+        }
+
+        function makeVertexBuffers(count, vbArrayPtr) {
+          if (!count) return undefined;
+          var vbs = [];
+          for (var i = 0; i < count; ++i) {
+            vbs.push(makeVertexBuffer(vbArrayPtr + i * 32));
+          }
+          return vbs;
+        }
+
+        function makeVertexState(viPtr) {
+          if (!viPtr) return undefined;
+          assert(viPtr);
+          assert(Number(HEAPU64[((viPtr) / 8)]) === 0);
+          var desc = {
+            "module": WebGPU.mgrShaderModule.get(Number(HEAPU64[(((viPtr) + (8)) / 8)])),
+            "constants": WebGPU.makePipelineConstants(HEAPU32[(((viPtr) + (24)) / 4)], Number(HEAPU64[(((viPtr) + (32)) / 8)])),
+            "buffers": makeVertexBuffers(HEAPU32[(((viPtr) + (40)) / 4)], Number(HEAPU64[(((viPtr) + (48)) / 8)]))
+          };
+          var entryPointPtr = Number(HEAPU64[(((viPtr) + (16)) / 8)]);
+          if (entryPointPtr) desc["entryPoint"] = UTF8ToString(entryPointPtr);
+          return desc;
+        }
+
+        function makeMultisampleState(msPtr) {
+          if (!msPtr) return undefined;
+          assert(msPtr);
+          assert(Number(HEAPU64[((msPtr) / 8)]) === 0);
+          return {
+            "count": HEAPU32[(((msPtr) + (8)) / 4)],
+            "mask": HEAPU32[(((msPtr) + (12)) / 4)],
+            "alphaToCoverageEnabled": !!(HEAPU32[(((msPtr) + (16)) / 4)])
+          };
+        }
+
+        function makeFragmentState(fsPtr) {
+          if (!fsPtr) return undefined;
+          assert(fsPtr);
+          assert(Number(HEAPU64[((fsPtr) / 8)]) === 0);
+          var desc = {
+            "module": WebGPU.mgrShaderModule.get(Number(HEAPU64[(((fsPtr) + (8)) / 8)])),
+            "constants": WebGPU.makePipelineConstants(HEAPU32[(((fsPtr) + (24)) / 4)], Number(HEAPU64[(((fsPtr) + (32)) / 8)])),
+            "targets": makeColorStates(HEAPU32[(((fsPtr) + (40)) / 4)], Number(HEAPU64[(((fsPtr) + (48)) / 8)]))
+          };
+          var entryPointPtr = Number(HEAPU64[(((fsPtr) + (16)) / 8)]);
+          if (entryPointPtr) desc["entryPoint"] = UTF8ToString(entryPointPtr);
+          return desc;
+        }
+        var desc = {
+          "label": undefined,
+          "layout": WebGPU.makePipelineLayout(Number(HEAPU64[(((descriptor) + (16)) / 8)])),
+          "vertex": makeVertexState(descriptor + 24),
+          "primitive": makePrimitiveState(descriptor + 80),
+          "depthStencil": makeDepthStencilState(Number(HEAPU64[(((descriptor) + (104)) / 8)])),
+          "multisample": makeMultisampleState(descriptor + 112),
+          "fragment": makeFragmentState(Number(HEAPU64[(((descriptor) + (136)) / 8)]))
+        };
+        var labelPtr = Number(HEAPU64[(((descriptor) + (8)) / 8)]);
+        if (labelPtr) desc["label"] = UTF8ToString(labelPtr);
+        return desc;
+      };
+
+      var _wgpuDeviceCreateRenderPipeline = function(deviceId, descriptor) {
+        deviceId = bigintToI53Checked(deviceId);
+        descriptor = bigintToI53Checked(descriptor);
+        var ret = (() => {
+          var desc = generateRenderPipelineDesc(descriptor);
+          var device = WebGPU.mgrDevice.get(deviceId);
+          return WebGPU.mgrRenderPipeline.create(device.createRenderPipeline(desc));
+        })();
+        return BigInt(ret);
+      };
+
+      var _wgpuDeviceCreateShaderModule = function(deviceId, descriptor) {
+        deviceId = bigintToI53Checked(deviceId);
+        descriptor = bigintToI53Checked(descriptor);
+        var ret = (() => {
+          assert(descriptor);
+          var nextInChainPtr = Number(HEAPU64[((descriptor) / 8)]);
+          assert(nextInChainPtr !== 0);
+          var sType = HEAPU32[(((nextInChainPtr) + (8)) / 4)];
+          var desc = {
+            "label": undefined,
+            "code": ""
+          };
+          var labelPtr = Number(HEAPU64[(((descriptor) + (8)) / 8)]);
+          if (labelPtr) desc["label"] = UTF8ToString(labelPtr);
+          switch (sType) {
+            case 5: {
+              var count = HEAPU32[(((nextInChainPtr) + (16)) / 4)];
+              var start = Number(HEAPU64[(((nextInChainPtr) + (24)) / 8)]);
+              var offset = ((start) / 4);
+              desc["code"] = HEAPU32.subarray(offset, offset + count);
+              break;
+            }
+
+            case 6: {
+              var sourcePtr = Number(HEAPU64[(((nextInChainPtr) + (16)) / 8)]);
+              if (sourcePtr) {
+                desc["code"] = UTF8ToString(sourcePtr);
+              }
+              break;
+            }
+
+            default:
+              abort("unrecognized ShaderModule sType");
+          }
+          var device = WebGPU.mgrDevice.get(deviceId);
+          return WebGPU.mgrShaderModule.create(device.createShaderModule(desc));
         })();
         return BigInt(ret);
       };
@@ -4624,63 +4946,6 @@ var Module = (() => {
         return BigInt(ret);
       };
 
-      var handleException = e => {
-        if (e instanceof ExitStatus || e == "unwind") {
-          return EXITSTATUS;
-        }
-        checkStackCookie();
-        if (e instanceof WebAssembly.RuntimeError) {
-          if (_emscripten_stack_get_current() <= 0) {
-            err("Stack overflow detected.  You can try increasing -sSTACK_SIZE (currently set to 67108864)");
-          }
-        }
-        quit_(1, e);
-      };
-
-      var maybeExit = () => {
-        if (!keepRuntimeAlive()) {
-          try {
-            _exit(EXITSTATUS);
-          } catch (e) {
-            handleException(e);
-          }
-        }
-      };
-
-      var callUserCallback = func => {
-        if (ABORT) {
-          err("user callback triggered after runtime exited or application aborted.  Ignoring.");
-          return;
-        }
-        try {
-          func();
-          maybeExit();
-        } catch (e) {
-          handleException(e);
-        }
-      };
-
-      var _wgpuQueueOnSubmittedWorkDone = function(queueId, callback, userdata) {
-        queueId = bigintToI53Checked(queueId);
-        callback = bigintToI53Checked(callback);
-        userdata = bigintToI53Checked(userdata);
-        var queue = WebGPU.mgrQueue.get(queueId);
-        queue.onSubmittedWorkDone().then(() => {
-          callUserCallback(() => {
-            ((a1, a2) => dynCall_vij(callback, a1, BigInt(a2)))(0, userdata);
-          });
-        }, () => {
-          callUserCallback(() => {
-            ((a1, a2) => dynCall_vij(callback, a1, BigInt(a2)))(1, userdata);
-          });
-        });
-      };
-
-      function _wgpuQueueRelease(id) {
-        id = bigintToI53Checked(id);
-        return WebGPU.mgrQueue.release(id);
-      }
-
       var _wgpuQueueSubmit = function(queueId, commandCount, commands) {
         queueId = bigintToI53Checked(queueId);
         commandCount = bigintToI53Checked(commandCount);
@@ -4690,6 +4955,31 @@ var Module = (() => {
         var cmds = Array.from(HEAP64.subarray((((commands) / 8)), ((commands + commandCount * 8) / 8)), id => WebGPU.mgrCommandBuffer.get(id));
         queue.submit(cmds);
       };
+
+      function _wgpuRenderPassEncoderDraw(passId, vertexCount, instanceCount, firstVertex, firstInstance) {
+        passId = bigintToI53Checked(passId);
+        var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      }
+
+      function _wgpuRenderPassEncoderEnd(encoderId) {
+        encoderId = bigintToI53Checked(encoderId);
+        var encoder = WebGPU.mgrRenderPassEncoder.get(encoderId);
+        encoder.end();
+      }
+
+      function _wgpuRenderPassEncoderRelease(id) {
+        id = bigintToI53Checked(id);
+        return WebGPU.mgrRenderPassEncoder.release(id);
+      }
+
+      function _wgpuRenderPassEncoderSetPipeline(passId, pipelineId) {
+        passId = bigintToI53Checked(passId);
+        pipelineId = bigintToI53Checked(pipelineId);
+        var pass = WebGPU.mgrRenderPassEncoder.get(passId);
+        var pipeline = WebGPU.mgrRenderPipeline.get(pipelineId);
+        pass.setPipeline(pipeline);
+      }
 
       var _wgpuTextureCreateView = function(textureId, descriptor) {
         textureId = bigintToI53Checked(textureId);
@@ -4719,15 +5009,23 @@ var Module = (() => {
         return BigInt(ret);
       };
 
-      function _wgpuTextureDestroy(textureId) {
-        textureId = bigintToI53Checked(textureId);
-        return WebGPU.mgrTexture.get(textureId).destroy();
+      function _wgpuTextureViewRelease(id) {
+        id = bigintToI53Checked(id);
+        return WebGPU.mgrTextureView.release(id);
       }
 
-      function _wgpuTextureRelease(id) {
-        id = bigintToI53Checked(id);
-        return WebGPU.mgrTexture.release(id);
-      }
+      var handleException = e => {
+        if (e instanceof ExitStatus || e == "unwind") {
+          return EXITSTATUS;
+        }
+        checkStackCookie();
+        if (e instanceof WebAssembly.RuntimeError) {
+          if (_emscripten_stack_get_current() <= 0) {
+            err("Stack overflow detected.  You can try increasing -sSTACK_SIZE (currently set to 67108864)");
+          }
+        }
+        quit_(1, e);
+      };
 
       var wasmTableMirror = [];
 
@@ -4739,6 +5037,29 @@ var Module = (() => {
           return func();
         } catch (e) {
           abort(e);
+        }
+      };
+
+      var maybeExit = () => {
+        if (!keepRuntimeAlive()) {
+          try {
+            _exit(EXITSTATUS);
+          } catch (e) {
+            handleException(e);
+          }
+        }
+      };
+
+      var callUserCallback = func => {
+        if (ABORT) {
+          err("user callback triggered after runtime exited or application aborted.  Ignoring.");
+          return;
+        }
+        try {
+          func();
+          maybeExit();
+        } catch (e) {
+          handleException(e);
         }
       };
 
@@ -5112,7 +5433,11 @@ var Module = (() => {
         /** @export */
         strftime: _strftime,
         /** @export */
+        strftime_l: _strftime_l,
+        /** @export */
         wgpuCommandBufferRelease: _wgpuCommandBufferRelease,
+        /** @export */
+        wgpuCommandEncoderBeginRenderPass: _wgpuCommandEncoderBeginRenderPass,
         /** @export */
         wgpuCommandEncoderFinish: _wgpuCommandEncoderFinish,
         /** @export */
@@ -5120,21 +5445,27 @@ var Module = (() => {
         /** @export */
         wgpuDeviceCreateCommandEncoder: _wgpuDeviceCreateCommandEncoder,
         /** @export */
+        wgpuDeviceCreateRenderPipeline: _wgpuDeviceCreateRenderPipeline,
+        /** @export */
+        wgpuDeviceCreateShaderModule: _wgpuDeviceCreateShaderModule,
+        /** @export */
         wgpuDeviceCreateTexture: _wgpuDeviceCreateTexture,
         /** @export */
         wgpuDeviceGetQueue: _wgpuDeviceGetQueue,
         /** @export */
-        wgpuQueueOnSubmittedWorkDone: _wgpuQueueOnSubmittedWorkDone,
-        /** @export */
-        wgpuQueueRelease: _wgpuQueueRelease,
-        /** @export */
         wgpuQueueSubmit: _wgpuQueueSubmit,
+        /** @export */
+        wgpuRenderPassEncoderDraw: _wgpuRenderPassEncoderDraw,
+        /** @export */
+        wgpuRenderPassEncoderEnd: _wgpuRenderPassEncoderEnd,
+        /** @export */
+        wgpuRenderPassEncoderRelease: _wgpuRenderPassEncoderRelease,
+        /** @export */
+        wgpuRenderPassEncoderSetPipeline: _wgpuRenderPassEncoderSetPipeline,
         /** @export */
         wgpuTextureCreateView: _wgpuTextureCreateView,
         /** @export */
-        wgpuTextureDestroy: _wgpuTextureDestroy,
-        /** @export */
-        wgpuTextureRelease: _wgpuTextureRelease
+        wgpuTextureViewRelease: _wgpuTextureViewRelease
       };
 
       var wasmExports = createWasm();
@@ -5148,6 +5479,8 @@ var Module = (() => {
       var _fflush = createExportWrapper("fflush", 1);
 
       var _main = Module["_main"] = createExportWrapper("main", 2);
+
+      var _memalign = createExportWrapper("memalign", 2);
 
       var _malloc = Module["_malloc"] = createExportWrapper("malloc", 1);
 
@@ -5169,6 +5502,8 @@ var Module = (() => {
 
       var _emscripten_stack_get_current = () => (_emscripten_stack_get_current = wasmExports["emscripten_stack_get_current"])();
 
+      var ___cxa_is_pointer_type = createExportWrapper("__cxa_is_pointer_type", 1);
+
       var dynCall_jjj = Module["dynCall_jjj"] = createExportWrapper("dynCall_jjj", 3);
 
       var dynCall_vjj = Module["dynCall_vjj"] = createExportWrapper("dynCall_vjj", 3);
@@ -5185,11 +5520,57 @@ var Module = (() => {
 
       var dynCall_vi = Module["dynCall_vi"] = createExportWrapper("dynCall_vi", 2);
 
-      var dynCall_vij = Module["dynCall_vij"] = createExportWrapper("dynCall_vij", 3);
+      var dynCall_jj = Module["dynCall_jj"] = createExportWrapper("dynCall_jj", 2);
 
       var dynCall_jjji = Module["dynCall_jjji"] = createExportWrapper("dynCall_jjji", 4);
 
       var dynCall_ijdiiii = Module["dynCall_ijdiiii"] = createExportWrapper("dynCall_ijdiiii", 7);
+
+      var dynCall_vj = Module["dynCall_vj"] = createExportWrapper("dynCall_vj", 2);
+
+      var dynCall_vjjjii = Module["dynCall_vjjjii"] = createExportWrapper("dynCall_vjjjii", 6);
+
+      var dynCall_vjjji = Module["dynCall_vjjji"] = createExportWrapper("dynCall_vjjji", 5);
+
+      var dynCall_iji = Module["dynCall_iji"] = createExportWrapper("dynCall_iji", 3);
+
+      var dynCall_ijii = Module["dynCall_ijii"] = createExportWrapper("dynCall_ijii", 4);
+
+      var dynCall_jjjjij = Module["dynCall_jjjjij"] = createExportWrapper("dynCall_jjjjij", 6);
+
+      var dynCall_ijjjjjjjj = Module["dynCall_ijjjjjjjj"] = createExportWrapper("dynCall_ijjjjjjjj", 9);
+
+      var dynCall_ijjjjj = Module["dynCall_ijjjjj"] = createExportWrapper("dynCall_ijjjjj", 6);
+
+      var dynCall_ijji = Module["dynCall_ijji"] = createExportWrapper("dynCall_ijji", 4);
+
+      var dynCall_vjjjj = Module["dynCall_vjjjj"] = createExportWrapper("dynCall_vjjjj", 5);
+
+      var dynCall_jjjjjjj = Module["dynCall_jjjjjjj"] = createExportWrapper("dynCall_jjjjjjj", 7);
+
+      var dynCall_jjjjii = Module["dynCall_jjjjii"] = createExportWrapper("dynCall_jjjjii", 6);
+
+      var dynCall_jjjjid = Module["dynCall_jjjjid"] = createExportWrapper("dynCall_jjjjid", 6);
+
+      var dynCall_jjjjijj = Module["dynCall_jjjjijj"] = createExportWrapper("dynCall_jjjjijj", 7);
+
+      var dynCall_jjjjjjjii = Module["dynCall_jjjjjjjii"] = createExportWrapper("dynCall_jjjjjjjii", 9);
+
+      var dynCall_jjjjijii = Module["dynCall_jjjjijii"] = createExportWrapper("dynCall_jjjjijii", 8);
+
+      var dynCall_jjjjijjj = Module["dynCall_jjjjijjj"] = createExportWrapper("dynCall_jjjjijjj", 8);
+
+      var dynCall_jjjijijj = Module["dynCall_jjjijijj"] = createExportWrapper("dynCall_jjjijijj", 8);
+
+      var dynCall_jjjijij = Module["dynCall_jjjijij"] = createExportWrapper("dynCall_jjjijij", 7);
+
+      var dynCall_vjjjiij = Module["dynCall_vjjjiij"] = createExportWrapper("dynCall_vjjjiij", 7);
+
+      var dynCall_v = Module["dynCall_v"] = createExportWrapper("dynCall_v", 1);
+
+      var dynCall_ijjj = Module["dynCall_ijjj"] = createExportWrapper("dynCall_ijjj", 4);
+
+      var dynCall_vjjjjii = Module["dynCall_vjjjjii"] = createExportWrapper("dynCall_vjjjjii", 7);
 
       var _asyncify_start_unwind = createExportWrapper("asyncify_start_unwind", 1);
 
@@ -5199,9 +5580,9 @@ var Module = (() => {
 
       var _asyncify_stop_rewind = createExportWrapper("asyncify_stop_rewind", 0);
 
-      var ___start_em_js = Module["___start_em_js"] = 334128;
+      var ___start_em_js = Module["___start_em_js"] = 352160;
 
-      var ___stop_em_js = Module["___stop_em_js"] = 334776;
+      var ___stop_em_js = Module["___stop_em_js"] = 352808;
 
       function invoke_vjj(index, a1, a2) {
         var sp = stackSave();
@@ -5222,6 +5603,9 @@ var Module = (() => {
         var makeWrapper___PP = f => function(a0, a1, a2) {
           return f(a0, BigInt(a1 ? a1 : 0), BigInt(a2 ? a2 : 0));
         };
+        var makeWrapper_ppp = f => function(a0, a1) {
+          return Number(f(BigInt(a0), BigInt(a1)));
+        };
         var makeWrapper_pp = f => function(a0) {
           return Number(f(BigInt(a0)));
         };
@@ -5234,6 +5618,7 @@ var Module = (() => {
         wasmExports["free"] = makeWrapper__p(wasmExports["free"]);
         wasmExports["fflush"] = makeWrapper__p(wasmExports["fflush"]);
         wasmExports["main"] = makeWrapper___PP(wasmExports["main"]);
+        wasmExports["memalign"] = makeWrapper_ppp(wasmExports["memalign"]);
         wasmExports["malloc"] = makeWrapper_pp(wasmExports["malloc"]);
         wasmExports["sbrk"] = makeWrapper_pP(wasmExports["sbrk"]);
         wasmExports["setThrew"] = makeWrapper__p(wasmExports["setThrew"]);
@@ -5242,6 +5627,7 @@ var Module = (() => {
         wasmExports["_emscripten_stack_restore"] = makeWrapper__p(wasmExports["_emscripten_stack_restore"]);
         wasmExports["_emscripten_stack_alloc"] = makeWrapper_pp(wasmExports["_emscripten_stack_alloc"]);
         wasmExports["emscripten_stack_get_current"] = makeWrapper_p(wasmExports["emscripten_stack_get_current"]);
+        wasmExports["__cxa_is_pointer_type"] = makeWrapper__p(wasmExports["__cxa_is_pointer_type"]);
         wasmExports["asyncify_start_unwind"] = makeWrapper__p(wasmExports["asyncify_start_unwind"]);
         wasmExports["asyncify_start_rewind"] = makeWrapper__p(wasmExports["asyncify_start_rewind"]);
         return wasmExports;
