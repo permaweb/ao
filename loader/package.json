@@ -14,6 +14,8 @@
     "./dist"
   ],
   "scripts": {
+    "format-file": "js-beautify -s 2 -r",
+    "patch:webgpu": "patch src/formats/wasm64-emscripten-webgpu.cjs patch/gas/wasm64-emscripten-webgpu.patch",
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.19.5",
+    "js-beautify": "^1.15.1",
     "typescript": "^5.2.2"
   },
   "engines": {

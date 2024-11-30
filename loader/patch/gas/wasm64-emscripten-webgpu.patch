@@ -1,0 +1,23 @@
+0a1,2
+> const DEFAULT_GAS_LIMIT = 9_000_000_000_000_000;
+> 
+9a12,30
+>       /**
+>        * Expose gas on the module
+>        *
+>        * This is how we track the amount of ops this WASM module has used,
+>        * and also how we refill the gas on each invocation of the WASM.
+>        */
+>       Module.gas = {
+>         limit: Module.computeLimit || DEFAULT_GAS_LIMIT,
+>         used: 0,
+>         use: (amount) => {
+>           Module.gas.used += Number(amount);
+>         },
+>         refill: (amount) => {
+>           if (!amount) Module.gas.used = 0;
+>           else Module.gas.used = Math.max(Module.gas.used - amount, 0);
+>         },
+>         isEmpty: () => Module.gas.used > Module.gas.limit,
+>       };
+> 

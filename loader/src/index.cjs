@@ -3,6 +3,7 @@ const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
 const Emscripten4 = require('./formats/emscripten4.cjs')
 const Wasm64 = require('./formats/wasm64-emscripten.cjs')
+const Wasm64WebGPU = require('./formats/wasm64-emscripten-webgpu.cjs')
 const metering = require('@permaweb/wasm-metering')
 
 /* eslint-enable */
@@ -171,6 +172,8 @@ module.exports = async function (binary, options) {
 
     if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15" || options.format === "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
       instance = await Wasm64(options)
+    } else if (options.format === "wasm64-unknown-emscripten-draft_2024_11_30-webgpu") {
+      instance = await Wasm64WebGPU(options)
     } else if (options.format === "wasm32-unknown-emscripten4" || options.format === "wasm32-unknown-emscripten-metering") {
       instance = await Emscripten4(options)
     }
@@ -200,7 +203,8 @@ module.exports = async function (binary, options) {
   if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15" && 
     options.format !== "wasm32-unknown-emscripten4"  && 
     options.format !== "wasm32-unknown-emscripten-metering" && 
-    options.format !== "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
+    options.format !== "wasm64-unknown-emscripten-draft_2024_10_16-metering" &&
+    options.format !== "wasm64-unknown-emscripten-draft_2024_11_30-webgpu") {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }
 
