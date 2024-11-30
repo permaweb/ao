@@ -630,69 +630,69 @@ var Module = (() => {
 
       missingGlobal("asm", "Please use wasmExports instead");
 
-function missingLibrarySymbol(sym) {
- if (typeof globalThis != "undefined" && !Object.getOwnPropertyDescriptor(globalThis, sym)) {
-  Object.defineProperty(globalThis, sym, {
-   configurable: true,
-   get() {
-    var msg = `\`${sym}\` is a library symbol and not included by default; add it to your library.js __deps or to DEFAULT_LIBRARY_FUNCS_TO_INCLUDE on the command line`;
-    var librarySymbol = sym;
-    if (!librarySymbol.startsWith("_")) {
-     librarySymbol = "$" + sym;
-    }
-    msg += ` (e.g. -sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='${librarySymbol}')`;
-    if (isExportedByForceFilesystem(sym)) {
-     msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
-    }
-    warnOnce(msg);
-    return undefined;
-   }
-  });
- }
- unexportedRuntimeSymbol(sym);
-}
+      function missingLibrarySymbol(sym) {
+        if (typeof globalThis != "undefined" && !Object.getOwnPropertyDescriptor(globalThis, sym)) {
+          Object.defineProperty(globalThis, sym, {
+            configurable: true,
+            get() {
+              var msg = `\`${sym}\` is a library symbol and not included by default; add it to your library.js __deps or to DEFAULT_LIBRARY_FUNCS_TO_INCLUDE on the command line`;
+              var librarySymbol = sym;
+              if (!librarySymbol.startsWith("_")) {
+                librarySymbol = "$" + sym;
+              }
+              msg += ` (e.g. -sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='${librarySymbol}')`;
+              if (isExportedByForceFilesystem(sym)) {
+                msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
+              }
+              warnOnce(msg);
+              return undefined;
+            }
+          });
+        }
+        unexportedRuntimeSymbol(sym);
+      }
 
-function unexportedRuntimeSymbol(sym) {
- if (!Object.getOwnPropertyDescriptor(Module, sym)) {
-  Object.defineProperty(Module, sym, {
-   configurable: true,
-   get() {
-    var msg = `'${sym}' was not exported. add it to EXPORTED_RUNTIME_METHODS (see the Emscripten FAQ)`;
-    if (isExportedByForceFilesystem(sym)) {
-     msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
-    }
-    abort(msg);
-   }
-  });
- }
-}
+      function unexportedRuntimeSymbol(sym) {
+        if (!Object.getOwnPropertyDescriptor(Module, sym)) {
+          Object.defineProperty(Module, sym, {
+            configurable: true,
+            get() {
+              var msg = `'${sym}' was not exported. add it to EXPORTED_RUNTIME_METHODS (see the Emscripten FAQ)`;
+              if (isExportedByForceFilesystem(sym)) {
+                msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
+              }
+              abort(msg);
+            }
+          });
+        }
+      }
 
-function __asyncjs__weavedrive_open(c_filename, mode) {
- return Asyncify.handleAsync(async () => {
-  const filename = UTF8ToString(Number(c_filename));
-  if (!Module.WeaveDrive) {
-   return Promise.resolve(null);
-  }
-  const drive = Module.WeaveDrive(Module, FS);
-  return await drive.open(filename);
- });
-}
+      function __asyncjs__weavedrive_open(c_filename, mode) {
+        return Asyncify.handleAsync(async () => {
+          const filename = UTF8ToString(Number(c_filename));
+          if (!Module.WeaveDrive) {
+            return Promise.resolve(null);
+          }
+          const drive = Module.WeaveDrive(Module, FS);
+          return await drive.open(filename);
+        });
+      }
 
-function __asyncjs__weavedrive_read(fd, dst_ptr, length) {
- return Asyncify.handleAsync(async () => {
-  const drive = Module.WeaveDrive(Module, FS);
-  return Promise.resolve(await drive.read(fd, dst_ptr, length));
- });
-}
-function __asyncjs__weavedrive_close(fd) {
- return Asyncify.handleAsync(async () => {
-  const drive = Module.WeaveDrive(Module, FS);
-  return drive.close(fd);
- });
-}
-function metering_gasUsed() {
-  return Module.gas.used;
-}
+      function __asyncjs__weavedrive_read(fd, dst_ptr, length) {
+        return Asyncify.handleAsync(async () => {
+          const drive = Module.WeaveDrive(Module, FS);
+          return Promise.resolve(await drive.read(fd, dst_ptr, length));
+        });
+      }
+      function __asyncjs__weavedrive_close(fd) {
+        return Asyncify.handleAsync(async () => {
+          const drive = Module.WeaveDrive(Module, FS);
+          return drive.close(fd);
+        });
+      }
+      function metering_gasUsed() {
+        return Module.gas.used;
+      }
 
 /** @constructor */ function ExitStatus(status) {
         this.name = "ExitStatus";
