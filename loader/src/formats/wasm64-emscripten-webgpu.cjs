@@ -5903,9 +5903,9 @@ var Module = (() => {
 
       var _asyncify_stop_rewind = createExportWrapper("asyncify_stop_rewind", 0);
 
-      var ___start_em_js = Module["___start_em_js"] = 355264;
+      var ___start_em_js = Module["___start_em_js"] = 355280;
 
-      var ___stop_em_js = Module["___stop_em_js"] = 355912;
+      var ___stop_em_js = Module["___stop_em_js"] = 355928;
 
       function invoke_vjj(index, a1, a2) {
         var sp = stackSave();
