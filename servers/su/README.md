@@ -56,7 +56,7 @@ Create a .env file with the following variables, or set them in the OS:
 - `ARWEAVE_URL_LIST` list of arweave urls that have tx access aka url/txid returns the tx. Used by gateway calls for checking transactions etc...
 
 ## Experimental environment variables
-To use the expirimental fully local storage system set the following evnironment variables.
+To use the experimental fully local storage system set the following environment variables.
 - `USE_LOCAL_STORE`  if true the SU will operate on purely RocksDB
 - `SU_FILE_DB_DIR` a local RocksDB directory of bundles
 - `SU_INDEX_DB_DIR` a local index of processes and messages
@@ -166,7 +166,7 @@ docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./sched
 Over time the su database has evolved. It started as only Postgres then went to Postgres + RocksDB for performance enhancement. It now has a purely RocksDB implementation. For existing su's that already have data, you can follow the below to migration processes to bring it up to date to the latest implementation. 
 
 ### Migrating data to disk for an existing su instance
-If a su has been running using postgres for sometime there may be performance issues. Writing to  and reading files from disk has been added. In order to switch this on set the environment variables
+If a su has been running using postgres for some time there may be performance issues. Writing to  and reading files from disk has been added. In order to switch this on set the environment variables
 
 - `USE_DISK` whether or not to read and write binary files from/to the disk/rocksdb. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
 - `SU_DATA_DIR` the data directory on disk where the su will read from and write binaries to
@@ -231,6 +231,6 @@ Lastly the SU and SU-R require a postgresql database for each node that is alrea
 In summary the SU + SU-R requirements are
 - A docker environment to run 2 different dockerfiles
 - A server pointing to port 9000
-- Ablity to define and modify secrect files availabe in the same path as the dockerfiles, .wallet.json and .schedulers.json
-- Environement variables available in the container.
+- Ability to define and modify secret files available in the same path as the dockerfiles, .wallet.json and .schedulers.json
+- Environment variables available in the container.
 - a postgresql database per node, defined with a database called "su" at the time of deployment.
