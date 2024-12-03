@@ -164,7 +164,7 @@ export function processResultsWith ({
                 status: 'failure'
               })
             }
-          }, TASK_QUEUE_RETRY_DELAY)
+          }, (2 ** retries) * TASK_QUEUE_RETRY_DELAY)
         })
       } else {
         await new Promise(resolve => setTimeout(resolve, 100))
