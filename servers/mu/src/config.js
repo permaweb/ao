@@ -54,8 +54,8 @@ export const domainConfigSchema = z.object({
   MAX_WORKERS: positiveIntSchema,
   DB_URL: z.string(),
   TRACE_DB_URL: z.string(),
-  TASK_QUEUE_MAX_RETRIES: z.number(),
-  TASK_QUEUE_RETRY_DELAY: z.number(),
+  TASK_QUEUE_MAX_RETRIES: positiveIntSchema,
+  TASK_QUEUE_RETRY_DELAY: positiveIntSchema,
   DISABLE_TRACE: z.boolean(),
   SPAWN_PUSH_ENABLED: z.boolean()
 })
