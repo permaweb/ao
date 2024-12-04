@@ -46,6 +46,8 @@ def load_libraries(config: Config, definition: Definition, c_program: str, link_
     bundle_files += glob.glob('/src/libs/**/*.a', recursive=True)
     bundle_files += glob.glob('/src/libs/**/*.o', recursive=True)
     bundle_files += glob.glob('/src/libs/**/*.dylib', recursive=True)
+
+    bundle_files += glob.glob('/opt/didkit.a', recursive=True)
     
     # Load aolib from /opt/aolibc/
     if(config.target == 64):
@@ -61,6 +63,8 @@ def load_libraries(config: Config, definition: Definition, c_program: str, link_
                               '/share/lua/**/*.lua', recursive=True)
 
     for bundle in bundle_files:
+        debug_print('*** Considering bundle: {}'.format(bundle))
+
         if is_lua_source_file(bundle):
             debug_print('Lua file found: {}'.format(bundle))
             basename = re.sub(LUAROCKS_LOCAL_MODULE_PREFIX_RE, '', bundle)

@@ -12,6 +12,12 @@
 #include "lauxlib.h"
 #endif
 
+//#include "vlad_rusty_lib.h"
+// #include "didkit.h"
+
+int get_version(void);
+const char *get_version2(void);
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -19,6 +25,65 @@ extern "C"
 
   int boot_lua(lua_State *L);
   lua_State *wasm_lua_state = NULL;
+
+  int lua_didkit_version(lua_State* L) {
+    // // Call the Rust function
+    // const char* result = get_version();
+    
+    // // Push the result back onto the Lua stack
+    // lua_pushstring(L, result);
+
+    // Call the Rust function
+    int result = get_version();
+    
+    // Push the result back onto the Lua stack
+    lua_pushinteger(L, result);
+    
+    // Return the number of results
+    return 1;
+  }
+
+  int lua_didkit_version2(lua_State* L) {
+    // Call the Rust function
+    const char* result = get_version2();
+    
+    // Push the result back onto the Lua stack
+    lua_pushstring(L, result);
+    
+    // Return the number of results
+    return 1;
+  }
+
+  // // Define a wrapper function to call add_two_integers from Lua
+  // int lua_add_two_integers(lua_State* L) {
+  //     // Get the two integer arguments from the Lua stack
+  //     int a = luaL_checkinteger(L, 1);
+  //     int b = luaL_checkinteger(L, 2);
+      
+  //     // Call the Rust function
+  //     int result = add_two_integers(a, b);
+      
+  //     // Push the result back onto the Lua stack
+  //     lua_pushinteger(L, result);
+      
+  //     // Return the number of results
+  //     return 1;
+  // }
+  //   // Define a wrapper function to call subtract_two_integers from Lua
+  // int lua_subtract_two_integers(lua_State* L) {
+  //     // Get the two integer arguments from the Lua stack
+  //     int a = luaL_checkinteger(L, 1);
+  //     int b = luaL_checkinteger(L, 2);
+      
+  //     // Call the Rust function
+  //     int result = subtract_two_integers(a, b);
+      
+  //     // Push the result back onto the Lua stack
+  //     lua_pushinteger(L, result);
+      
+  //     // Return the number of results
+  //     return 1;
+  // }
 
   // Pre-compiled lua loader program
   static const unsigned char program[] = {__LUA_BASE__};
@@ -132,6 +197,7 @@ extern "C"
       lua_close(wasm_lua_state);
       return 1;
     }
+
     // printf("Boot Lua Webassembly!\n");
     return 0;
   }
@@ -152,6 +218,14 @@ extern "C"
 
     // This place will be injected by emcc-lua
     __INJECT_LUA_FILES__
+
+    // VLAD: Register our custom C functions with Lua
+    // lua_register(wasm_lua_state, "add_two_integers", lua_add_two_integers);
+    // lua_register(wasm_lua_state, "subtract_two_integers", lua_subtract_two_integers);
+
+    // VIC: Register our custom C functions with Lua
+    lua_register(wasm_lua_state, "didkit_version", lua_didkit_version);
+    lua_register(wasm_lua_state, "didkit_version2", lua_didkit_version2);
 
     if (docall(L, 1, LUA_MULTRET))
     {
