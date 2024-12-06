@@ -109,8 +109,8 @@ RUN rm /opt/aolibc/aostdio.o
 # Build aolibc for 64-bit
 RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua.a -I/lua-5.3.4/src"
 
-# Patch emcripten WebGPU library
-COPY ./src/emscripten/src/library_webgpu.js /emsdk/upstream/emscripten/src/library_webgpu.js
+# Patch emcripten code
+COPY ./src/emscripten/src/* /emsdk/upstream/emscripten/src
 
 ENV CC='emcc -s WASM=1'
 ENV NM='/emsdk/upstream/bin/llvm-nm'
