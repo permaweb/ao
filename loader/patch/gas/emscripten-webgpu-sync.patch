@@ -1,7 +1,7 @@
 0a1,2
 > const DEFAULT_GAS_LIMIT = 9_000_000_000_000_000;
 > 
-9a12,30
+23a26,44
 >       /**
 >        * Expose gas on the module
 >        *
@@ -12,7 +12,7 @@
 >         limit: Module.computeLimit || DEFAULT_GAS_LIMIT,
 >         used: 0,
 >         use: (amount) => {
->           Module.gas.used += Number(amount);
+>           Module.gas.used += amount;
 >         },
 >         refill: (amount) => {
 >           if (!amount) Module.gas.used = 0;

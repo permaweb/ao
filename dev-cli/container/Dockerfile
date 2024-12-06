@@ -1,4 +1,6 @@
-FROM emscripten/emsdk:3.1.59
+# FROM emscripten/emsdk:3.1.59
+# FROM emscripten/emsdk:sdk-main-64bit
+FROM emscripten/emsdk:3.1.73
 LABEL maintainer="tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there
@@ -106,6 +108,9 @@ RUN rm /opt/aolibc/aolibc.a
 RUN rm /opt/aolibc/aostdio.o
 # Build aolibc for 64-bit
 RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua.a -I/lua-5.3.4/src"
+
+# Patch emcripten WebGPU library
+COPY ./src/emscripten/src/library_webgpu.js /emsdk/upstream/emscripten/src/library_webgpu.js
 
 ENV CC='emcc -s WASM=1'
 ENV NM='/emsdk/upstream/bin/llvm-nm'

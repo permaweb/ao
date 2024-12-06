@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker build . -t p3rmaw3b/ao
+docker build . -t p3rmaw3b/ao:webgpu-sync
