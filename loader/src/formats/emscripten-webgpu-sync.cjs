@@ -4405,7 +4405,22 @@ var Module = (() => {
         callUserCallback(func);
       }, timeout);
 
-      var _emscripten_sleep = ms => Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));
+      var _emscripten_sleep = ms => {
+        // Initial sleep promise, ignore duration and use 0 instead
+        const sleepPromise = new Promise(resolve => safeSetTimeout(resolve, 0));
+        // Get sleepTasksOnce, a list of promises
+        const tasks = Asyncify.getSleepTasksOnce();
+        console.log("tasks", tasks);
+        // Create a promise that executes all tasks sequentially
+        const completeAllTasksPromise = tasks.reduce((p, task) => p.then(task), sleepPromise);
+        // Handle sleep for the duration of the promise
+        return Asyncify.handleSleep(wakeUp => {
+          completeAllTasksPromise.then(() => {
+            Asyncify.clearSleepTasksOnce();
+            wakeUp();
+          });
+        });
+      };
 
       _emscripten_sleep.isAsync = true;
 
@@ -4419,6 +4434,7 @@ var Module = (() => {
       };
 
       var WebGPU = {
+        _HAS_PENDING_QUEUE: false,
         errorCallback: (callback, type, message, userdata) => {
           var sp = stackSave();
           var messagePtr = stringToUTF8OnStack(message);
@@ -5389,6 +5405,13 @@ var Module = (() => {
         var queue = WebGPU.mgrQueue.get(queueId);
         var cmds = Array.from(HEAP32.subarray((((commands) >> 2)), ((commands + commandCount * 4) >> 2)), id => WebGPU.mgrCommandBuffer.get(id));
         queue.submit(cmds);
+        if (WebGPU._HAS_PENDING_QUEUE === false) {
+          WebGPU._HAS_PENDING_QUEUE = true;
+          Asyncify.addSleepTaskOnce(async () => {
+            await queue.onSubmittedWorkDone();
+            WebGPU._HAS_PENDING_QUEUE = false;
+          });
+        }
       };
 
       var _wgpuRenderPassEncoderDraw = (passId, vertexCount, instanceCount, firstVertex, firstInstance) => {
@@ -5467,6 +5490,26 @@ var Module = (() => {
       };
 
       var Asyncify = {
+        sleepTasksOnce: [],
+        addSleepTaskOnce(task) {
+          Asyncify.sleepTasksOnce.push(task);
+        },
+        getSleepTasksOnce() {
+          return Asyncify.sleepTasksOnce;
+        },
+        clearSleepTasksOnce() {
+          Asyncify.sleepTasksOnce = [];
+        },
+        sleepCallbacksOnce: [],
+        addSleepCallbackOnce(callback) {
+          Asyncify.sleepCallbacksOnce.push(callback);
+        },
+        getSleepCallbacksOnce() {
+          return Asyncify.sleepCallbacksOnce;
+        },
+        clearSleepCallbacksOnce() {
+          Asyncify.sleepCallbacksOnce = [];
+        },
         instrumentWasmImports(imports) {
           var importPattern = /^(invoke_.*|__asyncjs__.*)$/;
           for (let [x, original] of Object.entries(imports)) {
@@ -5688,6 +5731,12 @@ var Module = (() => {
             _free(Asyncify.currData);
             Asyncify.currData = null;
             // Call all sleep callbacks now that the sleep-resume is all done.
+            // Single calls
+            const callbacksOnce = Asyncify.getSleepCallbacksOnce();
+            console.log("callbacksOnce", callbacksOnce);
+            callbacksOnce.forEach(callUserCallback);
+            Asyncify.clearSleepCallbacksOnce();
+            // Saved calls
             Asyncify.sleepCallbacks.forEach(callUserCallback);
           } else {
             abort(`invalid state: ${Asyncify.state}`);
