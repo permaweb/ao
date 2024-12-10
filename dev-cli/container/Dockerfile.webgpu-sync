@@ -1,4 +1,5 @@
-FROM --platform=linux/amd64 p3rmaw3b/ao:dev
+ARG platform=linux/amd64
+FROM --platform=${platform} p3rmaw3b/ao:dev
 
 # Patch emcripten code
 COPY ./src/emscripten/src/* /emsdk/upstream/emscripten/src
