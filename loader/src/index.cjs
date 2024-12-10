@@ -3,6 +3,7 @@ const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
 const Emscripten4 = require('./formats/emscripten4.cjs')
 const EmscriptenWebGPUSync = require('./formats/emscripten-webgpu-sync.cjs')
+const EmscriptenWebGPUUnsafe = require('./formats/emscripten-webgpu-unsafe.cjs')
 const Wasm64 = require('./formats/wasm64-emscripten.cjs')
 const metering = require('@permaweb/wasm-metering')
 
@@ -85,6 +86,7 @@ const metering = require('@permaweb/wasm-metering')
  * @property {number} [computeLimit]
  * @property {string} [memoryLimit]
  * @property {string[]} [extensions]
+ * @property {boolean} [unsafe]
  */
 
 /**
@@ -173,7 +175,11 @@ module.exports = async function (binary, options) {
     if (options.format === "wasm64-unknown-emscripten-draft_2024_02_15" || options.format === "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
       instance = await Wasm64(options)
     } else if (options.format === "wasm32-unknown-emscripten-webgpu-draft_2024_11_30") {
-      instance = await EmscriptenWebGPUSync(options)
+      if (options.unsafe) {
+        instance = await EmscriptenWebGPUUnsafe(options)
+      } else {
+        instance = await EmscriptenWebGPUSync(options)
+      }
     } else if (options.format === "wasm32-unknown-emscripten4" || options.format === "wasm32-unknown-emscripten-metering") {
       instance = await Emscripten4(options)
     }

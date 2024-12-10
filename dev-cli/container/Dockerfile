@@ -125,6 +125,3 @@ COPY ./src/node /opt/node
 RUN cd /opt/node && \
   npm install --omit="dev" && \
   npm link
-
-# Patch emcripten code
-COPY ./src/emscripten/src/* /emsdk/upstream/emscripten/src

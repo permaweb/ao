@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "format-file": "js-beautify -s 2 -r",
-    "patch:webgpu": "patch src/formats/emscripten-webgpu-sync.cjs patch/gas/emscripten-webgpu-sync.patch",
+    "patch:webgpu": "patch src/formats/emscripten-webgpu-sync.cjs patch/gas/emscripten-webgpu.patch && patch src/formats/emscripten-webgpu-unsafe.cjs patch/gas/emscripten-webgpu.patch",
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.cjs --declaration --allowJs --emitDeclarationOnly --outDir dist",
