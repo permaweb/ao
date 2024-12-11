@@ -1062,6 +1062,7 @@ impl DataStore for StoreClient {
         &self,
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType> {
+        self.logger.log(format!("retreiving latest message for process - {}", &process_id_in));
         use super::schema::messages::dsl::*;
         /*
             This must use get_conn because it needs
@@ -1071,11 +1072,15 @@ impl DataStore for StoreClient {
         */
         let conn = &mut self.get_conn()?;
 
+        self.logger.log(format!("connection established - {}", &process_id_in));
+
         // Get the latest DbMessage
         let latest_db_message_result = messages
             .filter(process_id.eq(process_id_in))
-            .order(row_id.desc())
+            .order(timestamp.desc())
             .first::<DbMessage>(conn);
+
+        self.logger.log(format!("latest message query complete - {}", &process_id_in));
 
         match latest_db_message_result {
             Ok(db_message) => {
