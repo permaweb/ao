@@ -197,21 +197,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-web-prom"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76743e67d4e7efa9fc2ac7123de0dd7b2ca592668e19334f1d81a3b077afc6ac"
-dependencies = [
- "actix-web",
- "futures-core",
- "log",
- "pin-project-lite",
- "prometheus",
- "regex",
- "strfmt",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1231,12 +1216,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d77f7ec81a6d05a3abb01ab6eb7590f6083d08449fe5a1c8b1e620283546ccb7"
 
 [[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
 name = "http"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2057,52 +2036,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "procfs"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "731e0d9356b0c25f16f33b5be79b1c57b562f141ebfcdb0ad8ac2c13a24293b4"
-dependencies = [
- "bitflags 2.4.0",
- "hex",
- "lazy_static",
- "procfs-core",
- "rustix",
-]
-
-[[package]]
-name = "procfs-core"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d3554923a69f4ce04c4a754260c338f505ce22642d3830e049a399fc2059a29"
-dependencies = [
- "bitflags 2.4.0",
- "hex",
-]
-
-[[package]]
-name = "prometheus"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d33c28a30771f7f96db69893f78b857f7450d7e0237e9c8fc6427a81bae7ed1"
-dependencies = [
- "cfg-if",
- "fnv",
- "lazy_static",
- "libc",
- "memchr",
- "parking_lot",
- "procfs",
- "protobuf",
- "thiserror",
-]
-
-[[package]]
-name = "protobuf"
-version = "2.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
-
-[[package]]
 name = "quote"
 version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2711,12 +2644,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "strfmt"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a8348af2d9fc3258c8733b8d9d8db2e56f54b2363a4b5b81585c7875ed65e65"
-
-[[package]]
 name = "strum"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2740,7 +2667,6 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
- "actix-web-prom",
  "arweave-rs",
  "async-trait",
  "avro-rs",
@@ -2756,7 +2682,6 @@ dependencies = [
  "lazy_static",
  "log",
  "lru",
- "prometheus",
  "reqwest",
  "ring",
  "rocksdb",

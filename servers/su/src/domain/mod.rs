@@ -23,7 +23,7 @@ pub use flows::Deps;
 pub use local_store::migration::migrate_to_local;
 pub use store::migrate_to_disk;
 
-pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Registry) -> Arc<Deps> {
+pub async fn init_deps(mode: Option<String>) -> Arc<Deps> {
     let logger: Arc<dyn Log> = SuLog::init();
 
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
@@ -99,7 +99,6 @@ pub async fn init_deps(mode: Option<String>, metrics_registry: prometheus::Regis
 
     let metrics = Arc::new(PromMetrics::new(
         AoConfig::new(mode).expect("Failed to read configuration"),
-        metrics_registry,
     ));
 
     Arc::new(Deps {
