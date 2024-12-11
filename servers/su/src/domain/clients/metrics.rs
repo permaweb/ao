@@ -1,6 +1,6 @@
 use super::super::config::AoConfig;
 use super::super::core::dal::CoreMetrics;
-use prometheus::{HistogramOpts, HistogramVec, IntCounter, Registry};
+// use prometheus::{HistogramOpts, HistogramVec, IntCounter, Registry};
 
 /*
   Implementation of metrics
@@ -11,53 +11,55 @@ use prometheus::{HistogramOpts, HistogramVec, IntCounter, Registry};
 
 pub struct PromMetrics {
     enabled: bool,
-    core_metrics: HistogramVec,
-    message_save_failures: IntCounter,
+    // core_metrics: HistogramVec,
+    // message_save_failures: IntCounter,
 }
 
 impl PromMetrics {
-    pub fn new(config: AoConfig, registry: Registry) -> Self {
-        // Define the options for the histogram, with buckets in milliseconds
-        let histogram_opts = HistogramOpts::new(
-            "core_metrics_duration_milliseconds",
-            "Histogram of durations for core metrics functions in milliseconds",
-        )
-        .buckets(vec![
-            0.0, 1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 5500.0,
-            6000.0, 6500.0, 7000.0, 7500.0, 8000.0, 8500.0, 9000.0, 9500.0, 10000.0,
-        ])
-        .namespace("su");
+    pub fn new(config: AoConfig) -> Self {
+        // let registry = Registry::new();
 
-        // Create a HistogramVec with labels for the different core metric functions
-        let core_metrics = HistogramVec::new(histogram_opts, &["function_name"]).unwrap();
+        // // Define the options for the histogram, with buckets in milliseconds
+        // let histogram_opts = HistogramOpts::new(
+        //     "core_metrics_duration_milliseconds",
+        //     "Histogram of durations for core metrics functions in milliseconds",
+        // )
+        // .buckets(vec![
+        //     0.0, 1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 5500.0,
+        //     6000.0, 6500.0, 7000.0, 7500.0, 8000.0, 8500.0, 9000.0, 9500.0, 10000.0,
+        // ])
+        // .namespace("su");
 
-        // Register the HistogramVec with the provided registry
-        registry.register(Box::new(core_metrics.clone())).unwrap();
+        // // Create a HistogramVec with labels for the different core metric functions
+        // let core_metrics = HistogramVec::new(histogram_opts, &["function_name"]).unwrap();
 
-        let message_save_failures: IntCounter =
-            IntCounter::new("message_save_failures", "message save failure count").unwrap();
+        // // Register the HistogramVec with the provided registry
+        // registry.register(Box::new(core_metrics.clone())).unwrap();
 
-        // Register the IntCounter with the provided registry
-        registry
-            .register(Box::new(message_save_failures.clone()))
-            .unwrap();
+        // let message_save_failures: IntCounter =
+        //     IntCounter::new("message_save_failures", "message save failure count").unwrap();
+
+        // // Register the IntCounter with the provided registry
+        // registry
+        //     .register(Box::new(message_save_failures.clone()))
+        //     .unwrap();
 
         PromMetrics {
             enabled: config.enable_metrics,
-            core_metrics,
-            message_save_failures,
+            // core_metrics,
+            // message_save_failures,
         }
     }
 
-    fn observe_duration(&self, function_name: &str, duration: u128) {
+    fn observe_duration(&self, _function_name: &str, _duration: u128) {
         if !self.enabled {
             return;
         }
 
         // Observe the duration in milliseconds directly
-        self.core_metrics
-            .with_label_values(&[function_name])
-            .observe(duration as f64);
+        // self.core_metrics
+        //     .with_label_values(&[function_name])
+        //     .observe(duration as f64);
     }
 }
 
@@ -91,6 +93,6 @@ impl CoreMetrics for PromMetrics {
     }
 
     fn failed_message_save(&self) {
-        self.message_save_failures.inc();
+        // self.message_save_failures.inc();
     }
 }

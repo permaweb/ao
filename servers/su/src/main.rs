@@ -11,9 +11,6 @@ use actix_web::{
 use serde::Deserialize;
 use serde_json::json;
 
-use actix_web_prom::PrometheusMetricsBuilder;
-use prometheus::Registry;
-
 use su::domain::{flows, init_deps, router, Deps};
 
 #[derive(Deserialize)]
@@ -242,14 +239,7 @@ async fn main() -> io::Result<()> {
         }
     };
 
-    let registry = Registry::new();
-    let prometheus = PrometheusMetricsBuilder::new("su")
-        .endpoint("/metrics")
-        .registry(registry.clone())
-        .build()
-        .unwrap();
-
-    let deps = init_deps(mode, registry).await;
+    let deps = init_deps(mode).await;
     let app_state = web::Data::new(AppState { deps });
 
     let run_deps = app_state.deps.clone();
@@ -270,7 +260,6 @@ async fn main() -> io::Result<()> {
                     .allow_any_header(),
             )
             .wrap(Logger::default())
-            .wrap(prometheus.clone())
             .app_data(app_state.clone())
             .app_data(web::PayloadConfig::new(10485760))
             .route("/", web::get().to(base))

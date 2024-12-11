@@ -86,6 +86,7 @@ pub async fn write_item(
     base_layer: Option<String>,
     exclude: Option<String>,
 ) -> Result<String, String> {
+    deps.logger.log(format!("write item called"));
     let start_top_level = Instant::now();
     let builder = init_builder(&deps)?;
 
@@ -103,6 +104,8 @@ pub async fn write_item(
         }
     };
 
+    deps.logger.log(format!("builder initialized item parsed target - {}", &target_id));
+
     /*
       Acquire the lock for a given process id. After acquiring the lock
       we can safely increment it and start building/writing data
@@ -119,6 +122,8 @@ pub async fn write_item(
     deps.metrics
         .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
 
+    deps.logger.log(format!("lock acquired - {} - {}", &target_id, elapsed_acquire_lock.as_millis()));
+
     /*
       Check to see if the message already exists, this
       doesn't need to run for an assignment. If we start
@@ -130,6 +135,8 @@ pub async fn write_item(
         deps.data_store.check_existing_message(&item.id())?
     };
 
+    deps.logger.log(format!("checked for message existence- {}", &target_id));
+
     /*
       Increment the scheduling info using the locked mutable reference
       to schedule_info
@@ -138,6 +145,8 @@ pub async fn write_item(
         .scheduler
         .increment(&mut *schedule_info, target_id.clone())
         .await?;
+
+    deps.logger.log(format!("incrememted scheduler - {}", &target_id));
 
     // XOR, if we have one of these, we must have both.
     if process_id.is_some() ^ assign.is_some() {
@@ -195,6 +204,8 @@ pub async fn write_item(
         return Err("Data-Protocol tag not present".to_string());
     }
 
+    deps.logger.log(format!("tags cloned - {}", &target_id));
+
     if let Some(type_tag) = type_tag {
         if type_tag.value == "Process" {
             let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");
@@ -227,13 +238,21 @@ pub async fn write_item(
                     },
                     None => (),
                 };
+
+                deps.logger.log(format!("boot load check complete - {}", &target_id));
+
                 let assignment = builder
                     .gen_assignment(None, data_item.id(), &next_schedule_info, &None)
                     .await?;
 
+                deps.logger.log(format!("assignment generated - {}", &target_id));
+
                 let aid = assignment.id();
                 let did = data_item.id();
                 let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
+
+                deps.logger.log(format!("data bundled - {}", &target_id));
+
                 let process = Process::from_bundle(&build_result.bundle)?;
                 deps.data_store
                     .save_process(&process, &build_result.binary)?;
@@ -243,7 +262,11 @@ pub async fn write_item(
                     .commit(&mut *schedule_info, &next_schedule_info, did, aid);
                 drop(schedule_info);
 
+                deps.logger.log(format!("scheduler committed cloned - {}", &target_id));
+
                 upload(&deps, build_result.binary.to_vec()).await?;
+
+                deps.logger.log(format!("upload triggered - {}", &target_id));
                 return id_res(&deps, process.process.process_id.clone(), start_top_level);
             } else {
                 let build_result = builder.build_process(input, &next_schedule_info).await?;
