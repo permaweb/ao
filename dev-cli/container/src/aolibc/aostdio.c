@@ -23,7 +23,11 @@ EM_ASYNC_JS(int, weavedrive_open, (const char* c_filename, const char* mode), {
     }
 
     const drive = Module.WeaveDrive(Module, FS);
-    return await drive.open(filename);
+    const driveResponse = await drive.open(filename);
+    if (typeof driveResponse === 'string') {
+        throw new Error('HALT: FILE NOT FOUND')
+    }
+    return driveResponse;
 });
 
 EM_ASYNC_JS(int, weavedrive_read, (int fd, int *dst_ptr, size_t length), {
