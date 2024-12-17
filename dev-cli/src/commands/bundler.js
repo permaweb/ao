@@ -11,10 +11,10 @@ function amountArgs (amount) {
   ]
 }
 
-export async function balance ({ wallet, host }) {
+export async function balance ({ wallet, bundler }) {
   const cmdArgs = [
     ...walletArgs(wallet),
-    ...bundlerArgs(host)
+    ...bundlerArgs(bundler)
   ]
 
   const p = Deno.run({
