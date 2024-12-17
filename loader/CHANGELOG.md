@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.44](https://github.com/permaweb/ao/compare/loader@v0.0.43...loader@v0.0.44) (2024-12-17)
+
+
+### Features
+
+* **loader:** on drive error, send halt to CU ([5c378d0](https://github.com/permaweb/ao/commit/5c378d04ce755293843a50fba66ea43e4b1cd569))
+
 ## [0.0.43](https://github.com/permaweb/ao/compare/loader@v0.0.42...loader@v0.0.43) (2024-10-28)
 
 
