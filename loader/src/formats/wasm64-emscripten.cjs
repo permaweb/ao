@@ -674,7 +674,11 @@ function __asyncjs__weavedrive_open(c_filename, mode) {
    return Promise.resolve(null);
   }
   const drive = Module.WeaveDrive(Module, FS);
-  return await drive.open(filename);
+  const driveResponse = await drive.open(filename);
+  if (typeof driveResponse === 'string') {
+    throw new Error('HALT: FILE NOT FOUND')
+  }
+  return driveResponse
  });
 }
 
