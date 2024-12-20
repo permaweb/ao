@@ -12,7 +12,7 @@ import {
   saveModuleWith
 } from './ao-module.js'
 import { createTestLogger } from '../domain/logger.js'
-import { MODULES_TABLE } from './sqlite.js'
+import { MODULES_TABLE } from './db.js'
 
 const logger = createTestLogger({ name: 'ao-cu:readState' })
 

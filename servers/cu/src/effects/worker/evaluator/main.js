@@ -1,11 +1,11 @@
 import * as WasmClient from '../../wasm.js'
 import * as AoEvaluationClient from '../../ao-evaluation.js'
-import * as SqliteClient from '../../sqlite.js'
+import * as DbClient from '../../db.js'
 
 import { evaluateWith } from '../evaluate.js'
 
 export const createApis = async (ctx) => {
-  const sqlite = await SqliteClient.createSqliteClient({ url: ctx.DB_URL, bootstrap: false })
+  const db = await DbClient.createDbClient({ url: ctx.DB_URL, bootstrap: false, max: 5 })
   const wasmInstanceCache = WasmClient.createWasmInstanceCache({ MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE })
 
   const close = async (streamId) => wasmInstanceCache.delete(streamId)
@@ -18,7 +18,7 @@ export const createApis = async (ctx) => {
       CHECKPOINT_GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL
     }),
     bootstrapWasmInstance: WasmClient.bootstrapWasmInstanceWith(),
-    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db: sqlite, logger: ctx.logger }),
+    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger: ctx.logger }),
     ARWEAVE_URL: ctx.ARWEAVE_URL,
     logger: ctx.logger
   })

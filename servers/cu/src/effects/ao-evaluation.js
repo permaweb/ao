@@ -3,7 +3,7 @@ import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply,
 import { z } from 'zod'
 
 import { evaluationSchema } from '../domain/model.js'
-import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
+import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './db.js'
 
 const evaluationDocSchema = z.object({
   id: z.string().min(1),
@@ -60,8 +60,7 @@ const toEvaluation = applySpec({
 
 const fromEvaluationDoc = pipe(
   evolve({
-    output: JSON.parse,
-    evaluatedAt: (timestamp) => new Date(timestamp)
+    output: JSON.parse
   }),
   /**
    * Ensure the input matches the expected
@@ -76,8 +75,8 @@ export function findEvaluationWith ({ db }) {
     return {
       sql: `
         SELECT
-          id, processId, messageId, deepHash, nonce, epoch, timestamp,
-          ordinate, blockHeight, cron, evaluatedAt, output
+          id, "processId", "messageId", "deepHash", nonce, epoch, timestamp,
+          ordinate, "blockHeight", cron, "evaluatedAt", output
         FROM ${EVALUATIONS_TABLE}
         WHERE
           id = ?;
@@ -143,7 +142,7 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
       {
         sql: `
           INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-            (id, processId, messageId, deepHash, nonce, epoch, timestamp, ordinate, blockHeight, cron, evaluatedAt, output)
+            (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
         parameters: [
@@ -170,7 +169,7 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
     if (!evaluation.cron) {
       statements.push({
         sql: `
-          INSERT OR IGNORE INTO ${MESSAGES_TABLE} (id, processId, seq) VALUES (?, ?, ?);
+          INSERT OR IGNORE INTO ${MESSAGES_TABLE} (id, "processId", seq) VALUES (?, ?, ?);
          `,
         parameters: messageDocParamsSchema.parse([
           createMessageId({
@@ -204,8 +203,8 @@ export function findEvaluationsWith ({ db }) {
     return {
       sql: `
         SELECT
-          id, processId, messageId, deepHash, nonce, epoch, timestamp,
-          ordinate, blockHeight, cron, evaluatedAt, output
+          id, "processId", "messageId", "deepHash", nonce, epoch, timestamp,
+          ordinate, "blockHeight", cron, "evaluatedAt", output
         FROM ${EVALUATIONS_TABLE}
         WHERE
           id > ? AND id <= ?
@@ -251,7 +250,7 @@ export function findMessageBeforeWith ({ db }) {
         FROM ${MESSAGES_TABLE}
         WHERE
           id = ?
-          AND processId = ?
+          AND "processId" = ?
           AND seq < ?
         LIMIT 1;
       `,

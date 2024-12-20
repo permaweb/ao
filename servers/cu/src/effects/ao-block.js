@@ -2,10 +2,11 @@ import { fromPromise, of } from 'hyper-async'
 import { applySpec, last, map, path, pathSatisfies, pipe, pluck, prop, props, splitEvery } from 'ramda'
 import { z } from 'zod'
 import pMap from 'p-map'
-import { blockSchema } from '../domain/model.js'
-import { BLOCKS_TABLE } from './sqlite.js'
-import { backoff, strFromFetchError } from '../domain/utils.js'
 import CircuitBreaker from 'opossum'
+
+import { blockSchema } from '../domain/model.js'
+import { backoff, strFromFetchError } from '../domain/utils.js'
+import { BLOCKS_TABLE } from './db.js'
 
 const okRes = (res) => {
   if (res.ok) return res
