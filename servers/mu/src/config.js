@@ -57,7 +57,8 @@ export const domainConfigSchema = z.object({
   TASK_QUEUE_MAX_RETRIES: positiveIntSchema,
   TASK_QUEUE_RETRY_DELAY: positiveIntSchema,
   DISABLE_TRACE: z.boolean(),
-  SPAWN_PUSH_ENABLED: z.boolean()
+  SPAWN_PUSH_ENABLED: z.boolean(),
+  ALLOW_PUSHES_AFTER: z.number()
 })
 
 /**
@@ -102,7 +103,8 @@ const CONFIG_ENVS = {
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
-    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true'
+    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
+    ALLOW_PUSHES_AFTER: process.env.ALLOW_PUSHES_AFTER || 1572103
   },
   production: {
     MODE,
@@ -124,7 +126,8 @@ const CONFIG_ENVS = {
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
-    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true'
+    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
+    ALLOW_PUSHES_AFTER: process.env.ALLOW_PUSHES_AFTER || 1572103
   }
 }
 

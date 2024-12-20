@@ -30,7 +30,7 @@ describe('pushMsgWith', () => {
                 transactions: {
                   edges: [
                     {
-                      block: { timestamp: Date.now() }
+                      block: { height: 1572105 }
                     }
                   ]
                 }
@@ -42,6 +42,7 @@ describe('pushMsgWith', () => {
             return Resolved()
           },
           logger,
+          ALLOW_PUSHES_AFTER: 1572103
         })
 
         const { crank } = await pushMsg({

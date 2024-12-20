@@ -86,6 +86,7 @@ export const createApis = async (ctx) => {
   const PROC_FILE_PATH = ctx.PROC_FILE_PATH
   const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
+  const ALLOW_PUSHES_AFTER = ctx.ALLOW_PUSHES_AFTER
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -300,7 +301,8 @@ export const createApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: pushMsgItemLogger,
-    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
+    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
+    ALLOW_PUSHES_AFTER
   })
 
   return {
