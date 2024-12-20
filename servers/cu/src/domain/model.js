@@ -411,7 +411,15 @@ export const evaluationSchema = z.object({
   evaluatedAt: z.preprocess(
     (
       arg
-    ) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : arg),
+    ) => {
+      // typeof arg === 'string' || arg instanceof Date ? new Date(arg + 0) : arg
+
+      if (arg instanceof Date) return arg
+      if (typeof arg === 'string') try { arg = parseInt(arg) } catch {}
+      if (typeof arg === 'number') return new Date(arg)
+
+      return arg
+    },
     z.date()
   ),
   /**
