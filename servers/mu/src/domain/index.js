@@ -26,6 +26,7 @@ import { stopMonitorProcessWith } from './api/stopMonitorProcess.js'
 import { sendDataItemWith } from './api/sendDataItem.js'
 import { sendAssignWith } from './api/sendAssign.js'
 import { processAssignWith } from './api/processAssign.js'
+import { pushMsgWith } from './api/pushMsg.js'
 
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
@@ -293,6 +294,14 @@ export const createApis = async (ctx) => {
 
   const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL, DISABLE_TRACE: ctx.DISABLE_TRACE }))
 
+  const pushMsgItemLogger = logger.child('pushMsg')
+  const pushMsg = pushMsgWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
+    crank,
+    logger: pushMsgItemLogger,
+  })
+
   return {
     metrics,
     sendDataItem,
@@ -300,6 +309,7 @@ export const createApis = async (ctx) => {
     stopMonitorProcess,
     sendAssign,
     fetchCron,
+    pushMsg,
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
