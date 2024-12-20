@@ -2,7 +2,6 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
-import { graphqlReturnSchema } from '../dal.js'
 
 export function pushMsgWith ({
   selectNode,
@@ -10,6 +9,7 @@ export function pushMsgWith ({
   fetchTransactions,
   crank,
   logger,
+  ALLOW_PUSHES_AFTER
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
@@ -22,9 +22,8 @@ export function pushMsgWith ({
       })
       .chain(res => {
         if(res?.data?.transactions?.edges?.length >= 1) {
-          if(res.data.transactions.edges[0].block?.timestamp) {
-            const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-            if (res.data.transactions.edges[0].block.timestamp >= oneDayAgo) {
+          if(res.data.transactions.edges[0].block?.height) {
+            if (res.data.transactions.edges[0].block.height >= ALLOW_PUSHES_AFTER) {
               return Resolved(ctx)
             } 
           }
