@@ -11,7 +11,7 @@ import AsyncLock from 'async-lock'
 
 import { isEarlierThan, isEqualTo, isJsonString, isLaterThan, maybeParseInt, parseTags } from '../domain/utils.js'
 import { processSchema } from '../domain/model.js'
-import { PROCESSES_TABLE, CHECKPOINTS_TABLE, CHECKPOINT_FILES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './sqlite.js'
+import { PROCESSES_TABLE, CHECKPOINTS_TABLE, CHECKPOINT_FILES_TABLE, COLLATION_SEQUENCE_MIN_CHAR } from './db.js'
 import { timer } from './metrics.js'
 
 const gunzipP = promisify(gunzip)
@@ -519,7 +519,7 @@ export function findRecordCheckpointBeforeWith ({ db }) {
         SELECT *
         FROM ${CHECKPOINTS_TABLE}
         WHERE
-          processId = ? AND timestamp < ?
+          "processId" = ? AND timestamp < ?
         ORDER BY timestamp DESC
         LIMIT 5;
       `,
@@ -573,7 +573,7 @@ export function writeCheckpointRecordWith ({ db }) {
     return {
       sql: `
         INSERT OR IGNORE INTO ${CHECKPOINTS_TABLE}
-        (id, processId, timestamp, ordinate, cron, memory, evaluation)
+        (id, "processId", timestamp, ordinate, cron, memory, evaluation)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       parameters: [
@@ -617,7 +617,7 @@ export function findFileCheckpointBeforeWith ({ db }) {
       sql: `
         SELECT *
         FROM ${CHECKPOINT_FILES_TABLE}
-        WHERE processId = ?;
+        WHERE "processId" = ?;
       `,
       parameters: [processId]
     }
@@ -679,7 +679,7 @@ export function writeFileCheckpointRecordWith ({ db }) {
     return {
       sql: `
         INSERT OR REPLACE INTO ${CHECKPOINT_FILES_TABLE}
-        (id, processId, timestamp, ordinate, cron, file, evaluation, cachedAt)
+        (id, "processId", timestamp, ordinate, cron, file, evaluation, "cachedAt")
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       parameters: [

@@ -14,8 +14,8 @@ import { fromPromise } from 'hyper-async'
 import lt from 'long-timeout'
 
 // Precanned clients to use for OOTB apis
+import * as DbClient from './effects/db.js'
 import * as ArweaveClient from './effects/arweave.js'
-import * as SqliteClient from './effects/sqlite.js'
 import * as AoSuClient from './effects/ao-su.js'
 import * as WasmClient from './effects/wasm.js'
 import * as AoProcessClient from './effects/ao-process.js'
@@ -77,8 +77,7 @@ export const createApis = async (ctx) => {
     cacheKeyFn: ({ processId }) => processId
   })
 
-  const DB_URL = `${ctx.DB_URL}.sqlite`
-  const sqlite = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true })
+  const db = await DbClient.createDbClient({ url: ctx.DB_URL, bootstrap: true })
 
   const BROADCAST = 'workers'
   const workerBroadcast = new BroadcastChannel(BROADCAST).unref()
@@ -98,7 +97,7 @@ export const createApis = async (ctx) => {
           ARWEAVE_URL: ctx.ARWEAVE_URL,
           GRAPHQL_URL: ctx.GRAPHQL_URL,
           CHECKPOINT_GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL,
-          DB_URL,
+          DB_URL: ctx.DB_URL,
           id: workerId,
           MODE: ctx.MODE,
           LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
@@ -219,9 +218,9 @@ export const createApis = async (ctx) => {
     hashWasmMemory: WasmClient.hashWasmMemoryWith({ logger: ctx.logger }),
     buildAndSignDataItem: ArweaveClient.buildAndSignDataItemWith({ WALLET: ctx.WALLET }),
     uploadDataItem: ArweaveClient.uploadDataItemWith({ UPLOADER_URL: ctx.UPLOADER_URL, fetch: ctx.fetch, logger: ctx.logger }),
-    writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({ db: sqlite }),
+    writeCheckpointRecord: AoProcessClient.writeCheckpointRecordWith({ db }),
     writeFileCheckpointMemory,
-    writeFileCheckpointRecord: AoProcessClient.writeFileCheckpointRecordWith({ db: sqlite }),
+    writeFileCheckpointRecord: AoProcessClient.writeFileCheckpointRecordWith({ db }),
     logger: ctx.logger,
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
@@ -307,14 +306,14 @@ export const createApis = async (ctx) => {
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
     isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
-    findProcess: AoProcessClient.findProcessWith({ db: sqlite, logger }),
+    findProcess: AoProcessClient.findProcessWith({ db, logger }),
     findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       readProcessMemoryFile,
       readFileCheckpointMemory,
-      findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db: sqlite }),
-      findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db: sqlite }),
+      findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db }),
+      findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db }),
       address,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
@@ -331,14 +330,14 @@ export const createApis = async (ctx) => {
     }),
     evaluationCounter,
     // gasCounter,
-    saveProcess: AoProcessClient.saveProcessWith({ db: sqlite, logger }),
-    findEvaluation: AoEvaluationClient.findEvaluationWith({ db: sqlite, logger }),
-    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db: sqlite, logger }),
-    findBlocks: AoBlockClient.findBlocksWith({ db: sqlite, logger }),
-    saveBlocks: AoBlockClient.saveBlocksWith({ db: sqlite, logger }),
+    saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
+    findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
+    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
+    findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
+    saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
     loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, pageSize: 90, logger }),
-    findModule: AoModuleClient.findModuleWith({ db: sqlite, logger }),
-    saveModule: AoModuleClient.saveModuleWith({ db: sqlite, logger }),
+    findModule: AoModuleClient.findModuleWith({ db, logger }),
+    saveModule: AoModuleClient.saveModuleWith({ db, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
       loadWasmModule,
       evaluateWith: (prep) => primaryWorkQueue.add(() =>
@@ -362,7 +361,7 @@ export const createApis = async (ctx) => {
       ),
       logger
     }),
-    findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db: sqlite, logger }),
+    findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),
@@ -450,13 +449,13 @@ export const createApis = async (ctx) => {
   const readCronResultsLogger = ctx.logger.child('readCronResults')
   const readCronResults = readCronResultsWith({
     ...sharedDeps(readCronResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readCronResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readCronResultsLogger })
   })
 
   const readResultsLogger = ctx.logger.child('readResults')
   const readResults = readResultsWith({
     ...sharedDeps(readResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db: sqlite, logger: readResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readResultsLogger })
   })
 
   let checkpointP
