@@ -17,32 +17,32 @@
     "@permaweb/weavedrive": "^0.0.18",
     "arweave": "^1.15.5",
     "async-lock": "^1.4.1",
-    "better-sqlite3": "^11.5.0",
+    "better-sqlite3": "^11.7.0",
     "bytes": "^3.1.2",
     "cors": "^2.8.5",
-    "dataloader": "^2.2.2",
-    "dotenv": "^16.4.5",
+    "dataloader": "^2.2.3",
+    "dotenv": "^16.4.7",
     "fast-glob": "^3.3.2",
-    "fastify": "^5.1.0",
+    "fastify": "^5.2.0",
     "helmet": "^8.0.0",
     "hyper-async": "^1.1.2",
     "keccak": "^3.0.4",
     "long-timeout": "^0.1.1",
     "lru-cache": "^11.0.2",
     "ms": "^2.1.3",
-    "opossum": "^8.3.0",
-    "p-map": "^7.0.2",
+    "opossum": "^8.4.0",
+    "p-map": "^7.0.3",
     "p-queue": "^8.0.1",
     "prom-client": "^15.1.3",
     "ramda": "^0.30.1",
-    "undici": "^6.20.1",
+    "undici": "^7.2.0",
     "warp-arbundles": "^1.0.4",
-    "winston": "^3.16.0",
+    "winston": "^3.17.0",
     "workerpool": "^9.2.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.9"
   },
   "engines": {
     "node": ">=18"
