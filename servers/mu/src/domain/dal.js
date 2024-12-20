@@ -72,6 +72,14 @@ export const resultSchema = z.function()
     )
   )
 
+export const graphqlReturnSchema = z.function()
+  .args(
+    z.array(),
+  )
+  .returns(
+    z.any()
+  )
+
 /**
  * fetchCron
  * Given a process and a cursor, fetch the cron from the CU

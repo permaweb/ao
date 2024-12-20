@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto'
 
 const withPushRoute = (app) => {
   app.post(
-    '/push/:processId/:id',
+    '/push/:id/:number',
     compose(
       withMiddleware,
       withMetrics(),
@@ -14,13 +14,20 @@ const withPushRoute = (app) => {
         const {
           logger: _logger,
           domain: { apis: { pushMsg } },
-          params: { processId, id }
+          params: { id, number },
+          query: {
+            'process-id': processId
+          }
         } = req
 
         const logger = _logger.child('POST_push')
         const logId = randomBytes(8).toString('hex')
 
-        await of({ tx: { id, processId }, logId, messageId: id })
+        if (isNaN(Number(number))) {
+          return res.status(400).send({ error: `'number' parameter must be a valid number` });
+        }
+
+        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id })
           .chain(pushMsg)
           .bimap(
             (e) => {
