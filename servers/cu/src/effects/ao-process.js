@@ -1350,12 +1350,6 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     // cache.set(processId, { Memory: zipped, evaluation })
     cache.set(processId, { Memory, evaluation })
 
-    /**
-     *  @deprecated
-     *  We are no longer creating checkpoints based on eval counts. Rather, we use a gas-based checkpoint system
-    **/
-    // if (!evalCount || !EAGER_CHECKPOINT_THRESHOLD || evalCount < EAGER_CHECKPOINT_THRESHOLD) return
-
     if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
     /**
      * Eagerly create the Checkpoint on the next event queue drain

@@ -117,7 +117,6 @@ const CONFIG_ENVS = {
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('30m'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
-    EAGER_CHECKPOINT_THRESHOLD: process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute. After 2 hours, this process used
@@ -167,7 +166,6 @@ const CONFIG_ENVS = {
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('30m'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false', // TODO: disabled by default for now. Enable by default later
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
-    EAGER_CHECKPOINT_THRESHOLD: process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute by adding and clearing a table.

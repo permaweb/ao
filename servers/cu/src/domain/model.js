@@ -97,13 +97,6 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
-   * @deprecated
-   * If an evaluation stream evaluates this amount of messages,
-   * then it will immediately create a Checkpoint at the end of the
-   * evaluation stream
-   */
-  EAGER_CHECKPOINT_THRESHOLD: positiveIntSchema,
-  /**
    * If a process uses this amount of
    * gas, then it will immediately create a Checkpoint at the end of the
    * evaluation stream.
