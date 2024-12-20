@@ -69,6 +69,85 @@ function isWalletWith ({
   }
 }
 
+
+/**
+ * @name fetchTransactionDetails
+ * Fetches transaction details using the provided GraphQL query
+ * from the Arweave search endpoint.
+ *
+ * @param {string[]} ids - The list of transaction IDs to query.
+ * @param {function} fetch - The fetch implementation to use for HTTP requests.
+ * @returns {Promise<object>} The GraphQL query result.
+ */
+function fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) {
+  return async (ids) => {
+    const query = `
+      query {
+        transactions(ids: ${JSON.stringify(ids)}) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              anchor
+              signature
+              recipient
+              block {
+                timestamp
+              }
+              owner {
+                address
+                key
+              }
+              fee {
+                winston
+                ar
+              }
+              quantity {
+                winston
+                ar
+              }
+              data {
+                size
+                type
+              }
+              tags {
+                name
+                value
+              }
+              block {
+                id
+                timestamp
+                height
+                previous
+              }
+              parent {
+                id
+              }
+            }
+          }
+        }
+      }
+    `;
+  
+    const response = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+  
+    if (!response.ok) {
+      throw new Error(`Failed to fetch transaction details: ${response.statusText}`);
+    }
+  
+    return response.json();
+  } 
+}
+
+
 export default {
-  isWalletWith
+  isWalletWith,
+  fetchTransactionDetailsWith
 }
