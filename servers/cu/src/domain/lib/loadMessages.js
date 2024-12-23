@@ -369,7 +369,7 @@ function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   }
 }
 
-export function maybePrependProcessMessage (ctx, logger) {
+export function maybePrependProcessMessage (ctx, logger, loadTransactionData) {
   return async function * ($messages) {
     const isColdStart = isNil(ctx.from)
 
@@ -405,6 +405,15 @@ export function maybePrependProcessMessage (ctx, logger) {
        */
       if (done || (parseTags(value.message.Tags).Type !== 'Process') || value.message.Cron) {
         logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
+
+        /**
+         * data for a process can potentially be very large, and it's only needed
+         * as part of the very first process message sent to the process (aka. Bootloader).
+         *
+         * So in lieu of caching the process data, we fetch it once here, on cold start,
+         */
+        const processData = await loadTransactionData(ctx.id).then(res => res.text())
+
         yield {
           /**
            * Ensure the noSave flag is set, so evaluation does not persist
@@ -416,7 +425,7 @@ export function maybePrependProcessMessage (ctx, logger) {
           message: {
             Id: ctx.id,
             Signature: ctx.signature,
-            Data: ctx.data,
+            Data: processData,
             Owner: ctx.owner,
             /**
              * the target of the process message is itself
@@ -484,7 +493,7 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
+function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, loadTransactionData, saveBlocks, logger }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
 
   const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
@@ -697,7 +706,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
     .map($messages => {
       return composeStreams(
         $messages,
-        Transform.from(maybePrependProcessMessage(ctx, logger))
+        Transform.from(maybePrependProcessMessage(ctx, logger, loadTransactionData))
       )
     })
     .map(messages => ({ messages }))

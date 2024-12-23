@@ -420,6 +420,13 @@ export function saveProcessWith ({ db }) {
   return (process) => {
     return of(process)
       /**
+       * The data for the process could be very large, so we do not persist
+       * it, and instead hydrate it on the process message later, if needed.
+       */
+      .map(evolve({
+        data: () => null
+      }))
+      /**
        * Ensure the expected shape before writing to the db
        */
       .map(processDocSchema.parse)

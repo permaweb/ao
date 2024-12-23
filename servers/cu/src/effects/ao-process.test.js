@@ -134,7 +134,7 @@ describe('ao-process', () => {
               assert.deepStrictEqual(parameters, [
                 'process-123',
                 'sig-123',
-                'data-123',
+                null, // data is nullified
                 null,
                 JSON.stringify({ address: 'owner-123', key: 'key-123' }),
                 JSON.stringify([{ name: 'foo', value: 'bar' }]),
