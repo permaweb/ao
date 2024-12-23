@@ -18,7 +18,11 @@ export const createApis = async (ctx) => {
       CHECKPOINT_GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL
     }),
     bootstrapWasmInstance: WasmClient.bootstrapWasmInstanceWith(),
-    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger: ctx.logger }),
+    saveEvaluation: AoEvaluationClient.saveEvaluationWith({
+      DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
+      db,
+      logger: ctx.logger
+    }),
     ARWEAVE_URL: ctx.ARWEAVE_URL,
     logger: ctx.logger
   })

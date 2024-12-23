@@ -249,6 +249,38 @@ describe('ao-evaluation', () => {
         evaluatedAt
       })
     })
+
+    test('noop insert evaluation if DISABLE_PROCESS_EVALUATION_CACHE', async () => {
+      const saveEvaluation = saveEvaluationSchema.implement(
+        saveEvaluationWith({
+          DISABLE_PROCESS_EVALUATION_CACHE: true,
+          db: {
+            transaction: async (statements) => {
+              assert.equal(statements.length, 1)
+              const [{ sql: messageDocSql }] = statements
+              assert.ok(messageDocSql.trim().startsWith(`INSERT OR IGNORE INTO ${MESSAGES_TABLE}`))
+
+              return Promise.resolve('process-123,1702677252111,1')
+            }
+          },
+          logger
+        })
+      )
+
+      await saveEvaluation({
+        isAssignment: false,
+        deepHash: 'deepHash-123',
+        timestamp: 1702677252111,
+        nonce: '1',
+        epoch: 0,
+        ordinate: 1,
+        blockHeight: 1234,
+        processId: 'process-123',
+        messageId: 'message-123',
+        output: { Messages: [{ foo: 'bar' }], Memory: 'foo' },
+        evaluatedAt
+      })
+    })
   })
 
   describe('findEvaluations', () => {
