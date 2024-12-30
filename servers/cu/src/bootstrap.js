@@ -101,7 +101,8 @@ export const createApis = async (ctx) => {
           id: workerId,
           MODE: ctx.MODE,
           LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
-          DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL
+          DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL,
+          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE
         }
       }
     }

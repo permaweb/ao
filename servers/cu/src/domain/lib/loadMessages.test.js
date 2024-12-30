@@ -475,6 +475,11 @@ describe('loadMessages', () => {
       }
     }
 
+    const loadTransactionData = async (id) => {
+      assert.equal(id, 'process-123')
+      return new Response('process data')
+    }
+
     describe('should prepend the process message on cold start', () => {
       test('if first stream message is not the process', async () => {
         const $messages = Readable.from([
@@ -486,13 +491,14 @@ describe('loadMessages', () => {
             }
           }
         ])
-        const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+        const $merged = maybePrependProcessMessage(ctx, logger, loadTransactionData)($messages)
 
         const results = []
         for await (const m of $merged) results.push(m)
 
         assert.equal(results.length, 2)
         assert.equal(results[0].name, 'Process Message process-123')
+        assert.equal(results[0].message.Data, 'process data')
       })
 
       test('if the first stream message is a cron message', async () => {
@@ -506,24 +512,26 @@ describe('loadMessages', () => {
             }
           }
         ])
-        const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+        const $merged = maybePrependProcessMessage(ctx, logger, loadTransactionData)($messages)
 
         const results = []
         for await (const m of $merged) results.push(m)
 
         assert.equal(results.length, 2)
         assert.equal(results[0].name, 'Process Message process-123')
+        assert.equal(results[0].message.Data, 'process data')
       })
 
       test('if there are no messages', async () => {
         const $messages = Readable.from([])
-        const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+        const $merged = maybePrependProcessMessage(ctx, logger, loadTransactionData)($messages)
 
         const results = []
         for await (const m of $merged) results.push(m)
 
         assert.equal(results.length, 1)
         assert.equal(results[0].name, 'Process Message process-123')
+        assert.equal(results[0].message.Data, 'process data')
       })
     })
 
@@ -546,7 +554,7 @@ describe('loadMessages', () => {
           }
         }
       ])
-      const $merged = maybePrependProcessMessage(ctx, logger)($messages)
+      const $merged = maybePrependProcessMessage(ctx, logger, loadTransactionData)($messages)
 
       const results = []
       for await (const m of $merged) results.push(m)
