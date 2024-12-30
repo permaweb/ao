@@ -30,7 +30,7 @@ describe('pushMsgWith', () => {
                 transactions: {
                   edges: [
                     {
-                      block: { height: 1572105 }
+                      node: { block: { height: 1572105 } }
                     }
                   ]
                 }

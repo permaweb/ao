@@ -22,8 +22,8 @@ export function pushMsgWith ({
       })
       .chain(res => {
         if(res?.data?.transactions?.edges?.length >= 1) {
-          if(res.data.transactions.edges[0].block?.height) {
-            if (res.data.transactions.edges[0].block.height >= ALLOW_PUSHES_AFTER) {
+          if(res.data.transactions.edges[0].node?.block?.height) {
+            if (res.data.transactions.edges[0].node.block.height >= ALLOW_PUSHES_AFTER) {
               return Resolved(ctx)
             } 
           }
