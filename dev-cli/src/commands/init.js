@@ -19,7 +19,7 @@ export async function init ({ lang = 'lua' }, name) {
 
 export const command = new Command()
   .description('Create an ao Process Source Project')
-  .usage('-l cpp <my-project-name>')
+  .usage('-l c <my-project-name>')
   .option(
     '-l, --lang <language:string>',
     'The starter to use. Defaults to Lua. Options are "lua" and "c"'
