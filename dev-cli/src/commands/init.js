@@ -22,7 +22,7 @@ export const command = new Command()
   .usage('-l cpp <my-project-name>')
   .option(
     '-l, --lang <language:string>',
-    'The starter to use. Defaults to Lua. Options are "lua" and "cpp"'
+    'The starter to use. Defaults to Lua. Options are "lua" and "c"'
   )
   .arguments('<name:string>')
   .action(init)
