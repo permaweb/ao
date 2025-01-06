@@ -3,11 +3,22 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [TASKS_TABLE, TRACES_TABLE, CRON_PROCESSES_TABLE] = [
+export const [TASKS_TABLE, TRACES_TABLE, CRON_PROCESSES_TABLE, MESSAGES_TABLE] = [
   'tasks',
   'traces',
-  'cron_processes'
+  'cron_processes',
+  'messages'
 ]
+
+const createMessages = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${MESSAGES_TABLE}(
+    id TEXT PRIMARY KEY,
+    timestamp INTEGER,
+    data TEXT,
+    retries INTEGER
+  ) WITHOUT ROWID;`
+).run()
+
 const createTasks = async (db) => db.prepare(
   `CREATE TABLE IF NOT EXISTS ${TASKS_TABLE}(
     id TEXT PRIMARY KEY,
@@ -72,6 +83,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       await Promise.resolve()
         .then(() => createTasks(db))
         .then(() => createCronProcesses(db))
+        .then(() => createMessages(db))
     }
     if (type === 'traces') {
       await Promise.resolve()

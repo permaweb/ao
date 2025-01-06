@@ -1,5 +1,5 @@
 import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
-import { identity } from 'ramda'
+import { compose, head, identity, isEmpty, prop, propOr } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { writeMessageTxWith } from '../lib/write-message-tx.js'
@@ -8,6 +8,7 @@ import { parseDataItemWith } from '../lib/parse-data-item.js'
 import { verifyParsedDataItemWith } from '../lib/verify-parsed-data-item.js'
 import { writeProcessTxWith } from '../lib/write-process-tx.js'
 import { locateProcessSchema } from '../dal.js'
+import { MESSAGES_TABLE } from '../clients/sqlite.js'
 
 /**
  * Forward along the DataItem to the SU,
@@ -26,7 +27,10 @@ export function sendDataItemWith ({
   logger,
   fetchSchedulerProcess,
   writeDataItemArweave,
-  spawnPushEnabled
+  spawnPushEnabled,
+  db,
+  GET_RESULT_MAX_RETRIES,
+  GET_RESULT_RETRY_DELAY
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -34,6 +38,7 @@ export function sendDataItemWith ({
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
   const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
+  const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
 
   const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
 
@@ -58,37 +63,68 @@ export function sendDataItemWith ({
           },
           (res) => Resolved(res)
         )
-        .map(res => ({
-          ...res,
-          /**
-             * An opaque method to fetch the result of the message just forwarded
-             * and then crank its results
-             */
-          crank: () => of({ ...res, initialTxId: res.tx.id })
-            .chain(getCuAddress)
-            .chain(pullResult)
-            .chain((ctx) => {
-              const { msgs, spawns, assigns, initialTxId, messageId: parentId } = ctx
-              return crank({
-                msgs,
-                spawns,
-                assigns,
-                initialTxId,
-                parentId
-              })
-            })
-            .bimap(
-              (res) => {
-                logger({ log: 'Failed to push messages', end: true }, ctx)
-                return res
-              },
-              (res) => {
-                logger({ log: 'Pushing complete', end: true }, ctx)
-                return res
-              }
-            )
-        }))
-    )
+        .map(res => {
+          return {
+            ...res,
+            /**
+               * An opaque method to fetch the result of the message just forwarded
+               * and then crank its results
+               */
+            crank: () => {
+              return of({ ...res, initialTxId: res.tx.id, pullResultAttempts: 0 })
+                .chain(fromPromise(insertMessage))
+                .chain(fromPromise(getResult))
+                .chain(fromPromise(deleteMessage))
+                .chain((ctx) => {
+                  const { msgs, spawns, assigns, initialTxId, messageId: parentId } = ctx
+                  return crank({
+                    msgs,
+                    spawns,
+                    assigns,
+                    initialTxId,
+                    parentId
+                  })
+                })
+                .bimap(
+                  (res) => {
+                    logger({ log: 'Failed to push messages', end: true }, ctx)
+                    return res
+                  },
+                  (res) => {
+                    logger({ log: 'Pushing complete', end: true }, ctx)
+                    return res
+                  }
+                )
+            }
+          }
+        }
+        ))
+
+  async function insertMessage (ctx) {
+    const query = {
+      sql: `
+          INSERT OR IGNORE INTO ${MESSAGES_TABLE} (
+            id,
+            timestamp,
+            data,
+            retries
+          ) VALUES (?, ?, ?, 0)
+        `,
+      parameters: [ctx.logId, new Date().getTime(), JSON.stringify(ctx)]
+    }
+    return await db.run(query).then(() => ctx)
+  }
+
+  async function deleteMessage (ctx) {
+    const query = {
+      sql: `
+          DELETE FROM ${MESSAGES_TABLE}
+          WHERE id = ?
+        `,
+      parameters: [ctx.logId]
+    }
+    return await db.run(query).then(() => ctx)
+  }
 
   /**
    * If the Data Item is a Process, we push an Assignment
@@ -180,9 +216,6 @@ export function sendDataItemWith ({
   return (ctx) => {
     return of(ctx)
       .chain(parseDataItem)
-      .map((ctx) => {
-        return ctx
-      })
       .chain((ctx) =>
         verifyParsedDataItem(ctx.dataItem)
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
@@ -205,5 +238,135 @@ export function sendDataItemWith ({
             identity
           )
       )
+  }
+}
+
+function getResultWith ({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY }) {
+  const getCuAddress = getCuAddressWith({ selectNode, logger })
+  const pullResult = pullResultWith({ fetchResult, logger })
+
+  return async function getResult (ctx) {
+    const attempts = ctx.pullResultAttempts
+    return of(ctx)
+      .chain(getCuAddress)
+      .chain(pullResult)
+      .bichain(
+        fromPromise(async (_err) => {
+          if (attempts < GET_RESULT_MAX_RETRIES) {
+            ctx.pullResultAttempts++
+            await new Promise(resolve => setTimeout(resolve, GET_RESULT_RETRY_DELAY * (2 ** attempts)))
+            return await getResult(ctx)
+          }
+          throw new Error(`GetResult ran out of retries (${GET_RESULT_MAX_RETRIES}). Bubbling error...`)
+        }),
+        Resolved
+      )
+      .toPromise()
+  }
+}
+
+function selectMessageWith ({ db }) {
+  return async () => {
+    const timestamp = new Date().getTime()
+    const query = {
+      sql: `SELECT * FROM ${MESSAGES_TABLE} WHERE timestamp < ? ORDER BY timestamp ASC LIMIT 1`,
+      parameters: [timestamp]
+    }
+    return await db.query(query)
+  }
+}
+
+function deleteMessageWith ({ db }) {
+  return async (logId) => {
+    const query = {
+      sql: `
+        DELETE FROM ${MESSAGES_TABLE}
+        WHERE id = ?
+      `,
+      parameters: [logId]
+    }
+
+    return await db.run(query).then(() => logId)
+  }
+}
+
+function updateMessageTimestampWith ({ db, logger, MESSAGE_RECOVERY_MAX_RETRIES, MESSAGE_RECOVERY_RETRY_DELAY }) {
+  return async (logId, retries) => {
+    const deleteQuery = {
+      sql: `DELETE FROM ${MESSAGES_TABLE} WHERE id = ?`,
+      parameters: [logId]
+    }
+    const updateOffset = MESSAGE_RECOVERY_RETRY_DELAY * (2 ** retries)
+    const updateQuery = {
+      sql: `UPDATE OR IGNORE ${MESSAGES_TABLE} SET timestamp = ?, retries = retries + 1 WHERE id = ?`,
+      parameters: [new Date().getTime() + updateOffset, logId]
+    }
+    let query = updateQuery
+    if (retries > MESSAGE_RECOVERY_MAX_RETRIES) {
+      query = deleteQuery
+      logger({ log: `Message with logId ${logId} has ran out of retries and been deleted`, end: true }, { logId })
+    }
+
+    return await db.run(query).catch((e) => {
+      console.log('error', e)
+      return e
+    }).then(() => logId)
+  }
+}
+
+export function startMessageRecoveryCronWith ({ selectNode, fetchResult, logger, db, cron, crank, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY, MESSAGE_RECOVERY_MAX_RETRIES, MESSAGE_RECOVERY_RETRY_DELAY }) {
+  const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
+  const selectMessage = selectMessageWith({ db })
+  const deleteMessage = deleteMessageWith({ db })
+  const updateMessageTimestamp = updateMessageTimestampWith({ db, logger, MESSAGE_RECOVERY_MAX_RETRIES, MESSAGE_RECOVERY_RETRY_DELAY })
+  return async () => {
+    let ct = null
+    let isJobRunning = false
+    ct = cron.schedule('*/10 * * * * *', async () => {
+      if (!isJobRunning) {
+        isJobRunning = true
+        ct.stop() // pause cron while recovering messages
+        await selectMessage()
+          .then((res) => ({ ctx: compose(JSON.parse, propOr('{}', 'data'), head)(res), retries: compose(prop('retries'), head)(res) }))
+          .then(({ ctx, retries }) => {
+            if (isEmpty(ctx)) {
+              isJobRunning = false
+              return
+            }
+            const logId = ctx.logId
+            logger({ log: `Attempting to recover message, retry ${retries} of ${MESSAGE_RECOVERY_MAX_RETRIES}` }, { logId })
+            return getResult(ctx)
+              .then((res) => {
+                const { msgs, spawns, assigns, initialTxId, messageId: parentId } = res
+                return crank({
+                  msgs,
+                  spawns,
+                  assigns,
+                  initialTxId,
+                  parentId
+                })
+              })
+              .then(() => {
+                logger({ log: 'Successfully pushed message results', end: true }, { logId })
+                return deleteMessage(logId)
+              })
+              .then(() => {
+                isJobRunning = false
+              })
+              .catch((e) => {
+                const delay = MESSAGE_RECOVERY_RETRY_DELAY * (2 ** retries)
+                logger({ log: `Error recovering message - getResult, retrying in ${delay}ms: ${e}` }, ctx)
+                updateMessageTimestamp(logId, retries)
+                isJobRunning = false
+              })
+          })
+          .catch((e) => {
+            logger({ log: `Error recovering message - selectMessage: ${e}` })
+            isJobRunning = false
+          })
+
+        ct.start() // resume cron when done recovering messages
+      }
+    })
   }
 }
