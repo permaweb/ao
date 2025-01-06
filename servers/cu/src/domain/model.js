@@ -97,6 +97,11 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: z.preprocess((val) => !!val, z.boolean()),
   /**
+   * Whether to disable caching process evaluations, useful when operating as
+   * a RU
+   */
+  DISABLE_PROCESS_EVALUATION_CACHE: z.preprocess((val) => !!val, z.boolean()),
+  /**
    * If a process uses this amount of
    * gas, then it will immediately create a Checkpoint at the end of the
    * evaluation stream.

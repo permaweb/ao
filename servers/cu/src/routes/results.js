@@ -1,7 +1,7 @@
 import { always, compose, identity } from 'ramda'
-
-import { withMetrics, withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
 import { z } from 'zod'
+
+import { withMetrics, withMiddleware, withProcessRestrictionFromPath, withCuMode } from './middleware/index.js'
 
 /**
  * TODO: could be moved into a route utils or middleware
@@ -47,8 +47,9 @@ export const withResultsRoutes = app => {
     '/results/:processId',
     compose(
       withMiddleware,
-      withMetrics({ tracesFrom: (req) => ({ process_id: req.params.processId }) }),
+      withCuMode,
       withProcessRestrictionFromPath,
+      withMetrics({ tracesFrom: (req) => ({ process_id: req.params.processId }) }),
       always(async (req, res) => {
         const {
           params: { processId },

@@ -30,6 +30,7 @@ export const server = pipeP(
      */
     const server = app.listen({ port: config.port, host: '0.0.0.0' }, () => {
       logger(`Server is running on http://localhost:${config.port}`)
+      logger(`Server in unit mode: "${config.UNIT_MODE}"`)
     })
 
     const memMonitor = setInterval(async () => {

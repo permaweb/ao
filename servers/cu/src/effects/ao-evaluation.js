@@ -96,7 +96,7 @@ export function findEvaluationWith ({ db }) {
   }
 }
 
-export function saveEvaluationWith ({ db, logger: _logger }) {
+export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logger: _logger }) {
   const toEvaluationDoc = pipe(
     converge(
       unapply(mergeAll),
@@ -138,8 +138,10 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
 
   function createQuery (evaluation) {
     const evalDoc = toEvaluationDoc(evaluation)
-    const statements = [
-      {
+    const statements = []
+
+    if (!DISABLE_PROCESS_EVALUATION_CACHE) {
+      statements.push({
         sql: `
           INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
             (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
@@ -160,8 +162,8 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
           evalDoc.evaluatedAt.getTime(),
           JSON.stringify(evalDoc.output)
         ]
-      }
-    ]
+      })
+    }
 
     /**
       * Cron messages are not needed to be saved in the messages table
