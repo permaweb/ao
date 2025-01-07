@@ -252,14 +252,23 @@ export function findMessageBeforeWith ({ db }) {
         FROM ${MESSAGES_TABLE}
         WHERE
           id = ?
-          AND "processId" = ?
-          AND seq < ?
+          AND processId = ?
+          AND (
+            CAST(substr(seq, instr(seq, ':') + 1) as UNSIGNED) < ?
+            OR
+              (
+                CAST(SUBSTR(seq, 1, INSTR(seq, ':') - 1) AS INTEGER) = ?
+                AND CAST(SUBSTR(seq, INSTR(seq, ':') + 1) AS INTEGER) < ?
+              )
+          )
         LIMIT 1;
       `,
       parameters: [
         createMessageId({ messageId, deepHash, isAssignment }),
         processId,
-        `${epoch}:${nonce}` // 0:13
+        epoch,
+        epoch,
+        nonce
       ]
     }
   }

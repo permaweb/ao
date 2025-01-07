@@ -382,7 +382,9 @@ describe('ao-evaluation', () => {
               assert.deepStrictEqual(parameters, [
                 'deepHash-123',
                 'process-123',
-                '0:3'
+                0,
+                0,
+                3
               ])
 
               const mockAssigment = {
@@ -418,7 +420,9 @@ describe('ao-evaluation', () => {
                 assert.deepStrictEqual(parameters, [
                   'message-123',
                   'process-123',
-                  '0:3'
+                  0,
+                  0,
+                  3
                 ])
 
                 const mockAssigment = {
@@ -453,7 +457,9 @@ describe('ao-evaluation', () => {
                 assert.deepStrictEqual(parameters, [
                   'message-123',
                   'process-123',
-                  '0:3'
+                  0,
+                  0,
+                  3
                 ])
 
                 const mockAssigment = {
