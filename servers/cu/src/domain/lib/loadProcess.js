@@ -65,9 +65,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
 
     return findEvaluation({
       processId: ctx.id,
-      to: ctx.to,
-      ordinate: ctx.ordinate,
-      cron: ctx.cron
+      messageId: ctx.messageId
     })
       .map((evaluation) => {
         logger(

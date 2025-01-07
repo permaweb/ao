@@ -99,9 +99,7 @@ export const evaluatorSchema = z.function()
 export const findEvaluationSchema = z.function()
   .args(z.object({
     processId: z.string(),
-    to: z.coerce.number().nullish(),
-    ordinate: z.coerce.string().nullish(),
-    cron: z.string().nullish()
+    messageId: z.string()
   }))
   .returns(z.promise(evaluationSchema))
 
