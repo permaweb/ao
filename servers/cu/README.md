@@ -73,7 +73,7 @@ There are a few environment variables that you can set. Besides
 - `DB_MODE`: Whether the database being used by the CU is embedded within the CU
   or is remote to the CU. Can be either `embedded` or `remote` (defaults to
   `embedded`)
-- `DB_URL`: the name of the embdeeded database (defaults to `ao-cache`)
+- `DB_URL`: the name of the embedded database (defaults to `ao-cache`)
 - `PROCESS_WASM_MEMORY_MAX_LIMIT`: The maximum `Memory-Limit`, in bytes,
   supported for `ao` processes (defaults to `1GB`)
 - `PROCESS_WASM_COMPUTE_MAX_LIMIT`: The maximum `Compute-Limit`, in bytes,
@@ -105,7 +105,7 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_MEMORY_CACHE_FILE_DIR`: The directory to store drained process memory
   (Defaults to the os temp directory)
 - `PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL`: The interval at which the CU
-  should Checkpoint all processes stored in it's cache. Set to `0` to disabled
+  should Checkpoint all processes stored in its cache. Set to `0` to disabled
   (defaults to `0`)
 - `PROCESS_CHECKPOINT_CREATION_THROTTLE`: The amount of time, in milliseconds,
   that the CU should wait before creating a process `Checkpoint` IFF it has
@@ -226,7 +226,7 @@ to stub, and business logic easy to unit tests for correctness.
 
 Because the contract wrapping is done by the business logic itself, it also
 ensures the stubs we use in our unit tests accurately implement the contract
-API. Thus our unit tests are simoultaneously contract tests.
+API. Thus our unit tests are simultaneously contract tests.
 
 #### Driven Adapters
 
@@ -283,7 +283,7 @@ fulfill incoming requests, and egress to other `ao` Units over `HTTP(S)`.
 It will also need some sort of file system available, whether it be persistent
 or ephemeral.
 
-So in summary, this `ao` Compute Unit system requirments are:
+So in summary, this `ao` Compute Unit system requirements are:
 
 - a Containerization Environment or `node` to run the application
 - a Filesystem to store files and an embedded database
