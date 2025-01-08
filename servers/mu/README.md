@@ -48,6 +48,10 @@ There are a few environment variables that you can set:
 - `TASK_QUEUE_RETRY_DELAY`: The retry in between each attempt to process a message in the task queue.
 - `DISABLE_TRACE`: Whether or not the log tracer should be enabled. Set to any value to disable log tracing. (You must explicitly enable log tracing by setting - `DISABLE_TRACE` to `'false'`)
 - `SPAWN_PUSH_ENABLED`: If enabled, this will make the MU attempt to push messages for a spawn as per AOP 6 Boot loader https://github.com/permaweb/ao/issues/730 
+- `GET_RESULT_MAX_RETRIES`: The amount of attempts for the MU to get the result of a message from the CU.
+- `GET_RESULT_RETRY_DELAY`: The retry delay in between each attempt to get the result of a message from the CU.
+- `MESSAGE_RECOVERY_MAX_RETRIES`: The amount of attempts for the MU to recover a message from the database.
+- `MESSAGE_RECOVERY_RETRY_DELAY`: The retry delay in between each attempt to recover a message from the database.
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`

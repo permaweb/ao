@@ -23,7 +23,7 @@ import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
 import { monitorProcessWith } from './api/monitorProcess.js'
 import { stopMonitorProcessWith } from './api/stopMonitorProcess.js'
-import { sendDataItemWith } from './api/sendDataItem.js'
+import { sendDataItemWith, startMessageRecoveryCronWith } from './api/sendDataItem.js'
 import { sendAssignWith } from './api/sendAssign.js'
 import { processAssignWith } from './api/processAssign.js'
 import { pushMsgWith } from './api/pushMsg.js'
@@ -214,7 +214,10 @@ export const createApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
-    spawnPushEnabled: SPAWN_PUSH_ENABLED
+    spawnPushEnabled: SPAWN_PUSH_ENABLED,
+    db,
+    GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
+    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY
   })
 
   const sendAssignLogger = logger.child('sendAssign')
@@ -305,6 +308,20 @@ export const createApis = async (ctx) => {
     ALLOW_PUSHES_AFTER
   })
 
+  const startMessageRecoveryCronLogger = logger.child('messageRecoveryCron')
+  const startMessageRecoveryCron = startMessageRecoveryCronWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: startMessageRecoveryCronLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: startMessageRecoveryCronLogger }),
+    logger: startMessageRecoveryCronLogger,
+    db,
+    cron,
+    crank,
+    GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
+    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
+    MESSAGE_RECOVERY_MAX_RETRIES: ctx.MESSAGE_RECOVERY_MAX_RETRIES,
+    MESSAGE_RECOVERY_RETRY_DELAY: ctx.MESSAGE_RECOVERY_RETRY_DELAY
+  })
+
   return {
     metrics,
     sendDataItem,
@@ -317,7 +334,8 @@ export const createApis = async (ctx) => {
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
       getCronProcesses
-    })
+    }),
+    startMessageRecoveryCron
   }
 }
 
