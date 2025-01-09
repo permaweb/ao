@@ -31,7 +31,7 @@ export const COLLATION_SEQUENCE_MIN_CHAR = '0'
 
 export async function createDbClient ({ url, ...rest }) {
   if (url.startsWith('postgres://')) {
-    return PostgresClient.createPostgresClient({ url, ...rest })
+    return PostgresClient.createPostgresClient({ url, ssl: { rejectUnauthorized: false }, ...rest })
   }
 
   return SqliteClient.createSqliteClient({ url: `${url}.sqlite`, ...rest })
