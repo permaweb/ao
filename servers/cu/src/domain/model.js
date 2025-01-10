@@ -50,6 +50,13 @@ export const domainConfigSchema = z.object({
    */
   GRAPHQL_URL: z.string().url('GRAPHQL_URL must be a valid URL'),
   /**
+   * An array of urls for the graphql server to be used by the CU
+   * to query for block metadata from an Arweave Gateway. On retries, the urls will be cycled through.
+   *
+   * ie. ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql']
+   */
+  GRAPHQL_URLS: z.array(z.string().url('GraphQL_URLS must be a valid URL')),
+  /**
    * The url for the graphql server to be used by the CU
    * to query for process Checkpoints.
    *

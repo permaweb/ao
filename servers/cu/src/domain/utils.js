@@ -376,7 +376,7 @@ export const backoff = (
    * Recursive function that recurses with exponential backoff
    */
   const action = (retry, delay) => {
-    return Promise.resolve()
+    return Promise.resolve({ retry })
       .then(fn)
       .catch((err) => {
         // Reached max number of retries
