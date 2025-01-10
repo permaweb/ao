@@ -294,6 +294,15 @@ export const createApis = async (ctx) => {
     labelNames: ['stream_type', 'message_type', 'process_error']
   })
 
+  const pendingEvaluationCounter = MetricsClient.counterWith({})({
+    name: 'ao_process_pending_evaluations',
+    description: 'The total number of pending evaluations on a CU',
+    labelNames: ['type']
+  })
+
+  pendingEvaluationCounter.set({ type: 'primary' }, primaryWorkQueue.size)
+  pendingEvaluationCounter.set({ type: 'dry-run' }, dryRunWorkQueue.size)
+
   /**
    * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
    */
