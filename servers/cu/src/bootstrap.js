@@ -338,7 +338,7 @@ export const createApis = async (ctx) => {
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
-    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
+    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
     findModule: AoModuleClient.findModuleWith({ db, logger }),
     saveModule: AoModuleClient.saveModuleWith({ db, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({

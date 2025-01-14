@@ -102,7 +102,7 @@ export function findBlocksWith ({ db }) {
 /**
  * @typedef Env2
  * @property {fetch} fetch
- * @property {string} GRAPHQL_URL
+ * @property {string[]} GRAPHQL_URLS - An array of urls to query
  * @property {number} pageSize
  *
  * @callback LoadBlocksMeta
@@ -113,7 +113,7 @@ export function findBlocksWith ({ db }) {
  * @returns {LoadBlocksMeta}
  */
 export function loadBlocksMetaWith ({
-  fetch, GRAPHQL_URL, pageSize, logger, breakerOptions = {
+  fetch, GRAPHQL_URLS, pageSize, logger, breakerOptions = {
     timeout: 10000, // 10 seconds timeout
     errorThresholdPercentage: 50, // open circuit after 50% failures
     resetTimeout: 15000, // attempt to close circuit after 15 seconds
@@ -161,7 +161,7 @@ export function loadBlocksMetaWith ({
         return backoff(
           ({ retry }) => {
             return customFetch(
-              GRAPHQL_URL,
+              GRAPHQL_URLS,
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -182,7 +182,7 @@ export function loadBlocksMetaWith ({
                 throw new Error(`Can not communicate with gateway to retrieve block metadata: ${await strFromFetchError(e)}`)
               })
           },
-          { maxRetries: 2, delay: 300, log: logger, name: `loadBlockMeta(${JSON.stringify({ newMin: min, maxTimestamp })})` }
+          { maxRetries: 4, delay: 300, log: logger, name: `loadBlockMeta(${JSON.stringify({ newMin: min, maxTimestamp })})` }
         )
       })
       .then(async (res) => {

@@ -8,7 +8,7 @@ import { createTestLogger } from '../domain/logger.js'
 import { findBlocksSchema, loadBlocksMetaSchema, saveBlocksSchema } from '../domain/dal.js'
 import { findBlocksWith, loadBlocksMetaWith, saveBlocksWith } from './ao-block.js'
 
-const GRAPHQL_URL = globalThis.GRAPHQL_URL || ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql']
+const GRAPHQL_URLS = globalThis.GRAPHQL_URLS || ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql']
 const logger = createTestLogger({ name: 'ao-cu' })
 
 describe('ao-block', () => {
@@ -109,7 +109,7 @@ describe('ao-block', () => {
     test('load the block data across multiple pages', async () => {
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch,
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         /**
          * Weird page size, so we know we are chopping off the excess
          * from the last page, correctly
@@ -128,16 +128,16 @@ describe('ao-block', () => {
       assert.equal(res.length, uniqBy(prop('height'), res).length)
     })
 
-    test('should backoff for 3 attempts on error', async () => {
+    test('should backoff for 5 attempts on error', async () => {
       let errorCount = 0
       let errorCaught = false
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch: (url) => {
-          assert.equal(url, GRAPHQL_URL[errorCount % GRAPHQL_URL.length])
+          assert.equal(url, GRAPHQL_URLS[errorCount % GRAPHQL_URLS.length])
           errorCount++
           throw Error('Fetch error!')
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 17,
         logger
       }))
@@ -146,17 +146,17 @@ describe('ao-block', () => {
         assert.equal(e.message, 'Fetch error!')
       })
       assert.ok(errorCaught)
-      assert.equal(errorCount, 3)
+      assert.equal(errorCount, 5)
     })
 
     test('should circuit break on failure', async () => {
       let errorsCount = 0
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch: (url) => {
-          assert.equal(url, GRAPHQL_URL[errorsCount % GRAPHQL_URL.length])
+          assert.equal(url, GRAPHQL_URLS[errorsCount % GRAPHQL_URLS.length])
           throw Error('Fetch error!')
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 17,
         logger,
         breakerOptions: {
@@ -203,7 +203,7 @@ describe('ao-block', () => {
         fetch: () => {
           throw Error('Fetch error!')
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 17,
         logger,
         breakerOptions: {
@@ -257,7 +257,7 @@ describe('ao-block', () => {
             /**
              * This will cause every 3 calls to fail (25% error rate)
              */
-            ok: count % 6 < 3,
+            ok: count % 8 < 3,
             json: () => ({
               data: {
                 blocks: {
@@ -307,7 +307,7 @@ describe('ao-block', () => {
             })
           }
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 5,
         logger,
         circuitResetTimeout: 60000
