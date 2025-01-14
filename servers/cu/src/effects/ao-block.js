@@ -33,7 +33,7 @@ export function saveBlocksWith ({ db }) {
         VALUES
           ${new Array(blocks.length).fill('(?, ?, ?)').join(',\n')}
       `,
-      parameters: blocks.map(props(['height', 'height', 'timestamp']))
+      parameters: db.engine === 'sqlite' ? blocks.map(props(['height', 'height', 'timestamp'])) : blocks.map(props(['height', 'height', 'timestamp'])).flat()
     }
   }
   return (blocks) => {

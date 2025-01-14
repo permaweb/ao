@@ -245,21 +245,50 @@ export function findEvaluationsWith ({ db }) {
 
 export function findMessageBeforeWith ({ db }) {
   function createQuery ({ messageId, deepHash, isAssignment, processId, nonce, epoch }) {
+    const sqliteQuery = `
+      SELECT
+        id, seq
+      FROM ${MESSAGES_TABLE}
+      WHERE
+        id = ?
+        AND processId = ?
+        AND (
+          CAST(substr(seq, instr(seq, ':') + 1) as UNSIGNED) < ?
+          OR
+            (
+              CAST(SUBSTR(seq, 1, INSTR(seq, ':') - 1) AS INTEGER) = ?
+              AND CAST(SUBSTR(seq, INSTR(seq, ':') + 1) AS INTEGER) < ?
+            )
+        )
+      LIMIT 1;
+    `
+
+    const postgresQuery = `
+      SELECT
+        id, seq
+      FROM ${MESSAGES_TABLE}
+      WHERE
+        "id" = ?
+        AND "processId" = ?
+        AND (
+          CAST(SUBSTR(seq, POSITION(':' in seq) + 1) AS INTEGER) < ?
+          OR
+            (
+              CAST(SUBSTR(seq, 1, POSITION(':' in seq) - 1) AS INTEGER) = ?
+              AND CAST(SUBSTR(seq, POSITION(':' in seq) + 1) AS INTEGER) < ?
+            )
+        )
+      LIMIT 1;
+    `
+
     return {
-      sql: `
-        SELECT
-          id, seq
-        FROM ${MESSAGES_TABLE}
-        WHERE
-          id = ?
-          AND "processId" = ?
-          AND seq < ?
-        LIMIT 1;
-      `,
+      sql: db.engine === 'sqlite' ? sqliteQuery : postgresQuery,
       parameters: [
         createMessageId({ messageId, deepHash, isAssignment }),
         processId,
-        `${epoch}:${nonce}` // 0:13
+        epoch,
+        epoch,
+        nonce
       ]
     }
   }

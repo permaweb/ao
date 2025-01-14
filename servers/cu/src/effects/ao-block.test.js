@@ -17,6 +17,7 @@ describe('ao-block', () => {
       const findBlocks = findBlocksSchema.implement(
         findBlocksWith({
           db: {
+            engine: 'sqlite',
             query: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, [123, 456])
               return [
@@ -41,6 +42,7 @@ describe('ao-block', () => {
       const findBlocks = findBlocksSchema.implement(
         findBlocksWith({
           db: {
+            engine: 'sqlite',
             query: async ({ parameters }) => []
           }
         })
@@ -56,6 +58,7 @@ describe('ao-block', () => {
       const saveBlocks = saveBlocksSchema.implement(
         saveBlocksWith({
           db: {
+            engine: 'sqlite',
             run: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, [
                 [123, 123, 123],
@@ -74,10 +77,33 @@ describe('ao-block', () => {
       ])
     })
 
+    test('save the blocks, postgres', async () => {
+      const saveBlocks = saveBlocksSchema.implement(
+        saveBlocksWith({
+          db: {
+            engine: 'postgres',
+            run: async ({ parameters }) => {
+              assert.equal(parameters.length, 9)
+              assert.deepStrictEqual(parameters, [
+                123, 123, 123, 124, 124, 345, 125, 125, 456
+              ])
+            }
+          }
+        })
+      )
+
+      await saveBlocks([
+        { height: 123, timestamp: 123 },
+        { height: 124, timestamp: 345 },
+        { height: 125, timestamp: 456 }
+      ])
+    })
+
     test('should noop a block if it already exists the blocks', async () => {
       const saveBlocks = saveBlocksSchema.implement(
         saveBlocksWith({
           db: {
+            engine: 'sqlite',
             run: async ({ sql }) => {
               assert.ok(sql.trim().startsWith('INSERT OR IGNORE'))
             }
@@ -96,6 +122,7 @@ describe('ao-block', () => {
       const saveBlocks = saveBlocksSchema.implement(
         saveBlocksWith({
           db: {
+            engine: 'sqlite',
             run: async () => assert.fail('should not be called if no blocks')
           }
         })
