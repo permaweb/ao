@@ -72,9 +72,15 @@ end
 local function encode_number(val)
     -- Check for NaN, -inf and inf
     if val ~= val or val <= -math.huge or val >= math.huge then
-        error("unexpected number value '" .. tostring(val) .. "'")
+ 	error("unexpected number value '" .. tostring(val) .. "'")
     end
-    return string.format("%.14g", val)
+    -- Handle integer values separately to avoid floating-point conversion
+    if math.type(val) == "integer" then
+  	return string.format("%d", val) -- Format as an integer
+    else
+	-- Use 20 significant digits for non-integer numbers
+	return string.format("%.20g", val)
+    end
 end
 
 local type_func_map = {
