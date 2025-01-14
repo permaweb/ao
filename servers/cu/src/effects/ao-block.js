@@ -141,6 +141,11 @@ export function loadBlocksMetaWith ({
       }
     `
 
+  function customFetch (urls, options, retry = 0) {
+    const urlLength = urls.length
+    const url = urls[retry % urlLength]
+    return fetch(url, options)
+  }
   async function fetchPage ({ min, maxTimestamp }) {
     return Promise.resolve({ min, limit: pageSize })
       .then(variables => {
@@ -154,21 +159,29 @@ export function loadBlocksMetaWith ({
       })
       .then((variables) => {
         return backoff(
-          () => fetch(GRAPHQL_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: GET_BLOCKS_QUERY,
-              variables
-            })
-          }).then(okRes).catch(async (e) => {
-            logger(
-              'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
-              min,
-              maxTimestamp
+          ({ retry }) => {
+            return customFetch(
+              GRAPHQL_URL,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  query: GET_BLOCKS_QUERY,
+                  variables
+                })
+              },
+              retry
             )
-            throw new Error(`Can not communicate with gateway to retrieve block metadata: ${await strFromFetchError(e)}`)
-          }),
+              .then(okRes)
+              .catch(async (e) => {
+                logger(
+                  'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
+                  min,
+                  maxTimestamp
+                )
+                throw new Error(`Can not communicate with gateway to retrieve block metadata: ${await strFromFetchError(e)}`)
+              })
+          },
           { maxRetries: 2, delay: 300, log: logger, name: `loadBlockMeta(${JSON.stringify({ newMin: min, maxTimestamp })})` }
         )
       })

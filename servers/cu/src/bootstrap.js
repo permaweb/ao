@@ -303,6 +303,8 @@ export const createApis = async (ctx) => {
   //   labelNames: ['processId', 'cron', 'dryRun', 'error']
   // })
 
+  const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -336,7 +338,7 @@ export const createApis = async (ctx) => {
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
-    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, pageSize: 90, logger }),
+    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
     findModule: AoModuleClient.findModuleWith({ db, logger }),
     saveModule: AoModuleClient.saveModuleWith({ db, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({

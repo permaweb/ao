@@ -8,7 +8,7 @@ import { createTestLogger } from '../domain/logger.js'
 import { findBlocksSchema, loadBlocksMetaSchema, saveBlocksSchema } from '../domain/dal.js'
 import { findBlocksWith, loadBlocksMetaWith, saveBlocksWith } from './ao-block.js'
 
-const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
+const GRAPHQL_URL = globalThis.GRAPHQL_URL || ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql']
 const logger = createTestLogger({ name: 'ao-cu' })
 
 describe('ao-block', () => {
@@ -159,7 +159,8 @@ describe('ao-block', () => {
       let errorCount = 0
       let errorCaught = false
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
-        fetch: () => {
+        fetch: (url) => {
+          assert.equal(url, GRAPHQL_URL[errorCount % GRAPHQL_URL.length])
           errorCount++
           throw Error('Fetch error!')
         },
@@ -178,7 +179,8 @@ describe('ao-block', () => {
     test('should circuit break on failure', async () => {
       let errorsCount = 0
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
-        fetch: () => {
+        fetch: (url) => {
+          assert.equal(url, GRAPHQL_URL[errorsCount % GRAPHQL_URL.length])
           throw Error('Fetch error!')
         },
         GRAPHQL_URL,
@@ -187,7 +189,7 @@ describe('ao-block', () => {
         breakerOptions: {
           timeout: 5000, // 5 seconds timeout
           errorThresholdPercentage: 50, // open circuit after 50% failures
-          resetTimeout: 1000 // attempt to close circuit after 15 seconds
+          resetTimeout: 1000 // attempt to close circuit after 1 second
         }
       }))
 
