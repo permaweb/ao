@@ -1,10 +1,15 @@
 /* eslint-disable camelcase */
 import { Transform, compose as composeStreams } from 'node:stream'
+import { createHash } from 'node:crypto'
+
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
 import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError } from '../domain/utils.js'
+
+const base64UrlToBytes = (b64Url) =>
+  Buffer.from(b64Url, 'base64url')
 
 const okRes = (res) => {
   if (res.ok) return res
@@ -12,6 +17,40 @@ const okRes = (res) => {
 }
 
 const resToJson = (res) => res.json()
+
+const hashChain = (prevHashChain, prevAssignmentId) => {
+  const hash = createHash('sha256')
+
+  /**
+   * For the very first message, there is no previous id,
+   * so it is not included in the hashed bytes, to produce the very first
+   * hash chain
+   */
+  if (prevAssignmentId) hash.update(base64UrlToBytes(prevAssignmentId))
+  /**
+   * Always include the previous hash chain
+   */
+  hash.update(base64UrlToBytes(prevHashChain))
+
+  return hash.digest('base64url')
+}
+
+export const isHashChainValid = (scheduled) => {
+  const { prevAssignment, message } = scheduled
+  const actual = message['Hash-Chain']
+
+  /**
+   * This will match in cases where the SU returns no prevAssignment
+   * which is to say the feature isn't live on the SU.
+   *
+   * AND will match validating the first assignment, which needs
+   * no validation, besides needing to check its hashChain is present
+   */
+  if (!prevAssignment?.id || !prevAssignment?.hashChain) return !!actual
+
+  const expected = hashChain(prevAssignment.hashChain, prevAssignment.id)
+  return expected === actual
+}
 
 /**
  * See new shape in https://github.com/permaweb/ao/issues/563#issuecomment-2020597581
@@ -79,6 +118,10 @@ export const mapNode = pipe(
     ),
     // both
     applySpec({
+      prevAssignment: applySpec({
+        hashChain: pathOr(null, ['previous_assignment', 'hash_chain']),
+        id: pathOr(null, ['previous_assignment', 'id'])
+      }),
       isAssignment: pipe(
         path(['message', 'id']),
         isNil
@@ -94,6 +137,7 @@ export const mapNode = pipe(
     name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
     exclude: fAssignment.Exclude,
     isAssignment: fBoth.isAssignment,
+    prevAssignment: fBoth.prevAssignment,
     message: mergeAll([
       fMessage,
       fAssignment.message,
@@ -233,7 +277,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     }
   }
 
-  function mapAoMessage ({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }) {
+  function mapAoMessage ({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
     const AoGlobal = {
       Process: { Id: processId, Owner: processOwner, Tags: processTags },
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
@@ -241,7 +285,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
 
     return async function * (edges) {
       for await (const edge of edges) {
-        yield pipe(
+        const scheduled = pipe(
           prop('node'),
           /**
            * Map to the expected shape
@@ -252,6 +296,15 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             return scheduled
           }
         )(edge)
+
+        if (!isHashChainValid(scheduled)) {
+          logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+          const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
+          err.status = 422
+          throw err
+        }
+
+        yield scheduled
       }
     }
   }
@@ -264,7 +317,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
            * compose will convert the AsyncIterable into a readable Duplex
            */
           fetchAllPages({ suUrl, processId, from, to })(),
-          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }))
+          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }))
         )
       })
       .toPromise()

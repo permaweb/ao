@@ -1,11 +1,12 @@
 /* eslint-disable no-throw-literal */
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
+import { createHash } from 'node:crypto'
 
 import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
 import { messageSchema } from '../domain/model.js'
 import { createTestLogger } from '../domain/logger.js'
-import { loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
+import { isHashChainValid, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
 const logger = createTestLogger({ name: 'ao-cu:ao-su' })
@@ -20,6 +21,7 @@ describe('ao-su', () => {
       ordinate: '23',
       name: `Scheduled Message ${messageId} ${now}:23`,
       exclude: undefined,
+      prevAssignment: { id: null, hashChain: null },
       message: {
         Id: messageId,
         Signature: 'sig-123',
@@ -80,7 +82,7 @@ describe('ao-su', () => {
       assert.equal(res.isAssignment, false)
     })
 
-    describe('should map an assigned tx', () => {
+    describe('should map an assignment tx', () => {
       const res = mapNode({
         message: null,
         assignment: {
@@ -131,6 +133,140 @@ describe('ao-su', () => {
           Cron: false
         })
       })
+    })
+
+    describe('should map the previous assignment data', () => {
+      const arg = {
+        message: null,
+        assignment: {
+          owner: {
+            address: 'su-123',
+            key: 'su-123'
+          },
+          tags: [
+            { name: 'Epoch', value: '0' },
+            { name: 'Nonce', value: '23' },
+            { name: 'Process', value: 'process-123' },
+            { name: 'Block-Height', value: '000000000123' },
+            { name: 'Timestamp', value: `${now}` },
+            { name: 'Hash-Chain', value: 'hash-123' },
+            { name: 'Message', value: assignedMessageId }
+          ],
+          data: 'su-data-123'
+        }
+      }
+
+      test('should map prevAssignment fields', () => {
+        const res = mapNode({
+          ...arg,
+          previous_assignment: {
+            id: 'prev-assignment-id',
+            hash_chain: 'prev-hashchain'
+          }
+        })
+
+        assert.deepStrictEqual(
+          res.prevAssignment,
+          { id: 'prev-assignment-id', hashChain: 'prev-hashchain' }
+        )
+      })
+
+      test('should set prevAssignment fields to null', () => {
+        const res = mapNode({
+          ...arg,
+          no_previous_assigment: true
+        })
+
+        assert.deepStrictEqual(
+          res.prevAssignment,
+          { id: null, hashChain: null }
+        )
+      })
+    })
+  })
+
+  describe('isHashChainValid', () => {
+    const now = new Date().getTime()
+    const messageId = 'message-123'
+    const arg = {
+      cron: undefined,
+      ordinate: '23',
+      name: `Scheduled Message ${messageId} ${now}:23`,
+      exclude: undefined,
+      message: {
+        Id: messageId,
+        Signature: 'sig-123',
+        Data: 'data-123',
+        Owner: 'owner-123',
+        Target: 'process-123',
+        Anchor: '00000000123',
+        From: 'owner-123',
+        'Forwarded-By': undefined,
+        Tags: [{ name: 'Foo', value: 'Bar' }],
+        Epoch: 0,
+        Nonce: 23,
+        Timestamp: now,
+        'Block-Height': 123,
+        'Hash-Chain': 'hash-123',
+        Cron: false
+      },
+      block: {
+        height: 123,
+        timestamp: now
+      }
+    }
+
+    test('should return whether the hashChain exists if there is no previous assignment', () => {
+      // feature not rolled out on SU
+      assert(isHashChainValid(arg))
+      // first assignment ergo has no prev assignment
+      assert(isHashChainValid({
+        ...arg,
+        prevAssignment: {
+          hashChain: null,
+          id: 'foo'
+        }
+      }))
+      assert(isHashChainValid({
+        ...arg,
+        prevAssignment: {
+          hashChain: 'foo',
+          id: null
+        }
+      }))
+    })
+
+    test('should calculate and compare the hashChain based on the previous assignment', () => {
+      const prevAssignmentId = Buffer.from('assignment-123', 'utf8').toString('base64url')
+      const prevHashChain = Buffer.from('hashchain-123', 'utf8').toString('base64url')
+
+      const expected = createHash('sha256')
+        .update(Buffer.from(prevAssignmentId, 'base64url'))
+        .update(Buffer.from(prevHashChain, 'base64url'))
+        .digest('base64url')
+
+      const arg = {
+        // ...
+        prevAssignment: { id: prevAssignmentId, hashChain: prevHashChain },
+        message: {
+          // ....
+          'Hash-Chain': expected
+        }
+      }
+
+      assert(isHashChainValid(arg))
+
+      const invalid = {
+        ...arg,
+        message: {
+          'Hash-Chain': createHash('sha256')
+            .update(Buffer.from('something else', 'base64url'))
+            .update(Buffer.from(prevHashChain, 'base64url'))
+            .digest('base64url')
+        }
+      }
+
+      assert(!isHashChainValid(invalid))
     })
   })
 
