@@ -499,7 +499,7 @@ impl DataItem {
             ByteErrorType::ByteError(format!("data length error - {} ", err.to_string()))
         })?);
 
-        let sig_type: [u8; 2] = (1 as u16).to_le_bytes();
+        let sig_type: [u8; 2] = (self.signature_type.clone() as u16).to_le_bytes();
         let target_presence_byte = if self.target.is_empty() {
             &[0u8]
         } else {
