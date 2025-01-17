@@ -168,6 +168,7 @@ export const loadMessagesSchema = z.function()
     z.object({
       suUrl: z.string().url(),
       processId: z.string(),
+      block: blockSchema,
       owner: z.string(),
       tags: z.array(rawTagSchema),
       moduleId: z.string(),

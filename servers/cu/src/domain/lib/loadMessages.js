@@ -482,6 +482,7 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
         loadMessages({
           suUrl: ctx.suUrl,
           processId: ctx.id,
+          block: ctx.block,
           owner: ctx.owner,
           tags: ctx.tags,
           moduleId: ctx.moduleId,

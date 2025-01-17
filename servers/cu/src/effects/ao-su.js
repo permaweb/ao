@@ -277,14 +277,23 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     }
   }
 
-  function mapAoMessage ({ processId, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
+  function mapAoMessage ({ processId, processBlock, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
     const AoGlobal = {
       Process: { Id: processId, Owner: processOwner, Tags: processTags },
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
     }
+    /**
+     * Only perform hash chain validation on processes
+     * spawned after arweave day, since old hash chains are invalid
+     * anyway.
+     */
+    const isHashChainValidationEnabled = processBlock.height >= 1440000
+    if (!isHashChainValidationEnabled) {
+      logger('HashChain validation disabled for old process "%s" at block [%j]', [processId, processBlock])
+    }
 
-    const prevAssignmentId = assignmentId
-    const prevHashChain = hashChain
+    let prevAssignmentId = assignmentId
+    let prevHashChain = hashChain
     return async function * (edges) {
       for await (const edge of edges) {
         const scheduled = pipe(
@@ -299,12 +308,17 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           }
         )(edge)
 
-        if (!isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled)) {
-          logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
-          const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
-          err.status = 422
-          throw err
+        if (isHashChainValidationEnabled) {
+          if (!isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled)) {
+            logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+            const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
+            err.status = 422
+            throw err
+          }
         }
+
+        prevAssignmentId = scheduled.assignmentId
+        prevHashChain = scheduled.message['Hash-Chain']
 
         yield scheduled
       }
@@ -316,6 +330,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
       .map(({
         suUrl,
         processId,
+        block: processBlock,
         owner: processOwner,
         tags: processTags,
         moduleId,
@@ -333,6 +348,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           fetchAllPages({ suUrl, processId, from, to })(),
           Transform.from(mapAoMessage({
             processId,
+            processBlock,
             assignmentId,
             hashChain,
             processOwner,
