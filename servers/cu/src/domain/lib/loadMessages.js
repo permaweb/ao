@@ -488,8 +488,9 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
           moduleOwner: ctx.moduleOwner,
           moduleTags: ctx.moduleTags,
           from: ctx.from, // could be undefined
-          to: ctx.to // could be undefined
-          // TODO: pass ctx.mostRecentHashChain and ctx.mostRecentAssignmentId to initialize hash chain verification of scheduled messages
+          to: ctx.to, // could be undefined
+          assignmentId: ctx.mostRecentAssignmentId,
+          hashChain: ctx.mostRecentHashChain
         })
       )
 }

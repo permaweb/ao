@@ -20,7 +20,6 @@ const resToJson = (res) => res.json()
 
 const hashChain = (prevHashChain, prevAssignmentId) => {
   const hash = createHash('sha256')
-
   /**
    * For the very first message, there is no previous id,
    * so it is not included in the hashed bytes, to produce the very first
@@ -31,24 +30,21 @@ const hashChain = (prevHashChain, prevAssignmentId) => {
    * Always include the previous hash chain
    */
   hash.update(base64UrlToBytes(prevHashChain))
-
   return hash.digest('base64url')
 }
 
-export const isHashChainValid = (scheduled) => {
-  const { prevAssignment, message } = scheduled
+export const isHashChainValid = (prev, scheduled) => {
+  const { assignmentId: prevAssignmentId, hashChain: prevHashChain } = prev
+  const { message } = scheduled
   const actual = message['Hash-Chain']
 
   /**
-   * This will match in cases where the SU returns no prevAssignment
-   * which is to say the feature isn't live on the SU.
-   *
-   * AND will match validating the first assignment, which needs
-   * no validation, besides needing to check its hashChain is present
+   * Depending on the source of the hot-start, there may not be
+   * a prev assignmentId and hashChain
    */
-  if (!prevAssignment?.id || !prevAssignment?.hashChain) return !!actual
+  if (!prevAssignmentId || !prevHashChain) return !!actual
 
-  const expected = hashChain(prevAssignment.hashChain, prevAssignment.id)
+  const expected = hashChain(prevHashChain, prevAssignmentId)
   return expected === actual
 }
 
@@ -281,12 +277,14 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     }
   }
 
-  function mapAoMessage ({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
+  function mapAoMessage ({ processId, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
     const AoGlobal = {
       Process: { Id: processId, Owner: processOwner, Tags: processTags },
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
     }
 
+    const prevAssignmentId = assignmentId
+    const prevHashChain = hashChain
     return async function * (edges) {
       for await (const edge of edges) {
         const scheduled = pipe(
@@ -301,12 +299,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           }
         )(edge)
 
-        // if (!isHashChainValid(scheduled)) {
-        //   logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
-        //   const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
-        //   err.status = 422
-        //   throw err
-        // }
+        if (!isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled)) {
+          logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+          const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
+          err.status = 422
+          throw err
+        }
 
         yield scheduled
       }
@@ -315,13 +313,35 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
 
   return (args) =>
     of(args)
-      .map(({ suUrl, processId, owner: processOwner, tags: processTags, moduleId, moduleOwner, moduleTags, from, to }) => {
+      .map(({
+        suUrl,
+        processId,
+        owner: processOwner,
+        tags: processTags,
+        moduleId,
+        moduleOwner,
+        moduleTags,
+        from,
+        to,
+        assignmentId,
+        hashChain
+      }) => {
         return composeStreams(
           /**
            * compose will convert the AsyncIterable into a readable Duplex
            */
           fetchAllPages({ suUrl, processId, from, to })(),
-          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }))
+          Transform.from(mapAoMessage({
+            processId,
+            assignmentId,
+            hashChain,
+            processOwner,
+            processTags,
+            moduleId,
+            moduleOwner,
+            moduleTags,
+            logger
+          }))
         )
       })
       .toPromise()

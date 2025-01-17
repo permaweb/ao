@@ -142,7 +142,7 @@ describe('ao-su', () => {
   describe('isHashChainValid', () => {
     const now = new Date().getTime()
     const messageId = 'message-123'
-    const arg = {
+    const scheduled = {
       cron: undefined,
       ordinate: '23',
       name: `Scheduled Message ${messageId} ${now}:23`,
@@ -171,47 +171,40 @@ describe('ao-su', () => {
     }
 
     test('should return whether the hashChain exists if there is no previous assignment', () => {
-      // feature not rolled out on SU
-      assert(isHashChainValid(arg))
+      // no prev info
+      assert(isHashChainValid({}, scheduled))
       // first assignment ergo has no prev assignment
       assert(isHashChainValid({
-        ...arg,
-        prevAssignment: {
-          hashChain: null,
-          id: 'foo'
-        }
-      }))
+        hashChain: null,
+        assignmentId: 'foo'
+      }, scheduled))
       assert(isHashChainValid({
-        ...arg,
-        prevAssignment: {
-          hashChain: 'foo',
-          id: null
-        }
-      }))
+        hashChain: 'foo',
+        assignmentId: null
+      }, scheduled))
     })
 
     test('should calculate and compare the hashChain based on the previous assignment', () => {
       const prevAssignmentId = Buffer.from('assignment-123', 'utf8').toString('base64url')
       const prevHashChain = Buffer.from('hashchain-123', 'utf8').toString('base64url')
 
+      const prev = { assignmentId: prevAssignmentId, hashChain: prevHashChain }
+
       const expected = createHash('sha256')
         .update(Buffer.from(prevAssignmentId, 'base64url'))
         .update(Buffer.from(prevHashChain, 'base64url'))
         .digest('base64url')
 
-      const arg = {
-        // ...
-        prevAssignment: { id: prevAssignmentId, hashChain: prevHashChain },
+      const valid = {
         message: {
           // ....
           'Hash-Chain': expected
         }
       }
 
-      assert(isHashChainValid(arg))
+      assert(isHashChainValid(prev, valid))
 
       const invalid = {
-        ...arg,
         message: {
           'Hash-Chain': createHash('sha256')
             .update(Buffer.from('something else', 'base64url'))
@@ -220,7 +213,7 @@ describe('ao-su', () => {
         }
       }
 
-      assert(!isHashChainValid(invalid))
+      assert(!isHashChainValid(prev, invalid))
     })
   })
 
