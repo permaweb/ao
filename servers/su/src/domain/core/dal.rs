@@ -62,6 +62,7 @@ pub trait Config: Send + Sync {
     fn mode(&self) -> String;
     fn scheduler_list_path(&self) -> String;
     fn enable_process_assignment(&self) -> bool;
+    fn enable_deep_hash_checks(&self) -> bool;
 }
 
 #[derive(Debug)]
@@ -121,6 +122,7 @@ pub trait DataStore: Send + Sync {
         &self,
         message: &Message,
         bundle_in: &[u8],
+        deep_hash: Option<&String>,
     ) -> Result<String, StoreErrorType>;
     async fn get_messages(
         &self,
@@ -135,6 +137,7 @@ pub trait DataStore: Send + Sync {
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType>;
     fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
+    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType>;
 }
 
 #[async_trait]

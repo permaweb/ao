@@ -132,7 +132,8 @@ pub async fn write_item(
       set cache that gets set before the lock is released
     */
     if let Some(ref item) = data_item {
-        deps.data_store.check_existing_message(&item.id())?
+        deps.data_store.check_existing_message(&item.id())?;
+
     };
 
     deps.logger.log(format!("checked for message existence- {}", &target_id));
@@ -171,9 +172,9 @@ pub async fn write_item(
         let build_result = builder.bundle_items(vec![assignment]).await?;
         let message = Message::from_bundle(&build_result.bundle)?;
         deps.data_store
-            .save_message(&message, &build_result.binary)
+            .save_message(&message, &build_result.binary, None)
             .await?;
-        deps.logger.log(format!("saved message - {:?}", &message));
+        deps.logger.log(format!("saved message"));
 
         /*
           we set the id of the previous assignment
@@ -256,7 +257,7 @@ pub async fn write_item(
                 let process = Process::from_bundle(&build_result.bundle)?;
                 deps.data_store
                     .save_process(&process, &build_result.binary)?;
-                deps.logger.log(format!("saved process - {:?}", &process));
+                deps.logger.log(format!("saved process"));
 
                 deps.scheduler
                     .commit(&mut *schedule_info, &next_schedule_info, did, aid);
@@ -276,7 +277,7 @@ pub async fn write_item(
                 )?;
                 deps.data_store
                     .save_process(&process, &build_result.binary)?;
-                deps.logger.log(format!("saved process - {:?}", &process));
+                deps.logger.log(format!("saved process"));
 
                 /*
                   We dont commit and schedule info change here
@@ -301,12 +302,26 @@ pub async fn write_item(
 
             let aid = assignment.id();
             let dtarget = data_item.target();
+
+            let mut mutable_item = data_item.clone();
+            let deep_hash = match mutable_item.deep_hash() {
+              Ok(d) => d,
+              Err(_) => return Err("Unable to calculate deep hash".to_string())
+            };
+            
+            if deps.config.enable_deep_hash_checks() {
+              deps.data_store
+                .check_existing_deep_hash(&dtarget, &deep_hash)
+                .await?;
+            }
+
             let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
             let message = Message::from_bundle(&build_result.bundle)?;
+
             deps.data_store
-                .save_message(&message, &build_result.binary)
+                .save_message(&message, &build_result.binary, Some(&deep_hash))
                 .await?;
-            deps.logger.log(format!("saved message - {:?}", &message));
+            deps.logger.log(format!("saved message"));
 
             /*
               we set the id of the previous assignment

@@ -326,7 +326,7 @@ impl DataItem {
         Ok(DataItem {
             signature_type: SignerMap::Arweave,
             signature: vec![],
-            owner: owner,
+            owner,
             target,
             anchor,
             tags,
@@ -499,7 +499,7 @@ impl DataItem {
             ByteErrorType::ByteError(format!("data length error - {} ", err.to_string()))
         })?);
 
-        let sig_type: [u8; 2] = (self.signature_type.clone() as u16).to_le_bytes();
+        let sig_type: [u8; 2] = (1 as u16).to_le_bytes();
         let target_presence_byte = if self.target.is_empty() {
             &[0u8]
         } else {
@@ -527,6 +527,37 @@ impl DataItem {
 
         b.put(&data[..]);
         Ok(b)
+    }
+
+    /*
+      Utilized for deduplicating incoming messages even
+      if they have the same id
+    */
+    pub fn deep_hash(&mut self) -> Result<String, ByteErrorType> {
+        let data_chunk = match &mut self.data {
+            Data::None => DeepHashChunk::Chunk(Bytes::new()),
+            Data::Bytes(data) => DeepHashChunk::Chunk(data.clone().into())
+        };
+        
+        let encoded_tags = if !self.tags.is_empty() {
+            self.tags.encode()?
+        } else {
+            Bytes::default()
+        };
+
+        let deep_hash_vec = deep_hash_sync(DeepHashChunk::Chunks(vec![
+            DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+            // this is where the owner normally would be
+            DeepHashChunk::Chunk(Bytes::new()),
+            DeepHashChunk::Chunk(self.target.to_vec().into()),
+            DeepHashChunk::Chunk(self.anchor.to_vec().into()),
+            DeepHashChunk::Chunk(encoded_tags.clone()),
+            data_chunk,
+        ]))?;
+
+        Ok(base64_url::encode(&deep_hash_vec))
     }
 
     pub fn raw_id(&self) -> Vec<u8> {

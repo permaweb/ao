@@ -111,6 +111,7 @@ impl LocalStoreClient {
             ("process_ordering".to_string(), opts_index.clone()),
             ("message".to_string(), opts_index.clone()),
             ("message_ordering".to_string(), opts_index.clone()),
+            ("deep_hash".to_string(), opts_index.clone()),
         ]
     }
 
@@ -159,6 +160,13 @@ impl LocalStoreClient {
         Ok(format!(
             "message_ordering:{}:{:010}:{:010}:{:015}:{}",
             process_id, epoch, nonce, timestamp, assignment_id
+        ))
+    }
+
+    fn deep_hash_key(&self, process_id: &String, deep_hash: &String) -> Result<String, StoreErrorType> {
+        Ok(format!(
+            "deep_hash:{}:{}",
+            process_id, deep_hash
         ))
     }
 
@@ -288,6 +296,7 @@ impl DataStore for LocalStoreClient {
         &self,
         message: &Message,
         bundle_in: &[u8],
+        deep_hash: Option<&String>,
     ) -> Result<String, StoreErrorType> {
         let message_id = message.message_id()?;
         let assignment_id = message.assignment_id()?;
@@ -313,6 +322,19 @@ impl DataStore for LocalStoreClient {
 
         let assignment_key = self.msg_assignment_key(&assignment_id);
         self.file_db.put(assignment_key.as_bytes(), bundle_in)?;
+
+        let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+        })?;
+
+        match deep_hash {
+          Some(dh) => {
+            let deep_hash_key = self.deep_hash_key(&message.process_id()?, dh)?;
+            self.index_db
+                .put_cf(cf, deep_hash_key.as_bytes(), message.process_id()?.as_bytes())?;
+          },
+          None => ()
+        };
 
         Ok("Message saved".to_string())
     }
@@ -396,6 +418,22 @@ impl DataStore for LocalStoreClient {
             ))
         } else {
             Ok(())
+        }
+    }
+
+    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType> {
+        let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'deep_hash' not found".to_string())
+        })?;
+        let deep_hash_key = self.deep_hash_key(process_id, deep_hash)?;
+        match self.index_db.get_cf(cf, deep_hash_key) {
+          Ok(dh) => {
+            match dh {
+              Some(_) => return Err(StoreErrorType::MessageExists("Deep hash already exists".to_string())),
+              None => return Ok(())
+            }
+          },
+          Err(_) => return Ok(())
         }
     }
 
