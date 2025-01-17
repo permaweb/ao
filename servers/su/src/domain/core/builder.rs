@@ -247,6 +247,7 @@ impl<'a> Builder<'a> {
 
         result
     }
+
 }
 
 #[cfg(test)]
