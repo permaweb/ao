@@ -15,13 +15,14 @@ describe('ao-su', () => {
   describe('mapNode', () => {
     const now = new Date().getTime()
     const messageId = 'message-123'
+    const assignmentId = 'assignment-123'
     const assignedMessageId = 'assigned-123'
     const expected = {
       cron: undefined,
       ordinate: '23',
       name: `Scheduled Message ${messageId} ${now}:23`,
       exclude: undefined,
-      prevAssignment: { id: null, hashChain: null },
+      assignmentId,
       message: {
         Id: messageId,
         Signature: 'sig-123',
@@ -59,6 +60,7 @@ describe('ao-su', () => {
           data: 'data-123'
         },
         assignment: {
+          id: assignmentId,
           owner: {
             address: 'su-123',
             key: 'su-123'
@@ -80,6 +82,7 @@ describe('ao-su', () => {
         withoutAoGlobal.parse(expected)
       )
       assert.equal(res.isAssignment, false)
+      assert.equal(res.assignmentId, assignmentId)
     })
 
     describe('should map an assignment tx', () => {
@@ -132,55 +135,6 @@ describe('ao-su', () => {
           'Hash-Chain': 'hash-123',
           Cron: false
         })
-      })
-    })
-
-    describe('should map the previous assignment data', () => {
-      const arg = {
-        message: null,
-        assignment: {
-          owner: {
-            address: 'su-123',
-            key: 'su-123'
-          },
-          tags: [
-            { name: 'Epoch', value: '0' },
-            { name: 'Nonce', value: '23' },
-            { name: 'Process', value: 'process-123' },
-            { name: 'Block-Height', value: '000000000123' },
-            { name: 'Timestamp', value: `${now}` },
-            { name: 'Hash-Chain', value: 'hash-123' },
-            { name: 'Message', value: assignedMessageId }
-          ],
-          data: 'su-data-123'
-        }
-      }
-
-      test('should map prevAssignment fields', () => {
-        const res = mapNode({
-          ...arg,
-          previous_assignment: {
-            id: 'prev-assignment-id',
-            hash_chain: 'prev-hashchain'
-          }
-        })
-
-        assert.deepStrictEqual(
-          res.prevAssignment,
-          { id: 'prev-assignment-id', hashChain: 'prev-hashchain' }
-        )
-      })
-
-      test('should set prevAssignment fields to null', () => {
-        const res = mapNode({
-          ...arg,
-          no_previous_assigment: true
-        })
-
-        assert.deepStrictEqual(
-          res.prevAssignment,
-          { id: null, hashChain: null }
-        )
       })
     })
   })

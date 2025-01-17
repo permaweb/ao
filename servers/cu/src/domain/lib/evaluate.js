@@ -91,6 +91,8 @@ export function evaluateWith (env) {
       .chain(fromPromise(async (ctx) => {
         // A running tally of gas used in the eval stream
         let totalGasUsed = BigInt(0)
+        let mostRecentAssignmentId = ctx.mostRecentAssignmentId
+        let mostRecentHashChain = ctx.mostRecentHashChain
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -160,7 +162,7 @@ export function evaluateWith (env) {
                  * and evaluate each one
                  */
                 let first = true
-                for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, AoGlobal } of messages) {
+                for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
                   if (cron) {
                     const key = toEvaledCron({ timestamp: message.Timestamp, cron })
                     if (evaledCrons.has(key)) continue
@@ -170,6 +172,14 @@ export function evaluateWith (env) {
                      * again in the eval stream
                      */
                     else evaledCrons.set(key, true)
+                  } else if (!noSave) {
+                    /**
+                     * As messages stream into the process to be evaluated,
+                     * we need to keep track of the most assignmentId
+                     * and hashChain of the most recent scheduled message
+                     */
+                    mostRecentAssignmentId = assignmentId
+                    mostRecentHashChain = message['Hash-Chain']
                   }
 
                   /**
@@ -306,6 +316,8 @@ export function evaluateWith (env) {
             processId: ctx.id,
             moduleId: ctx.moduleId,
             messageId: message.Id,
+            assignmentId: mostRecentAssignmentId,
+            hashChain: mostRecentHashChain,
             timestamp: message.Timestamp,
             nonce: message.Nonce,
             epoch: message.Epoch,
@@ -313,7 +325,6 @@ export function evaluateWith (env) {
             ordinate,
             cron,
             Memory: prev.Memory,
-            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron,
             gasUsed: totalGasUsed
           })
         }

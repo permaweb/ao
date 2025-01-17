@@ -67,6 +67,8 @@ export const saveLatestProcessMemorySchema = z.function()
     processId: z.string(),
     moduleId: z.string().nullish(),
     messageId: z.string().nullish(),
+    assignmentId: z.string().nullish(),
+    hashChain: z.string().nullish(),
     timestamp: z.coerce.number().nullish(),
     epoch: z.coerce.number().nullish(),
     nonce: z.coerce.number().nullish(),
@@ -74,7 +76,6 @@ export const saveLatestProcessMemorySchema = z.function()
     cron: z.string().nullish(),
     blockHeight: z.coerce.number().nullish(),
     Memory: bufferSchema,
-    evalCount: z.number().nullish(),
     gasUsed: z.bigint().nullish()
   }))
   .returns(z.promise(z.any()))
@@ -173,7 +174,9 @@ export const loadMessagesSchema = z.function()
       moduleTags: z.array(rawTagSchema),
       moduleOwner: z.string(),
       from: z.coerce.number().nullish(),
-      to: z.coerce.number().nullish()
+      to: z.coerce.number().nullish(),
+      assignmentId: z.string().nullish(),
+      hashChain: z.string().nullish()
     })
   )
   /**

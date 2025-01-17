@@ -45,6 +45,8 @@ export const LATEST = 'LATEST'
  * @typedef Evaluation
  * @prop {string} processId
  * @prop {string} moduleId
+ * @prop {string} assignmentId
+ * @prop {string} hashChain
  * @prop {string} epoch
  * @prop {string} nonce
  * @prop {string} timestamp
@@ -566,6 +568,14 @@ export function writeCheckpointRecordWith ({ db }) {
     evaluation: z.object({
       processId: z.string().min(1),
       moduleId: z.string().min(1),
+      /**
+       * nullish for backwards compat
+       */
+      assignmentId: z.string().nullish(),
+      /**
+       * nullish for backwards compat
+       */
+      hashChain: z.string().nullish(),
       timestamp: z.coerce.number(),
       epoch: z.coerce.number().nullish(),
       nonce: z.coerce.number().nullish(),
@@ -639,11 +649,11 @@ export function findFileCheckpointBeforeWith ({ db }) {
           .map(createQuery)
           .chain(fromPromise((query) => db.query(query)))
       )
-      .map((results) => {
-        return results.map((result) => ({
-          ...result,
-          file: pathOr('', ['file'])(result),
-          evaluation: JSON.parse(pathOr({}, ['evaluation'])(result))
+      .map((fileCheckpoints) => {
+        return fileCheckpoints.map((fileCheckpoint) => ({
+          ...fileCheckpoint,
+          file: pathOr('', ['file'])(fileCheckpoint),
+          evaluation: JSON.parse(pathOr({}, ['evaluation'])(fileCheckpoint))
         }))
       })
       .map((parsed) => {
@@ -669,6 +679,8 @@ export function writeFileCheckpointRecordWith ({ db }) {
     evaluation: z.object({
       processId: z.string().min(1),
       moduleId: z.string().min(1),
+      assignmentId: z.string().nullish(),
+      hashChain: z.string().nullish(),
       timestamp: z.coerce.number(),
       epoch: z.coerce.number().nullish(),
       nonce: z.coerce.number().nullish(),
@@ -850,6 +862,8 @@ export function findLatestProcessMemoryWith ({
           return {
             id: node.id,
             timestamp: parseInt(tags.Timestamp),
+            assignmentId: tags.Assignment,
+            hashChain: tags['Hash-Chain'],
             /**
              * Due to a previous bug, these tags may sometimes
              * be invalid values, so we've added a utility
@@ -972,6 +986,8 @@ export function findLatestProcessMemoryWith ({
             fromFile: file,
             Memory,
             moduleId: cached.evaluation.moduleId,
+            assignmentId: cached.evaluation.assignmentId,
+            hashChain: cached.evaluation.hashChain,
             timestamp: cached.evaluation.timestamp,
             blockHeight: cached.evaluation.blockHeight,
             epoch: cached.evaluation.epoch,
@@ -1030,6 +1046,8 @@ export function findLatestProcessMemoryWith ({
             src: 'file',
             Memory,
             moduleId: checkpoint.moduleId,
+            assignmentId: checkpoint.assignmentId,
+            hashChain: checkpoint.hashChain,
             timestamp: checkpoint.timestamp,
             blockHeight: checkpoint.blockHeight,
             epoch: checkpoint.epoch,
@@ -1087,6 +1105,8 @@ export function findLatestProcessMemoryWith ({
                 src: 'record',
                 Memory,
                 moduleId: checkpoint.evaluation.moduleId,
+                assignmentId: checkpoint.evaluation.assignmentId,
+                hashChain: checkpoint.evaluation.hashChain,
                 timestamp: checkpoint.evaluation.timestamp,
                 epoch: checkpoint.evaluation.epoch,
                 nonce: checkpoint.evaluation.nonce,
@@ -1155,6 +1175,8 @@ export function findLatestProcessMemoryWith ({
             src: 'arweave',
             Memory,
             moduleId: latestCheckpoint.module,
+            assignmentId: latestCheckpoint.assignmentId,
+            hashChain: latestCheckpoint.hashChain,
             timestamp: latestCheckpoint.timestamp,
             epoch: latestCheckpoint.epoch,
             nonce: latestCheckpoint.nonce,
@@ -1186,6 +1208,8 @@ export function findLatestProcessMemoryWith ({
       src: 'cold_start',
       Memory: null,
       moduleId: undefined,
+      assignmentId: undefined,
+      hashChain: undefined,
       timestamp: undefined,
       epoch: undefined,
       nonce: undefined,
@@ -1289,7 +1313,7 @@ export function findLatestProcessMemoryWith ({
 }
 
 export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD }) {
-  return async ({ processId, moduleId, messageId, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, evalCount, gasUsed }) => {
+  return async ({ processId, moduleId, assignmentId, messageId, hashChain, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, gasUsed }) => {
     const cached = cache.get(processId)
 
     /**
@@ -1338,6 +1362,8 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     const evaluation = {
       processId,
       moduleId,
+      assignmentId,
+      hashChain,
       timestamp,
       epoch,
       nonce,
@@ -1460,7 +1486,7 @@ export function saveCheckpointWith ({
   `
 
   function createCheckpointDataItem (args) {
-    const { moduleId, processId, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory } = args
+    const { moduleId, processId, assignmentId, hashChain, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory } = args
 
     return of(Memory)
       .chain((buffer) =>
@@ -1495,6 +1521,25 @@ export function saveCheckpointWith ({
                 { name: 'Content-Encoding', value: 'gzip' }
               ]
             }
+
+            /**
+             * A Cron message does not have an assignment
+             * (which is to say this is the assignment of the most recent
+             * Scheduled message)
+             *
+             * This is needed in order to perform hash chain verification
+             * on hot starts from a checkpoint
+             */
+            if (assignmentId) dataItem.tags.push({ name: 'Assignment', value: assignmentId.trim() })
+            /**
+             * A Cron message does not have a hashChain
+             * (which is to say this is the hashChain of the most recent
+             * Scheduled message)
+             *
+             * This is needed in order to perform hash chain verification
+             * on hot starts from a checkpoint
+             */
+            if (hashChain) dataItem.tags.push({ name: 'Hash-Chain', value: hashChain.trim() })
 
             /**
              * Cron messages do not have an Epoch,
@@ -1542,7 +1587,7 @@ export function saveCheckpointWith ({
      */
     if (DISABLE_PROCESS_FILE_CHECKPOINT_CREATION && DISABLE_PROCESS_CHECKPOINT_CREATION) return Resolved(args)
 
-    const { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory, File } = args
+    const { moduleId, processId, assignmentId, hashChain, epoch, nonce, timestamp, blockHeight, cron, encoding, Memory, File } = args
 
     let file
     return of()
@@ -1569,7 +1614,7 @@ export function saveCheckpointWith ({
 
         logger(
           'Process cache entry error for evaluation "%j". Entry contains neither Memory or File. Skipping saving of checkpoint...',
-          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+          { moduleId, processId, assignmentId, hashChain, epoch, nonce, timestamp, blockHeight, cron, encoding }
         )
         return Rejected('either File or Memory required')
       })
@@ -1577,7 +1622,7 @@ export function saveCheckpointWith ({
   }
 
   function createFileCheckpoint (args) {
-    const { Memory, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron } = args
+    const { Memory, encoding, processId, moduleId, assignmentId, hashChain, timestamp, epoch, ordinate, nonce, blockHeight, cron } = args
 
     if (DISABLE_PROCESS_FILE_CHECKPOINT_CREATION) return Rejected('file checkpoint creation is disabled')
     /**
@@ -1589,6 +1634,8 @@ export function saveCheckpointWith ({
     const evaluation = {
       processId,
       moduleId,
+      assignmentId,
+      hashChain,
       timestamp,
       nonce,
       ordinate,
@@ -1614,7 +1661,7 @@ export function saveCheckpointWith ({
   }
 
   function createArweaveCheckpoint (args) {
-    const { encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron } = args
+    const { encoding, processId, moduleId, assignmentId, hashChain, timestamp, epoch, ordinate, nonce, blockHeight, cron } = args
 
     if (DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected('arweave checkpoint creation is disabled')
     /**
@@ -1624,7 +1671,7 @@ export function saveCheckpointWith ({
 
     logger(
       'Checking Gateway for existing Checkpoint for evaluation: %j',
-      { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding }
+      { moduleId, processId, assignmentId, hashChain, epoch, nonce, timestamp, blockHeight, cron, encoding }
     )
 
     return address()
@@ -1668,7 +1715,7 @@ export function saveCheckpointWith ({
 
         logger(
           'Creating Checkpoint for evaluation: %j',
-          { moduleId, processId, epoch, nonce, timestamp, blockHeight, cron, encoding: 'gzip' }
+          { moduleId, processId, assignmentId, hashChain, epoch, nonce, timestamp, blockHeight, cron, encoding: 'gzip' }
         )
 
         /**
@@ -1717,6 +1764,8 @@ export function saveCheckpointWith ({
           evaluation: {
             processId,
             moduleId,
+            assignmentId,
+            hashChain,
             timestamp,
             epoch,
             nonce,
@@ -1769,8 +1818,36 @@ export function saveCheckpointWith ({
       ))
   }
 
-  return async ({ Memory, File, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron }) =>
-    maybeHydrateMemory({ Memory, File, encoding, processId, moduleId, timestamp, epoch, ordinate, nonce, blockHeight, cron })
+  return async ({
+    Memory,
+    File,
+    encoding,
+    processId,
+    moduleId,
+    assignmentId,
+    hashChain,
+    timestamp,
+    epoch,
+    ordinate,
+    nonce,
+    blockHeight,
+    cron
+  }) =>
+    maybeHydrateMemory({
+      Memory,
+      File,
+      encoding,
+      processId,
+      assignmentId,
+      hashChain,
+      moduleId,
+      timestamp,
+      epoch,
+      ordinate,
+      nonce,
+      blockHeight,
+      cron
+    })
       .chain(createCheckpoints)
       .toPromise()
 }

@@ -60,37 +60,45 @@ export const mapNode = pipe(
     // fromAssignment
     pipe(
       path(['assignment']),
-      (assignment) => parseTags(assignment.tags),
-      applySpec({
-        /**
-         * There could be multiple Exclude tags,
-         * but parseTags will accumulate them into an array,
-         *
-         * which is what we want
-         */
-        Exclude: path(['Exclude']),
-        /**
-         * Data from the assignment, to be placed
-         * on the message
-         */
-        message: applySpec({
-          Message: path(['Message']),
-          Target: path(['Process']),
-          Epoch: pipe(path(['Epoch']), parseInt),
-          Nonce: pipe(path(['Nonce']), parseInt),
-          Timestamp: pipe(path(['Timestamp']), parseInt),
-          'Block-Height': pipe(
+      (assignment) => {
+        const tags = parseTags(assignment.tags)
+
+        return applySpec({
           /**
-           * Returns a left padded integer like '000001331218'
-           *
-           * So use parseInt to convert it into a number
+           * The assignment id is needed in order to compute
+           * and verify the hash chain
            */
-            path(['Block-Height']),
-            parseInt
-          ),
-          'Hash-Chain': path(['Hash-Chain'])
-        })
-      })
+          AssignmentId: always(assignment.id),
+          /**
+           * There could be multiple Exclude tags,
+           * but parseTags will accumulate them into an array,
+           *
+           * which is what we want
+           */
+          Exclude: path(['Exclude']),
+          /**
+           * Data from the assignment, to be placed
+           * on the message
+           */
+          message: applySpec({
+            Message: path(['Message']),
+            Target: path(['Process']),
+            Epoch: pipe(path(['Epoch']), parseInt),
+            Nonce: pipe(path(['Nonce']), parseInt),
+            Timestamp: pipe(path(['Timestamp']), parseInt),
+            'Block-Height': pipe(
+            /**
+             * Returns a left padded integer like '000001331218'
+             *
+             * So use parseInt to convert it into a number
+             */
+              path(['Block-Height']),
+              parseInt
+            ),
+            'Hash-Chain': path(['Hash-Chain'])
+          })
+        })(tags)
+      }
     ),
     // fromMessage
     pipe(
@@ -118,10 +126,6 @@ export const mapNode = pipe(
     ),
     // both
     applySpec({
-      prevAssignment: applySpec({
-        hashChain: pathOr(null, ['previous_assignment', 'hash_chain']),
-        id: pathOr(null, ['previous_assignment', 'id'])
-      }),
       isAssignment: pipe(
         path(['message', 'id']),
         isNil
@@ -137,7 +141,7 @@ export const mapNode = pipe(
     name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
     exclude: fAssignment.Exclude,
     isAssignment: fBoth.isAssignment,
-    prevAssignment: fBoth.prevAssignment,
+    assignmentId: fAssignment.AssignmentId,
     message: mergeAll([
       fMessage,
       fAssignment.message,
@@ -297,12 +301,12 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
           }
         )(edge)
 
-        if (!isHashChainValid(scheduled)) {
-          logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
-          const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
-          err.status = 422
-          throw err
-        }
+        // if (!isHashChainValid(scheduled)) {
+        //   logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+        //   const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
+        //   err.status = 422
+        //   throw err
+        // }
 
         yield scheduled
       }
