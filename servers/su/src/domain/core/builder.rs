@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
 use super::tags::Tag;
-use dashmap::DashMap;
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
-use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus};
+use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus, GatewayTx};
 use super::json::Process;
 
 pub struct Builder<'a> {
     gateway: Arc<dyn Gateway>,
     signer: Arc<dyn Signer>,
-    logger: &'a Arc<dyn Log>,
-    cache: Arc<DashMap<String, Result<(), BuilderErrorType>>>,
+    logger: &'a Arc<dyn Log>
 }
 
 pub struct BuildResult {
@@ -52,8 +50,7 @@ impl<'a> Builder<'a> {
         Ok(Builder {
             gateway,
             signer,
-            logger,
-            cache: Arc::new(DashMap::new()),
+            logger
         })
     }
 
@@ -205,12 +202,7 @@ impl<'a> Builder<'a> {
         tx_id: &String,
         process: &Process,
         base_layer: &Option<String>,
-    ) -> Result<(), BuilderErrorType> {
-        // Check if the result is in the DashMap cache
-        if let Some(cached_result) = self.cache.get(tx_id) {
-            return cached_result.clone();
-        }
-
+    ) -> Result<Option<GatewayTx>, BuilderErrorType> {
         // Process the assignment verification
         let result = match base_layer {
             Some(_) => {
@@ -230,20 +222,16 @@ impl<'a> Builder<'a> {
                 };
 
                 match status.number_of_confirmations {
-                    n if n >= threshold => Ok(()),
+                    n if n >= threshold => Ok(None),
                     _ => Err(BuilderErrorType::BuilderError(
                         "Not enough confirmations to assign".to_string(),
                     )),
                 }
             }
             None => {
-                self.gateway.gql_tx(&tx_id).await?;
-                Ok(())
+                Ok(Some(self.gateway.gql_tx(&tx_id).await?))
             }
         };
-
-        // Store the result in the DashMap cache
-        self.cache.insert(tx_id.clone(), result.clone());
 
         result
     }
@@ -281,7 +269,15 @@ mod tests {
         async fn gql_tx(&self, _tx_id: &String) -> Result<GatewayTx, String> {
             Ok(GatewayTx {
                 id: "id".to_string(),
+                signature: "sig".to_string(),
+                anchor: None,
+                tags: vec![],
+                recipient: None,
             })
+        }
+
+        async fn raw(&self, _tx_id: &String) -> Result<Vec<u8>, String> {
+            Ok(vec![])
         }
     }
 
