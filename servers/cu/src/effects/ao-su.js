@@ -1,15 +1,11 @@
 /* eslint-disable camelcase */
 import { Transform, compose as composeStreams } from 'node:stream'
-import { createHash } from 'node:crypto'
 
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
 import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError } from '../domain/utils.js'
-
-const base64UrlToBytes = (b64Url) =>
-  Buffer.from(b64Url, 'base64url')
 
 const okRes = (res) => {
   if (res.ok) return res
@@ -18,22 +14,7 @@ const okRes = (res) => {
 
 const resToJson = (res) => res.json()
 
-const hashChain = (prevHashChain, prevAssignmentId) => {
-  const hash = createHash('sha256')
-  /**
-   * For the very first message, there is no previous id,
-   * so it is not included in the hashed bytes, to produce the very first
-   * hash chain
-   */
-  if (prevAssignmentId) hash.update(base64UrlToBytes(prevAssignmentId))
-  /**
-   * Always include the previous hash chain
-   */
-  hash.update(base64UrlToBytes(prevHashChain))
-  return hash.digest('base64url')
-}
-
-export const isHashChainValid = (prev, scheduled) => {
+export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) => {
   const { assignmentId: prevAssignmentId, hashChain: prevHashChain } = prev
   const { message } = scheduled
   const actual = message['Hash-Chain']
@@ -44,7 +25,7 @@ export const isHashChainValid = (prev, scheduled) => {
    */
   if (!prevAssignmentId || !prevHashChain) return !!actual
 
-  const expected = hashChain(prevHashChain, prevAssignmentId)
+  const expected = await hashChain(prevHashChain, prevAssignmentId)
   return expected === actual
 }
 
@@ -176,8 +157,10 @@ export const mapNode = pipe(
   })
 )
 
-export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
+export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
+
+  const isHashChainValid = isHashChainValidWith({ hashChain })
 
   const fetchPageDataloader = new DataLoader(async (args) => {
     fetchPageDataloader.clearAll()
@@ -309,7 +292,7 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
         )(edge)
 
         if (isHashChainValidationEnabled) {
-          if (!isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled)) {
+          if (!(await isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled))) {
             logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
             const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
             err.status = 422

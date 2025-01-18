@@ -6,7 +6,8 @@ import { createHash } from 'node:crypto'
 import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
 import { messageSchema } from '../domain/model.js'
 import { createTestLogger } from '../domain/logger.js'
-import { isHashChainValid, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
+import { isHashChainValidWith, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
+import { hashChain } from './worker/hashChain/main.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
 const logger = createTestLogger({ name: 'ao-cu:ao-su' })
@@ -140,6 +141,7 @@ describe('ao-su', () => {
   })
 
   describe('isHashChainValid', () => {
+    const isHashChainValid = isHashChainValidWith({ hashChain })
     const now = new Date().getTime()
     const messageId = 'message-123'
     const scheduled = {
@@ -170,21 +172,21 @@ describe('ao-su', () => {
       }
     }
 
-    test('should return whether the hashChain exists if there is no previous assignment', () => {
+    test('should return whether the hashChain exists if there is no previous assignment', async () => {
       // no prev info
-      assert(isHashChainValid({}, scheduled))
+      assert(await isHashChainValid({}, scheduled))
       // first assignment ergo has no prev assignment
-      assert(isHashChainValid({
+      assert(await isHashChainValid({
         hashChain: null,
         assignmentId: 'foo'
       }, scheduled))
-      assert(isHashChainValid({
+      assert(await isHashChainValid({
         hashChain: 'foo',
         assignmentId: null
       }, scheduled))
     })
 
-    test('should calculate and compare the hashChain based on the previous assignment', () => {
+    test('should calculate and compare the hashChain based on the previous assignment', async () => {
       const prevAssignmentId = Buffer.from('assignment-123', 'utf8').toString('base64url')
       const prevHashChain = Buffer.from('hashchain-123', 'utf8').toString('base64url')
 
@@ -202,7 +204,7 @@ describe('ao-su', () => {
         }
       }
 
-      assert(isHashChainValid(prev, valid))
+      assert(await isHashChainValid(prev, valid))
 
       const invalid = {
         message: {
@@ -213,7 +215,7 @@ describe('ao-su', () => {
         }
       }
 
-      assert(!isHashChainValid(prev, invalid))
+      assert(!(await isHashChainValid(prev, invalid)))
     })
   })
 
