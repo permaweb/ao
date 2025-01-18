@@ -920,7 +920,7 @@ impl DataStore for StoreClient {
                     let from_timestamp = from_timestamp_str
                         .parse::<i64>()
                         .map_err(StoreErrorType::from)?;
-                    from_timestamp == process_in.process.timestamp
+                    from_timestamp != process_in.process.timestamp
                 }
                 None => true, // No 'from' timestamp means it's the first page
             };

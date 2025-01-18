@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub use super::bytes::DataItem;
 pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
 pub use super::router::{ProcessScheduler, Scheduler};
+pub use super::tags::Tag;
 
 /*
 Interfaces for core dependencies. Implement these traits
@@ -22,9 +23,13 @@ pub struct TxStatus {
     pub number_of_confirmations: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct GatewayTx {
     pub id: String,
+    pub signature: String,
+    pub anchor: Option<String>,
+    pub tags: Vec<Tag>,
+    pub recipient: Option<String>,
 }
 
 #[async_trait]
@@ -33,6 +38,7 @@ pub trait Gateway: Send + Sync {
     async fn network_info(&self) -> Result<NetworkInfo, String>;
     async fn status(&self, tx_id: &String) -> Result<TxStatus, String>;
     async fn gql_tx(&self, tx_id: &String) -> Result<GatewayTx, String>;
+    async fn raw(&self, tx_id: &String) -> Result<Vec<u8>, String>;
 }
 
 pub trait Wallet: Send + Sync {
