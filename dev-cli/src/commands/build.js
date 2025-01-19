@@ -23,7 +23,7 @@ export async function build(customImage) {
 }
 
 export const command = new Command()
-  .description('Build the Lua Project into WASM')
+  .description('Build the Project into WASM')
   .option('-i, --image <image:string>', 'Specify a custom Docker image to use')
   .action(async (options) => {
     await build(options.image)
