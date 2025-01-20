@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { Transform, compose as composeStreams } from 'node:stream'
+import { Transform, Readable } from 'node:stream'
 
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
@@ -324,11 +324,8 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
         assignmentId,
         hashChain
       }) => {
-        return composeStreams(
-          /**
-           * compose will convert the AsyncIterable into a readable Duplex
-           */
-          fetchAllPages({ suUrl, processId, from, to })(),
+        return [
+          Readable.from(fetchAllPages({ suUrl, processId, from, to })()),
           Transform.from(mapAoMessage({
             processId,
             processBlock,
@@ -341,7 +338,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
             moduleTags,
             logger
           }))
-        )
+        ]
       })
       .toPromise()
 }

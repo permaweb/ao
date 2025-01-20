@@ -1,26 +1,14 @@
-import { compose as composeStreams, PassThrough, Transform } from 'node:stream'
+import { Transform } from 'node:stream'
 
 import { of } from 'hyper-async'
 import { mergeRight, isNil } from 'ramda'
-import { z } from 'zod'
 import WarpArBundles from 'warp-arbundles'
 
 import { loadTransactionDataSchema, loadTransactionMetaSchema } from '../dal.js'
-import { messageSchema, streamSchema } from '../model.js'
+import { messageSchema } from '../model.js'
 import { mapFrom, addressFrom } from '../utils.js'
 
 const { createData } = WarpArBundles
-
-/**
- * The result that is produced from this step
- * and added to ctx.
- *
- * This is used to parse the output to ensure the correct shape
- * is always added to context
- */
-const ctxSchema = z.object({
-  messages: streamSchema
-}).passthrough()
 
 function loadFromChainWith ({ loadTransactionData, loadTransactionMeta }) {
   loadTransactionData = loadTransactionDataSchema.implement(loadTransactionData)
@@ -219,7 +207,7 @@ export function hydrateMessagesWith (env) {
          */
         // $messages.on('error', () => $messages.emit('end'))
 
-        return composeStreams(
+        return [
           /**
            * There is some sort of bug in pipeline which will consistently cause this stream
            * to not end IFF it emits an error.
@@ -238,20 +226,15 @@ export function hydrateMessagesWith (env) {
            * thus closing the pipeline, and resolving the promise wrapping the stream
            * (see finished in evaluate.js)
            */
-          $messages,
-          composeStreams(
-            Transform.from(maybeMessageId),
-            Transform.from(maybeAoAssignment),
-            // Ensure every message emitted satisfies the schema
-            Transform.from(async function * (messages) {
-              for await (const cur of messages) yield messageSchema.parse(cur)
-            })
-          ),
-          new PassThrough({ objectMode: true })
-        )
+          ...$messages,
+          Transform.from(maybeMessageId),
+          Transform.from(maybeAoAssignment),
+          // Ensure every message emitted satisfies the schema
+          Transform.from(async function * (messages) {
+            for await (const cur of messages) yield messageSchema.parse(cur)
+          })
+        ]
       })
-      .map(messages => ({ messages }))
-      .map(mergeRight(ctx))
-      .map(ctxSchema.parse)
+      .map(messages => ({ ...ctx, messages }))
   }
 }

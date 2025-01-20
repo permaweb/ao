@@ -2,6 +2,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
+import { Readable } from 'node:stream'
 
 import AoLoader from '@permaweb/ao-loader'
 
@@ -10,8 +11,8 @@ import { evaluateWith } from './evaluate.js'
 
 const logger = createTestLogger({ name: 'ao-cu:readState' })
 
-async function * toAsyncIterable (iterable) {
-  while (iterable.length) yield iterable.shift()
+function toReadable (iterable) {
+  return Readable.from(iterable)
 }
 
 const mockCounter = { inc: () => undefined }
@@ -71,7 +72,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         {
           ordinate: 1,
           isAssignment: false,
@@ -206,7 +207,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         // assignment
         {
           ordinate: 1,
@@ -321,7 +322,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         // duplicate of starting point
         {
           ordinate: 1,
@@ -468,7 +469,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         {
           // Will include an error in result.error
           ordinate: 1,
@@ -578,7 +579,7 @@ describe('evaluate', () => {
       result: {
         Memory: Buffer.from('Hello world')
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         {
           ordinate: 1,
           isAssignment: false,
@@ -733,7 +734,7 @@ describe('evaluate', () => {
 
       await evaluate({
         ...args,
-        messages: toAsyncIterable([cronOne, cronTwo])
+        messages: toReadable([cronOne, cronTwo])
       }).toPromise()
     })
 
@@ -752,7 +753,7 @@ describe('evaluate', () => {
 
       await evaluate({
         ...args,
-        messages: toAsyncIterable([cronOne, messageOne, cronTwo])
+        messages: toReadable([cronOne, messageOne, cronTwo])
       }).toPromise()
     })
 
@@ -771,7 +772,7 @@ describe('evaluate', () => {
 
       await evaluate({
         ...args,
-        messages: toAsyncIterable([cronOne, messageOne, cronTwo, messageTwo])
+        messages: toReadable([cronOne, messageOne, cronTwo, messageTwo])
       }).toPromise()
     })
   })

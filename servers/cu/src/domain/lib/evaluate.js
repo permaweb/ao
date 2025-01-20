@@ -8,7 +8,7 @@ import { LRUCache } from 'lru-cache'
 
 import { evaluatorSchema, findMessageBeforeSchema, saveLatestProcessMemorySchema } from '../dal.js'
 import { evaluationSchema } from '../model.js'
-import { readableToAsyncGenerator, removeTagsByNameMaybeValue } from '../utils.js'
+import { removeTagsByNameMaybeValue } from '../utils.js'
 
 /**
  * The result that is produced from this step
@@ -253,27 +253,52 @@ export function evaluateWith (env) {
           }
         }
 
-        await pipeline(
-          composeStreams(
-            readableToAsyncGenerator(ctx.messages),
-            Transform.from(async function * removeInvalidTags ($messages) {
-              for await (const message of $messages) {
-                yield evolve(
-                  {
-                    message: {
-                      Tags: pipe(
-                        removeTagsByNameMaybeValue('From'),
-                        removeTagsByNameMaybeValue('Owner')
-                      )
-                    }
-                  },
-                  message
-                )
-              }
+        const removeInvalidTags = Transform.from(async function * ($messages) {
+          for await (const message of $messages) {
+            yield evolve(
+              {
+                message: {
+                  Tags: pipe(
+                    removeTagsByNameMaybeValue('From'),
+                    removeTagsByNameMaybeValue('Owner')
+                  )
+                }
+              },
+              message
+            )
+          }
+        })
+
+        /**
+         * ABANDON ALL HOPE YE WHO ENTER HERE
+         *
+         * compose from node:streams has some incredibly hard to debug issues, when it comes to destroying
+         * streams and propagating errors, when composing multiple levels of streams.
+         *
+         * In order to circumvent these issues, we've hacked the steps to instead build a list of
+         * streams, then combine them all here.
+         *
+         * THEN we add an error listener such that any stream erroring
+         * results in all streams being cleaned up and destroyed with that error.
+         *
+         * Finally, if an error was thrown from any stream, we re-throw such that the eval promise rejects,
+         * bubbling the error to the caller
+         */
+        if (!Array.isArray(ctx.messages)) ctx.messages = [ctx.messages]
+        const streams = [...ctx.messages, removeInvalidTags]
+        streams.push(composeStreams(...streams))
+        let e
+        streams.forEach(s => {
+          s.on('error', (err) => {
+            e = err
+            streams.forEach(s => {
+              s.emit('end')
+              s.destroy(err)
             })
-          ),
-          evalStream
-        )
+          })
+        })
+        await pipeline(streams[streams.length - 1], evalStream)
+        if (e) throw e
 
         /**
          * Make sure to attempt to cache the last result

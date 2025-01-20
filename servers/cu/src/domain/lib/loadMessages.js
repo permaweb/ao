@@ -1,11 +1,9 @@
-import { Transform, compose as composeStreams } from 'node:stream'
+import { Transform } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, identity, ifElse, isNil, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
-import { z } from 'zod'
+import { T, always, ascend, cond, equals, identity, ifElse, isNil, last, length, pipe, prop, reduce, uniqBy } from 'ramda'
 import ms from 'ms'
 
-import { streamSchema } from '../model.js'
 import { mapFrom, parseTags } from '../utils.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
@@ -587,8 +585,8 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, load
             })
         )
         .map(({ leftMost, rightMostTimestamp, $scheduled, genCronMessages }) => {
-          return composeStreams(
-            $scheduled,
+          return [
+            ...$scheduled,
             /**
              * Given a left-most and right-most boundary, return an async generator,
              * that given a list of values, emits sequential binary tuples dervied from those values.
@@ -695,7 +693,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, load
                 if (doEmitRight) yield right
               }
             })
-          )
+          ]
         })
     })
     /**
@@ -707,27 +705,12 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, load
      * construct and emit a 'message' for the process
      */
     .map($messages => {
-      return composeStreams(
-        $messages,
+      return [
+        ...$messages,
         Transform.from(maybePrependProcessMessage(ctx, logger, loadTransactionData))
-      )
+      ]
     })
-    .map(messages => ({ messages }))
 }
-
-/**
- * The result that is produced from this step
- * and added to ctx.
- *
- * This is used to parse the output to ensure the correct shape
- * is always added to context
- */
-const ctxSchema = z.object({
-  /**
-   * Messages to be evaluated, as a stream
-   */
-  messages: streamSchema
-}).passthrough()
 
 /**
  * @typedef LoadMessagesArgs
@@ -761,7 +744,5 @@ export function loadMessagesWith (env) {
     of(ctx)
       .chain(loadScheduledMessages)
       .chain($scheduled => loadCronMessages({ ...ctx, $scheduled }))
-      // { messages }
-      .map(mergeRight(ctx))
-      .map(ctxSchema.parse)
+      .map(messages => ({ ...ctx, messages }))
 }
