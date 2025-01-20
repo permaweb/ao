@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
-import { Transform, compose as composeStreams } from 'node:stream'
+import { Transform, Readable } from 'node:stream'
+
 import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
@@ -13,6 +14,21 @@ const okRes = (res) => {
 
 const resToJson = (res) => res.json()
 
+export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) => {
+  const { assignmentId: prevAssignmentId, hashChain: prevHashChain } = prev
+  const { message } = scheduled
+  const actual = message['Hash-Chain']
+
+  /**
+   * Depending on the source of the hot-start, there may not be
+   * a prev assignmentId and hashChain
+   */
+  if (!prevAssignmentId || !prevHashChain) return !!actual
+
+  const expected = await hashChain(prevHashChain, prevAssignmentId)
+  return expected === actual
+}
+
 /**
  * See new shape in https://github.com/permaweb/ao/issues/563#issuecomment-2020597581
  */
@@ -21,37 +37,45 @@ export const mapNode = pipe(
     // fromAssignment
     pipe(
       path(['assignment']),
-      (assignment) => parseTags(assignment.tags),
-      applySpec({
-        /**
-         * There could be multiple Exclude tags,
-         * but parseTags will accumulate them into an array,
-         *
-         * which is what we want
-         */
-        Exclude: path(['Exclude']),
-        /**
-         * Data from the assignment, to be placed
-         * on the message
-         */
-        message: applySpec({
-          Message: path(['Message']),
-          Target: path(['Process']),
-          Epoch: pipe(path(['Epoch']), parseInt),
-          Nonce: pipe(path(['Nonce']), parseInt),
-          Timestamp: pipe(path(['Timestamp']), parseInt),
-          'Block-Height': pipe(
+      (assignment) => {
+        const tags = parseTags(assignment.tags)
+
+        return applySpec({
           /**
-           * Returns a left padded integer like '000001331218'
-           *
-           * So use parseInt to convert it into a number
+           * The assignment id is needed in order to compute
+           * and verify the hash chain
            */
-            path(['Block-Height']),
-            parseInt
-          ),
-          'Hash-Chain': path(['Hash-Chain'])
-        })
-      })
+          AssignmentId: always(assignment.id),
+          /**
+           * There could be multiple Exclude tags,
+           * but parseTags will accumulate them into an array,
+           *
+           * which is what we want
+           */
+          Exclude: path(['Exclude']),
+          /**
+           * Data from the assignment, to be placed
+           * on the message
+           */
+          message: applySpec({
+            Message: path(['Message']),
+            Target: path(['Process']),
+            Epoch: pipe(path(['Epoch']), parseInt),
+            Nonce: pipe(path(['Nonce']), parseInt),
+            Timestamp: pipe(path(['Timestamp']), parseInt),
+            'Block-Height': pipe(
+            /**
+             * Returns a left padded integer like '000001331218'
+             *
+             * So use parseInt to convert it into a number
+             */
+              path(['Block-Height']),
+              parseInt
+            ),
+            'Hash-Chain': path(['Hash-Chain'])
+          })
+        })(tags)
+      }
     ),
     // fromMessage
     pipe(
@@ -94,6 +118,7 @@ export const mapNode = pipe(
     name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
     exclude: fAssignment.Exclude,
     isAssignment: fBoth.isAssignment,
+    assignmentId: fAssignment.AssignmentId,
     message: mergeAll([
       fMessage,
       fAssignment.message,
@@ -132,8 +157,10 @@ export const mapNode = pipe(
   })
 )
 
-export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
+export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }) => {
   const logger = _logger.child('ao-su:loadMessages')
+
+  const isHashChainValid = isHashChainValidWith({ hashChain })
 
   const fetchPageDataloader = new DataLoader(async (args) => {
     fetchPageDataloader.clearAll()
@@ -233,15 +260,29 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
     }
   }
 
-  function mapAoMessage ({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }) {
+  function mapAoMessage ({ processId, processBlock, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
     const AoGlobal = {
       Process: { Id: processId, Owner: processOwner, Tags: processTags },
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
     }
+    /**
+     * Only perform hash chain validation on processes
+     * spawned after arweave day, since old hash chains are invalid
+     * anyway.
+     */
+    const isHashChainValidationEnabled = processBlock.height >= 1440000
+    if (!isHashChainValidationEnabled) {
+      logger('HashChain validation disabled for old process "%s" at block [%j]', [processId, processBlock])
+    }
 
+    // Set this to simulate a stream error
+    // eslint-disable-next-line
+    let simulateError = false
+    let prevAssignmentId = assignmentId
+    let prevHashChain = hashChain
     return async function * (edges) {
       for await (const edge of edges) {
-        yield pipe(
+        const scheduled = pipe(
           prop('node'),
           /**
            * Map to the expected shape
@@ -252,20 +293,62 @@ export const loadMessagesWith = ({ fetch, logger: _logger, pageSize }) => {
             return scheduled
           }
         )(edge)
+
+        if (simulateError) {
+          logger('<SIMULATED ERROR> message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+          const err = new Error(`Simulated Error on message ${scheduled.message.Id}`)
+          err.status = 422
+          throw err
+        }
+
+        if (isHashChainValidationEnabled) {
+          if (!(await isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled))) {
+            logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+            const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
+            err.status = 422
+            throw err
+          }
+        }
+
+        prevAssignmentId = scheduled.assignmentId
+        prevHashChain = scheduled.message['Hash-Chain']
+
+        yield scheduled
       }
     }
   }
 
   return (args) =>
     of(args)
-      .map(({ suUrl, processId, owner: processOwner, tags: processTags, moduleId, moduleOwner, moduleTags, from, to }) => {
-        return composeStreams(
-          /**
-           * compose will convert the AsyncIterable into a readable Duplex
-           */
-          fetchAllPages({ suUrl, processId, from, to })(),
-          Transform.from(mapAoMessage({ processId, processOwner, processTags, moduleId, moduleOwner, moduleTags }))
-        )
+      .map(({
+        suUrl,
+        processId,
+        block: processBlock,
+        owner: processOwner,
+        tags: processTags,
+        moduleId,
+        moduleOwner,
+        moduleTags,
+        from,
+        to,
+        assignmentId,
+        hashChain
+      }) => {
+        return [
+          Readable.from(fetchAllPages({ suUrl, processId, from, to })()),
+          Transform.from(mapAoMessage({
+            processId,
+            processBlock,
+            assignmentId,
+            hashChain,
+            processOwner,
+            processTags,
+            moduleId,
+            moduleOwner,
+            moduleTags,
+            logger
+          }))
+        ]
       })
       .toPromise()
 }

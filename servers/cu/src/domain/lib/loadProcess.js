@@ -46,6 +46,16 @@ const ctxSchema = z.object({
    */
   fromCron: z.string().nullish(),
   /**
+   * The most RECENT SCHEDULED message assignmentId, needed
+   * in order to perform hashChain validation
+   */
+  mostRecentAssignmentId: z.string().nullish(),
+  /**
+   * The most RECENT SCHEDULED message hashChain, needed
+   * in order to perform hashChain validation
+   */
+  mostRecentHashChain: z.string().nullish(),
+  /**
    * Whether the evaluation found is the exact evaluation being requested
    */
   exact: z.boolean().default(false)
@@ -89,8 +99,6 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
   }
 
   function maybeCachedMemory (ctx) {
-    // logger('Checking cache for existing memory to start evaluation "%s"...', ctx.id)
-
     return findLatestProcessMemory({
       processId: ctx.id,
       timestamp: ctx.to,
@@ -127,14 +135,12 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
             if (['cold_start'].includes(found.src)) return Resolved(found)
             if (['memory'].includes(found.src) && !found.fromFile) return Resolved(found)
 
-            // logger(
-            //   'Seeding cache with latest checkpoint found with parameters "%j"',
-            //   omit(['Memory'], found)
-            // )
             /**
-             * Immediatley attempt to save the memory loaded from a checkpoint
-             * into the LRU In-memory cache, which will cut
-             * down on calls to load checkpoints from arweave (it will load from cache instead)
+             * Immediatley attempt to save the memory loaded, from a less-hot checkpoint
+             * layer, into the LRU In-memory cache.
+             *
+             * This will help mitigate concurrent evals of the same process
+             * from all making calls to a remote ie. Arweave
              */
             return saveLatestProcessMemory({
               processId: ctx.id,
@@ -144,6 +150,8 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
                */
               Memory: found.Memory,
               moduleId: found.moduleId,
+              assignmentId: found.assignmentId,
+              hashChain: found.hashChain,
               // messageId: found.messageId,
               timestamp: found.timestamp,
               epoch: found.epoch,
@@ -163,6 +171,15 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
             ordinate: found.ordinate,
             fromBlockHeight: found.blockHeight,
             fromCron: found.cron,
+            mostRecentAssignmentId: found.assignmentId,
+            mostRecentHashChain: found.hashChain,
+            /**
+             * The exact evaluation may not have been found in persitence,
+             * but it may be found in a caching tier.
+             *
+             * So we still signal to the caller whether an exact match
+             * was found, for potential optimizations.
+             */
             exact
           }))
       })
