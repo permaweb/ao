@@ -3,7 +3,20 @@ use alloc::string::ToString;
 use alloc::vec::Vec;
 use serde_json::{json, Map, Value};
 
-#[derive(Default)]
+pub enum Error {
+    SerdeError(serde_json::Error),
+    FailedToGetAuthorities,
+    FailedToGetTag,
+    FailedToGetMessageInOutbox,
+    FailedToGetArrayAsMut,
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Error {
+        Error::SerdeError(err)
+    }
+}
+
 pub struct AO {
     pub version: String,
     module: Option<String>,
@@ -31,9 +44,9 @@ impl AO {
         }
     }
 
-    pub fn init(&mut self, env: &str) {
+    pub fn init(&mut self, env: &str) -> Result<(), Error> {
         // Parse the environment JSON string into a Value (serde_json's equivalent of cJSON)
-        let env_json: Value = serde_json::from_str(env).unwrap();
+        let env_json: Value = serde_json::from_str(env)?;
 
         // Retrieve the "Process" object from the parsed JSON
         if let Some(process) = env_json.get("Process") {
@@ -67,7 +80,10 @@ impl AO {
                         if let Some(name) = tag.get("name").and_then(Value::as_str) {
                             if name == "Authority" {
                                 if let Some(value) = tag.get("value").and_then(Value::as_str) {
-                                    self.authorities.as_mut().unwrap().push(value.to_string());
+                                    self.authorities
+                                        .as_mut()
+                                        .ok_or(Error::FailedToGetAuthorities)?
+                                        .push(value.to_string());
                                 }
                             }
                         }
@@ -76,15 +92,16 @@ impl AO {
             }
         }
         self.clear_outbox();
+        Ok(())
     }
 
-    pub fn normalize(&self, msg: &str) -> String {
-        let msg_json: Value = serde_json::from_str(msg).unwrap();
-        serde_json::to_string(&msg_json).unwrap()
+    pub fn normalize(&self, msg: &str) -> Result<String, Error> {
+        let msg_json: Value = serde_json::from_str(msg)?;
+        Ok(serde_json::to_string(&msg_json)?)
     }
 
-    pub fn sanitize(&self, msg: &str) -> String {
-        let mut msg_json: Value = serde_json::from_str(msg).unwrap();
+    pub fn sanitize(&self, msg: &str) -> Result<String, Error> {
+        let mut msg_json: Value = serde_json::from_str(msg)?;
         let mut new_message = Map::new();
 
         // Iterate over each key in the JSON object, excluding non-forwardable tags
@@ -93,8 +110,7 @@ impl AO {
                 new_message.insert(key.clone(), value.clone());
             }
         }
-
-        serde_json::to_string(&new_message).unwrap()
+        Ok(serde_json::to_string(&new_message)?)
     }
 
     pub fn log(&mut self, msg: &str) {
@@ -104,8 +120,8 @@ impl AO {
         }
     }
 
-    pub fn send(&mut self, msg: &str) -> String {
-        let msg_json: Value = serde_json::from_str(msg).unwrap();
+    pub fn send(&mut self, msg: &str) -> Result<String, Error> {
+        let msg_json: Value = serde_json::from_str(msg)?;
         self.ref_count += 1;
         let padded_ref = format!("{:032}", self.ref_count);
 
@@ -130,7 +146,9 @@ impl AO {
                     self.add_tag_to_array(
                         &mut tags_array,
                         name,
-                        tag.get("value").and_then(Value::as_str).unwrap(),
+                        tag.get("value")
+                            .and_then(Value::as_str)
+                            .ok_or(Error::FailedToGetTag)?,
                     );
                 }
             }
@@ -141,16 +159,16 @@ impl AO {
         let messages = self
             .outbox
             .get_mut("Messages")
-            .unwrap()
+            .ok_or(Error::FailedToGetMessageInOutbox)?
             .as_array_mut()
-            .unwrap();
+            .ok_or(Error::FailedToGetArrayAsMut)?;
         messages.push(Value::Object(message.clone()));
 
-        serde_json::to_string(&message).unwrap()
+        Ok(serde_json::to_string(&message)?)
     }
 
-    pub fn assign(&mut self, assignment: &str) {
-        let assignment_json: Value = serde_json::from_str(assignment).unwrap();
+    pub fn assign(&mut self, assignment: &str) -> Result<(), Error> {
+        let assignment_json: Value = serde_json::from_str(assignment)?;
         let assignments = self
             .outbox
             .get_mut("Assignments")
@@ -158,6 +176,7 @@ impl AO {
             .as_array_mut()
             .unwrap();
         assignments.push(assignment_json);
+        Ok(())
     }
 
     pub fn is_trusted(&self, msg: &str) -> bool {
