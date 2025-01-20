@@ -1,8 +1,11 @@
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
 use serde_json::{json, Map, Value};
 
 #[derive(Default)]
 pub struct AO {
-    version: String,
+    pub version: String,
     module: Option<String>,
     id: Option<String>,
     authorities: Option<Vec<String>>,
@@ -86,7 +89,7 @@ impl AO {
 
         // Iterate over each key in the JSON object, excluding non-forwardable tags
         for (key, value) in msg_json.as_object_mut().unwrap().iter_mut() {
-            if !self.is_string_in_array(&key, &self.non_forwardable_tags()) {
+            if !self.is_string_in_array(key, &self.non_forwardable_tags()) {
                 new_message.insert(key.clone(), value.clone());
             }
         }
@@ -193,18 +196,6 @@ impl AO {
         result_out.insert("Output".to_string(), output.clone());
 
         serde_json::to_string(&result_out).unwrap()
-    }
-
-    pub fn print(&self) {
-        println!("Version: {}", self.version);
-        println!("Module: {}", self.module.clone().unwrap_or_default());
-        println!("Ref: {}", self.ref_count);
-        println!("Id: {}", self.id.clone().unwrap_or_default());
-        println!(
-            "Authorities: {}",
-            serde_json::to_string(&self.authorities).unwrap()
-        );
-        println!("Outbox: {}", serde_json::to_string(&self.outbox).unwrap());
     }
 
     pub fn clear_outbox(&mut self) {

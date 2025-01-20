@@ -1,6 +1,24 @@
+#![no_std]
+
+#[macro_use]
+extern crate alloc;
+use alloc::string::String;
+use alloc::string::ToString;
 pub mod libao;
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+use alloc::ffi::CString;
+use core::ffi::c_char;
+use core::ffi::CStr;
+use wee_alloc::WeeAlloc;
+
+#[global_allocator]
+static ALLOC: WeeAlloc = WeeAlloc::INIT;
+
+/// halt the thread on panic; messages are discarded:
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
 
 /// Processes the input `msg` and `env` strings, performs some operations,
 /// and returns the result as a C-compatible string.
@@ -17,7 +35,7 @@ use std::os::raw::c_char;
 /// - A pointer to a null-terminated C string containing the result. The caller must not modify
 ///   or attempt to free this pointer.
 #[no_mangle]
-pub extern "C" fn process_handle(msg: *const c_char, env: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn process_handle(msg: *const c_char, env: *const c_char) -> *const c_char {
     // Convert the C strings to Rust strings
     let msg = unsafe { CStr::from_ptr(msg).to_str().unwrap_or("Invalid msg") };
     let env = unsafe { CStr::from_ptr(env).to_str().unwrap_or("Invalid env") };
@@ -38,16 +56,15 @@ pub fn handler(msg: &str, env: &str) -> String {
     ao.init(env);
     ao.log("Normalize");
     let norm = ao.normalize(msg);
-    ao.log(&msg);
-    let send = &ao.send(&norm);
-    println!("Send: {}", send);
+    ao.log(msg);
+    let _send = &ao.send(&norm);
     "{\"ok\": true,\"response\":{\"Output\":\"Success\"},\"Memory\":50000000}".to_string()
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
-    use std::ffi::{CStr, CString};
 
     #[test]
     fn test_process_handle() {
@@ -56,8 +73,7 @@ mod tests {
 
         let c_msg = CString::new(msg_json).expect("Failed to create CString for msg");
         let c_env = CString::new(env_json).expect("Failed to create CString for env");
-
-        let c_result = process_handle(c_msg.as_ptr(), c_env.as_ptr());
+        let c_result = unsafe { process_handle(c_msg.as_ptr(), c_env.as_ptr()) };
 
         assert!(!c_result.is_null(), "Returned pointer is null");
 

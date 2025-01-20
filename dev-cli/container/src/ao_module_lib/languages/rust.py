@@ -18,7 +18,7 @@ def inject_rust_files(definition: Definition, c_program: str):
     for header in c_header_files:
         c_program = '#include "{}"\n'.format(header) + c_program
 
-    c_program = 'const char *process_handle(const char *arg_0, const char *arg_1);\n' + c_program
+#    c_program = 'const char *process_handle(const char *arg_0, const char *arg_1);\n' + c_program
 
 
     c_program = c_program.replace('__FUNCTION_DECLARATIONS__', definition.make_c_function_delarations())
