@@ -1,4 +1,3 @@
-#![no_std]
 #[macro_use]
 extern crate alloc;
 use alloc::string::String;
@@ -7,17 +6,6 @@ pub mod libao;
 use alloc::ffi::CString;
 use core::ffi::c_char;
 use core::ffi::CStr;
-use dlmalloc::GlobalDlmalloc;
-
-#[global_allocator]
-static GLOBAL: GlobalDlmalloc = GlobalDlmalloc;
-
-/// halt the thread on panic; messages are discarded:
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
 
 /// Processes the input `msg` and `env` strings, performs some operations,
 /// and returns the result as a C-compatible string.
