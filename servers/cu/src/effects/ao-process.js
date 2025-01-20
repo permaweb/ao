@@ -1653,7 +1653,7 @@ export function saveCheckpointWith ({
             logger(
               'Successfully created file checkpoint for process "%s" on evaluation "%j"',
               processId,
-              { file, processId, nonce, timestamp, cron }
+              { file, processId, assignmentId, hashChain, nonce, timestamp, cron }
             )
             return { file, ...evaluation }
           })
@@ -1730,7 +1730,7 @@ export function saveCheckpointWith ({
               logger(
                 'Successfully uploaded Checkpoint DataItem for process "%s" on evaluation "%j"',
                 processId,
-                { checkpointTxId: res.id, processId, nonce, timestamp, cron, encoding: 'gzip' }
+                { checkpointTxId: res.id, processId, assignmentId, hashChain, nonce, timestamp, cron, encoding: 'gzip' }
               )
               /**
                * Track that we've recently created a checkpoint for this

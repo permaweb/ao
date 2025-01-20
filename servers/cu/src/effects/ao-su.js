@@ -275,6 +275,9 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
       logger('HashChain validation disabled for old process "%s" at block [%j]', [processId, processBlock])
     }
 
+    // Set this to simulate a stream error
+    // eslint-disable-next-line
+    let simulateError = false
     let prevAssignmentId = assignmentId
     let prevHashChain = hashChain
     return async function * (edges) {
@@ -290,6 +293,13 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
             return scheduled
           }
         )(edge)
+
+        if (simulateError) {
+          logger('<SIMULATED ERROR> message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+          const err = new Error(`Simulated Error on message ${scheduled.message.Id}`)
+          err.status = 422
+          throw err
+        }
 
         if (isHashChainValidationEnabled) {
           if (!(await isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled))) {

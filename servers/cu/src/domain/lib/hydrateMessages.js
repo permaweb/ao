@@ -208,24 +208,6 @@ export function hydrateMessagesWith (env) {
         // $messages.on('error', () => $messages.emit('end'))
 
         return [
-          /**
-           * There is some sort of bug in pipeline which will consistently cause this stream
-           * to not end IFF it emits an error.
-           *
-           * When errors are thrown in other points in the stream, pipeline seems to work and
-           * close the stream just fine, so not sure what's going on here.
-           *
-           * Before, we had a workaround to manually emit 'end' from the stream on eror, which seemed
-           * to work (See above commented out .on())
-           *
-           * That was UNTIL we composed more than 2 Transform streams after it, which caused that
-           * workaround to no longer work -- very strange.
-           *
-           * For some reason, wrapping the subsequent Transforms in another compose,
-           * AND adding a PassThrough stream at the end successfully ends the stream on errors,
-           * thus closing the pipeline, and resolving the promise wrapping the stream
-           * (see finished in evaluate.js)
-           */
           ...$messages,
           Transform.from(maybeMessageId),
           Transform.from(maybeAoAssignment),
