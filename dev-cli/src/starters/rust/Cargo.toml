@@ -9,7 +9,7 @@ crate-type = ["staticlib"]
 [dependencies]
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde_json = { version="1.0", default-features = false, features = ["alloc"] }
-wee_alloc = "0.4.5"
+dlmalloc = { version="0.2.7", default-features = false, features = ["global"] }
 
 [profile.dev]
 panic = "abort"

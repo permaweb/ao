@@ -8,10 +8,10 @@ pub mod libao;
 use alloc::ffi::CString;
 use core::ffi::c_char;
 use core::ffi::CStr;
-use wee_alloc::WeeAlloc;
+use dlmalloc::GlobalDlmalloc;
 
 #[global_allocator]
-static ALLOC: WeeAlloc = WeeAlloc::INIT;
+static GLOBAL: GlobalDlmalloc = GlobalDlmalloc;
 
 /// halt the thread on panic; messages are discarded:
 #[cfg(not(test))]
