@@ -74,7 +74,7 @@ def main():
 
     # Inject rust files into c_program if language is rust
     if(language == 'rust'):
-        c_program = inject_rust_files(definition, c_program)
+        c_program = inject_rust_files(definition, c_program, config)
 
     # Inject lua files into c_program always to load lua files and replace placeholders
     if(language == 'lua'):
@@ -159,10 +159,7 @@ def main():
     # shell_exec(*meter_cmd)
 
     if config.keep_js is False:
-        process_js_path = os.path.join(os.getcwd(), 'process.js')
-        # For rust case, js code is not exists
-        if os.path.exists(process_js_path):
-            shell_exec(*['rm', process_js_path])
+        shell_exec(*['rm', os.path.join(os.getcwd(), 'process.js')])
 
 if __name__ == '__main__':
     main()

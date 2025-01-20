@@ -4,9 +4,10 @@ import shutil
 
 from ao_module_lib.helper import shell_exec
 from ao_module_lib.definition import Definition
+from ao_module_lib.config import Config
 
 RUST_DIR = '/opt/aorustlib'
-def inject_rust_files(definition: Definition, c_program: str):
+def inject_rust_files(definition: Definition, c_program: str, config: Config):
 
     c_header_files = []
     # rust_source_files = []
@@ -37,6 +38,7 @@ def inject_rust_files(definition: Definition, c_program: str):
 #    os.chdir(RUST_DIR)
 
     # build rust code at '/src'
+    target = config.target == 64 and 'wasm64-unknown-unknown' or 'wasm32-unknown-unknown'
     os.environ["RUSTFLAGS"] = "--cfg=web_sys_unstable_apis --Z wasm_c_abi=spec"
     cmd = [
         'cargo',
@@ -44,12 +46,12 @@ def inject_rust_files(definition: Definition, c_program: str):
         'build',
         '-Zbuild-std=std,panic_unwind,panic_abort',
         # '-Zbuild-std-features=panic_immediate_abort',
-        '--target=wasm64-unknown-unknown',
+        f'--target={target}',
         '--release'
         ]
 
     shell_exec(*cmd)
-    rust_lib = glob.glob('/src/target/wasm64-unknown-unknown/release/*.a', recursive=True)[0]
+    rust_lib = glob.glob(f'/src/target/{target}/release/*.a', recursive=True)[0]
     rust_lib = shutil.copy2(rust_lib, RUST_DIR)
 
     cmd = [
