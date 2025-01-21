@@ -1,3 +1,13 @@
+/**
+ * The business logic is encapsulated away from the effects
+ * using simple zod schemas.
+ *
+ * All calls entering and exiting the business logic, into an effect,
+ * ought to pass through a schema specified here. This ensures the
+ * business logic is always dealing with the shapes that it expects
+ * from the "outside" effect world.
+ */
+
 import { z } from 'zod'
 
 import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchema, processCheckpointSchema, bufferSchema } from './model.js'
@@ -231,3 +241,10 @@ export const locateProcessSchema = z.function()
       url: z.string()
     })
   ))
+
+// Application
+
+export const applicationSchema = z.object({
+  start: z.function().returns(z.promise(z.any())),
+  stop: z.function().returns(z.promise(z.any()))
+})

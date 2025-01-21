@@ -1,4 +1,4 @@
-import { errFrom } from '../../domain/utils.js'
+import { errFrom } from '../../../../domain/utils.js'
 
 /**
  * A middleware that simply calls the next handler in the chain.
@@ -13,9 +13,10 @@ export const withErrorHandler = (handler) => (req, res) => {
   return Promise.resolve()
     .then(() => handler(req, res))
     .catch((err) => {
-      const { domain: { logger } } = req
+      const { logger } = req
 
       logger('An error bubbled to the top handler. Formatting and relaying to client:', err)
+      console.error(err)
       const formatted = errFrom(err)
       if (res.raw.writableEnded) return
 

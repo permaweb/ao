@@ -5,32 +5,22 @@ import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
-import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
 import workerpool from 'workerpool'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
-import { fromPromise } from 'hyper-async'
 import lt from 'long-timeout'
 
-// Precanned clients to use for OOTB apis
-import * as DbClient from './effects/db.js'
-import * as ArweaveClient from './effects/arweave.js'
-import * as AoSuClient from './effects/ao-su.js'
-import * as WasmClient from './effects/wasm.js'
-import * as AoProcessClient from './effects/ao-process.js'
-import * as AoModuleClient from './effects/ao-module.js'
-import * as AoEvaluationClient from './effects/ao-evaluation.js'
-import * as AoBlockClient from './effects/ao-block.js'
-import * as MetricsClient from './effects/metrics.js'
-
-import { readResultWith } from './domain/api/readResult.js'
-import { readStateWith, pendingReadStates } from './domain/api/readState.js'
-import { readCronResultsWith } from './domain/api/readCronResults.js'
-import { healthcheckWith } from './domain/api/healthcheck.js'
-import { readResultsWith } from './domain/api/readResults.js'
-import { dryRunWith } from './domain/api/dryRun.js'
-import { statsWith } from './domain/api/perf.js'
+import * as DbClient from './db.js'
+import * as ArweaveClient from './arweave.js'
+import * as AoSuClient from './ao-su.js'
+import * as WasmClient from './wasm.js'
+import * as AoProcessClient from './ao-process.js'
+import * as AoModuleClient from './ao-module.js'
+import * as AoEvaluationClient from './ao-evaluation.js'
+import * as AoBlockClient from './ao-block.js'
+import * as MetricsClient from './metrics.js'
+import * as AoHttp from './ao-http/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -50,9 +40,7 @@ async function readFile (file) {
   return Buffer.concat(chunks)
 }
 
-export const createApis = async (ctx) => {
-  ctx.logger('Creating business logic apis')
-
+export const createEffects = async (ctx) => {
   const setTimeout = (...args) => lt.setTimeout(...args)
   const clearTimeout = (...args) => lt.clearTimeout(...args)
 
@@ -142,10 +130,10 @@ export const createApis = async (ctx) => {
    * Since hash chain valiation is done for _every single scheduled message_, we offload the
    * work to a worker thread, so at least the main thread isn't blocked.
    */
-  const hashChainWorkerPath = join(__dirname, 'effects', 'worker', 'hashChain', 'index.js')
+  const hashChainWorkerPath = join(__dirname, 'worker', 'hashChain', 'index.js')
   const hashChainWorker = workerpool.pool(hashChainWorkerPath, { maxWorkers: maxPrimaryWorkerThreads })
 
-  const worker = join(__dirname, 'effects', 'worker', 'evaluator', 'index.js')
+  const worker = join(__dirname, 'worker', 'evaluator', 'index.js')
   const primaryWorkerPool = workerpool.pool(worker, {
     maxWorkers: maxPrimaryWorkerThreads,
     onCreateWorker: onCreateWorker('primary')
@@ -170,7 +158,7 @@ export const createApis = async (ctx) => {
    * TODO: I don't really like implictly doing this,
    * but works for now.
    */
-  const _metrics = MetricsClient.initializeRuntimeMetricsWith({})()
+  const metrics = MetricsClient.initializeRuntimeMetricsWith({})()
 
   const gauge = MetricsClient.gaugeWith({})
 
@@ -208,6 +196,8 @@ export const createApis = async (ctx) => {
     mkdir
   })
 
+  // TODO: these log statements ought to be moved close to the code that is pertinent
+  // For now, just keeping here
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
@@ -257,46 +247,37 @@ export const createApis = async (ctx) => {
     cache: WasmClient.createWasmModuleCache({ MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE })
   })
 
-  const stats = statsWith({
-    gauge,
-    loadWorkerStats: () => ({
-      primary: ({
-        ...primaryWorkerPool.stats(),
-        /**
-         * We use a work queue on the main thread while keeping
-         * worker pool queues empty (see comment above)
-         *
-         * So we use the work queue size to report pending tasks
-         */
-        pendingTasks: primaryWorkQueue.size
-      }),
-      dryRun: ({
-        ...dryRunWorkerPool.stats(),
-        /**
-         * We use a work queue on the main thread while keeping
-         * worker pool queues empty (see comment above)
-         *
-         * So we use the work queue size to report pending tasks
-         */
-        pendingTasks: dryRunWorkQueue.size
-      })
+  const loadWorkerStats = () => ({
+    primary: ({
+      ...primaryWorkerPool.stats(),
+      /**
+       * We use a work queue on the main thread while keeping
+       * worker pool queues empty (see comment above)
+       *
+       * So we use the work queue size to report pending tasks
+       */
+      pendingTasks: primaryWorkQueue.size
     }),
-    /**
-     * https://nodejs.org/api/process.html#processmemoryusage
-     *
-     * Note: worker thread resources will be included in rss,
-     * as that is the Resident Set Size for the entire node process
-     */
-    loadMemoryUsage: () => process.memoryUsage(),
-    loadProcessCacheUsage: () => wasmMemoryCache.data.loadProcessCacheUsage()
+    dryRun: ({
+      ...dryRunWorkerPool.stats(),
+      /**
+       * We use a work queue on the main thread while keeping
+       * worker pool queues empty (see comment above)
+       *
+       * So we use the work queue size to report pending tasks
+       */
+      pendingTasks: dryRunWorkQueue.size
+    })
   })
+
   /**
-   * TODO: Should this just be a field on stats to call?
+   * https://nodejs.org/api/process.html#processmemoryusage
+   *
+   * Note: worker thread resources will be included in rss,
+   * as that is the Resident Set Size for the entire node process
    */
-  const metrics = {
-    contentType: _metrics.contentType,
-    compute: fromPromise(() => _metrics.metrics())
-  }
+  const loadMemoryUsage = () => process.memoryUsage()
+  const loadProcessCacheUsage = () => wasmMemoryCache.data.loadProcessCacheUsage()
 
   const evaluationCounter = MetricsClient.counterWith({})({
     name: 'ao_process_total_evaluations',
@@ -315,7 +296,7 @@ export const createApis = async (ctx) => {
 
   const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
 
-  const sharedDeps = (logger) => ({
+  const common = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
     isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
@@ -387,147 +368,74 @@ export const createApis = async (ctx) => {
     isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
     isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
     isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
-    isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
-    MODULE_MODE: ctx.MODULE_MODE,
-    logger
+    isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS })
   })
-  /**
-   * default readState that works OOTB
-   * - Uses PouchDB to cache evaluations and processes
-   * - Uses ao Sequencer Unit
-   * - Use arweave.net gateway
-   */
-  const readStateLogger = ctx.logger.child('readState')
-  const readState = readStateWith(sharedDeps(readStateLogger))
 
-  const dryRunLogger = ctx.logger.child('dryRun')
-  const dryRun = dryRunWith({
-    ...sharedDeps(dryRunLogger),
+  const loadMessageMeta = AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: ctx.logger })
+
+  const loadDryRunEvaluator = AoModuleClient.evaluatorWith({
+    loadWasmModule,
+    evaluateWith: (prep) => dryRunWorkQueue.add(() =>
+      Promise.resolve()
+        /**
+         * prep work is deferred until the work queue tasks is executed
+         */
+        .then(prep)
+        .then(([args, options]) =>
+          Promise.resolve()
+            .then(() => {
+              /**
+               * TODO: is this the best place for this?
+               *
+               * It keeps it abstracted away from business logic,
+               * and tied to the specific evaluator, so seems kosher,
+               * but also feels kind of misplaced
+               */
+              if (args.close) return broadcastCloseStream(args.streamId)
+
+              return dryRunWorkerPool.exec('evaluate', [args], options)
+            })
+            .catch((err) => {
+              /**
+               * Hack to detect when the max queue size is being exceeded and to reject
+               * with a more informative error
+               */
+              if (err.message.startsWith('Max queue size of')) {
+                const dryRunLimitErr = new Error('Dry-Run enqueue limit exceeded')
+                dryRunLimitErr.status = 429
+                return Promise.reject(dryRunLimitErr)
+              }
+
+              // Bubble as normal
+              return Promise.reject(err)
+            })
+        )
+    )
+  })
+
+  const findEvaluations = AoEvaluationClient.findEvaluationsWith({ db, logger: ctx.logger })
+
+  /**
+   * The presentation side-effect, that accepts the domain
+   * and any additional context, and returns the app
+   */
+  const app = (domain) => AoHttp.createAoHttp({ ...ctx, domain })
+
+  return {
+    common,
     setTimeout,
     clearTimeout,
-    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: dryRunLogger }),
-    /**
-     * Dry-runs use a separate worker thread pool, so as to not block
-     * primary evaluations
-     */
-    loadDryRunEvaluator: AoModuleClient.evaluatorWith({
-      loadWasmModule,
-      evaluateWith: (prep) => dryRunWorkQueue.add(() =>
-        Promise.resolve()
-          /**
-           * prep work is deferred until the work queue tasks is executed
-           */
-          .then(prep)
-          .then(([args, options]) =>
-            Promise.resolve()
-              .then(() => {
-                /**
-                 * TODO: is this the best place for this?
-                 *
-                 * It keeps it abstracted away from business logic,
-                 * and tied to the specific evaluator, so seems kosher,
-                 * but also feels kind of misplaced
-                 */
-                if (args.close) return broadcastCloseStream(args.streamId)
-
-                return dryRunWorkerPool.exec('evaluate', [args], options)
-              })
-              .catch((err) => {
-                /**
-                 * Hack to detect when the max queue size is being exceeded and to reject
-                 * with a more informative error
-                 */
-                if (err.message.startsWith('Max queue size of')) {
-                  const dryRunLimitErr = new Error('Dry-Run enqueue limit exceeded')
-                  dryRunLimitErr.status = 429
-                  return Promise.reject(dryRunLimitErr)
-                }
-
-                // Bubble as normal
-                return Promise.reject(err)
-              })
-          )
-      ),
-      logger: dryRunLogger
-    })
-  })
-
-  /**
-   * default readResult that works OOTB
-   * - Uses PouchDB to cache evaluations and processes
-   * - Uses ao Sequencer Unit
-   * - Use arweave.net gateway
-   */
-  const readResultLogger = ctx.logger.child('readResult')
-  const readResult = readResultWith({
-    ...sharedDeps(readResultLogger),
-    loadMessageMeta: AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: readResultLogger })
-  })
-
-  const readCronResultsLogger = ctx.logger.child('readCronResults')
-  const readCronResults = readCronResultsWith({
-    ...sharedDeps(readCronResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readCronResultsLogger })
-  })
-
-  const readResultsLogger = ctx.logger.child('readResults')
-  const readResults = readResultsWith({
-    ...sharedDeps(readResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readResultsLogger })
-  })
-
-  let checkpointP
-  const checkpointWasmMemoryCache = fromPromise(async () => {
-    if (checkpointP) {
-      ctx.logger('Checkpointing of WASM Memory Cache already in progress. Nooping...')
-      return checkpointP
-    }
-
-    const pArgs = []
-    /**
-     * push a new object to keep references to original data intact
-     */
-    wasmMemoryCache.data.forEach((value) =>
-      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
-    )
-
-    checkpointP = pMap(
-      pArgs,
-      (value) => saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        }),
-      {
-        /**
-         * TODO: allow to be configured on CU
-         *
-         * Helps prevent the gateway from being overwhelmed and then timing out
-         */
-        concurrency: 10,
-        /**
-         * Prevent any one rejected promise from causing other invocations
-         * to not be attempted.
-         *
-         * The overall promise will still reject, which is why we have
-         * an empty catch below, which will allow all Promises to either resolve,
-         * or reject, then the final wrapping promise to always resolve.
-         *
-         * https://github.com/sindresorhus/p-map?tab=readme-ov-file#stoponerror
-         */
-        stopOnError: false
-      }
-    )
-      .catch(() => {})
-
-    await checkpointP
-    checkpointP = undefined
-  })
-
-  const healthcheck = healthcheckWith({ walletAddress: address })
-
-  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
+    metrics,
+    address,
+    gauge,
+    wasmMemoryCache,
+    loadWorkerStats,
+    loadMemoryUsage,
+    loadProcessCacheUsage,
+    loadMessageMeta,
+    loadDryRunEvaluator,
+    findEvaluations,
+    saveCheckpoint,
+    app
+  }
 }
