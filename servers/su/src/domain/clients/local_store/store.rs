@@ -111,6 +111,7 @@ impl LocalStoreClient {
             ("process_ordering".to_string(), opts_index.clone()),
             ("message".to_string(), opts_index.clone()),
             ("message_ordering".to_string(), opts_index.clone()),
+            ("deep_hash".to_string(), opts_index.clone()),
         ]
     }
 
@@ -159,6 +160,13 @@ impl LocalStoreClient {
         Ok(format!(
             "message_ordering:{}:{:010}:{:010}:{:015}:{}",
             process_id, epoch, nonce, timestamp, assignment_id
+        ))
+    }
+
+    fn deep_hash_key(&self, process_id: &String, deep_hash: &String) -> Result<String, StoreErrorType> {
+        Ok(format!(
+            "deep_hash:{}:{}",
+            process_id, deep_hash
         ))
     }
 
@@ -220,7 +228,7 @@ impl LocalStoreClient {
             if let Some(ref to_str) = to {
                 if let Ok(to_timestamp) = to_str.parse::<i64>() {
                     if timestamp > to_timestamp {
-                        has_next_page = true;
+                        has_next_page = false;
                         break;
                     }
                 }
@@ -288,6 +296,7 @@ impl DataStore for LocalStoreClient {
         &self,
         message: &Message,
         bundle_in: &[u8],
+        deep_hash: Option<&String>,
     ) -> Result<String, StoreErrorType> {
         let message_id = message.message_id()?;
         let assignment_id = message.assignment_id()?;
@@ -313,6 +322,19 @@ impl DataStore for LocalStoreClient {
 
         let assignment_key = self.msg_assignment_key(&assignment_id);
         self.file_db.put(assignment_key.as_bytes(), bundle_in)?;
+
+        let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+        })?;
+
+        match deep_hash {
+          Some(dh) => {
+            let deep_hash_key = self.deep_hash_key(&message.process_id()?, dh)?;
+            self.index_db
+                .put_cf(cf, deep_hash_key.as_bytes(), message.process_id()?.as_bytes())?;
+          },
+          None => ()
+        };
 
         Ok("Message saved".to_string())
     }
@@ -399,6 +421,23 @@ impl DataStore for LocalStoreClient {
         }
     }
 
+    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType> {
+        let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'deep_hash' not found".to_string())
+        })?;
+
+        let deep_hash_key = self.deep_hash_key(process_id, deep_hash)?;
+        match self.index_db.get_cf(cf, deep_hash_key) {
+          Ok(dh) => {
+            match dh {
+              Some(_) => return Err(StoreErrorType::MessageExists("Deep hash already exists".to_string())),
+              None => return Ok(())
+            }
+          },
+          Err(_) => return Ok(())
+        }
+    }
+
     /*
       Message list retrieval for the /processid
       query, this returns a paginated list of messages
@@ -424,7 +463,9 @@ impl DataStore for LocalStoreClient {
         */
         let include_process = process_in.assignment.is_some()
             && match from {
-                Some(ref from_nonce) => from_nonce == &process_in.nonce()?.to_string(),
+                Some(ref from_timestamp) => {
+                  from_timestamp != &process_in.timestamp()?.to_string()
+                },
                 /*
                   No 'from' means it's the first page
                 */
@@ -441,6 +482,26 @@ impl DataStore for LocalStoreClient {
             actual_limit -= 1;
         }
 
+        /*
+          handles an edge case where "to" is the message right
+          after the process, and limit is 1
+        */
+        if include_process && actual_limit == 0 {
+            match to {
+              Some(t) => {
+                let timestamp: i64 = t.parse()?;
+                if timestamp == process_in.timestamp()? {
+                  return Ok(PaginatedMessages::from_messages(messages, false)?);
+                } else if timestamp > process_in.timestamp()? {
+                  return Ok(PaginatedMessages::from_messages(messages, true)?);
+                }
+              },
+              None => {
+                return Ok(PaginatedMessages::from_messages(messages, false)?);
+              }
+            }
+        }
+
         let (paginated_keys, has_next_page) = self
             .fetch_message_range(process_id, from, to, &Some(actual_limit))
             .await?;
@@ -453,6 +514,11 @@ impl DataStore for LocalStoreClient {
         for (_, assignment_id) in paginated_keys {
             let assignment_key = self.msg_assignment_key(&assignment_id);
 
+            /*
+              It is possible the file isnt finished saving and 
+              available on the file db yet that is why this retry loop
+              is here.
+            */
             for _ in 0..10 {
                 if let Some(message_data) = self.file_db.get(assignment_key.as_bytes())? {
                     let message: Message = Message::from_bytes(message_data)?;
