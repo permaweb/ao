@@ -17,7 +17,7 @@ const evaluationDocSchema = z.object({
   blockHeight: evaluationSchema.shape.blockHeight,
   cron: evaluationSchema.shape.cron,
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output.omit({ Memory: true })
+  output: evaluationSchema.shape.output.omit({ Memory: true }) // TODO: return to omit after dir output is implemented
 })
 
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
@@ -96,7 +96,7 @@ export function findEvaluationWith ({ db }) {
   }
 }
 
-export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logger: _logger }) {
+export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logger: _logger, saveEvaluationToDir, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
   const toEvaluationDoc = pipe(
     converge(
       unapply(mergeAll),
@@ -141,12 +141,39 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
     const statements = []
 
     if (!DISABLE_PROCESS_EVALUATION_CACHE) {
+      // TODO: add this back in once dir output is implemented
+      // If we have a directory and bucket, we need to save the evaluation to the directory, not sqlite
+      // if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+      //   statements.push({
+      //     sql: `
+      //       INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+      //         (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
+      //         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      //     `,
+      //     parameters: [
+      //       // evaluations insert
+      //       evalDoc.id,
+      //       evalDoc.processId,
+      //       evalDoc.messageId,
+      //       evalDoc.deepHash,
+      //       evalDoc.nonce,
+      //       evalDoc.epoch,
+      //       evalDoc.timestamp,
+      //       evalDoc.ordinate,
+      //       evalDoc.blockHeight,
+      //       evalDoc.cron,
+      //       evalDoc.evaluatedAt.getTime(),
+      //       JSON.stringify(omit(['Memory'], evalDoc.output))
+      //     ]
+      //   })
+      // } else {
+
       statements.push({
         sql: `
-          INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-            (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        `,
+            INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+              (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `,
         parameters: [
           // evaluations insert
           evalDoc.id,
@@ -163,8 +190,8 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
           JSON.stringify(evalDoc.output)
         ]
       })
+      // }
     }
-
     /**
       * Cron messages are not needed to be saved in the messages table
       */
@@ -196,6 +223,15 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
           .chain(fromPromise((statements) => db.transaction(statements)))
           .map(always(data.id))
       )
+      .chain(() => {
+        if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+          return of({ messageId: evaluation.messageId, processId: evaluation.processId, output: evaluation.output })
+            .chain((args) => {
+              return Resolved(saveEvaluationToDir(args)) // TODO: improve this
+            })
+        }
+        return Resolved('here')
+      })
       .toPromise()
   }
 }

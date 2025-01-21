@@ -204,7 +204,15 @@ export const domainConfigSchema = z.object({
    * A list of wallets whose processes the CU should exclusively allow
    * aka. whitelist of processes created by these wallets
    */
-  ALLOW_OWNERS: commaDelimitedArraySchema
+  ALLOW_OWNERS: commaDelimitedArraySchema,
+  /**
+   * The directory to store evaluation results
+   */
+  EVALUATION_RESULT_DIR: z.string().optional(),
+  /**
+   * The bucket to store evaluation results
+   */
+  EVALUATION_RESULT_BUCKET: z.string().optional()
 })
 
 export const bufferSchema = z.any().refine(buffer => {
@@ -457,4 +465,5 @@ export const evaluationSchema = z.object({
     GasUsed: z.number().nullish(),
     Error: z.any().nullish()
   })
+  // .nullable() // TODO: return to not nullish after dir output is implemented
 })

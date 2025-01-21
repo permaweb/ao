@@ -172,7 +172,9 @@ const CONFIG_ENVS = {
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
     ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
-    ALLOW_OWNERS: process.env.ALLOW_OWNERS || []
+    ALLOW_OWNERS: process.env.ALLOW_OWNERS || [],
+    EVALUATION_RESULT_DIR: process.env.EVALUATION_RESULT_DIR || path.join(tmpdir(), 'evaluation_results'),
+    EVALUATION_RESULT_BUCKET: process.env.EVALUATION_RESULT_BUCKET || 'evaluation-results'
   },
   production: {
     MODE,
@@ -224,7 +226,9 @@ const CONFIG_ENVS = {
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
     ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
-    ALLOW_OWNERS: process.env.ALLOW_OWNERS || []
+    ALLOW_OWNERS: process.env.ALLOW_OWNERS || [],
+    EVALUATION_RESULT_DIR: process.env.EVALUATION_RESULT_DIR,
+    EVALUATION_RESULT_BUCKET: process.env.EVALUATION_RESULT_BUCKET
   }
 }
 

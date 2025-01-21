@@ -104,7 +104,10 @@ export const createApis = async (ctx) => {
           MODE: ctx.MODE,
           LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
           DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL,
-          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE
+          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
+          EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
+          EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET,
+          __dirname
         }
       }
     }
@@ -162,6 +165,13 @@ export const createApis = async (ctx) => {
     maxQueueSize: ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE
   })
   const dryRunWorkQueue = new PQueue({ concurrency: maxDryRunWorkerTheads })
+
+  // const hydratorWorker = join(__dirname, 'effects', 'worker', 'hydrator', 'index.js')
+  // const hydratorWorkerPool = workerpool.pool(hydratorWorker, {
+  //   maxWorkers: 1, // TODO: change?
+  //   onCreateWorker: onCreateWorker('hydrator')
+  // })
+  // const hydratorWorkQueue = new PQueue({ concurrency: 1 })
 
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
@@ -280,6 +290,10 @@ export const createApis = async (ctx) => {
          */
         pendingTasks: dryRunWorkQueue.size
       })
+      // hydrator: ({
+      //   ...hydratorWorkerPool.stats(),
+      //   pendingTasks: hydratorWorkQueue.size
+      // })
     }),
     /**
      * https://nodejs.org/api/process.html#processmemoryusage
@@ -345,7 +359,12 @@ export const createApis = async (ctx) => {
     // gasCounter,
     saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
-    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
+    saveEvaluation: AoEvaluationClient.saveEvaluationWith({
+      db,
+      logger,
+      EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
+      EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET
+    }),
     findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
     loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
