@@ -67,7 +67,7 @@ mod tests {
         let message_bundle = create_test_message_bundle();
         let test_message = Message::from_bytes(message_bundle.clone())?;
 
-        client.save_message(&test_message, &message_bundle, None).await?;
+        client.save_message(&test_message, &message_bundle).await?;
         let retrieved_message = client.get_message(&test_message.assignment.id)?;
 
         assert_eq!(retrieved_message.assignment.id, test_message.assignment.id);
@@ -86,7 +86,7 @@ mod tests {
         // Save all messages
         for bundle in message_bundles.iter() {
             let test_message = Message::from_bytes(bundle.clone())?;
-            client.save_message(&test_message, &bundle, None).await?;
+            client.save_message(&test_message, &bundle).await?;
         }
 
         // Retrieve messages and check nonce order and continuity
@@ -124,7 +124,7 @@ mod tests {
 
         for bundle in message_bundles.iter() {
             let test_message = Message::from_bytes(bundle.clone())?;
-            client.save_message(&test_message, &bundle, None).await?;
+            client.save_message(&test_message, &bundle).await?;
         }
 
         // Case 1: Default parameters
@@ -202,7 +202,7 @@ mod tests {
         // Save half of the messages
         for bundle in message_bundles.iter().take(message_bundles.len() / 2) {
             let test_message = Message::from_bytes(bundle.clone())?;
-            client.save_message(&test_message, &bundle, None).await?;
+            client.save_message(&test_message, &bundle).await?;
         }
 
         let (process_bundle_2, message_bundles_2) = bundle_list_2();
@@ -212,19 +212,19 @@ mod tests {
         // Save half of the messages of next process
         for bundle in message_bundles_2.iter().take(message_bundles_2.len() / 2) {
             let test_message = Message::from_bytes(bundle.clone())?;
-            client.save_message(&test_message, &bundle, None).await?;
+            client.save_message(&test_message, &bundle).await?;
         }
 
         // Save second half of messages for the first process
         for bundle in message_bundles.iter().skip(message_bundles.len() / 2) {
             let test_message = Message::from_bytes(bundle.clone())?;
-            client.save_message(&test_message, &bundle, None).await?;
+            client.save_message(&test_message, &bundle).await?;
         }
 
         // Save second half of messages for the second process
         for bundle in message_bundles_2.iter().skip(message_bundles_2.len() / 2) {
             let test_message = Message::from_bytes(bundle.clone())?;
-            client.save_message(&test_message, &bundle, None).await?;
+            client.save_message(&test_message, &bundle).await?;
         }
 
         // Retrieve messages and check length, nonce order, and continuity

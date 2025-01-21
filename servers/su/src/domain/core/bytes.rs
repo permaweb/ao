@@ -38,12 +38,6 @@ impl From<String> for ByteErrorType {
     }
 }
 
-impl From<base64_url::base64::DecodeError> for ByteErrorType {
-  fn from(error: base64_url::base64::DecodeError) -> Self {
-      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
-  }
-}
-
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
@@ -332,7 +326,7 @@ impl DataItem {
         Ok(DataItem {
             signature_type: SignerMap::Arweave,
             signature: vec![],
-            owner,
+            owner: owner,
             target,
             anchor,
             tags,
@@ -533,73 +527,6 @@ impl DataItem {
 
         b.put(&data[..]);
         Ok(b)
-    }
-
-    /*
-      Utilized for deduplicating incoming messages even
-      if they have the same id
-    */
-    pub fn deep_hash(&mut self) -> Result<String, ByteErrorType> {
-        let data_chunk = match &mut self.data {
-            Data::None => DeepHashChunk::Chunk(Bytes::new()),
-            Data::Bytes(data) => DeepHashChunk::Chunk(data.clone().into())
-        };
-        
-        let encoded_tags = if !self.tags.is_empty() {
-            self.tags.encode()?
-        } else {
-            Bytes::default()
-        };
-
-        let deep_hash_vec = deep_hash_sync(DeepHashChunk::Chunks(vec![
-            DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
-            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
-            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
-            // this is where the owner normally would be
-            DeepHashChunk::Chunk(Bytes::new()),
-            DeepHashChunk::Chunk(self.target.to_vec().into()),
-            DeepHashChunk::Chunk(self.anchor.to_vec().into()),
-            DeepHashChunk::Chunk(encoded_tags.clone()),
-            data_chunk,
-        ]))?;
-
-        Ok(base64_url::encode(&deep_hash_vec))
-    }
-
-    pub fn deep_hash_fields(
-        target: Option<String>, 
-        anchor: Option<String>, 
-        tags: Vec<Tag>, 
-        data: Vec<u8>
-    ) -> Result<String, ByteErrorType> {
-        let target_chunk = match target {
-            None => DeepHashChunk::Chunk(Bytes::new()),
-            Some(t) => DeepHashChunk::Chunk(base64_url::decode(&t)?.into())
-        };
-
-        let anchor_chunk = match anchor {
-            None => DeepHashChunk::Chunk(Bytes::new()),
-            Some(a) => DeepHashChunk::Chunk(base64_url::decode(&a)?.into())
-        };
-        
-        let encoded_tags = if !tags.is_empty() {
-            tags.encode()?
-        } else {
-            Bytes::default()
-        };
-
-        let deep_hash_vec = deep_hash_sync(DeepHashChunk::Chunks(vec![
-            DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
-            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
-            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
-            DeepHashChunk::Chunk(Bytes::new()),
-            target_chunk,
-            anchor_chunk,
-            DeepHashChunk::Chunk(encoded_tags.clone()),
-            DeepHashChunk::Chunk(Bytes::from(data)),
-        ]))?;
-
-        Ok(base64_url::encode(&deep_hash_vec))
     }
 
     pub fn raw_id(&self) -> Vec<u8> {
