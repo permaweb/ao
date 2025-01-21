@@ -1,8 +1,11 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
-import { busyIn } from '../domain/utils.js'
-import { withMetrics, withMiddleware, withProcessRestrictionFromQuery } from './middleware/index.js'
+import { busyIn } from '../../../domain/utils.js'
+
+import { withErrorHandler } from './middleware/withErrorHandler.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from './middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'a process-id query parameter is required'),
@@ -28,7 +31,7 @@ export const withDryRunRoutes = app => {
   app.post(
     '/dry-run',
     compose(
-      withMiddleware,
+      withErrorHandler,
       withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
       withProcessRestrictionFromQuery,
       always(async (req, res) => {

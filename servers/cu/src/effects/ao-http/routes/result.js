@@ -1,9 +1,13 @@
 import { compose } from 'ramda'
 import { z } from 'zod'
 
-import { busyIn } from '../domain/utils.js'
-import { withMetrics, withMiddleware, withProcessRestrictionFromQuery, withCuMode } from './middleware/index.js'
+import { busyIn } from '../../../domain/utils.js'
+
 import { withInMemoryCache } from './middleware/withInMemoryCache.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
+import { withCuMode } from './middleware/withCuMode.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from './middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
   messageTxId: z.string().min(1, 'a message tx id is required'),
@@ -14,7 +18,7 @@ export const withResultRoutes = app => {
   app.get(
     '/result/:messageTxId',
     compose(
-      withMiddleware,
+      withErrorHandler,
       withCuMode,
       withProcessRestrictionFromQuery,
       withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
