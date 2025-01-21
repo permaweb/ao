@@ -463,9 +463,7 @@ impl DataStore for LocalStoreClient {
         */
         let include_process = process_in.assignment.is_some()
             && match from {
-                Some(ref from_timestamp) => {
-                  from_timestamp != &process_in.timestamp()?.to_string()
-                },
+                Some(ref _from_timestamp) => false,
                 /*
                   No 'from' means it's the first page
                 */
