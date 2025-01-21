@@ -814,10 +814,21 @@ impl DataStore for StoreClient {
         }
     }
 
+    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType> {
+      if self.bytestore.is_ready() {
+        match self.bytestore.deep_hash_exists(process_id, deep_hash) {
+          true => return Err(StoreErrorType::MessageExists("Deep hash already exists".to_string())),
+          false => return Ok(())
+        }
+      }
+      Ok(())
+    }
+
     async fn save_message(
         &self,
         message: &Message,
         bundle_in: &[u8],
+        deep_hash: Option<&String>,
     ) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_conn()?;
@@ -853,6 +864,15 @@ impl DataStore for StoreClient {
                             message.timestamp()?.to_string(),
                             bundle_in.to_vec(),
                         )?;
+                        match deep_hash {
+                          Some(dh) => {
+                              bytestore.save_deep_hash(
+                                  &message.process_id()?,
+                                  dh
+                              )?;
+                          },
+                          None => ()
+                        };
                     }
                     Ok("saved".to_string())
                 }
@@ -900,7 +920,7 @@ impl DataStore for StoreClient {
                     let from_timestamp = from_timestamp_str
                         .parse::<i64>()
                         .map_err(StoreErrorType::from)?;
-                    from_timestamp == process_in.process.timestamp
+                    from_timestamp != process_in.process.timestamp
                 }
                 None => true, // No 'from' timestamp means it's the first page
             };
@@ -1527,6 +1547,62 @@ mod bytestore {
             timestamp: &str,
         ) -> bool {
             let key = ByteStore::create_key(message_id, assignment_id, process_id, timestamp);
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return false,
+            };
+
+            if let Some(ref db) = *db {
+                match db.get(&key) {
+                    Ok(Some(_)) => true,
+                    _ => false,
+                }
+            } else {
+                false
+            }
+        }
+
+        pub fn save_deep_hash(
+            &self,
+            process_id: &String,
+            deep_hash: &String
+        ) -> Result<(), String> {
+            let key = format!(
+                "deephash___{}___{}",
+                process_id, 
+                deep_hash
+            ).into_bytes();
+
+            let value = format!(
+                "{}",
+                process_id
+            ).into_bytes();
+
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Failed to acquire read lock".into()),
+            };
+
+            if let Some(ref db) = *db {
+                db.put(key, value)
+                    .map_err(|e| format!("Failed to write to RocksDB: {:?}", e))?;
+                Ok(())
+            } else {
+                Err("Database is not initialized".into())
+            }
+        }
+
+        pub fn deep_hash_exists(
+            &self,
+            process_id: &String,
+            deep_hash: &String,
+        ) -> bool {
+            let key = format!(
+                "deephash___{}___{}",
+                process_id, 
+                deep_hash
+            ).into_bytes();
+
             let db = match self.db.read() {
                 Ok(r) => r,
                 Err(_) => return false,

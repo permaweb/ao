@@ -9,6 +9,7 @@ use simd_json::to_string as simd_to_string;
 use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
+use super::bytes::DataItem;
 
 use super::dal::{
     Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet,
@@ -132,7 +133,8 @@ pub async fn write_item(
       set cache that gets set before the lock is released
     */
     if let Some(ref item) = data_item {
-        deps.data_store.check_existing_message(&item.id())?
+        deps.data_store.check_existing_message(&item.id())?;
+
     };
 
     deps.logger.log(format!("checked for message existence- {}", &target_id));
@@ -148,7 +150,11 @@ pub async fn write_item(
 
     deps.logger.log(format!("incrememted scheduler - {}", &target_id));
 
-    // XOR, if we have one of these, we must have both.
+    /*
+       XOR, if we have one of these, we must have both.
+       The else if condition here contains the flow for a
+       POST of an assignment
+    */
     if process_id.is_some() ^ assign.is_some() {
         return Err("If sending assign or process-id, you must send both.".to_string());
     } else if let (Some(process_id), Some(assign)) = (process_id.clone(), assign.clone()) {
@@ -162,18 +168,49 @@ pub async fn write_item(
             .await?;
 
         let process = deps.data_store.get_process(&process_id).await?;
-        builder
-            .verify_assignment(&assign, &process, &base_layer)
-            .await?;
 
+        let gateway_tx = match builder
+            .verify_assignment(&assign, &process, &base_layer)
+            .await? {
+              Some(g) => g,
+              None => return Err("Invalid gateway tx for assignming".to_string())
+        };
+
+        /*
+          If this is an assignment of an AO Message,
+          check for a duplicate deep hash and throw
+          an error if we find one
+        */
+        let deep_hash = match &base_layer {
+            Some(_) => None,
+            None => {
+                let tx_data = deps.gateway.raw(&assign).await?;
+                let dh = DataItem::deep_hash_fields(
+                    gateway_tx.recipient,
+                    gateway_tx.anchor,
+                    gateway_tx.tags,
+                    tx_data,
+                )
+                .map_err(|_| "Unable to calculate deep hash".to_string())?;
+        
+                if deps.config.enable_deep_hash_checks() {
+                    deps.data_store
+                        .check_existing_deep_hash(&process_id, &dh)
+                        .await?;
+                }
+        
+                Some(dh)
+            }
+        };
+        
         let aid = assignment.id();
         let return_aid = assignment.id();
         let build_result = builder.bundle_items(vec![assignment]).await?;
         let message = Message::from_bundle(&build_result.bundle)?;
         deps.data_store
-            .save_message(&message, &build_result.binary)
+            .save_message(&message, &build_result.binary, deep_hash.as_ref())
             .await?;
-        deps.logger.log(format!("saved message - {:?}", &message));
+        deps.logger.log(format!("saved message"));
 
         /*
           we set the id of the previous assignment
@@ -192,6 +229,11 @@ pub async fn write_item(
         return id_res(&deps, return_aid, start_top_level);
     }
 
+    /*
+      The rest of this function handles writing a Process
+      or a Message data item.
+    */
+
     let data_item = match data_item {
         Some(d) => d,
         None => return Err("Unable to parse data item".to_string()),
@@ -204,124 +246,146 @@ pub async fn write_item(
         return Err("Data-Protocol tag not present".to_string());
     }
 
-    deps.logger.log(format!("tags cloned - {}", &target_id));
+    let type_tag = match type_tag {
+        Some(t) => t,
+        None => return Err("Invalid Type Tag".to_string())
+    };
 
-    if let Some(type_tag) = type_tag {
-        if type_tag.value == "Process" {
-            let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");
-            let sched_tag_exists = tags.iter().any(|tag| tag.name == "Scheduler");
+    if type_tag.value == "Process" {
+        let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");
+        let sched_tag_exists = tags.iter().any(|tag| tag.name == "Scheduler");
 
-            if !mod_tag_exists || !sched_tag_exists {
-                return Err(
-                    "Required Module and Scheduler tags for Process type not present".to_string(),
-                );
-            }
+        if !mod_tag_exists || !sched_tag_exists {
+            return Err(
+                "Required Module and Scheduler tags for Process type not present".to_string(),
+            );
+        }
 
-            /*
-              If we dont enable_process_assignment, the
-              su will follow the old flow and not generate
-              an assignment for the process.
+        /*
+          If we dont enable_process_assignment, the
+          su will follow the old flow and not generate
+          an assignment for the process.
 
-              As a result, no process will be returned
-              in the messages list either, and the Nonce
-              will start at 0 for the first message
-            */
-            if deps.config.enable_process_assignment() {
-                match data_item.tags().iter().find(|tag| tag.name == "On-Boot") {
-                    Some(boot_tag) => match boot_tag.value.as_str() {
-                        "Data" => (),
-                        tx_id => {
-                            if !deps.gateway.check_head(tx_id.to_string()).await? {
-                                return Err("Invalid tx id for On-Boot tag".to_string());
-                            }
+          As a result, no process will be returned
+          in the messages list either, and the Nonce
+          will start at 0 for the first message
+        */
+        if deps.config.enable_process_assignment() {
+            match data_item.tags().iter().find(|tag| tag.name == "On-Boot") {
+                Some(boot_tag) => match boot_tag.value.as_str() {
+                    "Data" => (),
+                    tx_id => {
+                        if !deps.gateway.check_head(tx_id.to_string()).await? {
+                            return Err("Invalid tx id for On-Boot tag".to_string());
                         }
-                    },
-                    None => (),
-                };
+                    }
+                },
+                None => (),
+            };
 
-                deps.logger.log(format!("boot load check complete - {}", &target_id));
-
-                let assignment = builder
-                    .gen_assignment(None, data_item.id(), &next_schedule_info, &None)
-                    .await?;
-
-                deps.logger.log(format!("assignment generated - {}", &target_id));
-
-                let aid = assignment.id();
-                let did = data_item.id();
-                let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
-
-                deps.logger.log(format!("data bundled - {}", &target_id));
-
-                let process = Process::from_bundle(&build_result.bundle)?;
-                deps.data_store
-                    .save_process(&process, &build_result.binary)?;
-                deps.logger.log(format!("saved process - {:?}", &process));
-
-                deps.scheduler
-                    .commit(&mut *schedule_info, &next_schedule_info, did, aid);
-                drop(schedule_info);
-
-                deps.logger.log(format!("scheduler committed cloned - {}", &target_id));
-
-                upload(&deps, build_result.binary.to_vec()).await?;
-
-                deps.logger.log(format!("upload triggered - {}", &target_id));
-                return id_res(&deps, process.process.process_id.clone(), start_top_level);
-            } else {
-                let build_result = builder.build_process(input, &next_schedule_info).await?;
-                let process = Process::from_bundle_no_assign(
-                    &build_result.bundle,
-                    &build_result.bundle_data_item,
-                )?;
-                deps.data_store
-                    .save_process(&process, &build_result.binary)?;
-                deps.logger.log(format!("saved process - {:?}", &process));
-
-                /*
-                  We dont commit and schedule info change here
-                  because the process is not getting a Nonce.
-                  However we dont drop the lock until the Process
-                  is successfully saved to the database
-                */
-                drop(schedule_info);
-
-                upload(&deps, build_result.binary.to_vec()).await?;
-                return id_res(&deps, process.process.process_id.clone(), start_top_level);
-            }
-        } else if type_tag.value == "Message" {
             let assignment = builder
-                .gen_assignment(
-                    Some(data_item.id()),
-                    data_item.target(),
-                    &next_schedule_info,
-                    &None,
-                )
+                .gen_assignment(None, data_item.id(), &next_schedule_info, &None)
                 .await?;
 
             let aid = assignment.id();
-            let dtarget = data_item.target();
+            let did = data_item.id();
             let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
-            let message = Message::from_bundle(&build_result.bundle)?;
-            deps.data_store
-                .save_message(&message, &build_result.binary)
-                .await?;
-            deps.logger.log(format!("saved message - {:?}", &message));
 
-            /*
-              we set the id of the previous assignment
-              for the next message to be able to use
-              in its Hash Chain
-            */
+            let process = Process::from_bundle(&build_result.bundle)?;
+            deps.data_store
+                .save_process(&process, &build_result.binary)?;
+
             deps.scheduler
-                .commit(&mut *schedule_info, &next_schedule_info, dtarget, aid);
+                .commit(&mut *schedule_info, &next_schedule_info, did, aid);
             drop(schedule_info);
 
             upload(&deps, build_result.binary.to_vec()).await?;
-            return id_res(&deps, message.message_id()?, start_top_level);
+
+            return id_res(&deps, process.process.process_id.clone(), start_top_level);
         } else {
-            return Err("Type tag not present".to_string());
+            let build_result = builder.build_process(input, &next_schedule_info).await?;
+            let process = Process::from_bundle_no_assign(
+                &build_result.bundle,
+                &build_result.bundle_data_item,
+            )?;
+            deps.data_store
+                .save_process(&process, &build_result.binary)?;
+            deps.logger.log(format!("saved process"));
+
+            /*
+              We dont commit and schedule info change here
+              because the process is not getting a Nonce.
+              However we dont drop the lock until the Process
+              is successfully saved to the database
+            */
+            drop(schedule_info);
+
+            upload(&deps, build_result.binary.to_vec()).await?;
+            return id_res(&deps, process.process.process_id.clone(), start_top_level);
         }
+    } else if type_tag.value == "Message" {
+        let assignment = builder
+            .gen_assignment(
+                Some(data_item.id()),
+                data_item.target(),
+                &next_schedule_info,
+                &None,
+            )
+            .await?;
+
+        let aid = assignment.id();
+        let dtarget = data_item.target();
+
+        let deep_hash = match tags.iter().find(|tag| tag.name == "From-Process") {
+          /*
+            If the Message contains a From-Process tag it is 
+            a pushed message so we should dedupe it, otherwise
+            it is a user message and we should not
+          */
+          Some(_) => {
+            let mut mutable_item = data_item.clone();
+            let deep_hash = match mutable_item.deep_hash() {
+              Ok(d) => d,
+              Err(_) => return Err("Unable to calculate deep hash".to_string())
+            };
+            
+            /*
+              Throw an error if we detect a duplicated pushed
+              message
+            */
+            if deps.config.enable_deep_hash_checks() {
+                deps.data_store
+                  .check_existing_deep_hash(&dtarget, &deep_hash)
+                  .await?;
+            }
+
+            Some(deep_hash)
+          },
+          None => {
+            None
+          }
+        };
+
+        let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
+        let message = Message::from_bundle(&build_result.bundle)?;
+
+        deps.data_store
+            .save_message(&message, &build_result.binary, deep_hash.as_ref())
+            .await?;
+
+        deps.logger.log(format!("saved message"));
+
+        /*
+          we set the id of the previous assignment
+          for the next message to be able to use
+          in its Hash Chain
+        */
+        deps.scheduler
+            .commit(&mut *schedule_info, &next_schedule_info, dtarget, aid);
+        drop(schedule_info);
+
+        upload(&deps, build_result.binary.to_vec()).await?;
+        return id_res(&deps, message.message_id()?, start_top_level);
     } else {
         return Err("Type tag not present".to_string());
     }
