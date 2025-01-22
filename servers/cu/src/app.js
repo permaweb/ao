@@ -11,6 +11,7 @@ import { logger } from './logger.js'
 import { bootstrap } from './domain/index.js'
 
 import { createEffects as createCuEffects } from './effects/main.cu.js'
+import { createEffects as createHbEffects } from './effects/main.hb.js'
 
 setGlobalDispatcher(new Agent({
   /** the timeout, in milliseconds, after which a socket without active requests will time out. Monitors time between activity on a connected socket. This value may be overridden by *keep-alive* hints from the server */
@@ -19,13 +20,14 @@ setGlobalDispatcher(new Agent({
   keepAliveMaxTimeout: 10 * 60 * 1000 // 10 mins
 }))
 
-/**
- * @param {{ config: typeof config, logger: typeof logger}} context
- * @returns the effects needed in order to run in a particular mode
- */
 function chooseEffects (ctx) {
+  console.log('UNIT_MODE', ctx.UNIT_MODE)
   if (['cu', 'ru'].includes(ctx.UNIT_MODE)) {
     return createCuEffects({ ...config, logger, fetch })
+  }
+
+  if (ctx.UNIT_MODE === 'hbu') {
+    return createHbEffects({ ...config, logger, fetch })
   }
 
   throw new Error(`Unknown effects for UNIT_MODE: ${ctx.UNIT_MODE}`)

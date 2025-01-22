@@ -3,9 +3,9 @@ import { z } from 'zod'
 
 import { busyIn } from '../../../domain/utils.js'
 
-import { withErrorHandler } from './middleware/withErrorHandler.js'
-import { withMetrics } from './middleware/withMetrics.js'
-import { withProcessRestrictionFromQuery } from './middleware/withProcessRestriction.js'
+import { withErrorHandler } from '../../middleware/withErrorHandler.js'
+import { withMetrics } from '../../middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from '../../middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'a process-id query parameter is required'),
