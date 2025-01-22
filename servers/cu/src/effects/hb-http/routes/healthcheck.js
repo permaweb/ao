@@ -12,7 +12,7 @@ export const withHealthcheckRoutes = (app) => {
         const { domain: { apis: { healthcheck } } } = req
 
         await healthcheck()
-          .map((hc) => res.send(hc))
+          .map((hc) => res.send({ ...hc, status: 'Hello from HB CU!' }))
           .toPromise()
       })
     )()

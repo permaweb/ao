@@ -3,10 +3,10 @@ import { z } from 'zod'
 
 import { arrayBufferFromMaybeView, busyIn } from '../../../domain/utils.js'
 
-import { withErrorHandler } from './middleware/withErrorHandler.js'
+import { withErrorHandler } from '../../middleware/withErrorHandler.js'
 import { withCuMode } from './middleware/withCuMode.js'
-import { withProcessRestrictionFromPath } from './middleware/withProcessRestriction.js'
-import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromPath } from '../../middleware/withProcessRestriction.js'
+import { withMetrics } from '../../middleware/withMetrics.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),

@@ -6,27 +6,19 @@ import cors from 'cors'
 import helmet from 'helmet'
 
 import { withMetricRoutes } from '../routes/metrics.js'
-import { withStateRoutes } from './routes/state.js'
-import { withResultRoutes } from './routes/result.js'
-import { withDryRunRoutes } from './routes/dryRun.js'
-import { withResultsRoutes } from './routes/results.js'
-import { withCronRoutes } from './routes/cron.js'
 import { withHealthcheckRoutes } from './routes/healthcheck.js'
+import { withResultRoutes } from './routes/result.js'
 
 const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)))
 
 const withRoutes = pipe(
   withHealthcheckRoutes,
-  withStateRoutes,
   withResultRoutes,
-  withDryRunRoutes,
-  withResultsRoutes,
-  withCronRoutes,
   withMetricRoutes
 )
 
-export const createAoHttp = async ({ logger: _logger, domain, ...config }) => {
-  const logger = _logger.child('ao-http')
+export const createHbHttp = async ({ logger: _logger, domain, ...config }) => {
+  const logger = _logger.child('hb-http')
 
   /**
    * Fastify wraps the Node native req and res with Request and Reply
