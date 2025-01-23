@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchema, streamSchema, processCheckpointSchema, bufferSchema } from './model.js'
+import { blockSchema, evaluationSchema, processSchema, moduleSchema, rawTagSchema, processCheckpointSchema, bufferSchema } from './model.js'
 
 // Arweave
 
@@ -67,6 +67,8 @@ export const saveLatestProcessMemorySchema = z.function()
     processId: z.string(),
     moduleId: z.string().nullish(),
     messageId: z.string().nullish(),
+    assignmentId: z.string().nullish(),
+    hashChain: z.string().nullish(),
     timestamp: z.coerce.number().nullish(),
     epoch: z.coerce.number().nullish(),
     nonce: z.coerce.number().nullish(),
@@ -74,7 +76,6 @@ export const saveLatestProcessMemorySchema = z.function()
     cron: z.string().nullish(),
     blockHeight: z.coerce.number().nullish(),
     Memory: bufferSchema,
-    evalCount: z.number().nullish(),
     gasUsed: z.bigint().nullish()
   }))
   .returns(z.promise(z.any()))
@@ -167,20 +168,23 @@ export const loadMessagesSchema = z.function()
     z.object({
       suUrl: z.string().url(),
       processId: z.string(),
+      block: blockSchema,
       owner: z.string(),
       tags: z.array(rawTagSchema),
       moduleId: z.string(),
       moduleTags: z.array(rawTagSchema),
       moduleOwner: z.string(),
       from: z.coerce.number().nullish(),
-      to: z.coerce.number().nullish()
+      to: z.coerce.number().nullish(),
+      assignmentId: z.string().nullish(),
+      hashChain: z.string().nullish()
     })
   )
   /**
    * Returns a Stream that wraps an AsyncIterable, which is not something that Zod can
    * parse natively, so we make sure the returned value implements a pipe api
    */
-  .returns(z.promise(streamSchema))
+  .returns(z.promise(z.any()))
 
 export const loadProcessSchema = z.function()
   .args(z.object({

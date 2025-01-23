@@ -39,6 +39,8 @@ pub struct AoConfig {
     pub use_local_store: bool,
     pub su_file_db_dir: String,
     pub su_index_db_dir: String,
+
+    pub enable_deep_hash_checks: bool,
 }
 
 fn get_db_dirs() -> (String, String) {
@@ -139,6 +141,10 @@ impl AoConfig {
             Err(_e) => false,
         };
         let (su_file_db_dir, su_index_db_dir) = get_db_dirs();
+        let enable_deep_hash_checks = match env::var("ENABLE_DEEP_HASH_CHECKS") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -161,6 +167,7 @@ impl AoConfig {
             use_local_store,
             su_file_db_dir,
             su_index_db_dir,
+            enable_deep_hash_checks
         })
     }
 }
@@ -174,5 +181,8 @@ impl Config for AoConfig {
     }
     fn enable_process_assignment(&self) -> bool {
         self.enable_process_assignment.clone()
+    }
+    fn enable_deep_hash_checks(&self) -> bool {
+        self.enable_deep_hash_checks.clone()
     }
 }

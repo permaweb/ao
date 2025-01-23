@@ -2,6 +2,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
+import { Readable } from 'node:stream'
 
 import AoLoader from '@permaweb/ao-loader'
 
@@ -10,9 +11,11 @@ import { evaluateWith } from './evaluate.js'
 
 const logger = createTestLogger({ name: 'ao-cu:readState' })
 
-async function * toAsyncIterable (iterable) {
-  while (iterable.length) yield iterable.shift()
+function toReadable (iterable) {
+  return Readable.from(iterable)
 }
+
+const mockCounter = { inc: () => undefined }
 
 const moduleOptions = {
   format: 'wasm32-unknown-emscripten',
@@ -69,7 +72,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         {
           ordinate: 1,
           isAssignment: false,
@@ -204,7 +207,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         // assignment
         {
           ordinate: 1,
@@ -319,7 +322,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         // duplicate of starting point
         {
           ordinate: 1,
@@ -466,7 +469,7 @@ describe('evaluate', () => {
       result: {
         Memory: null
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         {
           // Will include an error in result.error
           ordinate: 1,
@@ -576,7 +579,7 @@ describe('evaluate', () => {
       result: {
         Memory: Buffer.from('Hello world')
       },
-      messages: toAsyncIterable([
+      messages: toReadable([
         {
           ordinate: 1,
           isAssignment: false,
@@ -600,5 +603,177 @@ describe('evaluate', () => {
         }
       ])
     }).toPromise()
+  })
+
+  describe('tracks and saves most recent assignmentId and hashChain', () => {
+    const cronOne = {
+      ordinate: 1,
+      isAssignment: false,
+      cron: '1-20-minutes',
+      message: {
+        Id: 'message-123',
+        Timestamp: 1702846520559,
+        Owner: 'owner-123',
+        Tags: [
+          { name: 'From', value: 'hello' },
+          { name: 'function', value: 'hello' },
+          { name: 'Owner', value: 'hello' }
+        ],
+        'Block-Height': 1234
+      },
+      AoGlobal: {
+        Process: {
+          Id: '1234',
+          Tags: []
+        }
+      }
+    }
+
+    const cronTwo = {
+      ordinate: 2,
+      isAssignment: false,
+      cron: '1-20-minutes',
+      message: {
+        Id: 'message-123',
+        Timestamp: 1702846520559,
+        Owner: 'owner-123',
+        Tags: [
+          { name: 'From', value: 'hello' },
+          { name: 'function', value: 'hello' },
+          { name: 'Owner', value: 'hello' }
+        ],
+        'Block-Height': 1234
+      },
+      AoGlobal: {
+        Process: {
+          Id: '1234',
+          Tags: []
+        }
+      }
+    }
+
+    const messageOne = {
+      ordinate: 1,
+      isAssignment: false,
+      assignmentId: 'assignment-1',
+      message: {
+        Id: 'message-123',
+        Timestamp: 1702846520559,
+        Owner: 'owner-123',
+        'Hash-Chain': 'hashchain-1',
+        Tags: [
+          { name: 'From', value: 'hello' },
+          { name: 'function', value: 'hello' },
+          { name: 'Owner', value: 'hello' }
+        ],
+        'Block-Height': 1234
+      },
+      AoGlobal: {
+        Process: {
+          Id: '1234',
+          Tags: []
+        }
+      }
+    }
+
+    const messageTwo = {
+      ordinate: 1,
+      isAssignment: false,
+      assignmentId: 'assignment-2',
+      message: {
+        Id: 'message-123',
+        Timestamp: 1702846520559,
+        Owner: 'owner-123',
+        'Hash-Chain': 'hashchain-2',
+        Tags: [
+          { name: 'From', value: 'hello' },
+          { name: 'function', value: 'hello' },
+          { name: 'Owner', value: 'hello' }
+        ],
+        'Block-Height': 1234
+      },
+      AoGlobal: {
+        Process: {
+          Id: '1234',
+          Tags: []
+        }
+      }
+    }
+
+    const args = {
+      id: 'ctr-1234',
+      from: new Date().getTime(),
+      moduleId: 'foo-module',
+      mostRecentAssignmentId: 'init-assignment-123',
+      mostRecentHashChain: 'init-hashchain-123',
+      moduleOptions,
+      stats: {
+        messages: {
+          scheduled: 0,
+          cron: 0,
+          error: 0
+        }
+      },
+      result: {
+        Memory: Buffer.from('Hello world')
+      }
+    }
+
+    test('when only cron', async () => {
+      const evaluate = evaluateWith({
+        findMessageBefore: async () => { throw { status: 404 } },
+        loadEvaluator: () => ({ message, close }) => ({ Memory: Buffer.from('Hello world') }),
+        saveLatestProcessMemory: async (a) => {
+          assert.equal(a.assignmentId, args.mostRecentAssignmentId)
+          assert.equal(a.hashChain, args.mostRecentHashChain)
+        },
+        evaluationCounter: mockCounter,
+        gasCounter: mockCounter,
+        logger
+      })
+
+      await evaluate({
+        ...args,
+        messages: toReadable([cronOne, cronTwo])
+      }).toPromise()
+    })
+
+    test('intermingled cron and scheduled', async () => {
+      const evaluate = evaluateWith({
+        findMessageBefore: async () => { throw { status: 404 } },
+        loadEvaluator: () => ({ message, close }) => ({ Memory: Buffer.from('Hello world') }),
+        saveLatestProcessMemory: async (a) => {
+          assert.equal(a.assignmentId, messageOne.assignmentId)
+          assert.equal(a.hashChain, messageOne.message['Hash-Chain'])
+        },
+        evaluationCounter: mockCounter,
+        gasCounter: mockCounter,
+        logger
+      })
+
+      await evaluate({
+        ...args,
+        messages: toReadable([cronOne, messageOne, cronTwo])
+      }).toPromise()
+    })
+
+    test('multiple scheduled', async () => {
+      const evaluate = evaluateWith({
+        findMessageBefore: async () => { throw { status: 404 } },
+        loadEvaluator: () => ({ message, close }) => ({ Memory: Buffer.from('Hello world') }),
+        saveLatestProcessMemory: async (a) => {
+          assert.equal(a.assignmentId, messageTwo.assignmentId)
+          assert.equal(a.hashChain, messageTwo.message['Hash-Chain'])
+        },
+        evaluationCounter: mockCounter,
+        gasCounter: mockCounter,
+        logger
+      })
+
+      await evaluate({
+        ...args,
+        messages: toReadable([cronOne, messageOne, cronTwo, messageTwo])
+      }).toPromise()
+    })
   })
 })

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.63](https://github.com/permaweb/ao/compare/connect@v0.0.62...connect@v0.0.63) (2025-01-15)
+
+
+### Bug Fixes
+
+* **connect:** support spawn data ArrayBuffer type ([b1e846a](https://github.com/permaweb/ao/commit/b1e846afa5f3071aef3971940c9e3c9472df7fbc))
+
 ## [0.0.62](https://github.com/permaweb/ao/compare/connect@v0.0.61...connect@v0.0.62) (2024-11-22)
 
 ## [0.0.61](https://github.com/permaweb/ao/compare/connect@v0.0.60...connect@v0.0.61) (2024-10-31)

@@ -376,7 +376,7 @@ export const backoff = (
    * Recursive function that recurses with exponential backoff
    */
   const action = (retry, delay) => {
-    return Promise.resolve()
+    return Promise.resolve({ retry })
       .then(fn)
       .catch((err) => {
         // Reached max number of retries
@@ -528,4 +528,10 @@ export const addressFrom = ({ address, key }) => {
   cache.set(cKey, _address)
 
   return _address
+}
+
+export function readableToAsyncGenerator (stream) {
+  return (async function * () {
+    for await (const d of stream) yield d
+  })()
 }

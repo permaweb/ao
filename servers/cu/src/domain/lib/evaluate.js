@@ -1,4 +1,5 @@
-import { Transform, compose as composeStreams, finished } from 'node:stream'
+import { Transform, compose as composeStreams } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 
 import { always, applySpec, evolve, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
@@ -91,6 +92,8 @@ export function evaluateWith (env) {
       .chain(fromPromise(async (ctx) => {
         // A running tally of gas used in the eval stream
         let totalGasUsed = BigInt(0)
+        let mostRecentAssignmentId = ctx.mostRecentAssignmentId
+        let mostRecentHashChain = ctx.mostRecentHashChain
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -106,187 +109,196 @@ export function evaluateWith (env) {
           noSave: always(true)
         })(ctx)
 
-        await new Promise((resolve, reject) => {
-          const cleanup = finished(
+        const evalStream = async function (messages) {
+          /**
+           * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
+           * to pin down why. My hunch is that the very first message can be a duplicate of the 'from', if 'from'
+           * is itself a Cron Message.
+           *
+           * So to get around this, we maintain a set of strings that unique identify
+           * Cron messages (timestamp+cron interval). We will add each cron message identifier.
+           * If an iteration comes across an identifier already present in this list, then we consider it
+           * a duplicate and remove it from the eval stream.
+           *
+           * This should prevent duplicate Cron Messages from being duplicate evaluated, thus not "tainting"
+           * Memory that is folded as part of the eval stream.
+           *
+           * Since this will only happen at the end and beginning of boundaries generated in loadMessages
+           * this cache can be small, which prevents bloating memory on long cron runs
+           */
+          const evaledCrons = new LRUCache({ maxSize: 100, sizeCalculation: always(1) })
+          /**
+           * If the starting point ('from') is itself a Cron Message,
+           * then that will be our first identifier added to the set
+           */
+          if (ctx.fromCron) evaledCrons.set(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }), true)
+
+          /**
+           * Iterate over the async iterable of messages,
+           * and evaluate each one
+           */
+          let first = true
+          for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
+            if (cron) {
+              const key = toEvaledCron({ timestamp: message.Timestamp, cron })
+              if (evaledCrons.has(key)) continue
+              /**
+               * We add the crons identifier to the cache,
+               * thus preventing a duplicate evaluation if we come across it
+               * again in the eval stream
+               */
+              else evaledCrons.set(key, true)
+            } else if (!noSave) {
+              /**
+               * As messages stream into the process to be evaluated,
+               * we need to keep track of the most assignmentId
+               * and hashChain of the most recent scheduled message
+               */
+              mostRecentAssignmentId = assignmentId
+              mostRecentHashChain = message['Hash-Chain']
+            }
+
             /**
-             * Where the entire eval stream is composed and concludes.
+             * We make sure to remove duplicate pushed (matching deepHash)
+             * and duplicate assignments (matching messageId) from the eval stream
              *
-             * messages will flow into evaluation, respecting backpressure, bubbling errors,
-             * and cleaning up resources when finished.
+             * Which prevents them from corrupting the process.
+             *
+             * NOTE: We should only need to check if the message is an assignment
+             * or a pushed message, since the SU rejects any messages with the same id,
+             * that are not an assignment
+             *
+             * TODO: should the CU check every message, ergo not trusting the SU?
              */
-            composeStreams(
-              ctx.messages,
-              Transform.from(async function * removeInvalidTags ($messages) {
-                for await (const message of $messages) {
-                  yield evolve(
-                    {
-                      message: {
-                        Tags: pipe(
-                          removeTagsByNameMaybeValue('From'),
-                          removeTagsByNameMaybeValue('Owner')
-                        )
-                      }
-                    },
-                    message
+            if (
+              (deepHash || isAssignment) &&
+              await doesMessageExist({
+                messageId: message.Id,
+                deepHash,
+                isAssignment,
+                processId: ctx.id,
+                epoch: message.Epoch,
+                nonce: message.Nonce
+              }).toPromise()
+            ) {
+              const log = deepHash ? 'deepHash of' : 'assigned id'
+              logger(
+                `Prior Message to process "%s" with ${log} "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream`,
+                ctx.id,
+                deepHash || message.Id,
+                name
+              )
+              continue
+            }
+
+            prev = await Promise.resolve(prev)
+              .then((prev) =>
+                Promise.resolve(prev.Memory)
+                  /**
+                   * Where the actual evaluation is performed
+                   */
+                  .then((Memory) => ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
+                  /**
+                   * These values are folded,
+                   * so that we can potentially update the process memory cache
+                   * at the end of evaluation
+                   */
+                  .then(mergeLeft({ noSave, message, cron, ordinate }))
+                  .then(async (output) => {
+                    /**
+                     * Make sure to set first to false
+                     * for all subsequent evaluations for this evaluation stream
+                     */
+                    if (first) first = false
+                    if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
+
+                    if (cron) ctx.stats.messages.cron++
+                    else ctx.stats.messages.scheduled++
+
+                    if (output.Error) {
+                      logger(
+                        'Error occurred when applying message "%s" to process "%s": "%s',
+                        name,
+                        ctx.id,
+                        output.Error
+                      )
+                      ctx.stats.messages.error = ctx.stats.messages.error || 0
+                      ctx.stats.messages.error++
+                    }
+
+                    /**
+                     * Increments gauges for total evaluations for both:
+                     *
+                     * total evaluations (no labels)
+                     * specific kinds of evaluations (type of eval stream, type of message, whether an error occurred or not)
+                     */
+                    evaluationCounter.inc(1)
+                    evaluationCounter.inc(
+                      1,
+                      {
+                        stream_type: ctx.dryRun ? 'dry-run' : 'primary',
+                        message_type: ctx.dryRun ? 'dry-run' : cron ? 'cron' : isAssignment ? 'assignment' : 'scheduled',
+                        process_error: Boolean(output.Error)
+                      },
+                      { processId: ctx.id }
+                    )
+                    /**
+                     * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
+                     */
+                    // gasCounter.inc(output.GasUsed ?? 0, { cron: Boolean(cron), dryRun: Boolean(ctx.dryRun) }, { processId: ctx.id, error: Boolean(output.Error) })
+
+                    return output
+                  })
+              )
+          }
+        }
+
+        const removeInvalidTags = Transform.from(async function * ($messages) {
+          for await (const message of $messages) {
+            yield evolve(
+              {
+                message: {
+                  Tags: pipe(
+                    removeTagsByNameMaybeValue('From'),
+                    removeTagsByNameMaybeValue('Owner')
                   )
                 }
-              }),
-              async function (messages) {
-                /**
-                 * There seems to be duplicate Cron Message evaluations occurring and it's been difficult
-                 * to pin down why. My hunch is that the very first message can be a duplicate of the 'from', if 'from'
-                 * is itself a Cron Message.
-                 *
-                 * So to get around this, we maintain a set of strings that unique identify
-                 * Cron messages (timestamp+cron interval). We will add each cron message identifier.
-                 * If an iteration comes across an identifier already present in this list, then we consider it
-                 * a duplicate and remove it from the eval stream.
-                 *
-                 * This should prevent duplicate Cron Messages from being duplicate evaluated, thus not "tainting"
-                 * Memory that is folded as part of the eval stream.
-                 *
-                 * Since this will only happen at the end and beginning of boundaries generated in loadMessages
-                 * this cache can be small, which prevents bloating memory on long cron runs
-                 */
-                const evaledCrons = new LRUCache({ maxSize: 100, sizeCalculation: always(1) })
-                /**
-                 * If the starting point ('from') is itself a Cron Message,
-                 * then that will be our first identifier added to the set
-                 */
-                if (ctx.fromCron) evaledCrons.set(toEvaledCron({ timestamp: ctx.from, cron: ctx.fromCron }), true)
-
-                /**
-                 * Iterate over the async iterable of messages,
-                 * and evaluate each one
-                 */
-                let first = true
-                for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, AoGlobal } of messages) {
-                  if (cron) {
-                    const key = toEvaledCron({ timestamp: message.Timestamp, cron })
-                    if (evaledCrons.has(key)) continue
-                    /**
-                     * We add the crons identifier to the cache,
-                     * thus preventing a duplicate evaluation if we come across it
-                     * again in the eval stream
-                     */
-                    else evaledCrons.set(key, true)
-                  }
-
-                  /**
-                   * We make sure to remove duplicate pushed (matching deepHash)
-                   * and duplicate assignments (matching messageId) from the eval stream
-                   *
-                   * Which prevents them from corrupting the process.
-                   *
-                   * NOTE: We should only need to check if the message is an assignment
-                   * or a pushed message, since the SU rejects any messages with the same id,
-                   * that are not an assignment
-                   *
-                   * TODO: should the CU check every message, ergo not trusting the SU?
-                   */
-                  if (
-                    (deepHash || isAssignment) &&
-                    await doesMessageExist({
-                      messageId: message.Id,
-                      deepHash,
-                      isAssignment,
-                      processId: ctx.id,
-                      epoch: message.Epoch,
-                      nonce: message.Nonce
-                    }).toPromise()
-                  ) {
-                    const log = deepHash ? 'deepHash of' : 'assigned id'
-                    logger(
-                      `Prior Message to process "%s" with ${log} "%s" was found and therefore has already been evaluated. Removing "%s" from eval stream`,
-                      ctx.id,
-                      deepHash || message.Id,
-                      name
-                    )
-                    continue
-                  }
-
-                  prev = await Promise.resolve(prev)
-                    .then((prev) =>
-                      Promise.resolve(prev.Memory)
-                        /**
-                         * Where the actual evaluation is performed
-                         */
-                        .then((Memory) => ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
-                        /**
-                         * These values are folded,
-                         * so that we can potentially update the process memory cache
-                         * at the end of evaluation
-                         */
-                        .then(mergeLeft({ noSave, message, cron, ordinate }))
-                        .then(async (output) => {
-                          /**
-                           * Make sure to set first to false
-                           * for all subsequent evaluations for this evaluation stream
-                           */
-                          if (first) first = false
-                          if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
-
-                          if (cron) ctx.stats.messages.cron++
-                          else ctx.stats.messages.scheduled++
-
-                          if (output.Error) {
-                            logger(
-                              'Error occurred when applying message "%s" to process "%s": "%s',
-                              name,
-                              ctx.id,
-                              output.Error
-                            )
-                            ctx.stats.messages.error = ctx.stats.messages.error || 0
-                            ctx.stats.messages.error++
-                          }
-
-                          /**
-                           * Increments gauges for total evaluations for both:
-                           *
-                           * total evaluations (no labels)
-                           * specific kinds of evaluations (type of eval stream, type of message, whether an error occurred or not)
-                           */
-                          evaluationCounter.inc(1)
-                          evaluationCounter.inc(
-                            1,
-                            {
-                              stream_type: ctx.dryRun ? 'dry-run' : 'primary',
-                              message_type: ctx.dryRun ? 'dry-run' : cron ? 'cron' : isAssignment ? 'assignment' : 'scheduled',
-                              process_error: Boolean(output.Error)
-                            },
-                            { processId: ctx.id }
-                          )
-                          /**
-                           * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
-                           */
-                          // gasCounter.inc(output.GasUsed ?? 0, { cron: Boolean(cron), dryRun: Boolean(ctx.dryRun) }, { processId: ctx.id, error: Boolean(output.Error) })
-
-                          return output
-                        })
-                    )
-                }
-              }
-            ),
-            (err) => {
-              /**
-               * finished() will leave dangling event listeners even after this callback
-               * has been invoked, so that unexpected errors do not cause full-on crashes.
-               *
-               * finished() returns a callback fn to cleanup these dangling listeners, so we make sure
-               * to always call it here to prevent memory leaks.
-               *
-               * See https://nodejs.org/api/stream.html#streamfinishedstream-options-callback
-               */
-              cleanup()
-              /**
-               * Signal the evaluator to close any resources spun up as part
-               * of handling this eval stream
-               */
-              ctx.evaluator({ close: true })
-              err ? reject(err) : resolve()
-            }
-          )
+              },
+              message
+            )
+          }
         })
+
+        /**
+         * ABANDON ALL HOPE YE WHO ENTER HERE
+         *
+         * compose from node:streams has some incredibly hard to debug issues, when it comes to destroying
+         * streams and propagating errors, when composing multiple levels of streams.
+         *
+         * In order to circumvent these issues, we've hacked the steps to instead build a list of
+         * streams, then combine them all here.
+         *
+         * THEN we add an error listener such that any stream erroring
+         * results in all streams being cleaned up and destroyed with that error.
+         *
+         * Finally, if an error was thrown from any stream, we re-throw such that the eval promise rejects,
+         * bubbling the error to the caller
+         */
+        if (!Array.isArray(ctx.messages)) ctx.messages = [ctx.messages]
+        const streams = [...ctx.messages, removeInvalidTags]
+        streams.push(composeStreams(...streams))
+        let e
+        streams.forEach(s => {
+          s.on('error', (err) => {
+            e = err
+            streams.forEach(s => {
+              s.emit('end')
+              s.destroy(err)
+            })
+          })
+        })
+        await pipeline(streams[streams.length - 1], evalStream)
+        if (e) throw e
 
         /**
          * Make sure to attempt to cache the last result
@@ -306,6 +318,8 @@ export function evaluateWith (env) {
             processId: ctx.id,
             moduleId: ctx.moduleId,
             messageId: message.Id,
+            assignmentId: mostRecentAssignmentId,
+            hashChain: mostRecentHashChain,
             timestamp: message.Timestamp,
             nonce: message.Nonce,
             epoch: message.Epoch,
@@ -313,7 +327,6 @@ export function evaluateWith (env) {
             ordinate,
             cron,
             Memory: prev.Memory,
-            evalCount: ctx.stats.messages.scheduled + ctx.stats.messages.cron,
             gasUsed: totalGasUsed
           })
         }

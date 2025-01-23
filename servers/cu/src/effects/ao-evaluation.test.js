@@ -17,6 +17,7 @@ describe('ao-evaluation', () => {
       const findEvaluation = findEvaluationSchema.implement(
         findEvaluationWith({
           db: {
+            engine: 'sqlite',
             query: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, ['process-123,1702677252111,1'])
 
@@ -65,6 +66,7 @@ describe('ao-evaluation', () => {
       const findEvaluation = findEvaluationSchema.implement(
         findEvaluationWith({
           db: {
+            engine: 'sqlite',
             query: async () => []
           },
           logger
@@ -107,6 +109,7 @@ describe('ao-evaluation', () => {
         const saveEvaluation = saveEvaluationSchema.implement(
           saveEvaluationWith({
             db: {
+              engine: 'sqlite',
               transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
                 assert.deepStrictEqual(evaluationDocParams, [
                   'process-123,1702677252111,1',
@@ -143,6 +146,7 @@ describe('ao-evaluation', () => {
         const saveEvaluation = saveEvaluationSchema.implement(
           saveEvaluationWith({
             db: {
+              engine: 'sqlite',
               transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
                 assert.deepStrictEqual(evaluationDocParams, [
                   'process-123,1702677252111,1',
@@ -183,6 +187,7 @@ describe('ao-evaluation', () => {
         const saveEvaluation = saveEvaluationSchema.implement(
           saveEvaluationWith({
             db: {
+              engine: 'sqlite',
               transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
                 assert.deepStrictEqual(evaluationDocParams, [
                   'process-123,1702677252111,1',
@@ -224,6 +229,7 @@ describe('ao-evaluation', () => {
       const saveEvaluation = saveEvaluationSchema.implement(
         saveEvaluationWith({
           db: {
+            engine: 'sqlite',
             transaction: async ([{ sql: evaluationDocSql }, { sql: messageDocSql }]) => {
               assert.ok(evaluationDocSql.trim().startsWith(`INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}`))
               assert.ok(messageDocSql.trim().startsWith(`INSERT OR IGNORE INTO ${MESSAGES_TABLE}`))
@@ -255,6 +261,7 @@ describe('ao-evaluation', () => {
         saveEvaluationWith({
           DISABLE_PROCESS_EVALUATION_CACHE: true,
           db: {
+            engine: 'sqlite',
             transaction: async (statements) => {
               assert.equal(statements.length, 1)
               const [{ sql: messageDocSql }] = statements
@@ -299,6 +306,7 @@ describe('ao-evaluation', () => {
       const findEvaluations = findEvaluationsSchema.implement(
         findEvaluationsWith({
           db: {
+            engine: 'sqlite',
             query: async ({ sql, parameters }) => {
               assert.ok(sql.includes('AND cron IS NOT NULL'))
               assert.ok(sql.includes('timestamp ASC'))
@@ -340,6 +348,7 @@ describe('ao-evaluation', () => {
       const findEvaluations = findEvaluationsSchema.implement(
         findEvaluationsWith({
           db: {
+            engine: 'sqlite',
             query: async ({ sql, parameters }) => {
               /**
                * no onlyCron
@@ -378,11 +387,14 @@ describe('ao-evaluation', () => {
       const findMessageBefore = findMessageBeforeSchema.implement(
         findMessageBeforeWith({
           db: {
+            engine: 'sqlite',
             query: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, [
                 'deepHash-123',
                 'process-123',
-                '0:3'
+                0,
+                0,
+                3
               ])
 
               const mockAssigment = {
@@ -414,11 +426,14 @@ describe('ao-evaluation', () => {
         const findMessageBefore = findMessageBeforeSchema.implement(
           findMessageBeforeWith({
             db: {
+              engine: 'sqlite',
               query: async ({ parameters }) => {
                 assert.deepStrictEqual(parameters, [
                   'message-123',
                   'process-123',
-                  '0:3'
+                  0,
+                  0,
+                  3
                 ])
 
                 const mockAssigment = {
@@ -449,11 +464,55 @@ describe('ao-evaluation', () => {
         const findMessageBefore = findMessageBeforeSchema.implement(
           findMessageBeforeWith({
             db: {
-              query: async ({ parameters }) => {
+              engine: 'sqlite',
+              query: async ({ sql, parameters }) => {
+                // Only the postgres engine uses POSITION
+                assert.ok(!sql.includes('POSITION'))
                 assert.deepStrictEqual(parameters, [
                   'message-123',
                   'process-123',
-                  '0:3'
+                  0,
+                  0,
+                  3
+                ])
+
+                const mockAssigment = {
+                  id: 'message-123',
+                  processId: 'process-123',
+                  seq: '0:3'
+                }
+
+                return [mockAssigment]
+              }
+            }
+          })
+        )
+
+        const res = await findMessageBefore({
+          processId: 'process-123',
+          messageId: 'message-123',
+          deepHash: 'deepHash-123',
+          isAssignment: true,
+          epoch: 0,
+          nonce: 3
+        })
+
+        assert.deepStrictEqual(res, { id: 'message-123' })
+      })
+      test('if it is an assignment, postgres', async () => {
+        const findMessageBefore = findMessageBeforeSchema.implement(
+          findMessageBeforeWith({
+            db: {
+              engine: 'postgres',
+              query: async ({ sql, parameters }) => {
+                // Only the postgres engine uses POSITION
+                assert.ok(sql.includes('POSITION'))
+                assert.deepStrictEqual(parameters, [
+                  'message-123',
+                  'process-123',
+                  0,
+                  0,
+                  3
                 ])
 
                 const mockAssigment = {
@@ -485,6 +544,7 @@ describe('ao-evaluation', () => {
       const findMessageBefore = findMessageBeforeSchema.implement(
         findMessageBeforeWith({
           db: {
+            engine: 'sqlite',
             query: async () => []
           },
           logger

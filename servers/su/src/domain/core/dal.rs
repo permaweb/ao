@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub use super::bytes::DataItem;
 pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
 pub use super::router::{ProcessScheduler, Scheduler};
+pub use super::tags::Tag;
 
 /*
 Interfaces for core dependencies. Implement these traits
@@ -22,9 +23,13 @@ pub struct TxStatus {
     pub number_of_confirmations: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct GatewayTx {
     pub id: String,
+    pub signature: String,
+    pub anchor: Option<String>,
+    pub tags: Vec<Tag>,
+    pub recipient: Option<String>,
 }
 
 #[async_trait]
@@ -33,6 +38,7 @@ pub trait Gateway: Send + Sync {
     async fn network_info(&self) -> Result<NetworkInfo, String>;
     async fn status(&self, tx_id: &String) -> Result<TxStatus, String>;
     async fn gql_tx(&self, tx_id: &String) -> Result<GatewayTx, String>;
+    async fn raw(&self, tx_id: &String) -> Result<Vec<u8>, String>;
 }
 
 pub trait Wallet: Send + Sync {
@@ -62,6 +68,7 @@ pub trait Config: Send + Sync {
     fn mode(&self) -> String;
     fn scheduler_list_path(&self) -> String;
     fn enable_process_assignment(&self) -> bool;
+    fn enable_deep_hash_checks(&self) -> bool;
 }
 
 #[derive(Debug)]
@@ -121,6 +128,7 @@ pub trait DataStore: Send + Sync {
         &self,
         message: &Message,
         bundle_in: &[u8],
+        deep_hash: Option<&String>,
     ) -> Result<String, StoreErrorType>;
     async fn get_messages(
         &self,
@@ -135,6 +143,7 @@ pub trait DataStore: Send + Sync {
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType>;
     fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
+    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType>;
 }
 
 #[async_trait]

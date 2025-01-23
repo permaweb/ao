@@ -128,7 +128,7 @@ const applyMetering = (arrayBuffer, importObject) => {
 }
 
 // Override WebAssembly.compileStreaming to apply metering
-WebAssembly.compileStreaming = async function (source, importObject = { }) {
+WebAssembly.compileStreaming = async function (source, importObject = {}) {
   if (!shouldApplyMetering(importObject)) return originalCompileStreaming(source)
 
   const arrayBuffer = await source.arrayBuffer()
@@ -136,7 +136,7 @@ WebAssembly.compileStreaming = async function (source, importObject = { }) {
 }
 
 // Override WebAssembly.compile to apply metering
-WebAssembly.compile = async function (source, importObject = { }) {
+WebAssembly.compile = async function (source, importObject = {}) {
   if (!shouldApplyMetering(importObject)) return originalCompile(source)
 
   return applyMetering(source, importObject)
@@ -197,9 +197,9 @@ module.exports = async function (binary, options) {
     instance.cleanupListeners()
   }
 
-  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15" && 
-    options.format !== "wasm32-unknown-emscripten4"  && 
-    options.format !== "wasm32-unknown-emscripten-metering" && 
+  if (options.format !== "wasm64-unknown-emscripten-draft_2024_02_15" &&
+    options.format !== "wasm32-unknown-emscripten4" &&
+    options.format !== "wasm32-unknown-emscripten-metering" &&
     options.format !== "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
     doHandle = instance.cwrap('handle', 'string', ['string', 'string'])
   }

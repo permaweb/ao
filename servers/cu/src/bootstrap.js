@@ -135,6 +135,14 @@ export const createApis = async (ctx) => {
     Math.ceil(ctx.WASM_EVALUATION_MAX_WORKERS * (ctx.WASM_EVALUATION_PRIMARY_WORKERS_PERCENTAGE / 100))
   )
 
+  /**
+   * node's crypto module is synchronous, which blocks the main thread.
+   * Since hash chain valiation is done for _every single scheduled message_, we offload the
+   * work to a worker thread, so at least the main thread isn't blocked.
+   */
+  const hashChainWorkerPath = join(__dirname, 'effects', 'worker', 'hashChain', 'index.js')
+  const hashChainWorker = workerpool.pool(hashChainWorkerPath, { maxWorkers: maxPrimaryWorkerThreads })
+
   const worker = join(__dirname, 'effects', 'worker', 'evaluator', 'index.js')
   const primaryWorkerPool = workerpool.pool(worker, {
     maxWorkers: maxPrimaryWorkerThreads,
@@ -303,6 +311,8 @@ export const createApis = async (ctx) => {
   //   labelNames: ['processId', 'cron', 'dryRun', 'error']
   // })
 
+  const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
+
   const sharedDeps = (logger) => ({
     loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -336,7 +346,7 @@ export const createApis = async (ctx) => {
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
-    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, pageSize: 90, logger }),
+    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
     findModule: AoModuleClient.findModuleWith({ db, logger }),
     saveModule: AoModuleClient.saveModuleWith({ db, logger }),
     loadEvaluator: AoModuleClient.evaluatorWith({
@@ -365,7 +375,12 @@ export const createApis = async (ctx) => {
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
-    loadMessages: AoSuClient.loadMessagesWith({ fetch: ctx.fetch, pageSize: 1000, logger }),
+    loadMessages: AoSuClient.loadMessagesWith({
+      hashChain: (...args) => hashChainWorker.exec('hashChain', args),
+      fetch: ctx.fetch,
+      pageSize: 1000,
+      logger
+    }),
     locateProcess: locateDataloader.load.bind(locateDataloader),
     isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
     isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),

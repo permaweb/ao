@@ -3,7 +3,7 @@
 # Build the ao cli into a set of platform binaries
 
 # change directory to root of dev-cli to ensure this script works no matter where it is ran
-root_dir="$(dirname "$0")/.."
+root_dir="$(realpath "$(dirname "$0")/..")"
 cd $root_dir
 
 OUTPUT_DIR="${root_dir}/dist"

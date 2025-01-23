@@ -141,6 +141,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
   }
 
   return {
+    engine: 'sqlite',
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
     run: async ({ sql, parameters }) => db.prepare(sql).run(...parameters),
     transaction: async (statements) => db.transaction(

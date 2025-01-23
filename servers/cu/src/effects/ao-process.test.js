@@ -195,6 +195,8 @@ describe('ao-process', () => {
     const evaluation = {
       processId: 'process-123',
       moduleId: 'module-123',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       epoch: 0,
       nonce: 11,
       timestamp: now,
@@ -218,7 +220,10 @@ describe('ao-process', () => {
           cron: undefined
         }
       })
-      assert.deepStrictEqual(res, { file: 'state-process-123.dat', ...evaluation })
+      assert.deepStrictEqual(res, {
+        file: 'state-process-123.dat',
+        ...evaluation
+      })
     })
 
     test('should return the latest checkpoint from a file BEFORE the before', async () => {
@@ -296,6 +301,8 @@ describe('ao-process', () => {
     const cachedEval = {
       processId: PROCESS,
       moduleId: 'module-123',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       epoch: 0,
       nonce: 11,
       timestamp: tenSecondsAgo,
@@ -400,6 +407,8 @@ describe('ao-process', () => {
             fromFile: undefined,
             Memory,
             moduleId: 'module-123',
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -417,6 +426,8 @@ describe('ao-process', () => {
             fromFile: undefined,
             Memory,
             moduleId: 'module-123',
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -449,6 +460,8 @@ describe('ao-process', () => {
           fromFile: 'state-process123.dat',
           Memory,
           moduleId: 'module-123',
+          assignmentId: cachedEval.assignmentId,
+          hashChain: cachedEval.hashChain,
           epoch: cachedEval.epoch,
           nonce: cachedEval.nonce,
           timestamp: cachedEval.timestamp,
@@ -509,6 +522,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'file',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -525,6 +540,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'file',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -541,6 +558,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'file',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -611,6 +630,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'record',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -627,6 +648,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'record',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -652,6 +675,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'record',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -699,6 +724,8 @@ describe('ao-process', () => {
             tags: [
               { name: 'Module', value: `${cachedEval.moduleId}` },
               { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+              { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+              { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
               { name: 'Epoch', value: `${cachedEval.epoch}` },
               { name: 'Nonce', value: `${cachedEval.nonce}` },
               { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
@@ -744,6 +771,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'arweave',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -760,6 +789,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'arweave',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -783,6 +814,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'arweave',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -809,6 +842,8 @@ describe('ao-process', () => {
           assert.deepStrictEqual(res, {
             src: 'arweave',
             moduleId: cachedEval.moduleId,
+            assignmentId: cachedEval.assignmentId,
+            hashChain: cachedEval.hashChain,
             epoch: cachedEval.epoch,
             nonce: cachedEval.nonce,
             timestamp: cachedEval.timestamp,
@@ -861,6 +896,8 @@ describe('ao-process', () => {
                       id: 'tx-not-encoded',
                       tags: [
                         { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp}` },
                         { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: `${cachedEval.nonce}` },
@@ -897,6 +934,8 @@ describe('ao-process', () => {
                       ...edges[0].node,
                       tags: [
                         { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
                         { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: '12' },
@@ -931,6 +970,9 @@ describe('ao-process', () => {
                       id: 'ignored',
                       tags: [
                         { name: 'Module', value: `${cachedEval.moduleId}` },
+                        // purposefully omitted to ensure robustness
+                        // { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                        // { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
                         { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
                         { name: 'Epoch', value: `${cachedEval.epoch}` },
                         { name: 'Nonce', value: '12' },
@@ -968,6 +1010,8 @@ describe('ao-process', () => {
                         ...edges[0].node,
                         tags: [
                           { name: 'Module', value: `${cachedEval.moduleId}` },
+                          { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                          { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
                           { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
                           { name: 'Epoch', value: `${cachedEval.epoch}` },
                           { name: 'Nonce', value: '12' },
@@ -1056,6 +1100,8 @@ describe('ao-process', () => {
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
+        assignmentId: undefined,
+        hashChain: undefined,
         timestamp: undefined,
         epoch: undefined,
         nonce: undefined,
@@ -1233,6 +1279,8 @@ describe('ao-process', () => {
                       id: 'tx-123',
                       tags: [
                         { name: 'Module', value: `${laterCachedEval.moduleId}` },
+                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
                         { name: 'Timestamp', value: `${laterCachedEval.timestamp}` },
                         { name: 'Epoch', value: `${laterCachedEval.epoch}` },
                         { name: 'Nonce', value: `${laterCachedEval.nonce}` },
@@ -1278,6 +1326,8 @@ describe('ao-process', () => {
     const cachedEval = {
       processId: PROCESS,
       moduleId: 'module-123',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       epoch: 0,
       nonce: 11,
       timestamp: tenSecondsAgo,
@@ -1289,6 +1339,8 @@ describe('ao-process', () => {
     const cachedEvalFuture = {
       processId: PROCESS,
       moduleId: 'module-1234',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       epoch: 0,
       nonce: 11,
       timestamp: now + 1000,
@@ -1310,7 +1362,6 @@ describe('ao-process', () => {
       timestamp: now - 1000,
       ordinate: '13',
       cron: undefined,
-      evalCount: 5,
       gasUsed: BigInt(50)
     }
     const targetWithGasUsed = {
@@ -1319,7 +1370,6 @@ describe('ao-process', () => {
       timestamp: now - 1000,
       ordinate: '13',
       cron: undefined,
-      evalCount: 15,
       gasUsed: BigInt(50)
     }
 

@@ -31,6 +31,7 @@ export async function createPostgresClient ({ url, bootstrap = false, ...rest })
   }
 
   return {
+    engine: 'postgres',
     query: async ({ sql, parameters }) => pool.query(toOrdinals(sql), parameters).then(rows),
     run: async ({ sql, parameters }) => pool.query(toOrdinals(sql), parameters).then(rows),
     transaction: async (statements) => pool.connect()

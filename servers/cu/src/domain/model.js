@@ -50,6 +50,13 @@ export const domainConfigSchema = z.object({
    */
   GRAPHQL_URL: z.string().url('GRAPHQL_URL must be a valid URL'),
   /**
+   * An array of urls for the graphql server to be used by the CU
+   * to query for block metadata from an Arweave Gateway. On retries, the urls will be cycled through.
+   *
+   * ie. ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql']
+   */
+  GRAPHQL_URLS: z.array(z.string().url('GraphQL_URLS must be a valid URL')),
+  /**
    * The url for the graphql server to be used by the CU
    * to query for process Checkpoints.
    *
@@ -245,6 +252,8 @@ export const processCheckpointSchema = z.object({
   fromFile: z.string().nullish(),
   Memory: bufferSchema.nullish(),
   moduleId: z.string().nullish(),
+  assignmentId: z.string().nullish(),
+  hashChain: z.string().nullish(),
   timestamp: z.coerce.number().nullish(),
   epoch: z.coerce.number().nullish(),
   nonce: z.coerce.number().nullish(),
@@ -300,6 +309,13 @@ export const messageSchema = z.object({
    * Whether the message is a pure assignment of an on-chain message
    */
   isAssignment: z.boolean().default(false),
+  /**
+   * The id of the assignment.
+   *
+   * cron messages do not have an assignment, so this
+   * is optional
+   */
+  assignmentId: z.string().nullish(),
   /**
    * For assignments, any exclusions to not be passed to the process,
    * and potentially not loaded from the gateway or arweave

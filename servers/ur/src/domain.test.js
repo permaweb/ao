@@ -38,6 +38,74 @@ describe('domain', () => {
       })
     })
 
+    describe('fromModuleToHost', () => {
+      test('should bailout if the process fromModule is mapped to a specific host', async () => {
+        const fetchMock = async (url) => {
+          assert.equal(url, 'surUrl1/processes/process-123')
+          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{name:'From-Module', value: 'fromModule1'}] }))
+        }
+
+        const bailout = bailoutWith({
+          fetch: fetchMock,
+          surUrl: 'surUrl1',
+          fromModuleToHost: { fromModule1: 'https://specific_owner.host' }
+        })
+
+        const determineHost = determineHostWith({ hosts: HOSTS, bailout })
+
+        const host = await determineHost({ processId: 'process-123', failoverAttempt: 0 })
+        assert.equal(host, 'https://specific_owner.host')
+      })
+
+      test('should NOT bailout if the process owner is not mapped to a specific host', async () => {
+        const fetchMock = async (url) => {
+          assert.equal(url, 'surUrl1/processes/process-123')
+          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{name:'From-Module', value: 'fromModule1'}] }))
+        }
+
+        const bailout = bailoutWith({
+          fetch: fetchMock,
+          surUrl: 'surUrl1',
+          fromModuleToHost: { notFromModule1: 'https://specific_owner.host' }
+        })
+
+        const determineHost = determineHostWith({ hosts: HOSTS, bailout })
+
+        const host = await determineHost({ processId: 'process-123', failoverAttempt: 0 })
+        assert.ok(host !== 'https://specific_owner.host')
+        assert.ok(HOSTS.includes(host))
+      })
+
+      test('should NOT bailout if no fromModuleToHost is provided', async () => {
+        const fetchMock = async (url) => {
+          assert.equal(url, 'surUrl1/processes/process-123')
+          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{name:'From-Module', value: 'fromModule1'}] }))
+        }
+
+        const determineHostEmptyMapping = determineHostWith({
+          hosts: HOSTS,
+          bailout: bailoutWith({
+            fetch: fetchMock,
+            surUrl: 'surUrl1',
+            fromModuleToHost: {}
+          })
+        })
+        const host = await determineHostEmptyMapping({ processId: 'process-123', failoverAttempt: 0 })
+        assert.ok(HOSTS.includes(host))
+
+        const determineHostNoMapping = determineHostWith({
+          hosts: HOSTS,
+          bailout: bailoutWith({
+            fetch: fetchMock,
+            surUrl: 'surUrl1',
+            ownerToHost: undefined
+          })
+        })
+        const host1 = await determineHostNoMapping({ processId: 'process-123', failoverAttempt: 0 })
+        assert.ok(HOSTS.includes(host1))
+      })
+    })
+
     describe('ownerToHost', () => {
       test('should bailout if the process owner is mapped to a specific host', async () => {
         const fetchMock = async (url) => {

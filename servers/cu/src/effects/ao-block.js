@@ -33,7 +33,7 @@ export function saveBlocksWith ({ db }) {
         VALUES
           ${new Array(blocks.length).fill('(?, ?, ?)').join(',\n')}
       `,
-      parameters: blocks.map(props(['height', 'height', 'timestamp']))
+      parameters: db.engine === 'sqlite' ? blocks.map(props(['height', 'height', 'timestamp'])) : blocks.map(props(['height', 'height', 'timestamp'])).flat()
     }
   }
   return (blocks) => {
@@ -102,7 +102,7 @@ export function findBlocksWith ({ db }) {
 /**
  * @typedef Env2
  * @property {fetch} fetch
- * @property {string} GRAPHQL_URL
+ * @property {string[]} GRAPHQL_URLS - An array of urls to query
  * @property {number} pageSize
  *
  * @callback LoadBlocksMeta
@@ -113,7 +113,7 @@ export function findBlocksWith ({ db }) {
  * @returns {LoadBlocksMeta}
  */
 export function loadBlocksMetaWith ({
-  fetch, GRAPHQL_URL, pageSize, logger, breakerOptions = {
+  fetch, GRAPHQL_URLS, pageSize, logger, breakerOptions = {
     timeout: 10000, // 10 seconds timeout
     errorThresholdPercentage: 50, // open circuit after 50% failures
     resetTimeout: 15000, // attempt to close circuit after 15 seconds
@@ -141,6 +141,11 @@ export function loadBlocksMetaWith ({
       }
     `
 
+  function customFetch (urls, options, retry = 0) {
+    const urlLength = urls.length
+    const url = urls[retry % urlLength]
+    return fetch(url, options)
+  }
   async function fetchPage ({ min, maxTimestamp }) {
     return Promise.resolve({ min, limit: pageSize })
       .then(variables => {
@@ -154,22 +159,30 @@ export function loadBlocksMetaWith ({
       })
       .then((variables) => {
         return backoff(
-          () => fetch(GRAPHQL_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: GET_BLOCKS_QUERY,
-              variables
-            })
-          }).then(okRes).catch(async (e) => {
-            logger(
-              'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
-              min,
-              maxTimestamp
+          ({ retry }) => {
+            return customFetch(
+              GRAPHQL_URLS,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  query: GET_BLOCKS_QUERY,
+                  variables
+                })
+              },
+              retry
             )
-            throw new Error(`Can not communicate with gateway to retrieve block metadata: ${await strFromFetchError(e)}`)
-          }),
-          { maxRetries: 2, delay: 300, log: logger, name: `loadBlockMeta(${JSON.stringify({ newMin: min, maxTimestamp })})` }
+              .then(okRes)
+              .catch(async (e) => {
+                logger(
+                  'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
+                  min,
+                  maxTimestamp
+                )
+                throw new Error(`Can not communicate with gateway to retrieve block metadata: ${await strFromFetchError(e)}`)
+              })
+          },
+          { maxRetries: 4, delay: 300, log: logger, name: `loadBlockMeta(${JSON.stringify({ newMin: min, maxTimestamp })})` }
         )
       })
       .then(async (res) => {
