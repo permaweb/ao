@@ -1,11 +1,15 @@
-import { pipe, pipeWith, unapply } from 'ramda'
+import { Readable } from 'node:stream'
 
+import { pipe, pipeWith, unapply } from 'ramda'
 import Fastify from 'fastify'
 import FastifyMiddie from '@fastify/middie'
 import cors from 'cors'
 import helmet from 'helmet'
+import { parseMultipartMessage } from '@apeleghq/multipart-parser'
 
-import { withMetricRoutes } from '../routes/metrics.js'
+import { parseMultipartBoundary } from '../index.js'
+
+import { withMetricRoutes } from '../../routes/metrics.js'
 import { withHealthcheckRoutes } from './routes/healthcheck.js'
 import { withResultRoutes } from './routes/result.js'
 
@@ -48,6 +52,28 @@ export const createHbHttp = async ({ logger: _logger, domain, ...config }) => {
     (app) => app.register(FastifyMiddie).then(() => app),
     (app) => app.use(helmet()),
     (app) => app.use(cors()),
+    (app) => {
+      app.addContentTypeParser('multipart/form-data', function (_req, req, done) {
+        const boundary = parseMultipartBoundary(req)
+
+        if (!boundary) return done()
+
+        /**
+         * Parse the streaming body into an Async generator
+         * that can be used to iterate over the parts. Each part
+         * is emitted as { headers: Headers, body: Uint8Array | null }.
+         *
+         * IFF the part is a nested multipart, then parts field will also
+         * be present, which is a nested iterator of the same structure
+         *
+         * This is set at req.body
+         */
+        const body = parseMultipartMessage(Readable.toWeb(req), boundary)
+        done(null, body)
+      })
+
+      return app
+    },
     withDeps,
     withRoutes,
     (app) => {
