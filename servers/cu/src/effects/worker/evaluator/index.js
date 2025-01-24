@@ -80,9 +80,11 @@ worker({
         // Don't event vacuum on dry runs
         if (message && !message['Read-Only']) {
           await eventVacuum.processLogs(
-            output.Output.data,
+            output.Error ?? output.Output.data,
             processId,
-            +ordinate
+            +ordinate,
+            output.GasUsed,
+            arrayBufferFromMaybeView(output.Memory).byteLength
           )
         }
       }
