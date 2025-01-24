@@ -20,7 +20,7 @@ import * as AoModuleClient from './ao-module.js'
 import * as AoEvaluationClient from './ao-evaluation.js'
 import * as AoBlockClient from './ao-block.js'
 import * as MetricsClient from './metrics.js'
-import * as HbHttp from './hb-http/index.js'
+import * as HbHttp from './hb/http/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 

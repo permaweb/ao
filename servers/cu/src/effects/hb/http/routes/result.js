@@ -1,9 +1,9 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
-import { withErrorHandler } from '../../middleware/withErrorHandler.js'
-import { withMetrics } from '../../middleware/withMetrics.js'
-import { withProcessRestrictionFromQuery } from '../../middleware/withProcessRestriction.js'
+import { withErrorHandler } from '../../../middleware/withErrorHandler.js'
+import { withMetrics } from '../../../middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from '../../../middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
   messageTxId: z.string().min(1, 'a message tx id is required'),

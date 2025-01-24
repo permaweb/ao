@@ -1,6 +1,6 @@
 import { always, compose } from 'ramda'
 
-import { withErrorHandler } from '../../middleware/withErrorHandler.js'
+import { withErrorHandler } from '../../../middleware/withErrorHandler.js'
 
 export const withHealthcheckRoutes = (app) => {
   // healthcheck
