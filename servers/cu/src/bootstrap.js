@@ -59,7 +59,9 @@ export const createApis = async (ctx) => {
   const { locate } = schedulerUtilsConnect({
     cacheSize: 100,
     GRAPHQL_URL: ctx.GRAPHQL_URL,
-    followRedirects: true
+    followRedirects: true,
+    GRAPHQL_MAX_RETRIES: 5,
+    GRAPHQL_RETRY_BACKOFF: 300
   })
   const locateDataloader = new Dataloader(async (params) => {
     /**
