@@ -5,13 +5,8 @@ import pMap from 'p-map'
 import CircuitBreaker from 'opossum'
 
 import { blockSchema } from '../domain/model.js'
-import { backoff, strFromFetchError } from '../domain/utils.js'
+import { backoff, okRes, strFromFetchError } from '../domain/utils.js'
 import { BLOCKS_TABLE } from './db.js'
-
-const okRes = (res) => {
-  if (res.ok) return res
-  throw res
-}
 
 const blockDocSchema = z.object({
   id: blockSchema.shape.height,
