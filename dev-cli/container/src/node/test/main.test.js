@@ -261,6 +261,7 @@ describe('createContractWith', () => {
     const res = await spawnProcess({
       walletPath: '/path/to/wallet.json',
       module: 'module-tx-123',
+      scheduler: 'scheduler-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -275,6 +276,7 @@ describe('createContractWith', () => {
       create: (params) => {
         assert.deepStrictEqual(params, {
           module: 'module-tx-123',
+          scheduler: 'scheduler-tx-123',
           tags: [
             { name: 'foo', value: 'bar' }
           ],
@@ -288,6 +290,7 @@ describe('createContractWith', () => {
     await spawnProcess({
       walletPath: '/path/to/wallet.json',
       module: 'module-tx-123',
+      scheduler: 'scheduler-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ]
@@ -303,6 +306,7 @@ describe('createContractWith', () => {
     await contract({
       walletPath: '/path/to/wallet.json',
       module: 'module-tx-123',
+      scheduler: 'scheduler-tx-123',
       tags: [
         { name: 'foo', value: 'bar' }
       ]
