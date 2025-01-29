@@ -1,0 +1,9 @@
+{
+  "name": "http-sig-example",
+  "description": "An example of signing an http message with Arweave keys",
+  "type": "module",
+  "dependencies": {
+    "arweave": "^1.15.5",
+    "http-message-signatures": "^1.0.4"
+  }
+}
