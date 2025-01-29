@@ -358,7 +358,12 @@ export const createApis = async (ctx) => {
     evaluationCounter,
     // gasCounter,
     saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
-    findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
+    findEvaluation: AoEvaluationClient.findEvaluationWith({
+      db,
+      logger,
+      EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
+      EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET
+    }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({
       db,
       logger,

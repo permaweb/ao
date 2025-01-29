@@ -73,11 +73,13 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
      */
     if (ctx.needsOnlyMemory) return Rejected(ctx)
 
+    console.log('LOADING EVALUATION2', { ctx })
     return findEvaluation({
       processId: ctx.id,
       to: ctx.to,
       ordinate: ctx.ordinate,
-      cron: ctx.cron
+      cron: ctx.cron,
+      messageId: ctx.messageId
     })
       .map((evaluation) => {
         logger(

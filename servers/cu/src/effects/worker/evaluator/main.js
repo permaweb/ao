@@ -67,10 +67,6 @@ export const createApis = async (ctx) => {
         return hydratorWorkQueue.add(() =>
           Promise.resolve()
             .then(async () => await hydratorWorkerPool.exec('saveEvaluationToDir', [args]))
-            .then((result) => {
-              console.log('444 Result', { result })
-              return result
-            })
             .catch((e) => {
               console.error('Error in hydrator worker', e)
               throw e

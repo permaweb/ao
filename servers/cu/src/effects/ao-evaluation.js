@@ -70,7 +70,19 @@ const fromEvaluationDoc = pipe(
   toEvaluation
 )
 
-export function findEvaluationWith ({ db }) {
+export function findEvaluationFromDirWith ({ loadEvaluationFromDir }) {
+  return ({ processId, messageId }) => {
+    return of({ processId, messageId })
+      // .map(loadEvaluationFromDir)
+      .map((args) => {
+        console.log('Finding evaluation from dir:', { args })
+        return 'h'
+      })
+      .toPromise()
+  }
+}
+
+export function findEvaluationFromDbWith ({ db }) {
   function createQuery ({ processId, timestamp, ordinate, cron }) {
     return {
       sql: `
@@ -86,12 +98,33 @@ export function findEvaluationWith ({ db }) {
   }
 
   return ({ processId, to, ordinate, cron }) => {
+    console.log('FINDING EVALUATION FROM DB WITH', { processId, to, ordinate, cron })
     return of({ processId, timestamp: to, ordinate, cron })
       .chain(fromPromise((params) => db.query(createQuery(params))))
       .map(defaultTo([]))
       .map(head)
       .chain((row) => row ? Resolved(row) : Rejected({ status: 404, message: 'Evaluation result not found' }))
       .map(fromEvaluationDoc)
+      .toPromise()
+  }
+}
+
+export function findEvaluationWith ({ db, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+  const findEvaluationFromDir = findEvaluationFromDirWith({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
+  const findEvaluationFromDb = fromPromise(findEvaluationFromDbWith({ db }))
+  return ({ processId, to, ordinate, cron, messageId }) => {
+    console.log('FINDING EVALUATION WITH', { processId, to, ordinate, cron, messageId })
+    return of({ processId, to, ordinate, cron, messageId })
+      .chain(findEvaluationFromDb)
+      .chain(
+        (result) => {
+          console.log(888, { result, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
+          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && !result.output) {
+            return findEvaluationFromDir({ processId, messageId })
+          }
+          return Resolved(result)
+        }
+      )
       .toPromise()
   }
 }

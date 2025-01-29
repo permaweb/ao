@@ -3,7 +3,6 @@ import fs from 'fs'
 import { omit } from 'ramda'
 export function saveEvaluationToDirWith ({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
   return async ({ messageId, processId, output }) => {
-    console.log('SAVING EVALUATION TO DIR', { EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET, messageId })
     if (!EVALUATION_RESULT_DIR || !EVALUATION_RESULT_BUCKET) {
       console.log('EVALUATION_RESULT_DIR or EVALUATION_RESULT_BUCKET is not set')
       return 'not set'
@@ -12,7 +11,7 @@ export function saveEvaluationToDirWith ({ EVALUATION_RESULT_DIR, EVALUATION_RES
     const outputWithoutMemory = omit(['Memory'], output)
 
     if (!fs.existsSync(dir)) {
-      console.log(`File ${dir} does not exist, writing it`)
+      console.log('SAVING EVALUATION TO DIR', { EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET, messageId })
       try {
         fs.writeFileSync(dir, JSON.stringify(outputWithoutMemory))
       } catch (e) {

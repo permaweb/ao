@@ -45,12 +45,13 @@ worker({
      * Transfer the ownership of the underlying ArrayBuffer back to the main thread
      * to prevent copying it over
      */
-    .then((output) => {
-      console.log('OUTPUT:', { output, args })
-      return 'h'
-    })
     .catch((e) => {
-      console.error('Error in hydrator worker', e)
+      console.error('Error in hydrator worker 1', e)
+      throw e
+    }),
+  loadEvaluationFromDir: (...args) => apis.loadEvaluationFromDir(...args)
+    .catch((e) => {
+      console.error('Error in hydrator worker 2', e)
       throw e
     })
 })
