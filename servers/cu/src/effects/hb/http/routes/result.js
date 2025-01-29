@@ -10,13 +10,46 @@ const inputSchema = z.object({
   processId: z.string().min(1, 'a process-id query parameter is required')
 })
 
+function mapAssignmentFrom ({ headers, body }) {
+  return {
+    noSave: true,
+    ordinate: headers.slot,
+    name: `Hyperbeam Message ${headers.timestamp}:${headers.slot}`,
+    exclude: headers.exclude,
+    /**
+     * TODO: how do we determine whether of not this is an
+     * assignment of data from arweave?
+     */
+    isAssignment: undefined,
+    assignmentId: undefined,
+    message: {
+      /**
+       * TODO: Add fields from the body
+       */
+      Epoch: headers.epoch,
+      Nonce: headers.slot,
+      Timestamp: parseInt(headers.timestamp),
+      'Block-Height': parseInt(headers['block-height']),
+      Target: headers.process,
+      'Hash-Chain': headers['hash-chain']
+    },
+    block: {
+      height: parseInt(headers['block-height']),
+      /**
+       * TODO: is this seconds or milliseconds?
+       */
+      timestamp: parseInt(headers['block-timestamp'])
+    }
+  }
+}
+
 export const withResultRoutes = app => {
   app.post(
     '/result/:messageTxId',
     compose(
       withErrorHandler,
       withProcessRestrictionFromQuery,
-      withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
+      withMetrics(),
       always(async ({ req, res }) => {
         /**
          * TODO:
@@ -26,8 +59,7 @@ export const withResultRoutes = app => {
          */
 
         const {
-          params: { messageTxId },
-          query: { 'process-id': processId },
+          body,
           // eslint-disable-next-line
           domain: { apis: { readResult } }
         } = req

@@ -14,6 +14,24 @@ export function parseMultipartBoundary (req) {
   return boundaryMatch[1]
 }
 
+export const locateProcessWith = () => {
+  return async ({ processId, schedulerHint }) => {
+
+  }
+}
+
+export const loadProcessWith = () => {
+  return async ({ processId, suUrl }) => {
+
+  }
+}
+
+export const loadTimestampWith = () => {
+  return async ({ processId, suUrl }) => {
+
+  }
+}
+
 export const loadMessagesWith = ({ hashChain, fetch, logger, pageSize }) => {
   // maybe implement a little map here to store
   // initial message + process sent along with result request
