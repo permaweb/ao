@@ -1,6 +1,6 @@
-import { promisify } from 'node:util'
-import { PassThrough, Readable, Transform, pipeline } from 'node:stream'
-import { createGunzip, createGzip } from 'node:zlib'
+import { PassThrough, Readable, Transform } from 'node:stream'
+import { pipeline as pipelineP } from 'node:stream/promises'
+import { createGunzip, createGzip, constants as zlibConstants } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { join } from 'node:path'
@@ -15,7 +15,41 @@ import WeaveDrive from '@permaweb/weavedrive'
 import { joinUrl } from '../domain/utils.js'
 import AsyncLock from 'async-lock'
 
-const pipelineP = promisify(pipeline)
+class SubchunkStream extends Transform {
+  constructor (chunkSize) {
+    super()
+    this.chunkSize = chunkSize
+    /**
+     * accumulate received chunks into this buffer.
+     *
+     * It will be subchunked as needed, as the transform stream
+     * is read.
+     */
+    this.buffer = Buffer.alloc(0)
+  }
+
+  _transform (chunk, _encoding, callback) {
+    this.buffer = Buffer.concat([this.buffer, chunk])
+
+    while (this.buffer.length >= this.chunkSize) {
+      const subChunk = this.buffer.subarray(0, this.chunkSize)
+      this.buffer = this.buffer.subarray(this.chunkSize)
+
+      /**
+       * We stop if push returns false in order to respect
+       * backpressure
+       */
+      if (!this.push(subChunk)) return
+    }
+
+    callback()
+  }
+
+  _flush (callback) {
+    if (this.buffer.length > 0) this.push(this.buffer)
+    callback()
+  }
+}
 
 export function wasmResponse (stream) {
   return new Response(stream, { headers: { 'Content-Type': 'application/wasm' } })
@@ -31,12 +65,9 @@ function readWasmFileWith ({ DIR }) {
   return async (moduleId) => {
     const file = join(DIR, `${moduleId}.wasm.gz`)
 
-    return new Promise((resolve, reject) =>
-      resolve(pipeline(
-        createReadStream(file),
-        createGunzip(),
-        reject
-      ))
+    return pipelineP(
+      createReadStream(file),
+      createGunzip()
     )
   }
 }
@@ -229,6 +260,38 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
   }
 }
 
+export function compressWasmMemoryWith () {
+  return async (memoryStream, encoding) => {
+    const chunks = []
+    return pipelineP(
+      memoryStream,
+      new SubchunkStream(1024 * 64),
+      encoding === 'gzip'
+        ? createGzip({ level: zlibConstants.Z_BEST_COMPRESSION })
+        : new PassThrough(),
+      async function (stream) {
+        for await (const chunk of stream) chunks.push(chunk)
+      }
+    ).then(() => Buffer.concat(chunks))
+  }
+}
+
+export function decompressWasmMemoryWith () {
+  return async (memoryStream, encoding) => {
+    const chunks = []
+    return pipelineP(
+      memoryStream,
+      new SubchunkStream(1024 * 64),
+      encoding === 'gzip'
+        ? createGunzip()
+        : new PassThrough(),
+      async function (stream) {
+        for await (const chunk of stream) chunks.push(chunk)
+      }
+    ).then(() => Buffer.concat(chunks))
+  }
+}
+
 /**
  * The memory may be encoded, so in order to compute the correct hash
  * of the actual memory, we may need to decode it
@@ -236,42 +299,6 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
  * We use a stream, so that we can incrementally compute hash in a non-blocking way
  */
 export function hashWasmMemoryWith () {
-  class SubchunkStream extends Transform {
-    constructor (chunkSize) {
-      super()
-      this.chunkSize = chunkSize
-      /**
-       * accumulate received chunks into this buffer.
-       *
-       * It will be subchunked as needed, as the transform stream
-       * is read.
-       */
-      this.buffer = Buffer.alloc(0)
-    }
-
-    _transform (chunk, _encoding, callback) {
-      this.buffer = Buffer.concat([this.buffer, chunk])
-
-      while (this.buffer.length >= this.chunkSize) {
-        const subChunk = this.buffer.subarray(0, this.chunkSize)
-        this.buffer = this.buffer.subarray(this.chunkSize)
-
-        /**
-         * We stop if push returns false in order to respect
-         * backpressure
-         */
-        if (!this.push(subChunk)) return
-      }
-
-      callback()
-    }
-
-    _flush (callback) {
-      if (this.buffer.length > 0) this.push(this.buffer)
-      callback()
-    }
-  }
-
   return async (memoryStream, encoding) => {
     /**
      * TODO: add more encoding options
@@ -280,33 +307,30 @@ export function hashWasmMemoryWith () {
       throw new Error('Only GZIP encoding of Memory is supported for Process Checkpoints')
     }
 
-    return Promise.resolve(memoryStream)
-      .then((memoryStream) => {
-        const hash = createHash('sha256')
-        return pipelineP(
-          memoryStream,
-          /**
-           * The memoryStream, if derived from an iterable like a Buffer,
-           * may emit the entire data stream as a single chunk.
-           *
-           * This can break things like Crypto hash, which can only handle
-           * data chunks less than 2GB.
-           *
-           * So we use this Transform stream to receive chunks,
-           * then re-emit "sub-chunks" of the given size -- in this case
-           * the default highWaterMark of 64kb
-           *
-           * This allows for hashing to work for any size memory, derived
-           * from any iterable, while respecting backpressure
-           */
-          new SubchunkStream(1024 * 64),
-          encoding === 'gzip'
-            ? createGunzip()
-            : new PassThrough(),
-          hash
-        )
-          .then(() => hash.digest('hex'))
-      })
+    const hash = createHash('sha256')
+    return pipelineP(
+      memoryStream,
+      /**
+       * The memoryStream, if derived from an iterable like a Buffer,
+       * may emit the entire data stream as a single chunk.
+       *
+       * This can break things like Crypto hash, which can only handle
+       * data chunks less than 2GB.
+       *
+       * So we use this Transform stream to receive chunks,
+       * then re-emit "sub-chunks" of the given size -- in this case
+       * the default highWaterMark of 64kb
+       *
+       * This allows for hashing to work for any size memory, derived
+       * from any iterable, while respecting backpressure
+       */
+      new SubchunkStream(1024 * 64),
+      encoding === 'gzip'
+        ? createGunzip()
+        : new PassThrough(),
+      hash
+    )
+      .then(() => hash.digest('hex'))
   }
 }
 
