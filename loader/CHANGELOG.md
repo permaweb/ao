@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.46](https://github.com/permaweb/ao/compare/loader@v0.0.45...loader@v0.0.46) (2025-01-29)
+
+
+### Features
+
+* **loader:** revert free call in wasm64 ([7cced2c](https://github.com/permaweb/ao/commit/7cced2c1463ccf010e03c0c28ede6b8c080faace))
+
 ## [0.0.45](https://github.com/permaweb/ao/compare/loader@v0.0.44...loader@v0.0.45) (2025-01-18)
 
 ## [0.0.44](https://github.com/permaweb/ao/compare/loader@v0.0.43...loader@v0.0.44) (2024-12-17)
