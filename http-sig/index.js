@@ -1,73 +1,152 @@
-import { createHash, createPrivateKey } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { createHash, createPrivateKey, createPublicKey, verify, constants, sign } from 'node:crypto';
+import { randomBytes } from 'crypto';
+import { httpbis } from 'http-message-signatures';
+import Arweave from 'arweave';
+const { signMessage, verifyMessage } = httpbis;
 
-import Arweave from 'arweave'
-import { httpbis, createSigner } from 'http-message-signatures'
+// Initialize Arweave
+const arweave = Arweave.init({
+    host: 'arweave.net',
+    port: 443,
+    protocol: 'https',
+});
 
-const { signMessage } = httpbis
-const arweave = Arweave.init()
+// Generate a random secret key for HMAC
+const secretKey = randomBytes(32).toString('hex');
+console.log('Generated Secret Key:', secretKey);
 
-const WASM = readFileSync('./test-64.wasm')
+console.log(constants)
 
-/**
- * A signer that uses an arweave key
- * and rsa-pss-sha512 alg to sign the message.
- *
- * This also sets the wallet as the keyid in the signature params
- */
-const arweaveSigner = await arweave.wallets.generate()
-  .then((jwk) => arweave.wallets.getAddress(jwk)
-    .then(address => ({ address, pk: createPrivateKey({ key: jwk, format: 'jwk' }) }))
-  )
-  .then(({ address, pk }) => createSigner(pk, 'rsa-pss-sha512', address))
+// Create a function to generate different signers
+async function createSigner(alg) {
+    if (alg === 'hmac-sha256') {
+        return {
+            id: 'hmac-key-id',
+            alg: 'hmac-sha256',
+            async sign(data) {
+                const key = await crypto.subtle.importKey(
+                    'raw',
+                    Buffer.from(secretKey),
+                    { name: 'HMAC', hash: 'SHA-256' },
+                    true,
+                    ['sign', 'verify']
+                );
+                return Buffer.from(await crypto.subtle.sign('HMAC', key, data));
+            },
+        };
+    } else if (alg === 'rsa-pss-sha512') {
+        const jwk = await arweave.wallets.generate();
 
-async function sign ({ signer, request }) {
-  return signMessage({
-    key: signer,
-    /**
-     * Include all the fields in the signature,
-     * plus the method and path
-     */
-    fields: [
-      '@method',
-      '@path',
-      ...Object.keys(request.headers)
-    ].sort(),
-    /**
-     * The name of the signature in the Signature and
-     * Signature-Input dictionaries
-     */
-    name: 'my-sig',
-    params: ['keyid', 'alg']
-  }, request)
+        const privateKeyPem = convertJWKToPEM(jwk, 'private');
+        const publicKeyPem = convertJWKToPEM(jwk, 'public');
+
+        return {
+            id: 'arweave-key-id',
+            alg: 'rsa-pss-sha512',
+            async sign(data) {
+                const privateKey = createPrivateKey(privateKeyPem);
+                return sign(
+                    'sha512',
+                    data,
+                    {
+                        key: privateKey,
+                        padding: constants.RSA_PKCS1_PSS_PADDING,
+                        saltLength: 64,
+                    },
+                );
+            },
+            pubKey: publicKeyPem, // Store public key for verification
+        };
+    }
+    throw new Error(`Unsupported algorithm: ${alg}`);
 }
 
-/**
- * Signature and Signature-Input headers have been appended
- * to with the new signature and signature params.
- *
- * Pass these to fetch or preferred http client
- */
-const { method, url, headers, body } = await sign({
-  signer: arweaveSigner,
-  request: {
-    method: 'POST',
-    url: new URL('http://localhost:8080/~process@1.0/schedule'),
-    headers: {
-      'execution-device': 'wasm64@1.0',
-      'scheduler-device': 'scheduler@1.0',
-      'scheduler-location': 'J2UvMhi2G_I4YXhiWjhlJmFD0Oezci1NWiMXz0YYPS4',
-      '2.body|map': 'type=process',
-      /**
-       * See https://datatracker.ietf.org/doc/html/rfc9530#name-the-content-digest-field
-       * for content-digest structure
-       * and https://datatracker.ietf.org/doc/html/rfc8941#name-byte-sequences for
-       * structured field syntax
-       */
-      'content-digest': `sha-256=:${createHash('sha256').update(WASM).digest('base64')}:`
-    },
-    body: WASM
-  }
-})
+// Create a function to generate verifiers
+async function createVerifier(alg, publicKeyPem) {
+    if (alg === 'hmac-sha256') {
+        return async (data, signature) => {
+            const key = await crypto.subtle.importKey(
+                'raw',
+                Buffer.from(secretKey),
+                { name: 'HMAC', hash: 'SHA-256' },
+                true,
+                ['sign', 'verify']
+            );
+            return crypto.subtle.verify('HMAC', key, signature, data);
+        };
+    } else if (alg === 'rsa-pss-sha512' && publicKeyPem) {
+        return async (data, signature) => {
+            const publicKey = createPublicKey(publicKeyPem);
+            return verify(
+                'sha512',
+                signature,
+                { key: publicKey, padding: constants.RSA_PKCS1_PSS_PADDING, saltLength: 64 },
+                data
+            );
+        };
+    }
+    throw new Error(`Unsupported algorithm: ${alg}`);
+}
 
-console.log({ method, url, headers, body })
+// Convert JWK to PEM format
+function convertJWKToPEM(jwk, type) {
+    if (!jwk.n || !jwk.e) throw new Error('Invalid JWK format.');
+    return type === 'private'
+        ? createPrivateKey({ key: jwk, format: 'jwk' }).export({ type: 'pkcs8', format: 'pem' })
+        : createPublicKey({ key: jwk, format: 'jwk' }).export({ type: 'spki', format: 'pem' });
+}
+
+async function signAndVerifyRequest(alg) {
+    try {
+        const signer = await createSigner(alg);
+        const verifier = await createVerifier(alg, signer.pubKey);
+
+        const request = {
+            method: 'POST',
+            url: 'https://example.com',
+            headers: {
+                'content-type': 'application/json',
+                'content-digest': 'sha-512=:YMAam51Jz/jOATT6/zvHrLVgOYTGFy1d6GJiOHTohq4yP+pgk4vf2aCsyRZOtw8MjkM7iw7yZ/WkppmM44T3qg==:',
+                'content-length': '19',
+            },
+            body: '{"hello": "world"}\n',
+        };
+
+        // Sign the request
+        const signedRequest = await signMessage({ key: signer }, request);
+        console.log('Signed Request:', signedRequest);
+
+        // Keystore for verification
+        const keys = new Map();
+        keys.set(signer.id, {
+            id: signer.id,
+            algs: [alg],
+            verify: verifier,
+        });
+
+        // Simulate received request for verification
+        const receivedRequest = {
+            ...request,
+            headers: {
+                ...signedRequest.headers,
+            },
+        };
+
+        // Verify the signed request
+        const verified = await verifyMessage(
+            {
+                async keyLookup(params) {
+                    return keys.get(params.keyid);
+                },
+            },
+            receivedRequest
+        );
+
+        console.log(`Verification result for ${alg}:`, verified ? 'Valid' : 'Invalid');
+    } catch (error) {
+        console.error(`Error for ${alg}:`, error);
+    }
+}
+
+signAndVerifyRequest('hmac-sha256');
+signAndVerifyRequest('rsa-pss-sha512');

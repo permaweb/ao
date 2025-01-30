@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "arweave": "^1.15.5",
+    "base64-arraybuffer": "^1.0.2",
     "http-message-signatures": "^1.0.4"
   }
 }
