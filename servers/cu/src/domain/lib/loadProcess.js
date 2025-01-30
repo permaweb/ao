@@ -2,7 +2,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { identity, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
-import { findEvaluationSchema, findLatestProcessMemorySchema, saveLatestProcessMemorySchema } from '../dal.js'
+import { findLatestProcessMemorySchema, saveLatestProcessMemorySchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -62,7 +62,7 @@ const ctxSchema = z.object({
 }).passthrough()
 
 function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, saveLatestProcessMemory, logger }) {
-  findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
+  findEvaluation = fromPromise((findEvaluation))
   findLatestProcessMemory = fromPromise(findLatestProcessMemorySchema.implement(findLatestProcessMemory))
   saveLatestProcessMemory = fromPromise(saveLatestProcessMemorySchema.implement(saveLatestProcessMemory))
 
@@ -73,7 +73,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
      */
     if (ctx.needsOnlyMemory) return Rejected(ctx)
 
-    console.log('LOADING EVALUATION2', { ctx })
+    console.log('0 LOADING EVALUATION2', { ctx })
     return findEvaluation({
       processId: ctx.id,
       to: ctx.to,
@@ -81,6 +81,16 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
       cron: ctx.cron,
       messageId: ctx.messageId
     })
+      .bimap(
+        (err) => {
+          console.log('LOAD: Error finding evaluation in loadProcess', { err })
+          return err
+        },
+        (result) => {
+          console.log('LOAD: Result from loadProcess', { result })
+          return result
+        }
+      )
       .map((evaluation) => {
         logger(
           'Exact match to cached evaluation for message to process "%s": %j',
@@ -218,6 +228,10 @@ export function loadProcessWith (env) {
     return of(ctx)
       .chain(loadLatestEvaluation)
       .map(mergeRight(ctx))
+      .map((ctx) => {
+        console.log('LOADED LATEST EVALUATION1', { ctx })
+        return ctx
+      })
       .map(ctxSchema.parse)
   }
 }

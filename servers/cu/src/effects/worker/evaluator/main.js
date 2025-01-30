@@ -13,43 +13,30 @@ export const createApis = async (ctx) => {
 
   const close = async (streamId) => wasmInstanceCache.delete(streamId)
 
-  const BROADCAST = 'workers'
   const __dirname = ctx.__dirname
-  const hydratorWorker = join(__dirname, 'effects', 'worker', 'hydrator', 'index.js')
-  const onCreateHydratorWorker = () => () => {
+  const saveEvaluationWorker = join(__dirname, 'effects', 'worker', 'saveEvaluation', 'index.js')
+  const onCreateSaveEvaluationWorker = () => () => {
     const workerId = randomBytes(8).toString('hex')
-    ctx.logger('Spinning up hydrator worker with id "%s"...', workerId)
+    ctx.logger('Spinning up save evaluation worker with id "%s"...', workerId)
 
     return {
       workerThreadOpts: {
         workerData: {
-          BROADCAST,
-          WASM_MODULE_CACHE_MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE,
-          WASM_INSTANCE_CACHE_MAX_SIZE: ctx.WASM_INSTANCE_CACHE_MAX_SIZE,
-          WASM_BINARY_FILE_DIRECTORY: ctx.WASM_BINARY_FILE_DIRECTORY,
-          ARWEAVE_URL: ctx.ARWEAVE_URL,
-          GRAPHQL_URL: ctx.GRAPHQL_URL,
-          CHECKPOINT_GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL,
-          DB_URL: ctx.DB_URL,
           id: workerId,
-          MODE: ctx.MODE,
-          LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
-          DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL,
-          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
           EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
           EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET
         }
       }
     }
   }
-  const hydratorWorkerPool = workerpool.pool(hydratorWorker, {
+  const saveEvaluationWorkerPool = workerpool.pool(saveEvaluationWorker, {
     maxWorkers: 2, // TODO: change?
-    onCreateWorker: onCreateHydratorWorker(),
+    onCreateWorker: onCreateSaveEvaluationWorker(),
     onTerminateWorker: (ctx) => {
-      console.log('444 Worker terminated', ctx)
+      console.log('SAVE EVALUATION WORKER TERMINATED', { ctx })
     }
   })
-  const hydratorWorkQueue = new PQueue({ concurrency: 2 })
+  const saveEvaluationWorkQueue = new PQueue({ concurrency: 2 })
 
   const evaluate = evaluateWith({
     wasmInstanceCache,
@@ -64,11 +51,11 @@ export const createApis = async (ctx) => {
       db,
       logger: ctx.logger,
       saveEvaluationToDir: (args) => {
-        return hydratorWorkQueue.add(() =>
+        return saveEvaluationWorkQueue.add(() =>
           Promise.resolve()
-            .then(async () => await hydratorWorkerPool.exec('saveEvaluationToDir', [args]))
+            .then(async () => await saveEvaluationWorkerPool.exec('saveEvaluationToDir', [args]))
             .catch((e) => {
-              console.error('Error in hydrator worker', e)
+              console.error('Error in saveEvaluation worker', e)
               throw e
             })
         )

@@ -5,6 +5,7 @@ import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
+import cron from 'node-cron'
 import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
@@ -84,6 +85,7 @@ export const createApis = async (ctx) => {
   const BROADCAST = 'workers'
   const workerBroadcast = new BroadcastChannel(BROADCAST).unref()
   const broadcastCloseStream = (streamId) => workerBroadcast.postMessage({ type: 'close-stream', streamId })
+  const broadcastDumpEvaluations = () => workerBroadcast.postMessage({ type: 'dump-evaluations' })
 
   const onCreateWorker = (type) => () => {
     const workerId = randomBytes(8).toString('hex')
@@ -166,12 +168,13 @@ export const createApis = async (ctx) => {
   })
   const dryRunWorkQueue = new PQueue({ concurrency: maxDryRunWorkerTheads })
 
-  // const hydratorWorker = join(__dirname, 'effects', 'worker', 'hydrator', 'index.js')
-  // const hydratorWorkerPool = workerpool.pool(hydratorWorker, {
-  //   maxWorkers: 1, // TODO: change?
-  //   onCreateWorker: onCreateWorker('hydrator')
-  // })
-  // const hydratorWorkQueue = new PQueue({ concurrency: 1 })
+  const loadEvaluationWorker = join(__dirname, 'effects', 'worker', 'loadEvaluation', 'index.js')
+  const loadEvaluationWorkerPool = workerpool.pool(loadEvaluationWorker, {
+    minWorkers: 1,
+    maxWorkers: 2, // TODO: change?
+    onCreateWorker: onCreateWorker('loadEvaluation')
+  })
+  const loadEvaluationWorkQueue = new PQueue({ concurrency: 2 })
 
   const arweave = ArweaveClient.createWalletClient()
   const address = ArweaveClient.addressWith({ WALLET: ctx.WALLET, arweave })
@@ -362,7 +365,24 @@ export const createApis = async (ctx) => {
       db,
       logger,
       EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
-      EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET
+      EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET,
+      loadEvaluationFromDir: (args) => {
+        return loadEvaluationWorkQueue.add(() =>
+          Promise.resolve()
+            .then(() => {
+              console.log('2.25 LOADING EVALUATION5')
+              return loadEvaluationWorkerPool.exec('loadEvaluationFromDir', [args])
+            })
+            .then((result) => {
+              console.log('RESULT2', { result })
+              return result
+            })
+            .catch((e) => {
+              console.error('Error in loadEvaluation worker', e)
+              throw e
+            })
+        )
+      }
     }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({
       db,
@@ -552,6 +572,24 @@ export const createApis = async (ctx) => {
   })
 
   const healthcheck = healthcheckWith({ walletAddress: address })
+
+  /** Set up a cron to clear out old tasks from the
+  * sqlite database. Every two seconds, all of the
+  * tasks in the database that have been dequeued
+  * (dequeuedTasks) are deleted.
+  */
+  let ct = null
+  let isJobRunning = false
+  ct = cron.schedule('*/3 * * * * *', async () => {
+    if (!isJobRunning) {
+      isJobRunning = true
+      ct.stop() // pause cron while dequeueing
+      console.log('DUMPING EVALUATIONS')
+      broadcastDumpEvaluations()
+      ct.start() // resume cron when done dequeueing
+      isJobRunning = false
+    }
+  })
 
   return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
 }

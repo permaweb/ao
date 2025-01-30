@@ -72,13 +72,21 @@ const fromEvaluationDoc = pipe(
 
 export function findEvaluationFromDirWith ({ loadEvaluationFromDir }) {
   return ({ processId, messageId }) => {
-    return of({ processId, messageId })
-      // .map(loadEvaluationFromDir)
-      .map((args) => {
-        console.log('Finding evaluation from dir:', { args })
-        return 'h'
+    console.log('2.1 FINDING EVALUATION FROM DIR WITH', { processId, messageId })
+    return Promise.resolve({ processId, messageId })
+      .then((args) => {
+        console.log('2.2 Finding evaluation from dir:', { args })
+        return args
       })
-      .toPromise()
+      .then(loadEvaluationFromDir)
+      .then((result) => {
+        console.log('2.4 Finding evaluation from dir:', { result })
+        return result
+      })
+      .catch((err) => {
+        console.log('2.5 Error finding evaluation from dir:', { err })
+        throw err
+      })
   }
 }
 
@@ -98,7 +106,7 @@ export function findEvaluationFromDbWith ({ db }) {
   }
 
   return ({ processId, to, ordinate, cron }) => {
-    console.log('FINDING EVALUATION FROM DB WITH', { processId, to, ordinate, cron })
+    console.log('1.1 FINDING EVALUATION FROM DB WITH', { processId, to, ordinate, cron })
     return of({ processId, timestamp: to, ordinate, cron })
       .chain(fromPromise((params) => db.query(createQuery(params))))
       .map(defaultTo([]))
@@ -109,20 +117,40 @@ export function findEvaluationFromDbWith ({ db }) {
   }
 }
 
-export function findEvaluationWith ({ db, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
-  const findEvaluationFromDir = findEvaluationFromDirWith({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
+export function findEvaluationWith ({ db, loadEvaluationFromDir, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+  const findEvaluationFromDir = findEvaluationFromDirWith({ loadEvaluationFromDir })
   const findEvaluationFromDb = fromPromise(findEvaluationFromDbWith({ db }))
   return ({ processId, to, ordinate, cron, messageId }) => {
-    console.log('FINDING EVALUATION WITH', { processId, to, ordinate, cron, messageId })
+    console.log('1 FINDING EVALUATION WITH', { processId, to, ordinate, cron, messageId })
     return of({ processId, to, ordinate, cron, messageId })
       .chain(findEvaluationFromDb)
-      .chain(
-        (result) => {
-          console.log(888, { result, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
-          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && !result.output) {
+      .bichain(
+        (err) => {
+          console.log('2 FIND: Error finding evaluation from db', { err })
+          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && err.status === 404) {
             return findEvaluationFromDir({ processId, messageId })
           }
-          return Resolved(result)
+          return Rejected(err)
+        },
+        fromPromise(async (result) => {
+          console.log('2 FOUND EVALUATION FROM DB', { result, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
+          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+            const evaluationOutput = await findEvaluationFromDir({ processId, messageId })
+            console.log('2 FOUND EVALUATION FROM DIR', { evaluationOutput })
+            return { ...result, output: evaluationOutput }
+          }
+          console.log('2 here')
+          return await Promise.resolve().then(() => result)
+        })
+      )
+      .bimap(
+        (err) => {
+          console.log('3 ERR', { err })
+          return err
+        },
+        (result) => {
+          console.log('3 RESULT', { result })
+          return result
         }
       )
       .toPromise()
@@ -253,7 +281,10 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
       .chain((data) =>
         of(data)
           .map((data) => createQuery(data))
-          .chain(fromPromise((statements) => db.transaction(statements)))
+          .chain(fromPromise((statements) => {
+            // console.log('SAVE: Transaction', { data })
+            return db.transaction(statements)
+          }))
           .map(always(data.id))
       )
       .chain(() => {
