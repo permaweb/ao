@@ -59,6 +59,7 @@
   "devDependencies": {
     "arweave": "^1.15.5",
     "esbuild": "^0.24.2",
+    "esbuild-plugins-node-modules-polyfill": "^1.6.8",
     "typescript": "^5.7.3"
   },
   "engines": {
