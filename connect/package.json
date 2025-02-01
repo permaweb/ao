@@ -49,6 +49,7 @@
     "@permaweb/protocol-tag-utils": "~0.0.2",
     "buffer": "^6.0.3",
     "debug": "^4.4.0",
+    "http-message-signatures": "^1.0.4",
     "hyper-async": "^1.1.2",
     "mnemonist": "^0.39.8",
     "ramda": "^0.30.1",
