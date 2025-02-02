@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.64](https://github.com/permaweb/ao/compare/connect@v0.0.63...connect@v0.0.64) (2025-02-02)
+
+
+### Features
+
+* **connect:** add connect.hb() to use HyperBEAM mode ([5f97b93](https://github.com/permaweb/ao/commit/5f97b93b558f8b617f371b9ddcf97b42e0337502))
+
 ## [0.0.63](https://github.com/permaweb/ao/compare/connect@v0.0.62...connect@v0.0.63) (2025-01-15)
 
 
