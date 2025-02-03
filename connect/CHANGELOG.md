@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.65](https://github.com/permaweb/ao/compare/connect@v0.0.64...connect@v0.0.65) (2025-02-03)
+
+
+### Features
+
+* **connect:** always use provided fetch for gateway calls ([47cdf7e](https://github.com/permaweb/ao/commit/47cdf7e8c0beae7527d890e4df12a2eba10e3c1f))
+* **connect:** sign all headers for any relayed requests ([af00769](https://github.com/permaweb/ao/commit/af00769c966efe3ceb81511c0f008b6c3b1895a6))
+
 ## [0.0.64](https://github.com/permaweb/ao/compare/connect@v0.0.63...connect@v0.0.64) (2025-02-02)
 
 
