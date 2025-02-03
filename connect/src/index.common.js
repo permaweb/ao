@@ -81,7 +81,12 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     GATEWAY_URL = DEFAULT_GATEWAY_URL,
     MU_URL = DEFAULT_MU_URL,
     CU_URL = DEFAULT_CU_URL,
-    fetch = defaultFetch
+    fetch = defaultFetch,
+    /**
+     * Only set when augmented with connect.hb(),
+     * and so default to the provided fetch otherwise.
+     */
+    originalFetch = fetch
   } = {}) {
     if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
 
@@ -118,7 +123,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
      */
     const spawnLogger = logger.child('spawn')
     const spawn = spawnWith({
-      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GRAPHQL_URL, logger: spawnLogger }),
+      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: originalFetch, GRAPHQL_URL, logger: spawnLogger }),
       validateScheduler: validate,
       deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
       logger: spawnLogger
@@ -206,6 +211,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
   connect.hb = function ({
     wallet,
     URL = DEFAULT_HB_URL,
+    fetch: originalFetch = defaultFetch,
     ...rest
   }) {
     logger('HyperBEAM mode activated! ⚡️⭐️')
@@ -213,20 +219,20 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     const api = connect({
       ...rest,
       /**
-       * TODO: do all fetch calls need to be relayed?
-       * Could still use this downstream for 'non-relayed'
-       * calls.
-       *
-       * For now, it isn't used at all downstream, in HyperBEAM
-       * mode.
+       * Downstream logic, that does not need to be relayed
+       * may still want the original fetch, so inject it here
        */
-      originalFetch: rest.fetch,
+      originalFetch,
       /**
        * Use the HyperBEAM relay as fetch for all downstream
        * dependencies
        */
       fetch: HbClient.relayerWith({
         ...rest,
+        /**
+         * Always wrap default fetch with relayer,
+         * no embellishment beyond the relayer
+         */
         fetch: defaultFetch,
         logger,
         HB_URL: URL,

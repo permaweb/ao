@@ -22,7 +22,7 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
    */
   return async (url, options) => {
     const parsed = new URL(url)
-    options.headers = options.headers || {}
+    options.headers = new Headers(options.headers)
     const relayUrl = parsed.href
     /**
      * TODO: should we only use a header instead?
@@ -40,11 +40,14 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
      * ie. TypeError? For now, just letting this bubble
      */
     const { headers: signedHeaders } = await signer({
-      fields: ['relay-path'],
+      fields: [
+        ...options.headers.keys(),
+        'relay-path'
+      ].sort(),
       request: {
         url,
         ...options,
-        headers: { ...options.headers, 'relay-path': relayUrl }
+        headers: { ...Object.fromEntries(options.headers), 'relay-path': relayUrl }
       }
     })
 
