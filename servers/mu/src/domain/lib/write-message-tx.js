@@ -1,5 +1,5 @@
-import { Resolved, fromPromise } from 'hyper-async'
-import { __, assoc } from 'ramda'
+import { Resolved, fromPromise, of } from 'hyper-async'
+import { __, assoc, T } from 'ramda'
 import z from 'zod'
 import { checkStage, setStage } from '../utils.js'
 import { uploadDataItemSchema, writeDataItemSchema } from '../dal.js'
@@ -19,7 +19,7 @@ const ctxSchemaArweave = z.object({
 }).passthrough()
 
 export function writeMessageTxWith (env) {
-  let { logger, writeDataItem, writeDataItemArweave } = env
+  let { logger, writeDataItem, writeDataItemArweave, topUp, RELAY_PROCESSES } = env
 
   writeDataItem = fromPromise(writeDataItemSchema.implement(writeDataItem))
   writeDataItemArweave = fromPromise(uploadDataItemSchema.implement(writeDataItemArweave))
@@ -36,15 +36,32 @@ export function writeMessageTxWith (env) {
 
       if (!checkStage('write-message-su')(ctx)) return Resolved(ctx)
 
-      return writeDataItem({ suUrl: ctx.schedLocation.url, data: ctx.tx.data.toString('base64'), logId: ctx.logId })
-        .map(assoc('schedulerTx', __, ctx))
-        .map(ctxSchema.parse)
-        .bimap(
-          (e) => {
-            return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
-          },
-          logger.tap({ log: 'Added schedulerTx to ctx' })
-        )
+      return of()
+        .chain(() => {
+          if(RELAY_PROCESSES && RELAY_PROCESSES.includes(ctx.tx.processId)) {
+            if(ctx.cachedMsg.msg.Tags?.find((t) => t.name === 'Action' && t.value === 'Credit-Notice')) {
+              return topUp(ctx)
+                .bimap(
+                  (e) => {
+                    return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
+                  },
+                  logger.tap({ log: 'Topped up relay process' })
+                )
+            }
+          }
+          return Resolved()
+        })
+        .chain((_) => {
+          return writeDataItem({ suUrl: ctx.schedLocation.url, data: ctx.tx.data.toString('base64'), logId: ctx.logId })
+            .map(assoc('schedulerTx', __, ctx))
+            .map(ctxSchema.parse)
+            .bimap(
+              (e) => {
+                return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
+              },
+              logger.tap({ log: 'Added schedulerTx to ctx' })
+            )
+        })
     } else {
       ctx = setStage('write-message', 'write-message-arweave')(ctx)
 

@@ -16,6 +16,14 @@ const positiveIntSchema = z.preprocess((val) => {
   return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
 }, z.number().nonnegative())
 
+const csvArraySchema = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val.split(',').map(str => str.trim()).filter(Boolean);
+  }
+  return [];
+}, z.array(z.string()))
+
+
 /**
  * Some frameworks will implicitly override NODE_ENV
  *
@@ -62,7 +70,9 @@ export const domainConfigSchema = z.object({
   GET_RESULT_MAX_RETRIES: positiveIntSchema,
   GET_RESULT_RETRY_DELAY: positiveIntSchema,
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
-  MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema
+  MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
+  RELAY_PROCESSES: csvArraySchema,
+  RELAY_URL: z.string()
 })
 
 /**
@@ -112,7 +122,9 @@ const CONFIG_ENVS = {
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
-    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000
+    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
+    RELAY_PROCESSES: process.env.RELAY_PROCESSES || '',
+    RELAY_URL: process.env.RELAY_URL || ''
   },
   production: {
     MODE,
@@ -139,7 +151,9 @@ const CONFIG_ENVS = {
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
-    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000
+    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
+    RELAY_PROCESSES: process.env.RELAY_PROCESSES || '',
+    RELAY_URL: process.env.RELAY_URL || ''
   }
 }
 

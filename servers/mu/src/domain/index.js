@@ -18,6 +18,7 @@ import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
 import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
 import { readTracesWith } from './clients/tracer.js'
+import * as RelayClient from './clients/relay.js'
 
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
@@ -352,6 +353,8 @@ export const createResultApis = async (ctx) => {
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
+  const RELAY_PROCESSES = ctx.RELAY_PROCESSES
+  const RELAY_URL = ctx.RELAY_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -385,7 +388,9 @@ export const createResultApis = async (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram })
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
+    RELAY_PROCESSES,
+    topUp: RelayClient.topUpWith({ RELAY_URL })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
