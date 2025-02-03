@@ -1,6 +1,6 @@
 import { workerData } from 'node:worker_threads'
 import { hostname } from 'node:os'
-
+import fs from 'node:fs'
 import { fetch, setGlobalDispatcher, Agent } from 'undici'
 import { worker } from 'workerpool'
 
@@ -21,6 +21,10 @@ const apis = await createApis({
   fetch,
   logger
 })
+
+if (workerData.EVALUATION_RESULT_DIR && !fs.existsSync(workerData.EVALUATION_RESULT_DIR)) {
+  fs.mkdirSync(workerData.EVALUATION_RESULT_DIR, { recursive: true })
+}
 
 worker({
   saveEvaluationToDir: (...args) => apis.saveEvaluationToDir(...args)

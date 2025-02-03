@@ -1,5 +1,5 @@
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head, defaultTo, evolve, pipe } from 'ramda'
+import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head, defaultTo, evolve, pipe, identity } from 'ramda'
 import { z } from 'zod'
 
 import { evaluationSchema } from '../domain/model.js'
@@ -124,14 +124,7 @@ export function findEvaluationWith ({ db, loadEvaluationFromDir, EVALUATION_RESU
     console.log('1 FINDING EVALUATION WITH', { processId, to, ordinate, cron, messageId })
     return of({ processId, to, ordinate, cron, messageId })
       .chain(findEvaluationFromDb)
-      .bichain(
-        (err) => {
-          console.log('2 FIND: Error finding evaluation from db', { err })
-          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && err.status === 404) {
-            return findEvaluationFromDir({ processId, messageId })
-          }
-          return Rejected(err)
-        },
+      .chain(
         fromPromise(async (result) => {
           console.log('2 FOUND EVALUATION FROM DB', { result, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
           if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
@@ -140,7 +133,7 @@ export function findEvaluationWith ({ db, loadEvaluationFromDir, EVALUATION_RESU
             return { ...result, output: evaluationOutput }
           }
           console.log('2 here')
-          return await Promise.resolve().then(() => result)
+          return result
         })
       )
       .bimap(

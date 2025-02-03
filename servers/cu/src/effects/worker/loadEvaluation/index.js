@@ -1,6 +1,6 @@
 import { workerData } from 'node:worker_threads'
 import { hostname } from 'node:os'
-
+import fs from 'node:fs'
 import { fetch, setGlobalDispatcher, Agent } from 'undici'
 import { worker } from 'workerpool'
 
@@ -31,6 +31,10 @@ broadcast.onmessage = (event) => {
   if (data.type === 'dump-evaluations') return apis.dumpEvaluations()
 
   logger.warn('Unrecognized event type "%s". Doing nothing...', data.type)
+}
+
+if (workerData.EVALUATION_RESULT_DIR && !fs.existsSync(workerData.EVALUATION_RESULT_DIR)) {
+  fs.mkdirSync(workerData.EVALUATION_RESULT_DIR, { recursive: true })
 }
 
 worker({
