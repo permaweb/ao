@@ -12,7 +12,7 @@ export function loadEvaluationFromDirWith ({ EVALUATION_RESULT_DIR, EVALUATION_R
 
     if (!fs.existsSync(dir)) {
       console.log(`LOAD: File ${dir} does not exist`)
-      return 'not found'
+      return JSON.parse('{ "error": "not found" }')
     } else {
       console.log(`LOAD: File ${dir} exists`)
       try {
