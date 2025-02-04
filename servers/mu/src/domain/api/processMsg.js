@@ -21,10 +21,10 @@ export function processMsgWith ({
   isWallet,
   fetchSchedulerProcess,
   topUp,
-  RELAY_PROCESSES
+  RELAY_MAP
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet })
-  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, RELAY_PROCESSES, topUp })
+  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, RELAY_MAP, topUp })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
 

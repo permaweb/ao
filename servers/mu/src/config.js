@@ -16,12 +16,16 @@ const positiveIntSchema = z.preprocess((val) => {
   return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
 }, z.number().nonnegative())
 
-const csvArraySchema = z.preprocess((val) => {
+const jsonObjectSchema = z.preprocess((val) => {
   if (typeof val === 'string') {
-    return val.split(',').map(str => str.trim()).filter(Boolean);
+    try {
+      return JSON.parse(val);
+    } catch (error) {
+      return {}; // Default to an empty object if parsing fails
+    }
   }
-  return [];
-}, z.array(z.string()))
+  return val;
+}, z.record(z.object({ url: z.string().url() })))
 
 
 /**
@@ -71,8 +75,7 @@ export const domainConfigSchema = z.object({
   GET_RESULT_RETRY_DELAY: positiveIntSchema,
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
   MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
-  RELAY_PROCESSES: csvArraySchema,
-  RELAY_URL: z.string()
+  RELAY_MAP: jsonObjectSchema
 })
 
 /**
@@ -123,8 +126,7 @@ const CONFIG_ENVS = {
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_PROCESSES: process.env.RELAY_PROCESSES || '',
-    RELAY_URL: process.env.RELAY_URL || ''
+    RELAY_MAP: process.env.RELAY_MAP || ''
   },
   production: {
     MODE,
@@ -152,8 +154,7 @@ const CONFIG_ENVS = {
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_PROCESSES: process.env.RELAY_PROCESSES || '',
-    RELAY_URL: process.env.RELAY_URL || ''
+    RELAY_MAP: process.env.RELAY_MAP || ''
   }
 }
 

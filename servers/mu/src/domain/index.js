@@ -353,8 +353,7 @@ export const createResultApis = async (ctx) => {
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
-  const RELAY_PROCESSES = ctx.RELAY_PROCESSES
-  const RELAY_URL = ctx.RELAY_URL
+  const RELAY_MAP = ctx.RELAY_MAP
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -389,8 +388,8 @@ export const createResultApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
-    RELAY_PROCESSES,
-    topUp: RelayClient.topUpWith({ RELAY_URL })
+    RELAY_MAP,
+    topUp: RelayClient.topUpWith({ fetch, logger: processMsgLogger, wallet: MU_WALLET })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
