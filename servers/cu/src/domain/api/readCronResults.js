@@ -41,6 +41,10 @@ export function readCronResultsWith (env) {
        * Now 'caught up' on evaluations, so now we can gather the results, using the filtering
        * criteria
        */
+      .map((ctx) => {
+        console.log('READ CRON RESULTS -> GATHERING RESULTS')
+        return ctx
+      })
       .chain(() => gatherResults({
         processId,
         from,

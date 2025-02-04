@@ -5,7 +5,6 @@ import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
-import cron from 'node-cron'
 import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
@@ -90,7 +89,6 @@ export const createApis = async (ctx) => {
   const onCreateWorker = (type) => () => {
     const workerId = randomBytes(8).toString('hex')
     ctx.logger('Spinning up "%s" pool worker with id "%s"...', type, workerId)
-
     return {
       workerThreadOpts: {
         workerData: {
@@ -109,6 +107,9 @@ export const createApis = async (ctx) => {
           DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
           EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
           EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET,
+          AWS_ACCESS_KEY_ID: ctx.AWS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: ctx.AWS_SECRET_ACCESS_KEY,
+          AWS_REGION: ctx.AWS_REGION,
           __dirname
         }
       }
@@ -270,6 +271,14 @@ export const createApis = async (ctx) => {
     cache: WasmClient.createWasmModuleCache({ MAX_SIZE: ctx.WASM_MODULE_CACHE_MAX_SIZE })
   })
 
+  const loadEvaluation = (args) => loadEvaluationWorkQueue.add(() =>
+    Promise.resolve()
+      .then(() => loadEvaluationWorkerPool.exec('loadEvaluation', [args]))
+      .catch((e) => {
+        throw new Error(`Error in loadEvaluation worker: ${e}`)
+      })
+  )
+
   const stats = statsWith({
     gauge,
     loadWorkerStats: () => ({
@@ -366,16 +375,11 @@ export const createApis = async (ctx) => {
       logger,
       EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
       EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET,
-      loadEvaluationFromDir: (args) => {
+      loadEvaluation: (args) => {
         return loadEvaluationWorkQueue.add(() =>
           Promise.resolve()
             .then(() => {
-              console.log('2.25 LOADING EVALUATION5')
-              return loadEvaluationWorkerPool.exec('loadEvaluationFromDir', [args])
-            })
-            .then((result) => {
-              console.log('RESULT2', { result })
-              return result
+              return loadEvaluationWorkerPool.exec('loadEvaluation', [args])
             })
             .catch((e) => {
               console.error('Error in loadEvaluation worker', e)
@@ -511,13 +515,13 @@ export const createApis = async (ctx) => {
   const readCronResultsLogger = ctx.logger.child('readCronResults')
   const readCronResults = readCronResultsWith({
     ...sharedDeps(readCronResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readCronResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readCronResultsLogger, loadEvaluation, EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET })
   })
 
   const readResultsLogger = ctx.logger.child('readResults')
   const readResults = readResultsWith({
     ...sharedDeps(readResultsLogger),
-    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readResultsLogger })
+    findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readResultsLogger, loadEvaluation, EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET })
   })
 
   let checkpointP
@@ -573,23 +577,15 @@ export const createApis = async (ctx) => {
 
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  /** Set up a cron to clear out old tasks from the
-  * sqlite database. Every two seconds, all of the
-  * tasks in the database that have been dequeued
-  * (dequeuedTasks) are deleted.
-  */
-  let ct = null
-  let isJobRunning = false
-  ct = cron.schedule('*/3 * * * * *', async () => {
-    if (!isJobRunning) {
-      isJobRunning = true
-      ct.stop() // pause cron while dequeueing
-      console.log('DUMPING EVALUATIONS')
-      broadcastDumpEvaluations()
-      ct.start() // resume cron when done dequeueing
-      isJobRunning = false
-    }
-  })
+  const dumpEvaluations = fromPromise(async (args) => loadEvaluationWorkQueue.add(() =>
+    Promise.resolve()
+      .then(() => loadEvaluationWorkerPool.exec('dumpEvaluations', [args]))
+      .catch((e) => {
+        ctx.logger('Error in loadEvaluation worker while dumping evaluations', e)
+        throw new Error(`Error in loadEvaluation worker: ${e}`)
+      })
+    )
+  )
 
-  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
+  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck, dumpEvaluations }
 }

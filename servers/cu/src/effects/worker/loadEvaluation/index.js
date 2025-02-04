@@ -23,12 +23,13 @@ const apis = await createApis({
 })
 
 const broadcast = new BroadcastChannel(workerData.BROADCAST)
-console.log({ bc: workerData.BROADCAST })
 
 broadcast.onmessage = (event) => {
   const data = event.data
-  console.log({ data })
-  if (data.type === 'dump-evaluations') return apis.dumpEvaluations()
+
+  if (data.type === 'dump-evaluations') {
+    return apis.dumpEvaluations(data.processId)
+  }
 
   logger.warn('Unrecognized event type "%s". Doing nothing...', data.type)
 }
@@ -38,14 +39,14 @@ if (workerData.EVALUATION_RESULT_DIR && !fs.existsSync(workerData.EVALUATION_RES
 }
 
 worker({
-  loadEvaluationFromDir: (...args) => apis.loadEvaluationFromDir(...args)
-    .catch((e) => {
-      console.error('Error in loadEvaluation worker', e)
-      throw e
-    }),
+  loadEvaluation: (...args) => {
+    return apis.loadEvaluation(...args)
+      .catch((e) => {
+        throw new Error(`Error in loadEvaluation worker: ${e}`)
+      })
+  },
   dumpEvaluations: (...args) => apis.dumpEvaluations(...args)
     .catch((e) => {
-      console.error('Error in dumpEvaluations worker', e)
-      throw e
+      throw new Error(`Error in dumpEvaluations worker: ${e}`)
     })
 })

@@ -1,11 +1,19 @@
-import { loadEvaluationFromDirWith } from '../loadEvaluationFromDir.js'
+import { dumpEvaluationsWith } from '../dumpEvaluations.js'
+import { loadEvaluationWith } from '../loadEvaluation.js'
 export const createApis = async (ctx) => {
-  const loadEvaluationFromDir = loadEvaluationFromDirWith({
+  const loadEvaluation = loadEvaluationWith({
     EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
-    EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET
+    EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET,
+    AWS_ACCESS_KEY_ID: ctx.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: ctx.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: ctx.AWS_REGION
   })
-  const dumpEvaluations = () => {
-    console.log('DUMPING EVALUATIONS IN WORKER')
-  }
-  return { loadEvaluationFromDir, dumpEvaluations }
+  const dumpEvaluations = dumpEvaluationsWith({
+    EVALUATION_RESULT_DIR: ctx.EVALUATION_RESULT_DIR,
+    EVALUATION_RESULT_BUCKET: ctx.EVALUATION_RESULT_BUCKET,
+    AWS_ACCESS_KEY_ID: ctx.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: ctx.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: ctx.AWS_REGION
+  })
+  return { loadEvaluation, dumpEvaluations }
 }

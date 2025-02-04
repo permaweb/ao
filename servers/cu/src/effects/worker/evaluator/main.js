@@ -31,10 +31,7 @@ export const createApis = async (ctx) => {
   }
   const saveEvaluationWorkerPool = workerpool.pool(saveEvaluationWorker, {
     maxWorkers: 2, // TODO: change?
-    onCreateWorker: onCreateSaveEvaluationWorker(),
-    onTerminateWorker: (ctx) => {
-      console.log('SAVE EVALUATION WORKER TERMINATED', { ctx })
-    }
+    onCreateWorker: onCreateSaveEvaluationWorker()
   })
   const saveEvaluationWorkQueue = new PQueue({ concurrency: 2 })
 
@@ -55,8 +52,7 @@ export const createApis = async (ctx) => {
           Promise.resolve()
             .then(async () => await saveEvaluationWorkerPool.exec('saveEvaluationToDir', [args]))
             .catch((e) => {
-              console.error('Error in saveEvaluation worker', e)
-              throw e
+              throw new Error(`Error in saveEvaluation worker: ${e}`)
             })
         )
       },

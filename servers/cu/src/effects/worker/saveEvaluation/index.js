@@ -29,7 +29,6 @@ if (workerData.EVALUATION_RESULT_DIR && !fs.existsSync(workerData.EVALUATION_RES
 worker({
   saveEvaluationToDir: (...args) => apis.saveEvaluationToDir(...args)
     .catch((e) => {
-      console.error('Error in saveEvaluation worker', { e })
-      throw e
+      throw new Error(`Error in saveEvaluation worker: ${e}`)
     })
 })
