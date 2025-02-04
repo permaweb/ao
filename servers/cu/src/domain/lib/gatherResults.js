@@ -31,9 +31,10 @@ const ctxSchema = z.object({
  * @returns {GatherCronMessages}
  */
 export function gatherResultsWith (env) {
-  const findEvaluations = fromPromise(findEvaluationsSchema.implement(env.findEvaluations))
+  const findEvaluations = fromPromise((env.findEvaluations))
 
   return (ctx) => {
+    console.log('GATHERING RESULTS', { ctx })
     return of(ctx)
       .chain(maybeParseCursor('from'))
       .chain(maybeParseCursor('to'))
@@ -61,6 +62,7 @@ export function gatherResultsWith (env) {
             ctx.sort
         }
 
+        console.log('GATHERING RESULTS -> FINDING EVALUATIONS')
         return findEvaluations({
           processId: ctx.processId,
           from: ctx.from,
@@ -69,6 +71,13 @@ export function gatherResultsWith (env) {
           limit: ctx.limit,
           onlyCron: ctx.onlyCron
         })
+          .bimap((err) => {
+            console.log('FINDEVALUATIONS ERROR: ', { err })
+            return err
+          }, (evaluations) => {
+            console.log('FINDEVALUATIONS EVALUATIONS: ', { evaluations })
+            return evaluations
+          })
           .map((evaluations) =>
             transduce(
               compose(

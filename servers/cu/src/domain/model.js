@@ -212,7 +212,19 @@ export const domainConfigSchema = z.object({
   /**
    * The bucket to store evaluation results
    */
-  EVALUATION_RESULT_BUCKET: z.string().optional()
+  EVALUATION_RESULT_BUCKET: z.string().optional(),
+  /**
+   * The access key id for the bucket to store evaluation results
+   */
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  /**
+   * The secret access key for the bucket to store evaluation results
+   */
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  /**
+   * The region of the bucket to store evaluation results
+   */
+  AWS_REGION: z.string().optional()
 })
 
 export const bufferSchema = z.any().refine(buffer => {
@@ -395,6 +407,16 @@ export const scheduleSchema = z.object({
   message: z.any()
 })
 
+export const outputSchema = z.object({
+  Memory: z.any().nullish(),
+  Messages: z.array(z.any()).nullish(),
+  Assignments: z.array(z.any()).nullish(),
+  Spawns: z.array(z.any()).nullish(),
+  Output: z.any().nullish(),
+  GasUsed: z.number().nullish(),
+  Error: z.any().nullish()
+})
+
 export const evaluationSchema = z.object({
   /**
    * the id of the process that the message was performed upon
@@ -456,14 +478,5 @@ export const evaluationSchema = z.object({
    *
    * This is the output of process, after the action was applied
    */
-  output: z.object({
-    Memory: z.any().nullish(),
-    Messages: z.array(z.any()).nullish(),
-    Assignments: z.array(z.any()).nullish(),
-    Spawns: z.array(z.any()).nullish(),
-    Output: z.any().nullish(),
-    GasUsed: z.number().nullish(),
-    Error: z.any().nullish()
-  })
-  // .nullable() // TODO: return to not nullish after dir output is implemented
+  output: outputSchema
 })

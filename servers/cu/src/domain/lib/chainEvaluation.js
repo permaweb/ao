@@ -19,7 +19,6 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, lo
      */
     if (ctx.needsOnlyMemory) return Rejected(ctx)
 
-    console.log('0 LOADING EVALUATION1', { ctx })
     return findEvaluation({
       processId: ctx.id,
       to: ctx.to,

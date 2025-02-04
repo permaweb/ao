@@ -1,5 +1,5 @@
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head, defaultTo, evolve, pipe, identity } from 'ramda'
+import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply, prop, head, defaultTo, evolve, pipe } from 'ramda'
 import { z } from 'zod'
 
 import { evaluationSchema } from '../domain/model.js'
@@ -70,22 +70,12 @@ const fromEvaluationDoc = pipe(
   toEvaluation
 )
 
-export function findEvaluationFromDirWith ({ loadEvaluationFromDir }) {
+export function findEvaluationFromDirOrS3With ({ loadEvaluation }) {
   return ({ processId, messageId }) => {
-    console.log('2.1 FINDING EVALUATION FROM DIR WITH', { processId, messageId })
     return Promise.resolve({ processId, messageId })
-      .then((args) => {
-        console.log('2.2 Finding evaluation from dir:', { args })
-        return args
-      })
-      .then(loadEvaluationFromDir)
-      .then((result) => {
-        console.log('2.4 Finding evaluation from dir:', { result })
-        return result
-      })
+      .then(loadEvaluation)
       .catch((err) => {
-        console.log('2.5 Error finding evaluation from dir:', { err })
-        throw err
+        throw new Error(`Error finding evaluation from dir or s3: ${err}`)
       })
   }
 }
@@ -106,7 +96,6 @@ export function findEvaluationFromDbWith ({ db }) {
   }
 
   return ({ processId, to, ordinate, cron }) => {
-    console.log('1.1 FINDING EVALUATION FROM DB WITH', { processId, to, ordinate, cron })
     return of({ processId, timestamp: to, ordinate, cron })
       .chain(fromPromise((params) => db.query(createQuery(params))))
       .map(defaultTo([]))
@@ -117,34 +106,20 @@ export function findEvaluationFromDbWith ({ db }) {
   }
 }
 
-export function findEvaluationWith ({ db, loadEvaluationFromDir, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
-  const findEvaluationFromDir = findEvaluationFromDirWith({ loadEvaluationFromDir })
+export function findEvaluationWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+  const findEvaluationFromDir = findEvaluationFromDirOrS3With({ loadEvaluation })
   const findEvaluationFromDb = fromPromise(findEvaluationFromDbWith({ db }))
   return ({ processId, to, ordinate, cron, messageId }) => {
-    console.log('1 FINDING EVALUATION WITH', { processId, to, ordinate, cron, messageId })
     return of({ processId, to, ordinate, cron, messageId })
       .chain(findEvaluationFromDb)
       .chain(
         fromPromise(async (result) => {
-          console.log('2 FOUND EVALUATION FROM DB', { result, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET })
-          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && !result.output) {
             const evaluationOutput = await findEvaluationFromDir({ processId, messageId })
-            console.log('2 FOUND EVALUATION FROM DIR', { evaluationOutput })
             return { ...result, output: evaluationOutput }
           }
-          console.log('2 here')
           return result
         })
-      )
-      .bimap(
-        (err) => {
-          console.log('3 ERR', { err })
-          return err
-        },
-        (result) => {
-          console.log('3 RESULT', { result })
-          return result
-        }
       )
       .toPromise()
   }
@@ -195,56 +170,55 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
     const statements = []
 
     if (!DISABLE_PROCESS_EVALUATION_CACHE) {
-      // TODO: add this back in once dir output is implemented
-      // If we have a directory and bucket, we need to save the evaluation to the directory, not sqlite
-      // if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
-      //   statements.push({
-      //     sql: `
-      //       INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-      //         (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
-      //         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-      //     `,
-      //     parameters: [
-      //       // evaluations insert
-      //       evalDoc.id,
-      //       evalDoc.processId,
-      //       evalDoc.messageId,
-      //       evalDoc.deepHash,
-      //       evalDoc.nonce,
-      //       evalDoc.epoch,
-      //       evalDoc.timestamp,
-      //       evalDoc.ordinate,
-      //       evalDoc.blockHeight,
-      //       evalDoc.cron,
-      //       evalDoc.evaluatedAt.getTime(),
-      //       JSON.stringify(omit(['Memory'], evalDoc.output))
-      //     ]
-      //   })
-      // } else {
 
-      statements.push({
-        sql: `
+      // If we have a directory and bucket, we need to save the evaluation to the directory, not sqlite
+      if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+        statements.push({
+          sql: `
             INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-              (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+              (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt")
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
           `,
-        parameters: [
-          // evaluations insert
-          evalDoc.id,
-          evalDoc.processId,
-          evalDoc.messageId,
-          evalDoc.deepHash,
-          evalDoc.nonce,
-          evalDoc.epoch,
-          evalDoc.timestamp,
-          evalDoc.ordinate,
-          evalDoc.blockHeight,
-          evalDoc.cron,
-          evalDoc.evaluatedAt.getTime(),
-          JSON.stringify(evalDoc.output)
-        ]
-      })
-      // }
+          parameters: [
+            // evaluations insert
+            evalDoc.id,
+            evalDoc.processId,
+            evalDoc.messageId,
+            evalDoc.deepHash,
+            evalDoc.nonce,
+            evalDoc.epoch,
+            evalDoc.timestamp,
+            evalDoc.ordinate,
+            evalDoc.blockHeight,
+            evalDoc.cron,
+            evalDoc.evaluatedAt.getTime()
+          ]
+        })
+      } else {
+
+        statements.push({
+          sql: `
+              INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+                (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            `,
+          parameters: [
+            // evaluations insert
+            evalDoc.id,
+            evalDoc.processId,
+            evalDoc.messageId,
+            evalDoc.deepHash,
+            evalDoc.nonce,
+            evalDoc.epoch,
+            evalDoc.timestamp,
+            evalDoc.ordinate,
+            evalDoc.blockHeight,
+            evalDoc.cron,
+            evalDoc.evaluatedAt.getTime(),
+            JSON.stringify(evalDoc.output)
+          ]
+        })
+      }
     }
     /**
       * Cron messages are not needed to be saved in the messages table
@@ -275,25 +249,25 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
         of(data)
           .map((data) => createQuery(data))
           .chain(fromPromise((statements) => {
-            // console.log('SAVE: Transaction', { data })
             return db.transaction(statements)
           }))
           .map(always(data.id))
       )
-      .chain(() => {
+      .chain((id) => {
         if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
           return of({ messageId: evaluation.messageId, processId: evaluation.processId, output: evaluation.output })
             .chain((args) => {
               return Resolved(saveEvaluationToDir(args)) // TODO: improve this
             })
         }
-        return Resolved('here')
+        return Resolved(id)
       })
       .toPromise()
   }
 }
 
-export function findEvaluationsWith ({ db }) {
+export function findEvaluationsWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+  const findEvaluationFromDir = findEvaluationFromDirOrS3With({ loadEvaluation })
   function createQuery ({ processId, from, to, onlyCron, sort, limit }) {
     return {
       sql: `
@@ -321,16 +295,30 @@ export function findEvaluationsWith ({ db }) {
           : createEvaluationId({ processId, timestamp: from.timestamp, ordinate: from.ordinate, cron: from.cron }),
         isEmpty(to)
           ? createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
-          : createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate || COLLATION_SEQUENCE_MAX_CHAR, cron: to.cron }),
+          : createEvaluationId({ processId, timestamp: to?.timestamp || null, ordinate: to?.ordinate || COLLATION_SEQUENCE_MAX_CHAR, cron: to?.cron || null }),
         limit
       ]
     }
   }
 
   return ({ processId, from, to, onlyCron, sort, limit }) => {
+    console.trace('FINDING EVALUATIONS', { processId, from, to, onlyCron, sort, limit })
     return of({ processId, from, to, onlyCron, sort: sort.toUpperCase(), limit })
       .map(createQuery)
       .chain(fromPromise((query) => db.query(query)))
+      .map(head)
+      .chain(fromPromise(async (result) => {
+        if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && result.processId && result.messageId && !result.output) {
+            const evaluationOutput = await findEvaluationFromDir({ processId: result.processId, messageId: result.messageId })
+            return { ...result, output: evaluationOutput }
+          }
+          return result
+        })
+      )
+      .map((ctx) => {
+        console.log('findEvaluationsWith result: ', { ctx })
+        return ctx
+      })
       .map(map(fromEvaluationDoc))
       .toPromise()
   }
