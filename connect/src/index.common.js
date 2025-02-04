@@ -26,6 +26,8 @@ const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
  * TODO: set this when we know it
  */
 const DEFAULT_HB_URL = 'http://localhost:8734'
+const DEFAULT_HB_CU_URL = 'http://cu.s451-comm3-main.xyz'
+const DEFAULT_HB_MU_URL = 'http://mu.s451-comm3-main.xyz'
 
 const defaultFetch = fetch
 
@@ -218,6 +220,8 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
     const api = connect({
       ...rest,
+      CU_URL: rest.CU_URL || DEFAULT_HB_CU_URL,
+      MU_URL: rest.MU_URL || DEFAULT_HB_MU_URL,
       /**
        * Downstream logic, that does not need to be relayed
        * may still want the original fetch, so inject it here
