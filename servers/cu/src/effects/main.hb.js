@@ -20,7 +20,7 @@ import * as AoModuleClient from './ao-module.js'
 import * as AoEvaluationClient from './ao-evaluation.js'
 import * as AoBlockClient from './ao-block.js'
 import * as MetricsClient from './metrics.js'
-import * as HbHttp from './hb/http/index.js'
+import * as AoHttp from './ao-http/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -417,7 +417,7 @@ export const createEffects = async (ctx) => {
    * The presentation side-effect, that accepts the domain
    * and any additional context, and returns the app
    */
-  const app = (domain) => HbHttp.createHbHttp({ ...ctx, domain })
+  const app = (domain) => AoHttp.createAoHttp({ ...ctx, domain })
 
   return {
     common,

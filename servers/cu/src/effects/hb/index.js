@@ -2,18 +2,6 @@ import { Readable } from 'node:stream'
 
 import { of } from 'hyper-async'
 
-export function parseMultipartBoundary (req) {
-  const contentType = req.headers['content-type'] || ''
-
-  if (!contentType.startsWith('multipart/')) return false
-
-  const boundaryMatch = contentType.match(/boundary="?(.*)"?/)
-  if (!boundaryMatch || !boundaryMatch.length) {
-    throw new Error(`Boundary not found on multipart type: ${contentType}`)
-  }
-  return boundaryMatch[1]
-}
-
 export const locateProcessWith = () => {
   return async ({ processId, schedulerHint }) => {
 

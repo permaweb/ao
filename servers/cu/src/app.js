@@ -21,7 +21,6 @@ setGlobalDispatcher(new Agent({
 }))
 
 function chooseEffects (ctx) {
-  console.log('UNIT_MODE', ctx.UNIT_MODE)
   if (['cu', 'ru'].includes(ctx.UNIT_MODE)) {
     return createCuEffects({ ...config, logger, fetch })
   }
