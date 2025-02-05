@@ -916,7 +916,12 @@ impl DataStore for StoreClient {
         // Determine if the 'from' timestamp matches the process timestamp and if assignment is present
         let include_process = process_in.assignment.is_some()
             && match from {
-                Some(_) => false,
+                Some(from_timestamp_str) => {
+                    let from_timestamp = from_timestamp_str
+                        .parse::<i64>()
+                        .map_err(StoreErrorType::from)?;
+                    from_timestamp == process_in.process.timestamp
+                }
                 None => true, // No 'from' timestamp means it's the first page
             };
 

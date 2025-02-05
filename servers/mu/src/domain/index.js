@@ -7,6 +7,7 @@ import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
 import workerpool from 'workerpool'
+import Arweave from 'arweave'
 
 import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
@@ -73,6 +74,8 @@ const errorStageGauge = MetricsClient.gaugeWith({})({
   description: 'The number of errors at a given stage',
   labelNames: ['stage', 'type']
 })
+
+const arweave = Arweave.init()
 
 /**
  * A set of apis used by the express server
@@ -358,6 +361,8 @@ export const createResultApis = async (ctx) => {
   const logger = ctx.logger
   const fetch = ctx.fetch
 
+  const walletAddress = await arweave.wallets.getAddress(MU_WALLET)
+
   const fetchWithCache = cuFetchWithCache({
     fetch,
     cache: muRedirectCache,
@@ -389,7 +394,7 @@ export const createResultApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
     RELAY_MAP,
-    topUp: RelayClient.topUpWith({ fetch, logger: processMsgLogger, wallet: MU_WALLET })
+    topUp: RelayClient.topUpWith({ fetch, logger: processMsgLogger, wallet: MU_WALLET, address: walletAddress })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
