@@ -2,6 +2,7 @@ import { createPrivateKey, createHash} from 'node:crypto'
 import { httpbis, createSigner } from 'http-message-signatures'
 
 import { of, fromPromise } from 'hyper-async'
+import { url } from 'node:inspector';
 
 const { signMessage } = httpbis
 
@@ -24,19 +25,23 @@ export function topUpWith ({ fetch, logger, wallet, address }) {
   const params = ['alg', 'keyid'].sort()
 
   return async ({ logId, relayUrl, amount, recipient }) => {
+    let relayUrlObj = new URL(relayUrl)
     const urlString = `${relayUrl}?amount=${amount}&recipient=${recipient}`
 
     const request = {
       url: new URL(urlString),
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'amount': `${amount}`,
+        'recipient': `${recipient}`,
+        'path': relayUrlObj.pathname,
+      }
     }
     
     const { method, headers } = await signMessage({
       key: s,
       fields: [
-        '@path',
-        '@query-param;name=amount',
-        '@query-param;name=recipient',
+        ...Object.keys(request.headers)
       ].sort(),
       name: httpSigName(address),
       params
