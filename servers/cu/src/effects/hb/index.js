@@ -12,6 +12,16 @@ const okRes = (res) => {
 }
 
 const resToJson = (res) => res.json()
+  /**
+   * Janky extra parse b/c HB currently sends back a string
+   * that contains a JSON object, that must be parsed further.
+   *
+   * TODO: remove later.
+   */
+  .then(maybeJSON => typeof maybeJSON === 'object'
+    ? maybeJSON
+    : JSON.parse(maybeJSON)
+  )
 
 /**
  * GET /...?target=ProcID[&from=X&to=y]&accept=application/aos-2
@@ -19,10 +29,20 @@ const resToJson = (res) => res.json()
 const toParams = ({ processId, from, to, pageSize }) =>
   new URLSearchParams(filter(
     isNotNil,
-    { target: processId, from, to, limit: pageSize, accept: 'application/aos-2' }
+    { target: processId, 'from+Integer': from, 'to+Integer': to, limit: pageSize, accept: 'application/aos-2' }
   ))
 
 const nodeAt = (idx) => pipe(path(['edges']), nth(idx), path(['node']))
+
+/**
+ * TODO: eventually actually locate the scheduler
+ * For now, just always returning the HB_URL
+ */
+export const locateProcessWith = ({ fetch, HB_URL }) => {
+  return async ({ processId }) => {
+    return { url: HB_URL }
+  }
+}
 
 export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) => {
   const { assignmentId: prevAssignmentId, hashChain: prevHashChain } = prev
@@ -98,7 +118,6 @@ export const mapNode = pipe(
          * and so we cannot detect and derive other chain
          * addresses ie. Ethereum
          */
-        // const address = addressFrom(message.Owner)
         const address = message.Owner
 
         return applySpec({
@@ -345,7 +364,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
        */
     const isHashChainValidationEnabled = processBlock.height >= 1440000
     if (!isHashChainValidationEnabled) {
-      logger('HashChain validation disabled for old process "%s" at block [%j]', [processId, processBlock])
+      logger('HashChain validation disabled for old process "%s" at block [%j]', processId, processBlock)
     }
 
     // Set this to simulate a stream error

@@ -267,7 +267,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
      */
     const isHashChainValidationEnabled = processBlock.height >= 1440000
     if (!isHashChainValidationEnabled) {
-      logger('HashChain validation disabled for old process "%s" at block [%j]', [processId, processBlock])
+      logger('HashChain validation disabled for old process "%s" at block [%j]', processId, processBlock)
     }
 
     // Set this to simulate a stream error

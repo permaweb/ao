@@ -79,6 +79,7 @@ export const domainConfigSchema = z.object({
    * The connection string to the database
    */
   DB_URL: z.string().min(1, 'DB_URL must be set to the database connection string'),
+  HB_URL: z.string().url().nullish(),
   /**
    * The wallet for the CU
    */

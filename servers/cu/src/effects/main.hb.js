@@ -6,9 +6,7 @@ import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
 import PQueue from 'p-queue'
-import Dataloader from 'dataloader'
 import workerpool from 'workerpool'
-import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import lt from 'long-timeout'
 
 import * as DbClient from './db.js'
@@ -45,27 +43,6 @@ async function readFile (file) {
 export const createEffects = async (ctx) => {
   const setTimeout = (...args) => lt.setTimeout(...args)
   const clearTimeout = (...args) => lt.clearTimeout(...args)
-
-  const { locate } = schedulerUtilsConnect({
-    cacheSize: 100,
-    GRAPHQL_URL: ctx.GRAPHQL_URL,
-    followRedirects: true
-  })
-  const locateDataloader = new Dataloader(async (params) => {
-    /**
-     * locate already maintains a cache, so we'll just clear
-     * the dataloader cache every time
-     *
-     * This way we get the benefits of batching and deduping built
-     * into the dataloader api
-     */
-    locateDataloader.clearAll()
-    return Promise.all(params.map(
-      ({ processId, schedulerHint }) => locate(processId, schedulerHint).catch(err => err)
-    ))
-  }, {
-    cacheKeyFn: ({ processId }) => processId
-  })
 
   const db = await DbClient.createDbClient({ url: ctx.DB_URL, bootstrap: true })
 
@@ -364,7 +341,7 @@ export const createEffects = async (ctx) => {
       pageSize: 1000,
       logger
     }),
-    locateProcess: locateDataloader.load.bind(locateDataloader),
+    locateProcess: HbClient.locateProcessWith({ fetch: ctx.fetch, HB_URL: ctx.HB_URL }),
     isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
     isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
     isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),

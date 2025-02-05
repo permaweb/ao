@@ -556,6 +556,12 @@ const cache = new LRUCache({ max: 1000 })
  * @returns {string}
  */
 export const addressFrom = ({ address, key }) => {
+  /**
+   * If we do not have the key, then the address
+   * MUST be what we use
+   */
+  if (!key) return address
+
   const cKey = `${address}-${key}`
   if (cache.has(cKey)) return cache.get(cKey)
 

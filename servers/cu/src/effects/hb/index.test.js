@@ -232,8 +232,8 @@ describe('hb-su', () => {
             assert.equal(url.pathname, '/~scheduler@1.0/schedule')
             assert.deepStrictEqual(params, {
               target: 'process-123',
-              from: '3',
-              to: '3',
+              'from+Integer': '3',
+              'to+Integer': '3',
               limit: '1',
               accept: 'application/aos-2'
             })
@@ -304,8 +304,8 @@ describe('hb-su', () => {
           assert.equal(url.pathname, '/~scheduler@1.0/schedule')
           assert.deepStrictEqual(params, {
             target: 'pid-1',
-            from: '0',
-            to: '0',
+            'from+Integer': '0',
+            'to+Integer': '0',
             limit: '1',
             accept: 'application/aos-2'
           })
@@ -386,8 +386,8 @@ describe('hb-su', () => {
           assert.equal(url.pathname, '/~scheduler@1.0/schedule')
           assert.deepStrictEqual(params, {
             target: 'pid-1',
-            from: '0',
-            to: '0',
+            'from+Integer': '0',
+            'to+Integer': '0',
             limit: '1',
             accept: 'application/aos-2'
           })

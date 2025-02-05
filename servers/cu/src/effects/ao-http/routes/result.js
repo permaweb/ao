@@ -10,7 +10,7 @@ import { withMetrics } from '../../middleware/withMetrics.js'
 import { withProcessRestrictionFromQuery } from '../../middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
-  messageUid: z.string().min(1, 'a message tx id is required'),
+  messageUid: z.string().min(1, 'a message unique identifier is required'),
   processId: z.string().min(1, 'a process-id query parameter is required')
 })
 
