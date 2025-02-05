@@ -24,8 +24,11 @@ export const withResultRoutes = app => {
       withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
       withInMemoryCache({
         keyer: (req) => {
-          const { params: { messageUid } } = req
-          return messageUid
+          const {
+            params: { messageUid },
+            query: { 'process-id': processId }
+          } = req
+          return `${processId}:${messageUid}`
         },
         loader: async ({ req, res }) => {
           const {
