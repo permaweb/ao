@@ -13,7 +13,7 @@ import lt from 'long-timeout'
 
 import * as DbClient from './db.js'
 import * as ArweaveClient from './arweave.js'
-import * as AoSuClient from './ao-su.js'
+// import * as AoSuClient from './ao-su.js'
 import * as WasmClient from './wasm.js'
 import * as AoProcessClient from './ao-process.js'
 import * as AoModuleClient from './ao-module.js'
@@ -21,6 +21,8 @@ import * as AoEvaluationClient from './ao-evaluation.js'
 import * as AoBlockClient from './ao-block.js'
 import * as MetricsClient from './metrics.js'
 import * as AoHttp from './ao-http/index.js'
+
+import * as HbClient from './hb/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -354,9 +356,9 @@ export const createEffects = async (ctx) => {
       logger
     }),
     findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
-    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
-    loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
-    loadMessages: AoSuClient.loadMessagesWith({
+    loadTimestamp: HbClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
+    loadProcess: HbClient.loadProcessWith({ fetch: ctx.fetch, logger }),
+    loadMessages: HbClient.loadMessagesWith({
       hashChain: (...args) => hashChainWorker.exec('hashChain', args),
       fetch: ctx.fetch,
       pageSize: 1000,
@@ -369,7 +371,7 @@ export const createEffects = async (ctx) => {
     isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS })
   })
 
-  const loadMessageMeta = AoSuClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: ctx.logger })
+  const loadMessageMeta = HbClient.loadMessageMetaWith({ fetch: ctx.fetch, logger: ctx.logger })
 
   const loadDryRunEvaluator = AoModuleClient.evaluatorWith({
     loadWasmModule,

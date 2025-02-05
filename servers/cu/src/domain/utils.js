@@ -575,9 +575,3 @@ export const addressFrom = ({ address, key }) => {
 
   return _address
 }
-
-export function readableToAsyncGenerator (stream) {
-  return (async function * () {
-    for await (const d of stream) yield d
-  })()
-}

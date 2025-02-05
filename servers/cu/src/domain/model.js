@@ -242,7 +242,7 @@ export const processSchema = z.object({
   signature: z.string().nullish(),
   data: z.any().nullish(),
   anchor: z.string().nullish(),
-  owner: ownerSchema,
+  owner: ownerSchema.partial({ key: true }),
   tags: z.array(rawTagSchema),
   block: blockSchema
 })
