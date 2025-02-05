@@ -1342,10 +1342,10 @@ describe('ao-process', () => {
       assignmentId: 'assignment-123',
       hashChain: 'hashchain-123',
       epoch: 0,
-      nonce: 11,
+      nonce: 14,
       timestamp: now + 1000,
       blockHeight: 123,
-      ordinate: '11',
+      ordinate: '14',
       encoding: 'gzip',
       gasUsed: BigInt(100)
     }
@@ -1380,7 +1380,7 @@ describe('ao-process', () => {
             Memory,
             evaluation: cachedEvalFuture
           }),
-          set: () => assert.fail('should not call if found in cache')
+          set: (f) => assert.fail('should not call if later found in cache')
         },
         logger,
         saveCheckpoint: () => assert.fail('should not call if found in cache'),
