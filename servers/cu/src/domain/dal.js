@@ -221,7 +221,7 @@ export const loadMessageMetaSchema = z.function()
   .args(z.object({
     suUrl: z.string().url(),
     processId: z.string().min(1),
-    messageTxId: z.string().min(1)
+    messageUid: z.string().min(1)
   }))
   .returns(z.promise(
     z.object({

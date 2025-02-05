@@ -245,7 +245,7 @@ describe('ao-su', () => {
       const res = await loadMessageMeta({
         suUrl: 'https://foo.bar',
         processId: 'process-123',
-        messageTxId: 'message-tx-123'
+        messageUid: 'message-tx-123'
       })
 
       assert.deepStrictEqual(res, {
@@ -286,7 +286,7 @@ describe('ao-su', () => {
       const res = await loadMessageMeta({
         suUrl: 'https://foo.bar',
         processId: 'process-123',
-        messageTxId: 'message-tx-123'
+        messageUid: 'message-tx-123'
       })
 
       assert.ok(!!count)
@@ -324,7 +324,7 @@ describe('ao-su', () => {
       const res = await loadMessageMeta({
         suUrl: 'https://foo.bar',
         processId: 'process-123',
-        messageTxId: 'message-tx-123'
+        messageUid: 'message-tx-123'
       })
 
       assert.ok(!!count)

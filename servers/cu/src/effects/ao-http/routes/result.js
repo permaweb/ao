@@ -10,13 +10,13 @@ import { withMetrics } from '../../middleware/withMetrics.js'
 import { withProcessRestrictionFromQuery } from '../../middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
-  messageTxId: z.string().min(1, 'a message tx id is required'),
+  messageUid: z.string().min(1, 'a message tx id is required'),
   processId: z.string().min(1, 'a process-id query parameter is required')
 })
 
 export const withResultRoutes = app => {
   app.get(
-    '/result/:messageTxId',
+    '/result/:messageUid',
     compose(
       withErrorHandler,
       withCuMode,
@@ -24,12 +24,12 @@ export const withResultRoutes = app => {
       withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
       withInMemoryCache({
         keyer: (req) => {
-          const { params: { messageTxId } } = req
-          return messageTxId
+          const { params: { messageUid } } = req
+          return messageUid
         },
         loader: async ({ req, res }) => {
           const {
-            params: { messageTxId },
+            params: { messageUid },
             /**
              * Client may set the 'no-busy' query parameter to any value
              * to disable the busy response.
@@ -40,7 +40,7 @@ export const withResultRoutes = app => {
             domain: { BUSY_THRESHOLD, apis: { readResult } }
           } = req
 
-          const input = inputSchema.parse({ messageTxId, processId })
+          const input = inputSchema.parse({ messageUid, processId })
 
           return busyIn(
             noBusy ? 0 : BUSY_THRESHOLD,
@@ -50,7 +50,7 @@ export const withResultRoutes = app => {
             () => {
               res.status(202)
               return [
-                { message: `Evaluation of process "${input.processId}" to "${input.messageTxId || 'latest'}" is in progress.` },
+                { message: `Evaluation of process "${input.processId}" to "${input.messageUid || 'latest'}" is in progress.` },
                 /**
                  * Don't store the busy message in the In-Memory cache
                  */
