@@ -2,7 +2,6 @@ import { createPrivateKey, createHash} from 'node:crypto'
 import { httpbis, createSigner } from 'http-message-signatures'
 
 import { of, fromPromise } from 'hyper-async'
-import { url } from 'node:inspector';
 
 const { signMessage } = httpbis
 
