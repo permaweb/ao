@@ -185,7 +185,9 @@ export const loadMessagesSchema = z.function()
       moduleTags: z.array(rawTagSchema),
       moduleOwner: z.string(),
       from: z.coerce.number().nullish(),
+      fromOrdinate: z.coerce.number().nullish(),
       to: z.coerce.number().nullish(),
+      toOrdinate: z.coerce.number().nullish(),
       assignmentId: z.string().nullish(),
       hashChain: z.string().nullish()
     })
