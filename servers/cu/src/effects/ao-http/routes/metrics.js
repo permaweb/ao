@@ -1,19 +1,19 @@
 import { always, compose } from 'ramda'
-import { withMiddleware } from './middleware/index.js'
 
-import { config } from '../config.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
 
 export const withMetricRoutes = (app) => {
-  if (!config.ENABLE_METRICS_ENDPOINT) return app
-
   app.get(
     '/metrics',
     compose(
-      withMiddleware,
+      withErrorHandler,
       always(async (req, res) => {
         const {
+          config,
           domain: { apis: { metrics } }
         } = req
+
+        if (!config.ENABLE_METRICS_ENDPOINT) return res.status(404).send('Not Found')
 
         await metrics.compute()
           .toPromise()

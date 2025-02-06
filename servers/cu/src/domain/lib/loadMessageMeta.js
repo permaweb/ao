@@ -49,7 +49,7 @@ function maybeCachedWith ({ locateProcess, findProcess }) {
 
 /**
  * @typedef Args
- * @property {string} messageTxId - the transaction id of the message
+ * @property {string} messageUid - the transaction id of the message
  *
  * @typedef Result
  * @property {string} processId - the id of the process that the message is for
@@ -81,11 +81,10 @@ export function loadMessageMetaWith (env) {
          * itself as the first Message without there necessarily being any more
          * Messages on the Process.
          */
-        if (ctx.processId === ctx.messageTxId) {
+        if (ctx.processId === ctx.messageUid) {
           return loadProcess({
             suUrl: trimSlash(url),
-            processId: ctx.processId,
-            messageTxId: ctx.messageTxId
+            processId: ctx.processId
           })
         }
 
@@ -96,7 +95,7 @@ export function loadMessageMetaWith (env) {
         return loadMessageMeta({
           suUrl: trimSlash(url),
           processId: ctx.processId,
-          messageTxId: ctx.messageTxId
+          messageUid: ctx.messageUid
         })
       })
       .map(ctxSchema.parse)

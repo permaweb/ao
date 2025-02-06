@@ -3,16 +3,16 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { createHash } from 'node:crypto'
 
-import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
-import { messageSchema } from '../domain/model.js'
-import { createTestLogger } from '../domain/logger.js'
-import { isHashChainValidWith, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
-import { hashChain } from './worker/hashChain/main.js'
+import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../../domain/dal.js'
+import { messageSchema } from '../../domain/model.js'
+import { createTestLogger } from '../../domain/logger.js'
+import { isHashChainValidWith, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './index.js'
+import { hashChain } from '.././worker/hashChain/main.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
 const logger = createTestLogger({ name: 'ao-cu:ao-su' })
 
-describe('ao-su', () => {
+describe('hb-su', () => {
   describe('mapNode', () => {
     const now = new Date().getTime()
     const messageId = 'message-123'
@@ -33,7 +33,7 @@ describe('ao-su', () => {
         Anchor: '00000000123',
         From: 'owner-123',
         'Forwarded-By': undefined,
-        Tags: [{ name: 'Foo', value: 'Bar' }],
+        Tags: [{ name: 'Inner', value: 'test' }],
         Epoch: 0,
         Nonce: 23,
         Timestamp: now,
@@ -50,31 +50,32 @@ describe('ao-su', () => {
     test('should map a scheduled message', () => {
       const res = mapNode({
         message: {
-          id: messageId,
-          tags: [{ name: 'Foo', value: 'Bar' }],
-          signature: 'sig-123',
-          anchor: '00000000123',
-          owner: {
-            address: 'owner-123',
-            key: 'key-123'
-          },
-          data: 'data-123'
+          Id: messageId,
+          Owner: 'owner-123',
+          Tags: [
+            { name: 'Inner', value: 'test' }
+          ],
+          Signature: 'sig-123',
+          Anchor: '00000000123',
+          Data: 'data-123'
         },
         assignment: {
-          id: assignmentId,
-          owner: {
-            address: 'su-123',
-            key: 'su-123'
-          },
-          tags: [
+          Id: assignmentId,
+          Anchor: '',
+          Owner: 'su-123',
+          Tags: [
+            { name: 'Block-Height', value: 123 },
+            { name: 'Block-Timestamp', value: now - 10000 },
+            { name: 'Data-Protocol', value: 'ao' },
             { name: 'Epoch', value: '0' },
-            { name: 'Nonce', value: '23' },
+            { name: 'Hash-Chain', value: 'hash-123' },
+            { name: 'Path', value: 'compute' },
             { name: 'Process', value: 'process-123' },
-            { name: 'Block-Height', value: '000000000123' },
-            { name: 'Timestamp', value: `${now}` },
-            { name: 'Hash-Chain', value: 'hash-123' }
+            { name: 'Slot', value: 23 },
+            { name: 'Timestamp', value: now },
+            { name: 'Variant', value: 'ao.N.1' }
           ],
-          data: 'su-data-123'
+          Data: 'su-data-123'
         }
       })
 
@@ -88,22 +89,24 @@ describe('ao-su', () => {
 
     describe('should map an assignment tx', () => {
       const res = mapNode({
-        message: null,
+        message: {
+          Id: assignedMessageId
+        },
         assignment: {
-          owner: {
-            address: 'su-123',
-            key: 'su-123'
-          },
-          tags: [
+          Owner: 'su-123',
+          Tags: [
+            { name: 'Block-Height', value: 123 },
+            { name: 'Block-Timestamp', value: now - 10000 },
+            { name: 'Data-Protocol', value: 'ao' },
             { name: 'Epoch', value: '0' },
-            { name: 'Nonce', value: '23' },
-            { name: 'Process', value: 'process-123' },
-            { name: 'Block-Height', value: '000000000123' },
-            { name: 'Timestamp', value: `${now}` },
             { name: 'Hash-Chain', value: 'hash-123' },
-            { name: 'Message', value: assignedMessageId }
+            { name: 'Path', value: 'compute' },
+            { name: 'Process', value: 'process-123' },
+            { name: 'Slot', value: 23 },
+            { name: 'Timestamp', value: now },
+            { name: 'Variant', value: 'ao.N.1' }
           ],
-          data: 'su-data-123'
+          Data: 'su-data-123'
         }
       })
 
@@ -113,7 +116,6 @@ describe('ao-su', () => {
 
       test('should set message.Id to the assignment Message tag', () => {
         assert.equal(res.message.Id, assignedMessageId)
-        assert.equal(res.message.Message, assignedMessageId)
       })
 
       test('should explicitly set message.Target to undefined', () => {
@@ -127,7 +129,6 @@ describe('ao-su', () => {
       test('should set all other message fields as normal', () => {
         assert.deepStrictEqual(res.message, {
           Id: assignedMessageId,
-          Message: assignedMessageId,
           Target: undefined,
           Epoch: 0,
           Nonce: 23,
@@ -223,19 +224,55 @@ describe('ao-su', () => {
     test('return the message meta', async () => {
       const loadMessageMeta = loadMessageMetaSchema.implement(
         loadMessageMetaWith({
-          fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
-            assert.deepStrictEqual(options, { method: 'GET' })
+          fetch: async (url) => {
+            url = new URL(url)
+            const params = Object.fromEntries(url.searchParams)
+
+            assert.equal(url.origin, 'https://foo.bar')
+            assert.equal(url.pathname, '/~scheduler@1.0/schedule')
+            assert.deepStrictEqual(params, {
+              target: 'process-123',
+              'from+Integer': '3',
+              'to+Integer': '3',
+              limit: '1',
+              accept: 'application/aos-2'
+            })
 
             return new Response(JSON.stringify({
-              message: {}, // not used, but will be present
-              assignment: {
-                tags: [
-                  { name: 'Process', value: 'process-123' },
-                  { name: 'Nonce', value: '3' },
-                  { name: 'Timestamp', value: '12345' }
-                ]
-              }
+              page_info: { has_next_page: false },
+              edges: [{
+                cursor: '3',
+                node: {
+                  message: {
+                    Id: 'message-123',
+                    Owner: 'owner-123',
+                    Tags: [
+                      { name: 'Inner', value: 'test' }
+                    ],
+                    Signature: 'sig-123',
+                    Anchor: '00000000123',
+                    Data: 'data-123'
+                  },
+                  assignment: {
+                    Id: 'assignment-123',
+                    Anchor: '',
+                    Owner: 'su-123',
+                    Tags: [
+                      { name: 'Block-Height', value: 123 },
+                      { name: 'Block-Timestamp', value: new Date().getTime() },
+                      { name: 'Data-Protocol', value: 'ao' },
+                      { name: 'Epoch', value: '0' },
+                      { name: 'Hash-Chain', value: 'hash-123' },
+                      { name: 'Path', value: 'compute' },
+                      { name: 'Process', value: 'process-123' },
+                      { name: 'Slot', value: '3' },
+                      { name: 'Timestamp', value: 12345 },
+                      { name: 'Variant', value: 'ao.N.1' }
+                    ],
+                    Data: 'su-data-123'
+                  }
+                }
+              }]
             }))
           },
           logger
@@ -245,89 +282,8 @@ describe('ao-su', () => {
       const res = await loadMessageMeta({
         suUrl: 'https://foo.bar',
         processId: 'process-123',
-        messageUid: 'message-tx-123'
+        messageUid: '3'
       })
-
-      assert.deepStrictEqual(res, {
-        processId: 'process-123',
-        timestamp: 12345,
-        nonce: 3
-      })
-    })
-
-    test('retry if error received from SU', async () => {
-      let count = 0
-      const loadMessageMeta = loadMessageMetaSchema.implement(
-        loadMessageMetaWith({
-          fetch: async (url, options) => {
-            if (!count) {
-              count++
-              throw new Error('woops')
-            }
-
-            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
-            assert.deepStrictEqual(options, { method: 'GET' })
-
-            return new Response(JSON.stringify({
-              message: {}, // not used, but will be present
-              assignment: {
-                tags: [
-                  { name: 'Process', value: 'process-123' },
-                  { name: 'Nonce', value: '3' },
-                  { name: 'Timestamp', value: '12345' }
-                ]
-              }
-            }))
-          },
-          logger
-        })
-      )
-
-      const res = await loadMessageMeta({
-        suUrl: 'https://foo.bar',
-        processId: 'process-123',
-        messageUid: 'message-tx-123'
-      })
-
-      assert.ok(!!count)
-
-      assert.deepStrictEqual(res, {
-        processId: 'process-123',
-        timestamp: 12345,
-        nonce: 3
-      })
-    })
-
-    test('retry if not OK res received from SU', async () => {
-      let count = 0
-      const loadMessageMeta = loadMessageMetaSchema.implement(
-        loadMessageMetaWith({
-          fetch: async (url, options) => {
-            assert.equal(url, 'https://foo.bar/message-tx-123?process-id=process-123')
-            assert.deepStrictEqual(options, { method: 'GET' })
-
-            return new Response(JSON.stringify({
-              message: {}, // not used, but will be present
-              assignment: {
-                tags: [
-                  { name: 'Process', value: 'process-123' },
-                  { name: 'Nonce', value: '3' },
-                  { name: 'Timestamp', value: '12345' }
-                ]
-              }
-            }), { status: !(count++) ? 408 : 200 })
-          },
-          logger
-        })
-      )
-
-      const res = await loadMessageMeta({
-        suUrl: 'https://foo.bar',
-        processId: 'process-123',
-        messageUid: 'message-tx-123'
-      })
-
-      assert.ok(!!count)
 
       assert.deepStrictEqual(res, {
         processId: 'process-123',
@@ -340,27 +296,56 @@ describe('ao-su', () => {
   describe('loadProcessesWith', () => {
     test('load the process metadata', async () => {
       const loadProcess = loadProcessSchema.implement(loadProcessWith({
-        fetch: async () => {
-          return {
-            ok: true,
-            json: () => {
-              return {
-                process_id: 'pid-2',
-                block: '000000001',
-                owner: {
-                  address: 'owner-address-1',
-                  key: 'owner-key-1'
+        fetch: async (url) => {
+          url = new URL(url)
+          const params = Object.fromEntries(url.searchParams)
+
+          assert.equal(url.origin, 'https://foo.bar')
+          assert.equal(url.pathname, '/~scheduler@1.0/schedule')
+          assert.deepStrictEqual(params, {
+            target: 'pid-1',
+            'from+Integer': '0',
+            'to+Integer': '0',
+            limit: '1',
+            accept: 'application/aos-2'
+          })
+
+          return new Response(JSON.stringify({
+            page_info: { has_next_page: false },
+            edges: [{
+              cursor: '0',
+              node: {
+                message: {
+                  Id: 'message-123',
+                  Owner: 'owner-123',
+                  Tags: [
+                    { name: 'Foo', value: 'Bar' }
+                  ],
+                  Signature: 'signature-1',
+                  Anchor: null,
+                  Data: '1984'
                 },
-                tags: [
-                  { name: 'Foo', value: 'Bar' }
-                ],
-                timestamp: 123456,
-                data: '1984',
-                anchor: null,
-                signature: 'signature-1'
+                assignment: {
+                  Id: 'assignment-123',
+                  Anchor: '',
+                  Owner: 'su-123',
+                  Tags: [
+                    { name: 'Block-Height', value: 123 },
+                    { name: 'Block-Timestamp', value: new Date().getTime() },
+                    { name: 'Data-Protocol', value: 'ao' },
+                    { name: 'Epoch', value: '0' },
+                    { name: 'Hash-Chain', value: 'hash-123' },
+                    { name: 'Path', value: 'compute' },
+                    { name: 'Process', value: 'process-123' },
+                    { name: 'Slot', value: 0 },
+                    { name: 'Timestamp', value: 123456 },
+                    { name: 'Variant', value: 'ao.N.1' }
+                  ],
+                  Data: 'su-data-123'
+                }
               }
-            }
-          }
+            }]
+          }))
         },
         logger
       }))
@@ -370,14 +355,14 @@ describe('ao-su', () => {
       })
       assert.deepStrictEqual(result, {
         owner: {
-          address: 'owner-address-1',
-          key: 'owner-key-1'
+          address: 'owner-123',
+          key: undefined
         },
         tags: [
           { name: 'Foo', value: 'Bar' }
         ],
         block: {
-          height: 1,
+          height: 123,
           timestamp: 123456
         },
         processId: 'pid-1',
@@ -393,16 +378,28 @@ describe('ao-su', () => {
   describe('loadTimestampWith', () => {
     test('load process timestamp and block height', async () => {
       const loadTimestamp = loadTimestampSchema.implement(loadTimestampWith({
-        fetch: async () => {
-          return {
-            ok: true,
-            json: () => {
-              return {
-                block_height: '0000001',
-                timestamp: '123456'
-              }
-            }
-          }
+        fetch: async (url) => {
+          url = new URL(url)
+          const params = Object.fromEntries(url.searchParams)
+
+          assert.equal(url.origin, 'https://foo.bar')
+          assert.equal(url.pathname, '/~scheduler@1.0/schedule')
+          assert.deepStrictEqual(params, {
+            target: 'pid-1',
+            'from+Integer': '0',
+            'to+Integer': '0',
+            limit: '1',
+            accept: 'application/aos-2'
+          })
+
+          return new Response(JSON.stringify({
+            page_info: {
+              has_next_page: false,
+              timestamp: 123456,
+              'block-height': '1'
+            },
+            edges: []
+          }))
         },
         logger
       }))

@@ -1,8 +1,12 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
-import { arrayBufferFromMaybeView, busyIn } from '../domain/utils.js'
-import { withMetrics, withMiddleware, withProcessRestrictionFromPath, withCuMode } from './middleware/index.js'
+import { arrayBufferFromMaybeView, busyIn } from '../../../domain/utils.js'
+
+import { withErrorHandler } from './middleware/withErrorHandler.js'
+import { withCuMode } from './middleware/withCuMode.js'
+import { withProcessRestrictionFromPath } from './middleware/withProcessRestriction.js'
+import { withMetrics } from './middleware/withMetrics.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
@@ -14,7 +18,7 @@ export const withStateRoutes = (app) => {
   app.get(
     '/state/:processId',
     compose(
-      withMiddleware,
+      withErrorHandler,
       withCuMode,
       withProcessRestrictionFromPath,
       withMetrics({ tracesFrom: (req) => ({ process_id: req.params.processId }) }),

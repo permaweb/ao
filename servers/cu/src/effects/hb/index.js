@@ -1,13 +1,48 @@
 /* eslint-disable camelcase */
-import { Transform, Readable } from 'node:stream'
+import { Readable, Transform } from 'node:stream'
 
-import { of } from 'hyper-async'
-import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
+import { always, applySpec, filter, isNil, isNotNil, juxt, last, mergeAll, nth, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
-import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError, okRes } from '../domain/utils.js'
+import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../../domain/utils.js'
+
+const okRes = (res) => {
+  if (res.ok) return res
+  throw res
+}
 
 const resToJson = (res) => res.json()
+  /**
+   * Janky extra parse b/c HB currently sends back a string
+   * that contains a JSON object, that must be parsed further.
+   *
+   * TODO: remove later.
+   */
+  .then(maybeJSON => typeof maybeJSON === 'object'
+    ? maybeJSON
+    : JSON.parse(maybeJSON)
+  )
+
+/**
+ * GET /...?target=ProcID[&from=X&to=y]&accept=application/aos-2
+ */
+const toParams = ({ processId, from, to, pageSize }) =>
+  new URLSearchParams(filter(
+    isNotNil,
+    { target: processId, 'from+Integer': from, 'to+Integer': to, limit: pageSize, accept: 'application/aos-2' }
+  ))
+
+const nodeAt = (idx) => pipe(path(['edges']), nth(idx), path(['node']))
+
+/**
+ * TODO: eventually actually locate the scheduler
+ * For now, just always returning the HB_URL
+ */
+export const locateProcessWith = ({ fetch, HB_URL }) => {
+  return async ({ processId }) => {
+    return { url: HB_URL }
+  }
+}
 
 export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) => {
   const { assignmentId: prevAssignmentId, hashChain: prevHashChain } = prev
@@ -24,23 +59,20 @@ export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) =
   return expected === actual
 }
 
-/**
- * See new shape in https://github.com/permaweb/ao/issues/563#issuecomment-2020597581
- */
 export const mapNode = pipe(
   juxt([
-    // fromAssignment
+    // derived from assignment
     pipe(
       path(['assignment']),
       (assignment) => {
-        const tags = parseTags(assignment.tags)
+        const tags = parseTags(assignment.Tags)
 
         return applySpec({
           /**
            * The assignment id is needed in order to compute
            * and verify the hash chain
            */
-          AssignmentId: always(assignment.id),
+          AssignmentId: always(assignment.Id),
           /**
            * There could be multiple Exclude tags,
            * but parseTags will accumulate them into an array,
@@ -53,17 +85,16 @@ export const mapNode = pipe(
            * on the message
            */
           message: applySpec({
-            Message: path(['Message']),
             Target: path(['Process']),
             Epoch: pipe(path(['Epoch']), parseInt),
-            Nonce: pipe(path(['Nonce']), parseInt),
+            Nonce: pipe(path(['Slot']), parseInt),
             Timestamp: pipe(path(['Timestamp']), parseInt),
             'Block-Height': pipe(
-            /**
-             * Returns a left padded integer like '000001331218'
-             *
-             * So use parseInt to convert it into a number
-             */
+              /**
+               * Returns a left padded integer like '000001331218'
+               *
+               * So use parseInt to convert it into a number
+               */
               path(['Block-Height']),
               parseInt
             ),
@@ -72,34 +103,50 @@ export const mapNode = pipe(
         })(tags)
       }
     ),
-    // fromMessage
+    // derived from message
     pipe(
       path(['message']),
       (message) => {
         /**
-         * No message, meaning this is an Assignment for an existing message
+         * No message, or only Id, meaning this is an Assignment for an existing message
          * on chain, to be hydrated later (see hydrateMessages)
          */
-        if (isNil(message)) return undefined
+        if (Object.keys(message).length === 1) return { Id: message.Id }
 
-        const address = addressFrom(message.owner)
+        /**
+         * TODO: HB SU does not return the public key
+         * and so we cannot detect and derive other chain
+         * addresses ie. Ethereum
+         */
+        const address = message.Owner
 
         return applySpec({
-          Id: path(['id']),
-          Signature: path(['signature']),
-          Data: path(['data']),
+          Id: path(['Id']),
+          Signature: path(['Signature']),
+          Data: path(['Data']),
           Owner: always(address),
-          Anchor: path(['anchor']),
-          From: (message) => mapFrom({ tags: message.tags, owner: address }),
-          'Forwarded-By': (message) => mapForwardedBy({ tags: message.tags, owner: address }),
-          Tags: pathOr([], ['tags'])
+          Anchor: path(['Anchor']),
+          From: always(mapFrom({ tags: message.Tags, owner: address })),
+          'Forwarded-By': always(mapForwardedBy({ tags: message.Tags, owner: address })),
+          Tags: pipe(
+            pathOr([], ['Tags']),
+            // Some tags are being returned as non strings, so coerce them to strings
+            (tags) => tags.map(t => ({ name: t.name, value: `${t.value}` }))
+          )
         })(message)
       }
     ),
     // both
     applySpec({
+      /**
+       * In the case of an assignment of a message on-chain, only the Id
+       * will be present.
+       *
+       * So checking for any other field, like 'Owner' should tell us
+       * whether this is an assignment of data on-chain or not.
+       */
       isAssignment: pipe(
-        path(['message', 'id']),
+        path(['message', 'Owner']),
         isNil
       )
     }),
@@ -110,7 +157,7 @@ export const mapNode = pipe(
   ([fAssignment, fMessage = {}, fBoth, fStatic]) => ({
     cron: undefined,
     ordinate: fAssignment.message.Nonce,
-    name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
+    name: `${fBoth.isAssignment ? 'Assigned' : 'Scheduled'} Message ${fMessage.Id} ${fAssignment.message.Timestamp}:${fAssignment.message.Nonce}`,
     exclude: fAssignment.Exclude,
     isAssignment: fBoth.isAssignment,
     assignmentId: fAssignment.AssignmentId,
@@ -118,14 +165,10 @@ export const mapNode = pipe(
       fMessage,
       fAssignment.message,
       /**
-       * For an Assignment, the message, and ergo it's Id will be undefined,
-       * but the assignment will contain a Message Tag that indicates the assigned tx.
-       * In this case, the assigned data can be queried for and hydrated, using the Id.
-       *
-       * So we must ensure that this field is always set, regardless if this is a message
+       * We must ensure that this field is always set, regardless if this is a message
        * or just an Assignment for an existing message on-chain
        */
-      { Id: fBoth.isAssignment ? fAssignment.message.Message : fMessage.Id },
+      { Id: fMessage.Id },
       /**
        * For an Assignment, the Target is derived from the recipient of
        * the assigned tx.
@@ -152,8 +195,65 @@ export const mapNode = pipe(
   })
 )
 
+export const loadProcessWith = ({ fetch, logger }) => {
+  return async ({ suUrl, processId }) => {
+    const params = toParams({ processId, from: 0, to: 0, pageSize: 1 })
+
+    return backoff(
+      () => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes),
+      { maxRetries: 5, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
+    )
+      .catch(async (err) => {
+        logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
+        throw new Error(`Error Encountered when loading process from Scheduler Unit: ${await strFromFetchError(err)}`)
+      })
+      .then(resToJson)
+      .then(nodeAt(0))
+      .then(mapNode)
+      .then(applySpec({
+        owner: applySpec({
+          address: path(['message', 'Owner']),
+          /**
+           * TODO: currently will always be undefined,
+           * since HB SU does not return the public key
+           * of the owner
+           */
+          key: path(['key'])
+        }),
+        tags: path(['message', 'Tags']),
+        signature: path(['message', 'Signature']),
+        data: path(['message', 'Data']),
+        anchor: path(['message', 'Anchor']),
+        timestamp: path(['message', 'Timestamp']),
+        block: path(['block']),
+        processId: always(processId),
+        nonce: always(0)
+      }))
+  }
+}
+
+export const loadTimestampWith = ({ fetch, logger }) => {
+  return async ({ suUrl, processId }) => {
+    const params = toParams({ processId, from: 0, to: 0, pageSize: 1 })
+
+    return backoff(
+      () => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes),
+      { maxRetries: 5, delay: 500, log: logger, name: `loadTimestamp(${JSON.stringify({ suUrl, processId })})` }
+    )
+      .catch(async (err) => {
+        logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
+        throw new Error(`Error Encountered when loading timestamp for process from Scheduler Unit: ${await strFromFetchError(err)}`)
+      })
+      .then(resToJson)
+      .then(({ page_info }) => ({
+        timestamp: parseInt(page_info.timestamp),
+        height: parseInt(page_info['block-height'])
+      }))
+  }
+}
+
 export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }) => {
-  const logger = _logger.child('ao-su:loadMessages')
+  const logger = _logger.child('hb-su:loadMessages')
 
   const isHashChainValid = isHashChainValidWith({ hashChain })
 
@@ -162,29 +262,26 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
     return Promise.allSettled(
       args.map(({ suUrl, processId, from, to, pageSize }) => {
-        return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
-          .then(filter(isNotNil))
-          .then(params => new URLSearchParams(params))
-          .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes))
+        return Promise.resolve({ processId, from, to, pageSize })
+          .then(toParams)
+          .then((params) => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`))
+          .then(okRes)
           .catch(async (err) => {
             logger(
               'Error Encountered when fetching page of scheduled messages from SU \'%s\' for process \'%s\' between \'%s\' and \'%s\'',
-              suUrl,
-              processId,
-              from,
-              to
+              suUrl, processId, from, to
             )
             throw new Error(`Encountered Error fetching scheduled messages from Scheduler Unit: ${await strFromFetchError(err)}`)
           })
           .then(resToJson)
       })
     ).then((values) =>
-      /**
-       * By returning the error, Dataloader will register as an error
-       * for the individual call to load, without failing the batch as a whole
-       *
-       * See https://www.npmjs.com/package/dataloader#caching-errors
-       */
+    /**
+     * By returning the error, Dataloader will register as an error
+     * for the individual call to load, without failing the batch as a whole
+     *
+     * See https://www.npmjs.com/package/dataloader#caching-errors
+     */
       values.map(v => v.status === 'fulfilled' ? v.value : v.reason)
     )
   }, {
@@ -203,8 +300,16 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
    * dynamically
    */
   function fetchAllPages ({ suUrl, processId, from, to }) {
+    /**
+     * The HB SU 'from' and 'to' are both inclusive.
+     * So when we pass from (which is the cached most recent evaluated message)
+     * we need to increment by 1, so as to not include the message we have
+     * already evaluated.
+     */
+    if (from && from > 0) from = from + 1
+
     async function fetchPage ({ from }) {
-      const params = new URLSearchParams(filter(isNotNil, { 'process-id': processId, from, to, limit: pageSize }))
+      const params = toParams({ processId, from, to, pageSize })
 
       return backoff(
         () => fetchPageDataloader.load({ suUrl, processId, from, to, pageSize }),
@@ -224,11 +329,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           .then(() => {
             logger(
               'Loading next page of max %s messages for process "%s" from SU "%s" between "%s" and "%s"',
-              pageSize,
-              processId,
-              suUrl,
-              from || 'initial',
-              to || 'latest'
+              pageSize, processId, suUrl, from || 'initial', to || 'latest'
             )
             return fetchPage({ from: curFrom })
           })
@@ -247,11 +348,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
       logger(
         'Successfully loaded a total of %s scheduled messages for process "%s" from SU "%s" between "%s" and "%s"...',
-        total,
-        processId,
-        suUrl,
-        from || 'initial',
-        to || 'latest')
+        total, processId, suUrl, from || 'initial', to || 'latest')
     }
   }
 
@@ -261,10 +358,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
     }
     /**
-     * Only perform hash chain validation on processes
-     * spawned after arweave day, since old hash chains are invalid
-     * anyway.
-     */
+       * Only perform hash chain validation on processes
+       * spawned after arweave day, since old hash chains are invalid
+       * anyway.
+       */
     const isHashChainValidationEnabled = processBlock.height >= 1440000
     if (!isHashChainValidationEnabled) {
       logger('HashChain validation disabled for old process "%s" at block [%j]', processId, processBlock)
@@ -280,8 +377,8 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
         const scheduled = pipe(
           prop('node'),
           /**
-           * Map to the expected shape
-           */
+             * Map to the expected shape
+             */
           mapNode,
           (scheduled) => {
             scheduled.AoGlobal = AoGlobal
@@ -313,129 +410,35 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     }
   }
 
-  return (args) =>
-    of(args)
-      .map(({
-        suUrl,
-        processId,
-        block: processBlock,
-        owner: processOwner,
-        tags: processTags,
-        moduleId,
-        moduleOwner,
-        moduleTags,
-        from,
-        to,
-        assignmentId,
-        hashChain
-      }) => {
-        return [
-          Readable.from(fetchAllPages({ suUrl, processId, from, to })()),
-          Transform.from(mapAoMessage({
-            processId,
-            processBlock,
-            assignmentId,
-            hashChain,
-            processOwner,
-            processTags,
-            moduleId,
-            moduleOwner,
-            moduleTags,
-            logger
-          }))
-        ]
-      })
-      .toPromise()
-}
-
-export const loadProcessWith = ({ fetch, logger }) => {
-  return async ({ suUrl, processId }) => {
-    return backoff(
-      () => fetch(`${suUrl}/processes/${processId}`, { method: 'GET' }).then(okRes),
-      { maxRetries: 5, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
-    )
-      .catch(async (err) => {
-        logger('Error Encountered when loading process "%s" from SU "%s"', processId, suUrl)
-        throw new Error(`Error Encountered when loading process from Scheduler Unit: ${await strFromFetchError(err)}`)
-      })
-      .then(resToJson)
-      .then(applySpec({
-        owner: path(['owner']),
-        tags: path(['tags']),
-        block: applySpec({
-          height: pipe(
-            path(['block']),
-            (block) => parseInt(block)
-          ),
-          /**
-           * SU is currently sending back timestamp in milliseconds,
-           */
-          timestamp: path(['timestamp'])
-        }),
-        /**
-         * These were added for the aop6 Boot Loader change so that
-         * the Process can be used properly downstream.
-         *
-         * See https://github.com/permaweb/ao/issues/730
-         */
-        processId: always(processId),
-        timestamp: path(['timestamp']),
-        nonce: always(0),
-        signature: path(['signature']),
-        data: path(['data']),
-        anchor: path(['anchor'])
-      }))
-  }
-}
-
-export const loadTimestampWith = ({ fetch, logger }) => {
-  return ({ suUrl, processId }) => backoff(
-    () => fetch(`${suUrl}/timestamp?process-id=${processId}`).then(okRes),
-    { maxRetries: 5, delay: 500, log: logger, name: `loadTimestamp(${JSON.stringify({ suUrl, processId })})` }
-  )
-    .catch(async (err) => {
-      logger('Error Encountered when loading timestamp for process "%s" from SU "%s"', processId, suUrl)
-      throw new Error(`Error Encountered when loading timestamp for process from Scheduler Unit: ${await strFromFetchError(err)}`)
+  return (args) => Promise.resolve(args)
+    .then(({
+      suUrl, processId, block: processBlock, owner: processOwner, tags: processTags,
+      moduleId, moduleOwner, moduleTags, fromOrdinate, toOrdinate, assignmentId, hashChain
+    }) => {
+      return [
+        Readable.from(fetchAllPages({ suUrl, processId, from: fromOrdinate, to: toOrdinate })()),
+        Transform.from(mapAoMessage({
+          processId,
+          processBlock,
+          assignmentId,
+          hashChain,
+          processOwner,
+          processTags,
+          moduleId,
+          moduleOwner,
+          moduleTags,
+          logger
+        }))
+      ]
     })
-    .then(resToJson)
-    .then((res) => ({
-      /**
-       * TODO: SU currently sends these back as strings
-       * so need to parse them to integers
-       */
-      timestamp: parseInt(res.timestamp),
-      height: parseInt(res.block_height)
-    }))
 }
 
 export const loadMessageMetaWith = ({ fetch, logger }) => {
-  const legacyMeta = (res) => ({
-    processId: res.process_id,
-    timestamp: res.timestamp,
-    nonce: res.nonce
-  })
-
-  const meta = pipe(
-    pathOr([], ['assignment', 'tags']),
-    parseTags,
-    applySpec({
-      processId: path(['Process']),
-      timestamp: pipe(
-        path(['Timestamp']),
-        parseInt
-      ),
-      nonce: pipe(
-        path(['Nonce']),
-        parseInt
-      )
-    })
-  )
-
-  const mapMeta = ifElse(has('assignment'), meta, legacyMeta)
-
   return async ({ suUrl, processId, messageUid }) => {
+    const params = toParams({ processId, to: messageUid, from: messageUid, pageSize: 1 })
+
     return backoff(
-      () => fetch(`${suUrl}/${messageUid}?process-id=${processId}`, { method: 'GET' }).then(okRes),
+      () => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes),
       { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
     )
       .catch(async (err) => {
@@ -446,10 +449,12 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
         throw new Error(`Error Encountered when loading message from Scheduler Unit: ${await strFromFetchError(err)}`)
       })
       .then(resToJson)
-      /**
-       * Map to the expected shape, depending on the response shape.
-       * See https://github.com/permaweb/ao/issues/563
-       */
-      .then(mapMeta)
+      .then(nodeAt(0))
+      .then(mapNode)
+      .then(applySpec({
+        timestamp: path(['message', 'Timestamp']),
+        nonce: path(['message', 'Nonce']),
+        processId: always(processId)
+      }))
   }
 }

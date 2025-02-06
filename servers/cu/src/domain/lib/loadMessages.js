@@ -487,7 +487,9 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
           moduleOwner: ctx.moduleOwner,
           moduleTags: ctx.moduleTags,
           from: ctx.from, // could be undefined
+          fromOrdinate: ctx.ordinate, // could be undefined
           to: ctx.to, // could be undefined
+          toOrdinate: ctx.toOrdinate, // could be undefined
           assignmentId: ctx.mostRecentAssignmentId,
           hashChain: ctx.mostRecentHashChain
         })
