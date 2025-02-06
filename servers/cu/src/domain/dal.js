@@ -102,7 +102,8 @@ export const findEvaluationSchema = z.function()
     processId: z.string(),
     to: z.coerce.number().nullish(),
     ordinate: z.coerce.string().nullish(),
-    cron: z.string().nullish()
+    cron: z.string().nullish(),
+    messageId: z.string().nullish()
   }))
   .returns(z.promise(evaluationSchema))
 
@@ -127,7 +128,8 @@ export const findEvaluationsSchema = z.function()
     limit: z.number(),
     onlyCron: z.boolean().default(false)
   }))
-  .returns(z.promise(z.array(evaluationSchema)))
+  // TODO: uncomment this
+  // .returns(z.promise(z.array(evaluationSchema)))
 
 // Messages
 
