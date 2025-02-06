@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { describe, test, before } from 'node:test'
 // import * as assert from 'node:assert'
 import { tmpdir } from 'node:os'
@@ -6,6 +7,7 @@ import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 
 import Arweave from 'arweave'
+import { tap } from 'ramda'
 
 import { connect } from './index.js'
 
@@ -28,17 +30,12 @@ describe('index - node', () => {
     test('should relay the message through HyperBEAM', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const { spawn, message, createDataItemSigner } = connect.hb({
+      const { spawn, message, result, createDataItemSigner } = connect.hb({
         wallet,
         URL: process.env.HB_URL || 'http://localhost:8734'
       })
 
-      // await result({
-      //   process: 's2LoBaYzVk_hAtZeoOw4BGFdkZ3fAF0jHCzX4FYY-iI',
-      //   message: 'pumsQ7WWwTbV9O39VUcFrABUIT2NL2XIKq_-a5L2Ogs'
-      // }).then(console.log).catch(console.error)
-
-      await spawn({
+      const p = await spawn({
         module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
         scheduler: 'tqHKJRbJWk1vD1Petwza-LMpV8H2XLXagjhWy11A2Sc',
         data: 'Foo = "bar"',
@@ -46,20 +43,23 @@ describe('index - node', () => {
           { name: 'Foo', value: 'Bar' }
         ],
         signer: createDataItemSigner()
-      }).then(console.log).catch(console.error)
+      }).then(tap(console.log))
 
-      await message({
-        process: 's2LoBaYzVk_hAtZeoOw4BGFdkZ3fAF0jHCzX4FYY-iI',
-        anchor: 'foobar',
-        tags: [
-          { name: 'Action', value: 'Eval' },
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Variant', value: 'ao.TN.1' },
-          { name: 'Type', value: 'Message' }
-        ],
-        data: "hello('bg')",
-        signer: createDataItemSigner()
-      }).then(console.log).catch(console.error)
+      // const m = await message({
+      //   process: p,
+      //   anchor: 'foobar',
+      //   tags: [
+      //     { name: 'Action', value: 'Eval' },
+      //     { name: 'Data-Protocol', value: 'ao' },
+      //     { name: 'Variant', value: 'ao.TN.1' },
+      //     { name: 'Type', value: 'Message' }
+      //   ],
+      //   data: "hello('bg')",
+      //   signer: createDataItemSigner()
+      // }).then(tap(console.log))
+
+      // const r = await result({ id: m, process: p })
+      //   .then(tap(console.log)).catch(console.error)
     })
   })
 })

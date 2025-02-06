@@ -285,6 +285,17 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       logger: spawnLogger
     })
 
+    const resultLogger = logger.child('hb:result')
+    api.result = resultWith({
+      loadResult: HbClient.loadResultWith({
+        fetch: defaultFetch,
+        logger: resultLogger,
+        HB_URL: URL,
+        signer
+      }),
+      logger: resultLogger
+    })
+
     return api
   }
 

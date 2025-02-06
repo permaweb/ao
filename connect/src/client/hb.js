@@ -42,7 +42,9 @@ async function sha256 (data) {
 }
 
 async function itemToMultipart ({ processId, data, tags, anchor }) {
-  const headers = new Headers({ target: processId })
+  const headers = new Headers()
+
+  if (processId) headers.append('target', processId)
   if (anchor) headers.append('anchor', anchor)
   tags.forEach(t => headers.append(t.name, t.value))
   /**
@@ -52,20 +54,27 @@ async function itemToMultipart ({ processId, data, tags, anchor }) {
   headers.set('Variant', 'ao.N.1')
 
   /**
-   * Make sure to include the Content-Type describing the data
-   * into the part
+   * We need to encode the data as a part in a multipart body,
+   * ensuring content-type is preserved and appending a
+   * Content-Digest header
    */
-  const contentType = headers.get('content-type')
-  const { boundary, body } = await toMultipartBody(data, contentType)
-  /**
-   * Use set to always ensure the Content-Type is native HB
-   * http encoding
-   *
-   * See
-   */
-  headers.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
-  const hash = await sha256(body)
-  headers.append('Content-Digest', `sha-256=:${base64Encode(hash)}:`)
+  let body
+  if (data) {
+    /**
+     * Make sure to include the Content-Type describing the data
+     * into the part
+     */
+    const contentType = headers.get('content-type')
+    const mp = await toMultipartBody(data, contentType)
+    body = mp.body
+    /**
+     * Use set to always ensure the Content-Type is native HB
+     * http encoding
+     */
+    headers.set('Content-Type', `multipart/form-data; boundary="${mp.boundary}"`)
+    const hash = await sha256(body)
+    headers.append('Content-Digest', `sha-256=:${base64Encode(hash)}:`)
+  }
 
   return { headers, body }
 }
@@ -170,6 +179,41 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
           logger.tap('Successfully wrote message via HB MU')
         )
         .map((slot) => ({ messageId: slot }))
+      )
+      .toPromise()
+  }
+}
+
+export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('loadResult')
+
+  return (args) => {
+    return of(args)
+      .chain(fromPromise(async ({ id, processId }) => {
+        const { headers, body } = await itemToMultipart({ processId })
+        headers.append('slot', id)
+        return signer(toSignerArgs({
+          url: `${HB_URL}/~compute-lite@1.0/compute&slot=${id}&process-id=${processId}`,
+          method: 'POST',
+          headers
+        })).then((req) => ({ ...req, body }))
+      }))
+      .map(logger.tap('fetching message result from HB CU: %o'))
+      .chain((request) => of(request)
+        .chain(fromPromise(({ url, method, headers, body }) =>
+          fetch(url, { method, headers, body, redirect: 'follow' })
+        ))
+        .bichain(
+          (err) => Rejected(err),
+          fromPromise(async (res) => {
+            if (res.ok) return res.json()
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
+        )
+        .bimap(
+          logger.tap('Error encountered when writing message via HB CU'),
+          logger.tap('Successfully wrote message via HB CU')
+        )
       )
       .toPromise()
   }
