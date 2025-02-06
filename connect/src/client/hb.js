@@ -1,15 +1,127 @@
-function base64urlDecodeUTF8 (base64url) {
-  const binary = atob(base64url.replace(/-/g, '+').replace(/_/g, '/'))
+import { Buffer } from 'buffer/index.js'
+import { Rejected, fromPromise, of } from 'hyper-async'
+
+function base64urlDecode (encoded) {
+  const binary = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
   const bytes = new Uint8Array([...binary].map(char => char.charCodeAt(0)))
-  return new TextDecoder().decode(bytes)
+  return bytes
+}
+
+/**
+ * NOTE: this is base64 NOT base64url
+ */
+function base64Encode (buffer) {
+  const base64 = btoa(String.fromCharCode(...buffer))
+  return base64
+}
+
+async function toMultipartBody (data, contentType) {
+  const boundary = `--${Math.random().toString(36).slice(2)}`
+  const blob = new Blob([
+    `--${boundary}\r\n`,
+    'content-disposition: inline\r\n',
+    /**
+     * Optionally include the content-type header
+     * in the body part
+     */
+    `${contentType ? `Content-Type: ${contentType.trim()}` : ''}\r\n`,
+    data,
+    `\r\n--${boundary}--\r\n`
+  ])
+
+  return { boundary, body: blob }
+}
+
+/**
+ * @param {Blob} data
+ */
+async function sha256 (data) {
+  const ab = await data.arrayBuffer()
+  const hashAb = await crypto.subtle.digest('SHA-256', ab)
+  return Buffer.from(hashAb)
+}
+
+async function itemToMultipart ({ processId, data, tags, anchor }) {
+  const headers = new Headers({ target: processId })
+  if (anchor) headers.append('anchor', anchor)
+  tags.forEach(t => headers.append(t.name, t.value))
+  /**
+   * Always ensure the variant is mainnet for hyperbeam
+   * TODO: change default variant to be this eventually
+   */
+  headers.set('Variant', 'ao.N.1')
+
+  /**
+   * Make sure to include the Content-Type describing the data
+   * into the part
+   */
+  const contentType = headers.get('content-type')
+  const { boundary, body } = await toMultipartBody(data, contentType)
+  /**
+   * Use set to always ensure the Content-Type is native HB
+   * http encoding
+   *
+   * See
+   */
+  headers.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
+  const hash = await sha256(body)
+  headers.append('Content-Digest', `sha-256=:${base64Encode(hash)}:`)
+
+  return { headers, body }
 }
 
 export function httpSigName (address) {
-  const decoded = Buffer.from(base64urlDecodeUTF8(address))
+  const decoded = base64urlDecode(address)
   const hexString = [...decoded.subarray(1, 9)]
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
   return `http-sig-${hexString}`
+}
+
+export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('hb-mu')
+
+  return (args) => {
+    return of(args)
+      /**
+       * disregard data item signer passed, as it is not needed
+       * when the HTTP msg is what is actually signed
+       */
+      .chain(fromPromise(({ processId, data, tags, anchor }) =>
+        itemToMultipart({ processId, data, tags, anchor })
+      ))
+      .chain(fromPromise(({ headers, body }) => {
+        return signer({
+          fields: [
+            ...headers.keys(),
+            '@path'
+          ].sort(),
+          request: {
+            url: `${HB_URL}/~process@1.0/schedule`,
+            method: 'POST',
+            headers: { ...Object.fromEntries(headers) }
+          }
+        }).then((req) => ({ ...req, body }))
+      }))
+      .map(logger.tap('Sending HTTP signed message to HB MU: %o'))
+      .chain((request) => of(request)
+        .chain(fromPromise(({ url, method, headers, body }) =>
+          fetch(url, { method, headers, body, redirect: 'follow' })
+        )).bichain(
+          (err) => Rejected(err),
+          fromPromise(async (res) => {
+            if (res.ok) return res.headers.get('slot')
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
+        )
+        .bimap(
+          logger.tap('Error encountered when writing message via HB MU'),
+          logger.tap('Successfully wrote message via HB MU')
+        )
+        .map((slot) => ({ messageId: slot }))
+      )
+      .toPromise()
+  }
 }
 
 export function relayerWith ({ fetch, logger, HB_URL, signer }) {
