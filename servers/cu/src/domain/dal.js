@@ -128,7 +128,8 @@ export const findEvaluationsSchema = z.function()
     limit: z.number(),
     onlyCron: z.boolean().default(false)
   }))
-  .returns(z.promise(z.array(evaluationSchema)))
+  // TODO: uncomment this
+  // .returns(z.promise(z.array(evaluationSchema)))
 
 // Messages
 

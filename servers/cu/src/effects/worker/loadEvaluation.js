@@ -3,7 +3,6 @@ import fs from 'fs'
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
 export function loadEvaluationWith ({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION }) {
   return async ({ messageId, processId }) => {
-    console.log('LOADING EVALUATION', { messageId, processId })
     if (!EVALUATION_RESULT_DIR || !EVALUATION_RESULT_BUCKET) {
       return 'not set'
     }
@@ -57,7 +56,6 @@ function loadEvaluationFromS3With ({ EVALUATION_RESULT_BUCKET, AWS_ACCESS_KEY_ID
       .catch((e) => {
         throw new Error(`Error getting file from S3: ${e}`)
       })
-    console.log('file', { file })
     return file
   }
 }

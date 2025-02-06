@@ -41,10 +41,6 @@ export function readResultsWith (env) {
        * Now 'caught up' on evaluations, so now we can gather the results, using the filtering
        * criteria
        */
-      .map((ctx) => {
-        console.log('READ RESULTS -> GATHERING RESULTS', { ctx, to })
-        return ctx
-      })
       .chain(() => gatherResults({
         processId,
         from,

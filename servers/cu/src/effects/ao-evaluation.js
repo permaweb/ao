@@ -60,7 +60,7 @@ const toEvaluation = applySpec({
 
 const fromEvaluationDoc = pipe(
   evolve({
-    output: JSON.parse
+    output: (old) => typeof old === 'string' ? JSON.parse(old) : old
   }),
   /**
    * Ensure the input matches the expected
@@ -302,23 +302,21 @@ export function findEvaluationsWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR
   }
 
   return ({ processId, from, to, onlyCron, sort, limit }) => {
-    console.trace('FINDING EVALUATIONS', { processId, from, to, onlyCron, sort, limit })
     return of({ processId, from, to, onlyCron, sort: sort.toUpperCase(), limit })
       .map(createQuery)
       .chain(fromPromise((query) => db.query(query)))
-      .map(head)
-      .chain(fromPromise(async (result) => {
-        if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && result.processId && result.messageId && !result.output) {
-            const evaluationOutput = await findEvaluationFromDir({ processId: result.processId, messageId: result.messageId })
-            return { ...result, output: evaluationOutput }
-          }
-          return result
-        })
-      )
-      .map((ctx) => {
-        console.log('findEvaluationsWith result: ', { ctx })
-        return ctx
-      })
+      .chain(fromPromise(async (results) => {
+        if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+          return await Promise.all(results.map(async (result) => {
+            if (result.processId && result.messageId && !result.output) {
+              const evaluationOutput = await findEvaluationFromDir({ processId: result.processId, messageId: result.messageId })
+              return { ...result, output: evaluationOutput }
+            }
+            return result
+          }))
+        }
+        return results
+      }))
       .map(map(fromEvaluationDoc))
       .toPromise()
   }
