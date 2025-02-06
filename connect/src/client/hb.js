@@ -19,12 +19,12 @@ async function toMultipartBody (data, contentType) {
   const boundary = `--${Math.random().toString(36).slice(2)}`
   const blob = new Blob([
     `--${boundary}\r\n`,
-    'content-disposition: inline\r\n',
+    'content-disposition: form-data; name="data"\r\n',
     /**
      * Optionally include the content-type header
      * in the body part
      */
-    `${contentType ? `Content-Type: ${contentType.trim()}` : ''}\r\n`,
+    `${contentType ? `content-type: ${contentType.trim()}` : ''}\r\n`,
     data,
     `\r\n--${boundary}--\r\n`
   ])
