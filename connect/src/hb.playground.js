@@ -28,7 +28,7 @@ describe('index - node', () => {
     test('should relay the message through HyperBEAM', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const { message, createDataItemSigner } = connect.hb({
+      const { spawn, message, createDataItemSigner } = connect.hb({
         wallet,
         URL: process.env.HB_URL || 'http://localhost:8734'
       })
@@ -37,6 +37,16 @@ describe('index - node', () => {
       //   process: 's2LoBaYzVk_hAtZeoOw4BGFdkZ3fAF0jHCzX4FYY-iI',
       //   message: 'pumsQ7WWwTbV9O39VUcFrABUIT2NL2XIKq_-a5L2Ogs'
       // }).then(console.log).catch(console.error)
+
+      await spawn({
+        module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
+        scheduler: 'tqHKJRbJWk1vD1Petwza-LMpV8H2XLXagjhWy11A2Sc',
+        data: 'Foo = "bar"',
+        tags: [
+          { name: 'Foo', value: 'Bar' }
+        ],
+        signer: createDataItemSigner()
+      }).then(console.log).catch(console.error)
 
       await message({
         process: 's2LoBaYzVk_hAtZeoOw4BGFdkZ3fAF0jHCzX4FYY-iI',

@@ -197,8 +197,33 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
   }) {
     logger('HyperBEAM mode activated! ⚡️⭐️')
 
+    let {
+      GRAPHQL_URL,
+      GRAPHQL_MAX_RETRIES,
+      GRAPHQL_RETRY_BACKOFF,
+      GATEWAY_URL = DEFAULT_GATEWAY_URL
+    } = rest
+
+    if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+
+    const { validate } = schedulerUtilsConnect({
+      cacheSize: 100,
+      GRAPHQL_URL,
+      GRAPHQL_MAX_RETRIES,
+      GRAPHQL_RETRY_BACKOFF
+    })
+
     const signer = createHbSigner(wallet)
 
+    /**
+     * TODO: connect and connect.hb are increasingly diverging,
+     * so it would be best to allow them to diverge, instead
+     * of composing them, then overwriting certian apis.
+     *
+     * Eventually all apis will require a signer for hb mode,
+     * unlike testnet mode, and so even divergence in the public
+     * api will need to happen.
+     */
     const api = connect({
       ...rest,
       CU_URL: rest.CU_URL || DEFAULT_HB_CU_URL,
@@ -232,8 +257,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
      */
     api.createDataItemSigner = () => createDataItemSigner(wallet)
 
-    const messageLogger = logger.child('message')
-
+    const messageLogger = logger.child('hb:message')
     api.message = messageWith({
       deployMessage: HbClient.deployMessageWith({
         fetch: defaultFetch,
@@ -242,6 +266,23 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
         signer
       }),
       logger: messageLogger
+    })
+
+    const spawnLogger = logger.child('hb:spawn')
+    api.spawn = spawnWith({
+      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
+        fetch: originalFetch,
+        GRAPHQL_URL,
+        logger: spawnLogger
+      }),
+      validateScheduler: validate,
+      deployProcess: HbClient.deployProcessWith({
+        fetch: defaultFetch,
+        logger: spawnLogger,
+        HB_URL: URL,
+        signer
+      }),
+      logger: spawnLogger
     })
 
     return api
