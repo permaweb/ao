@@ -52,9 +52,8 @@ export function topUpWith ({ fetch, logger, wallet, address }) {
         fromPromise(() =>
           fetch(
              urlString, { method, headers }
-          ).then(async (response) => {
+          ).then(async (_response) => {
             return { 
-              response, 
               request: { method, url: urlString, headers }
             }
           })
