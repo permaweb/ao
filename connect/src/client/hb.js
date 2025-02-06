@@ -86,8 +86,13 @@ function toSignerArgs ({ url, method, headers }) {
      * Always sign all headers, and the path,
      * and that there is a deterministic signature
      * component ordering
+     *
+     * TODO: removing path from signing, for now.
      */
-    fields: [...headers.keys(), '@path'].sort(),
+    fields: [
+      ...headers.keys()
+      // '@path'
+    ].sort(),
     request: { url, method, headers: { ...Object.fromEntries(headers) } }
   }
 }
