@@ -17,7 +17,7 @@ const evaluationDocSchema = z.object({
   blockHeight: evaluationSchema.shape.blockHeight,
   cron: evaluationSchema.shape.cron,
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output.omit({ Memory: true }) // TODO: return to omit after dir output is implemented
+  output: evaluationSchema.shape.output.omit({ Memory: true })
 })
 
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {

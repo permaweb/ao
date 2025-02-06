@@ -21,8 +21,7 @@ export function dumpEvaluationsWith ({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_
                 Body: fileStream
             };
             const command = new PutObjectCommand(params);
-            // TODO: uncomment this
-            // await s3Client.send(command);
+            await s3Client.send(command);
         }
     }
     const  s3Client = new S3Client({
