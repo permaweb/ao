@@ -5,7 +5,7 @@ import FastifyMiddie from '@fastify/middie'
 import cors from 'cors'
 import helmet from 'helmet'
 
-import { withMetricRoutes } from '../routes/metrics.js'
+import { withMetricRoutes } from './routes/metrics.js'
 import { withStateRoutes } from './routes/state.js'
 import { withResultRoutes } from './routes/result.js'
 import { withDryRunRoutes } from './routes/dryRun.js'

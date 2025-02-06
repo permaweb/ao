@@ -4,10 +4,10 @@ import { z } from 'zod'
 import { busyIn } from '../../../domain/utils.js'
 
 import { withInMemoryCache } from './middleware/withInMemoryCache.js'
-import { withErrorHandler } from '../../middleware/withErrorHandler.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
 import { withCuMode } from './middleware/withCuMode.js'
-import { withMetrics } from '../../middleware/withMetrics.js'
-import { withProcessRestrictionFromQuery } from '../../middleware/withProcessRestriction.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from './middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
   messageUid: z.string().min(1, 'a message unique identifier is required'),

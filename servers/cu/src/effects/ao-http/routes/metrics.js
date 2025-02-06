@@ -1,6 +1,6 @@
 import { always, compose } from 'ramda'
 
-import { withErrorHandler } from '../middleware/withErrorHandler.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
 
 export const withMetricRoutes = (app) => {
   app.get(
@@ -13,7 +13,7 @@ export const withMetricRoutes = (app) => {
           domain: { apis: { metrics } }
         } = req
 
-        if (!config.ENABLE_METRICS_ENDPOINT) return res.status(404)
+        if (!config.ENABLE_METRICS_ENDPOINT) return res.status(404).send('Not Found')
 
         await metrics.compute()
           .toPromise()

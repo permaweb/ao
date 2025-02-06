@@ -1,10 +1,10 @@
 import { always, compose, identity } from 'ramda'
 import { z } from 'zod'
 
-import { withErrorHandler } from '../../middleware/withErrorHandler.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
 import { withCuMode } from './middleware/withCuMode.js'
-import { withMetrics } from '../../middleware/withMetrics.js'
-import { withProcessRestrictionFromPath } from '../../middleware/withProcessRestriction.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromPath } from './middleware/withProcessRestriction.js'
 
 /**
  * TODO: could be moved into a route utils or middleware
