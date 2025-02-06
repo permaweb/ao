@@ -59,7 +59,6 @@ export const withResultsRoutes = app => {
 
         const input = inputSchema.parse({ processId, from, to, limit, sort })
 
-        console.log('READ RESULTS -> READ RESULTS', { input })
         await readResults(input)
           .map(({ evaluations }) => res.send(resultsConnection({
             nodes: evaluations,
