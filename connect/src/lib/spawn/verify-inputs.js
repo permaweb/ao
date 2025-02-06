@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { isNotNil, prop } from 'ramda'
 
@@ -98,7 +99,7 @@ export function verifyInputsWith (env) {
   return (ctx) => {
     return of(ctx)
       .chain(ctx => verifyModule(ctx.module).map(() => ctx))
-      .chain(ctx => verifyScheduler(ctx.scheduler)).map(() => ctx)
+      // .chain(ctx => verifyScheduler(ctx.scheduler)).map(() => ctx)
       .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
       .bimap(
         logger.tap('Error when verify input: %s'),
