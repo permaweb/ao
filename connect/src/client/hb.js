@@ -70,6 +70,19 @@ async function itemToMultipart ({ processId, data, tags, anchor }) {
   return { headers, body }
 }
 
+function toSignerArgs ({ url, method, headers }) {
+  headers = new Headers(headers)
+  return {
+    /**
+     * Always sign all headers, and the path,
+     * and that there is a deterministic signature
+     * component ordering
+     */
+    fields: [...headers.keys(), '@path'].sort(),
+    request: { url, method, headers: { ...Object.fromEntries(headers) } }
+  }
+}
+
 export function httpSigName (address) {
   const decoded = base64urlDecode(address)
   const hexString = [...decoded.subarray(1, 9)]
@@ -78,8 +91,50 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
+export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('deployProcess')
+
+  return (args) => {
+    return of(args)
+      /**
+       * disregard data item signer passed, as it is not needed
+       * when the HTTP msg is what is actually signed
+       */
+      .chain(fromPromise(({ processId, data, tags }) =>
+        itemToMultipart({ processId, data, tags })
+      ))
+      .chain(fromPromise(({ headers, body }) => {
+        return signer(toSignerArgs({
+          url: `${HB_URL}/~scheduler@1.0/schedule`,
+          method: 'POST',
+          headers
+        })).then((req) => ({ ...req, body }))
+      }))
+      .map(logger.tap('Sending HTTP signed message to HB MU: %o'))
+      .chain((request) => of(request)
+        .chain(fromPromise(({ url, method, headers, body }) =>
+          fetch(url, { method, headers, body, redirect: 'follow' })
+        ))
+        .bichain(
+          (err) => Rejected(err),
+          fromPromise(async (res) => {
+            console.log('deploy process', res)
+            if (res.ok) return res.headers.get('process')
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
+        )
+        .bimap(
+          logger.tap('Error encountered when deploying process via HB MU'),
+          logger.tap('Successfully deployed process via HB MU')
+        )
+        .map((process) => ({ processId: process }))
+      )
+      .toPromise()
+  }
+}
+
 export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
-  const logger = _logger.child('hb-mu')
+  const logger = _logger.child('deployMessage')
 
   return (args) => {
     return of(args)
@@ -91,25 +146,21 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
         itemToMultipart({ processId, data, tags, anchor })
       ))
       .chain(fromPromise(({ headers, body }) => {
-        return signer({
-          fields: [
-            ...headers.keys(),
-            '@path'
-          ].sort(),
-          request: {
-            url: `${HB_URL}/~process@1.0/schedule`,
-            method: 'POST',
-            headers: { ...Object.fromEntries(headers) }
-          }
-        }).then((req) => ({ ...req, body }))
+        return signer(toSignerArgs({
+          url: `${HB_URL}/~process@1.0/schedule`,
+          method: 'POST',
+          headers
+        })).then((req) => ({ ...req, body }))
       }))
       .map(logger.tap('Sending HTTP signed message to HB MU: %o'))
       .chain((request) => of(request)
         .chain(fromPromise(({ url, method, headers, body }) =>
           fetch(url, { method, headers, body, redirect: 'follow' })
-        )).bichain(
+        ))
+        .bichain(
           (err) => Rejected(err),
           fromPromise(async (res) => {
+            console.log('deploy message', res)
             if (res.ok) return res.headers.get('slot')
             throw new Error(`${res.status}: ${await res.text()}`)
           })
