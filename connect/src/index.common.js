@@ -2,7 +2,6 @@ import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
-import * as SuClient from './client/ao-su.js'
 import * as GatewayClient from './client/gateway.js'
 import * as HbClient from './client/hb.js'
 import { createLogger } from './logger.js'
@@ -94,8 +93,6 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
     const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
-    const processMetaCache = SuClient.createProcessMetaCache({ MAX_SIZE: 25 })
-
     const resultLogger = logger.child('result')
     const result = resultWith({
       loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: resultLogger }),
@@ -108,12 +105,6 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
      */
     const messageLogger = logger.child('message')
     const message = messageWith({
-      loadProcessMeta: SuClient.loadProcessMetaWith({
-        fetch,
-        cache: processMetaCache,
-        logger: messageLogger
-      }),
-      // locateScheduler: locate,
       deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
       logger: messageLogger
     })
@@ -138,12 +129,6 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
      */
     const monitorLogger = logger.child('monitor')
     const monitor = monitorWith({
-      loadProcessMeta: SuClient.loadProcessMetaWith({
-        fetch,
-        cache: processMetaCache,
-        logger: monitorLogger
-      }),
-      // locateScheduler: locate,
       deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
       logger: monitorLogger
     })
@@ -155,12 +140,6 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
      */
     const unmonitorLogger = logger.child('unmonitor')
     const unmonitor = unmonitorWith({
-      loadProcessMeta: SuClient.loadProcessMetaWith({
-        fetch,
-        cache: processMetaCache,
-        logger: unmonitorLogger
-      }),
-      // locateScheduler: locate,
       deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
       logger: monitorLogger
     })
@@ -218,6 +197,8 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
   }) {
     logger('HyperBEAM mode activated! ⚡️⭐️')
 
+    const signer = createHbSigner(wallet)
+
     const api = connect({
       ...rest,
       CU_URL: rest.CU_URL || DEFAULT_HB_CU_URL,
@@ -240,7 +221,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
         fetch: defaultFetch,
         logger,
         HB_URL: URL,
-        signer: createHbSigner(wallet)
+        signer
       })
     })
 
@@ -250,6 +231,19 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
      * use the wallet configured with HyperBEAM
      */
     api.createDataItemSigner = () => createDataItemSigner(wallet)
+
+    const messageLogger = logger.child('message')
+
+    api.message = messageWith({
+      deployMessage: HbClient.deployMessageWith({
+        fetch: defaultFetch,
+        logger: messageLogger,
+        HB_URL: URL,
+        signer
+      }),
+      logger: messageLogger
+    })
+
     return api
   }
 
