@@ -54,7 +54,7 @@ export function writeMessageTxWith (env) {
               }
             }
             
-            return topUp({ctx, relayUrl: RELAY_MAP[ctx.tx.processId].url, amount, recipientProcessId: sender})
+            return topUp({ctx, relayUrls: RELAY_MAP[ctx.tx.processId], amount, recipientProcessId: sender})
               .bimap(
                 (e) => {
                   return new Error(e, { cause: { ...ctx, stage: 'write-message' } })

@@ -54,7 +54,7 @@ describe('topUpWith function', function () {
   it('should correctly sign and verify a request', async function () {
     const params = {
       logId: 'test-log',
-      relayUrl: 'https://relay1.example/path/topup',
+      relayUrls: [{ url: 'https://relay1.example/path/topup' }, { url: 'https://relay2.example/path/topup' }],
       amount: 100,
       recipient: 'recipient-process-id'
     }

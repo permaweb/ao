@@ -97,11 +97,11 @@ describe('writeMessageTxWith', () => {
       },
       RELAY_MAP: {
         'ALLOWED_CURRENCIES': ["fromid"],
-        'mappedid1': { 'url': 'url1' },
-        'mappedid2': { 'url': 'url1' }
+        'mappedid1': [{ 'url': 'url1' }],
+        'mappedid2': [{ 'url': 'url1' }]
       },
       topUp: async (ctx) => {
-        assert.equal(ctx.relayUrl, 'url1')
+        assert.deepStrictEqual(ctx.relayUrls, [{ 'url': 'url1' }])
         return {}
       },
     })
