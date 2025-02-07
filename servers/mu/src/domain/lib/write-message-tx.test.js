@@ -96,6 +96,7 @@ describe('writeMessageTxWith', () => {
         }
       },
       RELAY_MAP: {
+        'ALLOWED_CURRENCIES': ["fromid"],
         'mappedid1': { 'url': 'url1' },
         'mappedid2': { 'url': 'url1' }
       },
@@ -115,6 +116,7 @@ describe('writeMessageTxWith', () => {
         url: 'https://foo.bar'
       },
       cachedMsg: {
+        fromProcessId: 'fromid',
         msg: {
           Tags: [{
             name: 'Action',
@@ -156,6 +158,7 @@ describe('writeMessageTxWith', () => {
         }
       },
       RELAY_MAP: {
+        'ALLOWED_CURRENCIES': ["ALL"],
         'mappedid1': { 'url': 'url1' },
         'mappedid2': { 'url': 'url1' }
       },

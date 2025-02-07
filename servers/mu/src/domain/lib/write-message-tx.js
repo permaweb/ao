@@ -43,6 +43,16 @@ export function writeMessageTxWith (env) {
             if(!amount || !sender) {
               return Rejected(new Error('Must set Sender and Quantity to top up.', { cause: ctx }))
             }
+
+            if(!Object.keys(RELAY_MAP).includes("ALLOWED_CURRENCIES")) {
+              return Rejected(new Error('No allowed currencies configured on this MU.', { cause: ctx }))
+            }
+
+            if(!RELAY_MAP["ALLOWED_CURRENCIES"].includes("ALL")) {
+              if(!RELAY_MAP["ALLOWED_CURRENCIES"].includes(ctx.cachedMsg.fromProcessId)) {
+                return Rejected(new Error('This currency is not supported on this MU.', { cause: ctx }))
+              }
+            }
             
             return topUp({ctx, relayUrl: RELAY_MAP[ctx.tx.processId].url, amount, recipientProcessId: sender})
               .bimap(

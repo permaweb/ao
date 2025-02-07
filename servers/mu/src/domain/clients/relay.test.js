@@ -32,7 +32,7 @@ describe('topUpWith function', function () {
   logger.tap = () => (args) => {
     return args
   }
-  const fetchTransactionDetails = async () => {
+  const fetchTransactions = async () => {
     return {
       data: {
         transactions: {
@@ -49,7 +49,7 @@ describe('topUpWith function', function () {
       }
     }
   }
-  let topUp = topUpWith({ fetch, logger, wallet, address, fetchTransactionDetails })
+  let topUp = topUpWith({ fetch, logger, wallet, address, fetchTransactions })
 
   it('should correctly sign and verify a request', async function () {
     const params = {
