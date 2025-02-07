@@ -25,7 +25,7 @@ const jsonObjectSchema = z.preprocess((val) => {
     }
   }
   return val;
-}, z.record(z.object({ url: z.string().url() })))
+}, z.any())
 
 
 /**
