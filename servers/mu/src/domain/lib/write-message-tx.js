@@ -44,7 +44,7 @@ export function writeMessageTxWith (env) {
               return Rejected(new Error('Must set Sender and Quantity to top up.', { cause: ctx }))
             }
             
-            return topUp({ctx, relayUrl: RELAY_MAP[ctx.tx.processId].url, amount, recipient: sender})
+            return topUp({ctx, relayUrl: RELAY_MAP[ctx.tx.processId].url, amount, recipientProcessId: sender})
               .bimap(
                 (e) => {
                   return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
