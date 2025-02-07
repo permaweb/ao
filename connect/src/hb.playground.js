@@ -45,21 +45,22 @@ describe('index - node', () => {
         signer: createDataItemSigner()
       }).then(tap(console.log))
 
-      // const m = await message({
-      //   process: p,
-      //   anchor: 'foobar',
-      //   tags: [
-      //     { name: 'Action', value: 'Eval' },
-      //     { name: 'Data-Protocol', value: 'ao' },
-      //     { name: 'Variant', value: 'ao.TN.1' },
-      //     { name: 'Type', value: 'Message' }
-      //   ],
-      //   data: "hello('bg')",
-      //   signer: createDataItemSigner()
-      // }).then(tap(console.log))
+      const m = await message({
+        process: p,
+        tags: [
+          { name: 'Action', value: 'Eval' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Message' }
+        ],
+        data: "hello('bg')",
+        signer: createDataItemSigner()
+      }).then(tap(console.log))
 
-      // const r = await result({ id: m, process: p })
-      //   .then(tap(console.log)).catch(console.error)
+      console.log('READY TO LOAD RESULT. m:', m)
+
+      const r = await result({ message: m, process: p })
+        .then(tap(console.log)).catch(console.error)
     })
   })
 })
