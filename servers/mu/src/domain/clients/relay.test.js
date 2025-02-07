@@ -32,14 +32,31 @@ describe('topUpWith function', function () {
   logger.tap = () => (args) => {
     return args
   }
-  let topUp = topUpWith({ fetch, logger, wallet, address })
+  const fetchTransactionDetails = async () => {
+    return {
+      data: {
+        transactions: {
+          edges: [
+            {
+              node: {
+                owner: {
+                  address: "asdf"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+  let topUp = topUpWith({ fetch, logger, wallet, address, fetchTransactionDetails })
 
   it('should correctly sign and verify a request', async function () {
     const params = {
       logId: 'test-log',
       relayUrl: 'https://relay1.example/path/topup',
       amount: 100,
-      recipient: 'recipient-address'
+      recipient: 'recipient-process-id'
     }
 
     const result = await topUp(params)
