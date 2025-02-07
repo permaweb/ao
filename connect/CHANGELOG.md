@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.66](https://github.com/permaweb/ao/compare/connect@v0.0.65...connect@v0.0.66) (2025-02-07)
+
+
+### Features
+
+* **connect:** hb mode has result on hb ([214309f](https://github.com/permaweb/ao/commit/214309f16731f24073232dea1eb58074c7e10173))
+* **connect:** hb mode has spawn on hb ([5ece939](https://github.com/permaweb/ao/commit/5ece93924e4d263ff8f2574b32606965b948d0fb))
+* **connect:** wip starting to build out http signed message to hb ([ba2439d](https://github.com/permaweb/ao/commit/ba2439da0f231202d65fcea9061cece52a947b2a))
+
+
+### Bug Fixes
+
+* **connect:** optionally add tags to hb headers. Change routes to non-process variants to start ([1cb6ef6](https://github.com/permaweb/ao/commit/1cb6ef651ce060f8eed1010c54ab5644ea85a34b))
+
 ## [0.0.65](https://github.com/permaweb/ao/compare/connect@v0.0.64...connect@v0.0.65) (2025-02-03)
 
 
