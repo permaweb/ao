@@ -1,81 +1,28 @@
-import { Buffer } from 'buffer/index.js'
 import { Rejected, fromPromise, of } from 'hyper-async'
+import base64url from 'base64url'
 
-function base64urlDecode (encoded) {
-  const binary = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
-  const bytes = new Uint8Array([...binary].map(char => char.charCodeAt(0)))
-  return bytes
-}
+import { encode } from './hb-encode.js'
 
 /**
- * NOTE: this is base64 NOT base64url
+ * Map data item members to corresponding HB HTTP message
+ * shape
  */
-function base64Encode (buffer) {
-  const base64 = btoa(String.fromCharCode(...buffer))
-  return base64
-}
+export async function encodeDataItem ({ processId, data, tags, anchor }) {
+  const obj = {}
 
-async function toMultipartBody (data, contentType) {
-  const boundary = `--${Math.random().toString(36).slice(2)}`
-  const blob = new Blob([
-    `--${boundary}\r\n`,
-    'content-disposition: form-data; name="data"\r\n',
-    /**
-     * Optionally include the content-type header
-     * in the body part
-     */
-    `${contentType ? `content-type: ${contentType.trim()}` : ''}\r\n`,
-    data,
-    `\r\n--${boundary}--\r\n`
-  ])
-
-  return { boundary, body: blob }
-}
-
-/**
- * @param {Blob} data
- */
-async function sha256 (data) {
-  const ab = await data.arrayBuffer()
-  const hashAb = await crypto.subtle.digest('SHA-256', ab)
-  return Buffer.from(hashAb)
-}
-
-async function itemToMultipart ({ processId, data, tags, anchor }) {
-  const headers = new Headers()
-  if (processId) headers.append('target', processId)
-  if (anchor) headers.append('anchor', anchor)
-  if (tags) tags.forEach(t => headers.append(t.name, t.value))
+  if (processId) obj.target = processId
+  if (anchor) obj.anchor = anchor
+  if (tags) tags.forEach(t => { obj[t.name] = t.value })
   /**
    * Always ensure the variant is mainnet for hyperbeam
    * TODO: change default variant to be this eventually
    */
-  headers.set('Variant', 'ao.N.1')
+  obj.variant = 'ao.N.1'
+  obj.data = data
 
-  /**
-   * We need to encode the data as a part in a multipart body,
-   * ensuring content-type is preserved and appending a
-   * Content-Digest header
-   */
-  let body
-  if (data) {
-    /**
-     * Make sure to include the Content-Type describing the data
-     * into the part
-     */
-    const contentType = headers.get('content-type')
-    const mp = await toMultipartBody(data, contentType)
-    body = mp.body
-    /**
-     * Use set to always ensure the Content-Type is native HB
-     * http encoding
-     */
-    headers.set('Content-Type', `multipart/form-data; boundary="${mp.boundary}"`)
-    const hash = await sha256(body)
-    headers.append('Content-Digest', `sha-256=:${base64Encode(hash)}:`)
-  }
-
-  return { headers, body }
+  const res = await encode(obj)
+  if (!res) return { headers: new Headers(), body: undefined }
+  return res
 }
 
 function toSignerArgs ({ url, method, headers }) {
@@ -97,7 +44,7 @@ function toSignerArgs ({ url, method, headers }) {
 }
 
 export function httpSigName (address) {
-  const decoded = base64urlDecode(address)
+  const decoded = base64url.toBuffer(address)
   const hexString = [...decoded.subarray(1, 9)]
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
@@ -114,7 +61,7 @@ export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
        * when the HTTP msg is what is actually signed
        */
       .chain(fromPromise(({ processId, data, tags }) =>
-        itemToMultipart({ processId, data, tags })
+        encodeDataItem({ processId, data, tags })
       ))
       .chain(fromPromise(({ headers, body }) => {
         return signer(toSignerArgs({
@@ -155,7 +102,7 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
        * when the HTTP msg is what is actually signed
        */
       .chain(fromPromise(({ processId, data, tags, anchor }) =>
-        itemToMultipart({ processId, data, tags, anchor })
+        encodeDataItem({ processId, data, tags, anchor })
       ))
       .chain(fromPromise(({ headers, body }) => {
         return signer(toSignerArgs({
@@ -192,7 +139,7 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   return (args) => {
     return of(args)
       .chain(fromPromise(async ({ id, processId }) => {
-        const { headers, body } = await itemToMultipart({ processId })
+        const { headers, body } = await encodeDataItem({ processId })
         headers.append('slot+integer', id)
         headers.append('accept', 'application/json')
         return signer(toSignerArgs({
