@@ -25,13 +25,13 @@ export function topUpWith ({ fetch, logger, wallet, address }) {
 
   return async ({ logId, relayUrl, amount, recipient }) => {
     let relayUrlObj = new URL(relayUrl)
-    const urlString = `${relayUrl}?amount=${amount}&recipient=${recipient}`
+    const urlString = `${relayUrl}?amount+integer=${amount}&recipient=${recipient}`
 
     const request = {
       url: new URL(urlString),
       method: 'POST',
       headers: {
-        'amount': `${amount}`,
+        'amount+integer': `${amount}`,
         'recipient': `${recipient}`,
         'path': relayUrlObj.pathname,
       }
