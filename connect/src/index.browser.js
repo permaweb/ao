@@ -9,24 +9,32 @@ const GRAPHQL_URL = globalThis.GRAPHQL_URL || undefined
 const GRAPHQL_MAX_RETRIES = globalThis.GRAPHQL_MAX_RETRIES || undefined
 const GRAPHQL_RETRY_BACKOFF = globalThis.GRAPHQL_RETRY_BACKOFF || undefined
 
-const HB_URL = globalThis.HB_URL || undefined
+const RELAY_URL = globalThis.RELAY_URL || undefined
+const AO_URL = globalThis.AO_URL = undefined
 
 const connect = connectWith({
   createDataItemSigner: WalletClient.createDataItemSigner,
   createHbSigner: WalletClient.createHbSigner
 })
 
+/**
+ * hardcoded to legacy, since wallet is not provided here
+ *
+ * TODO: probably remove these at the top level, and require using connect
+ * so as to set the mode and provide the wallet
+ */
 const { result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner } = connect({
+  MODE: 'legacy',
   GATEWAY_URL,
   MU_URL,
   CU_URL,
+  RELAY_URL,
+  AO_URL,
   GRAPHQL_URL,
   GRAPHQL_MAX_RETRIES,
-  GRAPHQL_RETRY_BACKOFF
+  GRAPHQL_RETRY_BACKOFF,
+  noLog: true
 })
-
-const originalHb = connect.hb
-connect.hb = ({ URL = HB_URL, ...rest }) => originalHb({ URL, ...rest })
 
 export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
 export { connect }

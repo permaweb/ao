@@ -11,7 +11,7 @@ import { tap } from 'ramda'
 
 import { connect } from './index.js'
 
-describe('index - node', () => {
+describe('hb playground', () => {
   /**
    * Generate a wallet in a temporary directory prior to running the tests
    */
@@ -30,9 +30,10 @@ describe('index - node', () => {
     test('should relay the message through HyperBEAM', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const { spawn, message, result, createDataItemSigner } = connect.hb({
+      const { spawn, message, result, createDataItemSigner } = connect({
+        MODE: 'mainnet',
         wallet,
-        URL: process.env.HB_URL || 'http://localhost:8734'
+        AO_URL: process.env.AO_URL || 'http://localhost:8734'
       })
 
       const p = await spawn({
