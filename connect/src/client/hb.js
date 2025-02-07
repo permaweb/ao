@@ -43,11 +43,9 @@ async function sha256 (data) {
 
 async function itemToMultipart ({ processId, data, tags, anchor }) {
   const headers = new Headers()
-  console.log('itemToMultipart', { processId, data, tags, anchor }, ". Headers:", headers)
-
   if (processId) headers.append('target', processId)
   if (anchor) headers.append('anchor', anchor)
-  tags?.forEach(t => headers.append(t.name, t.value))
+  if (tags) tags.forEach(t => headers.append(t.name, t.value))
   /**
    * Always ensure the variant is mainnet for hyperbeam
    * TODO: change default variant to be this eventually
@@ -133,7 +131,6 @@ export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .bichain(
           (err) => Rejected(err),
           fromPromise(async (res) => {
-            console.log('deploy process', res)
             if (res.ok) return res.headers.get('process')
             throw new Error(`${res.status}: ${await res.text()}`)
           })
@@ -175,7 +172,6 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .bichain(
           (err) => Rejected(err),
           fromPromise(async (res) => {
-            console.log('deploy message', res)
             if (res.ok) return res.headers.get('slot')
             throw new Error(`${res.status}: ${await res.text()}`)
           })
@@ -198,6 +194,7 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
       .chain(fromPromise(async ({ id, processId }) => {
         const { headers, body } = await itemToMultipart({ processId })
         headers.append('slot+integer', id)
+        headers.append('accept', 'application/json')
         return signer(toSignerArgs({
           url: `${HB_URL}/~compute-lite@1.0/compute&slot+integer=${id}&process-id=${processId}`,
           method: 'POST',
