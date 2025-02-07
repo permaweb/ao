@@ -394,8 +394,13 @@ export const createResultApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
     RELAY_MAP,
-    topUp: RelayClient.topUpWith({ fetch, logger: processMsgLogger, wallet: MU_WALLET, address: walletAddress }),
-    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
+    topUp: RelayClient.topUpWith({ 
+      fetch, 
+      logger: processMsgLogger, 
+      wallet: MU_WALLET, 
+      address: walletAddress, 
+      fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) 
+    }),
   })
 
   const processSpawnLogger = logger.child('processSpawn')

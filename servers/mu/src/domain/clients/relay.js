@@ -18,13 +18,13 @@ function httpSigName (address) {
   return `http-sig-${hexString}`;
 }
 
-export function topUpWith ({ fetch, logger, wallet, address, fetchTransactionDetails }) {
+export function topUpWith ({ fetch, logger, wallet, address, fetchTransactions }) {
   const privateKey = createPrivateKey({ key: wallet, format: 'jwk' })
   const s = createSigner(privateKey, 'rsa-pss-sha512', address)
   const params = ['alg', 'keyid'].sort()
 
   return async ({ logId, relayUrl, amount, recipientProcessId }) => {
-    let processInfo = await fetchTransactionDetails([recipientProcessId])
+    let processInfo = await fetchTransactions([recipientProcessId])
     let recipient = processInfo?.data?.transactions?.edges?.length >= 1 ? processInfo.data.transactions.edges[0].node.owner.address : null
     
     if(!recipient) {
