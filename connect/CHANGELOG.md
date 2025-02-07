@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.67](https://github.com/permaweb/ao/compare/connect@v0.0.66...connect@v0.0.67) (2025-02-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connect:** remove connect.hb. Add modes and corresponding *_URL args to connect()
+
+### Features
+
+* **connect:** remove connect.hb. Add modes and corresponding *_URL args to connect() ([226a20a](https://github.com/permaweb/ao/commit/226a20aa4da9b065ef2af9c8ebef36c4f70998fd))
+
 ## [0.0.66](https://github.com/permaweb/ao/compare/connect@v0.0.65...connect@v0.0.66) (2025-02-07)
 
 
