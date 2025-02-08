@@ -33,15 +33,16 @@ describe('hb playground', () => {
       const { spawn, message, result, createDataItemSigner } = connect({
         MODE: 'mainnet',
         wallet,
-        AO_URL: process.env.AO_URL || 'http://localhost:8734'
+        AO_URL: 'http://localhost:8734'
       })
 
       const p = await spawn({
         module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
-        scheduler: 'tqHKJRbJWk1vD1Petwza-LMpV8H2XLXagjhWy11A2Sc',
-        data: 'Foo = "bar"',
+        scheduler: 'yiSlNk8f4wTUz-q3TSpLxj-IycztUP1Abwxa3dOaX18',
+        data: 'Fizz = "buzz"',
         tags: [
-          { name: 'Foo', value: 'Bar' }
+          { name: 'Foo', value: 'Bar' },
+          { name: 'Wut', value: 1 }
         ],
         signer: createDataItemSigner()
       }).then(tap(console.log))
