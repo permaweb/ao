@@ -4,7 +4,7 @@ import assert from 'node:assert'
 
 import { createTestLogger } from '../domain/logger.js'
 import { findEvaluationSchema, findEvaluationsSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../domain/dal.js'
-import { findMessageBeforeWith, findEvaluationFromDbWith, findEvaluationsWith, saveEvaluationWith, findEvaluationWith } from './ao-evaluation.js'
+import { findMessageBeforeWith, findEvaluationsWith, saveEvaluationWith, findEvaluationWith } from './ao-evaluation.js'
 import { COLLATION_SEQUENCE_MAX_CHAR, EVALUATIONS_TABLE, MESSAGES_TABLE } from './db.js'
 
 const logger = createTestLogger({ name: 'ao-cu:readState' })

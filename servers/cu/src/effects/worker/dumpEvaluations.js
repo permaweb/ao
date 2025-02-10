@@ -1,5 +1,5 @@
 import path from 'path'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client } from '@aws-sdk/client-s3'
 
 export function dumpEvaluationsWith ({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, uploadFileToS3With, globSync, logger }) {
   return async (processId) => {

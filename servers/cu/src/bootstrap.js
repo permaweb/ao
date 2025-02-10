@@ -84,7 +84,6 @@ export const createApis = async (ctx) => {
   const BROADCAST = 'workers'
   const workerBroadcast = new BroadcastChannel(BROADCAST).unref()
   const broadcastCloseStream = (streamId) => workerBroadcast.postMessage({ type: 'close-stream', streamId })
-  const broadcastDumpEvaluations = () => workerBroadcast.postMessage({ type: 'dump-evaluations' })
 
   const onCreateWorker = (type) => () => {
     const workerId = randomBytes(8).toString('hex')

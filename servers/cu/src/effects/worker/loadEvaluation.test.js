@@ -98,6 +98,7 @@ describe('loadEvaluation', async () => {
         processId: 'test-process-id'
       })
       assert.deepStrictEqual(result, { foo: 'bar' })
+      assert.strictEqual(writeFileSyncCalled, true)
       assert.strictEqual(existsCalled, true)
     })
   })

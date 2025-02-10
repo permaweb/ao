@@ -1,5 +1,4 @@
 import path from 'path'
-import fs from 'fs'
 import { S3Client } from '@aws-sdk/client-s3'
 export function loadEvaluationWith ({ EVALUATION_RESULT_DIR, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, logger, existsSync, writeFileSync, loadEvaluationFromDir, loadEvaluationFromS3 }) {
   return async ({ messageId, processId }) => {
