@@ -65,6 +65,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     logger('Mode Activated 🔀')
 
     const signer = createHbSigner(wallet)
+    const staticWalletDataItemSigner = () => createDataItemSigner(wallet)
     const fetch = HbClient.relayerWith({
       /**
        * Always wrap default fetch with relayer,
@@ -132,7 +133,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       logger: messageLogger
     })
 
-    return { MODE, result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner }
+    return { MODE, result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner: staticWalletDataItemSigner }
   }
 
   function legacyMode ({
