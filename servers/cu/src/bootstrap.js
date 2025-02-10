@@ -584,7 +584,7 @@ export const createApis = async (ctx) => {
         ctx.logger('Error in loadEvaluation worker while dumping evaluations', e)
         throw new Error(`Error in loadEvaluation worker: ${e}`)
       })
-    )
+  )
   )
 
   return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck, dumpEvaluations }

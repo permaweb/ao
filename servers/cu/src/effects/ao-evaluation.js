@@ -173,7 +173,6 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
     const statements = []
 
     if (!DISABLE_PROCESS_EVALUATION_CACHE) {
-
       // If we have a directory and bucket, we need to save the evaluation to the directory, not sqlite
       if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
         statements.push({
@@ -198,7 +197,6 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
           ]
         })
       } else {
-
         statements.push({
           sql: `
               INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}

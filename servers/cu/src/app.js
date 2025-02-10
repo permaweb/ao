@@ -38,7 +38,6 @@ export const server = pipeP(
       logger('Currently Pending readState operations: %j', domain.apis.pendingReadStates())
     }, config.MEM_MONITOR_INTERVAL)
     memMonitor.unref()
-    
 
     if (config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL) {
       logger('Setting up Interval to Checkpoint all Processes every %s', ms(config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL))

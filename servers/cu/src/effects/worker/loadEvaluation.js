@@ -36,7 +36,7 @@ export function loadEvaluationFromDirWith ({ logger, readFileSync }) {
 
 export function loadEvaluationFromS3With ({ EVALUATION_RESULT_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, logger, getFileFromS3With }) {
   return async ({ fileName }) => {
-    const  s3Client = new S3Client({
+    const s3Client = new S3Client({
       region: AWS_REGION,
       credentials: {
         accessKeyId: AWS_ACCESS_KEY_ID,
@@ -54,4 +54,3 @@ export function loadEvaluationFromS3With ({ EVALUATION_RESULT_BUCKET, AWS_ACCESS
     return file
   }
 }
-
