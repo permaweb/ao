@@ -116,6 +116,9 @@ export function findEvaluationWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR,
         fromPromise(async (result) => {
           if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && !result.output) {
             const evaluationOutput = await findEvaluationFromDir({ processId, messageId })
+            if (evaluationOutput == 'AWS Credentials not set') {
+              return Rejected({ status: 404, message: 'Could not find evaluation: AWS Credentials not set' })
+            }
             return { ...result, output: evaluationOutput }
           }
           return result
@@ -257,7 +260,7 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
         if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
           return of({ messageId: evaluation.messageId, processId: evaluation.processId, output: evaluation.output })
             .chain((args) => {
-              return Resolved(saveEvaluationToDir(args)) // TODO: improve this
+              return Resolved(saveEvaluationToDir(args))
             })
         }
         return Resolved(id)
@@ -310,6 +313,9 @@ export function findEvaluationsWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR
           return await Promise.all(results.map(async (result) => {
             if (result.processId && result.messageId && !result.output) {
               const evaluationOutput = await findEvaluationFromDir({ processId: result.processId, messageId: result.messageId })
+              if (evaluationOutput == 'AWS Credentials not set') {
+                return Rejected({ status: 404, message: 'Could not find evaluation: AWS Credentials not set' })
+              }
               return { ...result, output: evaluationOutput }
             }
             return result

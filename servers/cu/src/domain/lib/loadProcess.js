@@ -2,7 +2,7 @@ import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { identity, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
 
-import { findLatestProcessMemorySchema, saveLatestProcessMemorySchema } from '../dal.js'
+import { findEvaluationSchema, findLatestProcessMemorySchema, saveLatestProcessMemorySchema } from '../dal.js'
 
 /**
  * The result that is produced from this step
@@ -62,7 +62,7 @@ const ctxSchema = z.object({
 }).passthrough()
 
 function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, saveLatestProcessMemory, logger }) {
-  findEvaluation = fromPromise((findEvaluation))
+  findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   findLatestProcessMemory = fromPromise(findLatestProcessMemorySchema.implement(findLatestProcessMemory))
   saveLatestProcessMemory = fromPromise(saveLatestProcessMemorySchema.implement(saveLatestProcessMemory))
 

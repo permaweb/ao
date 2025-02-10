@@ -31,7 +31,7 @@ const ctxSchema = z.object({
  * @returns {GatherCronMessages}
  */
 export function gatherResultsWith (env) {
-  const findEvaluations = fromPromise((env.findEvaluations))
+  const findEvaluations = fromPromise(findEvaluationsSchema.implement(env.findEvaluations))
 
   return (ctx) => {
     return of(ctx)

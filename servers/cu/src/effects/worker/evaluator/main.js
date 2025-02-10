@@ -30,7 +30,7 @@ export const createApis = async (ctx) => {
     }
   }
   const saveEvaluationWorkerPool = workerpool.pool(saveEvaluationWorker, {
-    maxWorkers: 2, // TODO: change?
+    maxWorkers: ctx.EVALUATION_RESULT_BUCKET && ctx.EVALUATION_RESULT_DIR ? 2 : 0,
     onCreateWorker: onCreateSaveEvaluationWorker()
   })
   const saveEvaluationWorkQueue = new PQueue({ concurrency: 2 })

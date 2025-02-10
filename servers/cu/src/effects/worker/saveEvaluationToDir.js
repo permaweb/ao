@@ -1,20 +1,20 @@
 import path from 'path'
-import fs from 'fs'
 import { omit } from 'ramda'
-export function saveEvaluationToDirWith ({ EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+export function saveEvaluationToDirWith ({ EVALUATION_RESULT_DIR, existsSync, writeFileSync, logger }) {
   return async ({ messageId, processId, output }) => {
-    if (!EVALUATION_RESULT_DIR || !EVALUATION_RESULT_BUCKET) {
-      return 'not set'
-    }
     const dir = path.join(EVALUATION_RESULT_DIR, `${processId}-${messageId}.json`)
     const outputWithoutMemory = omit(['Memory'], output)
 
-    if (!fs.existsSync(dir)) {
+    logger('Saving evaluation of message %s to process %s to directory: %s', messageId, processId, dir)
+    if (!existsSync(dir)) {
       try {
-        fs.writeFileSync(dir, JSON.stringify(outputWithoutMemory))
+        writeFileSync(dir, JSON.stringify(outputWithoutMemory))
       } catch (e) {
         throw new Error(`Error writing file ${dir}: ${e}`)
       }
+      logger('Successfully saved evaluation of message %s to process %s to directory: %s', messageId, processId, dir)
+    } else {
+      logger('Evaluation of message %s to process %s already exists in directory: %s', messageId, processId, dir)
     }
     return output
   }

@@ -19,6 +19,7 @@ const logger = createLogger({ ...workerData, name: `ao-cu:${hostname()}:worker-$
 const apis = await createApis({
   ...workerData,
   fetch,
+  globSync: fs.globSync,
   logger
 })
 

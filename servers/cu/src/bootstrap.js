@@ -171,8 +171,8 @@ export const createApis = async (ctx) => {
 
   const loadEvaluationWorker = join(__dirname, 'effects', 'worker', 'loadEvaluation', 'index.js')
   const loadEvaluationWorkerPool = workerpool.pool(loadEvaluationWorker, {
-    minWorkers: 1,
-    maxWorkers: 2, // TODO: change?
+    minWorkers: (ctx.EVALUATION_RESULT_BUCKET && ctx.EVALUATION_RESULT_DIR) ? 1 : 0,
+    maxWorkers: (ctx.EVALUATION_RESULT_BUCKET && ctx.EVALUATION_RESULT_DIR) ? 2 : 0,
     onCreateWorker: onCreateWorker('loadEvaluation')
   })
   const loadEvaluationWorkQueue = new PQueue({ concurrency: 2 })
