@@ -17,7 +17,7 @@ const evaluationDocSchema = z.object({
   blockHeight: evaluationSchema.shape.blockHeight,
   cron: evaluationSchema.shape.cron,
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output.omit({ Memory: true })
+  output: evaluationSchema.shape.output.omit({ Memory: true }).nullish() // This can now be nullish as the DB may not have the output
 })
 
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
@@ -117,7 +117,7 @@ export function findEvaluationWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR,
           if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && !result.output) {
             const evaluationOutput = await findEvaluationFromDir({ processId, messageId })
             if (evaluationOutput == 'AWS Credentials not set') {
-              return Rejected({ status: 404, message: 'Could not find evaluation: AWS Credentials not set' })
+              return Rejected({ status: 404, message: 'Could not find evaluation: AWS Credentials not set' }).toPromise()
             }
             return { ...result, output: evaluationOutput }
           }
