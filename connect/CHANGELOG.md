@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.68](https://github.com/permaweb/ao/compare/connect@v0.0.67...connect@v0.0.68) (2025-02-10)
+
+
+### Bug Fixes
+
+* **connect:** use staticDataItemSigner in relay mode ([d639682](https://github.com/permaweb/ao/commit/d639682f321d8fbcbabfc0430337e595e707a6b7))
+
 ## [0.0.67](https://github.com/permaweb/ao/compare/connect@v0.0.66...connect@v0.0.67) (2025-02-07)
 
 
