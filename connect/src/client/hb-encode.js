@@ -27,6 +27,19 @@ async function sha256 (data) {
   return crypto.subtle.digest('SHA-256', data)
 }
 
+function partition (pred, arr) {
+  return arr.reduce((acc, cur) => {
+    acc[pred(cur) ? 0 : 1].push(cur)
+    return acc
+  },
+  [[], []])
+}
+
+function isBytes (value) {
+  return value instanceof ArrayBuffer ||
+    ArrayBuffer.isView(value)
+}
+
 function hbEncodeValue (key, value) {
   const typeK = `converge-type-${key}`
 
@@ -58,22 +71,33 @@ function hbEncode (obj, parent = '') {
 
     // skip nullish values
     if (value == null) return acc
+
+    // binary data
+    if (isBytes(value)) {
+      if (value.byteLength === 0) {
+        return Object.assign(acc, hbEncodeValue(flatK, ''))
+      }
+      return Object.assign(acc, { [flatK]: value })
+    }
+
     // first/{idx}/name flatten array
     if (Array.isArray(value)) {
       if (value.length === 0) {
-        Object.assign(acc, hbEncodeValue(flatK, value))
+        return Object.assign(acc, hbEncodeValue(flatK, value))
       }
       value.forEach((v, i) =>
         Object.assign(acc, hbEncode(v, `${flatK}/${i}`))
       )
-      // first/second flatten object
-    } else if (typeof value === 'object' && value !== null) {
-      Object.assign(acc, hbEncode(value, flatK))
-      // leaf encode value
-    } else {
-      Object.assign(acc, hbEncodeValue(flatK, value))
+      return acc
     }
 
+    // first/second flatten object
+    if (typeof value === 'object' && value !== null) {
+      return Object.assign(acc, hbEncode(value, flatK))
+    }
+
+    // leaf encode value
+    Object.assign(acc, hbEncodeValue(flatK, value))
     return acc
   }, {})
 }
@@ -96,46 +120,66 @@ async function boundaryFrom (bodyParts = []) {
 export async function encode (obj = {}) {
   if (Object.keys(obj) === 0) return
 
+  const flattened = hbEncode(obj)
   /**
-   * TODO: all of these must be prefixed with body
-   * in order for the content digest to match
+   * Some values may be encoded into headers,
+   * while others may be encoded into the body
    */
-  const flattened = hbEncode(obj, 'body')
-  const bodyParts = await Promise.all(
-    Object
-      .keys(flattened)
+  const [bodyKeys, headerKeys] = partition(
+    (key) => {
+      if (key.includes('/')) return true
+      const bytes = Buffer.from(flattened[key])
       /**
-       * consistent ordering
+       * Anything larger than 4k goes into
+       * the body
        */
-      .sort()
-      .map((name) => new Blob([
+      return bytes.byteLength > 4096
+    },
+    Object.keys(flattened).sort()
+  )
+
+  const h = new Headers()
+  headerKeys.forEach((key) => h.append(key, flattened[key]))
+  /**
+   * Add headers that indicates and orders body-keys
+   * for the purpose of determinstically reconstructing
+   * content-digest on the server
+   */
+  // const bk = hbEncodeValue('body-keys', bodyKeys)
+  // Object.keys(bk).forEach((key) => h.append(key, bk[key]))
+
+  let body
+  if (bodyKeys.length) {
+    const bodyParts = await Promise.all(
+      bodyKeys.map((name) => new Blob([
         `content-disposition: form-data;name="${name}"\r\n\r\n`,
         flattened[name]
       ]).arrayBuffer())
-  )
+    )
 
-  const boundary = await boundaryFrom(bodyParts)
+    const boundary = await boundaryFrom(bodyParts)
 
-  /**
-   * Segment each part with the multipart boundary
-   */
-  const blobParts = bodyParts
-    .flatMap((p) => [`--${boundary}\r\n`, p, '\r\n'])
+    /**
+     * Segment each part with the multipart boundary
+     */
+    const blobParts = bodyParts
+      .flatMap((p) => [`--${boundary}\r\n`, p, '\r\n'])
 
-  /**
-   * Add the terminating boundary
-   */
-  blobParts.push(`--${boundary}--`)
+    /**
+     * Add the terminating boundary
+     */
+    blobParts.push(`--${boundary}--`)
 
-  const body = new Blob(blobParts)
-  /**
-   * calculate the content-digest
-   */
-  const contentDigest = await sha256(await body.arrayBuffer())
-  const base64 = base64url.toBase64(base64url.encode(contentDigest))
+    body = new Blob(blobParts)
+    /**
+     * calculate the content-digest
+     */
+    const contentDigest = await sha256(await body.arrayBuffer())
+    const base64 = base64url.toBase64(base64url.encode(contentDigest))
 
-  const headers = new Headers()
-  headers.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
-  headers.append('Content-Digest', `sha-256=:${base64}:`)
-  return { headers, body }
+    h.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
+    h.append('Content-Digest', `sha-256=:${base64}:`)
+  }
+
+  return { headers: h, body }
 }
