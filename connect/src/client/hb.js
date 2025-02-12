@@ -1,84 +1,32 @@
-import { Buffer } from 'buffer/index.js'
 import { Rejected, fromPromise, of } from 'hyper-async'
+import base64url from 'base64url'
 
-function base64urlDecode (encoded) {
-  const binary = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
-  const bytes = new Uint8Array([...binary].map(char => char.charCodeAt(0)))
-  return bytes
-}
+import { joinUrl } from '../lib/utils.js'
+import { encode } from './hb-encode.js'
 
 /**
- * NOTE: this is base64 NOT base64url
+ * Map data item members to corresponding HB HTTP message
+ * shape
  */
-function base64Encode (buffer) {
-  const base64 = btoa(String.fromCharCode(...buffer))
-  return base64
-}
+export async function encodeDataItem ({ processId, data, tags, anchor }) {
+  const obj = {}
 
-async function toMultipartBody (data, contentType) {
-  const boundary = `--${Math.random().toString(36).slice(2)}`
-  const blob = new Blob([
-    `--${boundary}\r\n`,
-    'content-disposition: form-data; name="data"\r\n',
-    /**
-     * Optionally include the content-type header
-     * in the body part
-     */
-    `${contentType ? `content-type: ${contentType.trim()}` : ''}\r\n`,
-    data,
-    `\r\n--${boundary}--\r\n`
-  ])
-
-  return { boundary, body: blob }
-}
-
-/**
- * @param {Blob} data
- */
-async function sha256 (data) {
-  const ab = await data.arrayBuffer()
-  const hashAb = await crypto.subtle.digest('SHA-256', ab)
-  return Buffer.from(hashAb)
-}
-
-async function itemToMultipart ({ processId, data, tags, anchor }) {
-  const headers = new Headers()
-  if (processId) headers.append('target', processId)
-  if (anchor) headers.append('anchor', anchor)
-  if (tags) tags.forEach(t => headers.append(t.name, t.value))
+  if (processId) obj.target = processId
+  if (anchor) obj.anchor = anchor
+  if (tags) tags.forEach(t => { obj[t.name] = t.value })
   /**
    * Always ensure the variant is mainnet for hyperbeam
    * TODO: change default variant to be this eventually
    */
-  headers.set('Variant', 'ao.N.1')
+  obj.variant = 'ao.N.1'
+  obj.data = data
 
-  /**
-   * We need to encode the data as a part in a multipart body,
-   * ensuring content-type is preserved and appending a
-   * Content-Digest header
-   */
-  let body
-  if (data) {
-    /**
-     * Make sure to include the Content-Type describing the data
-     * into the part
-     */
-    const contentType = headers.get('content-type')
-    const mp = await toMultipartBody(data, contentType)
-    body = mp.body
-    /**
-     * Use set to always ensure the Content-Type is native HB
-     * http encoding
-     */
-    headers.set('Content-Type', `multipart/form-data; boundary="${mp.boundary}"`)
-    const hash = await sha256(body)
-    headers.append('Content-Digest', `sha-256=:${base64Encode(hash)}:`)
-  }
-
-  return { headers, body }
+  const res = await encode(obj)
+  if (!res) return { headers: new Headers(), body: undefined }
+  return res
 }
 
-function toSignerArgs ({ url, method, headers }) {
+function toSignerArgs ({ url, method, headers, includePath = false }) {
   headers = new Headers(headers)
   return {
     /**
@@ -89,19 +37,51 @@ function toSignerArgs ({ url, method, headers }) {
      * TODO: removing path from signing, for now.
      */
     fields: [
-      ...headers.keys()
-      // '@path'
+      ...headers.keys(),
+      ...(includePath ? ['@path'] : [])
     ].sort(),
     request: { url, method, headers: { ...Object.fromEntries(headers) } }
   }
 }
 
 export function httpSigName (address) {
-  const decoded = base64urlDecode(address)
+  const decoded = base64url.toBuffer(address)
   const hexString = [...decoded.subarray(1, 9)]
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
   return `http-sig-${hexString}`
+}
+
+export function callWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('send')
+
+  return (fields) => {
+    const { path, method = 'GET', ...restFields } = fields
+
+    return of({ path, method, fields: restFields })
+      .chain(fromPromise(({ path, method, fields }) =>
+        encode(fields).then(({ headers, body }) => ({
+          path,
+          method,
+          headers,
+          body
+        }))
+      ))
+      .chain(fromPromise(async ({ path, method, headers, body }) =>
+        signer(toSignerArgs({
+          url: joinUrl({ url: HB_URL, path }),
+          method,
+          headers,
+          includePath: true
+        })).then((req) => ({ ...req, body }))
+      ))
+      .map(logger.tap('Sending HTTP signed message to HB: %o'))
+      .chain((request) => of(request)
+        .chain(fromPromise(({ url, method, headers, body }) =>
+          fetch(url, { method, headers, body, redirect: 'follow' })
+        ))
+      ).toPromise()
+  }
 }
 
 export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
@@ -114,11 +94,11 @@ export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
        * when the HTTP msg is what is actually signed
        */
       .chain(fromPromise(({ processId, data, tags }) =>
-        itemToMultipart({ processId, data, tags })
+        encodeDataItem({ processId, data, tags })
       ))
       .chain(fromPromise(({ headers, body }) => {
         return signer(toSignerArgs({
-          url: `${HB_URL}/~scheduler@1.0/schedule`,
+          url: `${HB_URL}/schedule`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -155,11 +135,11 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
        * when the HTTP msg is what is actually signed
        */
       .chain(fromPromise(({ processId, data, tags, anchor }) =>
-        itemToMultipart({ processId, data, tags, anchor })
+        encodeDataItem({ processId, data, tags, anchor })
       ))
       .chain(fromPromise(({ headers, body }) => {
         return signer(toSignerArgs({
-          url: `${HB_URL}/~scheduler@1.0/schedule`,
+          url: `${HB_URL}/${args.processId}/schedule`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -172,8 +152,27 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .bichain(
           (err) => Rejected(err),
           fromPromise(async (res) => {
-            if (res.ok) return res.headers.get('slot')
+            if (res.ok) {
+              return {
+                slot: res.headers.get('slot'),
+                processId: args.processId
+              }
+            }
             throw new Error(`${res.status}: ${await res.text()}`)
+          })
+        )
+        .map(logger.tap('Received slot from HB MU: %o'))
+        .bichain(
+          (err) => Rejected(err),
+          fromPromise(async ({ slot, processId }) => {
+            const { headers, body } = await encodeDataItem({ processId })
+            return signer(toSignerArgs({
+              url: `${HB_URL}/${processId}/push&slot+integer=${slot}`,
+              method: 'POST',
+              headers
+            })).then((req) => ({ ...req, body }))
+              .then(req => fetch(req.url, { method: req.method, headers: req.headers, body: req.body, redirect: 'follow' }))
+              .then(() => slot)
           })
         )
         .bimap(
@@ -192,11 +191,11 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   return (args) => {
     return of(args)
       .chain(fromPromise(async ({ id, processId }) => {
-        const { headers, body } = await itemToMultipart({ processId })
+        const { headers, body } = await encodeDataItem({ processId })
         headers.append('slot+integer', id)
         headers.append('accept', 'application/json')
         return signer(toSignerArgs({
-          url: `${HB_URL}/~compute-lite@1.0/compute&slot+integer=${id}&process-id=${processId}`,
+          url: `${HB_URL}/${processId}/compute&slot+integer=${id}/results/json`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -214,8 +213,8 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
           })
         )
         .bimap(
-          logger.tap('Error encountered when writing message via HB CU'),
-          logger.tap('Successfully wrote message via HB CU')
+          logger.tap('Error encountered when loading result via HB CU'),
+          logger.tap('Successfully loading result via HB CU')
         )
       )
       .toPromise()

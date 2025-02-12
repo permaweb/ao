@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
-const tagSchema = z.object({
+export const tagSchema = z.object({
   name: z.string(),
-  value: z.string()
+  value: z.any()
 })
 
 // CU

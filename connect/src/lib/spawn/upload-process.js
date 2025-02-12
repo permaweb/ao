@@ -3,17 +3,14 @@ import { z } from 'zod'
 import { __, always, assoc, curry, defaultTo, ifElse, pipe, prop } from 'ramda'
 import { proto } from '@permaweb/protocol-tag-utils'
 
-import { deployProcessSchema, signerSchema } from '../../dal.js'
+import { deployProcessSchema, signerSchema, tagSchema } from '../../dal.js'
 
 const aoProto = proto('ao')
 const removeAoProtoByName = curry(aoProto.removeAllByName)
 const concatAoProto = curry(aoProto.concat)
 const concatUnassoc = curry(aoProto.concatUnassoc)
 
-const tagSchema = z.array(z.object({
-  name: z.string(),
-  value: z.string()
-}))
+const tagsSchema = z.array(tagSchema)
 
 /**
  * @typedef Tag
@@ -45,7 +42,7 @@ function buildTagsWith () {
         { name: 'Module', value: ctx.module },
         { name: 'Scheduler', value: ctx.scheduler }
       ]))
-      .map(tagSchema.parse)
+      .map(tagsSchema.parse)
       .map(assoc('tags', __, ctx))
   }
 }
