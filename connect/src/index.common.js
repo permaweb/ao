@@ -359,19 +359,45 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
    * // These are functionally equivalent
    * connect() == { spawn, message, result, results, monitor }
    *
-   * @typedef ConnectArgs
-   * @property {'legacy' | 'relay' | 'mainnet'} [MODE] - the mode that connect apis will be run in.
+   * @typedef {'legacy' | 'relay' | 'mainnet'} ConnectMode
+   *
+   * @typedef ConnectArgsShared
    * @property {string} [GATEWAY_URL] - the url of the desried Gateway.
    * @property {string} [GRAPHQL_URL] - the url of the desired Arweave Gateway GraphQL Server
    * @property {number} [GRAPHQL_MAX_RETRIES] - the number of times to retry querying the gateway, utilizing an exponential backoff
    * @property {number} [GRAPHQL_RETRY_BACKOFF] - the initial backoff, in milliseconds (moot if GRAPHQL_MAX_RETRIES is set to 0)
+   *
+   * @typedef ConnectArgsRelay
+   * @property {string} [RELAY_URL] - the url of the desried relay Unit. Only applicable in 'relay' mode
+   * @property {any} [wallet] - the wallet used to sign HTTP Messages.
    * @property {string} [MU_URL] - the url of the desried ao Messenger Unit. Also used as the relay MU in 'relay' mode
    * @property {string} [CU_URL] - the url of the desried ao Compute Unit. Also used as the relay CU in 'relay' mode
-   * @property {string} [AO_URL] - the url of the desried ao Unit. Only applicable in 'mainnet' mode
-   * @property {string} [RELAY_URL] - the url of the desried relay Unit. Only applicable in 'relay' mode
-   * @property {any} [wallet] - the wallet used to sign HTTP Messages. Only applicable in 'relay' or 'mainnet' mode
    *
-   * @param {ConnectArgs} [args]
+   * @typedef ConnectArgsMainnet
+   * @property {any} [wallet] - the wallet used to sign HTTP Messages.
+   * @property {string} [AO_URL] - the url of the desried ao Unit. Only applicable in 'mainnet' mode
+   *
+   * @typedef ConnectArgsLegacy
+   * @property {string} [MU_URL] - the url of the desried ao Messenger Unit. Also used as the relay MU in 'relay' mode
+   * @property {string} [CU_URL] - the url of the desried ao Compute Unit. Also used as the relay CU in 'relay' mode
+   *
+   * @typedef ConnectArgs
+   * @property {ConnectMode} [MODE] - the mode that connect apis will be run in.
+   *
+   * @overload
+   * @param {{ MODE: 'legacy'} & ConnectArgsShared & ConnectArgsLegacy } args
+   * @returns {ReturnType<typeof legacyMode>}
+   *
+   * @overload
+   * @param {{ MODE: 'relay'} & ConnectArgsShared & ConnectArgsRelay } args
+   * @returns {ReturnType<typeof relayMode>}
+   *
+   * @overload
+   * @param {{ MODE: 'mainnet'} & ConnectArgsShared & ConnectArgsMainnet } args
+   * @returns {ReturnType<typeof mainnetMode>}
+   *
+   * @param {ConnectArgs} args
+   * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof relayMode> | ReturnType<typeof mainnetMode>}
    */
   function connect (args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
