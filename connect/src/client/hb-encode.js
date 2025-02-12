@@ -40,66 +40,88 @@ function isBytes (value) {
     ArrayBuffer.isView(value)
 }
 
-function hbEncodeValue (key, value) {
-  const typeK = `converge-type-${key}`
+function isPojo (value) {
+  return !isBytes(value) &&
+    typeof value === 'object' &&
+    value !== null
+}
+
+function hbEncodeValue (value) {
+  if (isBytes(value)) {
+    if (value.byteLength === 0) return hbEncodeValue('')
+    return [undefined, value]
+  }
 
   if (typeof value === 'string') {
-    if (value.length === 0) return { [typeK]: 'empty-binary' }
-    return { [key]: value }
+    if (value.length === 0) return [undefined, 'empty-binary']
+    return [undefined, value]
   }
 
   if (Array.isArray(value) && value.length === 0) {
-    return { [typeK]: 'empty-list' }
+    return ['empty-list', undefined]
   }
 
   if (typeof value === 'number') {
-    if (!Number.isInteger(value)) return { [typeK]: 'float', [key]: `${value}` }
-    return { [typeK]: 'integer', [key]: `${value}` }
+    if (!Number.isInteger(value)) return ['float', `${value}`]
+    return ['integer', `${value}`]
   }
 
   if (typeof value === 'symbol') {
-    return { [typeK]: 'atom', [key]: value.description }
+    return ['atom', value.description]
   }
 
   throw new Error(`Cannot encode value: ${value.toString()}`)
 }
 
+function store (fullK, curK, dest, [type, value]) {
+  const [encoded, types] = dest
+  if (type) types[curK] = type
+  if (value) encoded[fullK] = value
+  return dest
+}
+
 function hbEncode (obj, parent = '') {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const flatK = (parent ? `${parent}/${key}` : key)
-      .toLowerCase()
+  const [flattened, types] = Object.entries(obj)
+    .reduce((acc, [key, value]) => {
+      const flatK = (parent ? `${parent}/${key}` : key)
+        .toLowerCase()
 
-    // skip nullish values
-    if (value == null) return acc
+      // skip nullish values
+      if (value == null) return acc
 
-    // binary data
-    if (isBytes(value)) {
-      if (value.byteLength === 0) {
-        return Object.assign(acc, hbEncodeValue(flatK, ''))
+      // first/{idx}/name flatten array
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return store(flatK, key, acc, hbEncodeValue(value))
+        }
+        value.forEach((v, i) =>
+          Object.assign(acc[0], hbEncode(v, `${flatK}/${i}`))
+        )
+        return acc
       }
-      return Object.assign(acc, { [flatK]: value })
-    }
 
-    // first/{idx}/name flatten array
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return Object.assign(acc, hbEncodeValue(flatK, value))
+      // first/second flatten object
+      if (isPojo(value)) {
+        Object.assign(acc[0], hbEncode(value, flatK))
+        return acc
       }
-      value.forEach((v, i) =>
-        Object.assign(acc, hbEncode(v, `${flatK}/${i}`))
-      )
-      return acc
-    }
 
-    // first/second flatten object
-    if (typeof value === 'object' && value !== null) {
-      return Object.assign(acc, hbEncode(value, flatK))
-    }
+      // leaf encode value
+      return store(flatK, key, acc, hbEncodeValue(value))
+    }, [{}, {}])
 
-    // leaf encode value
-    Object.assign(acc, hbEncodeValue(flatK, value))
-    return acc
-  }, {})
+  /**
+   * Add the ao-types key for the specific layer,
+   * as a structured dictionary
+   */
+  if (Object.keys(types).length) {
+    const typesKey = (parent ? `${parent}/ao-types` : 'ao-types')
+    flattened[typesKey] = Object.entries(types)
+      .map(([key, value]) => `${key.toLowerCase()}=${value}`)
+      .join(',')
+  }
+
+  return flattened
 }
 
 async function boundaryFrom (bodyParts = []) {
