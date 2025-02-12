@@ -65,7 +65,7 @@ export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
       ))
       .chain(fromPromise(({ headers, body }) => {
         return signer(toSignerArgs({
-          url: `${HB_URL}/~scheduler@1.0/schedule`,
+          url: `${HB_URL}/schedule`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -106,7 +106,7 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
       ))
       .chain(fromPromise(({ headers, body }) => {
         return signer(toSignerArgs({
-          url: `${HB_URL}/~scheduler@1.0/schedule`,
+          url: `${HB_URL}/${args.processId}/schedule`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -115,12 +115,29 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
       .chain((request) => of(request)
         .chain(fromPromise(({ url, method, headers, body }) =>
           fetch(url, { method, headers, body, redirect: 'follow' })
+             .then(res => ({
+              url: url,
+              slot: res.headers.get('slot'),
+              processId: args.processId
+             }))
         ))
         .bichain(
           (err) => Rejected(err),
-          fromPromise(async (res) => {
-            if (res.ok) return res.headers.get('slot')
-            throw new Error(`${res.status}: ${await res.text()}`)
+          x => of(x)
+      
+        )
+        .map(logger.tap('Received slot from HB MU: %o'))
+        .bichain(
+          (err) => Rejected(err),
+          fromPromise(async ({ slot, processId }) => {
+            const { headers, body } = await encodeDataItem({ processId })
+            return signer(toSignerArgs({
+              url: `${HB_URL}/${processId}/push&slot+integer=${slot}`,
+              method: 'POST',
+              headers
+            })).then((req) => ({ ...req, body }))
+               .then(req => fetch(req.url, { method: req.method, headers: req.headers, body: req.body, redirect: 'follow' } ))
+               .then(res => slot)
           })
         )
         .bimap(
@@ -143,7 +160,7 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
         headers.append('slot+integer', id)
         headers.append('accept', 'application/json')
         return signer(toSignerArgs({
-          url: `${HB_URL}/~compute-lite@1.0/compute&slot+integer=${id}&process-id=${processId}`,
+          url: `${HB_URL}/${processId}/compute&slot+integer=${id}/results/json`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))

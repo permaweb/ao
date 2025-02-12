@@ -33,16 +33,23 @@ describe('hb playground', () => {
       const { spawn, message, result, createDataItemSigner } = connect({
         MODE: 'mainnet',
         wallet,
-        AO_URL: 'http://localhost:8734'
+        AO_URL: process.env.HB_URL || 'http://localhost:8734'
       })
 
+      let address = await fetch(process.env.HB_URL + '/~meta@1.0/info/address').then((res) => res.text())
+
       const p = await spawn({
+        scheduler: address,
         module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
-        scheduler: 'yiSlNk8f4wTUz-q3TSpLxj-IycztUP1Abwxa3dOaX18',
-        data: 'Fizz = "buzz"',
+        data: 'print("Process initialized.")',
         tags: [
-          { name: 'Foo', value: 'Bar' },
-          { name: 'Wut', value: 1 }
+          { name: 'device', value: 'process@1.0' },
+          { name: 'scheduler-device', value: 'scheduler@1.0' },
+          { name: 'execution-device', value: 'compute-lite@1.0' },
+          { name: 'authority', value: address },
+          { name: 'scheduler-location', value: address },
+          { name: 'scheduler', value: address },
+          { name: 'random-seed', value: randomBytes(16).toString('hex') }
         ],
         signer: createDataItemSigner()
       }).then(tap(console.log))
@@ -55,7 +62,7 @@ describe('hb playground', () => {
           { name: 'Variant', value: 'ao.TN.1' },
           { name: 'Type', value: 'Message' }
         ],
-        data: "hello('bg')",
+        data: "Send({ Target = ao.id, Data = 'gday mate' })",
         signer: createDataItemSigner()
       }).then(tap(console.log))
 
