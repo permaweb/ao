@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.69](https://github.com/permaweb/ao/compare/connect@v0.0.68...connect@v0.0.69) (2025-02-12)
+
+
+### Features
+
+* **connect:** encode fields into headers if valid and within max header value size ([6abeb10](https://github.com/permaweb/ao/commit/6abeb10274673689fb03b7099f0973953f785666))
+* **connect:** implement send on relay and mainnet mode ([b47c0bf](https://github.com/permaweb/ao/commit/b47c0bf959cb871c59ce5b6e35a43ef1cb9a257c))
+* **connect:** M2 compability with HyperBEAM ([d296139](https://github.com/permaweb/ao/commit/d296139a5daa9f4826a1434b1fcd0ada0035e969))
+* **connect:** overload connect args and returns based on MODE ([499676e](https://github.com/permaweb/ao/commit/499676eb00f87b7513e770f0627ee8619bcf069f))
+* **connect:** send multipart http message with deterministic boundary to HB ([c81208e](https://github.com/permaweb/ao/commit/c81208ea86db1e3bfc7f08c3ef6c918bb50695ee))
+
 ## [0.0.68](https://github.com/permaweb/ao/compare/connect@v0.0.67...connect@v0.0.68) (2025-02-10)
 
 
