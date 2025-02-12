@@ -27,21 +27,24 @@ async function sha256 (data) {
   return crypto.subtle.digest('SHA-256', data)
 }
 
-function partition (pred, arr) {
-  return arr.reduce((acc, cur) => {
-    acc[pred(cur) ? 0 : 1].push(cur)
-    return acc
-  },
-  [[], []])
-}
-
 function isBytes (value) {
   return value instanceof ArrayBuffer ||
     ArrayBuffer.isView(value)
 }
 
+function isPojo (value) {
+  return !isBytes(value) &&
+    typeof value === 'object' &&
+    value !== null
+}
+
 function hbEncodeValue (key, value) {
   const typeK = `converge-type-${key}`
+
+  if (isBytes(value)) {
+    if (value.byteLength === 0) return hbEncodeValue(key, '')
+    return { [key]: value }
+  }
 
   if (typeof value === 'string') {
     if (value.length === 0) return { [typeK]: 'empty-binary' }
@@ -64,42 +67,26 @@ function hbEncodeValue (key, value) {
   throw new Error(`Cannot encode value: ${value.toString()}`)
 }
 
-function hbEncode (obj, parent = '') {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const flatK = (parent ? `${parent}/${key}` : key)
-      .toLowerCase()
+function hbEncodeLift (obj, prefix = '', result = {}) {
+  const cur = {}
+  for (const [key, value] of Object.entries(obj)) {
+    const flatK = prefix ? `${prefix}/${key}` : key
 
-    // skip nullish values
-    if (value == null) return acc
-
-    // binary data
-    if (isBytes(value)) {
-      if (value.byteLength === 0) {
-        return Object.assign(acc, hbEncodeValue(flatK, ''))
-      }
-      return Object.assign(acc, { [flatK]: value })
+    if (isPojo(value)) {
+      result[flatK] = value
+      hbEncodeLift(value, flatK, result)
+      continue
     }
 
-    // first/{idx}/name flatten array
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return Object.assign(acc, hbEncodeValue(flatK, value))
-      }
-      value.forEach((v, i) =>
-        Object.assign(acc, hbEncode(v, `${flatK}/${i}`))
-      )
-      return acc
-    }
+    Object.assign(cur, hbEncodeValue(key, value))
+  }
 
-    // first/second flatten object
-    if (typeof value === 'object' && value !== null) {
-      return Object.assign(acc, hbEncode(value, flatK))
-    }
+  if (Object.keys(cur).length === 0) return result
 
-    // leaf encode value
-    Object.assign(acc, hbEncodeValue(flatK, value))
-    return acc
-  }, {})
+  if (prefix) result[prefix] = cur
+  // Merge non-pojo values at top level
+  else Object.assign(result, cur)
+  return result
 }
 
 async function boundaryFrom (bodyParts = []) {
@@ -112,6 +99,22 @@ async function boundaryFrom (bodyParts = []) {
   return base64url.encode(Buffer.from(hash))
 }
 
+function encodePart (name, { headers, body }) {
+  headers.append('content-disposition', `form-data;name="${name}"`)
+  const parts = Object
+    .entries(headers)
+    .reduce((acc, [name, value]) => {
+      acc.push(`${name}: `, value, '\r\n')
+      return acc
+    }, [])
+
+  // CRLF if always required, even with empty body
+  parts.push('\r\n')
+  if (body) parts.push(body)
+
+  return new Blob(parts)
+}
+
 /**
  * Encode the object as HyperBEAM HTTP multipart
  * message. Nested objects are flattened to a single
@@ -120,41 +123,61 @@ async function boundaryFrom (bodyParts = []) {
 export async function encode (obj = {}) {
   if (Object.keys(obj) === 0) return
 
-  const flattened = hbEncode(obj)
+  const flattened = hbEncodeLift(obj)
+
   /**
    * Some values may be encoded into headers,
    * while others may be encoded into the body
    */
-  const [bodyKeys, headerKeys] = partition(
-    (key) => {
-      if (key.includes('/')) return true
-      const bytes = Buffer.from(flattened[key])
+  const bodyKeys = []
+  const headerKeys = []
+  await Promise.all(
+    Object.keys(flattened).map(async (key) => {
+      const value = flattened[key]
+
+      // if (key === 'data') {
+      //   bodyKeys.push(key)
+      //   flattened[key] = new Blob([
+      //     `content-disposition: form-data;name="${key}"\r\n\r\n`,
+      //     value
+      //   ])
+      //   return
+      // }
       /**
-       * Anything larger than 4k goes into
-       * the body
+       * Sub maps are always encoded as subparts
+       * in the body
        */
-      return bytes.byteLength > 4096
-    },
-    Object.keys(flattened).sort()
+      if (isPojo(value)) {
+        // Empty object or nil
+        const subPart = await encode(value)
+        if (!subPart) return
+
+        bodyKeys.push(key)
+        flattened[key] = encodePart(key, subPart)
+        return
+      }
+
+      if (key.includes('/') || Buffer.from(value).byteLength > 4096) {
+        bodyKeys.push(key)
+        flattened[key] = new Blob([
+          `content-disposition: form-data;name="${key}"\r\n\r\n`,
+          value
+        ])
+        return
+      }
+
+      headerKeys.push(key)
+      flattened[key] = value
+    })
   )
 
   const h = new Headers()
   headerKeys.forEach((key) => h.append(key, flattened[key]))
-  /**
-   * Add headers that indicates and orders body-keys
-   * for the purpose of determinstically reconstructing
-   * content-digest on the server
-   */
-  // const bk = hbEncodeValue('body-keys', bodyKeys)
-  // Object.keys(bk).forEach((key) => h.append(key, bk[key]))
 
   let body
   if (bodyKeys.length) {
     const bodyParts = await Promise.all(
-      bodyKeys.map((name) => new Blob([
-        `content-disposition: form-data;name="${name}"\r\n\r\n`,
-        flattened[name]
-      ]).arrayBuffer())
+      bodyKeys.map((name) => flattened[name].arrayBuffer())
     )
 
     const boundary = await boundaryFrom(bodyParts)
