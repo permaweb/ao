@@ -115,16 +115,18 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
       .chain((request) => of(request)
         .chain(fromPromise(({ url, method, headers, body }) =>
           fetch(url, { method, headers, body, redirect: 'follow' })
-             .then(res => ({
-              url: url,
-              slot: res.headers.get('slot'),
-              processId: args.processId
-             }))
         ))
         .bichain(
           (err) => Rejected(err),
-          x => of(x)
-      
+          fromPromise(async (res) => {
+            if (res.ok) {
+              return {
+                slot: res.headers.get('slot'),
+                processId: args.processId
+              }
+            }
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
         )
         .map(logger.tap('Received slot from HB MU: %o'))
         .bichain(
@@ -136,8 +138,8 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
               method: 'POST',
               headers
             })).then((req) => ({ ...req, body }))
-               .then(req => fetch(req.url, { method: req.method, headers: req.headers, body: req.body, redirect: 'follow' } ))
-               .then(res => slot)
+              .then(req => fetch(req.url, { method: req.method, headers: req.headers, body: req.body, redirect: 'follow' }))
+              .then(() => slot)
           })
         )
         .bimap(
@@ -178,8 +180,8 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
           })
         )
         .bimap(
-          logger.tap('Error encountered when writing message via HB CU'),
-          logger.tap('Successfully wrote message via HB CU')
+          logger.tap('Error encountered when loading result via HB CU'),
+          logger.tap('Successfully loading result via HB CU')
         )
       )
       .toPromise()
