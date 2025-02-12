@@ -6,6 +6,7 @@ import * as GatewayClient from './client/gateway.js'
 import * as HbClient from './client/hb.js'
 import { createLogger } from './logger.js'
 
+import { sendWith } from './lib/send/index.js'
 import { resultWith } from './lib/result/index.js'
 import { messageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
@@ -77,6 +78,17 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       signer
     })
 
+    const sendLogger = logger.child('send')
+    const send = sendWith({
+      logger: sendLogger,
+      send: HbClient.sendWith({
+        fetch: defaultFetch,
+        logger: sendLogger,
+        HB_URL: RELAY_URL,
+        signer
+      })
+    })
+
     const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
     const resultLogger = logger.child('result')
@@ -133,7 +145,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       logger: messageLogger
     })
 
-    return { MODE, result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner: staticWalletDataItemSigner }
+    return { MODE, send, result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner: staticWalletDataItemSigner }
   }
 
   function legacyMode ({
@@ -269,6 +281,17 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       logger: spawnLogger
     })
 
+    const sendLogger = logger.child('send')
+    const send = sendWith({
+      logger: sendLogger,
+      send: HbClient.sendWith({
+        fetch: defaultFetch,
+        logger: sendLogger,
+        HB_URL: AO_URL,
+        signer
+      })
+    })
+
     // const monitorLogger = logger.child('monitor')
     // const monitor = monitorWith({
     //   deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
@@ -303,7 +326,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     //   logger: messageLogger
     // })
 
-    return { MODE, result, message, spawn, createDataItemSigner: staticWalletDataItemSigner }
+    return { MODE, send, result, message, spawn, createDataItemSigner: staticWalletDataItemSigner }
   }
 
   /**

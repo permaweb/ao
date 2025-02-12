@@ -1,6 +1,7 @@
 import { Rejected, fromPromise, of } from 'hyper-async'
 import base64url from 'base64url'
 
+import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
 
 /**
@@ -25,7 +26,7 @@ export async function encodeDataItem ({ processId, data, tags, anchor }) {
   return res
 }
 
-function toSignerArgs ({ url, method, headers }) {
+function toSignerArgs ({ url, method, headers, includePath = false }) {
   headers = new Headers(headers)
   return {
     /**
@@ -36,8 +37,8 @@ function toSignerArgs ({ url, method, headers }) {
      * TODO: removing path from signing, for now.
      */
     fields: [
-      ...headers.keys()
-      // '@path'
+      ...headers.keys(),
+      ...(includePath ? ['@path'] : [])
     ].sort(),
     request: { url, method, headers: { ...Object.fromEntries(headers) } }
   }
@@ -49,6 +50,38 @@ export function httpSigName (address) {
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
   return `http-sig-${hexString}`
+}
+
+export function sendWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('send')
+
+  return (fields) => {
+    const { path, method = 'GET', ...restFields } = fields
+
+    return of({ path, method, fields: restFields })
+      .chain(fromPromise(({ path, method, fields }) =>
+        encode(fields).then(({ headers, body }) => ({
+          path,
+          method,
+          headers,
+          body
+        }))
+      ))
+      .chain(fromPromise(async ({ path, method, headers, body }) =>
+        signer(toSignerArgs({
+          url: joinUrl({ url: HB_URL, path }),
+          method,
+          headers,
+          includePath: true
+        })).then((req) => ({ ...req, body }))
+      ))
+      .map(logger.tap('Sending HTTP signed message to HB: %o'))
+      .chain((request) => of(request)
+        .chain(fromPromise(({ url, method, headers, body }) =>
+          fetch(url, { method, headers, body, redirect: 'follow' })
+        ))
+      ).toPromise()
+  }
 }
 
 export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
