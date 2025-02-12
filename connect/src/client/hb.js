@@ -52,7 +52,7 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-export function sendWith ({ fetch, logger: _logger, HB_URL, signer }) {
+export function callWith ({ fetch, logger: _logger, HB_URL, signer }) {
   const logger = _logger.child('send')
 
   return (fields) => {

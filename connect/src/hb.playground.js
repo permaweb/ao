@@ -30,7 +30,7 @@ describe('hb playground', () => {
     test('should relay the message through HyperBEAM', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const { send, spawn, message, result, createDataItemSigner } = connect({
+      const { call, spawn, message, result, createDataItemSigner } = connect({
         MODE: 'mainnet',
         wallet,
         AO_URL: process.env.HB_URL || 'http://localhost:8734'
@@ -40,7 +40,7 @@ describe('hb playground', () => {
 
       // uncomment examples as needed
 
-      const res = await send(`~simple-pay@1.0/balance?address=${address}`, {
+      const res = await call(`~simple-pay@1.0/balance?address=${address}`, {
         method: 'GET'
       })
 
