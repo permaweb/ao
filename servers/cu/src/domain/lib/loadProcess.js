@@ -13,6 +13,11 @@ import { findEvaluationSchema, findLatestProcessMemorySchema, saveLatestProcessM
  */
 const ctxSchema = z.object({
   /**
+   * The ordinate of the scheduled message we are
+   * evaluating up to.
+   */
+  toOrdinate: z.coerce.number().nullish(),
+  /**
    * The most recent result. This could be the most recent
    * cached result, or potentially initial cold start state
    * if no evaluations are cached
@@ -87,6 +92,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
         )
 
         return {
+          toOrdinate: ctx.ordinate,
           result: evaluation.output,
           from: evaluation.timestamp,
           ordinate: evaluation.ordinate,
@@ -164,6 +170,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
               .map(() => found)
           })
           .map(() => ({
+            toOrdinate: ctx.ordinate,
             result: {
               Memory: found.Memory
             },

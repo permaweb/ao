@@ -1,7 +1,5 @@
 import { LRUCache } from 'lru-cache'
 
-import { logger as _logger } from '../../logger.js'
-
 /**
  * A middleware that provides a response from an In-Memory LRUCache.
  *
@@ -33,9 +31,10 @@ export const withInMemoryCache = ({
     sizeCalculation: (value) => JSON.stringify(value).length
   })
 
-  const logger = _logger.child('InMemoryCache')
+  let logger
 
   return async (req, res) => {
+    logger = logger || req.logger.child('InMemoryCache')
     const key = keyer(req)
 
     /**

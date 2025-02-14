@@ -1,6 +1,6 @@
 import { always } from 'ramda'
 
-import { histogramWith, summaryWith } from '../../effects/metrics.js'
+import { histogramWith, summaryWith } from '../../../metrics.js'
 
 const histogram = histogramWith()({
   name: 'http_request_duration_seconds',

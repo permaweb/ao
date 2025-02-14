@@ -18,7 +18,7 @@ const ctxSchema = z.object({
 
 /**
  * @typedef Args
- * @property {string} messageTxId - the transaction id of the message
+ * @property {string} messageUid - the transaction id of the message
  *
  * @typedef Result
  * @property {any[]} messages - the array of cron messages over the interval

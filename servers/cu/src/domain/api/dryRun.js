@@ -48,7 +48,7 @@ const TtlCache = ({ setTimeout, clearTimeout }) => {
  * @typedef Result
  *
  * @typedef ReadResultArgs
- * @property {string} messageTxId
+ * @property {string} messageUid
  *
  * @callback ReadResult
  * @param {ReadResultArgs} args
@@ -73,16 +73,16 @@ export function dryRunWith (env) {
 
   const readStateCache = TtlCache(env)
 
-  function loadMessageCtx ({ messageTxId, processId }) {
+  function loadMessageCtx ({ messageUid, processId }) {
     /**
      * Load the metadata associated with the messageId ie.
      * it's timestamp and ordinate, so readState can evaluate
      * up to that point (if it hasn't already)
      */
-    if (messageTxId) return loadMessageMeta({ processId, messageTxId })
+    if (messageUid) return loadMessageMeta({ processId, messageUid })
 
     /**
-     * No messageTxId provided so evaluate up to latest
+     * No messageUid provided so evaluate up to latest
      */
     return Resolved({
       processId,
@@ -161,8 +161,8 @@ export function dryRunWith (env) {
     return Resolved(ctx)
   }
 
-  return ({ processId, messageTxId, maxProcessAge = DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
-    return of({ processId, messageTxId })
+  return ({ processId, messageUid, maxProcessAge = DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
+    return of({ processId, messageUid })
       .chain(loadMessageCtx)
       .chain(ensureProcessLoaded({ maxProcessAge }))
       .chain(ensureModuleLoaded)
