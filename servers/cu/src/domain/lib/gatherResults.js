@@ -64,7 +64,7 @@ export function gatherResultsWith (env) {
         return findEvaluations({
           processId: ctx.processId,
           from: ctx.from,
-          to: ctx.to,
+          to: ctx.to ?? {},
           sort,
           limit: ctx.limit,
           onlyCron: ctx.onlyCron
