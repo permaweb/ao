@@ -1,8 +1,5 @@
 use std::env;
 use std::io;
-use std::time::Duration;
-use tokio::time::sleep;
-
 use su::domain::sync_local_drives;
 use su::domain::migrate_to_local;
 use su::domain::migrate_to_disk;
@@ -37,13 +34,7 @@ async fn main() -> io::Result<()> {
             migrate_to_local().await.unwrap();
         }
         "sync_local_drives" => {
-            loop {
-                if let Err(e) = sync_local_drives().await {
-                    eprintln!("Error syncing local drives: {}", e);
-                    return Err(e);
-                }
-                sleep(Duration::from_secs(interval)).await;
-            }
+            sync_local_drives(interval).await.unwrap();
         }
         _ => {
             eprintln!("Invalid function name: {}", args[1]);
