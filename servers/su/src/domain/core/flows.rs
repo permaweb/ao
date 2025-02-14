@@ -9,7 +9,7 @@ use simd_json::to_string as simd_to_string;
 use super::builder::Builder;
 use super::json::{Message, Process};
 use super::scheduler;
-use super::bytes::DataItem;
+use super::bytes::{DataBundle, DataItem};
 
 use super::dal::{
     Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet,
@@ -492,5 +492,46 @@ pub async fn health(deps: Arc<Deps>) -> Result<String, String> {
             Ok(response_json.to_string())
         }
         Err(e) => Err(format!("{:?}", e)),
+    }
+}
+
+pub async fn msg_deephash(
+    gateway: Arc<dyn Gateway>, 
+    message: &Message, 
+    bundle_bytes: &Vec<u8>
+) -> Result<String, String> {
+    let bundle_data_item = match DataItem::from_bytes(bundle_bytes.clone()) {
+        Ok(b) => b,
+        Err(_) => { return Err("Error parsing bundle for message deephash".to_string()); }
+    };
+    let data_bytes = match bundle_data_item.data_bytes() {
+        Some(b) => b,
+        None => { return Err("Error parsing bundle for message deephash".to_string()); }
+    };
+    let bundle = match DataBundle::from_bytes(&data_bytes) {
+        Ok(b) => b,
+        Err(_) => { return Err("Error parsing bundle for message deephash".to_string()); }
+    };
+    match &message.message {
+        Some(_) => {
+            let mut message_item = bundle.items[1].clone();
+            match message_item.deep_hash() {
+              Ok(d) => Ok(d),
+              Err(_) => return Err("Unable to calculate deep hash".to_string())
+            }
+        },
+        None => {
+            let message_id = &message.message_id()?;
+            let gateway_tx = gateway.gql_tx(&message_id).await?;
+            let tx_data = gateway.raw(&message_id).await?;
+            let dh = DataItem::deep_hash_fields(
+                gateway_tx.recipient,
+                gateway_tx.anchor,
+                gateway_tx.tags,
+                tx_data,
+            )
+            .map_err(|_| "Unable to calculate deep hash".to_string())?;
+            Ok(dh)
+        }
     }
 }

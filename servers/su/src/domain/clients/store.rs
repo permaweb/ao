@@ -1633,7 +1633,7 @@ pub async fn migrate_to_disk() -> io::Result<()> {
         .expect("Failed to connect to bytestore");
 
     let args: Vec<String> = env::args().collect();
-    let range: &String = args.get(1).expect("Range argument not provided");
+    let range: &String = args.get(2).expect("Range argument not provided");
     let parts: Vec<&str> = range.split('-').collect();
     let from = parts[0].parse().expect("Invalid starting offset");
     let to = if parts.len() > 1 {

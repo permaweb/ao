@@ -69,6 +69,40 @@ impl LocalStoreClient {
         })
     }
 
+    pub fn new_read_only(file_db_dir: &String, index_db_dir: &String) -> Result<Self, StoreErrorType> {
+        let logger = SuLog::init();
+
+        let mut opts = Options::default();
+        opts.create_if_missing(true);
+        opts.set_enable_blob_files(true);
+        opts.set_blob_file_size(5 * 1024 * 1024 * 1024); // 5GB max
+
+        /*
+          This low value makes it so pretty much all
+          the values are stored in blobs on the file db
+        */
+        opts.set_min_blob_size(1024);
+
+        let file_db = DB::open_for_read_only(&opts, file_db_dir, false)?;
+
+        let mut opts_index = Options::default();
+        opts_index.create_if_missing(true);
+        opts_index.create_missing_column_families(true);
+
+        let cfs = LocalStoreClient::generate_cfs();
+
+        let index_db = match DB::open_cf_with_opts_for_read_only(&opts_index, &index_db_dir, cfs, false) {
+            Ok(_db) => _db,
+            Err(e) => panic!("failed to open cf with options: {}", e),
+        };
+
+        Ok(LocalStoreClient {
+            _logger: logger,
+            file_db,
+            index_db,
+        })
+    }
+
     /*
       Generate a column family for each prefix type in the index. This
       allows us to query them all seperately without conflicting results.
@@ -511,7 +545,6 @@ impl DataStore for LocalStoreClient {
         */
         for (_, assignment_id) in paginated_keys {
             let assignment_key = self.msg_assignment_key(&assignment_id);
-
             /*
               It is possible the file isnt finished saving and 
               available on the file db yet that is why this retry loop
