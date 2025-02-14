@@ -11,19 +11,14 @@ logger.tap = () => (args) => {
 // this is not what the buildAndSign actually returns
 // using tags here as data for testing
 async function buildAndSign ({ processId, tags, anchor }) {
-  assert.equal(tags.find((tag) =>
-    tag.name === 'Data-Protocol'
-  ).value, 'ao')
-  assert.equal(tags.find((tag) =>
-    tag.name === 'Type'
-  ).value, 'Message')
-  assert.equal(tags.find((tag) =>
-    tag.name === 'From-Process'
-  ).value, 'process-123')
-  assert.equal(tags.filter((tag) =>
-    tag.name === 'From-Process'
-  ).length, 1)
-
+  assert.deepStrictEqual(tags, [
+    { name: 'foo', value: 'bar' },
+    { name: 'Data-Protocol', value: 'ao' },
+    { name: 'Type', value: 'Message' },
+    { name: 'Variant', value: 'ao.TN.1' },
+    { name: 'From-Process', value: 'process-123' },
+    { name: 'From-Module', value: 'mod-1' }
+  ])
   return {
     id: 'id-1',
     data: Buffer.alloc(0),
@@ -69,7 +64,9 @@ describe('buildTx', () => {
         msg: {
           Target: 'id-1',
           Tags: [
-            { name: 'Assignments', value: ['p1', 'p2'] }
+            { name: 'Type', value: 'Message' },
+            { name: 'Assignments', value: ['p1', 'p2'] },
+            { name: 'foo', value: 'bar' }
           ],
           Anchor: 'anchor-1',
           Data: 'data-1'
@@ -98,6 +95,7 @@ describe('buildTx', () => {
         msg: {
           Target: 'id-1',
           Tags: [
+            { name: 'foo', value: 'bar' },
             { name: 'Assignments', value: ['p1', 'p2'] },
             { name: 'From-Process', value: 'Process1' },
             { name: 'From-Process', value: 'Process2' }
