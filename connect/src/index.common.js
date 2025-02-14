@@ -25,8 +25,8 @@ const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
 /**
  * TODO: set this when we know it
  */
-const DEFAULT_RELAY_URL = 'http://localhost:8734'
-const DEFAULT_AO_URL = 'http://localhost:8734'
+const DEFAULT_RELAY_URL = 'http://relay.ao-hb.xyz'
+const DEFAULT_AO_URL = 'http://m2.ao.computer'
 const DEFAULT_RELAY_CU_URL = 'http://cu.s451-comm3-main.xyz'
 const DEFAULT_RELAY_MU_URL = 'http://mu.s451-comm3-main.xyz'
 
