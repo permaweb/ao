@@ -40,10 +40,13 @@ pub struct AoConfig {
     pub su_file_db_dir: String,
     pub su_index_db_dir: String,
 
+    pub su_file_sync_db_dir: String,
+    pub su_index_sync_db_dir: String,
+
     pub enable_deep_hash_checks: bool,
 }
 
-fn get_db_dirs() -> (String, String) {
+fn get_db_dirs() -> (String, String, String, String) {
     // Get the user's home directory based on platform
     let home_dir = if cfg!(target_os = "windows") {
         env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string())
@@ -71,7 +74,25 @@ fn get_db_dirs() -> (String, String) {
         }
     };
 
-    (su_file_db_dir, su_index_db_dir)
+    let su_file_sync_db_dir = match env::var("SU_FILE_SYNC_DB_DIR") {
+        Ok(val) => val,
+        Err(_) => {
+            let mut path = PathBuf::from(&home_dir);
+            path.push("sudatasync");
+            path.to_string_lossy().to_string()
+        }
+    };
+
+    let su_index_sync_db_dir = match env::var("SU_INDEX_SYNC_DB_DIR") {
+        Ok(val) => val,
+        Err(_) => {
+            let mut path = PathBuf::from(&home_dir);
+            path.push("suindexsync");
+            path.to_string_lossy().to_string()
+        }
+    };
+
+    (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir)
 }
 
 impl AoConfig {
@@ -140,7 +161,7 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
-        let (su_file_db_dir, su_index_db_dir) = get_db_dirs();
+        let (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir) = get_db_dirs();
         let enable_deep_hash_checks = match env::var("ENABLE_DEEP_HASH_CHECKS") {
             Ok(val) => val == "true",
             Err(_e) => false,
@@ -167,7 +188,9 @@ impl AoConfig {
             use_local_store,
             su_file_db_dir,
             su_index_db_dir,
-            enable_deep_hash_checks
+            enable_deep_hash_checks,
+            su_file_sync_db_dir,
+            su_index_sync_db_dir
         })
     }
 }

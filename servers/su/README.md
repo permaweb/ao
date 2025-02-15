@@ -54,6 +54,8 @@ Create a .env file with the following variables, or set them in the OS:
 - `PROCESS_CACHE_SIZE` max size of the in memory cache of processes held by the data store
 - `ENABLE_PROCESS_ASSIGNMENT` enables AOP-6 boot loader, if enabled, the Process on a new spawn will become the first Message/Nonce in its message list. It will get an Assignment.
 - `ARWEAVE_URL_LIST` list of arweave urls that have tx access aka url/txid returns the tx. Used by gateway calls for checking transactions etc...
+- `SU_FILE_SYNC_DB_DIR` a directory for a RocksDB backup that will hold the full binary files that are the bundles, messages, and assignments. Only used by the cli binary.
+- `SU_INDEX_SYNC_DB_DIR` a directory for a RocksDB backup that will hold an index of Processes and Messages for ordering and querying. Only used by the cli binary.
 
 ## Experimental environment variables
 To use the expirimental fully local storage system set the following evnironment variables.
@@ -165,35 +167,36 @@ docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./sched
 
 Over time the su database has evolved. It started as only Postgres then went to Postgres + RocksDB for performance enhancement. It now has a purely RocksDB implementation. For existing su's that already have data, you can follow the below to migration processes to bring it up to date to the latest implementation. 
 
+
+Building the cli binary, delete all su images and containers if you have previously run this, then run
+```sh
+docker system prune -a
+docker build --target cli-builder -t cli-binary -f DockerfileCli .
+docker create --name temp-container-cli cli-binary
+docker cp temp-container-cli:/usr/src/cli/target/release/cli .
+```
+
 ### Migrating data to disk for an existing su instance
 If a su has been running using postgres for sometime there may be performance issues. Writing to  and reading files from disk has been added. In order to switch this on set the environment variables
 
 - `USE_DISK` whether or not to read and write binary files from/to the disk/rocksdb. If the su has already been running for a while the data will need to be migrated using the mig binary before turning this on.
 - `SU_DATA_DIR` the data directory on disk where the su will read from and write binaries to
 
-Then the `mig` binary can be used to migrate data in segments from the existing db. It will currently only migrate the message files to the disk. It takes a range which represents a range in the messages table. So 0-500 would grab the first 500 messages from the messages table and write them to rocksdb on the disk and so on. Just 0 as an argument would read the whole table, the range is so you can run multiple instances of the program on different segments of data for faster migration. To read from record 1000 to the end of the table you would just send 1000 as an argument.
+Then the `cli` binary can be used to migrate data in segments from the existing db. It will currently only migrate the message files to the disk. It takes a range which represents a range in the messages table. So 0-500 would grab the first 500 messages from the messages table and write them to rocksdb on the disk and so on. Just 0 as an argument would read the whole table, the range is so you can run multiple instances of the program on different segments of data for faster migration. To read from record 1000 to the end of the table you would just send 1000 as an argument.
 
 Migrate the entire messages table to disk
 ```sh
-./mig 0
+./cli migrate_to_disk 0
 ```
 
 Migrate the first 1000 messages
 ```sh
-./mig 0-1000
+./cli migrate_to_disk 0-1000
 ```
 
 Migrate from 1000 to the end of the table
 ```sh
-./mig 1000
-```
-
-Building the mig binary, delete all su images and containers if you have previously run this, then run
-```sh
-docker system prune -a
-docker build --target mig-builder -t mig-binary -f DockerfileMig .
-docker create --name temp-container-mig mig-binary
-docker cp temp-container-mig:/usr/src/mig/target/release/mig .
+./cli migrate_to_disk 1000
 ```
 
 ### Migrating data to fully local data store
@@ -203,20 +206,25 @@ If a su has been running using postgres + rocksdb using the above migration, it 
 - `SU_FILE_DB_DIR` a directory for a RocksDB instance that will hold the full binary files that are the bundles, messages, and assignments.
 - `SU_INDEX_DB_DIR` a directory for a RocksDB instance that will hold an index of Processes and Messages for ordering and querying.
 
-Then the `mig_local` binary can be used to migrate data in segments from the existing source. Note that you must have already run the above `mig` binary before running `mig_local` will work. It cannot migrate from a purely postgres implementation. So to get to this point if the su was running on only postgres, first follow the above steps using the `mig` binary. And then follow the  `mig_local` steps.
+Then the `cli` binary can be used to migrate data in segments from the existing source. Note that you must have already run the above `cli` binary with `migrate_to_disk` before running it with `migrate_to_local` will work. It cannot migrate from a purely postgres implementation. So to get to this point if the su was running on only postgres, first follow the above steps using the `cli` binary with `migrate_to_disk`. And then follow the  `migrate_to_local` steps.
 
 Migrate all Messages and Processes to RocksDB
 ```sh
-./mig_local
+./cli migrate_to_local
 ```
 
-Building the mig_local binary, delete all su images and containers if you have previously run this, then run
+
+### Keeping a backup database in sync with a running SU
+There is a program available to keep another directory in sync with a running SU, copy the environment variables from the running su and add these, and then run the cli binary with the `sync_local_drives` argument. This is to keep 2 fully local data stores in sync.
+
+- `SU_FILE_SYNC_DB_DIR` a directory for a RocksDB backup that will hold the full binary files that are the bundles, messages, and assignments.
+- `SU_INDEX_SYNC_DB_DIR` a directory for a RocksDB backup that will hold an index of Processes and Messages for ordering and querying.
+
+Keep the sync db directories up to date with a running SU on a 5 second interval
 ```sh
-docker system prune -a
-docker build --target mig-local-builder -t mig-local-binary -f DockerfileMigLocal .
-docker create --name temp-container-mig-local mig-local-binary
-docker cp temp-container-mig-local:/usr/src/mig_local/target/release/mig_local .
+./cli sync_local_drives 5
 ```
+
 
 # System Requirements for SU + SU-R cluster
 
