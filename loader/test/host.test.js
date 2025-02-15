@@ -1,0 +1,11 @@
+import { aoslocal } from '@permaweb/loco'
+import { test } from 'node:test'
+import * as assert from 'node:assert'
+
+test('genEnv should return nil', async () => {
+    const aos = await aoslocal()
+
+    // const result = await aos.eval('if not os.getenv("PATH") then print([[2]]) else print([[1]]) end')
+    const result = await aos.eval('print(os.getenv([[HOME]]))')
+    assert.equal(result.Output.data, '2')
+})
