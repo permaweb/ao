@@ -24,6 +24,7 @@
     "@permaweb/wasm-metering": "^0.2.2"
   },
   "devDependencies": {
+    "@permaweb/loco": "^0.0.16",
     "esbuild": "^0.19.5",
     "typescript": "^5.2.2"
   },

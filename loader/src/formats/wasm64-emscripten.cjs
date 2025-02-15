@@ -4162,7 +4162,7 @@ var Module = (() => {
           }
           getEnvStrings.strings = strings;
         }
-        return getEnvStrings.strings;
+        return []; //getEnvStrings.strings;
       };
 
       var stringToAscii = (str, buffer) => {
