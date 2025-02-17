@@ -52,11 +52,11 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-export function callWith ({ fetch, logger: _logger, HB_URL, signer }) {
-  const logger = _logger.child('send')
+export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('request')
 
   return (fields) => {
-    const { path, method = 'GET', ...restFields } = fields
+    const { path, ...restFields } = fields
 
     return of({ path, method, fields: restFields })
       .chain(fromPromise(({ path, method, fields }) =>

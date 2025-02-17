@@ -39,11 +39,6 @@ describe('index - node', () => {
       )
 
       assert.equal(
-        connect({ MODE: 'relay', wallet }).MODE,
-        'relay'
-      )
-
-      assert.equal(
         connect({ MODE: 'mainnet', wallet }).MODE,
         'mainnet'
       )
