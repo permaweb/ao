@@ -56,7 +56,7 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
   const logger = _logger.child('request')
 
   return (fields) => {
-    const { path, ...restFields } = fields
+    const { path, method, ...restFields } = fields
 
     return of({ path, method, fields: restFields })
       .chain(fromPromise(({ path, method, fields }) =>

@@ -231,6 +231,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     CU_URL = DEFAULT_RELAY_CU_URL,
     fetch = defaultFetch
   }) {
+    
     const logger = device === 'relay@1.0' ? _logger.child('mainnet-relay') : _logger.child('mainnet-process')
     logger('Mode Activated 🐲')
 
@@ -238,6 +239,17 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
     const signer = createHbSigner(wallet)
     const staticWalletDataItemSigner = () => createDataItemSigner(wallet)
+    const relayFetch = HbClient.relayerWith({
+      /**
+       * Always wrap default fetch with relayer,
+       * no embellishment beyond the relayer
+       */
+      fetch: defaultFetch,
+      logger,
+      HB_URL: URL,
+      signer
+    })
+
     /**
      * TODO: implement validating a scheduler
      */
@@ -285,10 +297,18 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       logger: spawnLogger
     })
 
+    const dryrunLogger = logger.child('dryrun')
+    const dryrun = dryrunWith({
+      dryrunFetch: CuClient.dryrunFetchWith({ fetch: device === "relay@1.0" ? relayFetch: fetch, CU_URL, logger: dryrunLogger }),
+      logger: dryrunLogger
+    })
+
     const requestLogger = logger.child('request')
     const request = requestWith({
       logger: requestLogger,
-      
+      MODE,
+      method: 'GET',
+      device: device,
       request: HbClient.requestWith({
         fetch: defaultFetch,
         logger: requestLogger,
@@ -300,6 +320,10 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     const getLogger = logger.child('get')
     const get = requestWith({
       logger: getLogger,
+      MODE,
+      method: 'GET',
+      device: device,
+      dryrun: dryrun,
       request: HbClient.requestWith({
         fetch: defaultFetch,
         method: 'GET',

@@ -1,4 +1,4 @@
-import { identity } from 'ramda'
+import { identity, omit, keys } from 'ramda'
 import { z } from 'zod'
 import { fromPromise, of } from 'hyper-async'
 
@@ -29,9 +29,10 @@ export function requestWith (env) {
   const spawn = env.spawn
 
   const device = env.device
+  const method = env.method
 
   const mode = env.MODE
-
+  
   /**
 if mode == 'legacy' then request should create an ans-104 from fields
 if mode == 'relay' then request should create a hybrid ans-104/httpsig from fields
@@ -43,7 +44,7 @@ if mode == 'process' then request should create a pure httpsig from fields
         const dataItem = {
             target: fields.Target,
             anchor: fields.Anchor ?? "",
-            tags: omit(['Target', 'Anchor', 'Data', 'dryrun', 'Type', 'Variant' ], fields).map(function (key) {
+            tags: keys(omit(['Target', 'Anchor', 'Data', 'dryrun', 'Type', 'Variant', 'path', 'method' ], fields)).map(function (key) {
                 return ({name: key, value: fields[key]})
             }, fields)
               .concat([
@@ -54,8 +55,8 @@ if mode == 'process' then request should create a pure httpsig from fields
             ,
             data: fields?.data || ""
         }
-
-        const _type = fields.Type ?? 'Message'
+        
+        let _type = fields.Type ?? 'Message'
         if (fields.dryrun) {
             _type = 'dryrun'
         }
@@ -83,17 +84,24 @@ if mode == 'process' then request should create a pure httpsig from fields
   }
 
   function dispatch({request, spawn, message, result, dryrun}) {
+    
     return function (ctx) {
-        if (ctx.tyoe === 'dryrun' && ctx.dataItem) {
-            return fromPromise(ctx => {
-                return dryrun({
-                    process: ctx.dataItem.Target,
-                    anchor: ctx.dataItem.Anchor,
-                    tags: ctx.dataItems.tags,
-                    data: ctx.datatItem.Data ?? ""
-                })
-            })(ctx)
+        
+        if (ctx.type === 'dryrun' && ctx.dataItem) {
+            const inputData = {
+                process: ctx.dataItem.target,
+                anchor: ctx.dataItem.anchor,
+                tags: ctx.dataItem.tags,
+                data: ctx.datatItem?.data ?? ""
+            }
+            return fromPromise(() => dryrun(inputData).catch(err => {
+                if (err.message.includes("Insufficient funds")) {
+                    return { error: "insufficient-funds"}
+                }
+                throw err
+            }))(ctx)
         }
+
         if (ctx.type === 'Message' && ctx.dataItem) {
             return fromPromise(ctx => {
                 return message({
@@ -130,8 +138,40 @@ if mode == 'process' then request should create a pure httpsig from fields
   const verifyInput = (args) =>
     of(inputSchema.parse(args))
 
+  const transformToMap = (result) => {
+    let map = {}
+    if (result.Output && result.Output.data) {
+      map.Output = {
+        text: () => Promise.resolve(result.Output.data)
+      }
+    }
+    if (result.Messages) {
+      map.Messages = result.Messages.map((m) => {
+        let miniMap = {}
+        m.Tags.forEach(t => {
+            miniMap[t.name] = {
+                text: () => Promise.resolve(t.value)
+            }
+        })
+        miniMap.Data = {
+            text: () => Promise.resolve(m.Data),
+            json: () => Promise.resolve(JSON.parse(m.Data)),
+            binary: () => Promise.resolve(Buffer.from(m.Data))
+        }
+        miniMap.Target = {
+            text: () => Promise.resolve(m.Target)
+        }
+        miniMap.Anchor = {
+            text: () => Promise.resolve(m.Anchor)
+        }
+        return miniMap
+      })
+    }
+    return map
+  }
+
   return (fields) => {
-    return of({...fields, path: `/~${device}`})
+    return of({...fields, path: `/~${device}`, method: fields.method ?? method })
       .chain(verifyInput)
       // is the the best place to either call
       // legacy mode just an ANS-104
@@ -143,6 +183,7 @@ if mode == 'process' then request should create a pure httpsig from fields
         logger('Received response from message sent to path "%s"', fields?.path ?? '/')
         return res
       })
+      .map(transformToMap)
       .bimap(errFrom, identity)
       .toPromise()
   }
