@@ -22,21 +22,26 @@ describe('browser - wallet', () => {
 
       const sign = createDataItemSigner(stubArweaveWallet)
 
-      const res = await sign({
-        data: 'foobar',
-        tags: [{ name: 'foo', value: 'bar' }],
-        target: 'xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw',
-        anchor: randomBytes(32),
+      const res = await sign(
+        async (args) => {
+          assert.ok(args.passthrough)
+          return {
+            data: 'foobar',
+            tags: [{ name: 'foo', value: 'bar' }],
+            target: 'xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw',
+            anchor: randomBytes(32)
+          }
+        },
         /**
          * stub createDataItem
          */
-        createDataItem (buf) {
+        (buf) => {
           return {
             id: Promise.resolve('CPUgRQCmNxVnIVyfC69_ypDaMQTYNOU8jsMad4QFAS8'),
             getRaw: async () => buf
           }
         }
-      })
+      )
 
       console.log('signedDataItem', res)
       assert.ok(res.id)

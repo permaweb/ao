@@ -22,6 +22,9 @@ const toView = (value) => {
   return value
 }
 
+export const DATAITEM_SIGNER_KIND = 'ans104'
+export const HTTP_SIGNER_KIND = 'httpsig'
+
 export const toDataItemSigner = (signer) => {
   return async ({ data, tags, target, anchor }) => {
     let resolveUnsigned
@@ -31,35 +34,35 @@ export const toDataItemSigner = (signer) => {
      */
     const dataToSign = new Promise((resolve) => { resolveUnsigned = resolve })
 
-    return signer(
+    /**
+     * receive the signing public credentials and
+     * extract what we need to construct the unsigned
+     * data item
+     */
+    const create = async (injected) => {
+      createCalled = true
       /**
-       * receive the signing public credentials and
-       * extract what we need to construct the unsigned
-       * data item
+       * If the signer wishes to receive the arguments
+       * and skip serialization to a data item, they can provide this argument.
+       *
+       * This is useful for signers that internally serialize data items,
+       * and drive UI off of the provided inputs ie. ArConnect
        */
-      async (injected) => {
-        createCalled = true
-        /**
-         * If the signer wishes to receive the arguments
-         * and skip serialization to a data item, they can provide this argument.
-         *
-         * This is useful for signers that internally serialize data items,
-         * and drive UI off of the provided inputs ie. ArConnect
-         */
-        if (injected.passthrough) return { data, tags, target, anchor }
+      if (injected.passthrough) return { data, tags, target, anchor }
 
-        const { publicKey, type } = injected
+      const { publicKey, type } = injected
 
-        const unsigned = createDataItemBytes(
-          data,
-          { type, publicKey: toView(publicKey) },
-          { target, tags, anchor }
-        )
+      const unsigned = createDataItemBytes(
+        data,
+        { type, publicKey: toView(publicKey) },
+        { target, tags, anchor }
+      )
 
-        resolveUnsigned(unsigned)
-        return unsigned
-      }
-    )
+      resolveUnsigned(unsigned)
+      return unsigned
+    }
+
+    return signer(create, DATAITEM_SIGNER_KIND)
       .then((res) => {
         /**
          * Ensure create was called in order to produce the signature
@@ -72,8 +75,11 @@ export const toDataItemSigner = (signer) => {
          * The signer has done the work
          */
         if (typeof res === 'object' && res.id && res.raw) return res
+        if (!res.signature || !res.signature) {
+          throw new Error('signer must return its signature and address')
+        }
 
-        const signature = res
+        const { signature } = res
         return dataToSign.then((unsigned) => {
           return Promise.resolve(signature)
             .then(toView)
@@ -119,7 +125,7 @@ export const toHttpSigner = (signer) => {
        */
       .then()
 
-    return signer(({ publicKey, address, alg, type }) => {
+    const create = ({ publicKey, alg, type }) => {
       createCalled = true
 
       /**
@@ -153,15 +159,21 @@ export const toHttpSigner = (signer) => {
       signatureBase.push(['"@signature-params"', [signatureInput]])
       const base = formatSignatureBase(signatureBase)
 
-      httpSig.name = httpSigName(address)
       httpSig.signatureInput = signatureInput
       httpSig.signatureBase = base
 
       const encoded = new TextEncoder().encode(base)
       resolveUnsigned(encoded)
       return encoded
-    })
-      .then((signature) => {
+    }
+
+    return signer(create, HTTP_SIGNER_KIND)
+      .then((res) => {
+        if (!res.signature || !res.signature) {
+          throw new Error('signer must return its signature and address')
+        }
+
+        const { signature, address } = res
         /**
          * Ensure create was called in order to produce the signature
          */
@@ -172,8 +184,13 @@ export const toHttpSigner = (signer) => {
         return dataToSign.then(() => {
           return Promise.resolve(signature)
             .then(toView)
-            .then(async (rawSig) => {
-              const withSignature = augmentHeaders(request.headers, rawSig, httpSig.signatureInput, httpSig.name)
+            .then((rawSig) => {
+              const withSignature = augmentHeaders(
+                request.headers,
+                rawSig,
+                httpSig.signatureInput,
+                httpSigName(address)
+              )
               return { ...request, headers: withSignature }
             })
         })
