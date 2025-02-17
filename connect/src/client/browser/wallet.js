@@ -17,14 +17,17 @@ function createANS104Signer (arweaveWallet) {
      * set passthrough in order to receive the arguements as they were passed
      * to toDataItemSigner
      */
-    const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true })
+    const { data, tags, target, anchor } = await create({
+      alg: 'rsa-v1_5-sha256',
+      passthrough: true
+    })
     /**
      * https://github.com/wanderwallet/Wander?tab=readme-ov-file#signdataitemdataitem-promiserawdataitem
      */
     const view = await arweaveWallet.signDataItem({ data, tags, target, anchor })
     /**
      * Since we passthrough above, just send the precomputed
-     * shape back
+     * shape back, which is then detected in signer wrapper
      */
     return getRawAndId(view)
   }

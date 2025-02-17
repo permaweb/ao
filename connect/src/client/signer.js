@@ -50,7 +50,13 @@ export const toDataItemSigner = (signer) => {
        */
       if (injected.passthrough) return { data, tags, target, anchor }
 
-      const { publicKey, type } = injected
+      /**
+       * Default the type and alg to be
+       * - type: arweave
+       * - alg: RSA PSS SHA256 (default for arweave signing)
+       */
+      // eslint-disable-next-line no-unused-vars
+      const { publicKey, type = 1, alg = 'rsa-v1_5-sha256' } = injected
 
       const unsigned = createDataItemBytes(
         data,
@@ -134,8 +140,16 @@ export const toHttpSigner = (signer) => {
        */
       .then()
 
-    const create = ({ publicKey, alg, type }) => {
+    const create = (injected) => {
       createCalled = true
+
+      /**
+       * Default the type and alg to be
+       * - type: arweave
+       * - alg: RSA PSS SHA512 (default for arweave http signing)
+       */
+      // eslint-disable-next-line no-unused-vars
+      let { publicKey, type = 1, alg = 'rsa-pss-sha512' } = injected
 
       /**
        * TODO: do we need to check signature type
@@ -153,7 +167,6 @@ export const toHttpSigner = (signer) => {
       // }
 
       publicKey = toView(publicKey)
-
       const signingParameters = createSigningParameters({
         params,
         paramValues: {
