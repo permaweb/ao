@@ -94,7 +94,7 @@ if mode == 'process' then request should create a pure httpsig from fields
                 })
             })(ctx)
         }
-        if (ctx.type === 'message' && ctx.dataItem) {
+        if (ctx.type === 'Message' && ctx.dataItem) {
             return fromPromise(ctx => {
                 return message({
                     process: ctx.dataItem.Target,
@@ -107,6 +107,20 @@ if mode == 'process' then request should create a pure httpsig from fields
                     message: id
                 }))
             })
+        }
+        if (ctx.type === 'Process' && ctx.dataItem) {
+            return fromPromise(ctx => {
+                return spawn({
+                    tags: ctx.tags,
+                    data: ctx.data
+                })
+            })
+        }
+        if (ctx.map) {
+            return fromPromise(ctx => {
+                return request(ctx.map)
+            })
+            
         }
         return 
     }
