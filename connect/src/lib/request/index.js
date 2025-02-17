@@ -27,7 +27,8 @@ export function requestWith (env) {
   const result = env.result
   const dryrun = env.dryrun
   const spawn = env.spawn
-
+  
+  const signer = env.signer
   const device = env.device
   const method = env.method
 
@@ -86,7 +87,6 @@ if mode == 'process' then request should create a pure httpsig from fields
   function dispatch({request, spawn, message, result, dryrun}) {
     
     return function (ctx) {
-        
         if (ctx.type === 'dryrun' && ctx.dataItem) {
             const inputData = {
                 process: ctx.dataItem.target,
@@ -101,20 +101,26 @@ if mode == 'process' then request should create a pure httpsig from fields
                 throw err
             }))(ctx)
         }
-
+        
         if (ctx.type === 'Message' && ctx.dataItem) {
-            return fromPromise(ctx => {
-                return message({
-                    process: ctx.dataItem.Target,
-                    anchor: ctx.dataItem.Anchor,
+            
+            return fromPromise(ctx => message({
+                    process: ctx.dataItem.target,
+                    anchor: ctx.dataItem.anchor,
                     tags: ctx.dataItem.tags,
-                    data: ctx.dataItem.Data ?? ""
+                    data: ctx.dataItem.data ?? "",
+                    signer
                 })
                 .then(id => result({
-                    process: ctx.dataItem.Target,
+                    process: ctx.dataItem.target,
                     message: id
                 }))
-            })
+                .catch(err => {
+                    if (err.message.includes("Insufficient funds")) {
+                        return { error: "insufficient-funds"}
+                    }
+                    throw err
+            }))(ctx)
         }
         if (ctx.type === 'Process' && ctx.dataItem) {
             return fromPromise(ctx => {

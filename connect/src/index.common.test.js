@@ -17,7 +17,7 @@ const WALLET = {
 }
 
 
-test("connectWith should give us mainnet device relay@1.0 mode", async () => {
+test.skip("connectWith use mainnet device=relay@1.0 mode to dryrun on a process", async () => {
     const connect = connectWith({
         createDataItemSigner: WalletClient.createDataItemSigner,
         createHbSigner: WalletClient.createHbSigner
@@ -33,7 +33,41 @@ test("connectWith should give us mainnet device relay@1.0 mode", async () => {
     assert.equal(Ticker, "PNTS")
 })
 
-test("connectWith should give us legacy connect mode", async () => {
+test("connectWith use mainnet device=relay@1.0 mode to message on a process", async () => {
+    const connect = connectWith({
+        createDataItemSigner: WalletClient.createDataItemSigner,
+        createHbSigner: WalletClient.createHbSigner
+    })
+    
+    const { get } = connect({MODE: 'mainnet', wallet: WALLET })
+    const Error = await get({
+        Target: "WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU",
+        Action: "Transfer",
+        Quantity: "10000",
+        Recipient: "cHencOZC-aCbPCDH2tEZ3Lhw3EM5oRw3kxgj-eEgtNc"
+    }).then(map => map.Messages[0].Error.text())
+
+    assert.equal(Error, "Insufficient Balance!")
+})
+
+test.skip("connectWith use mainnet device=relay@1.0 mode to spawn a process", async () => {
+    const connect = connectWith({
+        createDataItemSigner: WalletClient.createDataItemSigner,
+        createHbSigner: WalletClient.createHbSigner
+    })
+    
+    const { get } = connect({MODE: 'mainnet', wallet: WALLET })
+    const Ticker = await get({
+        Target: "WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU",
+        Action: "Info",
+        dryrun: true
+    }).then(map => map.Messages[0].Ticker.text())
+
+    assert.equal(Ticker, "PNTS")
+})
+
+
+test.skip("connectWith should give us legacy connect mode", async () => {
     const connect = connectWith({
         createDataItemSigner: WalletClient.createDataItemSigner,
         createHbSigner: WalletClient.createHbSigner

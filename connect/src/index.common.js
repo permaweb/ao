@@ -259,24 +259,47 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     }
 
     const resultLogger = logger.child('result')
-    const result = resultWith({
-      loadResult: HbClient.loadResultWith({
-        fetch: defaultFetch,
+    let loadResult = HbClient.loadResultWith({
+      fetch: defaultFetch,
+      logger: resultLogger,
+      HB_URL: URL,
+      signer
+    })
+    if (device === "relay@1.0") {
+      loadResult = CuClient.loadResultWith({
+        fetch: relayFetch,
         logger: resultLogger,
         HB_URL: URL,
+        CU_URL,
         signer
-      }),
+      })
+    }
+    const result = resultWith({
+      loadResult,
       logger: resultLogger
     })
 
+    
     const messageLogger = logger.child('message')
+    let deployMessage = HbClient.deployMessageWith({
+      fetch: defaultFetch,
+      logger: messageLogger,
+      HB_URL: URL,
+      signer
+    })
+
+    if (device === "relay@1.0") {
+       deployMessage = MuClient.deployMessageWith({
+          fetch: device === "relay@1.0" ? relayFetch : defaultFetch,
+          logger: messageLogger,
+          HB_URL: URL,
+          MU_URL: MU_URL,
+          CU_URL: CU_URL,
+          signer
+      })
+    }
     const message = messageWith({
-      deployMessage: HbClient.deployMessageWith({
-        fetch: defaultFetch,
-        logger: messageLogger,
-        HB_URL: URL,
-        signer
-      }),
+      deployMessage,
       logger: messageLogger
     })
 
@@ -324,6 +347,9 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       method: 'GET',
       device: device,
       dryrun: dryrun,
+      message,
+      result,
+      signer: createDataItemSigner(wallet), 
       request: HbClient.requestWith({
         fetch: defaultFetch,
         method: 'GET',
