@@ -288,6 +288,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     const requestLogger = logger.child('request')
     const request = requestWith({
       logger: requestLogger,
+      
       request: HbClient.requestWith({
         fetch: defaultFetch,
         logger: requestLogger,
