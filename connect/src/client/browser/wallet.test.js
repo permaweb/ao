@@ -2,25 +2,36 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 import { randomBytes } from 'node:crypto'
 
-import { createDataItemSigner } from './wallet.js'
+import Arweave from 'arweave'
+
+import { createDataItemBytes } from '../../lib/data-item.js'
+import { DATAITEM_SIGNER_KIND } from '../signer.js'
+import { createSigner } from './wallet.js'
 
 describe('browser - wallet', () => {
-  describe('createDataItemSigner', () => {
+  describe('createSigner', () => {
     test('should create and sign the data item', async () => {
+      const arweave = Arweave.init()
+      const wallet = await arweave.wallets.generate()
+      const publicKey = Buffer.from(wallet.n, 'base64url')
       /**
        * A mock of an actual arweaveWallet pulled from
        * globalThis or window
        *
        * We only stub signDataItem because it's the only
-       * api needed for the trimmed down InjectedArweaveSigner
+       * api needed
        */
       const stubArweaveWallet = {
         async signDataItem ({ data, tags, target, anchor }) {
-          return Buffer.from(JSON.stringify({ data, tags, target, anchor }))
+          /**
+           * pretend actual signing is done here
+           */
+          const bytes = createDataItemBytes(data, { type: 1, publicKey }, { tags, target, anchor })
+          return bytes
         }
       }
 
-      const sign = createDataItemSigner(stubArweaveWallet)
+      const sign = createSigner(stubArweaveWallet)
 
       const res = await sign(
         async (args) => {
@@ -32,15 +43,7 @@ describe('browser - wallet', () => {
             anchor: randomBytes(32)
           }
         },
-        /**
-         * stub createDataItem
-         */
-        (buf) => {
-          return {
-            id: Promise.resolve('CPUgRQCmNxVnIVyfC69_ypDaMQTYNOU8jsMad4QFAS8'),
-            getRaw: async () => buf
-          }
-        }
+        DATAITEM_SIGNER_KIND
       )
 
       console.log('signedDataItem', res)

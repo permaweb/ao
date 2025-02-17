@@ -1,14 +1,14 @@
-import { Buffer } from 'buffer/index.js'
+import { Buffer as BufferShim } from 'buffer/index.js'
 import base64url from 'base64url'
 import { httpbis } from 'http-message-signatures'
 import { parseItem, serializeList } from 'structured-headers'
 
-import { createDataItemBytes } from '../lib/data-item.js'
+import { createDataItemBytes, getSignatureData } from '../lib/data-item.js'
 import { httpSigName } from './hb.js'
 
 const { augmentHeaders, createSignatureBase, createSigningParameters, formatSignatureBase } = httpbis
 
-if (!globalThis.Buffer) globalThis.Buffer = Buffer
+if (!globalThis.Buffer) globalThis.Buffer = BufferShim
 
 /**
  * Convert the value into a Uint8Array
@@ -58,8 +58,17 @@ export const toDataItemSigner = (signer) => {
         { target, tags, anchor }
       )
 
+      /**
+       * What is actually signed is the DataItem
+       * deephash, so stash the unsigned bytes,
+       * and resolve the deepHash.
+       *
+       * When the signature is ultimately received,
+       * we can add it to the unsigned bytes
+       */
       resolveUnsigned(unsigned)
-      return unsigned
+      const deepHash = await getSignatureData(unsigned)
+      return deepHash
     }
 
     return signer(create, DATAITEM_SIGNER_KIND)
@@ -75,10 +84,10 @@ export const toDataItemSigner = (signer) => {
          * The signer has done the work
          */
         if (typeof res === 'object' && res.id && res.raw) return res
+
         if (!res.signature || !res.signature) {
           throw new Error('signer must return its signature and address')
         }
-
         const { signature } = res
         return dataToSign.then((unsigned) => {
           return Promise.resolve(signature)

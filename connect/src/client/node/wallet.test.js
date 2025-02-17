@@ -6,18 +6,11 @@ import { createPublicKey, randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 
 import Arweave from 'arweave'
-import * as WarpArBundles from 'warp-arbundles'
 import { createVerifier, httpbis } from 'http-message-signatures'
 
-import { createDataItemBytes } from '../../lib/data-item.js'
+import { createDataItemBytes, verify } from '../../lib/data-item.js'
 import { createSigner } from './wallet.js'
-import { toDataItemSigner, toHttpSigner } from '../signer.js'
-
-/**
- * hack to get module resolution working on node jfc
- */
-const pkg = WarpArBundles.default ? WarpArBundles.default : WarpArBundles
-const { DataItem } = pkg
+import { DATAITEM_SIGNER_KIND, toDataItemSigner, toHttpSigner } from '../signer.js'
 
 const { verifyMessage } = httpbis
 
@@ -36,7 +29,7 @@ describe('node - wallet', () => {
     )
   })
 
-  describe('createDataItemSigner', () => {
+  describe('createSigner', () => {
     test('should create and sign the data item with Arweave signer', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
       const pubKey = Buffer.from(wallet.n, 'base64url')
@@ -52,7 +45,7 @@ describe('node - wallet', () => {
           target: 'xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw',
           anchor: randomBytes(32)
         })
-      })
+      }, DATAITEM_SIGNER_KIND)
 
       assert.ok(res)
     })
@@ -73,7 +66,7 @@ describe('node - wallet', () => {
       assert.ok(res.id)
       assert.ok(res.raw)
 
-      const isValid = await DataItem.verify(res.raw)
+      const isValid = await verify(res.raw)
       assert.ok(isValid)
     })
 

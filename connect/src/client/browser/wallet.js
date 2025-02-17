@@ -1,20 +1,18 @@
 import { Buffer } from 'buffer/index.js'
-import * as WarpArBundles from 'warp-arbundles'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
 import { DATAITEM_SIGNER_KIND, HTTP_SIGNER_KIND } from '../signer.js'
+import { getRawAndId } from '../../lib/data-item.js'
 
 if (!globalThis.Buffer) globalThis.Buffer = Buffer
-
-const { DataItem } = WarpArBundles
 
 function createANS104Signer (arweaveWallet) {
   /**
    * createDataItem can be passed here for the purposes of unit testing
    * with a stub
    */
-  const signer = async (create, createDataItem = (buf) => new DataItem(buf)) => {
+  const signer = async (create) => {
     /**
      * set passthrough in order to receive the arguements as they were passed
      * to toDataItemSigner
@@ -24,16 +22,11 @@ function createANS104Signer (arweaveWallet) {
      * https://github.com/wanderwallet/Wander?tab=readme-ov-file#signdataitemdataitem-promiserawdataitem
      */
     const view = await arweaveWallet.signDataItem({ data, tags, target, anchor })
-    const signed = createDataItem(Buffer.from(view.buffer))
-
     /**
      * Since we passthrough above, just send the precomputed
      * shape back
      */
-    return {
-      id: await signed.id,
-      raw: await signed.getRaw()
-    }
+    return getRawAndId(view)
   }
 
   return signer
