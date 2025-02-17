@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
 import { createLogger } from '../logger.js'
-import { deployMessageSchema, deployMonitorSchema, deployProcessSchema, signerSchema, deployAssignSchema } from '../dal.js'
+import { deployMessageSchema, deployMonitorSchema, deployProcessSchema, deployAssignSchema, signerSchema } from '../dal.js'
 import { deployMessageWith, deployProcessWith, deployMonitorWith, deployUnmonitorWith, deployAssignWith } from './ao-mu.js'
 
 const MU_URL = globalThis.MU_URL || 'https://ao-mu-1.onrender.com'
@@ -40,7 +40,8 @@ describe('ao-mu', () => {
           { name: 'Content-Type', value: 'text/plain' }
         ],
         signer: signerSchema.implement(
-          async ({ data, tags, target }) => {
+          async (create) => {
+            const { data, tags, target } = await create({ passthrough: true })
             assert.ok(data)
             assert.deepStrictEqual(tags, [
               { name: 'foo', value: 'bar' },
@@ -90,7 +91,8 @@ describe('ao-mu', () => {
           { name: 'Content-Type', value: 'text/plain' }
         ],
         signer: signerSchema.implement(
-          async ({ data, tags, target }) => {
+          async (create) => {
+            const { data, tags, target } = await create({ passthrough: true })
             assert.ok(data)
             assert.deepStrictEqual(tags, [
               { name: 'foo', value: 'bar' },
@@ -141,7 +143,8 @@ describe('ao-mu', () => {
         ],
         anchor: 'idempotent-123',
         signer: signerSchema.implement(
-          async ({ data, tags, target, anchor }) => {
+          async (create) => {
+            const { data, tags, target, anchor } = await create({ passthrough: true })
             assert.ok(data)
             assert.deepStrictEqual(tags, [
               { name: 'foo', value: 'bar' },
@@ -189,7 +192,8 @@ describe('ao-mu', () => {
         data: '1234',
         tags: [{ name: 'foo', value: 'bar' }],
         signer: signerSchema.implement(
-          async ({ data, tags }) => {
+          async (create) => {
+            const { data, tags } = await create({ passthrough: true })
             assert.ok(data)
             assert.deepStrictEqual(tags, [
               { name: 'foo', value: 'bar' }
