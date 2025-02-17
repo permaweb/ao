@@ -3,7 +3,7 @@ import base64url from 'base64url'
 import { httpbis } from 'http-message-signatures'
 import { parseItem, serializeList } from 'structured-headers'
 
-import { createDataItemBytes, getSignatureData } from '../lib/data-item.js'
+import { createDataItemBytes, getSignatureData, verify } from '../lib/data-item.js'
 import { httpSigName } from './hb.js'
 
 const { augmentHeaders, createSignatureBase, createSigningParameters, formatSignatureBase } = httpbis
@@ -105,6 +105,9 @@ export const toDataItemSigner = (signer) => {
                */
               const signedBytes = unsigned
               signedBytes.set(rawSig, 2)
+
+              const isValid = await verify(signedBytes)
+              if (!isValid) throw new Error('Data Item signature is not valid')
 
               return {
                 /**
@@ -213,7 +216,12 @@ export const toHttpSigner = (signer) => {
                 httpSig.signatureInput,
                 httpSigName(address)
               )
-              return { ...request, headers: withSignature }
+
+              const signedRequest = { ...request, headers: withSignature }
+
+              // TODO: verify the request is properly signed
+
+              return signedRequest
             })
         })
       })

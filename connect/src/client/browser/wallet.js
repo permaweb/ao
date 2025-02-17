@@ -12,7 +12,9 @@ function createANS104Signer (arweaveWallet) {
    * createDataItem can be passed here for the purposes of unit testing
    * with a stub
    */
-  const signer = async (create) => {
+  const signer = async (create) => arweaveWallet.connect([
+    'SIGN_TRANSACTION'
+  ]).then(async () => {
     /**
      * set passthrough in order to receive the arguements as they were passed
      * to toDataItemSigner
@@ -25,12 +27,14 @@ function createANS104Signer (arweaveWallet) {
      * https://github.com/wanderwallet/Wander?tab=readme-ov-file#signdataitemdataitem-promiserawdataitem
      */
     const view = await arweaveWallet.signDataItem({ data, tags, target, anchor })
+
     /**
      * Since we passthrough above, just send the precomputed
      * shape back, which is then detected in signer wrapper
      */
-    return getRawAndId(view)
-  }
+    const res = await getRawAndId(Buffer.from(view))
+    return res
+  })
 
   return signer
 }
