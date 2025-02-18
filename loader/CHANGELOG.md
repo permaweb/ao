@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.47](https://github.com/permaweb/ao/compare/loader@v0.0.46...loader@v0.0.47) (2025-02-15)
+
+
+### Bug Fixes
+
+* **loader:** stub out getenv ([8002e84](https://github.com/permaweb/ao/commit/8002e84d30c44c43d6c53e00fa0e9560a9756540))
+
 ## [0.0.46](https://github.com/permaweb/ao/compare/loader@v0.0.45...loader@v0.0.46) (2025-01-29)
 
 

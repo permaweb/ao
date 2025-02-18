@@ -53,7 +53,7 @@ export const deployMessageSchema = z.function()
     data: z.any(),
     tags: z.array(tagSchema),
     anchor: z.string().optional(),
-    signer: z.any()
+    signer: z.any().nullish()
   }))
   .returns(z.promise(
     z.object({
@@ -65,7 +65,7 @@ export const deployProcessSchema = z.function()
   .args(z.object({
     data: z.any(),
     tags: z.array(tagSchema),
-    signer: z.any()
+    signer: z.any().nullish()
   }))
   .returns(z.promise(
     z.object({
@@ -126,22 +126,6 @@ export const loadTransactionMetaSchema = z.function()
   ))
 
 export const signerSchema = z.function()
-  .args(z.object({
-    data: z.any(),
-    tags: z.array(tagSchema),
-    /**
-     * target must be set with writeMessage,
-     * but not for createProcess
-     */
-    target: z.string().optional(),
-    anchor: z.string().optional()
-  }))
-  .returns(z.promise(
-    z.object({
-      id: z.string(),
-      raw: z.any()
-    })
-  ))
 
 /**
  * A hack to get reuse JSDoc types in other files
