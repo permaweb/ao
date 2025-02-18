@@ -30,17 +30,19 @@ describe('hb playground', () => {
     test('should relay the message through HyperBEAM', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const { call, spawn, message, result, createDataItemSigner } = connect({
+      const { request, spawn, message, result, createDataItemSigner } = connect({
         MODE: 'mainnet',
         wallet,
-        AO_URL: process.env.HB_URL || 'http://localhost:8734'
+        device: 'process@1.0',
+        URL: process.env.HB_URL || 'http://localhost:8734'
       })
 
       const address = await fetch(process.env.HB_URL + '/~meta@1.0/info/address').then((res) => res.text())
 
+      console.log(address)
       // uncomment examples as needed
 
-      const res = await call(`~simple-pay@1.0/balance?address=${address}`, {
+      const res = await request(`~simple-pay@1.0/balance?address=${address}`, {
         method: 'GET'
       })
 

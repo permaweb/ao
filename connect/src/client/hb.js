@@ -72,14 +72,38 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         toHttpSigner(signer)(toSigBaseArgs({
           url: joinUrl({ url: HB_URL, path }),
           method,
-          headers,
-          includePath: true
+          headers
+          // this does not work with hyperbeam
+          // includePath: true
         })).then((req) => ({ ...req, body }))
       ))
       .map(logger.tap('Sending HTTP signed message to HB: %o'))
       .chain((request) => of(request)
-        .chain(fromPromise(({ url, method, headers, body }) =>
-          fetch(url, { method, headers, body, redirect: 'follow' })
+        .chain(fromPromise(({ url, method, headers, body }) => {
+          return fetch(url, { method, headers, body, redirect: 'follow' })
+            .then(async res => {
+              if (res.status < 300) {
+                const contentType = res.headers.get('content-type')
+
+                if (contentType && contentType.includes('multipart/form-data')) {
+                  return res
+                } else if (contentType && contentType.includes('application/json')) {
+                  const body = await res.json()
+                  return {
+                    headers: res.headers,
+                    body
+                  }
+                } else {
+                  const body = await res.text()
+                  return {
+                    headers: res.headers,
+                    body
+                  }
+                }
+              }
+              return res
+            })
+        }
         ))
       ).toPromise()
   }
@@ -222,6 +246,14 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
+export class InsufficientFunds extends Error {
+  name = 'InsufficientFunds'
+}
+
+export class RedirectRequested extends Error {
+  name = 'RedirectRequested'
+}
+
 export function relayerWith ({ fetch, logger, HB_URL, signer }) {
   /**
    * A fetch wrapper that will sign
@@ -261,6 +293,20 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
       }
     })
 
-    return fetch(hb, { ...options, headers: signedHeaders })
+    return fetch(hb, { ...options, headers: signedHeaders }).then(res => {
+      if (res.status === 400) {
+        const err = new InsufficientFunds('Insufficient Funds for request!')
+        err.price = res.headers.get('price')
+        throw err
+      }
+      if (res.status === 422) {
+        const err = new RedirectRequested('Redirect with new format!')
+        err.contentEncoding = res.headers.get('content-encoding')
+        err.device = res.headers.get('accept-device')
+        err.location = res.headers.get('location')
+        throw err
+      }
+      return res
+    })
   }
 }
