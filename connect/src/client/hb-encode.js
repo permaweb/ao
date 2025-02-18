@@ -1,10 +1,10 @@
 import base64url from 'base64url'
-import { Buffer } from 'buffer/index.js'
+import { Buffer as BufferShim } from 'buffer/index.js'
 
 /**
  * polyfill in Browser
  */
-if (!globalThis.Buffer) globalThis.Buffer = Buffer
+if (!globalThis.Buffer) globalThis.Buffer = BufferShim
 
 /**
  * ******
@@ -124,16 +124,6 @@ function hbEncode (obj, parent = '') {
   return flattened
 }
 
-async function boundaryFrom (bodyParts = []) {
-  const base = new Blob(
-    bodyParts.flatMap((p, i, arr) =>
-      i < arr.length - 1 ? [p, '\r\n'] : [p])
-  )
-
-  const hash = await sha256(await base.arrayBuffer())
-  return base64url.encode(Buffer.from(hash))
-}
-
 /**
  * Encode the object as HyperBEAM HTTP multipart
  * message. Nested objects are flattened to a single
@@ -166,6 +156,10 @@ export async function encode (obj = {}) {
    * Add headers that indicates and orders body-keys
    * for the purpose of determinstically reconstructing
    * content-digest on the server
+   *
+   * TODO: remove dead code. Apparently, this is only needed
+   * on the HB side, but keeping the commented code here
+   * just in case we need it client side.
    */
   // const bk = hbEncodeValue('body-keys', bodyKeys)
   // Object.keys(bk).forEach((key) => h.append(key, bk[key]))
@@ -179,7 +173,16 @@ export async function encode (obj = {}) {
       ]).arrayBuffer())
     )
 
-    const boundary = await boundaryFrom(bodyParts)
+    /**
+     * Generate a deterministic boundary, from the parts
+     * to use for the multipart body boundary
+     */
+    const base = new Blob(
+      bodyParts.flatMap((p, i, arr) =>
+        i < arr.length - 1 ? [p, '\r\n'] : [p])
+    )
+    const hash = await sha256(await base.arrayBuffer())
+    const boundary = base64url.encode(Buffer.from(hash))
 
     /**
      * Segment each part with the multipart boundary
