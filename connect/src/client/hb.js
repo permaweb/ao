@@ -90,7 +90,7 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
                 } else if (contentType && contentType.includes('application/json')) {
                   const body = await res.json()
                   return {
-                    headers,
+                    headers: res.headers,
                     body
                   }
                 } else {
