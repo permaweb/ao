@@ -17,7 +17,7 @@ const WALLET = {
 }
 
 
-test.skip("connectWith use mainnet device=relay@1.0 mode to dryrun on a process", async () => {
+test("connectWith use mainnet device=relay@1.0 mode to dryrun on a process", async () => {
     const connect = connectWith({
         createDataItemSigner: WalletClient.createDataItemSigner,
         createHbSigner: WalletClient.createHbSigner
@@ -50,24 +50,28 @@ test("connectWith use mainnet device=relay@1.0 mode to message on a process", as
     assert.equal(Error, "Insufficient Balance!")
 })
 
-test.skip("connectWith use mainnet device=relay@1.0 mode to spawn a process", async () => {
+test("connectWith use mainnet device=relay@1.0 mode to spawn a process", async () => {
     const connect = connectWith({
         createDataItemSigner: WalletClient.createDataItemSigner,
         createHbSigner: WalletClient.createHbSigner
     })
     
     const { get } = connect({MODE: 'mainnet', wallet: WALLET })
-    const Ticker = await get({
-        Target: "WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU",
-        Action: "Info",
-        dryrun: true
-    }).then(map => map.Messages[0].Ticker.text())
-
-    assert.equal(Ticker, "PNTS")
+    const process = await get({
+        Type: "Process",
+        Name: "MyNewProcess",
+        Module: "JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g",
+        Scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA"
+    })
+    //.then(result => result.Output.text())
+    // console.log(result.Output.text())
+    //.then(map => map)
+    assert.equal(process.length, 43)
+    
 })
 
 
-test.skip("connectWith should give us legacy connect mode", async () => {
+test("connectWith should give us legacy connect mode", async () => {
     const connect = connectWith({
         createDataItemSigner: WalletClient.createDataItemSigner,
         createHbSigner: WalletClient.createHbSigner

@@ -304,6 +304,17 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     })
 
     const spawnLogger = logger.child('spawn')
+    let deployProcess = HbClient.deployProcessWith({
+      fetch: defaultFetch,
+      logger: spawnLogger,
+      HB_URL: URL,
+      signer
+    })
+    if (device == "relay@1.0") {
+      deployProcess = MuClient.deployProcessWith({ fetch: relayFetch, HB_URL: URL, MU_URL, logger: spawnLogger })
+        
+    }
+
     const spawn = spawnWith({
       loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
         fetch,
@@ -311,12 +322,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
         logger: spawnLogger
       }),
       validateScheduler: mockValidate,
-      deployProcess: HbClient.deployProcessWith({
-        fetch: defaultFetch,
-        logger: spawnLogger,
-        HB_URL: URL,
-        signer
-      }),
+      deployProcess,
       logger: spawnLogger
     })
 
@@ -346,9 +352,10 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       MODE,
       method: 'GET',
       device: device,
-      dryrun: dryrun,
+      dryrun,
       message,
       result,
+      spawn,
       signer: createDataItemSigner(wallet), 
       request: HbClient.requestWith({
         fetch: defaultFetch,

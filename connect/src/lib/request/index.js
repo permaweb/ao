@@ -116,6 +116,7 @@ if mode == 'process' then request should create a pure httpsig from fields
                     message: id
                 }))
                 .catch(err => {
+                    
                     if (err.message.includes("Insufficient funds")) {
                         return { error: "insufficient-funds"}
                     }
@@ -123,12 +124,25 @@ if mode == 'process' then request should create a pure httpsig from fields
             }))(ctx)
         }
         if (ctx.type === 'Process' && ctx.dataItem) {
-            return fromPromise(ctx => {
-                return spawn({
-                    tags: ctx.tags,
-                    data: ctx.data
+            
+            return fromPromise(ctx => spawn({
+                    tags: ctx.dataItem.tags,
+                    data: ctx.dataItem.data,
+                    scheduler: ctx.dataItem.tags.find(t => t.name == "Scheduler")?.value,
+                    module: ctx.dataItem.tags.find(t => t.name == "Module")?.value,
+                    signer
                 })
-            })
+                
+                // .then(id => result({
+                //     process: id,
+                //     message: id
+                // }))
+                .catch(err => {
+                    if (err.message.includes("Insufficient funds")) {
+                        return { error: "insufficient-funds"}
+                    }
+                    throw err
+            }))(ctx)
         }
         if (ctx.map) {
             return fromPromise(ctx => {
@@ -141,11 +155,27 @@ if mode == 'process' then request should create a pure httpsig from fields
   }
 
 
-  const verifyInput = (args) =>
-    of(inputSchema.parse(args))
-
+  const verifyInput = (args) => {
+     if (args.device == "relay@1.0" && args.Type == "Process") {
+        return of(
+            z.object({
+                path: z.string().min(1, { message: 'path is required' }),
+                method: z.string(),
+                Module: z.string(),
+                Scheduler: z.string(),
+              }).passthrough()
+                .parse(args)
+        )
+     }
+     return of(inputSchema.parse(args))
+  }
+  
   const transformToMap = (result) => {
     let map = {}
+    
+    if (typeof(result) === "string") {
+        return result
+    }
     if (result.Output && result.Output.data) {
       map.Output = {
         text: () => Promise.resolve(result.Output.data)
