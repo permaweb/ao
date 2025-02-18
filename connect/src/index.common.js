@@ -249,10 +249,9 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     CU_URL = DEFAULT_RELAY_CU_URL,
     fetch = defaultFetch
   }) {
-    if (device === 'relay@1.0') MODE = 'relay'
-
-    const logger = MODE === 'relay' ? _logger.child('mainnet-relay') : _logger.child('mainnet-process')
-    logger('Mode Activated %s', MODE === 'relay' ? '🔀' : '🐲')
+    const isRelayMode = device === 'relay@1.0'
+    const logger = isRelayMode ? _logger.child('mainnet-relay') : _logger.child('mainnet-process')
+    logger('Mode Activated %s', isRelayMode ? '🔀' : '🐲')
 
     if (!signer) throw new Error('mainnet mode requires providing a signer to connect()')
 
@@ -284,7 +283,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     }
 
     const resultLogger = logger.child('result')
-    const loadResult = MODE === 'relay'
+    const loadResult = isRelayMode
       ? CuClient.loadResultWith({
         fetch: relayFetch,
         logger: resultLogger,
@@ -305,9 +304,9 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     })
 
     const messageLogger = logger.child('message')
-    const deployMessage = MODE === 'relay'
+    const deployMessage = isRelayMode
       ? MuClient.deployMessageWith({
-        fetch: MODE === 'relay' ? relayFetch : defaultFetch,
+        fetch: isRelayMode ? relayFetch : defaultFetch,
         logger: messageLogger,
         HB_URL: URL,
         MU_URL,
@@ -327,7 +326,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     })
 
     const spawnLogger = logger.child('spawn')
-    const deployProcess = MODE === 'relay'
+    const deployProcess = isRelayMode
       ? MuClient.deployProcessWith({
         fetch: relayFetch,
         HB_URL: URL,
@@ -357,7 +356,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     const dryrun = dryrunWith({
       signer,
       dryrunFetch: CuClient.dryrunFetchWith({
-        fetch: MODE === 'relay' ? relayFetch : fetch,
+        fetch: isRelayMode ? relayFetch : fetch,
         CU_URL,
         logger: dryrunLogger
       }),
@@ -381,7 +380,6 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
 
     const getLogger = logger.child('get')
     const get = requestWith({
-      signer,
       logger: getLogger,
       MODE,
       method: 'GET',
@@ -390,6 +388,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       message,
       result,
       spawn,
+      signer,
       request: HbClient.requestWith({
         fetch: defaultFetch,
         method: 'GET',
@@ -445,7 +444,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     //   logger: messageLogger
     // })
 
-    return { MODE, request, get, post, result, message, spawn, createDataItemSigner: mainnetDataItemSigner, createSigner: mainnetSigner }
+    return { MODE: isRelayMode ? 'relay' : 'mainnet', request, get, post, result, message, spawn, createDataItemSigner: mainnetDataItemSigner, createSigner: mainnetSigner }
   }
 
   /**

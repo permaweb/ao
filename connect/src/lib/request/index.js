@@ -84,7 +84,6 @@ if mode == 'process' then request should create a pure httpsig from fields
 
   function dispatch ({ request, spawn, message, result, dryrun }) {
     return function (ctx) {
-      console.log(ctx)
       if (ctx.type === 'dryrun' && ctx.dataItem) {
         const inputData = {
           process: ctx.dataItem.target,
