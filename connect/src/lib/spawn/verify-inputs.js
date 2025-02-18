@@ -100,7 +100,7 @@ export function verifyInputsWith (env) {
     return of(ctx)
       .chain(ctx => verifyModule(ctx.module).map(() => ctx))
       // .chain(ctx => verifyScheduler(ctx.scheduler)).map(() => ctx)
-      .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
+      // .chain(ctx => verifySigner(ctx.signer).map(() => ctx))
       .bimap(
         logger.tap('Error when verify input: %s'),
         logger.tap('Successfully verified inputs')

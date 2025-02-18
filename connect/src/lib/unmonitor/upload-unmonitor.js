@@ -34,7 +34,7 @@ export function uploadUnmonitorWith (env) {
       .chain(fromPromise(({ id, signer }) =>
         deployUnmonitor({
           processId: id,
-          signer: signerSchema.implement(signer),
+          signer: signerSchema.implement(signer || env.signer),
           /**
            * No tags or data can be provided right now,
            *

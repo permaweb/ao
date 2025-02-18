@@ -1,5 +1,7 @@
 import { Rejected, fromPromise, of } from 'hyper-async'
 
+import { toDataItemSigner } from './signer.js'
+
 /**
  * @typedef Env3
  * @property {fetch} fetch
@@ -26,15 +28,10 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
       /**
        * Sign with the provided signer
        */
-      .chain(
-        fromPromise(({ processId, data, tags, anchor, signer }) =>
-        /**
-         * The processId is the target set on the data item
-         * See https://specs.g8way.io/?tx=xwOgX-MmqN5_-Ny_zNu2A8o-PnTGsoRb_3FrtiMAkuw
-         */
-          signer({ data, tags, target: processId, anchor }))
-
+      .chain(fromPromise(({ processId, data, tags, anchor, signer }) =>
+        toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
       )
+      .map(logger.tap('Successfully built and signed data item'))
       .chain(signedDataItem =>
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
@@ -91,7 +88,8 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
       /**
        * Sign with the provided signer
        */
-      .chain(fromPromise(({ data, tags, signer }) => signer({ data, tags })))
+      .chain(fromPromise(({ data, tags, signer }) => toDataItemSigner(signer)({ data, tags })))
+      .map(logger.tap('Successfully built and signed data item'))
       .chain(signedDataItem =>
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
@@ -146,11 +144,9 @@ export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
      */
     .chain(
       fromPromise(({ processId, data, tags, anchor, signer }) =>
-        /**
-         * The processId is the target set on the data item
-         */
-        signer({ data, tags, target: processId, anchor }))
+        toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
     )
+    .map(logger.tap('Successfully built and signed data item'))
     .chain((signedDataItem) =>
       of(signedDataItem)
         .chain(fromPromise(async (signedDataItem) =>
@@ -207,11 +203,9 @@ export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
      */
     .chain(
       fromPromise(({ processId, data, tags, anchor, signer }) =>
-        /**
-         * The processId is the target set on the data item
-         */
-        signer({ data, tags, target: processId, anchor }))
+        toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
     )
+    .map(logger.tap('Successfully built and signed data item'))
     .chain((signedDataItem) =>
       of(signedDataItem)
         .chain(fromPromise(async (signedDataItem) =>
