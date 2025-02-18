@@ -101,6 +101,7 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
                   }
                 }
               }
+              return res
             })
         }
         ))
