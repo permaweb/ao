@@ -24,51 +24,59 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployMessage')
 
   return (args) => {
-    return of(args)
-      /**
-       * Sign with the provided signer
-       */
-      .chain(fromPromise(({ processId, data, tags, anchor, signer }) =>
-        toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
-      )
-      .map(logger.tap('Successfully built and signed data item'))
-      .chain(signedDataItem =>
-        of(signedDataItem)
-          .chain(fromPromise(async (signedDataItem) =>
-            fetch(
-              MU_URL,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  Accept: 'application/json'
-                },
-                redirect: 'follow',
-                body: signedDataItem.raw
-              }
+    return (
+      of(args)
+        /**
+         * Sign with the provided signer
+         */
+        .chain(
+          fromPromise(({ processId, data, tags, anchor, signer }) =>
+            toDataItemSigner(signer)({ data, tags, target: processId, anchor })
+          )
+        )
+        .map(logger.tap('Successfully built and signed data item'))
+        .chain((signedDataItem) =>
+          of(signedDataItem)
+            .chain(
+              fromPromise(async (signedDataItem) =>
+                fetch(MU_URL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/octet-stream',
+                    Accept: 'application/json'
+                  },
+                  redirect: 'follow',
+                  body: signedDataItem.raw
+                })
+              )
             )
-          )).bichain(
-            err => {
-              if (err.name === 'RedirectRequested') {
-                return Rejected(err)
-              } else {
-                return Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`))
-              }
-            },
-            fromPromise(
-              async res => {
+            .bichain(
+              (err) => {
+                if (err.name === 'RedirectRequested') {
+                  return Rejected(err)
+                } else {
+                  return Rejected(
+                    new Error(
+                      `Error while communicating with MU: ${JSON.stringify(
+                        err
+                      )}`
+                    )
+                  )
+                }
+              },
+              fromPromise(async (res) => {
                 if (res.ok) return res.json()
                 throw new Error(`${res.status}: ${await res.text()}`)
-              }
+              })
             )
-          )
-          .bimap(
-            logger.tap('Error encountered when writing message via MU'),
-            logger.tap('Successfully wrote message via MU')
-          )
-          .map(res => ({ res, messageId: signedDataItem.id }))
-      )
-      .toPromise()
+            .bimap(
+              logger.tap('Error encountered when writing message via MU'),
+              logger.tap('Successfully wrote message via MU')
+            )
+            .map((res) => ({ res, messageId: signedDataItem.id }))
+        )
+        .toPromise()
+    )
   }
 }
 
@@ -90,43 +98,52 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployProcess')
 
   return (args) => {
-    return of(args)
-      /**
-       * Sign with the provided signer
-       */
-      .chain(fromPromise(({ data, tags, signer }) => toDataItemSigner(signer)({ data, tags })))
-      .map(logger.tap('Successfully built and signed data item'))
-      .chain(signedDataItem =>
-        of(signedDataItem)
-          .chain(fromPromise(async (signedDataItem) =>
-            fetch(
-              MU_URL,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  Accept: 'application/json'
-                },
-                redirect: 'follow',
-                body: signedDataItem.raw
-              }
+    return (
+      of(args)
+        /**
+         * Sign with the provided signer
+         */
+        .chain(
+          fromPromise(({ data, tags, signer }) =>
+            toDataItemSigner(signer)({ data, tags })
+          )
+        )
+        .map(logger.tap('Successfully built and signed data item'))
+        .chain((signedDataItem) =>
+          of(signedDataItem)
+            .chain(
+              fromPromise(async (signedDataItem) =>
+                fetch(MU_URL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/octet-stream',
+                    Accept: 'application/json'
+                  },
+                  redirect: 'follow',
+                  body: signedDataItem.raw
+                })
+              )
             )
-          )).bichain(
-            err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
-            fromPromise(
-              async res => {
+            .bichain(
+              (err) =>
+                Rejected(
+                  new Error(
+                    `Error while communicating with MU: ${JSON.stringify(err)}`
+                  )
+                ),
+              fromPromise(async (res) => {
                 if (res.ok) return res.json()
                 throw new Error(`${res.status}: ${await res.text()}`)
-              }
+              })
             )
-          )
-          .bimap(
-            logger.tap('Error encountered when deploying process via MU'),
-            logger.tap('Successfully deployed process via MU')
-          )
-          .map(res => ({ res, processId: signedDataItem.id }))
-      )
-      .toPromise()
+            .bimap(
+              logger.tap('Error encountered when deploying process via MU'),
+              logger.tap('Successfully deployed process via MU')
+            )
+            .map((res) => ({ res, processId: signedDataItem.id }))
+        )
+        .toPromise()
+    )
   }
 }
 
@@ -144,49 +161,54 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
 export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployMonitor')
 
-  return (args) => of(args)
-    /**
-     * Sign with the provided signer
-     */
-    .chain(
-      fromPromise(({ processId, data, tags, anchor, signer }) =>
-        toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
-    )
-    .map(logger.tap('Successfully built and signed data item'))
-    .chain((signedDataItem) =>
-      of(signedDataItem)
-        .chain(fromPromise(async (signedDataItem) =>
-          fetch(
-            MU_URL + '/monitor/' + args.processId,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/octet-stream',
-                Accept: 'application/json'
-              },
-              redirect: 'follow',
-              body: signedDataItem.raw
-            }
+  return (args) =>
+    of(args)
+      /**
+       * Sign with the provided signer
+       */
+      .chain(
+        fromPromise(({ processId, data, tags, anchor, signer }) =>
+          toDataItemSigner(signer)({ data, tags, target: processId, anchor })
+        )
+      )
+      .map(logger.tap('Successfully built and signed data item'))
+      .chain((signedDataItem) =>
+        of(signedDataItem)
+          .chain(
+            fromPromise(async (signedDataItem) =>
+              fetch(MU_URL + '/monitor/' + args.processId, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  Accept: 'application/json'
+                },
+                redirect: 'follow',
+                body: signedDataItem.raw
+              })
+            )
           )
-        )).bichain(
-          err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
-          fromPromise(
-            async res => {
+          .bichain(
+            (err) =>
+              Rejected(
+                new Error(
+                  `Error while communicating with MU: ${JSON.stringify(err)}`
+                )
+              ),
+            fromPromise(async (res) => {
               /**
                * Response from MU is not used, so just return some json
                */
               if (res.ok) return { ok: true }
               throw new Error(`${res.status}: ${await res.text()}`)
-            }
+            })
           )
-        )
-        .bimap(
-          logger.tap('Error encountered when subscribing to process via MU'),
-          logger.tap('Successfully subscribed to process via MU')
-        )
-        .map(res => ({ res, messageId: signedDataItem.id }))
-    )
-    .toPromise()
+          .bimap(
+            logger.tap('Error encountered when subscribing to process via MU'),
+            logger.tap('Successfully subscribed to process via MU')
+          )
+          .map((res) => ({ res, messageId: signedDataItem.id }))
+      )
+      .toPromise()
 }
 
 /**
@@ -203,49 +225,56 @@ export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
 export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployUnmonitor')
 
-  return (args) => of(args)
-    /**
-     * Sign with the provided signer
-     */
-    .chain(
-      fromPromise(({ processId, data, tags, anchor, signer }) =>
-        toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
-    )
-    .map(logger.tap('Successfully built and signed data item'))
-    .chain((signedDataItem) =>
-      of(signedDataItem)
-        .chain(fromPromise(async (signedDataItem) =>
-          fetch(
-            MU_URL + '/monitor/' + args.processId,
-            {
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/octet-stream',
-                Accept: 'application/json'
-              },
-              redirect: 'follow',
-              body: signedDataItem.raw
-            }
+  return (args) =>
+    of(args)
+      /**
+       * Sign with the provided signer
+       */
+      .chain(
+        fromPromise(({ processId, data, tags, anchor, signer }) =>
+          toDataItemSigner(signer)({ data, tags, target: processId, anchor })
+        )
+      )
+      .map(logger.tap('Successfully built and signed data item'))
+      .chain((signedDataItem) =>
+        of(signedDataItem)
+          .chain(
+            fromPromise(async (signedDataItem) =>
+              fetch(MU_URL + '/monitor/' + args.processId, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  Accept: 'application/json'
+                },
+                redirect: 'follow',
+                body: signedDataItem.raw
+              })
+            )
           )
-        )).bichain(
-          err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
-          fromPromise(
-            async res => {
+          .bichain(
+            (err) =>
+              Rejected(
+                new Error(
+                  `Error while communicating with MU: ${JSON.stringify(err)}`
+                )
+              ),
+            fromPromise(async (res) => {
               /**
                * Response from MU is not used, so just return some json
                */
               if (res.ok) return { ok: true }
               throw new Error(`${res.status}: ${await res.text()}`)
-            }
+            })
           )
-        )
-        .bimap(
-          logger.tap('Error encountered when unsubscribing to process via MU'),
-          logger.tap('Successfully unsubscribed to process via MU')
-        )
-        .map(res => ({ res, messageId: signedDataItem.id }))
-    )
-    .toPromise()
+          .bimap(
+            logger.tap(
+              'Error encountered when unsubscribing to process via MU'
+            ),
+            logger.tap('Successfully unsubscribed to process via MU')
+          )
+          .map((res) => ({ res, messageId: signedDataItem.id }))
+      )
+      .toPromise()
 }
 
 /**
@@ -272,9 +301,12 @@ export function deployAssignWith ({ fetch, MU_URL, logger: _logger }) {
 
   return (args) => {
     return of(args)
-      .chain(fromPromise(async ({ process, message, baseLayer, exclude }) =>
-        fetch(
-            `${MU_URL}?process-id=${process}&assign=${message}${baseLayer ? '&base-layer' : ''}${exclude ? '&exclude=' + exclude.join(',') : ''}`,
+      .chain(
+        fromPromise(async ({ process, message, baseLayer, exclude }) =>
+          fetch(
+            `${MU_URL}?process-id=${process}&assign=${message}${
+              baseLayer ? '&base-layer' : ''
+            }${exclude ? '&exclude=' + exclude.join(',') : ''}`,
             {
               method: 'POST',
               headers: {
@@ -282,21 +314,26 @@ export function deployAssignWith ({ fetch, MU_URL, logger: _logger }) {
                 Accept: 'application/json'
               }
             }
+          )
         )
-      )).bichain(
-        err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
-        fromPromise(
-          async res => {
-            if (res.ok) return res.json()
-            throw new Error(`${res.status}: ${await res.text()}`)
-          }
-        )
+      )
+      .bichain(
+        (err) =>
+          Rejected(
+            new Error(
+              `Error while communicating with MU: ${JSON.stringify(err)}`
+            )
+          ),
+        fromPromise(async (res) => {
+          if (res.ok) return res.json()
+          throw new Error(`${res.status}: ${await res.text()}`)
+        })
       )
       .bimap(
         logger.tap('Error encountered when writing assignment via MU'),
         logger.tap('Successfully wrote assignment via MU')
       )
-      .map(res => ({ res, assignmentId: res.id }))
+      .map((res) => ({ res, assignmentId: res.id }))
       .toPromise()
   }
 }
