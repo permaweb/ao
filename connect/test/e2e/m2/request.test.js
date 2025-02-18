@@ -49,13 +49,11 @@ test('request:M2 full stack spawn, message, result', async () => {
 
   })
   // .then(tap(console.log))
-
-  console.log(p.process)
-  console.log(p.slot)
+  const process = await p.process.text()
 
   // message
   const m = await request({
-    path: `${p.process}/schedule`,
+    path: `${process}/schedule`,
     type: 'Message',
     method: 'POST',
     action: 'Eval',
@@ -65,17 +63,18 @@ test('request:M2 full stack spawn, message, result', async () => {
 
   })
 
-  console.log(m)
+  const slot = await m.slot.text()
 
   // get results
   const r = await request({
-    path: `/${p.process}/compute&slot+integer=${m.slot}/results/json`,
+    path: `/${process}/compute&slot+integer=${slot}/results/json`,
     method: 'POST',
-    target: p.process,
-    'slot+integer': m.slot,
+    target: process,
+    'slot+integer': slot,
     accept: 'application/json'
   })
+  console.log(r)
 
-  console.log(JSON.parse(r.body).Output.data)
+  console.log(await r.Output.text())
   assert.ok(true)
 })

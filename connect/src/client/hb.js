@@ -80,19 +80,25 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .chain(fromPromise(({ url, method, headers, body }) => {
           return fetch(url, { method, headers, body, redirect: 'follow' })
             .then(async res => {
-              const content = res.headers.get('Content-Type')
-              let body = ''
-              if (content === 'application/json') {
-                body = await res.json()
-              } else {
-                body = await res.text()
+              if (res.status < 300) {
+                const contentType = res.headers.get('content-type')
+
+                if (contentType && contentType.includes('multipart/form-data')) {
+                  return res
+                } else if (contentType && contentType.includes('application/json')) {
+                  const body = await res.json()
+                  return {
+                    headers,
+                    body
+                  }
+                } else {
+                  const body = await res.text()
+                  return {
+                    headers: res.headers,
+                    body
+                  }
+                }
               }
-              const map = {}
-              res.headers.forEach((v, k) => {
-                map[k] = v
-              })
-              map.body = body
-              return map
             })
         }
         ))

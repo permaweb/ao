@@ -4,10 +4,12 @@ import { fromPromise, of } from 'hyper-async'
 
 import { errFrom } from '../utils.js'
 
-const inputSchema = z.object({
-  path: z.string().min(1, { message: 'path is required' }),
-  method: z.string()
-}).passthrough()
+const inputSchema = z
+  .object({
+    path: z.string().min(1, { message: 'path is required' }),
+    method: z.string()
+  })
+  .passthrough()
 
 /**
  * @callback Request
@@ -44,9 +46,24 @@ if mode == 'process' then request should create a pure httpsig from fields
       const dataItem = {
         target: fields.Target,
         anchor: fields.Anchor ?? '',
-        tags: keys(omit(['Target', 'Anchor', 'Data', 'dryrun', 'Type', 'Variant', 'path', 'method'], fields)).map(function (key) {
-          return ({ name: key, value: fields[key] })
-        }, fields)
+        tags: keys(
+          omit(
+            [
+              'Target',
+              'Anchor',
+              'Data',
+              'dryrun',
+              'Type',
+              'Variant',
+              'path',
+              'method'
+            ],
+            fields
+          )
+        )
+          .map(function (key) {
+            return { name: key, value: fields[key] }
+          }, fields)
           .concat([
             { name: 'Data-Protocol', value: 'ao' },
             { name: 'Type', value: fields.Type ?? 'Message' },
@@ -84,55 +101,63 @@ if mode == 'process' then request should create a pure httpsig from fields
           tags: ctx.dataItem.tags,
           data: ctx.datatItem?.data ?? ''
         }
-        return fromPromise(() => dryrun(inputData).catch(err => {
-          if (err.message.includes('Insufficient funds')) {
-            return { error: 'insufficient-funds' }
-          }
-          throw err
-        }))(ctx)
+        return fromPromise(() =>
+          dryrun(inputData).catch((err) => {
+            if (err.message.includes('Insufficient funds')) {
+              return { error: 'insufficient-funds' }
+            }
+            throw err
+          })
+        )(ctx)
       }
 
       if (ctx.type === 'Message' && ctx.dataItem) {
-        return fromPromise(ctx => message({
-          process: ctx.dataItem.target,
-          anchor: ctx.dataItem.anchor,
-          tags: ctx.dataItem.tags,
-          data: ctx.dataItem.data ?? '',
-          signer
-        })
-          .then(id => result({
+        return fromPromise((ctx) =>
+          message({
             process: ctx.dataItem.target,
-            message: id
-          }))
-          .catch(err => {
-            if (err.message.includes('Insufficient funds')) {
-              return { error: 'insufficient-funds' }
-            }
-            throw err
-          }))(ctx)
+            anchor: ctx.dataItem.anchor,
+            tags: ctx.dataItem.tags,
+            data: ctx.dataItem.data ?? '',
+            signer
+          })
+            .then((id) =>
+              result({
+                process: ctx.dataItem.target,
+                message: id
+              })
+            )
+            .catch((err) => {
+              if (err.message.includes('Insufficient funds')) {
+                return { error: 'insufficient-funds' }
+              }
+              throw err
+            })
+        )(ctx)
       }
       if (ctx.type === 'Process' && ctx.dataItem) {
-        return fromPromise(ctx => spawn({
-          tags: ctx.dataItem.tags,
-          data: ctx.dataItem.data,
-          scheduler: ctx.dataItem.tags.find(t => t.name === 'Scheduler')?.value,
-          module: ctx.dataItem.tags.find(t => t.name === 'Module')?.value,
-          signer
-        })
-
-        // .then(id => result({
-        //     process: id,
-        //     message: id
-        // }))
-          .catch(err => {
-            if (err.message.includes('Insufficient funds')) {
-              return { error: 'insufficient-funds' }
-            }
-            throw err
-          }))(ctx)
+        return fromPromise((ctx) =>
+          spawn({
+            tags: ctx.dataItem.tags,
+            data: ctx.dataItem.data,
+            scheduler: ctx.dataItem.tags.find((t) => t.name === 'Scheduler')
+              ?.value,
+            module: ctx.dataItem.tags.find((t) => t.name === 'Module')?.value,
+            signer
+          })
+            // .then(id => result({
+            //     process: id,
+            //     message: id
+            // }))
+            .catch((err) => {
+              if (err.message.includes('Insufficient funds')) {
+                return { error: 'insufficient-funds' }
+              }
+              throw err
+            })
+        )(ctx)
       }
       if (ctx.map) {
-        return fromPromise(ctx => {
+        return fromPromise((ctx) => {
           return request(ctx.map)
         })(ctx)
       }
@@ -142,77 +167,127 @@ if mode == 'process' then request should create a pure httpsig from fields
   const verifyInput = (args) => {
     if (args.device === 'relay@1.0' && args.Type === 'Process') {
       return of(
-        z.object({
-          path: z.string().min(1, { message: 'path is required' }),
-          method: z.string(),
-          Module: z.string(),
-          Scheduler: z.string()
-        }).passthrough()
+        z
+          .object({
+            path: z.string().min(1, { message: 'path is required' }),
+            method: z.string(),
+            Module: z.string(),
+            Scheduler: z.string()
+          })
+          .passthrough()
           .parse(args)
       )
     }
     return of(inputSchema.parse(args))
   }
 
-  const transformToMap = (result) => {
-    let map = {}
-
-    if (typeof (result) === 'string') {
-      return result
-    }
-
-    if (result.Output && result.Output.data) {
-      map.Output = {
-        text: () => Promise.resolve(result.Output.data)
+  const transformToMap = (mode) => (result) => {
+    const map = {}
+    if (mode === 'relay@1.0') {
+      if (typeof result === 'string') {
+        return result
       }
-    }
-    if (result.Messages) {
-      map.Messages = result.Messages.map((m) => {
-        const miniMap = {}
-        m.Tags.forEach(t => {
-          miniMap[t.name] = {
-            text: () => Promise.resolve(t.value)
+
+      if (result.Output && result.Output.data) {
+        map.Output = {
+          text: () => Promise.resolve(result.Output.data)
+        }
+      }
+      if (result.Messages) {
+        map.Messages = result.Messages.map((m) => {
+          const miniMap = {}
+          m.Tags.forEach((t) => {
+            miniMap[t.name] = {
+              text: () => Promise.resolve(t.value)
+            }
+          })
+          miniMap.Data = {
+            text: () => Promise.resolve(m.Data),
+            json: () => Promise.resolve(JSON.parse(m.Data)),
+            binary: () => Promise.resolve(Buffer.from(m.Data))
           }
+          miniMap.Target = {
+            text: () => Promise.resolve(m.Target)
+          }
+          miniMap.Anchor = {
+            text: () => Promise.resolve(m.Anchor)
+          }
+          return miniMap
         })
-        miniMap.Data = {
-          text: () => Promise.resolve(m.Data),
-          json: () => Promise.resolve(JSON.parse(m.Data)),
-          binary: () => Promise.resolve(Buffer.from(m.Data))
+      }
+      return map
+    } else {
+      const res = result
+      let body = ''
+      res.headers.forEach((v, k) => {
+        map[k] = {
+          text: () => Promise.resolve(v)
         }
-        miniMap.Target = {
-          text: () => Promise.resolve(m.Target)
-        }
-        miniMap.Anchor = {
-          text: () => Promise.resolve(m.Anchor)
-        }
-        return miniMap
       })
+
+      if (typeof res.body === 'string') {
+        try {
+          body = JSON.parse(res.body)
+
+          if (body.Output && body.Output.data) {
+            map.Output = {
+              text: () => Promise.resolve(body.Output.data)
+            }
+          }
+          if (body.Messages) {
+            map.Messages = body.Messages.map((m) => {
+              const miniMap = {}
+              m.Tags.forEach((t) => {
+                miniMap[t.name] = {
+                  text: () => Promise.resolve(t.value)
+                }
+              })
+              miniMap.Data = {
+                text: () => Promise.resolve(m.Data),
+                json: () => Promise.resolve(JSON.parse(m.Data)),
+                binary: () => Promise.resolve(Buffer.from(m.Data))
+              }
+              miniMap.Target = {
+                text: () => Promise.resolve(m.Target)
+              }
+              miniMap.Anchor = {
+                text: () => Promise.resolve(m.Anchor)
+              }
+              return miniMap
+            })
+          }
+        } catch (e) {
+          map.body = { text: () => Promise.resolve(body) }
+        }
+      }
+      return map
     }
-    if (!map.Output) {
-      // console.log(result)
-      // map.process = result.headers.get('process')
-      // map.slot = result.headers.get('slot')
-      map = result
-    }
-    // console.log(result)
-    return map
   }
 
   return (fields) => {
-    return of({ path: `/~${device}`, ...fields, method: fields.method ?? method })
-      .chain(verifyInput)
-      // is the the best place to either call
-      // legacy mode just an ANS-104
-      // mainnet relay-device = hsig + ans-104
-      // mainnet process-device -> hsig
-      .map(handleFormat)
-      .chain(dispatch({ request, spawn, message, result, dryrun }))
-      .map((res) => {
-        logger('Received response from message sent to path "%s"', fields?.path ?? '/')
-        return res
-      })
-      .map(transformToMap)
-      .bimap(errFrom, identity)
-      .toPromise()
+    return (
+      of({ path: `/~${device}`, ...fields, method: fields.method ?? method })
+        .chain(verifyInput)
+
+        // is the the best place to either call
+        // legacy mode just an ANS-104
+        // mainnet relay-device = hsig + ans-104
+        // mainnet process-device -> hsig
+        .map(handleFormat)
+
+        .chain(dispatch({ request, spawn, message, result, dryrun }))
+
+        .map((res) => {
+          logger(
+            'Received response from message sent to path "%s"',
+            fields?.path ?? '/'
+          )
+          return res
+        })
+        .map(transformToMap(device))
+
+        .bimap(errFrom, identity)
+        .toPromise()
+    )
   }
 }

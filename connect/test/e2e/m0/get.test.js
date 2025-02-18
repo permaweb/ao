@@ -27,7 +27,8 @@ test('get: connectWith use mainnet device=relay@1.0 mode to dryrun on a process'
     Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
     Action: 'Info',
     dryrun: true
-  }).then(map => map.Messages[0].Ticker.text())
+  })
+    .then(map => map.Messages[0].Ticker.text())
 
   assert.equal(Ticker, 'PNTS')
 })
