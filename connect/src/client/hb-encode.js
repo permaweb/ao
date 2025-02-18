@@ -100,7 +100,7 @@ export function hbEncodeLift (obj, parent = '', top = {}) {
          * as a top level field on result, to be encoded as its own part
          *
          * So use flatK to preserve the nesting hierarchy
-         * While ensure it will be encoded as it's own part
+         * While ensure it will be encoded as its own part
          */
         if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
           top[flatK] = encoded
@@ -120,9 +120,18 @@ export function hbEncodeLift (obj, parent = '', top = {}) {
    * as a structured dictionary
    */
   if (Object.keys(types).length > 0) {
-    flattened['ao-types'] = Object.entries(types)
+    const aoTypes = Object.entries(types)
       .map(([key, value]) => `${key.toLowerCase()}=${value}`)
       .join(',')
+
+    /**
+     * The ao-types header was too large to encoded as a header
+     * so lift to the top, to be encoded as its own part
+     */
+    if (Buffer.from(aoTypes).byteLength > MAX_HEADER_LENGTH) {
+      const flatK = (parent ? `${parent}/ao-types` : 'ao-types')
+      top[flatK] = aoTypes
+    } else flattened['ao-types'] = aoTypes
   }
 
   if (parent) top[parent] = flattened
