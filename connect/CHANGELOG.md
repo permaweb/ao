@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.70](https://github.com/permaweb/ao/compare/connect@v0.0.69...connect@v0.0.70) (2025-02-18)
+
+
+### Features
+
+* **connect:** add new e2e test branch ([4ea4bdb](https://github.com/permaweb/ao/commit/4ea4bdb4e40a86b930bcb979c5ea00d1e7fd12e8))
+* **connect:** add post mainnet mode with relay device ([1169d0f](https://github.com/permaweb/ao/commit/1169d0f9e7d56c6ce112fd0dc46bef9e4cc8ae88))
+* **connect:** added handlers for errors ([66cf70f](https://github.com/permaweb/ao/commit/66cf70fb9f21ecec8e9275afde2a4f89f5a01248))
+* **connect:** added handlers for errors ([fcdc3bd](https://github.com/permaweb/ao/commit/fcdc3bd90ecd4171a2b226ebf340d8f2d5884354))
+* **connect:** adding support for m2 with request ([56a89d4](https://github.com/permaweb/ao/commit/56a89d410466ef0f32bd359d0ed29c9c13bf6574))
+* **connect:** default type and alg to arweave keys, and sha256 for dataitems and sha512 for httpsig ([0903c1b](https://github.com/permaweb/ao/commit/0903c1b7a16d3148647a043a29f678aa2e24e13a))
+* **connect:** got e2e test working for m0 and m2 ([535da6a](https://github.com/permaweb/ao/commit/535da6a3465c832c8b0f2b573b0f9655bb8bdaf3))
+* **connect:** implement signers api for data items and http sig ([a8229f4](https://github.com/permaweb/ao/commit/a8229f41133db8e77984d936694a85312e0d4655))
+* **connect:** incorporated signer into m0 and m2 ([34eea1c](https://github.com/permaweb/ao/commit/34eea1ccd805352538544c7a3d097bc3053ac1f9))
+* **connect:** inject signer at top level and make optional/override on apis ([14a1054](https://github.com/permaweb/ao/commit/14a105499d5ed800e3fa6cbfaade3d992b05acc5))
+* **connect:** new apis - wip got message and result, next spawn ([36d5aeb](https://github.com/permaweb/ao/commit/36d5aeb6c31f5968f429875b7f5c04214064d9f0))
+* **connect:** new relay mode with get working ([268d70f](https://github.com/permaweb/ao/commit/268d70fd887be1baa73a70785118801073d1cc41))
+* **connect:** refactor api - wip ([0e7829c](https://github.com/permaweb/ao/commit/0e7829ce2b7237cf4454f2cf54f1e2c4fc0d9854))
+* **connect:** refactor api - wip ([910fa14](https://github.com/permaweb/ao/commit/910fa14610c97147846191df5bbd2225cc75546d))
+* **connect:** refactor api - wip ([9843dd7](https://github.com/permaweb/ao/commit/9843dd7f4ab4e68b8ad9be71e0b611587976d487))
+* **connect:** return res ([59561f2](https://github.com/permaweb/ao/commit/59561f2ab60145832164a855bf7a8dfb69cb4156))
+* **connect:** set defaults for relay and mainmode ([6b5d9f2](https://github.com/permaweb/ao/commit/6b5d9f28f22a7398774e437f71d9cd8e932b6439))
+* **connect:** side effects use new signers api shape ([6668a16](https://github.com/permaweb/ao/commit/6668a16baf7d25bc0973cf75771b44c7119e6504))
+* **connect:** signer api and implement for browser and node ([71d4661](https://github.com/permaweb/ao/commit/71d4661623f87a6cd7707c07be7c958bc0e2a6c2))
+* **connect:** use dha-team/arbundles for data item and deepHash impl ([4d710d6](https://github.com/permaweb/ao/commit/4d710d67813f73f630ebf74e712149f28eb6a726))
+* **connect:** verify data item sigs. request permission for signing data items in browser ([46c2870](https://github.com/permaweb/ao/commit/46c287042382d34690ce876727dc1f7c9912c341))
+
+
+### Bug Fixes
+
+* **connect:** do not overwrite MODE in when relay mode is detected ([3559529](https://github.com/permaweb/ao/commit/3559529df883be4b3460074e1fb20bcf8e76b110))
+
 ## [0.0.69](https://github.com/permaweb/ao/compare/connect@v0.0.68...connect@v0.0.69) (2025-02-12)
 
 
