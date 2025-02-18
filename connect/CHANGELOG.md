@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.71](https://github.com/permaweb/ao/compare/connect@v0.0.70...connect@v0.0.71) (2025-02-18)
+
+
+### Features
+
+* **connect:** fix res.headers ([e0000cd](https://github.com/permaweb/ao/commit/e0000cd9cb30cb5ff59a07f454c4724f942b4e2b))
+
 ## [0.0.70](https://github.com/permaweb/ao/compare/connect@v0.0.69...connect@v0.0.70) (2025-02-18)
 
 
