@@ -10,15 +10,11 @@ if (!globalThis.Buffer) globalThis.Buffer = BufferShim
  * ******
  * HyperBEAM Http Encoding
  *
- * TODO: bundle into a package with
- *
- * - export encode()
- * - export encodeDataItem() to convert object
- * or ans104 to http message
- * - exported signers for both node and browser environments
- * (currently located in wallet.js modules)
+ * TODO: bundle into a separate package
  * ******
  */
+
+const MAX_HEADER_LENGTH = 4096
 
 /**
  * @param {ArrayBuffer} data
@@ -65,37 +61,7 @@ function hbEncodeValue (value) {
   throw new Error(`Cannot encode value: ${value.toString()}`)
 }
 
-function store (fullK, curK, dest, [type, value]) {
-  const [encoded, types] = dest
-  if (type) types[curK] = type
-  if (value) encoded[fullK] = value
-  return dest
-}
-
-// eslint-disable-next-line
-function hbEncodeLift (obj, prefix = '', result = {}) {
-  const cur = {}
-  for (const [key, value] of Object.entries(obj)) {
-    const flatK = prefix ? `${prefix}/${key}` : key
-
-    if (isPojo(value)) {
-      result[flatK] = value
-      hbEncodeLift(value, flatK, result)
-      continue
-    }
-
-    Object.assign(cur, hbEncodeValue(key, value))
-  }
-
-  if (Object.keys(cur).length === 0) return result
-
-  if (prefix) result[prefix] = cur
-  // Merge non-pojo values at top level
-  else Object.assign(result, cur)
-  return result
-}
-
-function hbEncode (obj, parent = '', result = {}) {
+export function hbEncodeLift (obj, parent = '', top = {}) {
   const [flattened, types] = Object.entries(obj)
     .reduce((acc, [key, value]) => {
       const flatK = (parent ? `${parent}/${key}` : key)
@@ -115,59 +81,85 @@ function hbEncode (obj, parent = '', result = {}) {
       //   return acc
       // }
 
-      // first/second flatten object
+      // first/second lift object
       if (isPojo(value)) {
-        result[flatK] = value
-        hbEncode(value, flatK, result)
+        /**
+         * Encode the pojo on top, but then continuing iterating
+         * through the current object level
+         */
+        hbEncodeLift(value, flatK, top)
         return acc
       }
 
       // leaf encode value
-      return store(flatK, key, acc, hbEncodeValue(value))
+      const [type, encoded] = hbEncodeValue(value)
+      if (encoded) {
+        /**
+         * This value is too large to be potentially encoded
+         * in a multipart header, so we instead need to "lift" it
+         * as a top level field on result, to be encoded as its own part
+         *
+         * So use flatK to preserve the nesting hierarchy
+         * While ensure it will be encoded as it's own part
+         */
+        if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
+          top[flatK] = encoded
+        /**
+         * Encode at the current level as a normal field
+         */
+        } else acc[0][key] = encoded
+      }
+      if (type) acc[1][key] = type
+      return acc
     }, [{}, {}])
 
-  if (Object.keys(flattened).length === 0) return result
+  if (Object.keys(flattened).length === 0) return top
 
   /**
    * Add the ao-types key for this specific object,
    * as a structured dictionary
    */
-  const typesKey = (parent ? `${parent}/ao-types` : 'ao-types')
-  flattened[typesKey] = Object.entries(types)
-    .map(([key, value]) => `${key.toLowerCase()}=${value}`)
-    .join(',')
+  if (Object.keys(types).length > 0) {
+    flattened['ao-types'] = Object.entries(types)
+      .map(([key, value]) => `${key.toLowerCase()}=${value}`)
+      .join(',')
+  }
 
-  if (parent) result[parent] = flattened
+  if (parent) top[parent] = flattened
   // Merge non-pojo values at top level
-  else Object.assign(result, flattened)
-  return result
+  else Object.assign(top, flattened)
+  return top
 }
 
 function encodePart (name, { headers, body }) {
-  headers.append('content-disposition', `form-data;name="${name}"`)
   const parts = Object
-    .entries(headers)
+    .entries(Object.fromEntries(headers))
     .reduce((acc, [name, value]) => {
       acc.push(`${name}: `, value, '\r\n')
       return acc
-    }, [])
+    }, [`content-disposition: form-data;name="${name}"\r\n`])
 
-  // CRLF if always required, even with empty body
-  parts.push('\r\n')
-  if (body) parts.push(body)
+  if (body) parts.push('\r\n', body)
 
   return new Blob(parts)
 }
 
 /**
- * Encode the object as HyperBEAM HTTP multipart
- * message. Nested objects are flattened to a single
- * depth multipart
+ * Encoded the object as a HyperBEAM HTTP Multipart Message
+ * - Nested object are "lifted" to the top level, while preserving
+ * the hierarchy using "/", to be encoded as a part in the multipart body
+ *
+ * - Adds "ao-types" field on each nested object, that defines types
+ * for each nested field, encoded as a structured dictionary header on the part.
+ *
+ * - Conditionally "lifts" fields that too large to be encoded as headers,
+ * to the top level, to be encoded as a separate part, while preserving
+ * the hierarchy using "/"
  */
 export async function encode (obj = {}) {
   if (Object.keys(obj) === 0) return
 
-  const flattened = hbEncode(obj)
+  const flattened = hbEncodeLift(obj)
 
   /**
    * Some values may be encoded into headers,
@@ -178,18 +170,13 @@ export async function encode (obj = {}) {
   await Promise.all(
     Object.keys(flattened).map(async (key) => {
       const value = flattened[key]
-
-      // if (key === 'data') {
-      //   bodyKeys.push(key)
-      //   flattened[key] = new Blob([
-      //     `content-disposition: form-data;name="${key}"\r\n\r\n`,
-      //     value
-      //   ])
-      //   return
-      // }
       /**
        * Sub maps are always encoded as subparts
-       * in the body
+       * in the body.
+       *
+       * Since hbEncodeLift already lifts
+       * objects to the top level, there should only ever
+       * be 1 recursive call here.
        */
       if (isPojo(value)) {
         // Empty object or nil
@@ -201,7 +188,12 @@ export async function encode (obj = {}) {
         return
       }
 
-      if (key.includes('/') || Buffer.from(value).byteLength > 4096) {
+      /**
+       * This value is too large to be encoded into a header
+       * on the message, so it must instead be encoded as the body
+       * in it's own part
+       */
+      if (key.includes('/') || Buffer.from(value).byteLength > MAX_HEADER_LENGTH) {
         bodyKeys.push(key)
         flattened[key] = new Blob([
           `content-disposition: form-data;name="${key}"\r\n\r\n`,

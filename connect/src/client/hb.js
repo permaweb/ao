@@ -82,26 +82,19 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .chain(fromPromise(({ url, method, headers, body }) => {
           return fetch(url, { method, headers, body, redirect: 'follow' })
             .then(async res => {
-              if (res.status < 300) {
-                const contentType = res.headers.get('content-type')
+              if (res.status >= 300) return res
 
-                if (contentType && contentType.includes('multipart/form-data')) {
-                  return res
-                } else if (contentType && contentType.includes('application/json')) {
-                  const body = await res.json()
-                  return {
-                    headers: res.headers,
-                    body
-                  }
-                } else {
-                  const body = await res.text()
-                  return {
-                    headers: res.headers,
-                    body
-                  }
-                }
+              const contentType = res.headers.get('content-type')
+              if (contentType && contentType.includes('multipart/form-data')) {
+                // TODO: maybe add hbDecode here to decode multipart into maps of { headers, body }
+                return res
+              } else if (contentType && contentType.includes('application/json')) {
+                const body = await res.json()
+                return { headers: res.headers, body }
+              } else {
+                const body = await res.text()
+                return { headers: res.headers, body }
               }
-              return res
             })
         }
         ))
