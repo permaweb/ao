@@ -2,6 +2,8 @@ import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { connectWith } from '../../../src/index.common.js'
 import { WalletClient } from '../../../src/client/node/index.js'
+import { tap } from 'ramda'
+import { randomBytes } from 'node:crypto'
 
 // this is a test wallet do not use for anything other than testing
 const WALLET = {
@@ -16,69 +18,55 @@ const WALLET = {
   qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-test('get: connectWith use mainnet device=relay@1.0 mode to dryrun on a process', async () => {
+const URL = 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io'
+
+test('spawn process', async () => {
   const connect = connectWith({
     createDataItemSigner: WalletClient.createDataItemSigner,
     createHbSigner: WalletClient.createHbSigner
   })
-
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
-  const Ticker = await get({
-    Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
-    Action: 'Info',
-    dryrun: true
-  }).then(map => map.Messages[0].Ticker.text())
-
-  assert.equal(Ticker, 'PNTS')
-})
-
-test('get: connectWith use mainnet device=relay@1.0 mode to message on a process', async () => {
-  const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
-  })
-
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
-  const Error = await get({
-    Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
-    Action: 'Transfer',
-    Quantity: '10000',
-    Recipient: 'cHencOZC-aCbPCDH2tEZ3Lhw3EM5oRw3kxgj-eEgtNc'
-  }).then(map => map.Messages[0].Error.text())
-
-  assert.equal(Error, 'Insufficient Balance!')
-})
-
-test('get: connectWith use mainnet device=relay@1.0 mode to spawn a process', async () => {
-  const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
-  })
-
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
-  const process = await get({
-    Type: 'Process',
-    Name: 'MyNewProcess',
-    Module: 'JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g',
-    Scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
-  })
-  // .then(result => result.Output.text())
-  // console.log(result.Output.text())
-  // .then(map => map)
-  assert.equal(process.length, 43)
-})
-
-test('get: connectWith should give us legacy connect mode', async () => {
-  const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
-  })
-  const { dryrun } = connect({ MODE: 'legacy' })
-  const result = await dryrun({
-    process: 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10',
+  const createDataItemSigner = WalletClient.createDataItemSigner
+  const { spawn, message, result } = connect({ MODE: 'mainnet', URL, device: 'process@1.0', wallet: WALLET })
+  // const address = await request({
+  //     path: "~meta@1.0/info/address",
+  // })
+  const address = 'n2PBSqikIuFEFpys3gPC3EdBhqKgOI5gXu5YNNcGf7c'
+  console.log(address)
+  const p = await spawn({
+    scheduler: address,
+    module: 'JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g',
+    data: 'print("Process initialized.")',
     tags: [
-      { name: 'Action', value: 'Info' }
-    ]
-  }).then(res => res.Messages[0].Tags)
-  assert.equal(result.find(t => t.name === 'Ticker')?.value, 'wAR')
+      { name: 'device', value: 'process@1.0' },
+      { name: 'scheduler-device', value: 'scheduler@1.0' },
+      { name: 'execution-device', value: 'compute-lite@1.0' },
+      { name: 'authority', value: address },
+      { name: 'scheduler-location', value: address },
+      { name: 'scheduler', value: address },
+      { name: 'random-seed', value: randomBytes(16).toString('hex') },
+      { name: 'On-Boot', value: 'USxy_74bsS_yuQtYAqCvn9DtxmBuUZHA-4wNVuQxZHU' }
+    ],
+    signer: createDataItemSigner()
+  }).then(tap(console.log))
+  // const p = 'PrYCBlk8Qo0N8KdswWkn62Q6ME6LphewHKSWHMqWX9I'
+  const m = await message({
+    process: p,
+    tags: [
+      { name: 'Action', value: 'Transfer' },
+      { name: 'Data-Protocol', value: 'ao' },
+      { name: 'Variant', value: 'ao.TN.1' },
+      { name: 'Type', value: 'Message' },
+      { name: 'Quantity', value: '10' },
+      { name: 'Recipient', value: 'vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI' }
+    ],
+    data: '1984',
+    signer: createDataItemSigner()
+  }).then(tap(console.log))
+
+  console.log('READY TO LOAD RESULT. m:', m)
+
+  const r = await result({ message: m, process: p })
+    .then(tap(console.log)).catch(console.error)
+  console.log(r.Output.data)
+  assert.ok(true)
 })

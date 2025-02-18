@@ -71,14 +71,30 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         signer(toSignerArgs({
           url: joinUrl({ url: HB_URL, path }),
           method,
-          headers,
-          includePath: true
+          headers
+          // includePath: true
         })).then((req) => ({ ...req, body }))
       ))
       .map(logger.tap('Sending HTTP signed message to HB: %o'))
       .chain((request) => of(request)
-        .chain(fromPromise(({ url, method, headers, body }) =>
-          fetch(url, { method, headers, body, redirect: 'follow' })
+        .chain(fromPromise(({ url, method, headers, body }) => {
+          return fetch(url, { method, headers, body, redirect: 'follow' })
+            .then(async res => {
+              const content = res.headers.get('Content-Type')
+              let body = ''
+              if (content === 'application/json') {
+                body = await res.json()
+              } else {
+                body = await res.text()
+              }
+              const map = {}
+              res.headers.forEach((v, k) => {
+                map[k] = v
+              })
+              map.body = body
+              return map
+            })
+        }
         ))
       ).toPromise()
   }
