@@ -40,9 +40,10 @@
     "build": "npm run build:types && npm run build:src",
     "build:src": "node esbuild.js",
     "build:types": "tsc src/index.js --skipLibCheck --declaration --allowJs --emitDeclarationOnly --outDir dist",
-    "test": "node --test ./src/**/*.test.js src/index.test.js src/index.common.test.js",
+    "test": "node --test ./src/**/*.test.js src/index.test.js",
     "pretest:integration": "npm run build && npm link",
-    "test:integration": "cd ./test/e2e && npm test"
+    "test:integration": "cd ./test/e2e && npm test",
+    "test:m2": "node --test src/index.common.test.js"
   },
   "dependencies": {
     "@dha-team/arbundles": "^1.0.1",
