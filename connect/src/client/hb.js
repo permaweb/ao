@@ -14,7 +14,7 @@ export async function encodeDataItem ({ processId, data, tags, anchor }) {
 
   if (processId) obj.target = processId
   if (anchor) obj.anchor = anchor
-  if (tags) tags.forEach(t => { obj[t.name] = t.value })
+  if (tags) tags.forEach(t => { obj[t.name.toLowerCase()] = t.value })
   /**
    * Always ensure the variant is mainnet for hyperbeam
    * TODO: change default variant to be this eventually
