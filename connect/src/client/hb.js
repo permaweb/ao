@@ -73,6 +73,7 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
           url: joinUrl({ url: HB_URL, path }),
           method,
           headers
+          // this does not work with hyperbeam
           // includePath: true
         })).then((req) => ({ ...req, body }))
       ))
@@ -293,7 +294,6 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
 
     return fetch(hb, { ...options, headers: signedHeaders }).then(res => {
       if (res.status === 400) {
-        console.log(res.headers)
         const err = new InsufficientFunds('Insufficient Funds for request!')
         err.price = res.headers.get('price')
         throw err
@@ -303,7 +303,6 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
         err.contentEncoding = res.headers.get('content-encoding')
         err.device = res.headers.get('accept-device')
         err.location = res.headers.get('location')
-        console.log('throw error')
         throw err
       }
       return res

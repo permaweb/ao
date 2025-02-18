@@ -25,7 +25,7 @@ const URL = 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io'
 test('spawn process', async () => {
   const connect = connectWith({
     createDataItemSigner: WalletClient.createSigner,
-    createHbSigner: WalletClient.createSigner
+    createSigner: WalletClient.createSigner
   })
 
   const { spawn, message, result } = connect({ MODE: 'mainnet', URL, device: 'process@1.0', signer: createSigner(WALLET) })

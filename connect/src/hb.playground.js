@@ -34,7 +34,7 @@ describe('hb playground', () => {
         MODE: 'mainnet',
         wallet,
         device: 'process@1.0',
-        URL: process.env.HB_URL || 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io'
+        URL: process.env.HB_URL || 'http://localhost:8734'
       })
 
       const address = await fetch(process.env.HB_URL + '/~meta@1.0/info/address').then((res) => res.text())
