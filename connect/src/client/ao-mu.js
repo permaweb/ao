@@ -31,6 +31,7 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
       .chain(fromPromise(({ processId, data, tags, anchor, signer }) =>
         toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
       )
+      .map(logger.tap('Successfully built and signed data item'))
       .chain(signedDataItem =>
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
@@ -88,6 +89,7 @@ export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
        * Sign with the provided signer
        */
       .chain(fromPromise(({ data, tags, signer }) => toDataItemSigner(signer)({ data, tags })))
+      .map(logger.tap('Successfully built and signed data item'))
       .chain(signedDataItem =>
         of(signedDataItem)
           .chain(fromPromise(async (signedDataItem) =>
@@ -144,6 +146,7 @@ export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
       fromPromise(({ processId, data, tags, anchor, signer }) =>
         toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
     )
+    .map(logger.tap('Successfully built and signed data item'))
     .chain((signedDataItem) =>
       of(signedDataItem)
         .chain(fromPromise(async (signedDataItem) =>
@@ -202,6 +205,7 @@ export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
       fromPromise(({ processId, data, tags, anchor, signer }) =>
         toDataItemSigner(signer)({ data, tags, target: processId, anchor }))
     )
+    .map(logger.tap('Successfully built and signed data item'))
     .chain((signedDataItem) =>
       of(signedDataItem)
         .chain(fromPromise(async (signedDataItem) =>
