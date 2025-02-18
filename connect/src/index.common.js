@@ -368,11 +368,19 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
     const postLogger = logger.child('post')
     const post = requestWith({
-      logger: postLogger,
+      logger: getLogger,
+      MODE,
+      method: 'POST',
+      device: device,
+      dryrun,
+      message,
+      result,
+      spawn,
+      signer: createDataItemSigner(wallet), 
       request: HbClient.requestWith({
         fetch: defaultFetch,
-        method: 'POST',
-        logger: postLogger,
+        method: 'GET',
+        logger: getLogger,
         HB_URL: URL,
         signer
       })
