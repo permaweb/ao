@@ -291,7 +291,6 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
     })
 
     return fetch(hb, { ...options, headers: signedHeaders }).then(res => {
-      console.log(res.status)
       if (res.status === 400) {
         console.log(res.headers)
         const err = new InsufficientFunds('Insufficient Funds for request!')
