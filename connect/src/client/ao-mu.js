@@ -51,7 +51,13 @@ export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
               }
             )
           )).bichain(
-            err => Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`)),
+            err => {
+              if (err.name === 'RedirectRequested') {
+                return Rejected(err)
+              } else {
+                return Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`))
+              }
+            },
             fromPromise(
               async res => {
                 if (res.ok) return res.json()

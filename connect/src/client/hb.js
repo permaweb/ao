@@ -243,6 +243,14 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
+export class InsufficientFunds extends Error {
+  name = 'InsufficientFunds'
+}
+
+export class RedirectRequested extends Error {
+  name = 'RedirectRequested'
+}
+
 export function relayerWith ({ fetch, logger, HB_URL, signer }) {
   /**
    * A fetch wrapper that will sign
@@ -282,6 +290,23 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
       }
     })
 
-    return fetch(hb, { ...options, headers: signedHeaders })
+    return fetch(hb, { ...options, headers: signedHeaders }).then(res => {
+      console.log(res.status)
+      if (res.status === 400) {
+        console.log(res.headers)
+        const err = new InsufficientFunds('Insufficient Funds for request!')
+        err.price = res.headers.get('price')
+        throw err
+      }
+      if (res.status === 422) {
+        const err = new RedirectRequested('Redirect with new format!')
+        err.contentEncoding = res.headers.get('content-encoding')
+        err.device = res.headers.get('accept-device')
+        err.location = res.headers.get('location')
+        console.log('throw error')
+        throw err
+      }
+      return res
+    })
   }
 }
