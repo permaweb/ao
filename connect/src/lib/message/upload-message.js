@@ -115,7 +115,7 @@ export function uploadMessageWith (env) {
       .chain(buildTags)
       .chain(buildData)
       .chain(fromPromise(({ id, data, tags, anchor, signer }) =>
-        deployMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer) })
+        deployMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer || env.signer) })
       ))
       .map(res => assoc('messageId', res.messageId, ctx))
   }

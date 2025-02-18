@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { connectWith } from '../../../src/index.common.js'
 import { WalletClient } from '../../../src/client/node/index.js'
+import { createSigner } from '../../../src/client/node/wallet.js'
 
 // this is a test wallet do not use for anything other than testing
 const WALLET = {
@@ -18,11 +19,11 @@ const WALLET = {
 
 test('get: connectWith use mainnet device=relay@1.0 mode to dryrun on a process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createSigner: WalletClient.createSigner
   })
 
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
+  const { get } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
   const Ticker = await get({
     Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
     Action: 'Info',
@@ -35,11 +36,11 @@ test('get: connectWith use mainnet device=relay@1.0 mode to dryrun on a process'
 
 test('get: connectWith use mainnet device=relay@1.0 mode to message on a process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createSigner: WalletClient.createSigner
   })
 
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
+  const { get } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
   const Error = await get({
     Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
     Action: 'Transfer',
@@ -52,11 +53,11 @@ test('get: connectWith use mainnet device=relay@1.0 mode to message on a process
 
 test('get: connectWith use mainnet device=relay@1.0 mode to spawn a process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createSigner: WalletClient.createSigner
   })
 
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
+  const { get } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
   const process = await get({
     Type: 'Process',
     Name: 'MyNewProcess',
@@ -71,10 +72,11 @@ test('get: connectWith use mainnet device=relay@1.0 mode to spawn a process', as
 
 test('get: connectWith should give us legacy connect mode', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createSigner: WalletClient.createSigner
   })
-  const { dryrun } = connect({ MODE: 'legacy' })
+
+  const { dryrun } = connect({ MODE: 'legacy', signer: createSigner(WALLET) })
   const result = await dryrun({
     process: 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10',
     tags: [

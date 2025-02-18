@@ -106,7 +106,7 @@ export function uploadProcessWith (env) {
       .chain(buildTags)
       .chain(buildData)
       .chain(fromPromise(({ data, tags, signer }) =>
-        deployProcess({ data, tags, signer: signerSchema.implement(signer) })
+        deployProcess({ data, tags, signer: signerSchema.implement(signer || env.signer) })
       ))
       .map(res => assoc('processId', res.processId, ctx))
   }

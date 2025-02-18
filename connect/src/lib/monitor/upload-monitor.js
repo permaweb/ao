@@ -11,7 +11,6 @@ import { deployMonitorSchema, signerSchema } from '../../dal.js'
  * @typedef Context3
  * @property {string} id - the transaction id to be verified
  * @property {any} input
- * @property {any} wallet
  * @property {Tag3[]} tags
  *
  * @typedef Env6
@@ -34,7 +33,7 @@ export function uploadMonitorWith (env) {
       .chain(fromPromise(({ id, signer }) =>
         deployMonitor({
           processId: id,
-          signer: signerSchema.implement(signer),
+          signer: signerSchema.implement(signer || env.signer),
           /**
            * No tags or data can be provided right now,
            *

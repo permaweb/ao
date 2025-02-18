@@ -3,6 +3,7 @@ import base64url from 'base64url'
 
 import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
+import { toHttpSigner } from './signer.js'
 
 /**
  * Map data item members to corresponding HB HTTP message
@@ -26,7 +27,7 @@ export async function encodeDataItem ({ processId, data, tags, anchor }) {
   return res
 }
 
-function toSignerArgs ({ url, method, headers, includePath = false }) {
+function toSigBaseArgs ({ url, method, headers, includePath = false }) {
   headers = new Headers(headers)
   return {
     /**
@@ -68,7 +69,7 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         }))
       ))
       .chain(fromPromise(async ({ path, method, headers, body }) =>
-        signer(toSignerArgs({
+        toHttpSigner(signer)(toSigBaseArgs({
           url: joinUrl({ url: HB_URL, path }),
           method,
           headers
@@ -119,7 +120,7 @@ export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
         encodeDataItem({ processId, data, tags })
       ))
       .chain(fromPromise(({ headers, body }) => {
-        return signer(toSignerArgs({
+        return toHttpSigner(signer)(toSigBaseArgs({
           url: `${HB_URL}/schedule`,
           method: 'POST',
           headers
@@ -160,7 +161,7 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
         encodeDataItem({ processId, data, tags, anchor })
       ))
       .chain(fromPromise(({ headers, body }) => {
-        return signer(toSignerArgs({
+        return toHttpSigner(signer)(toSigBaseArgs({
           url: `${HB_URL}/${args.processId}/schedule`,
           method: 'POST',
           headers
@@ -188,7 +189,7 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
           (err) => Rejected(err),
           fromPromise(async ({ slot, processId }) => {
             const { headers, body } = await encodeDataItem({ processId })
-            return signer(toSignerArgs({
+            return toHttpSigner(signer)(toSigBaseArgs({
               url: `${HB_URL}/${processId}/push&slot+integer=${slot}`,
               method: 'POST',
               headers
@@ -216,7 +217,7 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
         const { headers, body } = await encodeDataItem({ processId })
         headers.append('slot+integer', id)
         headers.append('accept', 'application/json')
-        return signer(toSignerArgs({
+        return toHttpSigner(signer)(toSigBaseArgs({
           url: `${HB_URL}/${processId}/compute&slot+integer=${id}/results/json`,
           method: 'POST',
           headers
@@ -278,7 +279,7 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
      * TODO: should we mimick a fetch error on failure to sign
      * ie. TypeError? For now, just letting this bubble
      */
-    const { headers: signedHeaders } = await signer({
+    const { headers: signedHeaders } = await toHttpSigner(signer)({
       fields: [
         ...options.headers.keys(),
         'relay-path'

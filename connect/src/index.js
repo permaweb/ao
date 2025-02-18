@@ -14,16 +14,23 @@ const AO_URL = process.env.AO_URL = undefined
 
 const connect = connectWith({
   createDataItemSigner: WalletClient.createDataItemSigner,
-  createHbSigner: WalletClient.createHbSigner
+  createSigner: WalletClient.createSigner
 })
 
+const createDataItemSigner = WalletClient.createDataItemSigner
+const createSigner = WalletClient.createSigner
+
+export { createDataItemSigner, createSigner }
+export { connect }
+export { serializeCron }
+
 /**
- * hardcoded to legacy, since wallet is not provided here
+ * @deprecated top level exports will soon be removed. Use connect()
+ * instead.
  *
- * TODO: probably remove these at the top level, and require using connect
- * so as to set the mode and provide the wallet
+ * These will only operate in legacy mode
  */
-const { result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner } = connect({
+const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = connect({
   MODE: 'legacy',
   GATEWAY_URL,
   MU_URL,
@@ -35,15 +42,4 @@ const { result, results, message, spawn, monitor, unmonitor, dryrun, assign, cre
   GRAPHQL_RETRY_BACKOFF,
   noLog: true
 })
-
 export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
-export { connect }
-export { serializeCron }
-/**
- * A function that builds a signer using a wallet jwk interface
- * commonly used in node-based dApps
- *
- * This is provided as a convenience for consumers of the SDK
- * to use, but consumers can also implement their own signer
- */
-export { createDataItemSigner }

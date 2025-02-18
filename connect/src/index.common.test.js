@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import * as assert from 'node:assert'
-import { connectWith } from '../../../src/index.common.js'
-import { WalletClient } from '../../../src/client/node/index.js'
-import { createSigner } from '../../../src/client/node/wallet.js'
+
+import { connectWith } from './index.common.js'
+import { WalletClient } from './client/node/index.js'
 
 // this is a test wallet do not use for anything other than testing
 const WALLET = {
@@ -17,14 +17,14 @@ const WALLET = {
   qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-test('post: connectWith use mainnet device=relay@1.0 mode to dryrun on a process', async () => {
+test('connectWith use mainnet device=relay@1.0 mode to dryrun on a process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createSigner,
+    createDataItemSigner: WalletClient.createDataItemSigner,
     createSigner: WalletClient.createSigner
   })
 
-  const { post } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
-  const Ticker = await post({
+  const { get } = connect({ MODE: 'mainnet', signer: WalletClient.createSigner(WALLET) })
+  const Ticker = await get({
     Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
     Action: 'Info',
     dryrun: true
@@ -33,14 +33,14 @@ test('post: connectWith use mainnet device=relay@1.0 mode to dryrun on a process
   assert.equal(Ticker, 'PNTS')
 })
 
-test('post: connectWith use mainnet device=relay@1.0 mode to message on a process', async () => {
+test('connectWith use mainnet device=relay@1.0 mode to message on a process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createSigner,
+    createDataItemSigner: WalletClient.createDataItemSigner,
     createSigner: WalletClient.createSigner
   })
 
-  const { post } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
-  const Error = await post({
+  const { get } = connect({ MODE: 'mainnet', signer: WalletClient.createSigner(WALLET) })
+  const Error = await get({
     Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
     Action: 'Transfer',
     Quantity: '10000',
@@ -50,14 +50,14 @@ test('post: connectWith use mainnet device=relay@1.0 mode to message on a proces
   assert.equal(Error, 'Insufficient Balance!')
 })
 
-test('post: connectWith use mainnet device=relay@1.0 mode to spawn a process', async () => {
+test('connectWith use mainnet device=relay@1.0 mode to spawn a process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createSigner,
+    createDataItemSigner: WalletClient.createDataItemSigner,
     createSigner: WalletClient.createSigner
   })
 
-  const { post } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
-  const process = await post({
+  const { get } = connect({ MODE: 'mainnet', signer: WalletClient.createSigner(WALLET) })
+  const process = await get({
     Type: 'Process',
     Name: 'MyNewProcess',
     Module: 'JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g',
@@ -67,4 +67,19 @@ test('post: connectWith use mainnet device=relay@1.0 mode to spawn a process', a
   // console.log(result.Output.text())
   // .then(map => map)
   assert.equal(process.length, 43)
+})
+
+test('connectWith should give us legacy connect mode', async () => {
+  const connect = connectWith({
+    createDataItemSigner: WalletClient.createDataItemSigner,
+    createSigner: WalletClient.createSigner
+  })
+  const { dryrun } = connect({ MODE: 'legacy' })
+  const result = await dryrun({
+    process: 'xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10',
+    tags: [
+      { name: 'Action', value: 'Info' }
+    ]
+  }).then(res => res.Messages[0].Tags)
+  assert.equal(result.find(t => t.name === 'Ticker')?.value, 'wAR')
 })

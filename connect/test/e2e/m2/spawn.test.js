@@ -2,6 +2,8 @@ import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { connectWith } from '../../../src/index.common.js'
 import { WalletClient } from '../../../src/client/node/index.js'
+import { createSigner } from '../../../src/client/node/wallet.js'
+
 import { tap } from 'ramda'
 import { randomBytes } from 'node:crypto'
 
@@ -22,11 +24,11 @@ const URL = 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io'
 
 test('spawn process', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createHbSigner: WalletClient.createSigner
   })
-  const createDataItemSigner = WalletClient.createDataItemSigner
-  const { spawn, message, result } = connect({ MODE: 'mainnet', URL, device: 'process@1.0', wallet: WALLET })
+
+  const { spawn, message, result } = connect({ MODE: 'mainnet', URL, device: 'process@1.0', signer: createSigner(WALLET) })
   // const address = await request({
   //     path: "~meta@1.0/info/address",
   // })
@@ -45,8 +47,7 @@ test('spawn process', async () => {
       { name: 'scheduler', value: address },
       { name: 'random-seed', value: randomBytes(16).toString('hex') },
       { name: 'On-Boot', value: 'USxy_74bsS_yuQtYAqCvn9DtxmBuUZHA-4wNVuQxZHU' }
-    ],
-    signer: createDataItemSigner()
+    ]
   }).then(tap(console.log))
   // const p = 'PrYCBlk8Qo0N8KdswWkn62Q6ME6LphewHKSWHMqWX9I'
   const m = await message({
@@ -59,8 +60,7 @@ test('spawn process', async () => {
       { name: 'Quantity', value: '10' },
       { name: 'Recipient', value: 'vh-NTHVvlKZqRxc8LyyTNok65yQ55a_PJ1zWLb9G2JI' }
     ],
-    data: '1984',
-    signer: createDataItemSigner()
+    data: '1984'
   }).then(tap(console.log))
 
   console.log('READY TO LOAD RESULT. m:', m)

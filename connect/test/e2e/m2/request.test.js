@@ -2,6 +2,8 @@ import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { connectWith } from '../../../src/index.common.js'
 import { WalletClient } from '../../../src/client/node/index.js'
+import { createSigner } from '../../../src/client/node/wallet.js'
+
 import { randomBytes } from 'node:crypto'
 // import { tap } from 'ramda'
 
@@ -22,11 +24,11 @@ const URL = 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io'
 
 test('request:M2 full stack spawn, message, result', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createHbSigner: WalletClient.createSigner
   })
 
-  const { request } = connect({ MODE: 'mainnet', URL, device: 'process@1.0', wallet: WALLET })
+  const { request } = connect({ MODE: 'mainnet', URL, device: 'process@1.0', signer: createSigner(WALLET) })
   const address = await fetch(`${URL}/~meta@1.0/info/address`).then(res => res.text())
 
   // create a process on local cu

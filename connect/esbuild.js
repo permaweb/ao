@@ -54,9 +54,19 @@ await esbuild.build({
    * TODO: maybe we can just simply import createSignatureBase
    * from 'node-http-signatures/cavage/index.js'
    * and that will treeshake enough?
+   *
+   * "events" and "stream" have to be polyfilled for @dha-team/arbundles --
+   * really not great.
    */
   plugins: [
-    nodeModulesPolyfillPlugin({ modules: { crypto: true, constants: true } })
+    nodeModulesPolyfillPlugin({
+      modules: {
+        crypto: true,
+        constants: true,
+        events: true,
+        stream: true
+      }
+    })
   ],
   platform: 'browser',
   format: 'esm',

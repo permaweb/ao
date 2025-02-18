@@ -22,11 +22,9 @@ import { Types } from './dal.js'
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
 const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
-/**
- * TODO: set this when we know it
- */
 const DEFAULT_RELAY_URL = 'http://relay.ao-hb.xyz'
-// const DEFAULT_AO_URL = 'http://m2.ao.computer'
+// eslint-disable-next-line no-unused-vars
+const DEFAULT_AO_URL = 'http://m2.ao.computer'
 const DEFAULT_RELAY_CU_URL = 'http://cu.s451-comm3-main.xyz'
 const DEFAULT_RELAY_MU_URL = 'http://mu.s451-comm3-main.xyz'
 const DEFAULT_DEVICE = 'relay@1.0'
@@ -36,14 +34,17 @@ const defaultFetch = fetch
 export { serializeCron } from './lib/serializeCron/index.js'
 
 /**
- * @param {{ createDataItemSigner: (wallet:any) => Types['signer'], createHbSigner: any }}
+ * @param {{ createDataItemSigner: (wallet:any) => Types['signer'], createSigner: any }}
  */
-export function connectWith ({ createDataItemSigner, createHbSigner }) {
+export function connectWith ({ createDataItemSigner, createSigner }) {
   const _logger = createLogger()
 
   /**
    * Run connect in HyperBEAM mode, relaying network calls through the configured
    * HyperBEAM node.
+   *
+   * @deprecated - relay mode will instead be triggered by a device passed to
+   * mainnet mode. This should be removed at earliest convenience.
    *
    * @typedef HyperBeam
    * @property {any} wallet - the wallet to use to sign HyperBEAM HTTP messages
@@ -52,6 +53,119 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
    * @param {Services & HyperBeam} args
    * @returns {Omit<ReturnType<connect>, 'createDataItemSigner'> & { createDataItemSigner: () => Types['signer'] }}
    */
+  // eslint-disable-next-line no-unused-vars
+  function relayMode ({
+    MODE,
+    signer,
+    GRAPHQL_URL,
+    GRAPHQL_MAX_RETRIES,
+    GRAPHQL_RETRY_BACKOFF,
+    MU_URL = DEFAULT_RELAY_MU_URL,
+    CU_URL = DEFAULT_RELAY_CU_URL,
+    RELAY_URL = DEFAULT_RELAY_URL,
+    fetch: originalFetch = defaultFetch
+  }) {
+    const logger = _logger.child('relay')
+    logger('Mode Activated 🔀')
+
+    if (!signer) throw new Error('relay mode requires providing a signer to connect()')
+
+    const relayDataItemSigner = signer
+      ? () => signer
+      : createDataItemSigner
+
+    const relaySigner = signer
+      ? () => signer
+      : createSigner
+
+    const fetch = HbClient.relayerWith({
+      /**
+       * Always wrap default fetch with relayer,
+       * no embellishment beyond the relayer
+       */
+      fetch: defaultFetch,
+      logger,
+      HB_URL: RELAY_URL,
+      signer
+    })
+
+    const requestLogger = logger.child('request')
+    const request = requestWith({
+      logger: requestLogger,
+      request: HbClient.requestWith({
+        fetch: defaultFetch,
+        logger: requestLogger,
+        HB_URL: RELAY_URL,
+        signer
+      })
+    })
+
+    const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+
+    const resultLogger = logger.child('result')
+    const result = resultWith({
+      signer,
+      loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: resultLogger }),
+      logger: resultLogger
+    })
+
+    const messageLogger = logger.child('message')
+    const message = messageWith({
+      signer,
+      deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
+      logger: messageLogger
+    })
+
+    const spawnLogger = logger.child('spawn')
+    const spawn = spawnWith({
+      signer,
+      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: originalFetch, GRAPHQL_URL, logger: spawnLogger }),
+      validateScheduler: validate,
+      deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
+      logger: spawnLogger
+    })
+
+    const monitorLogger = logger.child('monitor')
+    const monitor = monitorWith({
+      signer,
+      deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
+      logger: monitorLogger
+    })
+
+    const unmonitorLogger = logger.child('unmonitor')
+    const unmonitor = unmonitorWith({
+      signer,
+      deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
+      logger: monitorLogger
+    })
+
+    const resultsLogger = logger.child('results')
+    const results = resultsWith({
+      signer,
+      queryResults: CuClient.queryResultsWith({ fetch, CU_URL, logger: resultsLogger }),
+      logger: resultsLogger
+    })
+
+    const dryrunLogger = logger.child('dryrun')
+    const dryrun = dryrunWith({
+      signer,
+      dryrunFetch: CuClient.dryrunFetchWith({ fetch, CU_URL, logger: dryrunLogger }),
+      logger: dryrunLogger
+    })
+
+    const assignLogger = logger.child('assign')
+    const assign = assignWith({
+      signer,
+      deployAssign: MuClient.deployAssignWith({
+        fetch,
+        MU_URL,
+        logger: assignLogger
+      }),
+      logger: messageLogger
+    })
+
+    return { MODE, request, result, results, message, spawn, monitor, unmonitor, dryrun, assign, ccreateDataItemSigner: relayDataItemSigner, createSigner: relaySigner }
+  }
 
   function legacyMode ({
     MODE,
@@ -127,7 +241,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
   function mainnetMode ({
     MODE,
-    wallet,
+    signer,
     GRAPHQL_URL,
     device = DEFAULT_DEVICE,
     URL = DEFAULT_RELAY_URL,
@@ -135,13 +249,20 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     CU_URL = DEFAULT_RELAY_CU_URL,
     fetch = defaultFetch
   }) {
-    const logger = device === 'relay@1.0' ? _logger.child('mainnet-relay') : _logger.child('mainnet-process')
-    logger('Mode Activated 🐲')
+    const isRelayMode = device === 'relay@1.0'
+    const logger = isRelayMode ? _logger.child('mainnet-relay') : _logger.child('mainnet-process')
+    logger('Mode Activated %s', isRelayMode ? '🔀' : '🐲')
 
-    if (!wallet) throw new Error('mainnet mode requires providing a wallet to connect()')
+    if (!signer) throw new Error('mainnet mode requires providing a signer to connect()')
 
-    const signer = createHbSigner(wallet)
-    const staticWalletDataItemSigner = () => createDataItemSigner(wallet)
+    const mainnetDataItemSigner = signer
+      ? () => signer
+      : createDataItemSigner
+
+    const mainnetSigner = signer
+      ? () => signer
+      : createSigner
+
     const relayFetch = HbClient.relayerWith({
       /**
        * Always wrap default fetch with relayer,
@@ -162,61 +283,65 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     }
 
     const resultLogger = logger.child('result')
-    let loadResult = HbClient.loadResultWith({
-      fetch: defaultFetch,
-      logger: resultLogger,
-      HB_URL: URL,
-      signer
-    })
-    if (device === 'relay@1.0') {
-      loadResult = CuClient.loadResultWith({
+    const loadResult = isRelayMode
+      ? CuClient.loadResultWith({
         fetch: relayFetch,
         logger: resultLogger,
         HB_URL: URL,
         CU_URL,
         signer
       })
-    }
+      : HbClient.loadResultWith({
+        fetch: defaultFetch,
+        logger: resultLogger,
+        HB_URL: URL,
+        signer
+      })
     const result = resultWith({
+      signer,
       loadResult,
       logger: resultLogger
     })
 
     const messageLogger = logger.child('message')
-    let deployMessage = HbClient.deployMessageWith({
-      fetch: defaultFetch,
-      logger: messageLogger,
-      HB_URL: URL,
-      signer
-    })
-
-    if (device === 'relay@1.0') {
-      deployMessage = MuClient.deployMessageWith({
-        fetch: device === 'relay@1.0' ? relayFetch : defaultFetch,
+    const deployMessage = isRelayMode
+      ? MuClient.deployMessageWith({
+        fetch: isRelayMode ? relayFetch : defaultFetch,
         logger: messageLogger,
         HB_URL: URL,
         MU_URL,
         CU_URL,
         signer
       })
-    }
+      : HbClient.deployMessageWith({
+        fetch: defaultFetch,
+        logger: messageLogger,
+        HB_URL: URL,
+        signer
+      })
     const message = messageWith({
+      signer,
       deployMessage,
       logger: messageLogger
     })
 
     const spawnLogger = logger.child('spawn')
-    let deployProcess = HbClient.deployProcessWith({
-      fetch: defaultFetch,
-      logger: spawnLogger,
-      HB_URL: URL,
-      signer
-    })
-    if (device === 'relay@1.0') {
-      deployProcess = MuClient.deployProcessWith({ fetch: relayFetch, HB_URL: URL, MU_URL, logger: spawnLogger })
-    }
+    const deployProcess = isRelayMode
+      ? MuClient.deployProcessWith({
+        fetch: relayFetch,
+        HB_URL: URL,
+        MU_URL,
+        logger: spawnLogger
+      })
+      : HbClient.deployProcessWith({
+        fetch: defaultFetch,
+        logger: spawnLogger,
+        HB_URL: URL,
+        signer
+      })
 
     const spawn = spawnWith({
+      signer,
       loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
         fetch,
         GRAPHQL_URL,
@@ -229,13 +354,19 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
     const dryrunLogger = logger.child('dryrun')
     const dryrun = dryrunWith({
-      dryrunFetch: CuClient.dryrunFetchWith({ fetch: device === 'relay@1.0' ? relayFetch : fetch, CU_URL, logger: dryrunLogger }),
+      signer,
+      dryrunFetch: CuClient.dryrunFetchWith({
+        fetch: isRelayMode ? relayFetch : fetch,
+        CU_URL,
+        logger: dryrunLogger
+      }),
       logger: dryrunLogger
     })
 
     const requestLogger = logger.child('request')
 
     const request = requestWith({
+      signer,
       logger: requestLogger,
       MODE,
       method: 'GET',
@@ -258,7 +389,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       message,
       result,
       spawn,
-      signer: createDataItemSigner(wallet),
+      signer,
       request: HbClient.requestWith({
         fetch: defaultFetch,
         method: 'GET',
@@ -270,6 +401,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
 
     const postLogger = logger.child('post')
     const post = requestWith({
+      signer,
       logger: postLogger,
       MODE,
       method: 'POST',
@@ -278,7 +410,6 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
       message,
       result,
       spawn,
-      signer: createDataItemSigner(wallet),
       request: HbClient.requestWith({
         fetch: defaultFetch,
         method: 'GET',
@@ -321,7 +452,7 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
     //   logger: messageLogger
     // })
 
-    return { MODE, request, get, post, result, message, spawn, createDataItemSigner: staticWalletDataItemSigner }
+    return { MODE: isRelayMode ? 'relay' : 'mainnet', request, get, post, result, message, spawn, createDataItemSigner: mainnetDataItemSigner, createSigner: mainnetSigner }
   }
 
   /**
@@ -361,19 +492,19 @@ export function connectWith ({ createDataItemSigner, createHbSigner }) {
    * @property {string} [GRAPHQL_URL] - the url of the desired Arweave Gateway GraphQL Server
    * @property {number} [GRAPHQL_MAX_RETRIES] - the number of times to retry querying the gateway, utilizing an exponential backoff
    * @property {number} [GRAPHQL_RETRY_BACKOFF] - the initial backoff, in milliseconds (moot if GRAPHQL_MAX_RETRIES is set to 0)
-   *
-   * @typedef ConnectArgsMainnet
-   * @property {any} [wallet] - the wallet used to sign HTTP Messages.
-   * @property {string} [URL] - the url of the desried ao Unit. Only applicable in 'mainnet' mode
-   * @property {string} [device] - the default path either 'relay@1.0' or 'process@1.0'
    * @property {string} [MU_URL] - the url of the desried ao Messenger Unit. Also used as the relay MU in 'relay' mode
    * @property {string} [CU_URL] - the url of the desried ao Compute Unit. Also used as the relay CU in 'relay' mode
+   *
+   * @typedef ConnectArgsMainnet
+   * @property {Types['signer']} [signer] - the signer used to sign Data items and HTTP messages.
+   * @property {string} [URL] - the url of the desried ao Unit. Only applicable in 'mainnet' mode
+   * @property {string} [device] - the default path either 'relay@1.0' or 'process@1.0'
    *
    * @typedef ConnectArgs
    * @property {ConnectMode} [MODE] - the mode that connect apis will be run in.
    *
    * @overload
-   * @param {{ MODE: 'legacy'} & ConnectArgsShared & ConnectArgsMainnet } args
+   * @param {{ MODE: 'legacy'} & ConnectArgsShared } args
    * @returns {ReturnType<typeof legacyMode>}
    *
    * @overload

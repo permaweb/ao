@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import * as assert from 'node:assert'
 import { connectWith } from '../../../src/index.common.js'
 import { WalletClient } from '../../../src/client/node/index.js'
+import { createSigner } from '../../../src/client/node/wallet.js'
 
 const WALLET = {
   kty: 'RSA',
@@ -17,11 +18,11 @@ const WALLET = {
 
 test('get: no funds for message', async () => {
   const connect = connectWith({
-    createDataItemSigner: WalletClient.createDataItemSigner,
-    createHbSigner: WalletClient.createHbSigner
+    createDataItemSigner: WalletClient.createSigner,
+    createSigner: WalletClient.createSigner
   })
 
-  const { get } = connect({ MODE: 'mainnet', wallet: WALLET })
+  const { get } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
   try {
     const Ticker = await get({
       Target: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
