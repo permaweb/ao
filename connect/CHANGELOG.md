@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.72](https://github.com/permaweb/ao/compare/connect@v0.0.71...connect@v0.0.72) (2025-02-19)
+
+
+### Bug Fixes
+
+* **connect:** fix bug with output response on main ([8df51b4](https://github.com/permaweb/ao/commit/8df51b4458a2d467b75e2526bafa55c57de5cc05))
+
 ## [0.0.71](https://github.com/permaweb/ao/compare/connect@v0.0.70...connect@v0.0.71) (2025-02-18)
 
 
