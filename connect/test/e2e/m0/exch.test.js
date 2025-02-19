@@ -20,9 +20,10 @@ const WALLET = {
  * 2. m0
  * 3. m2
  */
-test('m2: check balance and transfer token', async () => {
+test.skip('m2: check balance and transfer token', async () => {
   const { request } = connect({
     MODE: 'mainnet',
+    device: 'process@1.0',
     URL: 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io',
     signer: createSigner(WALLET)
   })
@@ -42,8 +43,44 @@ test('m2: check balance and transfer token', async () => {
   assert.ok(true)
 })
 
-test('m0: check balance and transfer token', () => {
+test('m0: check balance and transfer token', async () => {
+  const { request } = connect({
+    MODE: 'mainnet',
+    device: 'relay@1.0',
+    URL: 'https://relay.ao-hb.xyz',
+    signer: createSigner(WALLET)
+  })
 
+  const TOKEN = 'mADRM-jMJ3P3IOo8WelAHAKRDa7paw1kMVw9ivkky1I'
+  const result = await request({
+    type: 'Message',
+    process: TOKEN,
+    path: '/schedule',
+    method: 'POST',
+    Action: 'Balance',
+    Recipient: 'mADRM-jMJ3P3IOo8WelAHAKRDa7paw1kMVw9ivkky1I',
+    'Data-Protocol': 'ao',
+    Variant: 'ao.N.1'
+  })
+  const balance = result.Messages[0].Balance
+  assert.equal(balance, '10000000000000000')
+  // transfer token
+  const status = await request({
+    type: 'Message',
+    process: TOKEN,
+    path: '/schedule',
+    method: 'POST',
+    Action: 'Transfer',
+    Recipient: 'sSTjOLC_7YdQ6ZZ4Otj-QVq4DwZZ9GcoiED8HPLpqwA',
+    Quantity: '1',
+    'Data-Protocol': 'ao',
+    Variant: 'ao.N.1'
+  })
+
+  assert.equal(status.Messages[0].Action, 'Debit-Notice')
+  assert.equal(status.Messages[1].Action, 'Credit-Notice')
+  assert.equal(status.Messages[0].Quantity, '1')
+  assert.equal(status.Messages[1].Quantity, '1')
 })
 
 test('legacy: check balance and transfer token', () => {

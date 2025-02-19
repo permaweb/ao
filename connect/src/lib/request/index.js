@@ -1,6 +1,6 @@
 import { identity } from 'ramda'
 import { z } from 'zod'
-import { of, Rejected } from 'hyper-async'
+import { of, Rejected, fromPromise } from 'hyper-async'
 
 import { errFrom } from '../utils.js'
 import { transformToMap } from './transform.js'
@@ -78,6 +78,8 @@ export function requestWith (env) {
         )
         return res
       })
+      // .map(x => (console.log(x.Messages), x))
+      // .chain(getResult(request))
       .map(transformToMap(ctx.device))
       .bimap(errFrom, identity)
 
@@ -91,3 +93,19 @@ export function requestWith (env) {
 /**
 
 */
+// eslint-disable-next-line no-unused-vars
+function getResult (request) {
+  return (payload) => fromPromise((payload) => {
+    const process = payload.headers.get('process')
+    const slot = payload.headers.get('slot')
+    // return Promise.resolve({slot, process})
+    // eslint-disable-next-line no-unused-vars
+    return request({
+      path: `/${process}/compute&slot+integer=${slot}/results/json`,
+      method: 'POST',
+      target: process,
+      'slot+integer': slot,
+      accept: 'application/json'
+    })
+  })(payload)
+}

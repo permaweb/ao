@@ -373,6 +373,10 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       MODE,
       method: 'GET',
       device,
+      dryrun,
+      message,
+      result,
+      spawn,
       request: HbClient.requestWith({
         fetch: defaultFetch,
         logger: requestLogger,

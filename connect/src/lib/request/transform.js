@@ -6,29 +6,21 @@ export const transformToMap = (mode) => (result) => {
     }
 
     if (result.Output && result.Output.data) {
-      map.Output = {
-        text: () => Promise.resolve(result.Output.data)
-      }
+      map.Output = result.Output
     }
     if (result.Messages) {
       map.Messages = result.Messages.map((m) => {
         const miniMap = {}
         m.Tags.forEach((t) => {
-          miniMap[t.name] = {
-            text: () => Promise.resolve(t.value)
-          }
+          miniMap[t.name] = t.value
         })
         miniMap.Data = {
           text: () => Promise.resolve(m.Data),
-          json: () => Promise.resolve(JSON.parse(m.Data)),
-          binary: () => Promise.resolve(Buffer.from(m.Data))
+          json: () => Promise.resolve(JSON.parse(m.Data))
+          // binary: () => Promise.resolve(Buffer.from(m.Data))
         }
-        miniMap.Target = {
-          text: () => Promise.resolve(m.Target)
-        }
-        miniMap.Anchor = {
-          text: () => Promise.resolve(m.Anchor)
-        }
+        miniMap.Target = m.Target
+        miniMap.Anchor = m.Anchor
         return miniMap
       })
     }
@@ -37,9 +29,7 @@ export const transformToMap = (mode) => (result) => {
     const res = result
     let body = ''
     res.headers.forEach((v, k) => {
-      map[k] = {
-        text: () => Promise.resolve(v)
-      }
+      map[k] = v
     })
 
     if (typeof res.body === 'string') {
@@ -47,17 +37,13 @@ export const transformToMap = (mode) => (result) => {
         body = JSON.parse(res.body)
 
         if (body.Output) {
-          map.Output = {
-            json: () => Promise.resolve(body.Output)
-          }
+          map.Output = body.Output
         }
         if (body.Messages) {
           map.Messages = body.Messages.map((m) => {
             const miniMap = {}
             m.Tags.forEach((t) => {
-              miniMap[t.name] = {
-                text: () => Promise.resolve(t.value)
-              }
+              miniMap[t.name] = t.value
             })
             miniMap.Data = {
               text: () => Promise.resolve(m.Data),
@@ -66,12 +52,8 @@ export const transformToMap = (mode) => (result) => {
               // if (!globalThis.Buffer) globalThis.Buffer = BufferShim
               // binary: () => Promise.resolve(Buffer.from(m.Data))
             }
-            miniMap.Target = {
-              text: () => Promise.resolve(m.Target)
-            }
-            miniMap.Anchor = {
-              text: () => Promise.resolve(m.Anchor)
-            }
+            miniMap.Target = m.Target
+            miniMap.Anchor = m.Anchor
             return miniMap
           })
         }
