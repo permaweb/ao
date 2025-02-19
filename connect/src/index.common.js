@@ -16,6 +16,8 @@ import { resultsWith } from './lib/results/index.js'
 import { dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
+import { getOperator, getNodeBalance } from './lib/payments/index.js'
+
 // eslint-disable-next-line no-unused-vars
 import { Types } from './dal.js'
 
@@ -452,7 +454,27 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     //   logger: messageLogger
     // })
 
-    return { MODE: isRelayMode ? 'relay' : 'mainnet', request, get, post, result, message, spawn, createDataItemSigner: mainnetDataItemSigner, createSigner: mainnetSigner }
+    return {
+      MODE: isRelayMode ? 'relay' : 'mainnet',
+      request,
+      get,
+      post,
+      result,
+      message,
+      spawn,
+      getOperator: getOperator({ fetch, URL }),
+      getNodeBalance: getNodeBalance({
+        request: HbClient.requestWith({
+          fetch: defaultFetch,
+          method: 'GET',
+          logger: postLogger,
+          HB_URL: URL,
+          signer
+        })
+      }),
+      createDataItemSigner: mainnetDataItemSigner,
+      createSigner: mainnetSigner
+    }
   }
 
   /**
