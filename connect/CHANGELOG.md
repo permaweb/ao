@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.73](https://github.com/permaweb/ao/compare/connect@v0.0.72...connect@v0.0.73) (2025-02-19)
+
+
+### Features
+
+* **connect:** added error for RedirectRequested to resubmit based on Accept-Device ([829e390](https://github.com/permaweb/ao/commit/829e390331291966c8fb293a391f62f714a60440))
+* **connect:** wip added payment getOperator getNodeBalance ([e9b1e17](https://github.com/permaweb/ao/commit/e9b1e1761daeb4af3fa3b45ef036e4f70f4f5836))
+
 ## [0.0.72](https://github.com/permaweb/ao/compare/connect@v0.0.71...connect@v0.0.72) (2025-02-19)
 
 
