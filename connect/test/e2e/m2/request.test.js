@@ -77,6 +77,6 @@ test('request:M2 full stack spawn, message, result', async () => {
   })
   console.log(r)
 
-  console.log(await r.Output.text())
+  console.log(await r.Output.json())
   assert.ok(true)
 })

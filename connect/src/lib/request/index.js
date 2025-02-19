@@ -229,9 +229,9 @@ if mode == 'process' then request should create a pure httpsig from fields
         try {
           body = JSON.parse(res.body)
 
-          if (body.Output && body.Output.data) {
+          if (body.Output) {
             map.Output = {
-              text: () => Promise.resolve(body.Output.data)
+              json: () => Promise.resolve(body.Output)
             }
           }
           if (body.Messages) {
@@ -285,9 +285,19 @@ if mode == 'process' then request should create a pure httpsig from fields
           return res
         })
         .map(transformToMap(device))
+        // should be a bichain
+        // abstract the above into a standalone function
+        //
+        .bimap(
+          errFrom,
 
-        .bimap(errFrom, identity)
+          identity
+        )
         .toPromise()
     )
   }
 }
+
+/**
+
+*/
