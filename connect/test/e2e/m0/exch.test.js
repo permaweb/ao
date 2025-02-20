@@ -20,30 +20,90 @@ const WALLET = {
  * 2. m0
  * 3. m2
  */
-test('m2: check balance and transfer token', async () => {
-  const { request } = connect({
+test.skip('m2: check balance and transfer token', async () => {
+  const { request, getOperator } = connect({
     MODE: 'mainnet',
-    URL: 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io',
+    device: 'process@1.0',
+    URL: 'http://localhost:10000',
     signer: createSigner(WALLET)
   })
 
-  const TOKEN = '-GiqGGAdFHTE8MJr5ICbgzgRgIJ5PGQZjSrFka_3v90'
+  const address = await getOperator()
+
+  // create a token
+  // create a process on local cu
+  const p = await request({
+    path: '/schedule',
+    method: 'POST',
+    type: 'Process',
+    scheduler: address,
+    module: 'JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g',
+    device: 'process@1.0',
+    'scheduler-device': 'scheduler@1.0',
+    'execution-device': 'compute-lite@1.0',
+    authority: address,
+    'scheduler-location': address,
+    data: 'print("Hello World")',
+    'Data-Protocol': 'ao',
+    Variant: 'ao.N.1',
+    'On-Boot': 'USxy_74bsS_yuQtYAqCvn9DtxmBuUZHA-4wNVuQxZHU'
+
+  })
+  console.log(p)
+
+  const TOKEN = '8zUUzon7HO2k1E_cXZkEdcI9XGpVmBN7qjEBJ8Ec0e0'
   const result = await request({
     type: 'Message',
     process: TOKEN,
     path: '/schedule',
     method: 'POST',
     Action: 'Balance',
-    Recipient: '-GiqGGAdFHTE8MJr5ICbgzgRgIJ5PGQZjSrFka_3v90',
+    Recipient: '8zUUzon7HO2k1E_cXZkEdcI9XGpVmBN7qjEBJ8Ec0e0',
     'Data-Protocol': 'ao',
     Variant: 'ao.N.1'
   })
-  console.log(result)
-  assert.ok(true)
+
+  assert.equal(result.Messages[0].Balance, '10000000000000000')
 })
 
-test('m0: check balance and transfer token', () => {
+test.skip('m0: check balance and transfer token', async () => {
+  const { request } = connect({
+    MODE: 'mainnet',
+    device: 'relay@1.0',
+    URL: 'https://relay.ao-hb.xyz',
+    signer: createSigner(WALLET)
+  })
 
+  const TOKEN = 'mADRM-jMJ3P3IOo8WelAHAKRDa7paw1kMVw9ivkky1I'
+  const result = await request({
+    type: 'Message',
+    process: TOKEN,
+    path: '/schedule',
+    method: 'POST',
+    Action: 'Balance',
+    Recipient: 'mADRM-jMJ3P3IOo8WelAHAKRDa7paw1kMVw9ivkky1I',
+    'Data-Protocol': 'ao',
+    Variant: 'ao.N.1'
+  })
+  const balance = result.Messages[0].Balance
+  assert.equal(balance, '10000000000000000')
+  // transfer token
+  const status = await request({
+    type: 'Message',
+    process: TOKEN,
+    path: '/schedule',
+    method: 'POST',
+    Action: 'Transfer',
+    Recipient: 'sSTjOLC_7YdQ6ZZ4Otj-QVq4DwZZ9GcoiED8HPLpqwA',
+    Quantity: '1',
+    'Data-Protocol': 'ao',
+    Variant: 'ao.N.1'
+  })
+
+  assert.equal(status.Messages[0].Action, 'Debit-Notice')
+  assert.equal(status.Messages[1].Action, 'Credit-Notice')
+  assert.equal(status.Messages[0].Quantity, '1')
+  assert.equal(status.Messages[1].Quantity, '1')
 })
 
 test('legacy: check balance and transfer token', () => {

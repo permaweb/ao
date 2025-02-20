@@ -67,6 +67,27 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
     if (ctx.map) {
       return fromPromise((ctx) => {
         return request(ctx.map)
+          .then(res => {
+            if (res.status === 200) {
+              const process = res.headers.get('process')
+              const slot = res.headers.get('slot')
+              return request({
+                type: 'Message',
+                path: `${process}/compute&slot+integer=${slot}/results/json`,
+                method: 'POST',
+                target: process,
+                'slot+integer': slot,
+                accept: 'application/json'
+              })
+                .then(res2 => {
+                  if (!res2.process) {
+                    res2.process = process
+                  }
+                  return res2
+                })
+            }
+            return res
+          })
       })(ctx)
     }
   }

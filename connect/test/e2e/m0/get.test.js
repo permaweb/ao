@@ -29,7 +29,7 @@ test('get: connectWith use mainnet device=relay@1.0 mode to dryrun on a process'
     Action: 'Info',
     dryrun: true
   })
-    .then(map => map.Messages[0].Ticker.text())
+    .then(map => map.Messages[0].Ticker)
 
   assert.equal(Ticker, 'PNTS')
 })
@@ -46,7 +46,7 @@ test('get: connectWith use mainnet device=relay@1.0 mode to message on a process
     Action: 'Transfer',
     Quantity: '10000',
     Recipient: 'cHencOZC-aCbPCDH2tEZ3Lhw3EM5oRw3kxgj-eEgtNc'
-  }).then(map => map.Messages[0].Error.text())
+  }).then(map => map.Messages[0].Error)
 
   assert.equal(Error, 'Insufficient Balance!')
 })

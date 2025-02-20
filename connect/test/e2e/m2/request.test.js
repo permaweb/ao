@@ -20,7 +20,7 @@ const WALLET = {
   qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-const URL = 'https://10000-permaweb-hbinfra-erkeu448sa9.ws-us117.gitpod.io'
+const URL = 'http://localhost:10000'
 
 test('request:M2 full stack spawn, message, result', async () => {
   const connect = connectWith({
@@ -50,8 +50,9 @@ test('request:M2 full stack spawn, message, result', async () => {
     'On-Boot': 'USxy_74bsS_yuQtYAqCvn9DtxmBuUZHA-4wNVuQxZHU'
 
   })
+  console.log(p)
   // .then(tap(console.log))
-  const process = await p.process.text()
+  const process = p.process
 
   // message
   const m = await request({
@@ -65,7 +66,7 @@ test('request:M2 full stack spawn, message, result', async () => {
 
   })
 
-  const slot = await m.slot.text()
+  const slot = m.slot
 
   // get results
   const r = await request({
@@ -77,6 +78,6 @@ test('request:M2 full stack spawn, message, result', async () => {
   })
   console.log(r)
 
-  console.log(await r.Output.json())
+  console.log(r.Output)
   assert.ok(true)
 })
