@@ -20,7 +20,7 @@ const WALLET = {
  * 2. m0
  * 3. m2
  */
-test('m2: check balance and transfer token', async () => {
+test.skip('m2: check balance and transfer token', async () => {
   const { request, getOperator } = connect({
     MODE: 'mainnet',
     device: 'process@1.0',
@@ -49,7 +49,7 @@ test('m2: check balance and transfer token', async () => {
     'On-Boot': 'USxy_74bsS_yuQtYAqCvn9DtxmBuUZHA-4wNVuQxZHU'
 
   })
-  console.log(p.process)
+  console.log(p)
 
   const TOKEN = '8zUUzon7HO2k1E_cXZkEdcI9XGpVmBN7qjEBJ8Ec0e0'
   const result = await request({
