@@ -53,7 +53,7 @@ test('request:M2 full stack spawn, message, result', async () => {
   console.log(p)
   // .then(tap(console.log))
   const process = p.process
-
+  console.log(process)
   // message
   const m = await request({
     path: `${process}/schedule`,

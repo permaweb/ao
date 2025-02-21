@@ -70,15 +70,11 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     const logger = _logger.child('relay')
     logger('Mode Activated 🔀')
 
-    if (!signer) throw new Error('relay mode requires providing a signer to connect()')
+    if (!signer) { throw new Error('relay mode requires providing a signer to connect()') }
 
-    const relayDataItemSigner = signer
-      ? () => signer
-      : createDataItemSigner
+    const relayDataItemSigner = signer ? () => signer : createDataItemSigner
 
-    const relaySigner = signer
-      ? () => signer
-      : createSigner
+    const relaySigner = signer ? () => signer : createSigner
 
     const fetch = HbClient.relayerWith({
       /**
@@ -102,56 +98,93 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       })
     })
 
-    const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+    const { validate } = schedulerUtilsConnect({
+      cacheSize: 100,
+      GRAPHQL_URL,
+      GRAPHQL_MAX_RETRIES,
+      GRAPHQL_RETRY_BACKOFF
+    })
 
     const resultLogger = logger.child('result')
     const result = resultWith({
       signer,
-      loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: resultLogger }),
+      loadResult: CuClient.loadResultWith({
+        fetch,
+        CU_URL,
+        logger: resultLogger
+      }),
       logger: resultLogger
     })
 
     const messageLogger = logger.child('message')
     const message = messageWith({
       signer,
-      deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
+      deployMessage: MuClient.deployMessageWith({
+        fetch,
+        MU_URL,
+        logger: messageLogger
+      }),
       logger: messageLogger
     })
 
     const spawnLogger = logger.child('spawn')
     const spawn = spawnWith({
       signer,
-      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch: originalFetch, GRAPHQL_URL, logger: spawnLogger }),
+      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
+        fetch: originalFetch,
+        GRAPHQL_URL,
+        logger: spawnLogger
+      }),
       validateScheduler: validate,
-      deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
+      deployProcess: MuClient.deployProcessWith({
+        fetch,
+        MU_URL,
+        logger: spawnLogger
+      }),
       logger: spawnLogger
     })
 
     const monitorLogger = logger.child('monitor')
     const monitor = monitorWith({
       signer,
-      deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
+      deployMonitor: MuClient.deployMonitorWith({
+        fetch,
+        MU_URL,
+        logger: monitorLogger
+      }),
       logger: monitorLogger
     })
 
     const unmonitorLogger = logger.child('unmonitor')
     const unmonitor = unmonitorWith({
       signer,
-      deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
+      deployUnmonitor: MuClient.deployUnmonitorWith({
+        fetch,
+        MU_URL,
+        logger: unmonitorLogger
+      }),
       logger: monitorLogger
     })
 
     const resultsLogger = logger.child('results')
     const results = resultsWith({
       signer,
-      queryResults: CuClient.queryResultsWith({ fetch, CU_URL, logger: resultsLogger }),
+      queryResults: CuClient.queryResultsWith({
+        fetch,
+        CU_URL,
+        logger: resultsLogger
+      }),
       logger: resultsLogger
     })
 
     const dryrunLogger = logger.child('dryrun')
     const dryrun = dryrunWith({
       signer,
-      dryrunFetch: CuClient.dryrunFetchWith({ fetch, CU_URL, logger: dryrunLogger }),
+      dryrunFetch: CuClient.dryrunFetchWith({
+        fetch,
+        CU_URL,
+        logger: dryrunLogger
+      }),
       logger: dryrunLogger
     })
 
@@ -166,7 +199,20 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       logger: messageLogger
     })
 
-    return { MODE, request, result, results, message, spawn, monitor, unmonitor, dryrun, assign, ccreateDataItemSigner: relayDataItemSigner, createSigner: relaySigner }
+    return {
+      MODE,
+      request,
+      result,
+      results,
+      message,
+      spawn,
+      monitor,
+      unmonitor,
+      dryrun,
+      assign,
+      ccreateDataItemSigner: relayDataItemSigner,
+      createSigner: relaySigner
+    }
   }
 
   function legacyMode ({
@@ -182,49 +228,86 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     const logger = _logger.child('legacy')
     if (!noLog) logger('Mode Activated ℹ️')
 
-    const { validate } = schedulerUtilsConnect({ cacheSize: 100, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+    const { validate } = schedulerUtilsConnect({
+      cacheSize: 100,
+      GRAPHQL_URL,
+      GRAPHQL_MAX_RETRIES,
+      GRAPHQL_RETRY_BACKOFF
+    })
 
     const resultLogger = logger.child('result')
     const result = resultWith({
-      loadResult: CuClient.loadResultWith({ fetch, CU_URL, logger: resultLogger }),
+      loadResult: CuClient.loadResultWith({
+        fetch,
+        CU_URL,
+        logger: resultLogger
+      }),
       logger: resultLogger
     })
 
     const messageLogger = logger.child('message')
     const message = messageWith({
-      deployMessage: MuClient.deployMessageWith({ fetch, MU_URL, logger: messageLogger }),
+      deployMessage: MuClient.deployMessageWith({
+        fetch,
+        MU_URL,
+        logger: messageLogger
+      }),
       logger: messageLogger
     })
 
     const spawnLogger = logger.child('spawn')
     const spawn = spawnWith({
-      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({ fetch, GRAPHQL_URL, logger: spawnLogger }),
+      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
+        fetch,
+        GRAPHQL_URL,
+        logger: spawnLogger
+      }),
       validateScheduler: validate,
-      deployProcess: MuClient.deployProcessWith({ fetch, MU_URL, logger: spawnLogger }),
+      deployProcess: MuClient.deployProcessWith({
+        fetch,
+        MU_URL,
+        logger: spawnLogger
+      }),
       logger: spawnLogger
     })
 
     const monitorLogger = logger.child('monitor')
     const monitor = monitorWith({
-      deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
+      deployMonitor: MuClient.deployMonitorWith({
+        fetch,
+        MU_URL,
+        logger: monitorLogger
+      }),
       logger: monitorLogger
     })
 
     const unmonitorLogger = logger.child('unmonitor')
     const unmonitor = unmonitorWith({
-      deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
+      deployUnmonitor: MuClient.deployUnmonitorWith({
+        fetch,
+        MU_URL,
+        logger: unmonitorLogger
+      }),
       logger: monitorLogger
     })
 
     const resultsLogger = logger.child('results')
     const results = resultsWith({
-      queryResults: CuClient.queryResultsWith({ fetch, CU_URL, logger: resultsLogger }),
+      queryResults: CuClient.queryResultsWith({
+        fetch,
+        CU_URL,
+        logger: resultsLogger
+      }),
       logger: resultsLogger
     })
 
     const dryrunLogger = logger.child('dryrun')
     const dryrun = dryrunWith({
-      dryrunFetch: CuClient.dryrunFetchWith({ fetch, CU_URL, logger: dryrunLogger }),
+      dryrunFetch: CuClient.dryrunFetchWith({
+        fetch,
+        CU_URL,
+        logger: dryrunLogger
+      }),
       logger: dryrunLogger
     })
 
@@ -238,7 +321,18 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       logger: messageLogger
     })
 
-    return { MODE, result, results, message, spawn, monitor, unmonitor, dryrun, assign, createDataItemSigner }
+    return {
+      MODE,
+      result,
+      results,
+      message,
+      spawn,
+      monitor,
+      unmonitor,
+      dryrun,
+      assign,
+      createDataItemSigner
+    }
   }
 
   function mainnetMode ({
@@ -252,18 +346,16 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     fetch = defaultFetch
   }) {
     const isRelayMode = device === 'relay@1.0'
-    const logger = isRelayMode ? _logger.child('mainnet-relay') : _logger.child('mainnet-process')
+    const logger = isRelayMode
+      ? _logger.child('mainnet-relay')
+      : _logger.child('mainnet-process')
     logger('Mode Activated %s', isRelayMode ? '🔀' : '🐲')
 
-    if (!signer) throw new Error('mainnet mode requires providing a signer to connect()')
+    if (!signer) { throw new Error('mainnet mode requires providing a signer to connect()') }
 
-    const mainnetDataItemSigner = signer
-      ? () => signer
-      : createDataItemSigner
+    const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
 
-    const mainnetSigner = signer
-      ? () => signer
-      : createSigner
+    const mainnetSigner = signer ? () => signer : createSigner
 
     const relayFetch = HbClient.relayerWith({
       /**
@@ -325,6 +417,26 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       signer,
       deployMessage,
       logger: messageLogger
+    })
+
+    const resultsLogger = logger.child('results')
+    const queryResults = isRelayMode
+      ? CuClient.queryResultsWith({
+        fetch: relayFetch,
+        CU_URL,
+        logger: resultsLogger
+      })
+      : HbClient.queryResultsWith({
+        fetch: defaultFetch,
+        HB_URL: URL,
+        logger: resultsLogger,
+        signer
+      })
+
+    const results = resultsWith({
+      signer,
+      queryResults,
+      logger: resultsLogger
     })
 
     const spawnLogger = logger.child('spawn')
@@ -466,6 +578,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       result,
       message,
       spawn,
+      results,
       getOperator: getOperator({ fetch, URL }),
       getNodeBalance: getNodeBalance({
         request: HbClient.requestWith({
@@ -543,7 +656,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
   function connect (args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
 
-    if (!GRAPHQL_URL) GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' })
+    if (!GRAPHQL_URL) { GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' }) }
 
     const MODE = args.MODE || 'legacy'
 

@@ -246,6 +246,72 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
+/**
+ * @typedef Env3
+ * @property {fetch} fetch
+ * @property {string} CU_URL
+ *
+ * @typedef QueryResultsArgs
+ * @property {string} process - the id of the process being read
+ * @property {string} from - cursor to start the list of results
+ * @property {string} to - cursor to stop the list of results
+ * @property {string} sort - "ASC" or "DESC" to describe the order of list
+ * @property {number} limit - the number of results to return
+ *
+ * @callback QueryResults
+ * @param {QueryResultsArgs} args
+ * @returns {Promise<Record<string, any>}
+ *
+ * @param {Env3} env
+ * @returns {QueryResults}
+ */
+export function queryResultsWith ({ fetch, HB_URL, logger, signer }) {
+  return ({ process, from, to, sort, limit }) => {
+    // const target = new URL(`${CU_URL}/results/${process}`)
+    // const params = new URLSearchParams(target.search)
+    // if (from) { params.append('from', from) }
+    // if (to) { params.append('to', to) }
+    // if (sort) { params.append('sort', sort) }
+    // if (limit) { params.append('limit', limit) }
+    // target.search = params
+
+    // m2 does not have a results endpoint, but you can
+    // access each message by slots, the goal here
+    // would be to create a range of query requests
+    // based on the above parameters and then resolve
+    // them using a promise.all
+    return of().chain(fromPromise(async () => {
+      // TODO: need to figure out how best to pass this from client
+      const processId = 'Vj1efidjweGtv7YVDmD1rUEd7cUK7MCr6OQ6Jv04Qd0'
+      const { headers, body } = await encodeDataItem({ processId })
+      // headers.append('slot+integer', id)
+      headers.append('accept', 'application/json')
+      return toHttpSigner(signer)(toSigBaseArgs({
+        url: `${HB_URL}/${processId}/state/now`,
+        method: 'GET',
+        headers
+      })).then((req) => ({ ...req, body }))
+    }))
+      .chain((request) => of(request)
+        .chain(fromPromise(({ url, method, headers, body }) =>
+          fetch(url, { method, headers, body, redirect: 'follow' })
+        ))
+        .bichain(
+          (err) => Rejected(err),
+          fromPromise(async (res) => {
+            if (res.ok) return res.json()
+            throw new Error(`${res.status}: ${await res.text()}`)
+          })
+        )
+        .bimap(
+          logger.tap('Error encountered when loading result via HB CU'),
+          logger.tap('Successfully loading result via HB CU')
+        )
+      )
+      .toPromise()
+  }
+}
+
 export class InsufficientFunds extends Error {
   name = 'InsufficientFunds'
 }
