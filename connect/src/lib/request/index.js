@@ -71,12 +71,12 @@ export function requestWith (env) {
     const operation = (ctx) => verifyInput(ctx)
       .map(handleFormat(mode))
       .chain(dispatch({ request, spawn, message, result, dryrun, signer }))
-      .map((res) => {
+      .map((_) => {
         logger(
           'Received response from message sent to path "%s"',
           fields?.path ?? '/'
         )
-        return res
+        return _
       })
       // .map(x => (console.log(x.Messages), x))
       // .chain(getResult(request))

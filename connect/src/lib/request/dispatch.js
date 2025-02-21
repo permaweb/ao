@@ -15,7 +15,7 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
             return { error: 'insufficient-funds' }
           }
           throw err
-        })
+        }).then(res => ({ res }))
       )(ctx)
     }
 
@@ -32,7 +32,7 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
             result({
               process: ctx.dataItem.target,
               message: id
-            })
+            }).then(res => ({ res }))
           )
           .catch((err) => {
             if (err.message.includes('Insufficient funds')) {
@@ -52,10 +52,7 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
           module: ctx.dataItem.tags.find((t) => t.name === 'Module')?.value,
           signer
         })
-        // .then(id => result({
-        //     process: id,
-        //     message: id
-        // }))
+          .then(res => ({ res }))
           .catch((err) => {
             if (err.message.includes('Insufficient funds')) {
               return { error: 'insufficient-funds' }
@@ -71,6 +68,7 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
             if (res.status === 200) {
               const process = res.headers.get('process')
               const slot = res.headers.get('slot')
+
               return request({
                 type: 'Message',
                 path: `${process}/compute&slot+integer=${slot}/results/json`,
@@ -80,13 +78,14 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
                 accept: 'application/json'
               })
                 .then(res2 => {
-                  if (!res2.process) {
-                    res2.process = process
-                  }
-                  return res2
+                  // if (!res2.process) {
+                  //   console.log(process, slot)
+                  //   res2.headers.set('process', process)
+                  // }
+                  return ({ res: res2, process, slot })
                 })
             }
-            return res
+            return ({ res })
           })
       })(ctx)
     }

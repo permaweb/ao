@@ -1,5 +1,7 @@
-export const transformToMap = (mode) => (result) => {
+export const transformToMap = (mode) => (ctx) => {
+  const result = ctx.res
   const map = {}
+
   if (mode === 'relay@1.0') {
     if (typeof result === 'string') {
       return result
@@ -26,6 +28,8 @@ export const transformToMap = (mode) => (result) => {
     }
     return map
   } else {
+    map.process = ctx.process
+    map.slot = ctx.slot
     const res = result
     let body = ''
     res.headers.forEach((v, k) => {
