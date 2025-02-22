@@ -28,12 +28,13 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
           data: ctx.dataItem.data ?? '',
           signer
         })
-          .then((id) =>
-            result({
-              process: ctx.dataItem.target,
-              message: id
-            }).then(res => ({ res }))
-          )
+          // no magic just return response
+          // .then((id) =>
+          //   result({
+          //     process: ctx.dataItem.target,
+          //     message: id
+          //   }).then(res => ({ res }))
+          // )
           .catch((err) => {
             if (err.message.includes('Insufficient funds')) {
               return { error: 'insufficient-funds' }
@@ -65,28 +66,34 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
       return fromPromise((ctx) => {
         return request(ctx.map)
           .then(res => {
-            if (res.status === 200) {
-              const process = res.headers.get('process')
-              const slot = res.headers.get('slot')
-
-              return request({
-                type: 'Message',
-                path: `${process}/compute&slot+integer=${slot}/results/json`,
-                method: 'POST',
-                target: process,
-                'slot+integer': slot,
-                accept: 'application/json'
-              })
-                .then(res2 => {
-                  // if (!res2.process) {
-                  //   console.log(process, slot)
-                  //   res2.headers.set('process', process)
-                  // }
-                  return ({ res: res2, process, slot })
-                })
-            }
-            return ({ res })
+            // const process = res.headers.get('process')
+            // const slot = res.headers.get('slot')
+            return ({res})
           })
+          // don't get the compute result
+          // .then(res => {
+          //   if (res.status === 200) {
+          //     const process = res.headers.get('process')
+          //     const slot = res.headers.get('slot')
+
+          //     return request({
+          //       type: 'Message',
+          //       path: `${process}/compute&slot+integer=${slot}/results/json`,
+          //       method: 'POST',
+          //       target: process,
+          //       'slot+integer': slot,
+          //       accept: 'application/json'
+          //     })
+          //       .then(res2 => {
+          //         // if (!res2.process) {
+          //         //   console.log(process, slot)
+          //         //   res2.headers.set('process', process)
+          //         // }
+          //         return ({ res: res2, process, slot })
+          //       })
+          //   }
+          //   return ({ res })
+          // })
       })(ctx)
     }
   }

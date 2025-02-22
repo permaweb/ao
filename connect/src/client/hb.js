@@ -60,13 +60,14 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
     const { path, method, ...restFields } = fields
 
     return of({ path, method, fields: restFields })
-      .chain(fromPromise(({ path, method, fields }) =>
-        encode(fields).then(({ headers, body }) => ({
+      .chain(fromPromise(({ path, method, fields }) => {
+        return encode(fields).then(({ headers, body }) => ({
           path,
           method,
           headers,
           body
         }))
+      }
       ))
       .chain(fromPromise(async ({ path, method, headers, body }) =>
         toHttpSigner(signer)(toSigBaseArgs({

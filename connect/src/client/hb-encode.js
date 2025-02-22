@@ -128,6 +128,10 @@ export async function encode (obj = {}) {
   const [bodyKeys, headerKeys] = partition(
     (key) => {
       if (key.includes('/')) return true
+      // if data is set to go to the body
+      // for some reason everything breaks
+      // if (key === "data") return true 
+      
       const bytes = Buffer.from(flattened[key])
       /**
        * Anything larger than 4k goes into
@@ -137,7 +141,7 @@ export async function encode (obj = {}) {
     },
     Object.keys(flattened).sort()
   )
-
+  
   const h = new Headers()
   headerKeys.forEach((key) => h.append(key, flattened[key]))
   /**
