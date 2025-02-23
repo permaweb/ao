@@ -60,6 +60,7 @@ const metering = require('@permaweb/wasm-metering')
  * @property {DataItem} Output
  * @property {Message[]} Messages
  * @property {Message[]} Spawns
+ * @property {Patches[]} Patches
  * @property {AssignmentTypes.Assignment[]} Assignments
  */
 
@@ -262,6 +263,7 @@ module.exports = async function (binary, options) {
         Messages: response.Messages,
         Spawns: response.Spawns,
         Assignments: response.Assignments,
+        Patches: response.Patches || [],
         GasUsed: instance.gas.used
       }
     } finally {
