@@ -1,24 +1,20 @@
 import base64url from 'base64url'
-import { Buffer } from 'buffer/index.js'
+import { Buffer as BufferShim } from 'buffer/index.js'
 
 /**
  * polyfill in Browser
  */
-if (!globalThis.Buffer) globalThis.Buffer = Buffer
+if (!globalThis.Buffer) globalThis.Buffer = BufferShim
 
 /**
  * ******
  * HyperBEAM Http Encoding
  *
- * TODO: bundle into a package with
- *
- * - export encode()
- * - export encodeDataItem() to convert object
- * or ans104 to http message
- * - exported signers for both node and browser environments
- * (currently located in wallet.js modules)
+ * TODO: bundle into a separate package
  * ******
  */
+
+const MAX_HEADER_LENGTH = 4096
 
 /**
  * @param {ArrayBuffer} data
@@ -27,119 +23,197 @@ async function sha256 (data) {
   return crypto.subtle.digest('SHA-256', data)
 }
 
-function partition (pred, arr) {
-  return arr.reduce((acc, cur) => {
-    acc[pred(cur) ? 0 : 1].push(cur)
-    return acc
-  },
-  [[], []])
-}
-
 function isBytes (value) {
   return value instanceof ArrayBuffer ||
     ArrayBuffer.isView(value)
 }
 
-function hbEncodeValue (key, value) {
-  const typeK = `converge-type-${key}`
+function isPojo (value) {
+  return !isBytes(value) &&
+    typeof value === 'object' &&
+    value !== null
+}
+
+function hbEncodeValue (value) {
+  if (isBytes(value)) {
+    if (value.byteLength === 0) return hbEncodeValue('')
+    return [undefined, value]
+  }
 
   if (typeof value === 'string') {
-    if (value.length === 0) return { [typeK]: 'empty-binary' }
-    return { [key]: value }
+    if (value.length === 0) return [undefined, 'empty-binary']
+    return [undefined, value]
   }
 
   if (Array.isArray(value) && value.length === 0) {
-    return { [typeK]: 'empty-list' }
+    return ['empty-list', undefined]
   }
 
   if (typeof value === 'number') {
-    if (!Number.isInteger(value)) return { [typeK]: 'float', [key]: `${value}` }
-    return { [typeK]: 'integer', [key]: `${value}` }
+    if (!Number.isInteger(value)) return ['float', `${value}`]
+    return ['integer', `${value}`]
   }
 
   if (typeof value === 'symbol') {
-    return { [typeK]: 'atom', [key]: value.description }
+    return ['atom', value.description]
   }
 
   throw new Error(`Cannot encode value: ${value.toString()}`)
 }
 
-function hbEncode (obj, parent = '') {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const flatK = (parent ? `${parent}/${key}` : key)
-      .toLowerCase()
+export function hbEncodeLift (obj, parent = '', top = {}) {
+  const [flattened, types] = Object.entries(obj)
+    .reduce((acc, [key, value]) => {
+      const flatK = (parent ? `${parent}/${key}` : key)
+        .toLowerCase()
 
-    // skip nullish values
-    if (value == null) return acc
+      // skip nullish values
+      if (value == null) return acc
 
-    // binary data
-    if (isBytes(value)) {
-      if (value.byteLength === 0) {
-        return Object.assign(acc, hbEncodeValue(flatK, ''))
+      // // first/{idx}/name flatten array
+      // if (Array.isArray(value)) {
+      //   if (value.length === 0) {
+      //     return store(flatK, key, acc, hbEncodeValue(value))
+      //   }
+      //   value.forEach((v, i) =>
+      //     Object.assign(acc[0], hbEncode(v, `${flatK}/${i}`))
+      //   )
+      //   return acc
+      // }
+
+      // first/second lift object
+      if (isPojo(value)) {
+        /**
+         * Encode the pojo on top, but then continuing iterating
+         * through the current object level
+         */
+        hbEncodeLift(value, flatK, top)
+        return acc
       }
-      return Object.assign(acc, { [flatK]: value })
-    }
 
-    // first/{idx}/name flatten array
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return Object.assign(acc, hbEncodeValue(flatK, value))
+      // leaf encode value
+      const [type, encoded] = hbEncodeValue(value)
+      if (encoded) {
+        /**
+         * This value is too large to be potentially encoded
+         * in a multipart header, so we instead need to "lift" it
+         * as a top level field on result, to be encoded as its own part
+         *
+         * So use flatK to preserve the nesting hierarchy
+         * While ensure it will be encoded as its own part
+         */
+        if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
+          top[flatK] = encoded
+        /**
+         * Encode at the current level as a normal field
+         */
+        } else acc[0][key] = encoded
       }
-      value.forEach((v, i) =>
-        Object.assign(acc, hbEncode(v, `${flatK}/${i}`))
-      )
+      if (type) acc[1][key] = type
       return acc
-    }
+    }, [{}, {}])
 
-    // first/second flatten object
-    if (typeof value === 'object' && value !== null) {
-      return Object.assign(acc, hbEncode(value, flatK))
-    }
+  if (Object.keys(flattened).length === 0) return top
 
-    // leaf encode value
-    Object.assign(acc, hbEncodeValue(flatK, value))
-    return acc
-  }, {})
+  /**
+   * Add the ao-types key for this specific object,
+   * as a structured dictionary
+   */
+  if (Object.keys(types).length > 0) {
+    const aoTypes = Object.entries(types)
+      .map(([key, value]) => `${key.toLowerCase()}=${value}`)
+      .join(',')
+
+    /**
+     * The ao-types header was too large to encoded as a header
+     * so lift to the top, to be encoded as its own part
+     */
+    if (Buffer.from(aoTypes).byteLength > MAX_HEADER_LENGTH) {
+      const flatK = (parent ? `${parent}/ao-types` : 'ao-types')
+      top[flatK] = aoTypes
+    } else flattened['ao-types'] = aoTypes
+  }
+
+  if (parent) top[parent] = flattened
+  // Merge non-pojo values at top level
+  else Object.assign(top, flattened)
+  return top
 }
 
-async function boundaryFrom (bodyParts = []) {
-  const base = new Blob(
-    bodyParts.flatMap((p, i, arr) =>
-      i < arr.length - 1 ? [p, '\r\n'] : [p])
-  )
+function encodePart (name, { headers, body }) {
+  const parts = Object
+    .entries(Object.fromEntries(headers))
+    .reduce((acc, [name, value]) => {
+      acc.push(`${name}: `, value, '\r\n')
+      return acc
+    }, [`content-disposition: form-data;name="${name}"\r\n`])
 
-  const hash = await sha256(await base.arrayBuffer())
-  return base64url.encode(Buffer.from(hash))
+  if (body) parts.push('\r\n', body)
+
+  return new Blob(parts)
 }
 
 /**
- * Encode the object as HyperBEAM HTTP multipart
- * message. Nested objects are flattened to a single
- * depth multipart
+ * Encoded the object as a HyperBEAM HTTP Multipart Message
+ * - Nested object are "lifted" to the top level, while preserving
+ * the hierarchy using "/", to be encoded as a part in the multipart body
+ *
+ * - Adds "ao-types" field on each nested object, that defines types
+ * for each nested field, encoded as a structured dictionary header on the part.
+ *
+ * - Conditionally "lifts" fields that too large to be encoded as headers,
+ * to the top level, to be encoded as a separate part, while preserving
+ * the hierarchy using "/"
  */
 export async function encode (obj = {}) {
   if (Object.keys(obj) === 0) return
 
-  const flattened = hbEncode(obj)
+  const flattened = hbEncodeLift(obj)
+
   /**
    * Some values may be encoded into headers,
    * while others may be encoded into the body
    */
-  const [bodyKeys, headerKeys] = partition(
-    (key) => {
-      if (key.includes('/')) return true
-      // if data is set to go to the body
-      // for some reason everything breaks
-      // if (key === "data") return true 
-      
-      const bytes = Buffer.from(flattened[key])
+  const bodyKeys = []
+  const headerKeys = []
+  await Promise.all(
+    Object.keys(flattened).map(async (key) => {
+      const value = flattened[key]
       /**
-       * Anything larger than 4k goes into
-       * the body
+       * Sub maps are always encoded as subparts
+       * in the body.
+       *
+       * Since hbEncodeLift already lifts
+       * objects to the top level, there should only ever
+       * be 1 recursive call here.
        */
-      return bytes.byteLength > 4096
-    },
-    Object.keys(flattened).sort()
+      if (isPojo(value)) {
+        // Empty object or nil
+        const subPart = await encode(value)
+        if (!subPart) return
+
+        bodyKeys.push(key)
+        flattened[key] = encodePart(key, subPart)
+        return
+      }
+
+      /**
+       * This value is too large to be encoded into a header
+       * on the message, so it must instead be encoded as the body
+       * in it's own part
+       */
+      if (key.includes('/') || Buffer.from(value).byteLength > MAX_HEADER_LENGTH) {
+        bodyKeys.push(key)
+        flattened[key] = new Blob([
+          `content-disposition: form-data;name="${key}"\r\n\r\n`,
+          value
+        ])
+        return
+      }
+
+      headerKeys.push(key)
+      flattened[key] = value
+    })
   )
   
   const h = new Headers()
@@ -148,6 +222,10 @@ export async function encode (obj = {}) {
    * Add headers that indicates and orders body-keys
    * for the purpose of determinstically reconstructing
    * content-digest on the server
+   *
+   * TODO: remove dead code. Apparently, this is only needed
+   * on the HB side, but keeping the commented code here
+   * just in case we need it client side.
    */
   // const bk = hbEncodeValue('body-keys', bodyKeys)
   // Object.keys(bk).forEach((key) => h.append(key, bk[key]))
@@ -155,13 +233,19 @@ export async function encode (obj = {}) {
   let body
   if (bodyKeys.length) {
     const bodyParts = await Promise.all(
-      bodyKeys.map((name) => new Blob([
-        `content-disposition: form-data;name="${name}"\r\n\r\n`,
-        flattened[name]
-      ]).arrayBuffer())
+      bodyKeys.map((name) => flattened[name].arrayBuffer())
     )
 
-    const boundary = await boundaryFrom(bodyParts)
+    /**
+     * Generate a deterministic boundary, from the parts
+     * to use for the multipart body boundary
+     */
+    const base = new Blob(
+      bodyParts.flatMap((p, i, arr) =>
+        i < arr.length - 1 ? [p, '\r\n'] : [p])
+    )
+    const hash = await sha256(await base.arrayBuffer())
+    const boundary = base64url.encode(Buffer.from(hash))
 
     /**
      * Segment each part with the multipart boundary
