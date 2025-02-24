@@ -48,8 +48,6 @@ function isPojo (value) {
 }
 
 function hbEncodeValue (value) {
-  if (value instanceof Blob) return [undefined, value]
-
   if (isBytes(value)) {
     if (value.byteLength === 0) return hbEncodeValue('')
     return [undefined, value]
@@ -129,10 +127,7 @@ export function hbEncodeLift (obj, parent = '', top = {}) {
          * So use flatK to preserve the nesting hierarchy
          * While ensure it will be encoded as its own part
          */
-        if (encoded instanceof Blob) {
-          if (encoded.size > MAX_HEADER_LENGTH) top[flatK] = encoded
-          else acc[0][key] = encoded
-        } else if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
+        if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
           top[flatK] = encoded
         /**
          * Encode at the current level as a normal field
