@@ -20,7 +20,8 @@ const WALLET = {
   qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-const URL = 'http://localhost:10000'
+//const URL = 'http://localhost:10000'
+const URL = 'https://10000-permaweb-hyperbeam-mlmszq4wkgb.ws-us117.gitpod.io'
 
 test('request:M2 full stack spawn, message, result', async () => {
   const connect = connectWith({
@@ -40,7 +41,7 @@ test('request:M2 full stack spawn, message, result', async () => {
     module: 'JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g',
     device: 'process@1.0',
     'scheduler-device': 'scheduler@1.0',
-    'execution-device': 'compute-lite@1.0',
+    'execution-device': 'genesis-wasm@1.0',
     authority: address,
     'scheduler-location': address,
     'random-seed': randomBytes(16).toString('hex'),
@@ -50,34 +51,65 @@ test('request:M2 full stack spawn, message, result', async () => {
     'On-Boot': 'USxy_74bsS_yuQtYAqCvn9DtxmBuUZHA-4wNVuQxZHU'
 
   })
-  console.log(p)
-  // .then(tap(console.log))
+  // console.log(p)
+  // // .then(tap(console.log))
   const process = p.process
   console.log(process)
+  // const process = "0cNryp5nqRpE7HGcqvyysj6NGnCxRNTfCb_IO-hzYVA"
   // message
   const m = await request({
     path: `${process}/schedule`,
     type: 'Message',
     method: 'POST',
     action: 'Eval',
-    data: 'print(Balances)',
+    data: 'Send({Target = ao.id, Data = "Hello World"})',
     'Data-Protocol': 'ao',
     Variant: 'ao.N.1'
 
   })
-
+  console.log(m)
   const slot = m.slot
 
-  // get results
-  const r = await request({
-    path: `/${process}/compute&slot+integer=${slot}/results/json`,
+  // const r = await request({
+  //   path: `/${process}/compute&slot+integer=${slot}/results/json`,
+  //   method: 'POST',
+  //   target: process,
+  //   'slot+integer': slot,
+  //   accept: 'application/json'
+  // })
+  // console.log(r.Output.data)
+
+  const r2 = await request({
+    path: `/${process}/push&slot+integer=${slot}`,
     method: 'POST',
     target: process,
     'slot+integer': slot,
     accept: 'application/json'
-  })
-  console.log(r)
+  }).catch( e => console.log(e))
 
-  console.log(r.Output)
+  
+  console.log(r2)
+
+  const m2 = await request({
+    path: `${process}/schedule`,
+    type: 'Message',
+    method: 'POST',
+    action: 'Eval',
+    data: 'Inbox[2]',
+    'Data-Protocol': 'ao',
+    Variant: 'ao.N.1'
+
+  })
+  console.log(m2)
+  
+  const r3 = await request({
+    path: `/${process}/compute&slot+integer=${m2.slot}/results/json`,
+    method: 'POST',
+    target: process,
+    'slot+integer': m2.slot,
+    accept: 'application/json'
+  })
+  console.log(r3.Output.data)
+
   assert.ok(true)
 })
