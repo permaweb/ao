@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <emscripten.h>
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
 
 #if 0
 #define AO_LOG(...) fprintf(stderr, __VA_ARGS__)
@@ -20,7 +23,11 @@ EM_ASYNC_JS(int, weavedrive_open, (const char* c_filename, const char* mode), {
     }
 
     const drive = Module.WeaveDrive(Module, FS);
-    return await drive.open(filename);
+    const driveResponse = await drive.open(filename);
+    if (typeof driveResponse === 'string') {
+        throw new Error('HALT: FILE NOT FOUND')
+    }
+    return driveResponse;
 });
 
 EM_ASYNC_JS(int, weavedrive_read, (int fd, int *dst_ptr, size_t length), {
@@ -93,3 +100,26 @@ int munmap(void* addr, size_t length) {
     return 0;
 }
 */
+// EM_JS(int, metering_gasUsed, (), {
+//     return Module.gas.used;
+// });
+
+// static int gasUsed(lua_State *L)
+// {
+//     lua_pushnumber(L, metering_gasUsed());
+
+//     return 1;
+// }
+
+// // Library registration function
+// static const struct luaL_Reg aolib_funcs[] = {
+//     {"gasUsed", gasUsed},
+//     {NULL, NULL} /* Sentinel */
+// };
+
+// // Initialization function
+// int luaopen_metering(lua_State *L)
+// {
+//     luaL_newlib(L, aolib_funcs);
+//     return 1;
+// }

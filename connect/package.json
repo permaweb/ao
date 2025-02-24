@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/aoconnect",
-  "version": "0.0.59",
+  "version": "0.0.63",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -45,9 +45,10 @@
     "test:integration": "cd ./test/e2e && npm test"
   },
   "dependencies": {
-    "@permaweb/ao-scheduler-utils": "~0.0.23",
+    "@permaweb/ao-scheduler-utils": "~0.0.25",
+    "@permaweb/protocol-tag-utils": "~0.0.2",
     "buffer": "^6.0.3",
-    "debug": "^4.3.6",
+    "debug": "^4.3.7",
     "hyper-async": "^1.1.2",
     "mnemonist": "^0.39.8",
     "ramda": "^0.30.1",
@@ -55,9 +56,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "arweave": "^1.15.1",
-    "esbuild": "^0.23.0",
-    "typescript": "^5.5.4"
+    "arweave": "^1.15.5",
+    "esbuild": "^0.23.1",
+    "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=18"

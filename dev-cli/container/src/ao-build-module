@@ -81,7 +81,7 @@ def main():
         c_program = inject_lua_files(definition, c_program, injected_lua_files)
     
     # Load all libraries
-    c_program = load_libraries(definition, c_program, link_libraries, c_source_files, injected_lua_files,dependency_libraries)
+    c_program = load_libraries(config, definition, c_program, link_libraries, c_source_files, injected_lua_files,dependency_libraries)
                     
     # Inject the lua files into the c program
     c_program = c_program.replace(
@@ -101,7 +101,6 @@ def main():
       '-g2',
     #   '-s', 'MAIN_MODULE', # This is required to load dynamic libraries at runtime
       '-s', 'ASYNCIFY=1',
-      '-s', 'MEMORY64=1',
       '-s', 'STACK_SIZE=' + str(config.stack_size),
       '-s', 'ASYNCIFY_STACK_SIZE=' + str(config.stack_size),
       '-s', 'ALLOW_MEMORY_GROWTH=1', 
@@ -116,9 +115,16 @@ def main():
       '-msimd128',
       '--pre-js', '/opt/pre.js'
     ]
-
-    # Link aolibc library
-    cmd.extend(['-L/opt/aolibc', '-l:aolibc.a'])
+    
+    # If the target is 64 bit, add the MEMORY64 flag and link against 64 bit libraries
+    if config.target == 64:
+        cmd.extend(['-sMEMORY64=1'])
+        cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
+        cmd.extend([quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
+    # If the target is 32 bit, link against 32 bit libraries
+    else:
+        cmd.extend(['-I', quote('/lua-{}-32/src'.format(os.environ.get('LUA_VERSION')))])
+        cmd.extend([quote('/lua-{}-32/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
 
     # Link Rust library
     if(language == 'rust'):
@@ -128,14 +134,13 @@ def main():
     cmd.extend(definition.get_extra_args())
 
     # Add the lua include path
-    cmd.extend(['-I', quote('/lua-{}/src'.format(os.environ.get('LUA_VERSION')))])
 
     # Add all c source files if there are any
     for f in c_source_files:
         cmd.append(quote(f))
     
     # Add the compile file and link libraries
-    cmd.extend(['/tmp/compile.c', quote('/lua-{}/src/liblua.a'.format(os.environ.get('LUA_VERSION')))])
+    cmd.extend(['/tmp/compile.c'])
     cmd.extend([quote(v.filepath) for v in link_libraries])
     cmd.extend([quote(v.filepath) for v in dependency_libraries])
     cmd.extend(config.get_extra_args())

@@ -1,6 +1,6 @@
 use super::super::config::AoConfig;
 use super::super::core::dal::CoreMetrics;
-use prometheus::{HistogramOpts, HistogramVec, IntCounter, Registry};
+use prometheus::{HistogramOpts, HistogramVec, IntCounter, Registry, TextEncoder};
 
 /*
   Implementation of metrics
@@ -13,10 +13,13 @@ pub struct PromMetrics {
     enabled: bool,
     core_metrics: HistogramVec,
     message_save_failures: IntCounter,
+    registry: Registry
 }
 
 impl PromMetrics {
-    pub fn new(config: AoConfig, registry: Registry) -> Self {
+    pub fn new(config: AoConfig) -> Self {
+        let registry = Registry::new();
+
         // Define the options for the histogram, with buckets in milliseconds
         let histogram_opts = HistogramOpts::new(
             "core_metrics_duration_milliseconds",
@@ -46,6 +49,7 @@ impl PromMetrics {
             enabled: config.enable_metrics,
             core_metrics,
             message_save_failures,
+            registry,
         }
     }
 
@@ -58,6 +62,23 @@ impl PromMetrics {
         self.core_metrics
             .with_label_values(&[function_name])
             .observe(duration as f64);
+    }
+
+    pub fn emit_metrics(&self) -> Result<String, String> {
+        if !self.enabled {
+            return Err("Metrics not enabled".to_string());
+        }
+
+        let encoder = TextEncoder::new();
+
+        let metric_families = self.registry.gather();
+
+        let mut buffer = String::new();
+        if let Err(err) = encoder.encode_utf8(&metric_families, &mut buffer) {
+            return Err(format!("Failed to encode metrics: {}", err));
+        }
+
+        Ok(buffer)
     }
 }
 

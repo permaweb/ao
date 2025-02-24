@@ -1,11 +1,9 @@
-import { Transform, compose as composeStreams } from 'node:stream'
+import { Transform } from 'node:stream'
 
 import { Resolved, fromPromise, of } from 'hyper-async'
-import { T, always, ascend, cond, equals, identity, ifElse, isNil, last, length, mergeRight, pipe, prop, reduce, uniqBy } from 'ramda'
-import { z } from 'zod'
+import { T, always, ascend, cond, equals, identity, ifElse, isNil, last, length, pipe, prop, reduce, uniqBy } from 'ramda'
 import ms from 'ms'
 
-import { streamSchema } from '../model.js'
 import { mapFrom, parseTags } from '../utils.js'
 import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
@@ -369,7 +367,7 @@ function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   }
 }
 
-export function maybePrependProcessMessage (ctx, logger) {
+export function maybePrependProcessMessage (ctx, logger, loadTransactionData) {
   return async function * ($messages) {
     const isColdStart = isNil(ctx.from)
 
@@ -405,6 +403,15 @@ export function maybePrependProcessMessage (ctx, logger) {
        */
       if (done || (parseTags(value.message.Tags).Type !== 'Process') || value.message.Cron) {
         logger('Emitting process message at beginning of evaluation stream for process %s cold start', ctx.id)
+
+        /**
+         * data for a process can potentially be very large, and it's only needed
+         * as part of the very first process message sent to the process (aka. Bootloader).
+         *
+         * So in lieu of caching the process data, we fetch it once here, on cold start,
+         */
+        const processData = await loadTransactionData(ctx.id).then(res => res.text())
+
         yield {
           /**
            * Ensure the noSave flag is set, so evaluation does not persist
@@ -416,7 +423,7 @@ export function maybePrependProcessMessage (ctx, logger) {
           message: {
             Id: ctx.id,
             Signature: ctx.signature,
-            Data: ctx.data,
+            Data: processData,
             Owner: ctx.owner,
             /**
              * the target of the process message is itself
@@ -473,18 +480,21 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
         loadMessages({
           suUrl: ctx.suUrl,
           processId: ctx.id,
+          block: ctx.block,
           owner: ctx.owner,
           tags: ctx.tags,
           moduleId: ctx.moduleId,
           moduleOwner: ctx.moduleOwner,
           moduleTags: ctx.moduleTags,
           from: ctx.from, // could be undefined
-          to: ctx.to // could be undefined
+          to: ctx.to, // could be undefined
+          assignmentId: ctx.mostRecentAssignmentId,
+          hashChain: ctx.mostRecentHashChain
         })
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, saveBlocks, logger }) {
+function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, loadTransactionData, saveBlocks, logger }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
 
   const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
@@ -575,8 +585,8 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
             })
         )
         .map(({ leftMost, rightMostTimestamp, $scheduled, genCronMessages }) => {
-          return composeStreams(
-            $scheduled,
+          return [
+            ...$scheduled,
             /**
              * Given a left-most and right-most boundary, return an async generator,
              * that given a list of values, emits sequential binary tuples dervied from those values.
@@ -683,7 +693,7 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
                 if (doEmitRight) yield right
               }
             })
-          )
+          ]
         })
     })
     /**
@@ -695,27 +705,12 @@ function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, save
      * construct and emit a 'message' for the process
      */
     .map($messages => {
-      return composeStreams(
-        $messages,
-        Transform.from(maybePrependProcessMessage(ctx, logger))
-      )
+      return [
+        ...$messages,
+        Transform.from(maybePrependProcessMessage(ctx, logger, loadTransactionData))
+      ]
     })
-    .map(messages => ({ messages }))
 }
-
-/**
- * The result that is produced from this step
- * and added to ctx.
- *
- * This is used to parse the output to ensure the correct shape
- * is always added to context
- */
-const ctxSchema = z.object({
-  /**
-   * Messages to be evaluated, as a stream
-   */
-  messages: streamSchema
-}).passthrough()
 
 /**
  * @typedef LoadMessagesArgs
@@ -749,7 +744,5 @@ export function loadMessagesWith (env) {
     of(ctx)
       .chain(loadScheduledMessages)
       .chain($scheduled => loadCronMessages({ ...ctx, $scheduled }))
-      // { messages }
-      .map(mergeRight(ctx))
-      .map(ctxSchema.parse)
+      .map(messages => ({ ...ctx, messages }))
 }

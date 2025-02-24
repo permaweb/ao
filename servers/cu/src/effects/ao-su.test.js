@@ -1,11 +1,13 @@
 /* eslint-disable no-throw-literal */
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
+import { createHash } from 'node:crypto'
 
 import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
 import { messageSchema } from '../domain/model.js'
 import { createTestLogger } from '../domain/logger.js'
-import { loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
+import { isHashChainValidWith, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
+import { hashChain } from './worker/hashChain/main.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
 const logger = createTestLogger({ name: 'ao-cu:ao-su' })
@@ -14,12 +16,14 @@ describe('ao-su', () => {
   describe('mapNode', () => {
     const now = new Date().getTime()
     const messageId = 'message-123'
+    const assignmentId = 'assignment-123'
     const assignedMessageId = 'assigned-123'
     const expected = {
       cron: undefined,
       ordinate: '23',
       name: `Scheduled Message ${messageId} ${now}:23`,
       exclude: undefined,
+      assignmentId,
       message: {
         Id: messageId,
         Signature: 'sig-123',
@@ -57,6 +61,7 @@ describe('ao-su', () => {
           data: 'data-123'
         },
         assignment: {
+          id: assignmentId,
           owner: {
             address: 'su-123',
             key: 'su-123'
@@ -78,9 +83,10 @@ describe('ao-su', () => {
         withoutAoGlobal.parse(expected)
       )
       assert.equal(res.isAssignment, false)
+      assert.equal(res.assignmentId, assignmentId)
     })
 
-    describe('should map an assigned tx', () => {
+    describe('should map an assignment tx', () => {
       const res = mapNode({
         message: null,
         assignment: {
@@ -131,6 +137,85 @@ describe('ao-su', () => {
           Cron: false
         })
       })
+    })
+  })
+
+  describe('isHashChainValid', () => {
+    const isHashChainValid = isHashChainValidWith({ hashChain })
+    const now = new Date().getTime()
+    const messageId = 'message-123'
+    const scheduled = {
+      cron: undefined,
+      ordinate: '23',
+      name: `Scheduled Message ${messageId} ${now}:23`,
+      exclude: undefined,
+      message: {
+        Id: messageId,
+        Signature: 'sig-123',
+        Data: 'data-123',
+        Owner: 'owner-123',
+        Target: 'process-123',
+        Anchor: '00000000123',
+        From: 'owner-123',
+        'Forwarded-By': undefined,
+        Tags: [{ name: 'Foo', value: 'Bar' }],
+        Epoch: 0,
+        Nonce: 23,
+        Timestamp: now,
+        'Block-Height': 123,
+        'Hash-Chain': 'hash-123',
+        Cron: false
+      },
+      block: {
+        height: 123,
+        timestamp: now
+      }
+    }
+
+    test('should return whether the hashChain exists if there is no previous assignment', async () => {
+      // no prev info
+      assert(await isHashChainValid({}, scheduled))
+      // first assignment ergo has no prev assignment
+      assert(await isHashChainValid({
+        hashChain: null,
+        assignmentId: 'foo'
+      }, scheduled))
+      assert(await isHashChainValid({
+        hashChain: 'foo',
+        assignmentId: null
+      }, scheduled))
+    })
+
+    test('should calculate and compare the hashChain based on the previous assignment', async () => {
+      const prevAssignmentId = Buffer.from('assignment-123', 'utf8').toString('base64url')
+      const prevHashChain = Buffer.from('hashchain-123', 'utf8').toString('base64url')
+
+      const prev = { assignmentId: prevAssignmentId, hashChain: prevHashChain }
+
+      const expected = createHash('sha256')
+        .update(Buffer.from(prevAssignmentId, 'base64url'))
+        .update(Buffer.from(prevHashChain, 'base64url'))
+        .digest('base64url')
+
+      const valid = {
+        message: {
+          // ....
+          'Hash-Chain': expected
+        }
+      }
+
+      assert(await isHashChainValid(prev, valid))
+
+      const invalid = {
+        message: {
+          'Hash-Chain': createHash('sha256')
+            .update(Buffer.from('something else', 'base64url'))
+            .update(Buffer.from(prevHashChain, 'base64url'))
+            .digest('base64url')
+        }
+      }
+
+      assert(!(await isHashChainValid(prev, invalid)))
     })
   })
 

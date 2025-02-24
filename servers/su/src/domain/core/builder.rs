@@ -1,22 +1,21 @@
 use std::sync::Arc;
 
 use super::tags::Tag;
-use dashmap::DashMap;
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
-use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus};
+use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus, GatewayTx};
 use super::json::Process;
 
 pub struct Builder<'a> {
     gateway: Arc<dyn Gateway>,
     signer: Arc<dyn Signer>,
-    logger: &'a Arc<dyn Log>,
-    cache: Arc<DashMap<String, Result<(), BuilderErrorType>>>,
+    logger: &'a Arc<dyn Log>
 }
 
 pub struct BuildResult {
     pub binary: Vec<u8>,
     pub bundle: DataBundle,
+    pub bundle_data_item: DataItem,
 }
 
 #[derive(Debug, Clone)]
@@ -51,8 +50,7 @@ impl<'a> Builder<'a> {
         Ok(Builder {
             gateway,
             signer,
-            logger,
-            cache: Arc::new(DashMap::new()),
+            logger
         })
     }
 
@@ -116,7 +114,7 @@ impl<'a> Builder<'a> {
             Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
         ];
 
-        let mut data_bundle = DataBundle::new(bundle_tags.clone());
+        let mut data_bundle = DataBundle::new();
 
         items.iter().for_each(|item| {
             data_bundle.add_item(item.clone());
@@ -137,6 +135,7 @@ impl<'a> Builder<'a> {
         Ok(BuildResult {
             binary: bundle_data_item.as_bytes()?,
             bundle: data_bundle,
+            bundle_data_item,
         })
     }
 
@@ -173,7 +172,7 @@ impl<'a> Builder<'a> {
         ];
         self.logger.log(format!("generated tags - {:?}", &tags));
 
-        let mut data_bundle = DataBundle::new(tags.clone());
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(item);
         let buffer = data_bundle.to_bytes()?;
 
@@ -190,10 +189,11 @@ impl<'a> Builder<'a> {
         Ok(BuildResult {
             binary: new_data_item.as_bytes()?,
             bundle: data_bundle,
+            bundle_data_item: new_data_item,
         })
     }
 
-    pub fn parse_data_item(&self, tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
+    pub fn parse_data_item(tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
         Ok(DataItem::from_bytes(tx)?)
     }
 
@@ -202,12 +202,7 @@ impl<'a> Builder<'a> {
         tx_id: &String,
         process: &Process,
         base_layer: &Option<String>,
-    ) -> Result<(), BuilderErrorType> {
-        // Check if the result is in the DashMap cache
-        if let Some(cached_result) = self.cache.get(tx_id) {
-            return cached_result.clone();
-        }
-
+    ) -> Result<Option<GatewayTx>, BuilderErrorType> {
         // Process the assignment verification
         let result = match base_layer {
             Some(_) => {
@@ -227,23 +222,20 @@ impl<'a> Builder<'a> {
                 };
 
                 match status.number_of_confirmations {
-                    n if n >= threshold => Ok(()),
+                    n if n >= threshold => Ok(None),
                     _ => Err(BuilderErrorType::BuilderError(
                         "Not enough confirmations to assign".to_string(),
                     )),
                 }
             }
             None => {
-                self.gateway.gql_tx(&tx_id).await?;
-                Ok(())
+                Ok(Some(self.gateway.gql_tx(&tx_id).await?))
             }
         };
 
-        // Store the result in the DashMap cache
-        self.cache.insert(tx_id.clone(), result.clone());
-
         result
     }
+
 }
 
 #[cfg(test)]
@@ -277,7 +269,15 @@ mod tests {
         async fn gql_tx(&self, _tx_id: &String) -> Result<GatewayTx, String> {
             Ok(GatewayTx {
                 id: "id".to_string(),
+                signature: "sig".to_string(),
+                anchor: None,
+                tags: vec![],
+                recipient: None,
             })
+        }
+
+        async fn raw(&self, _tx_id: &String) -> Result<Vec<u8>, String> {
+            Ok(vec![])
         }
     }
 

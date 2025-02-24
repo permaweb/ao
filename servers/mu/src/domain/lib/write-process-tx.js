@@ -3,6 +3,7 @@ import { __, assoc, defaultTo, is } from 'ramda'
 import z from 'zod'
 
 import { parseTags } from '../utils.js'
+import { rawSchema, writeDataItemSchema } from '../dal.js'
 
 const ctxSchema = z.object({
   schedulerTx: z.object({
@@ -14,8 +15,8 @@ const ctxSchema = z.object({
 export function writeProcessTxWith (env) {
   let { logger, writeDataItem, locateScheduler } = env
 
-  writeDataItem = fromPromise(writeDataItem)
-  locateScheduler = fromPromise(locateScheduler)
+  writeDataItem = fromPromise(writeDataItemSchema.implement(writeDataItem))
+  locateScheduler = fromPromise(rawSchema.implement(locateScheduler))
 
   function findSchedulerTag (tags) {
     return of(tags)

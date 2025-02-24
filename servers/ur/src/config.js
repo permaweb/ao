@@ -33,13 +33,14 @@ const serverConfigSchema = z.object({
   }, z.number().positive()),
   processToHost: stringifiedJsonSchema.nullish(),
   ownerToHost: stringifiedJsonSchema.nullish(),
+  fromModuleToHost: stringifiedJsonSchema.nullish(),
   hosts: z.preprocess(
     (arg) => (typeof arg === 'string' ? arg.split(',').map(str => str.trim()) : arg),
     z.array(z.string().url())
   ),
   aoUnit: z.enum(['cu', 'mu']),
   strategy: z.enum(['proxy', 'redirect']),
-  surUrl: z.string().nullable().optional(),
+  surUrl: z.string().url(),
   /**
    * @deprecated - use ownerToHost or processToHost to
    * achieve subrouting
@@ -68,6 +69,7 @@ const CONFIG_ENVS = {
     hosts: process.env.HOSTS || ['http://127.0.0.1:3005'],
     processToHost: process.env.PROCESS_TO_HOST || JSON.stringify({}),
     ownerToHost: process.env.OWNER_TO_HOST || JSON.stringify({}),
+    fromModuleToHost: process.env.FROM_MODULE_TO_HOST || JSON.stringify({}),
 
     /**
      * default to the CU for no hassle startup in development mode,
@@ -95,7 +97,8 @@ const CONFIG_ENVS = {
     hosts: process.env.HOSTS,
     processToHost: process.env.PROCESS_TO_HOST || JSON.stringify({}),
     ownerToHost: process.env.OWNER_TO_HOST || JSON.stringify({}),
-
+    fromModuleToHost: process.env.FROM_MODULE_TO_HOST || JSON.stringify({}),
+    
     aoUnit: process.env.AO_UNIT,
     strategy: process.env.STRATEGY || 'proxy',
 

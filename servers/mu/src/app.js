@@ -26,6 +26,10 @@ export const server = pipe(
       logger({ log: 'Crons initialized' })
     })
 
+    domain.apis.startMessageRecoveryCron().then(() => {
+      logger({ log: 'Message recovery cron started' })
+    })
+
     return server
   }
 )(express())

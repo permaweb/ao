@@ -5,7 +5,7 @@ export class EventVacuum {
     this.transport = transport
   }
 
-  async processLogs (logData, processId, nonce) {
+  async processLogs (logData, processId, nonce, gasUsed, memorySize) {
     if (typeof logData !== 'string') return
     const events = (logData ?? '')
       .split('\n')
@@ -13,7 +13,7 @@ export class EventVacuum {
       .filter(this.isEvent)
       .map(({ _e, ...eventData }) => eventData) // Strip the "_e" flag
       .map(this.normalizeTimestamps)
-    await this.dispatchEvents(events, processId, nonce)
+    await this.dispatchEvents(events, processId, nonce, gasUsed, memorySize)
   }
 
   parseJson (line) {
@@ -45,9 +45,9 @@ export class EventVacuum {
     return event
   }
 
-  async dispatchEvents (events, processId, nonce) {
+  async dispatchEvents (events, processId, nonce, gasUsed, memorySize) {
     if (events.length === 0) return
-    await this.transport.sendEvents(events, processId, nonce)
+    await this.transport.sendEvents(events, processId, nonce, gasUsed, memorySize)
   }
 }
 

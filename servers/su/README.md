@@ -15,7 +15,9 @@ This is an spec compliant `ao` Scheduler Unit, implemented as a Rust actix web s
   - [Running the binary, su MODE](#running-the-binary-su-mode)
   - [Running a router in front of multiple scheduler units](#running-a-router-in-front-of-multiple-scheduler-units)
   - [Running the binary, router MODE](#running-the-binary-router-mode)
+- [Migrations](#migrations)
   - [Migrating data to disk for an existing su instance](#migrating-data-to-disk-for-an-existing-su-instance)
+  - [Migrating data to fully local data store](#migrating-data-to-fully-local-data-store)
 
 <!-- tocstop -->
 
@@ -52,6 +54,12 @@ Create a .env file with the following variables, or set them in the OS:
 - `PROCESS_CACHE_SIZE` max size of the in memory cache of processes held by the data store
 - `ENABLE_PROCESS_ASSIGNMENT` enables AOP-6 boot loader, if enabled, the Process on a new spawn will become the first Message/Nonce in its message list. It will get an Assignment.
 - `ARWEAVE_URL_LIST` list of arweave urls that have tx access aka url/txid returns the tx. Used by gateway calls for checking transactions etc...
+
+## Experimental environment variables
+To use the expirimental fully local storage system set the following evnironment variables.
+- `USE_LOCAL_STORE`  if true the SU will operate on purely RocksDB
+- `SU_FILE_DB_DIR` a local RocksDB directory of bundles
+- `SU_INDEX_DB_DIR` a local index of processes and messages
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
@@ -153,6 +161,9 @@ docker build -t su-runner .
 docker run --env-file .env.router -v ./.wallet.json:/app/.wallet.json -v ./schedulers.json:/app/.schedulers.json su-runner router 9000
 ```
 
+## Migrations
+
+Over time the su database has evolved. It started as only Postgres then went to Postgres + RocksDB for performance enhancement. It now has a purely RocksDB implementation. For existing su's that already have data, you can follow the below to migration processes to bring it up to date to the latest implementation. 
 
 ### Migrating data to disk for an existing su instance
 If a su has been running using postgres for sometime there may be performance issues. Writing to  and reading files from disk has been added. In order to switch this on set the environment variables
@@ -183,6 +194,28 @@ docker system prune -a
 docker build --target mig-builder -t mig-binary -f DockerfileMig .
 docker create --name temp-container-mig mig-binary
 docker cp temp-container-mig:/usr/src/mig/target/release/mig .
+```
+
+### Migrating data to fully local data store
+If a su has been running using postgres + rocksdb using the above migration, it can then be migrated to using purely RocksDB in a totally local data store. Use the following environment variables to configure this. Set `USE_LOCAL_STORE` to false while running the migration then once it is complete set it to true.
+
+- `USE_LOCAL_STORE` If set to true, the su will use a purely rocksdb data storage implementation.
+- `SU_FILE_DB_DIR` a directory for a RocksDB instance that will hold the full binary files that are the bundles, messages, and assignments.
+- `SU_INDEX_DB_DIR` a directory for a RocksDB instance that will hold an index of Processes and Messages for ordering and querying.
+
+Then the `mig_local` binary can be used to migrate data in segments from the existing source. Note that you must have already run the above `mig` binary before running `mig_local` will work. It cannot migrate from a purely postgres implementation. So to get to this point if the su was running on only postgres, first follow the above steps using the `mig` binary. And then follow the  `mig_local` steps.
+
+Migrate all Messages and Processes to RocksDB
+```sh
+./mig_local
+```
+
+Building the mig_local binary, delete all su images and containers if you have previously run this, then run
+```sh
+docker system prune -a
+docker build --target mig-local-builder -t mig-local-binary -f DockerfileMigLocal .
+docker create --name temp-container-mig-local mig-local-binary
+docker cp temp-container-mig-local:/usr/src/mig_local/target/release/mig_local .
 ```
 
 # System Requirements for SU + SU-R cluster

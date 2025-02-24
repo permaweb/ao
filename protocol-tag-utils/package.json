@@ -1,0 +1,31 @@
+{
+  "name": "@permaweb/protocol-tag-utils",
+  "version": "0.0.2",
+  "description": "A utility for extracting and parsing tags associated with ANS-115 Data-Protocols",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/permaweb/ao.git",
+    "directory": "data-protocols"
+  },
+  "license": "MIT",
+  "author": "Tyler Hall<tyler@hyper.io>",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "browser": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist"
+  ],
+  "scripts": {
+    "build": "npm run build:src && npm run build:types",
+    "build:src": "node esbuild.js",
+    "build:types": "tsc index.js --skipLibCheck --allowJS --declaration --emitDeclarationOnly --outDir dist",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

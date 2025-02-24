@@ -6,7 +6,9 @@ COPY ./package.json .
 COPY ./package-lock.json .
 COPY ./src ./src
 
-RUN npm install --omit=dev
+RUN npm install --omit=dev && \
+    mkdir /db/ && \
+    mkdir /file-checkpoints/
 
 ENV NODE_ENV=production
 

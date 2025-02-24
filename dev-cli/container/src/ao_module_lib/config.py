@@ -8,34 +8,34 @@ def mb_to_bytes(megabytes):
 
 presets = {
     'xs': {
-        'stack_size': mb_to_bytes(8),
-        'initial_memory': mb_to_bytes(16),
-        'maximum_memory': mb_to_bytes(64) 
-    },
-    'sm': {
-        'stack_size': mb_to_bytes(16), 
-        'initial_memory': mb_to_bytes(32),  
+        'stack_size': mb_to_bytes(16),
+        'initial_memory': mb_to_bytes(20),
         'maximum_memory': mb_to_bytes(128) 
     },
+    'sm': {
+        'stack_size': mb_to_bytes(32), 
+        'initial_memory': mb_to_bytes(36),  
+        'maximum_memory': mb_to_bytes(256) 
+    },
     'md': {
-        'stack_size': mb_to_bytes(32),
-        'initial_memory': mb_to_bytes(48), 
-        'maximum_memory': mb_to_bytes(256)
-    },
-    'lg': {
-        'stack_size': mb_to_bytes(48), 
-        'initial_memory': mb_to_bytes(64), 
-        'maximum_memory': mb_to_bytes(256)
-    },
-    'xl': {
-        'stack_size': mb_to_bytes(64), 
-        'initial_memory': mb_to_bytes(96), 
+        'stack_size': mb_to_bytes(64),
+        'initial_memory': mb_to_bytes(68), 
         'maximum_memory': mb_to_bytes(512)
     },
-    'xxl': {
+    'lg': {
         'stack_size': mb_to_bytes(96), 
-        'initial_memory': mb_to_bytes(128), 
-        'maximum_memory': mb_to_bytes(4096)
+        'initial_memory': mb_to_bytes(100), 
+        'maximum_memory': mb_to_bytes(1024)
+    },
+    'xl': {
+        'stack_size': mb_to_bytes(128), 
+        'initial_memory': mb_to_bytes(132), 
+        'maximum_memory': mb_to_bytes(8192)
+    },
+    'xxl': {
+        'stack_size': mb_to_bytes(512), 
+        'initial_memory': mb_to_bytes(518), 
+        'maximum_memory': mb_to_bytes(16384)
     },
 }
 
@@ -46,6 +46,7 @@ class Config():
     maximum_memory = 0
     extra_compile_args = []
     keep_js = False
+    target = 64
 
     def __init__(self, config_file):
         
@@ -69,6 +70,20 @@ class Config():
                 self.maximum_memory = data.get('maximum_memory', self.maximum_memory)
                 self.extra_compile_args = data.get('extra_compile_args', self.extra_compile_args)
                 self.keep_js = data.get('keep_js', self.keep_js)
+                self.setTarget(data.get('target', self.target))
+  
+
+    def setTarget(self, value):
+        if(not isinstance(value, int) and not isinstance(value, str)):
+            print('Invalid target. Defaulting to 64 bit')
+            value = 64
+        else:
+            if(isinstance(value, str)):
+                value = int(value)
+            if(value != 64 and value != 32):
+                print('Invalid target. Defaulting to 64 bit')
+                value = 64
+        self.target = value
 
     def setValuesByPreset(self, preset):
         self.preset = preset

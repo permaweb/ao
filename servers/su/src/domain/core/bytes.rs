@@ -15,9 +15,9 @@ pub enum ByteErrorType {
 }
 
 impl From<TagError> for ByteErrorType {
-  fn from(error: TagError) -> Self {
-      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
-  }
+    fn from(error: TagError) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {:?}", error))
+    }
 }
 
 impl From<&str> for ByteErrorType {
@@ -38,18 +38,20 @@ impl From<String> for ByteErrorType {
     }
 }
 
+impl From<base64_url::base64::DecodeError> for ByteErrorType {
+  fn from(error: base64_url::base64::DecodeError) -> Self {
+      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
+  }
+}
+
 #[derive(Clone)]
 pub struct DataBundle {
     pub items: Vec<DataItem>,
-    pub tags: Vec<Tag>,
 }
 
 impl DataBundle {
-    pub fn new(tags: Vec<Tag>) -> Self {
-        DataBundle {
-            items: Vec::new(),
-            tags: tags,
-        }
+    pub fn new() -> Self {
+        DataBundle { items: Vec::new() }
     }
 
     pub fn add_item(&mut self, item: DataItem) {
@@ -108,10 +110,7 @@ impl DataBundle {
             items.push(item);
         }
 
-        Ok(Self {
-            items,
-            tags: Vec::new(), // Assuming tags are not used in to_bytes
-        })
+        Ok(Self { items })
     }
 }
 
@@ -333,7 +332,7 @@ impl DataItem {
         Ok(DataItem {
             signature_type: SignerMap::Arweave,
             signature: vec![],
-            owner: owner,
+            owner,
             target,
             anchor,
             tags,
@@ -536,6 +535,73 @@ impl DataItem {
         Ok(b)
     }
 
+    /*
+      Utilized for deduplicating incoming messages even
+      if they have the same id
+    */
+    pub fn deep_hash(&mut self) -> Result<String, ByteErrorType> {
+        let data_chunk = match &mut self.data {
+            Data::None => DeepHashChunk::Chunk(Bytes::new()),
+            Data::Bytes(data) => DeepHashChunk::Chunk(data.clone().into())
+        };
+        
+        let encoded_tags = if !self.tags.is_empty() {
+            self.tags.encode()?
+        } else {
+            Bytes::default()
+        };
+
+        let deep_hash_vec = deep_hash_sync(DeepHashChunk::Chunks(vec![
+            DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+            // this is where the owner normally would be
+            DeepHashChunk::Chunk(Bytes::new()),
+            DeepHashChunk::Chunk(self.target.to_vec().into()),
+            DeepHashChunk::Chunk(self.anchor.to_vec().into()),
+            DeepHashChunk::Chunk(encoded_tags.clone()),
+            data_chunk,
+        ]))?;
+
+        Ok(base64_url::encode(&deep_hash_vec))
+    }
+
+    pub fn deep_hash_fields(
+        target: Option<String>, 
+        anchor: Option<String>, 
+        tags: Vec<Tag>, 
+        data: Vec<u8>
+    ) -> Result<String, ByteErrorType> {
+        let target_chunk = match target {
+            None => DeepHashChunk::Chunk(Bytes::new()),
+            Some(t) => DeepHashChunk::Chunk(base64_url::decode(&t)?.into())
+        };
+
+        let anchor_chunk = match anchor {
+            None => DeepHashChunk::Chunk(Bytes::new()),
+            Some(a) => DeepHashChunk::Chunk(base64_url::decode(&a)?.into())
+        };
+        
+        let encoded_tags = if !tags.is_empty() {
+            tags.encode()?
+        } else {
+            Bytes::default()
+        };
+
+        let deep_hash_vec = deep_hash_sync(DeepHashChunk::Chunks(vec![
+            DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(ONE_AS_BUFFER.into()),
+            DeepHashChunk::Chunk(Bytes::new()),
+            target_chunk,
+            anchor_chunk,
+            DeepHashChunk::Chunk(encoded_tags.clone()),
+            DeepHashChunk::Chunk(Bytes::from(data)),
+        ]))?;
+
+        Ok(base64_url::encode(&deep_hash_vec))
+    }
+
     pub fn raw_id(&self) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.update(&self.signature);
@@ -563,9 +629,7 @@ impl DataItem {
 
     pub fn data(&self) -> Option<String> {
         match &self.data {
-            Data::Bytes(d) => {
-                Some(String::from_utf8_lossy(d).into_owned())
-            },
+            Data::Bytes(d) => Some(String::from_utf8_lossy(d).into_owned()),
             Data::None => None,
         }
     }
@@ -649,11 +713,7 @@ mod tests {
         let d_item_string = ITEM_STR.to_string();
         let item_bytes = base64_url::decode(&d_item_string).expect("failed to encode data item");
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
-        let tags = vec![
-            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
-            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-        ];
-        let mut data_bundle = DataBundle::new(tags);
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(data_item);
         assert_eq!(data_bundle.items.len(), 1);
         let bundle_bytes = data_bundle.to_bytes();

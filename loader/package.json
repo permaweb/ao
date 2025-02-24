@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-loader",
-  "version": "0.0.36",
+  "version": "0.0.45",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -20,7 +20,9 @@
     "test": "npm run build && node --experimental-wasm-memory64 --test",
     "test:integration": "npm run build && MODULE_PATH='../dist/index.cjs' node --experimental-wasm-memory64 --test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@permaweb/wasm-metering": "^0.2.2"
+  },
   "devDependencies": {
     "esbuild": "^0.19.5",
     "typescript": "^5.2.2"

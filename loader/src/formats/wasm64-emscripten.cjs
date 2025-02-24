@@ -20,7 +20,7 @@ var Module = (() => {
         limit: Module.computeLimit || DEFAULT_GAS_LIMIT,
         used: 0,
         use: (amount) => {
-          Module.gas.used += amount;
+          Module.gas.used += Number(amount);
         },
         refill: (amount) => {
           if (!amount) Module.gas.used = 0;
@@ -36,7 +36,7 @@ var Module = (() => {
         readyPromiseReject = reject;
       });
 
-      ["_malloc", "_memory", "___asyncjs__weavedrive_open", "___asyncjs__weavedrive_read", "___asyncjs__weavedrive_close", "_handle", "___indirect_function_table", "onRuntimeInitialized"].forEach(prop => {
+      ["_malloc", "_memory", "___asyncjs__weavedrive_open", "___asyncjs__weavedrive_read", "___asyncjs__weavedrive_close", "_metering_gasUsed", "_handle", "___indirect_function_table", "onRuntimeInitialized"].forEach(prop => {
         if (!Object.getOwnPropertyDescriptor(readyPromise, prop)) {
           Object.defineProperty(readyPromise, prop, {
             get: () => abort("You are getting " + prop + " on the Promise object, instead of the instance. Use .then() to get called back with the instance, see the MODULARIZE docs in src/settings.js"),
@@ -630,66 +630,73 @@ var Module = (() => {
 
       missingGlobal("asm", "Please use wasmExports instead");
 
-function missingLibrarySymbol(sym) {
- if (typeof globalThis != "undefined" && !Object.getOwnPropertyDescriptor(globalThis, sym)) {
-  Object.defineProperty(globalThis, sym, {
-   configurable: true,
-   get() {
-    var msg = `\`${sym}\` is a library symbol and not included by default; add it to your library.js __deps or to DEFAULT_LIBRARY_FUNCS_TO_INCLUDE on the command line`;
-    var librarySymbol = sym;
-    if (!librarySymbol.startsWith("_")) {
-     librarySymbol = "$" + sym;
-    }
-    msg += ` (e.g. -sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='${librarySymbol}')`;
-    if (isExportedByForceFilesystem(sym)) {
-     msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
-    }
-    warnOnce(msg);
-    return undefined;
-   }
-  });
- }
- unexportedRuntimeSymbol(sym);
-}
+      function missingLibrarySymbol(sym) {
+        if (typeof globalThis != "undefined" && !Object.getOwnPropertyDescriptor(globalThis, sym)) {
+          Object.defineProperty(globalThis, sym, {
+            configurable: true,
+            get() {
+              var msg = `\`${sym}\` is a library symbol and not included by default; add it to your library.js __deps or to DEFAULT_LIBRARY_FUNCS_TO_INCLUDE on the command line`;
+              var librarySymbol = sym;
+              if (!librarySymbol.startsWith("_")) {
+                librarySymbol = "$" + sym;
+              }
+              msg += ` (e.g. -sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='${librarySymbol}')`;
+              if (isExportedByForceFilesystem(sym)) {
+                msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
+              }
+              warnOnce(msg);
+              return undefined;
+            }
+          });
+        }
+        unexportedRuntimeSymbol(sym);
+      }
 
-function unexportedRuntimeSymbol(sym) {
- if (!Object.getOwnPropertyDescriptor(Module, sym)) {
-  Object.defineProperty(Module, sym, {
-   configurable: true,
-   get() {
-    var msg = `'${sym}' was not exported. add it to EXPORTED_RUNTIME_METHODS (see the Emscripten FAQ)`;
-    if (isExportedByForceFilesystem(sym)) {
-     msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
-    }
-    abort(msg);
-   }
-  });
- }
-}
+      function unexportedRuntimeSymbol(sym) {
+        if (!Object.getOwnPropertyDescriptor(Module, sym)) {
+          Object.defineProperty(Module, sym, {
+            configurable: true,
+            get() {
+              var msg = `'${sym}' was not exported. add it to EXPORTED_RUNTIME_METHODS (see the Emscripten FAQ)`;
+              if (isExportedByForceFilesystem(sym)) {
+                msg += ". Alternatively, forcing filesystem support (-sFORCE_FILESYSTEM) can export this for you";
+              }
+              abort(msg);
+            }
+          });
+        }
+      }
 
-function __asyncjs__weavedrive_open(c_filename, mode) {
- return Asyncify.handleAsync(async () => {
-  const filename = UTF8ToString(Number(c_filename));
-  if (!Module.WeaveDrive) {
-   return Promise.resolve(null);
-  }
-  const drive = Module.WeaveDrive(Module, FS);
-  return await drive.open(filename);
- });
-}
+      function __asyncjs__weavedrive_open(c_filename, mode) {
+        return Asyncify.handleAsync(async () => {
+          const filename = UTF8ToString(Number(c_filename));
+          if (!Module.WeaveDrive) {
+            return Promise.resolve(null);
+          }
+          const drive = Module.WeaveDrive(Module, FS);
+          const driveResponse = await drive.open(filename);
+          if (typeof driveResponse === 'string') {
+            throw new Error('HALT: FILE NOT FOUND')
+          }
+          return driveResponse
+        });
+      }
 
-function __asyncjs__weavedrive_read(fd, dst_ptr, length) {
- return Asyncify.handleAsync(async () => {
-  const drive = Module.WeaveDrive(Module, FS);
-  return Promise.resolve(await drive.read(fd, dst_ptr, length));
- });
-}
-function __asyncjs__weavedrive_close(fd) {
- return Asyncify.handleAsync(async () => {
-  const drive = Module.WeaveDrive(Module, FS);
-  return drive.close(fd);
- });
-}
+      function __asyncjs__weavedrive_read(fd, dst_ptr, length) {
+        return Asyncify.handleAsync(async () => {
+          const drive = Module.WeaveDrive(Module, FS);
+          return Promise.resolve(await drive.read(fd, dst_ptr, length));
+        });
+      }
+      function __asyncjs__weavedrive_close(fd) {
+        return Asyncify.handleAsync(async () => {
+          const drive = Module.WeaveDrive(Module, FS);
+          return drive.close(fd);
+        });
+      }
+      function metering_gasUsed() {
+        return Module.gas.used;
+      }
 
 /** @constructor */ function ExitStatus(status) {
         this.name = "ExitStatus";
@@ -4909,6 +4916,7 @@ function __asyncjs__weavedrive_close(fd) {
         }
         var previousAsync = Asyncify.currData;
         var ret = func(...cArgs);
+
         function onDone(ret) {
           runtimeKeepalivePop();
           if (stack !== 0) stackRestore(stack);
@@ -4920,11 +4928,17 @@ function __asyncjs__weavedrive_close(fd) {
           assert(!(previousAsync && Asyncify.currData), "We cannot start an async operation when one is already flight");
           assert(!(previousAsync && !Asyncify.currData), "We cannot stop an async operation in flight");
           assert(asyncMode, "The call to " + ident + " is running asynchronously. If this was intended, add the async option to the ccall/cwrap call.");
-          return Asyncify.whenDone().then(onDone);
+          return Asyncify.whenDone().then(onDone).then(res => {
+            // CHG: free ptr of returned result in HEAP Memory
+            _free(ret)
+            return res;
+          });
         }
-        ret = onDone(ret);
-        if (asyncMode) return Promise.resolve(ret);
-        return ret;
+        let res = onDone(ret);
+        // CHG: free ptr of returned result in HEAP Memory
+        _free(ret);
+        if (asyncMode) return Promise.resolve(res);
+        return res;
       };
 
 /**
@@ -4955,9 +4969,8 @@ function __asyncjs__weavedrive_close(fd) {
 
       var wasmImports = {
  /** @export */ __assert_fail: ___assert_fail,
+ /** @export */ metering_gasUsed: metering_gasUsed,
  /** @export */ __asyncjs__weavedrive_close: __asyncjs__weavedrive_close,
-
-
  /** @export */ __asyncjs__weavedrive_open: __asyncjs__weavedrive_open,
  /** @export */ __asyncjs__weavedrive_read: __asyncjs__weavedrive_read,
  /** @export */ __cxa_throw: ___cxa_throw,

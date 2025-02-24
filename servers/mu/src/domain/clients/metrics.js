@@ -47,7 +47,7 @@ export const counterWith = ({ prefix = 'ao_mu' } = {}) => {
 }
 
 export const gaugeWith = ({ prefix = 'ao_mu' } = {}) => {
-  return ({ name, description, collect, labelNames = [] }) => {
+  return ({ name, description, collect, labeledCollect, labelNames = [] }) => {
     const g = new PromClient.Gauge({
       name: `${prefix}_${name}`,
       help: description,
@@ -60,9 +60,22 @@ export const gaugeWith = ({ prefix = 'ao_mu' } = {}) => {
        * that simply returns the collected value to set,
        * which will this call set here
        */
-      ...(collect
-        ? { collect: async function () { this.set(await collect()) } }
-        : {}
+      ...(labeledCollect
+        ? {
+            collect: async function () {
+              const labeledValues = await labeledCollect()
+              if (Array.isArray(labeledValues)) {
+                labeledValues.forEach(({ labelName, labelValue, value }) => {
+                  if (labelName && labelValue && value) {
+                    this.labels({ [labelName]: labelValue }).set(value)
+                  }
+                })
+              }
+            }
+          }
+        : collect
+          ? { collect: async function () { this.set(await collect()) } }
+          : {}
       ),
       enableExemplars: true
     })

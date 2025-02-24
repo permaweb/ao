@@ -126,260 +126,299 @@ pub fn hash(data: &[u8]) -> Vec<u8> {
 }
 
 impl Process {
-  pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
-      let id_assign = data_bundle.items[0].id().clone();
-      let tags_assign = data_bundle.items[0].tags();
-      let owner_assign = data_bundle.items[0].owner().clone();
-      let target_assign = data_bundle.items[0].target().clone();
-      let signature_assign = data_bundle.items[0].signature().clone();
-      let anchor_assign = data_bundle.items[0].anchor().clone();
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, JsonErrorType> {
+        let data_item = DataItem::from_bytes(bytes)?;
 
-      let ac_assign = anchor_assign.clone();
-      let anchor_r_assign = match &*anchor_assign {
-          "" => None,
-          _ => Some(ac_assign),
-      };
+        /*
+          Parse bundle to determine if old or new
+          structure. The old structure had no assignment.
+        */
+        let bundle_data = DataBundle::from_bytes(
+            &data_item
+                .data_bytes()
+                .ok_or("Bundle data not present in DataItem")?,
+        )?;
 
-      let owner_bytes_assign = base64_url::decode(&owner_assign)?;
-      let address_hash_assign = hash(&owner_bytes_assign);
-      let address_assign = base64_url::encode(&address_hash_assign);
+        match bundle_data.items.len() {
+            2 => {
+                /*
+                  Current process structure, because it has an
+                  assignment and a message
+                */
+                Ok(Process::from_bundle(&bundle_data)?)
+            }
+            1 => {
+                /*
+                  This is an old message structure so we have to
+                  parse it differently.
+                */
+                Ok(Process::from_bundle_no_assign(&bundle_data, &data_item)?)
+            }
+            _ => {
+                return Err(JsonErrorType::JsonError(
+                    "Invalid Process Bundle".to_string(),
+                ))
+            }
+        }
+    }
 
-      let owner_assign = Owner {
-          address: address_assign,
-          key: owner_assign,
-      };
+    pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
+        let id_assign = data_bundle.items[0].id().clone();
+        let tags_assign = data_bundle.items[0].tags();
+        let owner_assign = data_bundle.items[0].owner().clone();
+        let target_assign = data_bundle.items[0].target().clone();
+        let signature_assign = data_bundle.items[0].signature().clone();
+        let anchor_assign = data_bundle.items[0].anchor().clone();
 
-      let assignment_inner = AssignmentInner {
-          id: id_assign,
-          owner: owner_assign,
-          tags: tags_assign,
-          signature: signature_assign,
-          anchor: anchor_r_assign,
-          target: Some(target_assign),
-      };
+        let ac_assign = anchor_assign.clone();
+        let anchor_r_assign = match &*anchor_assign {
+            "" => None,
+            _ => Some(ac_assign),
+        };
 
-      let id = data_bundle.items[1].id().clone();
-      let tags = data_bundle.items[1].tags();
-      let target = match data_bundle.items[1].target().as_str() {
-          "" => None,
-          _ => Some(data_bundle.items[1].target().clone()),
-      };
-      let owner = data_bundle.items[1].owner().clone();
-      let signature = data_bundle.items[1].signature().clone();
-      let data = data_bundle.items[1].data_if_string().clone();
-      let anchor = data_bundle.items[1].anchor().clone();
+        let owner_bytes_assign = base64_url::decode(&owner_assign)?;
+        let address_hash_assign = hash(&owner_bytes_assign);
+        let address_assign = base64_url::encode(&address_hash_assign);
 
-      let owner_bytes = base64_url::decode(&owner)?;
-      let address_hash = hash(&owner_bytes);
-      let address = base64_url::encode(&address_hash);
+        let owner_assign = Owner {
+            address: address_assign,
+            key: owner_assign,
+        };
 
-      let assignment_tags = data_bundle.items[0].tags().clone();
+        let assignment_inner = AssignmentInner {
+            id: id_assign,
+            owner: owner_assign,
+            tags: tags_assign,
+            signature: signature_assign,
+            anchor: anchor_r_assign,
+            target: Some(target_assign),
+        };
 
-      let block_tag = assignment_tags
-          .iter()
-          .find(|tag| tag.name == "Block-Height")
-          .ok_or("Block-Height tag not found")?;
+        let id = data_bundle.items[1].id().clone();
+        let tags = data_bundle.items[1].tags();
+        let target = match data_bundle.items[1].target().as_str() {
+            "" => None,
+            _ => Some(data_bundle.items[1].target().clone()),
+        };
+        let owner = data_bundle.items[1].owner().clone();
+        let signature = data_bundle.items[1].signature().clone();
+        let data = data_bundle.items[1].data_if_string().clone();
+        let anchor = data_bundle.items[1].anchor().clone();
 
-      let timestamp_tag = assignment_tags
-          .iter()
-          .find(|tag| tag.name == "Timestamp")
-          .ok_or("Timestamp tag not found")?;
+        let owner_bytes = base64_url::decode(&owner)?;
+        let address_hash = hash(&owner_bytes);
+        let address = base64_url::encode(&address_hash);
 
-      let block = block_tag.value.clone();
-      let timestamp = timestamp_tag.value.clone().parse::<i64>()?;
+        let assignment_tags = data_bundle.items[0].tags().clone();
 
-      let owner = Owner {
-          address: address,
-          key: owner,
-      };
+        let block_tag = assignment_tags
+            .iter()
+            .find(|tag| tag.name == "Block-Height")
+            .ok_or("Block-Height tag not found")?;
 
-      let ac = anchor.clone();
-      let anchor_r = match &*anchor {
-          "" => None,
-          _ => Some(ac),
-      };
+        let timestamp_tag = assignment_tags
+            .iter()
+            .find(|tag| tag.name == "Timestamp")
+            .ok_or("Timestamp tag not found")?;
 
-      let process_inner = ProcessInner {
-          process_id: id,
-          block: block,
-          timestamp: timestamp,
-          owner: owner,
-          tags: tags,
-          target,
-          signature: Some(signature),
-          anchor: anchor_r,
-          data: data,
-      };
+        let block = block_tag.value.clone();
+        let timestamp = timestamp_tag.value.clone().parse::<i64>()?;
 
-      Ok(Process {
-          process: process_inner,
-          assignment: Some(assignment_inner),
-      })
-  }
+        let owner = Owner {
+            address: address,
+            key: owner,
+        };
 
-  /*
-    for Processes pre aop6
-  */
-  pub fn from_bundle_no_assign(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
-      let id = data_bundle.items[0].id().clone();
-      let tags = data_bundle.items[0].tags();
-      let owner = data_bundle.items[0].owner().clone();
-      let signature = data_bundle.items[0].signature().clone();
-      let target = match data_bundle.items[0].target().as_str() {
-          "" => None,
-          _ => Some(data_bundle.items[0].target().clone()),
-      };
-      /*
-      this is commented out because of this issue
-      https://github.com/permaweb/ao/issues/994
-      let data = data_bundle.items[0].data().clone();
-      */
-      let anchor = data_bundle.items[0].anchor().clone();
-      let owner_bytes = base64_url::decode(&owner)?;
-      let address_hash = hash(&owner_bytes);
-      let address = base64_url::encode(&address_hash);
+        let ac = anchor.clone();
+        let anchor_r = match &*anchor {
+            "" => None,
+            _ => Some(ac),
+        };
 
-      let bundle_tags = data_bundle.tags.clone();
+        let process_inner = ProcessInner {
+            process_id: id,
+            block: block,
+            timestamp: timestamp,
+            owner: owner,
+            tags: tags,
+            target,
+            signature: Some(signature),
+            anchor: anchor_r,
+            data: data,
+        };
 
-      let block_tag = bundle_tags
-          .iter()
-          .find(|tag| tag.name == "Block-Height")
-          .ok_or("Block-Height tag not found")?;
+        Ok(Process {
+            process: process_inner,
+            assignment: Some(assignment_inner),
+        })
+    }
 
-      let timestamp_tag = bundle_tags
-          .iter()
-          .find(|tag| tag.name == "Timestamp")
-          .ok_or("Timestamp tag not found")?;
+    /*
+      for Processes pre aop6
+    */
+    pub fn from_bundle_no_assign(
+        data_bundle: &DataBundle,
+        bundle_data_item: &DataItem,
+    ) -> Result<Self, JsonErrorType> {
+        let id = data_bundle.items[0].id().clone();
+        let tags = data_bundle.items[0].tags();
+        let owner = data_bundle.items[0].owner().clone();
+        let signature = data_bundle.items[0].signature().clone();
+        let target = match data_bundle.items[0].target().as_str() {
+            "" => None,
+            _ => Some(data_bundle.items[0].target().clone()),
+        };
+        /*
+        this is commented out because of this issue
+        https://github.com/permaweb/ao/issues/994
+        let data = data_bundle.items[0].data().clone();
+        */
+        let anchor = data_bundle.items[0].anchor().clone();
+        let owner_bytes = base64_url::decode(&owner)?;
+        let address_hash = hash(&owner_bytes);
+        let address = base64_url::encode(&address_hash);
 
-      let block = block_tag.value.clone();
-      let timestamp = timestamp_tag.value.clone().parse::<i64>()?;
+        let bundle_tags = bundle_data_item.tags().clone();
 
-      let owner = Owner {
-          address: address,
-          key: owner,
-      };
+        let block_tag = bundle_tags
+            .iter()
+            .find(|tag| tag.name == "Block-Height")
+            .ok_or("Block-Height tag not found")?;
 
-      let ac = anchor.clone();
-      let anchor_r = match &*anchor {
-          "" => None,
-          _ => Some(ac),
-      };
+        let timestamp_tag = bundle_tags
+            .iter()
+            .find(|tag| tag.name == "Timestamp")
+            .ok_or("Timestamp tag not found")?;
 
-      let process_inner = ProcessInner {
-          process_id: id,
-          block: block,
-          timestamp: timestamp,
-          owner: owner,
-          tags: tags,
-          signature: Some(signature),
-          anchor: anchor_r,
-          data: None,
-          target
-      };
+        let block = block_tag.value.clone();
+        let timestamp = timestamp_tag.value.clone().parse::<i64>()?;
 
-      Ok(Process {
-        process: process_inner,
-        assignment: None
-      })
-  }
+        let owner = Owner {
+            address: address,
+            key: owner,
+        };
 
-  pub fn epoch(&self) -> Result<i32, JsonErrorType> {
-      match &self.assignment {
-          Some(a) => {
-              let epoch_tag = a
-                  .tags
-                  .iter()
-                  .find(|tag| tag.name == "Epoch")
-                  .ok_or("Epoch tag not found")?;
-              Ok(epoch_tag.value.parse::<i32>()?)
-          }
-          None => Err(JsonErrorType::JsonError(
-              "No Assignment on Process".to_string(),
-          )),
-      }
-  }
+        let ac = anchor.clone();
+        let anchor_r = match &*anchor {
+            "" => None,
+            _ => Some(ac),
+        };
 
-  pub fn nonce(&self) -> Result<i32, JsonErrorType> {
-      match &self.assignment {
-          Some(a) => {
-              let nonce_tag = a
-                  .tags
-                  .iter()
-                  .find(|tag| tag.name == "Nonce")
-                  .ok_or("Nonce tag not found")?;
-              Ok(nonce_tag.value.parse::<i32>()?)
-          }
-          None => Err(JsonErrorType::JsonError(
-              "No Assignment on Process".to_string(),
-          )),
-      }
-  }
+        let process_inner = ProcessInner {
+            process_id: id,
+            block: block,
+            timestamp: timestamp,
+            owner: owner,
+            tags: tags,
+            signature: Some(signature),
+            anchor: anchor_r,
+            data: None,
+            target,
+        };
 
-  pub fn timestamp(&self) -> Result<i64, JsonErrorType> {
-      match &self.assignment {
-          Some(a) => {
-              let timestamp_tag = a
-                  .tags
-                  .iter()
-                  .find(|tag| tag.name == "Timestamp")
-                  .ok_or("Timestamp tag not found")?;
-              Ok(timestamp_tag.value.parse::<i64>()?)
-          }
-          None => Err(JsonErrorType::JsonError(
-              "No Assignment on Process".to_string(),
-          )),
-      }
-  }
+        Ok(Process {
+            process: process_inner,
+            assignment: None,
+        })
+    }
 
-  pub fn hash_chain(&self) -> Result<String, JsonErrorType> {
-      match &self.assignment {
-          Some(a) => {
-              let hash_chain_tag = a
-                  .tags
-                  .iter()
-                  .find(|tag| tag.name == "Hash-Chain")
-                  .ok_or("Timestamp tag not found")?;
-              Ok(hash_chain_tag.value.clone())
-          }
-          None => Err(JsonErrorType::JsonError(
-              "No Assignment on Process".to_string(),
-          )),
-      }
-  }
+    pub fn epoch(&self) -> Result<i32, JsonErrorType> {
+        match &self.assignment {
+            Some(a) => {
+                let epoch_tag = a
+                    .tags
+                    .iter()
+                    .find(|tag| tag.name == "Epoch")
+                    .ok_or("Epoch tag not found")?;
+                Ok(epoch_tag.value.parse::<i32>()?)
+            }
+            None => Err(JsonErrorType::JsonError(
+                "No Assignment on Process".to_string(),
+            )),
+        }
+    }
 
-  pub fn assignment_id(&self) -> Result<String, JsonErrorType> {
-      match &self.assignment {
-          Some(a) => Ok(a.id.clone()),
-          None => Err(JsonErrorType::JsonError(
-              "No Assignment on Process".to_string(),
-          )),
-      }
-  }
+    pub fn nonce(&self) -> Result<i32, JsonErrorType> {
+        match &self.assignment {
+            Some(a) => {
+                let nonce_tag = a
+                    .tags
+                    .iter()
+                    .find(|tag| tag.name == "Nonce")
+                    .ok_or("Nonce tag not found")?;
+                Ok(nonce_tag.value.parse::<i32>()?)
+            }
+            None => Err(JsonErrorType::JsonError(
+                "No Assignment on Process".to_string(),
+            )),
+        }
+    }
 
-  pub fn from_val(value: &serde_json::Value) -> Result<Self, JsonErrorType> {
-      match value.get("assignment") {
-          Some(_) => {
-              /*
-                  Current process structure we can directly
-                  parse it using the current shape
-              */
-              let process: Process = serde_json::from_value(value.clone())?;
-              Ok(process)
-          }
-          None => {
-              /*
-                  old process structure so there is no Assignment
-              */
-              let old: ProcessInner = serde_json::from_value(value.clone())?;
-              let assignment = None;
+    pub fn timestamp(&self) -> Result<i64, JsonErrorType> {
+        match &self.assignment {
+            Some(a) => {
+                let timestamp_tag = a
+                    .tags
+                    .iter()
+                    .find(|tag| tag.name == "Timestamp")
+                    .ok_or("Timestamp tag not found")?;
+                Ok(timestamp_tag.value.parse::<i64>()?)
+            }
+            None => Err(JsonErrorType::JsonError(
+                "No Assignment on Process".to_string(),
+            )),
+        }
+    }
 
-              Ok(Process {
-                  process: old,
-                  assignment,
-              })
-          }
-      }
-  }
+    pub fn hash_chain(&self) -> Result<String, JsonErrorType> {
+        match &self.assignment {
+            Some(a) => {
+                let hash_chain_tag = a
+                    .tags
+                    .iter()
+                    .find(|tag| tag.name == "Hash-Chain")
+                    .ok_or("Timestamp tag not found")?;
+                Ok(hash_chain_tag.value.clone())
+            }
+            None => Err(JsonErrorType::JsonError(
+                "No Assignment on Process".to_string(),
+            )),
+        }
+    }
+
+    pub fn assignment_id(&self) -> Result<String, JsonErrorType> {
+        match &self.assignment {
+            Some(a) => Ok(a.id.clone()),
+            None => Err(JsonErrorType::JsonError(
+                "No Assignment on Process".to_string(),
+            )),
+        }
+    }
+
+    pub fn from_val(value: &serde_json::Value) -> Result<Self, JsonErrorType> {
+        match value.get("assignment") {
+            Some(_) => {
+                /*
+                    Current process structure we can directly
+                    parse it using the current shape
+                */
+                let process: Process = serde_json::from_value(value.clone())?;
+                Ok(process)
+            }
+            None => {
+                /*
+                    old process structure so there is no Assignment
+                */
+                let old: ProcessInner = serde_json::from_value(value.clone())?;
+                let assignment = None;
+
+                Ok(Process {
+                    process: old,
+                    assignment,
+                })
+            }
+        }
+    }
 }
 
 impl Message {
@@ -838,12 +877,7 @@ mod tests {
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
         let assignment_data_item =
             DataItem::from_bytes(assignment_item_bytes).expect("failed to build data item");
-        let tags = vec![
-            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
-            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-            Tag::new(&"Block-Height".to_string(), &"100".to_string()),
-        ];
-        let mut data_bundle = DataBundle::new(tags);
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(assignment_data_item);
         data_bundle.add_item(data_item);
         let message = Message::from_bundle(&data_bundle).expect("failed to create message");
@@ -872,12 +906,7 @@ mod tests {
         let data_item = DataItem::from_bytes(item_bytes).expect("failed to build data item");
         let assignment_data_item =
             DataItem::from_bytes(assignment_item_bytes).expect("failed to build data item");
-        let tags = vec![
-            Tag::new(&"Bundle-Format".to_string(), &"binary".to_string()),
-            Tag::new(&"Bundle-Version".to_string(), &"2.0.0".to_string()),
-            Tag::new(&"Block-Height".to_string(), &"100".to_string()),
-        ];
-        let mut data_bundle = DataBundle::new(tags);
+        let mut data_bundle = DataBundle::new();
         data_bundle.add_item(assignment_data_item);
         data_bundle.add_item(data_item);
         let process = Process::from_bundle(&data_bundle).expect("failed to create process");

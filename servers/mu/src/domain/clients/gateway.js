@@ -18,6 +18,15 @@ function isWalletWith ({
     logger
   })
 
+  /**
+   * @name isWallet
+   * Given an id, check if it is a process or a wallet.
+   * First, check the cache. Then, check Arweave.
+   *
+   * @param id - The id to check if it is a process or a wallet
+   * @param logId - The logId to aggregate the logs by
+   * @returns isWallet - If the id is a wallet, return true. Otherwise, return false.
+   */
   return async (id, logId) => {
     logger({ log: `Checking if id is a wallet ${id}`, logId })
 
@@ -32,7 +41,7 @@ function isWalletWith ({
 
     /*
       Only if this is actually a tx will this
-      return true. That means if it doesnt its
+      return true. That means if it doesn't its
       either a wallet or something else.
     */
     return backoff(
@@ -40,7 +49,7 @@ function isWalletWith ({
         walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
           .then(okRes),
       {
-        maxRetries: 3,
+        maxRetries: 6,
         delay: 500,
         log: logger,
         logId,
@@ -60,6 +69,85 @@ function isWalletWith ({
   }
 }
 
+
+/**
+ * @name fetchTransactionDetails
+ * Fetches transaction details using the provided GraphQL query
+ * from the Arweave search endpoint.
+ *
+ * @param {string[]} ids - The list of transaction IDs to query.
+ * @param {function} fetch - The fetch implementation to use for HTTP requests.
+ * @returns {Promise<object>} The GraphQL query result.
+ */
+function fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) {
+  return async (ids) => {
+    const query = `
+      query {
+        transactions(ids: ${JSON.stringify(ids)}) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              anchor
+              signature
+              recipient
+              block {
+                timestamp
+              }
+              owner {
+                address
+                key
+              }
+              fee {
+                winston
+                ar
+              }
+              quantity {
+                winston
+                ar
+              }
+              data {
+                size
+                type
+              }
+              tags {
+                name
+                value
+              }
+              block {
+                id
+                timestamp
+                height
+                previous
+              }
+              parent {
+                id
+              }
+            }
+          }
+        }
+      }
+    `;
+  
+    const response = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+  
+    if (!response.ok) {
+      throw new Error(`Failed to fetch transaction details: ${response.statusText}`);
+    }
+  
+    return response.json();
+  } 
+}
+
+
 export default {
-  isWalletWith
+  isWalletWith,
+  fetchTransactionDetailsWith
 }

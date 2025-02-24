@@ -9,9 +9,9 @@ export class CompositeTransport {
     this.transports = transports // An array of transport instances
   }
 
-  async sendEvents (events, processId, nonce) {
+  async sendEvents (events, processId, nonce, gasUsed, memorySize) {
     for (const transport of this.transports) {
-      await transport.sendEvents(events, processId, nonce)
+      await transport.sendEvents(events, processId, nonce, gasUsed, memorySize)
     }
   }
 }
@@ -21,9 +21,9 @@ export class ConsoleTransport {
     this.logger = _logger.child('console-transport')
   }
 
-  sendEvents (events, processId, nonce) {
+  sendEvents (events, processId, nonce, gasUsed, memorySize) {
     this.logger.info(
-      `[ProcID: ${processId}; Nonce: ${nonce}]: Vacuumed events:\n%O`,
+      `[ProcID: ${processId}; Nonce: ${nonce}; GasUsed: ${gasUsed}; MemorySize: ${memorySize}]: Vacuumed events:\n%O`,
       events
     )
   }
@@ -109,7 +109,7 @@ export class HoneycombTransport {
     this.nonceTracker = new NonceTracker({ dbFilePath, logger })
   }
 
-  async sendEvents (events, processId, nonce) {
+  async sendEvents (events, processId, nonce, gasUsed, memorySize) {
     const currentMaxNonce = this.nonceTracker.getLargestNonce(processId)
 
     if (nonce > currentMaxNonce) {
@@ -118,6 +118,8 @@ export class HoneycombTransport {
         honeyEvent.add({
           processId,
           nonce,
+          gasUsed,
+          memorySize,
           ...event
         })
 
@@ -155,9 +157,12 @@ export class KinesisTransport {
     this.partitionKey = partitionKey
     this.logger = logger
     this.nonceTracker = new NonceTracker({ dbFilePath, logger })
+    this.retryAfterSigErr = true
+    this.region = region
+    this.credentials = credentials
   }
 
-  async sendEvents (events, processId, nonce) {
+  async sendEvents (events, processId, nonce, gasUsed, memorySize) {
     const currentMaxNonce = this.nonceTracker.getLargestNonce(processId)
 
     if (nonce > currentMaxNonce) {
@@ -165,6 +170,8 @@ export class KinesisTransport {
         const kinesisRecordData = {
           processId,
           nonce,
+          gasUsed,
+          memorySize,
           ...event
         }
 
@@ -179,9 +186,20 @@ export class KinesisTransport {
           await this.client.send(command)
           this.nonceTracker.updateLargestNonce(processId, nonce)
           this.logger.info(`[ProcID: ${processId}; Nonce: ${nonce}]: Sent event to Kinesis.`)
+          this.retryAfterSigErr = true
         } catch (error) {
-          this.logger.error(`[ProcID: ${processId}; Nonce: ${nonce}]: Error sending record to Kinesis: ${error}`)
-          throw error
+          if (`${error}`.includes('Signature expired') && this.retryAfterSigErr === true) {
+            this.logger.error(`[ProcID: ${processId}; Nonce: ${nonce}]: Retrying after Signature Expired error...`)
+            this.client = new KinesisClient({
+              region: this.region,
+              credentials: this.credentials
+            })
+            this.retryAfterSigErr = false // avoid stack overflow
+            await this.sendEvents(events, processId, nonce, gasUsed, memorySize)
+          } else {
+            this.logger.error(`[ProcID: ${processId}; Nonce: ${nonce}]: Error sending record to Kinesis: ${error}`)
+            throw error
+          }
         }
       }
     } else {

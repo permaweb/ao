@@ -54,10 +54,15 @@ export const domainConfigSchema = z.object({
   MAX_WORKERS: positiveIntSchema,
   DB_URL: z.string(),
   TRACE_DB_URL: z.string(),
-  TASK_QUEUE_MAX_RETRIES: z.number(),
-  TASK_QUEUE_RETRY_DELAY: z.number(),
+  TASK_QUEUE_MAX_RETRIES: positiveIntSchema,
+  TASK_QUEUE_RETRY_DELAY: positiveIntSchema,
   DISABLE_TRACE: z.boolean(),
-  SPAWN_PUSH_ENABLED: z.boolean()
+  SPAWN_PUSH_ENABLED: z.boolean(),
+  ALLOW_PUSHES_AFTER: positiveIntSchema,
+  GET_RESULT_MAX_RETRIES: positiveIntSchema,
+  GET_RESULT_RETRY_DELAY: positiveIntSchema,
+  MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
+  MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema
 })
 
 /**
@@ -102,7 +107,12 @@ const CONFIG_ENVS = {
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
-    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true'
+    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
+    ALLOW_PUSHES_AFTER: process.env.ALLOW_PUSHES_AFTER || 1580000,
+    GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
+    GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
+    MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
+    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000
   },
   production: {
     MODE,
@@ -124,7 +134,12 @@ const CONFIG_ENVS = {
     TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
-    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true'
+    SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
+    ALLOW_PUSHES_AFTER: process.env.ALLOW_PUSHES_AFTER || 1580000,
+    GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
+    GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
+    MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
+    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000
   }
 }
 

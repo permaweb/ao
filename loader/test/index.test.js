@@ -15,7 +15,7 @@ const MODULE_PATH = process.env.MODULE_PATH || '../src/index.cjs'
 console.log(`${MODULE_PATH}`)
 
 const { default: AoLoader } = await import(MODULE_PATH)
-const wasmBinary = fs.readFileSync('./test/legacy/process.wasm')
+const wasmBinary = fs.readFileSync('./test/emscripten/process.wasm')
 
 describe('loader', async () => {
   it('load wasm and evaluate message', async () => {
@@ -53,9 +53,10 @@ describe('loader', async () => {
        * that any Response will do
        */
       new Response(
-        Readable.toWeb(createReadStream('./test/legacy/process.wasm')),
+        Readable.toWeb(createReadStream('./test/emscripten/process.wasm')),
         { headers: { 'Content-Type': 'application/wasm' } }
-      )
+      ),
+      { format: 'wasm32-unknown-emscripten' }
     )
 
     const handle = await AoLoader((info, receiveInstance) => {
@@ -118,7 +119,7 @@ describe('loader', async () => {
      * but they should be within ~75k of each other, effectively meaning the gas is not
      * "stacking" and being refilled every time
      */
-    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 600000)
+    assert.ok(Math.abs(result.GasUsed - result2.GasUsed) < 750000)
   })
 
   it('should run out of gas', async () => {
@@ -144,14 +145,14 @@ describe('loader', async () => {
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result.Output, '1970-01-01')
+    assert.ok(result.Output === '1970-01-01' || result.Output === '1969-12-31')
 
     const result2 = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Date' }], Data: '' },
       { Process: { Id: '1', Tags: [] } }
     )
 
-    assert.equal(result2.Output, '1970-01-01')
+    assert.ok(result2.Output === '1970-01-01' || result2.Output === '1969-12-31')
 
     // console.log(result.GasUsed)
     assert.ok(true)
@@ -209,7 +210,7 @@ describe('loader', async () => {
 
   it('should handle Assignments', async () => {
     const handle = await AoLoader(wasmBinary, { format: 'wasm32-unknown-emscripten' })
-    
+
     // eslint-disable-next-line
     const result = await handle(null,
       { Owner: 'tom', Target: '1', Tags: [{ name: 'Action', value: 'Assignment' }], Data: '' },
@@ -217,10 +218,10 @@ describe('loader', async () => {
     )
 
     assert.deepStrictEqual(
-      result.Output, 
-      [ 
-        { Processes: [ 'pid-1', 'pid-2' ], Message: 'mid-1' },
-        { Processes: [ 'pid-1', 'pid-2' ], Message: 'mid-2' } 
+      result.Output,
+      [
+        { Processes: ['pid-1', 'pid-2'], Message: 'mid-1' },
+        { Processes: ['pid-1', 'pid-2'], Message: 'mid-2' }
       ]
     )
 

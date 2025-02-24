@@ -1,9 +1,9 @@
-import { defaultTo, isEmpty, complement, path } from 'ramda'
+import { defaultTo, isEmpty, complement, path, propEq } from 'ramda'
 import { LRUCache } from 'lru-cache'
 
 const isNotEmpty = complement(isEmpty)
 
-export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHost, ownerToHost }) {
+export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHost, ownerToHost, fromModuleToHost }) {
   const processToOwnerCache = new LRUCache({
     /**
        * 10MB
@@ -13,6 +13,17 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
        * A number is 8 bytes
        */
     sizeCalculation: () => 8
+  })
+
+  const fromModuleCache = new LRUCache({
+    /**
+       * 10MB
+       */
+    maxSize: 10_000_000,
+    /**
+       * A number is 8 bytes
+       */
+    sizeCalculation: () => 8 
   })
 
   async function findProcessOwner (processId) {
@@ -32,6 +43,25 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
       .catch((_e) => null)
   }
 
+  async function findFromModule (processId) {
+    const module = fromModuleCache.get(processId)
+    if (module) return module
+
+    return fetch(`${surUrl}/processes/${processId}`)
+      .then((res) => res.json())
+      .then(defaultTo({}))
+      .then(p => {
+        return p.tags.find(propEq('From-Module', 'name'))?.value
+      })
+      .then((module) => {
+        if (!module) return null
+
+        fromModuleCache.set(processId, module)
+        return module
+      })
+      .catch((_e) => null)
+  }
+
   return async (processId) => {
     /**
      * If a process has a specific mapping configured,
@@ -47,6 +77,15 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
       if (ownerToHost[owner]) return ownerToHost[owner]
     }
 
+    /**
+     * If there are fromModule -> host configured, then we lookup the 
+     * from-module and return the specific host if found
+     */
+    if (fromModuleToHost && isNotEmpty(fromModuleToHost)) {
+      const module = await findFromModule(processId)
+      if (fromModuleToHost[module]) return fromModuleToHost[module]
+    }
+    
     /**
      * @deprecated - this functionality is subsumed by ownerToHost
      * and will eventually be removed

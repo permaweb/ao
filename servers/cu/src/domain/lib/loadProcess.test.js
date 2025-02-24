@@ -9,13 +9,15 @@ const PROCESS = 'process-123-9HdeqeuYQOgMgWucro'
 const logger = createTestLogger({ name: 'ao-cu:readState' })
 
 describe('loadProcess', () => {
-  test('appends result, from, fromCron, fromBlockHeight and evaluatedAt to ctx', async () => {
+  test('appends result to ctx', async () => {
     const loadProcess = loadProcessWith({
       findEvaluation: async () => { throw { status: 404 } },
       findLatestProcessMemory: async () => ({
         src: 'cold_start',
         Memory: null,
         moduleId: undefined,
+        assignmentId: undefined,
+        hashChain: undefined,
         timestamp: undefined,
         epoch: undefined,
         nonce: undefined,
@@ -30,11 +32,7 @@ describe('loadProcess', () => {
     const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
 
     assert.deepStrictEqual(res.result, { Memory: null })
-    assert.equal(res.from, undefined)
-    assert.equal(res.fromCron, undefined)
     assert.equal(res.ordinate, '0')
-    assert.equal(res.fromBlockHeight, undefined)
-    assert.equal(res.evaluatedAt, undefined)
     assert.equal(res.id, PROCESS)
   })
 
@@ -76,6 +74,8 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
     assert.deepStrictEqual(res.fromCron, cachedEvaluation.cron)
     assert.deepStrictEqual(res.fromBlockHeight, cachedEvaluation.blockHeight)
+    assert.equal(res.mostRecentAssignmentId, undefined)
+    assert.equal(res.mostRecentHashChain, undefined)
     assert.equal(res.id, PROCESS)
   })
 
@@ -84,6 +84,8 @@ describe('loadProcess', () => {
       src: 'memory',
       Memory: Buffer.from('hello world'),
       moduleId: 'module-123',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       timestamp: 1697574792000,
       epoch: 0,
       nonce: 11,
@@ -104,6 +106,8 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.ordinate, cached.ordinate)
     assert.deepStrictEqual(res.fromCron, cached.cron)
     assert.deepStrictEqual(res.fromBlockHeight, cached.blockHeight)
+    assert.deepStrictEqual(res.mostRecentAssignmentId, cached.assignmentId)
+    assert.deepStrictEqual(res.mostRecentHashChain, cached.hashChain)
     assert.equal(res.id, PROCESS)
   })
 
@@ -111,6 +115,8 @@ describe('loadProcess', () => {
     const cached = {
       Memory: Buffer.from('hello world'),
       moduleId: 'module-123',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       timestamp: 1697574792000,
       epoch: 0,
       nonce: 11,
@@ -125,9 +131,10 @@ describe('loadProcess', () => {
       saveLatestProcessMemory: async (args) => {
         assert.deepStrictEqual(args, {
           processId: PROCESS,
-          evalCount: 0,
           Memory: cached.Memory,
           moduleId: cached.moduleId,
+          assignmentId: cached.assignmentId,
+          hashChain: cached.hashChain,
           timestamp: cached.timestamp,
           epoch: cached.epoch,
           nonce: cached.nonce,
@@ -150,6 +157,8 @@ describe('loadProcess', () => {
     const cached = {
       Memory: Buffer.from('hello world'),
       moduleId: 'module-123',
+      assignmentId: 'assignment-123',
+      hashChain: 'hashchain-123',
       timestamp: 1697574792000,
       epoch: 0,
       nonce: 11,
@@ -164,9 +173,10 @@ describe('loadProcess', () => {
       saveLatestProcessMemory: async (args) => {
         assert.deepStrictEqual(args, {
           processId: PROCESS,
-          evalCount: 0,
           Memory: cached.Memory,
           moduleId: cached.moduleId,
+          assignmentId: cached.assignmentId,
+          hashChain: cached.hashChain,
           timestamp: cached.timestamp,
           epoch: cached.epoch,
           nonce: cached.nonce,

@@ -28,19 +28,9 @@ impl From<GatewayErrorType> for String {
     }
 }
 
-/*
-  Right now we dont need all the fields
-  but later we can add to these types to
-  pull more data from gql responses
-*/
-#[derive(Deserialize, Debug, Clone)]
-struct Node {
-    id: String,
-}
-
 #[derive(Deserialize, Debug)]
 struct Edge {
-    node: Node,
+    node: GatewayTx,
 }
 
 #[derive(Deserialize, Debug)]
@@ -132,9 +122,9 @@ impl Gateway for ArweaveGateway {
     async fn check_head(&self, tx_id: String) -> Result<bool, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let arweave_urls = config.arweave_url_list;
-    
+
         let client = Client::new();
-    
+
         for arweave_url in arweave_urls {
             let url = match Url::parse(&arweave_url) {
                 Ok(u) => u,
@@ -143,7 +133,7 @@ impl Gateway for ArweaveGateway {
                     continue; // Skip this URL and try the next one
                 }
             };
-    
+
             let response = client
                 .head(
                     url.join(&format!("{}", tx_id))
@@ -151,23 +141,25 @@ impl Gateway for ArweaveGateway {
                 )
                 .send()
                 .await;
-    
+
             match response {
                 Ok(res) if res.status().is_success() => {
                     return Ok(true); // Return success if the request was successful
                 }
                 Ok(_) => {
-                    eprintln!("Request failed with non-success status for URL: {}", arweave_url);
+                    eprintln!(
+                        "Request failed with non-success status for URL: {}",
+                        arweave_url
+                    );
                 }
                 Err(e) => {
                     eprintln!("Error requesting URL {}: {}", arweave_url, e);
                 }
             }
         }
-    
+
         Ok(false) // If none of the URLs worked, return false
     }
-  
 
     async fn network_info(&self) -> Result<NetworkInfo, String> {
         // bind these with let so they dont drop until returning
@@ -217,14 +209,82 @@ impl Gateway for ArweaveGateway {
         }
     }
 
+    async fn raw(&self, tx_id: &String) -> Result<Vec<u8>, String> {
+        let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+        let arweave_url = config.arweave_url;
+
+        let url = match Url::parse(&arweave_url) {
+            Ok(u) => u,
+            Err(e) => return Err(format!("{}", e)),
+        };
+
+        let client = Client::new();
+
+        let response = client
+            .get(
+                url.join(&format!("raw/{}", tx_id))
+                    .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?,
+            )
+            .send()
+            .await
+            .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?;
+
+        if response.status().is_success() {
+          let body = response
+              .bytes()
+              .await
+              .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?;
+          Ok(body.to_vec())
+        } else {
+            Err(format!(
+                "Failed to get status. Status code: {}",
+                response.status()
+            ))
+        }
+    }
+
     async fn gql_tx(&self, tx_id: &String) -> Result<GatewayTx, String> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let graphql_url = config.graphql_url;
         let client = Client::new();
 
+        /*
+          id
+          signature
+          anchor
+          owner {
+            address
+            key
+          }
+          tags {
+            name
+            value
+          }
+          recipient
+        */
+
         let query = serde_json::json!({
             "query": format!(
-                "query {{ transactions (ids: [\"{}\"]){{ edges {{ node {{ id }} }} }} }}",
+                "query {{
+                    transactions(ids: [\"{}\"]) {{
+                        edges {{
+                            node {{
+                                id
+                                signature
+                                anchor
+                                owner {{
+                                  address
+                                  key
+                                }}  
+                                tags {{
+                                  name
+                                  value
+                                }}
+                                recipient
+                            }}
+                        }}
+                    }}
+                }}",
                 tx_id
             ),
             "variables": {}
@@ -248,9 +308,7 @@ impl Gateway for ArweaveGateway {
                 .map_err(|e| GatewayErrorType::JsonParseError(e.to_string()))?;
 
             if let Some(edge) = body.data.transactions.edges.get(0) {
-                Ok(GatewayTx {
-                    id: edge.node.clone().id,
-                })
+                Ok(edge.node.clone())
             } else {
                 Err("Transaction not found".to_string())
             }

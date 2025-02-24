@@ -24,7 +24,15 @@ const MODE = process.env.NODE_CONFIG_ENV
 
 if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 
-const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm32-unknown-emscripten2', 'wasm64-unknown-emscripten-draft_2024_02_15']
+const DEFAULT_PROCESS_WASM_MODULE_FORMATS = [
+  'wasm32-unknown-emscripten',
+  'wasm32-unknown-emscripten2',
+  'wasm32-unknown-emscripten3',
+  'wasm32-unknown-emscripten4',
+  'wasm64-unknown-emscripten-draft_2024_02_15',
+  'wasm32-unknown-emscripten-metering',
+  'wasm64-unknown-emscripten-draft_2024_10_16-metering'
+]
 
 /**
  * The server config is an extension of the config required by the domain (business logic).
@@ -33,6 +41,11 @@ const DEFAULT_PROCESS_WASM_MODULE_FORMATS = ['wasm32-unknown-emscripten', 'wasm3
  */
 const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
+  /**
+   * Whether the unit is operating as a Compute Unit
+   * or Read Unit. Defaults to 'cu'.
+   */
+  UNIT_MODE: z.enum(['cu', 'ru']),
   port: positiveIntSchema,
   ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
 })
@@ -43,13 +56,32 @@ const serverConfigSchema = domainConfigSchema.extend({
  */
 /* eslint-disable no-throw-literal */
 
+const preprocessUnitMode = (envConfig) => {
+  const { UNIT_MODE } = envConfig
+
+  if (UNIT_MODE === 'cu') return envConfig
+
+  /**
+   * A Read Unit's primary concern is serving dry-runs,
+   * and so does not create checkpoints and does not cache evaluation
+   * results to be served later.
+   */
+  return {
+    ...envConfig,
+    DISABLE_PROCESS_EVALUATION_CACHE: true,
+    DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+    DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+    PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: 0
+  }
+}
+
 /**
  * If the WALLET is defined, then do nothing.
  *
  * Otherwise, check whether the WALLET_FILE env var is defined and load it contents
  * as WALLET
  */
-export const preprocessWallet = (envConfig) => {
+const preprocessWallet = (envConfig) => {
   const { WALLET, WALLET_FILE, ...theRestOfTheConfig } = envConfig
 
   //  WALLET takes precendent. nothing to do here
@@ -75,7 +107,7 @@ export const preprocessWallet = (envConfig) => {
 const preprocessedServerConfigSchema = z.preprocess(
   (envConfig, zodRefinementContext) => {
     try {
-      return pipe(preprocessWallet, preprocessUrls)(envConfig)
+      return pipe(preprocessUnitMode, preprocessWallet, preprocessUrls)(envConfig)
     } catch (message) {
       zodRefinementContext.addIssue({ code: ZodIssueCode.custom, message })
     }
@@ -92,6 +124,7 @@ const preprocessedServerConfigSchema = z.preprocess(
 const CONFIG_ENVS = {
   development: {
     MODE,
+    UNIT_MODE: process.env.UNIT_MODE || 'cu',
     DEFAULT_LOG_LEVEL: process.env.DEFAULT_LOG_LEVEL || 'debug',
     LOG_CONFIG_PATH: process.env.LOG_CONFIG_PATH || '.loglevel',
     MODULE_MODE: process.env.MODULE_MODE,
@@ -99,6 +132,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
+    GRAPHQL_URLS: process.env.GRAPHQL_URLS?.split(',') || ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql'],
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
@@ -109,7 +143,7 @@ const CONFIG_ENVS = {
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('30m'),
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
-    EAGER_CHECKPOINT_THRESHOLD: process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
+    DISABLE_PROCESS_EVALUATION_CACHE: process.env.DISABLE_PROCESS_EVALUATION_CACHE,
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute. After 2 hours, this process used
@@ -142,6 +176,7 @@ const CONFIG_ENVS = {
   },
   production: {
     MODE,
+    UNIT_MODE: process.env.UNIT_MODE || 'cu',
     DEFAULT_LOG_LEVEL: process.env.DEFAULT_LOG_LEVEL || 'debug',
     LOG_CONFIG_PATH: process.env.LOG_CONFIG_PATH || '.loglevel',
     MODULE_MODE: process.env.MODULE_MODE,
@@ -149,6 +184,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
+    GRAPHQL_URLS: process.env.GRAPHQL_URLS?.split(',') || ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql'],
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
@@ -157,9 +193,9 @@ const CONFIG_ENVS = {
     WALLET_FILE: process.env.WALLET_FILE,
     MEM_MONITOR_INTERVAL: process.env.MEM_MONITOR_INTERVAL || ms('30s'),
     PROCESS_CHECKPOINT_CREATION_THROTTLE: process.env.PROCESS_CHECKPOINT_CREATION_THROTTLE || ms('30m'),
-    DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false', // TODO: disabled by default for now. Enable by default later
+    DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
-    EAGER_CHECKPOINT_THRESHOLD: process.env.EAGER_CHECKPOINT_THRESHOLD || 100,
+    DISABLE_PROCESS_EVALUATION_CACHE: process.env.DISABLE_PROCESS_EVALUATION_CACHE,
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute by adding and clearing a table.

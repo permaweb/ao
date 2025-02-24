@@ -1,0 +1,41 @@
+### NOTE: THIS WON'T WORK ON AN ARM64 DEVICE
+
+# Stage 1: Planner
+FROM --platform=linux/amd64 rust:1.75.0 AS planner
+WORKDIR /app
+RUN cargo install cargo-chef
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Stage 2: Cache the build of the dependencies
+FROM --platform=linux/amd64 rust:1.75.0 AS cacher
+WORKDIR /app
+RUN cargo install cargo-chef
+RUN apt-get update && apt-get install -y \
+    llvm-dev \
+    libclang-dev \
+    clang \
+    librocksdb-dev \
+    libpq5 \
+    libssl-dev 
+
+COPY --from=planner /app/recipe.json recipe.json
+RUN ls /lib/
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# Stage 3: Build binary with pre-built and cached dependencies
+FROM --platform=linux/amd64 rust:1.75.0 AS builder
+COPY . /app
+WORKDIR /app
+COPY --from=cacher /app/target target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+COPY --from=cacher /lib/x86_64-linux-gnu/* /lib/x86_64-linux-gnu/
+# Set the correct Rust target based on architecture
+RUN cargo build --release
+
+# Stage 4: Runner 
+FROM --platform=linux/amd64 ubuntu:22.04
+RUN apt-get update && apt install ca-certificates openssl -y
+COPY --from=builder /app/target/release/su /
+COPY --from=cacher /lib/x86_64-linux-gnu/*  /lib/x86_64-linux-gnu/
+CMD ["sh", "-c", "sleep 10 && ./su su 9000"]

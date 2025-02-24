@@ -108,13 +108,32 @@ export function createWasmInstanceCache ({ MAX_SIZE }) {
   })
 }
 
-export function addExtensionWith ({ ARWEAVE_URL }) {
+export function addExtensionWith ({ ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL }) {
+  /**
+   * WeaveDrive supports passing multiple urls to use for arweave and gateway
+   * related operations, within the extension.
+   *
+   * NOTE: WeaveDrive doesn't distinguish between a host for the Arweave HTTP API
+   * and a host for the Arweave GraphQL gateway api (it conflates the two). So certain
+   * operations will always fail for certain hosts ie. Arweave HTTP API operations sent to a host
+   * that only hosts the GraphQL gateway api. Until WeaveDrive allows passing distinct urls
+   * for each use case, passing a _first_ host that implements both is the best we can do to mitigate.
+   */
+  const weaveDriveUrls = Array.from(
+    /**
+     * dedupe in the case that the CU is configured to use the same host for multiple
+     * use-cases. This prevents WeaveDrive from falling back to the same url, and dictating
+     * its own retry mechanisms
+     */
+    new Set([ARWEAVE_URL, GRAPHQL_URL, CHECKPOINT_GRAPHQL_URL].map(s => new URL(s).origin))
+  ).join(',')
+
   return async ({ extension }) => {
     /**
-       * TODO: make this cleaner. Should we attach only api impls
-       * or other options (ie. ARWEAVE) as well here?
-       */
-    if (extension === 'WeaveDrive') return { WeaveDrive, ARWEAVE: ARWEAVE_URL }
+     * TODO: make this cleaner. Should we attach only api impls
+     * or other options (ie. ARWEAVE) as well here?
+     */
+    if (extension === 'WeaveDrive') return { WeaveDrive, ARWEAVE: weaveDriveUrls }
     throw new Error(`Extension ${extension} api not found`)
   }
 }
@@ -133,7 +152,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
   const readWasmFile = fromPromise(readWasmFileWith({ DIR: WASM_BINARY_FILE_DIRECTORY }))
   const writeWasmFile = writeWasmFileWith({ DIR: WASM_BINARY_FILE_DIRECTORY })
 
-  const toWasmResponse = fromPromise((stream) => WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream))))
+  const toWasmResponse = (moduleOptions) => fromPromise((stream) => WebAssembly.compileStreaming(wasmResponse(Readable.toWeb(stream), moduleOptions)))
 
   function maybeCachedModule (args) {
     const { moduleId } = args
@@ -147,16 +166,16 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
   }
 
   function maybeStoredBinary (args) {
-    const { moduleId } = args
+    const { moduleId, moduleOptions } = args
     logger('Checking for wasm file to load module "%s"...', moduleId)
 
     return of(moduleId)
       .chain(readWasmFile)
-      .chain(toWasmResponse)
+      .chain(toWasmResponse(moduleOptions))
       .bimap(always(args), identity)
   }
 
-  function loadTransaction ({ moduleId }) {
+  function loadTransaction ({ moduleId, moduleOptions }) {
     logger('Loading wasm transaction "%s"...', moduleId)
 
     return of(moduleId)
@@ -169,7 +188,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
       .chain(fromPromise(([s1, s2]) =>
         Promise.all([
           writeWasmFile(moduleId, Readable.fromWeb(s1)),
-          WebAssembly.compileStreaming(wasmResponse(s2))
+          WebAssembly.compileStreaming(wasmResponse(s2), moduleOptions)
         ])
       ))
       .map(([, res]) => res)
@@ -177,7 +196,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
 
   const lock = new AsyncLock()
 
-  return ({ moduleId }) => {
+  return ({ moduleId, moduleOptions }) => {
     /**
      * Prevent multiple eval streams close together
      * from compiling the wasm module multiple times
@@ -190,7 +209,7 @@ export function loadWasmModuleWith ({ fetch, ARWEAVE_URL, WASM_BINARY_FILE_DIREC
            *
            * then create the Wasm instance
            */
-          () => of({ moduleId })
+          () => of({ moduleId, moduleOptions })
             .chain(maybeStoredBinary)
             .bichain(loadTransaction, Resolved)
             /**

@@ -3,7 +3,7 @@ import { always, applySpec, isEmpty, isNotNil, converge, mergeAll, map, unapply,
 import { z } from 'zod'
 
 import { evaluationSchema } from '../domain/model.js'
-import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './sqlite.js'
+import { EVALUATIONS_TABLE, MESSAGES_TABLE, COLLATION_SEQUENCE_MAX_CHAR } from './db.js'
 
 const evaluationDocSchema = z.object({
   id: z.string().min(1),
@@ -60,8 +60,7 @@ const toEvaluation = applySpec({
 
 const fromEvaluationDoc = pipe(
   evolve({
-    output: JSON.parse,
-    evaluatedAt: (timestamp) => new Date(timestamp)
+    output: JSON.parse
   }),
   /**
    * Ensure the input matches the expected
@@ -76,8 +75,8 @@ export function findEvaluationWith ({ db }) {
     return {
       sql: `
         SELECT
-          id, processId, messageId, deepHash, nonce, epoch, timestamp,
-          ordinate, blockHeight, cron, evaluatedAt, output
+          id, "processId", "messageId", "deepHash", nonce, epoch, timestamp,
+          ordinate, "blockHeight", cron, "evaluatedAt", output
         FROM ${EVALUATIONS_TABLE}
         WHERE
           id = ?;
@@ -97,7 +96,7 @@ export function findEvaluationWith ({ db }) {
   }
 }
 
-export function saveEvaluationWith ({ db, logger: _logger }) {
+export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logger: _logger }) {
   const toEvaluationDoc = pipe(
     converge(
       unapply(mergeAll),
@@ -139,11 +138,13 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
 
   function createQuery (evaluation) {
     const evalDoc = toEvaluationDoc(evaluation)
-    const statements = [
-      {
+    const statements = []
+
+    if (!DISABLE_PROCESS_EVALUATION_CACHE) {
+      statements.push({
         sql: `
           INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-            (id, processId, messageId, deepHash, nonce, epoch, timestamp, ordinate, blockHeight, cron, evaluatedAt, output)
+            (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
         parameters: [
@@ -161,8 +162,8 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
           evalDoc.evaluatedAt.getTime(),
           JSON.stringify(evalDoc.output)
         ]
-      }
-    ]
+      })
+    }
 
     /**
       * Cron messages are not needed to be saved in the messages table
@@ -170,7 +171,7 @@ export function saveEvaluationWith ({ db, logger: _logger }) {
     if (!evaluation.cron) {
       statements.push({
         sql: `
-          INSERT OR IGNORE INTO ${MESSAGES_TABLE} (id, processId, seq) VALUES (?, ?, ?);
+          INSERT OR IGNORE INTO ${MESSAGES_TABLE} (id, "processId", seq) VALUES (?, ?, ?);
          `,
         parameters: messageDocParamsSchema.parse([
           createMessageId({
@@ -204,8 +205,8 @@ export function findEvaluationsWith ({ db }) {
     return {
       sql: `
         SELECT
-          id, processId, messageId, deepHash, nonce, epoch, timestamp,
-          ordinate, blockHeight, cron, evaluatedAt, output
+          id, "processId", "messageId", "deepHash", nonce, epoch, timestamp,
+          ordinate, "blockHeight", cron, "evaluatedAt", output
         FROM ${EVALUATIONS_TABLE}
         WHERE
           id > ? AND id <= ?
@@ -244,21 +245,50 @@ export function findEvaluationsWith ({ db }) {
 
 export function findMessageBeforeWith ({ db }) {
   function createQuery ({ messageId, deepHash, isAssignment, processId, nonce, epoch }) {
+    const sqliteQuery = `
+      SELECT
+        id, seq
+      FROM ${MESSAGES_TABLE}
+      WHERE
+        id = ?
+        AND processId = ?
+        AND (
+          CAST(substr(seq, instr(seq, ':') + 1) as UNSIGNED) < ?
+          OR
+            (
+              CAST(SUBSTR(seq, 1, INSTR(seq, ':') - 1) AS INTEGER) = ?
+              AND CAST(SUBSTR(seq, INSTR(seq, ':') + 1) AS INTEGER) < ?
+            )
+        )
+      LIMIT 1;
+    `
+
+    const postgresQuery = `
+      SELECT
+        id, seq
+      FROM ${MESSAGES_TABLE}
+      WHERE
+        "id" = ?
+        AND "processId" = ?
+        AND (
+          CAST(SUBSTR(seq, POSITION(':' in seq) + 1) AS INTEGER) < ?
+          OR
+            (
+              CAST(SUBSTR(seq, 1, POSITION(':' in seq) - 1) AS INTEGER) = ?
+              AND CAST(SUBSTR(seq, POSITION(':' in seq) + 1) AS INTEGER) < ?
+            )
+        )
+      LIMIT 1;
+    `
+
     return {
-      sql: `
-        SELECT
-          id, seq
-        FROM ${MESSAGES_TABLE}
-        WHERE
-          id = ?
-          AND processId = ?
-          AND seq < ?
-        LIMIT 1;
-      `,
+      sql: db.engine === 'sqlite' ? sqliteQuery : postgresQuery,
       parameters: [
         createMessageId({ messageId, deepHash, isAssignment }),
         processId,
-        `${epoch}:${nonce}` // 0:13
+        epoch,
+        epoch,
+        nonce
       ]
     }
   }

@@ -23,13 +23,15 @@ import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
 import { monitorProcessWith } from './api/monitorProcess.js'
 import { stopMonitorProcessWith } from './api/stopMonitorProcess.js'
-import { sendDataItemWith } from './api/sendDataItem.js'
+import { sendDataItemWith, startMessageRecoveryCronWith } from './api/sendDataItem.js'
 import { sendAssignWith } from './api/sendAssign.js'
 import { processAssignWith } from './api/processAssign.js'
+import { pushMsgWith } from './api/pushMsg.js'
 
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
 import { handleWorkerMetricsMessage } from './lib/handle-worker-metrics-message.js'
+import { fetchCronSchema } from './dal.js'
 
 export { errFrom } from './utils.js'
 
@@ -84,6 +86,7 @@ export const createApis = async (ctx) => {
   const PROC_FILE_PATH = ctx.PROC_FILE_PATH
   const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
+  const ALLOW_PUSHES_AFTER = ctx.ALLOW_PUSHES_AFTER
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -118,6 +121,26 @@ export const createApis = async (ctx) => {
   // Create log database client
   const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
   const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
+
+  // Create trace database metrics
+  MetricsClient.gaugeWith({})({
+    name: 'db_size',
+    description: 'The size of the databases',
+    labelNames: ['database'],
+    labeledCollect: async () => {
+      const taskPageSize = await db.pragma('page_size', { simple: true })
+      const taskPageCount = await db.pragma('page_count', { simple: true })
+
+      const tracePageSize = await traceDb.pragma('page_size', { simple: true })
+      const tracePageCount = await traceDb.pragma('page_count', { simple: true })
+
+      const labelValues = [
+        { labelName: 'database', labelValue: 'task', value: taskPageSize * taskPageCount },
+        { labelName: 'database', labelValue: 'trace', value: tracePageSize * tracePageCount }
+      ]
+      return labelValues
+    }
+  })
 
   /**
    * Select queue ids from database on startup.
@@ -191,7 +214,10 @@ export const createApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
-    spawnPushEnabled: SPAWN_PUSH_ENABLED
+    spawnPushEnabled: SPAWN_PUSH_ENABLED,
+    db,
+    GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
+    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY
   })
 
   const sendAssignLogger = logger.child('sendAssign')
@@ -204,13 +230,13 @@ export const createApis = async (ctx) => {
     logger: sendAssignLogger
   })
 
-  // /**
-  //  * Create cron to clear out traces, each hour
-  //  */
+  /**
+   * Create cron to clear out traces, each hour
+   */
   workerPool.exec('startDeleteTraceCron')
 
   const monitorProcessLogger = logger.child('monitorProcess')
-  const fetchCron = fromPromise(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger }))
+  const fetchCron = fromPromise(fetchCronSchema.implement(cuClient.fetchCronWith({ fetch, histogram, CU_URL, logger: monitorProcessLogger })))
 
   const saveCronProcess = saveCronProcessWith({ db })
   const deleteCronProcess = deleteCronProcessWith({ db })
@@ -272,6 +298,30 @@ export const createApis = async (ctx) => {
 
   const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL, DISABLE_TRACE: ctx.DISABLE_TRACE }))
 
+  const pushMsgItemLogger = logger.child('pushMsg')
+  const pushMsg = pushMsgWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
+    crank,
+    logger: pushMsgItemLogger,
+    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
+    ALLOW_PUSHES_AFTER
+  })
+
+  const startMessageRecoveryCronLogger = logger.child('messageRecoveryCron')
+  const startMessageRecoveryCron = startMessageRecoveryCronWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: startMessageRecoveryCronLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: startMessageRecoveryCronLogger }),
+    logger: startMessageRecoveryCronLogger,
+    db,
+    cron,
+    crank,
+    GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
+    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
+    MESSAGE_RECOVERY_MAX_RETRIES: ctx.MESSAGE_RECOVERY_MAX_RETRIES,
+    MESSAGE_RECOVERY_RETRY_DELAY: ctx.MESSAGE_RECOVERY_RETRY_DELAY
+  })
+
   return {
     metrics,
     sendDataItem,
@@ -279,11 +329,13 @@ export const createApis = async (ctx) => {
     stopMonitorProcess,
     sendAssign,
     fetchCron,
+    pushMsg,
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
       getCronProcesses
-    })
+    }),
+    startMessageRecoveryCron
   }
 }
 

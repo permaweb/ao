@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.45](https://github.com/permaweb/ao/compare/loader@v0.0.44...loader@v0.0.45) (2025-01-18)
+
+## [0.0.44](https://github.com/permaweb/ao/compare/loader@v0.0.43...loader@v0.0.44) (2024-12-17)
+
+
+### Features
+
+* **loader:** on drive error, send halt to CU ([5c378d0](https://github.com/permaweb/ao/commit/5c378d04ce755293843a50fba66ea43e4b1cd569))
+
+## [0.0.43](https://github.com/permaweb/ao/compare/loader@v0.0.42...loader@v0.0.43) (2024-10-28)
+
+
+### Features
+
+* **loader:** set blockHeight in handler, based on current message [#1055](https://github.com/permaweb/ao/issues/1055) ([f7dd714](https://github.com/permaweb/ao/commit/f7dd714e5c56d1ca65d4b4dffadaae16302b33ec))
+
+## [0.0.42](https://github.com/permaweb/ao/compare/loader@v0.0.41...loader@v0.0.42) (2024-10-18)
+
+## [0.0.41](https://github.com/permaweb/ao/compare/loader@v0.0.40...loader@v0.0.41) (2024-10-16)
+
+## [0.0.40](https://github.com/permaweb/ao/compare/loader@v0.0.39...loader@v0.0.40) (2024-10-16)
+
+## [0.0.39](https://github.com/permaweb/ao/compare/loader@v0.0.38...loader@v0.0.39) (2024-10-11)
+
+
+### Bug Fixes
+
+* **loader:** changed options to importObject inside of compileStreaming ([c763232](https://github.com/permaweb/ao/commit/c7632325b5ff583580f6a0248552951e1d3e7c73))
+* **loader:** check to make sure its a supported format before applying metering [#1034](https://github.com/permaweb/ao/issues/1034) ([76ac46d](https://github.com/permaweb/ao/commit/76ac46d19dcb7984c26236153e49277c290ffe61))
+* **loader:** updated test cases to pass format ([5d1f2e3](https://github.com/permaweb/ao/commit/5d1f2e3c550aa9e8e938455de65a34d54ab27d71))
+
+## [0.0.38](https://github.com/permaweb/ao/compare/loader@v0.0.37...loader@v0.0.38) (2024-10-03)
+
+## [0.0.37](https://github.com/permaweb/ao/compare/loader@v0.0.36...loader@v0.0.37) (2024-09-26)
+
+
+### Features
+
+* **dev-cli:** added a gasused function to aolibc thats exposed to lua ([dceb3b7](https://github.com/permaweb/ao/commit/dceb3b79592e54af9d14ecdd7b8f1ab2bb36a953))
+* **loader:** new wasm32-unknown-emscripten format with support for ao-physics and weavedrive [#997](https://github.com/permaweb/ao/issues/997) ([384a63a](https://github.com/permaweb/ao/commit/384a63a121113e15b11653f576f9037a33b6e581))
+
+
+### Bug Fixes
+
+* **loader:** _emscripten_date_now to return 0 ([d4b80a9](https://github.com/permaweb/ao/commit/d4b80a930f41a697cd475fb85d4b397beb305f37))
+* **loader:** reverting change as Date.now is overridden to be an incrementing deterministic num ([ddeb4d3](https://github.com/permaweb/ao/commit/ddeb4d393493afb15db9066a00e6af6fb1bb4747))
+
 ## [0.0.36](https://github.com/permaweb/ao/compare/loader@v0.0.35...loader@v0.0.36) (2024-08-09)
 
 

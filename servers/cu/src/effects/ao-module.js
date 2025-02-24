@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 import { arrayBufferFromMaybeView, isJsonString } from '../domain/utils.js'
 import { moduleSchema } from '../domain/model.js'
-import { MODULES_TABLE } from './sqlite.js'
+import { MODULES_TABLE } from './db.js'
 import { timer } from './metrics.js'
 
 const TWO_GB = 2 * 1024 * 1024 * 1024
@@ -128,7 +128,7 @@ export function evaluatorWith ({ evaluateWith, loadWasmModule }) {
         return (args) =>
           Promise.resolve(!(backpressure = ++backpressure % EVAL_DEFER_BACKPRESSURE))
             .then(async (defer) => {
-              if (!wasmModule) wasmModule = await loadWasmModule({ moduleId })
+              if (!wasmModule) wasmModule = await loadWasmModule({ moduleId, moduleOptions })
               return defer
             })
             .then(async (defer) => {

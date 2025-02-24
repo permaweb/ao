@@ -5,6 +5,7 @@ import { withDomain } from './withDomain.js'
 
 export * from './withProcessRestriction.js'
 export * from './withMetrics.js'
+export * from './withCuMode.js'
 
 /**
  * A convenience method that composes common middleware needed on most routes,

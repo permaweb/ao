@@ -1,0 +1,28 @@
+# Stage 1: Build the dynamic binary
+FROM rust:1.75.0 as mig-local-builder
+
+# Set the working directory in the container
+WORKDIR /usr/src/mig_local
+
+# Install required dependencies for building
+RUN apt-get update && apt-get install -y \
+    llvm-dev \
+    libclang-dev \
+    clang \
+    librocksdb-dev
+
+# Copy the manifests
+COPY Cargo.toml Cargo.lock ./
+
+# This step is to cache your dependencies
+RUN mkdir src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo build --release && \
+    rm -f target/release/deps/mig_local*
+
+# Now copy the actual source code and build the application
+COPY src ./src
+COPY migrations ./migrations
+RUN cargo build --release --bin mig_local
+
+# The final output binary will be in /usr/src/mig/target/release/mig

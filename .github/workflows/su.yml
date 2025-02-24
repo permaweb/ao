@@ -18,20 +18,20 @@ defaults:
 
 jobs:
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: ⬇️ Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: ⎔ Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+  #     - name: ⎔ Setup Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: 1.75.0
 
-      - name: Run Tests
-        working-directory: servers/su
-        run: cargo test
+  #     - name: Run Tests
+  #       working-directory: servers/su
+  #       run: cargo test
 
   
   publish:

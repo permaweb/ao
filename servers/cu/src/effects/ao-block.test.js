@@ -8,7 +8,7 @@ import { createTestLogger } from '../domain/logger.js'
 import { findBlocksSchema, loadBlocksMetaSchema, saveBlocksSchema } from '../domain/dal.js'
 import { findBlocksWith, loadBlocksMetaWith, saveBlocksWith } from './ao-block.js'
 
-const GRAPHQL_URL = globalThis.GRAPHQL_URL || 'https://arweave.net/graphql'
+const GRAPHQL_URLS = globalThis.GRAPHQL_URLS || ['https://arweave.net/graphql', 'https://arweave-search.goldsky.com/graphql']
 const logger = createTestLogger({ name: 'ao-cu' })
 
 describe('ao-block', () => {
@@ -17,6 +17,7 @@ describe('ao-block', () => {
       const findBlocks = findBlocksSchema.implement(
         findBlocksWith({
           db: {
+            engine: 'sqlite',
             query: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, [123, 456])
               return [
@@ -41,6 +42,7 @@ describe('ao-block', () => {
       const findBlocks = findBlocksSchema.implement(
         findBlocksWith({
           db: {
+            engine: 'sqlite',
             query: async ({ parameters }) => []
           }
         })
@@ -56,6 +58,7 @@ describe('ao-block', () => {
       const saveBlocks = saveBlocksSchema.implement(
         saveBlocksWith({
           db: {
+            engine: 'sqlite',
             run: async ({ parameters }) => {
               assert.deepStrictEqual(parameters, [
                 [123, 123, 123],
@@ -74,10 +77,33 @@ describe('ao-block', () => {
       ])
     })
 
+    test('save the blocks, postgres', async () => {
+      const saveBlocks = saveBlocksSchema.implement(
+        saveBlocksWith({
+          db: {
+            engine: 'postgres',
+            run: async ({ parameters }) => {
+              assert.equal(parameters.length, 9)
+              assert.deepStrictEqual(parameters, [
+                123, 123, 123, 124, 124, 345, 125, 125, 456
+              ])
+            }
+          }
+        })
+      )
+
+      await saveBlocks([
+        { height: 123, timestamp: 123 },
+        { height: 124, timestamp: 345 },
+        { height: 125, timestamp: 456 }
+      ])
+    })
+
     test('should noop a block if it already exists the blocks', async () => {
       const saveBlocks = saveBlocksSchema.implement(
         saveBlocksWith({
           db: {
+            engine: 'sqlite',
             run: async ({ sql }) => {
               assert.ok(sql.trim().startsWith('INSERT OR IGNORE'))
             }
@@ -96,6 +122,7 @@ describe('ao-block', () => {
       const saveBlocks = saveBlocksSchema.implement(
         saveBlocksWith({
           db: {
+            engine: 'sqlite',
             run: async () => assert.fail('should not be called if no blocks')
           }
         })
@@ -109,7 +136,7 @@ describe('ao-block', () => {
     test('load the block data across multiple pages', async () => {
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch,
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         /**
          * Weird page size, so we know we are chopping off the excess
          * from the last page, correctly
@@ -128,15 +155,16 @@ describe('ao-block', () => {
       assert.equal(res.length, uniqBy(prop('height'), res).length)
     })
 
-    test('should backoff for 3 attempts on error', async () => {
+    test('should backoff for 5 attempts on error', async () => {
       let errorCount = 0
       let errorCaught = false
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
-        fetch: () => {
+        fetch: (url) => {
+          assert.equal(url, GRAPHQL_URLS[errorCount % GRAPHQL_URLS.length])
           errorCount++
           throw Error('Fetch error!')
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 17,
         logger
       }))
@@ -145,22 +173,23 @@ describe('ao-block', () => {
         assert.equal(e.message, 'Fetch error!')
       })
       assert.ok(errorCaught)
-      assert.equal(errorCount, 3)
+      assert.equal(errorCount, 5)
     })
 
     test('should circuit break on failure', async () => {
       let errorsCount = 0
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
-        fetch: () => {
+        fetch: (url) => {
+          assert.equal(url, GRAPHQL_URLS[errorsCount % GRAPHQL_URLS.length])
           throw Error('Fetch error!')
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 17,
         logger,
         breakerOptions: {
           timeout: 5000, // 5 seconds timeout
           errorThresholdPercentage: 50, // open circuit after 50% failures
-          resetTimeout: 1000 // attempt to close circuit after 15 seconds
+          resetTimeout: 1000 // attempt to close circuit after 1 second
         }
       }))
 
@@ -201,7 +230,7 @@ describe('ao-block', () => {
         fetch: () => {
           throw Error('Fetch error!')
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 17,
         logger,
         breakerOptions: {
@@ -255,7 +284,7 @@ describe('ao-block', () => {
             /**
              * This will cause every 3 calls to fail (25% error rate)
              */
-            ok: count % 6 < 3,
+            ok: count % 8 < 3,
             json: () => ({
               data: {
                 blocks: {
@@ -305,7 +334,7 @@ describe('ao-block', () => {
             })
           }
         },
-        GRAPHQL_URL,
+        GRAPHQL_URLS,
         pageSize: 5,
         logger,
         circuitResetTimeout: 60000

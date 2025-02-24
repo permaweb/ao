@@ -127,8 +127,11 @@ impl ProcessScheduler {
         _schedule_info: &'a mut ScheduleInfo,
         id: String,
     ) -> Result<ScheduleInfo, String> {
+        self.deps.logger.log(format!("beginning scheduler increment - {}", &id));
         let timestamp = Self::current_system_time();
         let (epoch, nonce, hash_chain) = if let Some(cached_info) = self.cache.get(&id) {
+            self.deps.logger.log(format!("cache found - {}", &id));
+
             // Use the cached info but still increment nonce and regenerate hash_chain
             let new_nonce = cached_info.schedule_info.nonce + 1;
 
@@ -139,10 +142,14 @@ impl ProcessScheduler {
 
             (cached_info.schedule_info.epoch, new_nonce, new_hash_chain)
         } else {
-            let latest_message = match self.deps.data_store.get_latest_message(&id) {
+            self.deps.logger.log(format!("no cache found looking for latest message - {}", &id));
+
+            let latest_message = match self.deps.data_store.get_latest_message(&id).await {
                 Ok(m) => m,
                 Err(e) => return Err(format!("{:?}", e)),
             };
+
+            self.deps.logger.log(format!("no cache found, latest message retrieved - {}", &id));
 
             match latest_message {
                 Some(previous_message) => {
@@ -152,6 +159,7 @@ impl ProcessScheduler {
                         &previous_message.hash_chain()?,
                         Some(&previous_message.assignment_id()?),
                     )?;
+                    self.deps.logger.log(format!("has chain generated, latest message found - {}", &id));
                     (epoch, nonce, hash_chain)
                 }
                 /*
@@ -159,42 +167,46 @@ impl ProcessScheduler {
                   at the process
                 */
                 None => match self.deps.data_store.get_process(&id).await {
-                  Ok(process) => {
-                      /*
-                        Handling the old vs new process structure
-                        processes created before the boot loader update
-                        did not have an assignment
-                      */
-                      match process.assignment {
-                          Some(_) => {
-                              // this is the first message on a new process
-                              let epoch = process.epoch()?;
-                              let nonce = process.nonce()? + 1;
-                              let hash_chain = gen_hash_chain(
-                                  &process.hash_chain()?,
-                                  Some(&process.assignment_id()?),
-                              )?;
-                              (epoch as i32, nonce as i32, hash_chain)
-                          }
-                          None => {
-                              // this is the first message on an old process
-                              let hash_chain = gen_hash_chain(&process.process.process_id, None)?;
-                              (0 as i32, 0 as i32, hash_chain)
-                          }
-                      }
-                  }
-                  /*
-                    There is no process saved yet so the Nonce 
-                    will start at 0
-                  */
-                  Err(e) => match e {
-                      StoreErrorType::NotFound(_) => {
-                          let hash_chain = gen_hash_chain(&id, None)?;
-                          (0 as i32, 0 as i32, hash_chain)
-                      }
-                      _ => return Err(format!("{:?}", e)),
-                  },
-              },
+                    Ok(process) => {
+                        self.deps.logger.log(format!("no message found, process retrieved - {}", &id));
+                        /*
+                          Handling the old vs new process structure
+                          processes created before the boot loader update
+                          did not have an assignment
+                        */
+                        match process.assignment {
+                            Some(_) => {
+                                // this is the first message on a new process
+                                let epoch = process.epoch()?;
+                                let nonce = process.nonce()? + 1;
+                                let hash_chain = gen_hash_chain(
+                                    &process.hash_chain()?,
+                                    Some(&process.assignment_id()?),
+                                )?;
+                                self.deps.logger.log(format!("hash chain generated with assign - {}", &id));
+                                (epoch as i32, nonce as i32, hash_chain)
+                            }
+                            None => {
+                                // this is the first message on an old process
+                                let hash_chain = gen_hash_chain(&process.process.process_id, None)?;
+                                self.deps.logger.log(format!("hash chain generated no assign - {}", &id));
+                                (0 as i32, 0 as i32, hash_chain)
+                            }
+                        }
+                    }
+                    /*
+                      There is no process saved yet so the Nonce
+                      will start at 0
+                    */
+                    Err(e) => match e {
+                        StoreErrorType::NotFound(_) => {
+                            let hash_chain = gen_hash_chain(&id, None)?;
+                            self.deps.logger.log(format!("hash chain generated new process - {}", &id));
+                            (0 as i32, 0 as i32, hash_chain)
+                        }
+                        _ => return Err(format!("{:?}", e)),
+                    },
+                },
             }
         };
 

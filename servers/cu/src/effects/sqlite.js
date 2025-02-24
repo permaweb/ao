@@ -3,15 +3,7 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE, CHECKPOINTS_TABLE, CHECKPOINT_FILES_TABLE] = [
-  'processes',
-  'blocks',
-  'modules',
-  'evaluations',
-  'messages',
-  'checkpoints',
-  'checkpoint_files'
-]
+import { BLOCKS_TABLE, CHECKPOINT_FILES_TABLE, CHECKPOINTS_TABLE, EVALUATIONS_TABLE, MESSAGES_TABLE, MODULES_TABLE, PROCESSES_TABLE } from './db.js'
 
 const createProcesses = async (db) => db.prepare(
   `CREATE TABLE IF NOT EXISTS ${PROCESSES_TABLE}(
@@ -149,6 +141,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
   }
 
   return {
+    engine: 'sqlite',
     query: async ({ sql, parameters }) => db.prepare(sql).all(...parameters),
     run: async ({ sql, parameters }) => db.prepare(sql).run(...parameters),
     transaction: async (statements) => db.transaction(
