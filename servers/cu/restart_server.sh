@@ -31,8 +31,8 @@ kinesis_nonces=$(sqlite3 -csv ./kinesis_largest_nonces.db "select processId, non
 debug_log "Fetched kinesis_nonces: $kinesis_nonces"
 
 # Extract nonces for process IDs
-process_id_1="GaQrvEMKBpkjofgnBi_B3IgIDmY_XYelVLB6GcRGrHc"
-process_id_2="agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA"
+process_id_1="qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE" # mainnet
+process_id_2="agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA" # testnet
 
 debug_log "Processing nonces for process_id_1: $process_id_1"
 debug_log "Processing nonces for process_id_2: $process_id_2"
