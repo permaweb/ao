@@ -102,7 +102,8 @@ export const findEvaluationSchema = z.function()
     processId: z.string(),
     to: z.coerce.number().nullish(),
     ordinate: z.coerce.string().nullish(),
-    cron: z.string().nullish()
+    cron: z.string().nullish(),
+    messageId: z.string().nullish()
   }))
   .returns(z.promise(evaluationSchema))
 

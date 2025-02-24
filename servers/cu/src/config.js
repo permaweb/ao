@@ -172,7 +172,12 @@ const CONFIG_ENVS = {
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
     ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
-    ALLOW_OWNERS: process.env.ALLOW_OWNERS || []
+    ALLOW_OWNERS: process.env.ALLOW_OWNERS || [],
+    EVALUATION_RESULT_DIR: process.env.EVALUATION_RESULT_DIR,
+    EVALUATION_RESULT_BUCKET: process.env.EVALUATION_RESULT_BUCKET,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: process.env.AWS_REGION
   },
   production: {
     MODE,
@@ -224,7 +229,12 @@ const CONFIG_ENVS = {
     BUSY_THRESHOLD: process.env.BUSY_THRESHOLD || 0, // disabled
     RESTRICT_PROCESSES: process.env.RESTRICT_PROCESSES || [],
     ALLOW_PROCESSES: process.env.ALLOW_PROCESSES || [],
-    ALLOW_OWNERS: process.env.ALLOW_OWNERS || []
+    ALLOW_OWNERS: process.env.ALLOW_OWNERS || [],
+    EVALUATION_RESULT_DIR: process.env.EVALUATION_RESULT_DIR,
+    EVALUATION_RESULT_BUCKET: process.env.EVALUATION_RESULT_BUCKET,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: process.env.AWS_REGION
   }
 }
 

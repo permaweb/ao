@@ -17,7 +17,7 @@ const evaluationDocSchema = z.object({
   blockHeight: evaluationSchema.shape.blockHeight,
   cron: evaluationSchema.shape.cron,
   evaluatedAt: evaluationSchema.shape.evaluatedAt,
-  output: evaluationSchema.shape.output.omit({ Memory: true })
+  output: evaluationSchema.shape.output.omit({ Memory: true }).nullish() // This can now be nullish as the DB may not have the output
 })
 
 function createEvaluationId ({ processId, timestamp, ordinate, cron }) {
@@ -60,7 +60,7 @@ const toEvaluation = applySpec({
 
 const fromEvaluationDoc = pipe(
   evolve({
-    output: JSON.parse
+    output: (old) => typeof old === 'string' ? JSON.parse(old) : old
   }),
   /**
    * Ensure the input matches the expected
@@ -70,7 +70,17 @@ const fromEvaluationDoc = pipe(
   toEvaluation
 )
 
-export function findEvaluationWith ({ db }) {
+export function findEvaluationFromDirOrS3With ({ loadEvaluation }) {
+  return ({ processId, messageId }) => {
+    return Promise.resolve({ processId, messageId })
+      .then(loadEvaluation)
+      .catch((err) => {
+        throw new Error(`Error finding evaluation from dir or s3: ${err}`)
+      })
+  }
+}
+
+export function findEvaluationFromDbWith ({ db }) {
   function createQuery ({ processId, timestamp, ordinate, cron }) {
     return {
       sql: `
@@ -96,7 +106,29 @@ export function findEvaluationWith ({ db }) {
   }
 }
 
-export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logger: _logger }) {
+export function findEvaluationWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+  const findEvaluationFromDir = findEvaluationFromDirOrS3With({ loadEvaluation })
+  const findEvaluationFromDb = fromPromise(findEvaluationFromDbWith({ db }))
+  return ({ processId, to, ordinate, cron, messageId }) => {
+    return of({ processId, to, ordinate, cron, messageId })
+      .chain(findEvaluationFromDb)
+      .chain(
+        fromPromise(async (result) => {
+          if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET && !result.output) {
+            const evaluationOutput = await findEvaluationFromDir({ processId, messageId })
+            if (evaluationOutput === 'AWS Credentials not set') {
+              return Rejected({ status: 404, message: 'Could not find evaluation: AWS Credentials not set' }).toPromise()
+            }
+            return { ...result, output: evaluationOutput }
+          }
+          return result
+        })
+      )
+      .toPromise()
+  }
+}
+
+export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logger: _logger, saveEvaluationToDir, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
   const toEvaluationDoc = pipe(
     converge(
       unapply(mergeAll),
@@ -141,30 +173,54 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
     const statements = []
 
     if (!DISABLE_PROCESS_EVALUATION_CACHE) {
-      statements.push({
-        sql: `
-          INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
-            (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        `,
-        parameters: [
-          // evaluations insert
-          evalDoc.id,
-          evalDoc.processId,
-          evalDoc.messageId,
-          evalDoc.deepHash,
-          evalDoc.nonce,
-          evalDoc.epoch,
-          evalDoc.timestamp,
-          evalDoc.ordinate,
-          evalDoc.blockHeight,
-          evalDoc.cron,
-          evalDoc.evaluatedAt.getTime(),
-          JSON.stringify(evalDoc.output)
-        ]
-      })
+      // If we have a directory and bucket, we need to save the evaluation to the directory, not sqlite
+      if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+        statements.push({
+          sql: `
+            INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+              (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt")
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `,
+          parameters: [
+            // evaluations insert
+            evalDoc.id,
+            evalDoc.processId,
+            evalDoc.messageId,
+            evalDoc.deepHash,
+            evalDoc.nonce,
+            evalDoc.epoch,
+            evalDoc.timestamp,
+            evalDoc.ordinate,
+            evalDoc.blockHeight,
+            evalDoc.cron,
+            evalDoc.evaluatedAt.getTime()
+          ]
+        })
+      } else {
+        statements.push({
+          sql: `
+              INSERT OR IGNORE INTO ${EVALUATIONS_TABLE}
+                (id, "processId", "messageId", "deepHash", nonce, epoch, timestamp, ordinate, "blockHeight", cron, "evaluatedAt", output)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            `,
+          parameters: [
+            // evaluations insert
+            evalDoc.id,
+            evalDoc.processId,
+            evalDoc.messageId,
+            evalDoc.deepHash,
+            evalDoc.nonce,
+            evalDoc.epoch,
+            evalDoc.timestamp,
+            evalDoc.ordinate,
+            evalDoc.blockHeight,
+            evalDoc.cron,
+            evalDoc.evaluatedAt.getTime(),
+            JSON.stringify(evalDoc.output)
+          ]
+        })
+      }
     }
-
     /**
       * Cron messages are not needed to be saved in the messages table
       */
@@ -193,14 +249,26 @@ export function saveEvaluationWith ({ DISABLE_PROCESS_EVALUATION_CACHE, db, logg
       .chain((data) =>
         of(data)
           .map((data) => createQuery(data))
-          .chain(fromPromise((statements) => db.transaction(statements)))
+          .chain(fromPromise((statements) => {
+            return db.transaction(statements)
+          }))
           .map(always(data.id))
       )
+      .chain((id) => {
+        if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+          return of({ messageId: evaluation.messageId, processId: evaluation.processId, output: evaluation.output })
+            .chain((args) => {
+              return Resolved(saveEvaluationToDir(args))
+            })
+        }
+        return Resolved(id)
+      })
       .toPromise()
   }
 }
 
-export function findEvaluationsWith ({ db }) {
+export function findEvaluationsWith ({ db, loadEvaluation, EVALUATION_RESULT_DIR, EVALUATION_RESULT_BUCKET }) {
+  const findEvaluationFromDir = findEvaluationFromDirOrS3With({ loadEvaluation })
   function createQuery ({ processId, from, to, onlyCron, sort, limit }) {
     return {
       sql: `
@@ -228,7 +296,7 @@ export function findEvaluationsWith ({ db }) {
           : createEvaluationId({ processId, timestamp: from.timestamp, ordinate: from.ordinate, cron: from.cron }),
         isEmpty(to)
           ? createEvaluationId({ processId, timestamp: COLLATION_SEQUENCE_MAX_CHAR })
-          : createEvaluationId({ processId, timestamp: to.timestamp, ordinate: to.ordinate || COLLATION_SEQUENCE_MAX_CHAR, cron: to.cron }),
+          : createEvaluationId({ processId, timestamp: to?.timestamp || null, ordinate: to?.ordinate || COLLATION_SEQUENCE_MAX_CHAR, cron: to?.cron || null }),
         limit
       ]
     }
@@ -238,6 +306,21 @@ export function findEvaluationsWith ({ db }) {
     return of({ processId, from, to, onlyCron, sort: sort.toUpperCase(), limit })
       .map(createQuery)
       .chain(fromPromise((query) => db.query(query)))
+      .chain(fromPromise(async (results) => {
+        if (EVALUATION_RESULT_DIR && EVALUATION_RESULT_BUCKET) {
+          return await Promise.all(results.map(async (result) => {
+            if (result.processId && result.messageId && !result.output) {
+              const evaluationOutput = await findEvaluationFromDir({ processId: result.processId, messageId: result.messageId })
+              if (evaluationOutput === 'AWS Credentials not set') {
+                return Rejected({ status: 404, message: 'Could not find evaluation: AWS Credentials not set' })
+              }
+              return { ...result, output: evaluationOutput }
+            }
+            return result
+          }))
+        }
+        return results
+      }))
       .map(map(fromEvaluationDoc))
       .toPromise()
   }

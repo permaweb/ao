@@ -45,6 +45,9 @@ export const server = pipeP(
         logger('Checkpoint Interval Reached. Attempting to Checkpoint all Processes currently in WASM heap cache...')
         await domain.apis.checkpointWasmMemoryCache().toPromise()
         logger('Interval Checkpoint Done. Done checkpointing all processes in WASM heap cache.')
+        logger('Evaluations dump interval reached. Attempting to dump all evaluations...')
+        await domain.apis.dumpEvaluations().toPromise()
+        logger('Evaluations dump done.')
       }, config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL)
       cacheCheckpointInterval.unref()
     }
@@ -58,14 +61,18 @@ export const server = pipeP(
 
       logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
       await domain.apis.checkpointWasmMemoryCache().toPromise()
-      logger('Done checkpointing all processes in WASM heap cache. Exiting...')
+      logger('Done checkpointing all processes in WASM heap cache. Attempting to dump all evaluations...')
+      await domain.apis.dumpEvaluations().toPromise()
+      logger('Done dumping all evaluations. Exiting...')
       process.exit()
     })
 
     process.on('SIGUSR2', async () => {
       logger('Received SIGUSR2. Manually Attempting to Checkpoint all Processes currently in WASM heap cache...')
       await domain.apis.checkpointWasmMemoryCache().toPromise()
-      logger('SIGUSR2 Done. Done checkpointing all processes in WASM heap cache.')
+      logger('Done checkpointing all processes in WASM heap cache. Attempting to dump all evaluations...')
+      await domain.apis.dumpEvaluations().toPromise()
+      logger('SIGUSR2 Done. Done checkpointing all processes in WASM heap cache and dumping all evaluations.')
     })
 
     process.on('uncaughtException', (err) => {

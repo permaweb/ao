@@ -4,7 +4,7 @@ import assert from 'node:assert'
 
 import { createTestLogger } from '../domain/logger.js'
 import { findEvaluationSchema, findEvaluationsSchema, findMessageBeforeSchema, saveEvaluationSchema } from '../domain/dal.js'
-import { findMessageBeforeWith, findEvaluationWith, findEvaluationsWith, saveEvaluationWith } from './ao-evaluation.js'
+import { findMessageBeforeWith, findEvaluationsWith, saveEvaluationWith, findEvaluationWith } from './ao-evaluation.js'
 import { COLLATION_SEQUENCE_MAX_CHAR, EVALUATIONS_TABLE, MESSAGES_TABLE } from './db.js'
 
 const logger = createTestLogger({ name: 'ao-cu:readState' })
@@ -62,7 +62,7 @@ describe('ao-evaluation', () => {
       })
     })
 
-    test('return 404 status if not found', async () => {
+    test('return 404 status if not found and dir/bucket not set', async () => {
       const findEvaluation = findEvaluationSchema.implement(
         findEvaluationWith({
           db: {
@@ -81,6 +81,110 @@ describe('ao-evaluation', () => {
       })
         .catch(err => {
           assert.equal(err.status, 404)
+          return { ok: true }
+        })
+
+      assert(res.ok)
+    })
+
+    test('find evaluation from directory if dir/bucket are set', async () => {
+      const findEvaluation = findEvaluationSchema.implement(
+        findEvaluationWith({
+          db: {
+            engine: 'sqlite',
+            query: async ({ parameters }) => {
+              assert.deepStrictEqual(parameters, ['process-124,1702677252111,1'])
+              return [{
+                id: 'process-124,1702677252111,1',
+                processId: 'process-124',
+                messageId: 'message-123',
+                deepHash: 'deepHash-123',
+                nonce: 1,
+                epoch: 0,
+                timestamp: 1702677252111,
+                ordinate: '1',
+                blockHeight: 1234,
+                cron: undefined,
+                evaluatedAt: evaluatedAt.getTime(),
+                output: undefined
+              }]
+            }
+          },
+          loadEvaluation: async ({ processId, messageId }) => {
+            assert.equal(processId, 'process-124')
+            assert.equal(messageId, 'message-123')
+            return { Messages: [{ foo: 'bar' }] }
+          },
+          EVALUATION_RESULT_DIR: 'test-directory',
+          EVALUATION_RESULT_BUCKET: 'test-bucket'
+        })
+      )
+
+      const res = await findEvaluation({
+        processId: 'process-124',
+        to: 1702677252111,
+        ordinate: '1',
+        cron: undefined,
+        messageId: 'message-123'
+      })
+      assert.deepStrictEqual(res, {
+        processId: 'process-124',
+        messageId: 'message-123',
+        deepHash: 'deepHash-123',
+        nonce: 1,
+        epoch: 0,
+        timestamp: 1702677252111,
+        ordinate: '1',
+        blockHeight: 1234,
+        cron: undefined,
+        evaluatedAt,
+        output: { Messages: [{ foo: 'bar' }] }
+      })
+    })
+
+    test('return 404 if dir/bucket are set but AWS Credentials are not set', async () => {
+      const findEvaluation = findEvaluationSchema.implement(
+        findEvaluationWith({
+          db: {
+            engine: 'sqlite',
+            query: async ({ parameters }) => {
+              assert.deepStrictEqual(parameters, ['process-124,1702677252111,1'])
+              return [{
+                id: 'process-124,1702677252111,1',
+                processId: 'process-124',
+                messageId: 'message-123',
+                deepHash: 'deepHash-123',
+                nonce: 1,
+                epoch: 0,
+                timestamp: 1702677252111,
+                ordinate: '1',
+                blockHeight: 1234,
+                cron: undefined,
+                evaluatedAt: evaluatedAt.getTime(),
+                output: undefined
+              }]
+            }
+          },
+          loadEvaluation: async ({ processId, messageId }) => {
+            assert.equal(processId, 'process-124')
+            assert.equal(messageId, 'message-123')
+            return 'AWS Credentials not set'
+          },
+          EVALUATION_RESULT_DIR: 'test-directory',
+          EVALUATION_RESULT_BUCKET: 'test-bucket'
+        })
+      )
+
+      const res = await findEvaluation({
+        processId: 'process-124',
+        to: 1702677252111,
+        ordinate: '1',
+        cron: undefined,
+        messageId: 'message-123'
+      })
+        .catch(err => {
+          assert.equal(err.status, 404)
+          assert.equal(err.message, 'Could not find evaluation: AWS Credentials not set')
           return { ok: true }
         })
 
@@ -135,7 +239,10 @@ describe('ao-evaluation', () => {
                 return Promise.resolve('process-123,1702677252111,1')
               }
             },
-            logger
+            logger,
+            saveEvaluationToDir: async () => {
+              assert.fail('saveEvaluationToDir should not be called')
+            }
           })
         )
 
@@ -172,7 +279,10 @@ describe('ao-evaluation', () => {
                 return Promise.resolve('process-123,1702677252111,1')
               }
             },
-            logger
+            logger,
+            saveEvaluationToDir: async () => {
+              assert.fail('saveEvaluationToDir should not be called')
+            }
           })
         )
 
@@ -213,7 +323,60 @@ describe('ao-evaluation', () => {
                 return Promise.resolve('process-123,1702677252111,1')
               }
             },
-            logger
+            logger,
+            saveEvaluationToDir: async () => {
+              assert.fail('saveEvaluationToDir should not be called')
+            }
+          })
+        )
+
+        // no deepHash
+        await saveEvaluation({
+          ...args,
+          deepHash: undefined
+        })
+      })
+
+      test('with bucket and dir set, save the evaluation and message', async () => {
+        const saveEvaluation = saveEvaluationSchema.implement(
+          saveEvaluationWith({
+            db: {
+              engine: 'sqlite',
+              transaction: async ([{ parameters: evaluationDocParams }, { parameters: messageDocParams }]) => {
+                assert.deepStrictEqual(evaluationDocParams, [
+                  'process-123,1702677252111,1',
+                  'process-123',
+                  'message-123',
+                  undefined,
+                  1,
+                  0,
+                  1702677252111,
+                  '1',
+                  1234,
+                  undefined,
+                  evaluatedAt.getTime()
+                  // No output because we are going to save it to directory
+                ])
+
+                assert.deepStrictEqual(messageDocParams, [
+                  'message-123',
+                  'process-123',
+                  '0:1'
+                ])
+
+                return Promise.resolve('process-123,1702677252111,1')
+              }
+            },
+            logger,
+            saveEvaluationToDir: async ({ messageId, processId, output }) => {
+              delete output.Memory
+              assert.deepStrictEqual(messageId, 'message-123')
+              assert.deepStrictEqual(processId, 'process-123')
+              assert.deepStrictEqual(output, { Messages: [{ foo: 'bar' }] })
+              return output
+            },
+            EVALUATION_RESULT_DIR: 'test-directory',
+            EVALUATION_RESULT_BUCKET: 'test-bucket'
           })
         )
 
@@ -380,56 +543,73 @@ describe('ao-evaluation', () => {
 
       assert.equal(res.length, 2)
     })
-  })
 
-  describe('findMessageBeforeWith', () => {
-    test('find the prior message by deepHash', async () => {
-      const findMessageBefore = findMessageBeforeSchema.implement(
-        findMessageBeforeWith({
-          db: {
-            engine: 'sqlite',
-            query: async ({ parameters }) => {
-              assert.deepStrictEqual(parameters, [
-                'deepHash-123',
-                'process-123',
-                0,
-                0,
-                3
-              ])
-
-              const mockAssigment = {
-                id: 'deepHash-123',
-                processId: 'process-123',
-                seq: '0:3'
-              }
-
-              return [mockAssigment]
-            }
-          }
-        })
-      )
-
-      const res = await findMessageBefore({
+    test("return the evaluations between 'from' and 'to', get outputs from dir/bucket", async () => {
+      const evaluatedAt = new Date()
+      const mockEval = {
+        id: 'process-123,1702677252111',
+        timestamp: 1702677252111,
+        ordinate: '1',
+        blockHeight: 1234,
         processId: 'process-123',
         messageId: 'message-123',
-        deepHash: 'deepHash-123',
-        isAssignment: false,
-        epoch: 0,
-        nonce: 3
+        output: undefined,
+        evaluatedAt: evaluatedAt.getTime()
+      }
+      const findEvaluations = findEvaluationsSchema.implement(
+        findEvaluationsWith({
+          db: {
+            engine: 'sqlite',
+            query: async ({ sql, parameters }) => {
+              /**
+               * no onlyCron
+               */
+              assert.ok(!sql.includes('AND cron IS NOT NULL'))
+
+              assert.deepStrictEqual(parameters, [
+                'process-123,1702677252111,3', // gt
+                `process-123,1702677252111,${COLLATION_SEQUENCE_MAX_CHAR}`, // lte
+                10 // limit
+              ])
+
+              return [
+                mockEval,
+                mockEval
+              ]
+            }
+          },
+          loadEvaluation: async ({ processId, messageId }) => {
+            assert.equal(processId, 'process-123')
+            assert.equal(messageId, 'message-123')
+            return { Messages: [{ foo: 'bar' }] }
+          },
+          EVALUATION_RESULT_DIR: 'test-directory',
+          EVALUATION_RESULT_BUCKET: 'test-bucket',
+          logger
+        }))
+
+      const res = await findEvaluations({
+        processId: 'process-123',
+        from: { timestamp: 1702677252111, ordinate: '3' },
+        to: { timestamp: 1702677252111 },
+        limit: 10,
+        sort: 'ASC'
       })
 
-      assert.deepStrictEqual(res, { id: 'deepHash-123' })
+      assert.equal(res.length, 2)
+      assert.deepStrictEqual(res[0].output, { Messages: [{ foo: 'bar' }] })
+      assert.deepStrictEqual(res[1].output, { Messages: [{ foo: 'bar' }] })
     })
 
-    describe('find the prior message by messageId', () => {
-      test('if no deepHash was calculated', async () => {
+    describe('findMessageBeforeWith', () => {
+      test('find the prior message by deepHash', async () => {
         const findMessageBefore = findMessageBeforeSchema.implement(
           findMessageBeforeWith({
             db: {
               engine: 'sqlite',
               query: async ({ parameters }) => {
                 assert.deepStrictEqual(parameters, [
-                  'message-123',
+                  'deepHash-123',
                   'process-123',
                   0,
                   0,
@@ -437,7 +617,7 @@ describe('ao-evaluation', () => {
                 ])
 
                 const mockAssigment = {
-                  id: 'message-123',
+                  id: 'deepHash-123',
                   processId: 'process-123',
                   seq: '0:3'
                 }
@@ -451,40 +631,142 @@ describe('ao-evaluation', () => {
         const res = await findMessageBefore({
           processId: 'process-123',
           messageId: 'message-123',
-          deepHash: undefined,
+          deepHash: 'deepHash-123',
           isAssignment: false,
           epoch: 0,
           nonce: 3
         })
 
-        assert.deepStrictEqual(res, { id: 'message-123' })
+        assert.deepStrictEqual(res, { id: 'deepHash-123' })
       })
 
-      test('if it is an assignment', async () => {
+      describe('find the prior message by messageId', () => {
+        test('if no deepHash was calculated', async () => {
+          const findMessageBefore = findMessageBeforeSchema.implement(
+            findMessageBeforeWith({
+              db: {
+                engine: 'sqlite',
+                query: async ({ parameters }) => {
+                  assert.deepStrictEqual(parameters, [
+                    'message-123',
+                    'process-123',
+                    0,
+                    0,
+                    3
+                  ])
+
+                  const mockAssigment = {
+                    id: 'message-123',
+                    processId: 'process-123',
+                    seq: '0:3'
+                  }
+
+                  return [mockAssigment]
+                }
+              }
+            })
+          )
+
+          const res = await findMessageBefore({
+            processId: 'process-123',
+            messageId: 'message-123',
+            deepHash: undefined,
+            isAssignment: false,
+            epoch: 0,
+            nonce: 3
+          })
+
+          assert.deepStrictEqual(res, { id: 'message-123' })
+        })
+
+        test('if it is an assignment', async () => {
+          const findMessageBefore = findMessageBeforeSchema.implement(
+            findMessageBeforeWith({
+              db: {
+                engine: 'sqlite',
+                query: async ({ sql, parameters }) => {
+                // Only the postgres engine uses POSITION
+                  assert.ok(!sql.includes('POSITION'))
+                  assert.deepStrictEqual(parameters, [
+                    'message-123',
+                    'process-123',
+                    0,
+                    0,
+                    3
+                  ])
+
+                  const mockAssigment = {
+                    id: 'message-123',
+                    processId: 'process-123',
+                    seq: '0:3'
+                  }
+
+                  return [mockAssigment]
+                }
+              }
+            })
+          )
+
+          const res = await findMessageBefore({
+            processId: 'process-123',
+            messageId: 'message-123',
+            deepHash: 'deepHash-123',
+            isAssignment: true,
+            epoch: 0,
+            nonce: 3
+          })
+
+          assert.deepStrictEqual(res, { id: 'message-123' })
+        })
+        test('if it is an assignment, postgres', async () => {
+          const findMessageBefore = findMessageBeforeSchema.implement(
+            findMessageBeforeWith({
+              db: {
+                engine: 'postgres',
+                query: async ({ sql, parameters }) => {
+                // Only the postgres engine uses POSITION
+                  assert.ok(sql.includes('POSITION'))
+                  assert.deepStrictEqual(parameters, [
+                    'message-123',
+                    'process-123',
+                    0,
+                    0,
+                    3
+                  ])
+
+                  const mockAssigment = {
+                    id: 'message-123',
+                    processId: 'process-123',
+                    seq: '0:3'
+                  }
+
+                  return [mockAssigment]
+                }
+              }
+            })
+          )
+
+          const res = await findMessageBefore({
+            processId: 'process-123',
+            messageId: 'message-123',
+            deepHash: 'deepHash-123',
+            isAssignment: true,
+            epoch: 0,
+            nonce: 3
+          })
+
+          assert.deepStrictEqual(res, { id: 'message-123' })
+        })
+      })
+
+      test('return 404 status if not found', async () => {
         const findMessageBefore = findMessageBeforeSchema.implement(
           findMessageBeforeWith({
             db: {
               engine: 'sqlite',
-              query: async ({ sql, parameters }) => {
-                // Only the postgres engine uses POSITION
-                assert.ok(!sql.includes('POSITION'))
-                assert.deepStrictEqual(parameters, [
-                  'message-123',
-                  'process-123',
-                  0,
-                  0,
-                  3
-                ])
-
-                const mockAssigment = {
-                  id: 'message-123',
-                  processId: 'process-123',
-                  seq: '0:3'
-                }
-
-                return [mockAssigment]
-              }
-            }
+              query: async () => []
+            },
+            logger
           })
         )
 
@@ -496,75 +778,13 @@ describe('ao-evaluation', () => {
           epoch: 0,
           nonce: 3
         })
-
-        assert.deepStrictEqual(res, { id: 'message-123' })
-      })
-      test('if it is an assignment, postgres', async () => {
-        const findMessageBefore = findMessageBeforeSchema.implement(
-          findMessageBeforeWith({
-            db: {
-              engine: 'postgres',
-              query: async ({ sql, parameters }) => {
-                // Only the postgres engine uses POSITION
-                assert.ok(sql.includes('POSITION'))
-                assert.deepStrictEqual(parameters, [
-                  'message-123',
-                  'process-123',
-                  0,
-                  0,
-                  3
-                ])
-
-                const mockAssigment = {
-                  id: 'message-123',
-                  processId: 'process-123',
-                  seq: '0:3'
-                }
-
-                return [mockAssigment]
-              }
-            }
+          .catch(err => {
+            assert.equal(err.status, 404)
+            return { ok: true }
           })
-        )
 
-        const res = await findMessageBefore({
-          processId: 'process-123',
-          messageId: 'message-123',
-          deepHash: 'deepHash-123',
-          isAssignment: true,
-          epoch: 0,
-          nonce: 3
-        })
-
-        assert.deepStrictEqual(res, { id: 'message-123' })
+        assert(res.ok)
       })
-    })
-
-    test('return 404 status if not found', async () => {
-      const findMessageBefore = findMessageBeforeSchema.implement(
-        findMessageBeforeWith({
-          db: {
-            engine: 'sqlite',
-            query: async () => []
-          },
-          logger
-        })
-      )
-
-      const res = await findMessageBefore({
-        processId: 'process-123',
-        messageId: 'message-123',
-        deepHash: 'deepHash-123',
-        isAssignment: true,
-        epoch: 0,
-        nonce: 3
-      })
-        .catch(err => {
-          assert.equal(err.status, 404)
-          return { ok: true }
-        })
-
-      assert(res.ok)
     })
   })
 })
