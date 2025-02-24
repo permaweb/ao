@@ -1,12 +1,15 @@
 import { always, compose } from 'ramda'
 import { z } from 'zod'
 
-import { busyIn } from '../domain/utils.js'
-import { withMetrics, withMiddleware, withProcessRestrictionFromQuery } from './middleware/index.js'
+import { busyIn } from '../../../domain/utils.js'
+
+import { withErrorHandler } from './middleware/withErrorHandler.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from './middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'a process-id query parameter is required'),
-  messageTxId: z.string().min(1, 'to must be a transaction id').optional(),
+  messageUid: z.string().min(1, 'to must be a transaction id').optional(),
   maxProcessAge: z.coerce.number().nullish(),
   dryRun: z.object({
     Id: z.string().nullish(),
@@ -28,25 +31,25 @@ export const withDryRunRoutes = app => {
   app.post(
     '/dry-run',
     compose(
-      withMiddleware,
+      withErrorHandler,
       withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
       withProcessRestrictionFromQuery,
       always(async (req, res) => {
         const {
           headers: { 'x-max-age': maxProcessAge },
-          query: { 'process-id': processId, to: messageTxId },
+          query: { 'process-id': processId, to: messageUid },
           body,
           domain: { BUSY_THRESHOLD, apis: { dryRun } }
         } = req
 
-        const input = inputSchema.parse({ processId, messageTxId, maxProcessAge, dryRun: body })
+        const input = inputSchema.parse({ processId, messageUid, maxProcessAge, dryRun: body })
 
         await busyIn(
           BUSY_THRESHOLD,
           dryRun(input).toPromise(),
           () => {
             res.status(202)
-            return { message: `Evaluation of process "${input.processId}" to "${input.messageTxId || 'latest'}" is in progress.` }
+            return { message: `Evaluation of process "${input.processId}" to "${input.messageUid || 'latest'}" is in progress.` }
           }
         ).then((output) => res.send(output))
       })

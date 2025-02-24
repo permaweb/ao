@@ -1,31 +1,38 @@
 import { compose } from 'ramda'
 import { z } from 'zod'
 
-import { busyIn } from '../domain/utils.js'
-import { withMetrics, withMiddleware, withProcessRestrictionFromQuery, withCuMode } from './middleware/index.js'
+import { busyIn } from '../../../domain/utils.js'
+
 import { withInMemoryCache } from './middleware/withInMemoryCache.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
+import { withCuMode } from './middleware/withCuMode.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromQuery } from './middleware/withProcessRestriction.js'
 
 const inputSchema = z.object({
-  messageTxId: z.string().min(1, 'a message tx id is required'),
+  messageUid: z.string().min(1, 'a message unique identifier is required'),
   processId: z.string().min(1, 'a process-id query parameter is required')
 })
 
 export const withResultRoutes = app => {
   app.get(
-    '/result/:messageTxId',
+    '/result/:messageUid',
     compose(
-      withMiddleware,
+      withErrorHandler,
       withCuMode,
       withProcessRestrictionFromQuery,
       withMetrics({ tracesFrom: (req) => ({ process_id: req.query['process-id'] }) }),
       withInMemoryCache({
         keyer: (req) => {
-          const { params: { messageTxId } } = req
-          return messageTxId
+          const {
+            params: { messageUid },
+            query: { 'process-id': processId }
+          } = req
+          return `${processId}:${messageUid}`
         },
         loader: async ({ req, res }) => {
           const {
-            params: { messageTxId },
+            params: { messageUid },
             /**
              * Client may set the 'no-busy' query parameter to any value
              * to disable the busy response.
@@ -36,7 +43,7 @@ export const withResultRoutes = app => {
             domain: { BUSY_THRESHOLD, apis: { readResult } }
           } = req
 
-          const input = inputSchema.parse({ messageTxId, processId })
+          const input = inputSchema.parse({ messageUid, processId })
 
           return busyIn(
             noBusy ? 0 : BUSY_THRESHOLD,
@@ -46,7 +53,7 @@ export const withResultRoutes = app => {
             () => {
               res.status(202)
               return [
-                { message: `Evaluation of process "${input.processId}" to "${input.messageTxId || 'latest'}" is in progress.` },
+                { message: `Evaluation of process "${input.processId}" to "${input.messageUid || 'latest'}" is in progress.` },
                 /**
                  * Don't store the busy message in the In-Memory cache
                  */

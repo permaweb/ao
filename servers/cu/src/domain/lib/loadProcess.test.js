@@ -29,11 +29,12 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: '1697574792000' }).toPromise()
+    const res = await loadProcess({ id: PROCESS, ordinate: '10', to: '1697574792000' }).toPromise()
 
     assert.deepStrictEqual(res.result, { Memory: null })
     assert.equal(res.ordinate, '0')
     assert.equal(res.id, PROCESS)
+    assert.equal(res.toOrdinate, 10)
   })
 
   test('use exact match from db', async () => {
@@ -68,7 +69,7 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    const res = await loadProcess({ id: PROCESS, ordinate: '10', to: 1697574792000 }).toPromise()
     assert.deepStrictEqual(res.result, cachedEvaluation.output)
     assert.deepStrictEqual(res.from, cachedEvaluation.timestamp)
     assert.deepStrictEqual(res.ordinate, cachedEvaluation.ordinate)
@@ -77,6 +78,7 @@ describe('loadProcess', () => {
     assert.equal(res.mostRecentAssignmentId, undefined)
     assert.equal(res.mostRecentHashChain, undefined)
     assert.equal(res.id, PROCESS)
+    assert.equal(res.toOrdinate, 10)
   })
 
   test('use latest in cache', async () => {
@@ -101,7 +103,7 @@ describe('loadProcess', () => {
       logger
     })
 
-    const res = await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    const res = await loadProcess({ id: PROCESS, ordinate: '10', to: 1697574792000 }).toPromise()
     assert.deepStrictEqual(res.from, cached.timestamp)
     assert.deepStrictEqual(res.ordinate, cached.ordinate)
     assert.deepStrictEqual(res.fromCron, cached.cron)
@@ -109,6 +111,7 @@ describe('loadProcess', () => {
     assert.deepStrictEqual(res.mostRecentAssignmentId, cached.assignmentId)
     assert.deepStrictEqual(res.mostRecentHashChain, cached.hashChain)
     assert.equal(res.id, PROCESS)
+    assert.equal(res.toOrdinate, 10)
   })
 
   test('backfill cache if latest from arweave or file', async () => {
@@ -147,10 +150,10 @@ describe('loadProcess', () => {
     })
 
     cached.src = 'record'
-    await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    await loadProcess({ id: PROCESS, ordinate: '10', to: 1697574792000 }).toPromise()
 
     cached.src = 'arweave'
-    await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    await loadProcess({ id: PROCESS, ordinate: '10', to: 1697574792000 }).toPromise()
   })
 
   test('backfill cache if latest from memory drained to file', async () => {
@@ -190,7 +193,7 @@ describe('loadProcess', () => {
 
     cached.src = 'memory'
     cached.fromFile = 'state-process-123.dat'
-    await loadProcess({ id: PROCESS, to: 1697574792000 }).toPromise()
+    await loadProcess({ id: PROCESS, ordinate: '10', to: 1697574792000 }).toPromise()
   })
 
   test('bubble 425 if latestProcessMemory is later than requested message', async () => {
