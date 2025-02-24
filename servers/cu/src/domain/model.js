@@ -455,6 +455,7 @@ export const evaluationSchema = z.object({
     Assignments: z.array(z.any()).nullish(),
     Spawns: z.array(z.any()).nullish(),
     Output: z.any().nullish(),
+    Patches: z.array(z.any()).nullish(),
     GasUsed: z.number().nullish(),
     Error: z.any().nullish()
   })

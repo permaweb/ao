@@ -115,6 +115,7 @@ export function gatherResultsWith (env) {
                       Assignments: pathOr([], ['Assignments']),
                       Spawns: pathOr([], ['Spawns']),
                       Output: pathOr(undefined, ['Output']),
+                      Patches: pathOr([], ['Patches']),
                       Error: pathOr(undefined, ['Error'])
                     })
                   )
