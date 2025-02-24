@@ -21,7 +21,7 @@ const WALLET = {
 }
 
 //const URL = 'http://localhost:10000'
-const URL = 'https://10000-permaweb-hyperbeam-bj4oupf8bs1.ws-us117.gitpod.io'
+const URL = 'https://10000-permaweb-hyperbeam-mlmszq4wkgb.ws-us117.gitpod.io'
 
 test('request:M2 full stack spawn, message, result', async () => {
   const connect = connectWith({
