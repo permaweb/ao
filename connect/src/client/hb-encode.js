@@ -30,6 +30,7 @@ function isBytes (value) {
 
 function isPojo (value) {
   return !isBytes(value) &&
+    !Array.isArray(value) &&
     typeof value === 'object' &&
     value !== null
 }
@@ -45,8 +46,18 @@ function hbEncodeValue (value) {
     return [undefined, value]
   }
 
-  if (Array.isArray(value) && value.length === 0) {
-    return ['empty-list', undefined]
+  if (Array.isArray(value)) {
+    if (value.length === 0) return ['empty-list', undefined]
+    const encoded = value.reduce(
+      (acc, cur) => {
+        let [type, curEncoded] = hbEncodeValue(cur)
+        if (!type) type = 'binary'
+        acc.push(`(ao-type-${type}) ${curEncoded}`)
+        return acc
+      },
+      []
+    )
+    return ['list', encoded.join(',')]
   }
 
   if (typeof value === 'number') {
@@ -62,7 +73,7 @@ function hbEncodeValue (value) {
 }
 
 export function hbEncodeLift (obj, parent = '', top = {}) {
-  const [flattened, types] = Object.entries(obj)
+  const [flattened, types] = Object.entries({ ...obj })
     .reduce((acc, [key, value]) => {
       const flatK = (parent ? `${parent}/${key}` : key)
         .toLowerCase()
@@ -70,16 +81,18 @@ export function hbEncodeLift (obj, parent = '', top = {}) {
       // skip nullish values
       if (value == null) return acc
 
-      // // first/{idx}/name flatten array
-      // if (Array.isArray(value)) {
-      //   if (value.length === 0) {
-      //     return store(flatK, key, acc, hbEncodeValue(value))
-      //   }
-      //   value.forEach((v, i) =>
-      //     Object.assign(acc[0], hbEncode(v, `${flatK}/${i}`))
-      //   )
-      //   return acc
-      // }
+      // list of objects
+      if (Array.isArray(value) && value.some(isPojo)) {
+        /**
+         * Convert the list of maps into an object
+         * where keys are indices and values are the maps
+         *
+         * This will match the isPojo check below,
+         * which will handle the recursive lifting that we want.
+         */
+        value = value.reduce((indexedObj, v, idx) =>
+          Object.assign(indexedObj, { [idx]: v }), {})
+      }
 
       // first/second lift object
       if (isPojo(value)) {
