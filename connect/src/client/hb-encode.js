@@ -16,6 +16,17 @@ if (!globalThis.Buffer) globalThis.Buffer = BufferShim
 
 const MAX_HEADER_LENGTH = 4096
 
+async function hasNewline (value) {
+  if (typeof value === 'string') return value.includes('\n')
+  if (value instanceof Blob) {
+    value = await value.text()
+    return value.includes('\n')
+  }
+  if (isBytes(value)) return Buffer.from(value).includes('\n')
+
+  return false
+}
+
 /**
  * @param {ArrayBuffer} data
  */
@@ -31,11 +42,14 @@ function isBytes (value) {
 function isPojo (value) {
   return !isBytes(value) &&
     !Array.isArray(value) &&
+    !(value instanceof Blob) &&
     typeof value === 'object' &&
     value !== null
 }
 
 function hbEncodeValue (value) {
+  if (value instanceof Blob) return [undefined, value]
+
   if (isBytes(value)) {
     if (value.byteLength === 0) return hbEncodeValue('')
     return [undefined, value]
@@ -115,7 +129,10 @@ export function hbEncodeLift (obj, parent = '', top = {}) {
          * So use flatK to preserve the nesting hierarchy
          * While ensure it will be encoded as its own part
          */
-        if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
+        if (encoded instanceof Blob) {
+          if (encoded.size > MAX_HEADER_LENGTH) top[flatK] = encoded
+          else acc[0][key] = encoded
+        } else if (Buffer.from(encoded).byteLength > MAX_HEADER_LENGTH) {
           top[flatK] = encoded
         /**
          * Encode at the current level as a normal field
@@ -211,11 +228,27 @@ export async function encode (obj = {}) {
       }
 
       /**
-       * This value is too large to be encoded into a header
-       * on the message, so it must instead be encoded as the body
-       * in it's own part
+       * There are special cases that will force a field to be
+       * encoded into the body:
+       *
+       * - The field includes any whitespace
+       * - The field includes '/'
+       * - The fields size exceeds the max header length
+       *
+       * In all cases, the field is forced to be encoded into the body
+       * as a sub-part, where the part has a single Content-Disposition
+       * header denoting the field, and the body of the sub-part
+       * being the field value itself.
+       *
+       * (These special cases happen to cover a multitude of issues that
+       * could cause a Data Item's 'data' to not be encodable as a header,
+       * but extends that coverage to any sort of field)
        */
-      if (key.includes('/') || Buffer.from(value).byteLength > MAX_HEADER_LENGTH) {
+      if (
+        await hasNewline(value) ||
+        key.includes('/') ||
+        Buffer.from(value).byteLength > MAX_HEADER_LENGTH
+      ) {
         bodyKeys.push(key)
         flattened[key] = new Blob([
           `content-disposition: form-data;name="${key}"\r\n\r\n`,
