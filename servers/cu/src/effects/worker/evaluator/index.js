@@ -7,7 +7,6 @@ import { worker, Transfer } from 'workerpool'
 import { createLogger } from '../../../domain/logger.js'
 import { arrayBufferFromMaybeView } from '../../../domain/utils.js'
 import { eventVacuum } from '../../../domain/event-vacuum.js'
-import { eventVacuum } from '../../../domain/event-vacuum.js'
 
 import { createApis } from './main.js'
 
@@ -44,7 +43,6 @@ worker({
      * Transfer the ownership of the underlying ArrayBuffer back to the main thread
      * to prevent copying it over
      */
-    .then(async (output) => {
     .then(async (output) => {
       /**
        * The evaluation stream is being closed,
