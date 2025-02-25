@@ -58,7 +58,6 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
 
   return (fields) => {
     const { path, method, ...restFields } = fields
-
     return of({ path, method, fields: restFields })
       .chain(fromPromise(({ path, method, fields }) => {
         return encode(fields).then(({ headers, body }) => ({
@@ -67,6 +66,7 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
           headers,
           body
         }))
+        .then(x => (console.log('headers', headers), headers))
       }
       ))
       .chain(fromPromise(async ({ path, method, headers, body }) =>
@@ -354,6 +354,9 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
     })
 
     return fetch(hb, { ...options, headers: signedHeaders }).then(res => {
+      // const err = new RedirectRequested('Redirect with new format!')
+      // err.device = 'process@1.0'
+      // throw err
       if (res.status === 400) {
         const err = new InsufficientFunds('Insufficient Funds for request!')
         err.price = res.headers.get('price')
