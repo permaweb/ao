@@ -79,13 +79,13 @@ describe('AoLoader Functionality Tests', () => {
       it('load wasm and evaluate message', async () => {
         const handle = await AoLoader(wasmBinary, options)
         const mainResult = await handle(null, getMsg('return \'Hello World\''), getEnv())
-
+        //const mainResult = await handle(null, getMsg("print(os.getenv(\"PATH\"))"),getEnv())
         // Check basic properties of the result
         assert.ok(mainResult.Memory)
         assert.ok(mainResult.hasOwnProperty('Messages'))
         assert.ok(mainResult.hasOwnProperty('Spawns'))
         assert.ok(mainResult.hasOwnProperty('Error'))
-        assert.equal(mainResult.Output.data, 'Hello World') // Expect 'Hello World' in output
+        assert.equal(mainResult.Output.data, 'Hello World') // Expect 'nil' in output
       })
 
       it('should use separately instantiated WebAssembly.Instance', async () => {

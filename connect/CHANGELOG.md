@@ -2,6 +2,122 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.75](https://github.com/permaweb/ao/compare/connect@v0.0.74...connect@v0.0.75) (2025-02-21)
+
+## [0.0.74](https://github.com/permaweb/ao/compare/connect@v0.0.73...connect@v0.0.74) (2025-02-20)
+
+## [0.0.73](https://github.com/permaweb/ao/compare/connect@v0.0.72...connect@v0.0.73) (2025-02-19)
+
+
+### Features
+
+* **connect:** added error for RedirectRequested to resubmit based on Accept-Device ([829e390](https://github.com/permaweb/ao/commit/829e390331291966c8fb293a391f62f714a60440))
+* **connect:** wip added payment getOperator getNodeBalance ([e9b1e17](https://github.com/permaweb/ao/commit/e9b1e1761daeb4af3fa3b45ef036e4f70f4f5836))
+
+## [0.0.72](https://github.com/permaweb/ao/compare/connect@v0.0.71...connect@v0.0.72) (2025-02-19)
+
+
+### Bug Fixes
+
+* **connect:** fix bug with output response on main ([8df51b4](https://github.com/permaweb/ao/commit/8df51b4458a2d467b75e2526bafa55c57de5cc05))
+
+## [0.0.71](https://github.com/permaweb/ao/compare/connect@v0.0.70...connect@v0.0.71) (2025-02-18)
+
+
+### Features
+
+* **connect:** fix res.headers ([e0000cd](https://github.com/permaweb/ao/commit/e0000cd9cb30cb5ff59a07f454c4724f942b4e2b))
+
+## [0.0.70](https://github.com/permaweb/ao/compare/connect@v0.0.69...connect@v0.0.70) (2025-02-18)
+
+
+### Features
+
+* **connect:** add new e2e test branch ([4ea4bdb](https://github.com/permaweb/ao/commit/4ea4bdb4e40a86b930bcb979c5ea00d1e7fd12e8))
+* **connect:** add post mainnet mode with relay device ([1169d0f](https://github.com/permaweb/ao/commit/1169d0f9e7d56c6ce112fd0dc46bef9e4cc8ae88))
+* **connect:** added handlers for errors ([66cf70f](https://github.com/permaweb/ao/commit/66cf70fb9f21ecec8e9275afde2a4f89f5a01248))
+* **connect:** added handlers for errors ([fcdc3bd](https://github.com/permaweb/ao/commit/fcdc3bd90ecd4171a2b226ebf340d8f2d5884354))
+* **connect:** adding support for m2 with request ([56a89d4](https://github.com/permaweb/ao/commit/56a89d410466ef0f32bd359d0ed29c9c13bf6574))
+* **connect:** default type and alg to arweave keys, and sha256 for dataitems and sha512 for httpsig ([0903c1b](https://github.com/permaweb/ao/commit/0903c1b7a16d3148647a043a29f678aa2e24e13a))
+* **connect:** got e2e test working for m0 and m2 ([535da6a](https://github.com/permaweb/ao/commit/535da6a3465c832c8b0f2b573b0f9655bb8bdaf3))
+* **connect:** implement signers api for data items and http sig ([a8229f4](https://github.com/permaweb/ao/commit/a8229f41133db8e77984d936694a85312e0d4655))
+* **connect:** incorporated signer into m0 and m2 ([34eea1c](https://github.com/permaweb/ao/commit/34eea1ccd805352538544c7a3d097bc3053ac1f9))
+* **connect:** inject signer at top level and make optional/override on apis ([14a1054](https://github.com/permaweb/ao/commit/14a105499d5ed800e3fa6cbfaade3d992b05acc5))
+* **connect:** new apis - wip got message and result, next spawn ([36d5aeb](https://github.com/permaweb/ao/commit/36d5aeb6c31f5968f429875b7f5c04214064d9f0))
+* **connect:** new relay mode with get working ([268d70f](https://github.com/permaweb/ao/commit/268d70fd887be1baa73a70785118801073d1cc41))
+* **connect:** refactor api - wip ([0e7829c](https://github.com/permaweb/ao/commit/0e7829ce2b7237cf4454f2cf54f1e2c4fc0d9854))
+* **connect:** refactor api - wip ([910fa14](https://github.com/permaweb/ao/commit/910fa14610c97147846191df5bbd2225cc75546d))
+* **connect:** refactor api - wip ([9843dd7](https://github.com/permaweb/ao/commit/9843dd7f4ab4e68b8ad9be71e0b611587976d487))
+* **connect:** return res ([59561f2](https://github.com/permaweb/ao/commit/59561f2ab60145832164a855bf7a8dfb69cb4156))
+* **connect:** set defaults for relay and mainmode ([6b5d9f2](https://github.com/permaweb/ao/commit/6b5d9f28f22a7398774e437f71d9cd8e932b6439))
+* **connect:** side effects use new signers api shape ([6668a16](https://github.com/permaweb/ao/commit/6668a16baf7d25bc0973cf75771b44c7119e6504))
+* **connect:** signer api and implement for browser and node ([71d4661](https://github.com/permaweb/ao/commit/71d4661623f87a6cd7707c07be7c958bc0e2a6c2))
+* **connect:** use dha-team/arbundles for data item and deepHash impl ([4d710d6](https://github.com/permaweb/ao/commit/4d710d67813f73f630ebf74e712149f28eb6a726))
+* **connect:** verify data item sigs. request permission for signing data items in browser ([46c2870](https://github.com/permaweb/ao/commit/46c287042382d34690ce876727dc1f7c9912c341))
+
+
+### Bug Fixes
+
+* **connect:** do not overwrite MODE in when relay mode is detected ([3559529](https://github.com/permaweb/ao/commit/3559529df883be4b3460074e1fb20bcf8e76b110))
+
+## [0.0.69](https://github.com/permaweb/ao/compare/connect@v0.0.68...connect@v0.0.69) (2025-02-12)
+
+
+### Features
+
+* **connect:** encode fields into headers if valid and within max header value size ([6abeb10](https://github.com/permaweb/ao/commit/6abeb10274673689fb03b7099f0973953f785666))
+* **connect:** implement send on relay and mainnet mode ([b47c0bf](https://github.com/permaweb/ao/commit/b47c0bf959cb871c59ce5b6e35a43ef1cb9a257c))
+* **connect:** M2 compability with HyperBEAM ([d296139](https://github.com/permaweb/ao/commit/d296139a5daa9f4826a1434b1fcd0ada0035e969))
+* **connect:** overload connect args and returns based on MODE ([499676e](https://github.com/permaweb/ao/commit/499676eb00f87b7513e770f0627ee8619bcf069f))
+* **connect:** send multipart http message with deterministic boundary to HB ([c81208e](https://github.com/permaweb/ao/commit/c81208ea86db1e3bfc7f08c3ef6c918bb50695ee))
+
+## [0.0.68](https://github.com/permaweb/ao/compare/connect@v0.0.67...connect@v0.0.68) (2025-02-10)
+
+
+### Bug Fixes
+
+* **connect:** use staticDataItemSigner in relay mode ([d639682](https://github.com/permaweb/ao/commit/d639682f321d8fbcbabfc0430337e595e707a6b7))
+
+## [0.0.67](https://github.com/permaweb/ao/compare/connect@v0.0.66...connect@v0.0.67) (2025-02-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connect:** remove connect.hb. Add modes and corresponding *_URL args to connect()
+
+### Features
+
+* **connect:** remove connect.hb. Add modes and corresponding *_URL args to connect() ([226a20a](https://github.com/permaweb/ao/commit/226a20aa4da9b065ef2af9c8ebef36c4f70998fd))
+
+## [0.0.66](https://github.com/permaweb/ao/compare/connect@v0.0.65...connect@v0.0.66) (2025-02-07)
+
+
+### Features
+
+* **connect:** hb mode has result on hb ([214309f](https://github.com/permaweb/ao/commit/214309f16731f24073232dea1eb58074c7e10173))
+* **connect:** hb mode has spawn on hb ([5ece939](https://github.com/permaweb/ao/commit/5ece93924e4d263ff8f2574b32606965b948d0fb))
+* **connect:** wip starting to build out http signed message to hb ([ba2439d](https://github.com/permaweb/ao/commit/ba2439da0f231202d65fcea9061cece52a947b2a))
+
+
+### Bug Fixes
+
+* **connect:** optionally add tags to hb headers. Change routes to non-process variants to start ([1cb6ef6](https://github.com/permaweb/ao/commit/1cb6ef651ce060f8eed1010c54ab5644ea85a34b))
+
+## [0.0.65](https://github.com/permaweb/ao/compare/connect@v0.0.64...connect@v0.0.65) (2025-02-03)
+
+
+### Features
+
+* **connect:** always use provided fetch for gateway calls ([47cdf7e](https://github.com/permaweb/ao/commit/47cdf7e8c0beae7527d890e4df12a2eba10e3c1f))
+* **connect:** sign all headers for any relayed requests ([af00769](https://github.com/permaweb/ao/commit/af00769c966efe3ceb81511c0f008b6c3b1895a6))
+
+## [0.0.64](https://github.com/permaweb/ao/compare/connect@v0.0.63...connect@v0.0.64) (2025-02-02)
+
+
+### Features
+
+* **connect:** add connect.hb() to use HyperBEAM mode ([5f97b93](https://github.com/permaweb/ao/commit/5f97b93b558f8b617f371b9ddcf97b42e0337502))
+
 ## [0.0.63](https://github.com/permaweb/ao/compare/connect@v0.0.62...connect@v0.0.63) (2025-01-15)
 
 

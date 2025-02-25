@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/ao-loader",
-  "version": "0.0.45",
+  "version": "0.0.48",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -24,6 +24,7 @@
     "@permaweb/wasm-metering": "^0.2.2"
   },
   "devDependencies": {
+    "@permaweb/loco": "^0.0.17",
     "esbuild": "^0.19.5",
     "typescript": "^5.2.2"
   },

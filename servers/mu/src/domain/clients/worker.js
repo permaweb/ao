@@ -46,12 +46,12 @@ async function whileTrue (fn) {
 }
 
 const broadcastLogger = createBroadcastLogger({ namespace: 'mu-worker-broadcast', config })
-
 export const domain = {
   ...(domainConfigSchema.parse(config)),
   fetch,
   logger: broadcastLogger
 }
+
 
 /**
  * This program utilizes the business logic for

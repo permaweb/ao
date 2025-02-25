@@ -25,8 +25,11 @@ pipe(
     })
 
     process.on('SIGTERM', () => {
-      logger('Recevied SIGTERM. Gracefully shutting down server...')
-      server.close(() => logger('Server Shut Down'))
+      logger('Received SIGTERM. Gracefully shutting down server...')
+      server.close(() => {
+        logger('Server Shut Down')
+        process.exit()
+      })
     })
 
     return server

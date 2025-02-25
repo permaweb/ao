@@ -4162,7 +4162,7 @@ var Module = (() => {
           }
           getEnvStrings.strings = strings;
         }
-        return getEnvStrings.strings;
+        return []; //getEnvStrings.strings;
       };
 
       var stringToAscii = (str, buffer) => {
@@ -4929,14 +4929,10 @@ var Module = (() => {
           assert(!(previousAsync && !Asyncify.currData), "We cannot stop an async operation in flight");
           assert(asyncMode, "The call to " + ident + " is running asynchronously. If this was intended, add the async option to the ccall/cwrap call.");
           return Asyncify.whenDone().then(onDone).then(res => {
-            // CHG: free ptr of returned result in HEAP Memory
-            _free(ret)
             return res;
           });
         }
         let res = onDone(ret);
-        // CHG: free ptr of returned result in HEAP Memory
-        _free(ret);
         if (asyncMode) return Promise.resolve(res);
         return res;
       };

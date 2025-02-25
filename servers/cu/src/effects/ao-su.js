@@ -5,12 +5,7 @@ import { of } from 'hyper-async'
 import { always, applySpec, filter, has, ifElse, isNil, isNotNil, juxt, last, mergeAll, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
-import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError } from '../domain/utils.js'
-
-const okRes = (res) => {
-  if (res.ok) return res
-  throw res
-}
+import { backoff, mapForwardedBy, mapFrom, addressFrom, parseTags, strFromFetchError, okRes } from '../domain/utils.js'
 
 const resToJson = (res) => res.json()
 

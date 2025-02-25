@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.48](https://github.com/permaweb/ao/compare/loader@v0.0.47...loader@v0.0.48) (2025-02-23)
+
+
+### Features
+
+* **loader:** add optional patches return array for mainnet ([ccc6dc9](https://github.com/permaweb/ao/commit/ccc6dc967b0443afef16e8e6e88efd8abcb81d5d))
+
+
+### Bug Fixes
+
+* **loader:** improved tests to add host tests ([88d8289](https://github.com/permaweb/ao/commit/88d8289e424ea8e307d2e80dcbcd1724f08d9fe7))
+
+## [0.0.47](https://github.com/permaweb/ao/compare/loader@v0.0.46...loader@v0.0.47) (2025-02-15)
+
+
+### Bug Fixes
+
+* **loader:** stub out getenv ([8002e84](https://github.com/permaweb/ao/commit/8002e84d30c44c43d6c53e00fa0e9560a9756540))
+
+## [0.0.46](https://github.com/permaweb/ao/compare/loader@v0.0.45...loader@v0.0.46) (2025-01-29)
+
+
+### Features
+
+* **loader:** revert free call in wasm64 ([7cced2c](https://github.com/permaweb/ao/commit/7cced2c1463ccf010e03c0c28ede6b8c080faace))
+
 ## [0.0.45](https://github.com/permaweb/ao/compare/loader@v0.0.44...loader@v0.0.45) (2025-01-18)
 
 ## [0.0.44](https://github.com/permaweb/ao/compare/loader@v0.0.43...loader@v0.0.44) (2024-12-17)

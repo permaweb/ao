@@ -4,7 +4,7 @@ import { z } from 'zod'
 import Arweave from 'arweave'
 import WarpArBundles from 'warp-arbundles'
 
-import { joinUrl } from '../domain/utils.js'
+import { backoff, joinUrl, okRes, okResWithNodeWith } from '../domain/utils.js'
 
 const { createData, ArweaveSigner } = WarpArBundles
 
@@ -103,24 +103,23 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
     skipAnchor: z.boolean().default(false)
   }).default({})
 
-  return (id, options) =>
-    of(id)
+  return (id, options) => {
+    const okResWithNode = okResWithNodeWith(logger, id)
+    return of(id)
       .map((id) => {
         const variables = optionsSchema.parse(options)
         variables.processIds = [id]
         return variables
       })
       .chain(fromPromise((variables) =>
-        fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: GET_PROCESSES_QUERY, variables })
-        })
-          .then(async (res) => {
-            if (res.ok) return res.json()
-            logger('Error Encountered when fetching transaction \'%s\' from gateway', id)
-            throw new Error(`${res.status}: ${await res.text()}`)
-          })
+        backoff(
+          () => fetch(GRAPHQL_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: GET_PROCESSES_QUERY, variables })
+          }).then(okResWithNode),
+          { maxRetries: 5, delay: 500, log: logger, name: `loadTransactionMeta(${JSON.stringify({ id })})` }
+        )
           .then(transactionConnectionSchema.parse)
           .then(path(['data', 'transactions', 'edges', '0', 'node']))
           .then((node) => {
@@ -133,6 +132,7 @@ export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
           })
       ))
       .toPromise()
+  }
 }
 
 /**
@@ -152,7 +152,10 @@ export function loadTransactionDataWith ({ fetch, ARWEAVE_URL, logger }) {
   return (id) =>
     of(id)
       .chain(fromPromise((id) =>
-        fetch(joinUrl({ url: ARWEAVE_URL, path: `/raw/${id}` }))
+        backoff(
+          () => fetch(joinUrl({ url: ARWEAVE_URL, path: `/raw/${id}` })).then(okRes),
+          { maxRetries: 5, delay: 500, log: logger, name: `loadTransactionData(${JSON.stringify({ id })})` }
+        )
           .then(async (res) => {
             if (res.ok) return res
             logger('Error Encountered when fetching raw data for transaction \'%s\'', id)
@@ -164,11 +167,15 @@ export function loadTransactionDataWith ({ fetch, ARWEAVE_URL, logger }) {
 
 export function queryGatewayWith ({ fetch, GRAPHQL_URL, logger }) {
   return async ({ query, variables }) => {
-    return fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables })
-    })
+    return backoff(
+      () =>
+        fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, variables })
+        }).then(okRes),
+      { maxRetries: 5, delay: 500, log: logger, name: `queryGateway(${JSON.stringify({ query, variables })})` }
+    )
       .then(async (res) => {
         if (res.ok) return res.json()
         logger('Error Encountered when querying gateway')

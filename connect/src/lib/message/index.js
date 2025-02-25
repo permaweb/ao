@@ -14,7 +14,7 @@ import { uploadMessageWith } from './upload-message.js'
  * @property {string} [data]
  * @property {{ name: string, value: string }[]} [tags]
  * @property {string} [anchor]
- * @property {Types['signer']} signer
+ * @property {Types['signer']} [signer]
  *
  * @callback SendMessage
  * @param {SendMessageArgs} args
@@ -29,7 +29,7 @@ export function messageWith (env) {
   return ({ process, data, tags, anchor, signer }) => {
     return of({ id: process, data, tags, anchor, signer })
       .chain(uploadMessage)
-      .map((ctx) => ctx.messageId) // the id of the data item
+      .map((ctx) => ctx.messageId)
       .bimap(errFrom, identity)
       .toPromise()
   }

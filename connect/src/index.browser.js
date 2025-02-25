@@ -1,4 +1,4 @@
-import { connect, serializeCron } from './index.common.js'
+import { connectWith, serializeCron } from './index.common.js'
 
 import { WalletClient } from './client/browser/index.js'
 
@@ -9,16 +9,37 @@ const GRAPHQL_URL = globalThis.GRAPHQL_URL || undefined
 const GRAPHQL_MAX_RETRIES = globalThis.GRAPHQL_MAX_RETRIES || undefined
 const GRAPHQL_RETRY_BACKOFF = globalThis.GRAPHQL_RETRY_BACKOFF || undefined
 
-const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = connect({ GATEWAY_URL, MU_URL, CU_URL, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+const RELAY_URL = globalThis.RELAY_URL || undefined
+const AO_URL = globalThis.AO_URL = undefined
 
-export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }
+const connect = connectWith({
+  createDataItemSigner: WalletClient.createDataItemSigner,
+  createSigner: WalletClient.createSigner
+})
+
+const createDataItemSigner = WalletClient.createDataItemSigner
+const createSigner = WalletClient.createSigner
+
+export { createDataItemSigner, createSigner }
 export { connect }
 export { serializeCron }
+
 /**
- * A function that builds a signer using the global arweaveWallet
- * commonly used in browser-based dApps
+ * @deprecated top level exports will soon be removed. Use connect()
+ * instead.
  *
- * This is provided as a convenience for consumers of the SDK
- * to use, but consumers can also implement their own signer
+ * These will only operate in legacy mode
  */
-export const createDataItemSigner = WalletClient.createDataItemSigner
+const { result, results, message, spawn, monitor, unmonitor, dryrun, assign } = connect({
+  MODE: 'legacy',
+  GATEWAY_URL,
+  MU_URL,
+  CU_URL,
+  RELAY_URL,
+  AO_URL,
+  GRAPHQL_URL,
+  GRAPHQL_MAX_RETRIES,
+  GRAPHQL_RETRY_BACKOFF,
+  noLog: true
+})
+export { result, results, message, spawn, monitor, unmonitor, dryrun, assign }

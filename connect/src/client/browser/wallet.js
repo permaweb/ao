@@ -1,12 +1,76 @@
 import { Buffer } from 'buffer/index.js'
-import * as WarpArBundles from 'warp-arbundles'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from '../../dal.js'
+import { DATAITEM_SIGNER_KIND, HTTP_SIGNER_KIND } from '../signer.js'
+import { getRawAndId } from '../../lib/data-item.js'
 
 if (!globalThis.Buffer) globalThis.Buffer = Buffer
 
-const { DataItem } = WarpArBundles
+function createANS104Signer (arweaveWallet) {
+  /**
+   * createDataItem can be passed here for the purposes of unit testing
+   * with a stub
+   */
+  const signer = async (create) => arweaveWallet.connect([
+    'SIGN_TRANSACTION'
+  ]).then(async () => {
+    /**
+     * set passthrough in order to receive the arguements as they were passed
+     * to toDataItemSigner
+     */
+    const { data, tags, target, anchor } = await create({
+      alg: 'rsa-v1_5-sha256',
+      passthrough: true
+    })
+    /**
+     * https://github.com/wanderwallet/Wander?tab=readme-ov-file#signdataitemdataitem-promiserawdataitem
+     */
+    const view = await arweaveWallet.signDataItem({ data, tags, target, anchor })
+
+    /**
+     * Since we passthrough above, just send the precomputed
+     * shape back, which is then detected in signer wrapper
+     */
+    const res = await getRawAndId(Buffer.from(view))
+    return res
+  })
+
+  return signer
+}
+
+function createHttpSigner (arweaveWallet) {
+  const signer = async (create) => arweaveWallet.connect([
+    'ACCESS_ADDRESS',
+    'ACCESS_PUBLIC_KEY',
+    'SIGNATURE'
+  ]).then(async () => {
+    const [publicKey, address] = await Promise.all([
+      arweaveWallet.getActivePublicKey(),
+      arweaveWallet.getActiveAddress()
+    ])
+    return { publicKey, address }
+  }).then(async ({ publicKey, address }) => {
+    const signatureBase = await create({
+      type: 1,
+      publicKey,
+      address,
+      alg: 'rsa-pss-sha512'
+    })
+
+    const view = await arweaveWallet.signMessage(
+      signatureBase,
+      { hashAlgorithm: 'SHA-512' }
+    )
+
+    return {
+      signature: Buffer.from(view),
+      address
+    }
+  })
+
+  return signer
+}
 
 /**
  * A function that builds a signer using the global arweaveWallet
@@ -18,27 +82,25 @@ const { DataItem } = WarpArBundles
  * @param {Object} arweaveWallet - The window.arweaveWallet object
  * @returns {Types['signer']} - The signer function
  * @example
- * const signer = createDataItemSigner(window.arweaveWallet)
- *
+ * const signer = createSigner(window.arweaveWallet)
  */
-export function createDataItemSigner (arweaveWallet) {
-  /**
-   * createDataItem can be passed here for the purposes of unit testing
-   * with a stub
-   */
-  const signer = async ({ data, tags, target, anchor, createDataItem = (buf) => new DataItem(buf) }) => {
-    /**
-     * signDataItem interface according to ArweaveWalletConnector
-     *
-     * https://github.com/jfbeats/ArweaveWalletConnector/blob/7c167f79cd0cf72b6e32e1fe5f988a05eed8f794/src/Arweave.ts#L46C23-L46C23
-     */
-    const view = await arweaveWallet.signDataItem({ data, tags, target, anchor })
-    const dataItem = createDataItem(Buffer.from(view))
-    return {
-      id: await dataItem.id,
-      raw: await dataItem.getRaw()
-    }
+export function createSigner (wallet) {
+  const dataItemSigner = createANS104Signer(wallet)
+  const httpSigner = createHttpSigner(wallet)
+
+  const signer = (create, kind) => {
+    if (kind === DATAITEM_SIGNER_KIND) return dataItemSigner(create)
+    if (kind === HTTP_SIGNER_KIND) return httpSigner(create)
+    throw new Error(`signer kind unknown "${kind}"`)
   }
 
   return signer
 }
+
+/**
+ * @deprecated - use createSigner() instead
+ *
+ * Create a signer that uses the provided arweaveWallet
+ * commonly used as global in browser-based dApps
+ */
+export const createDataItemSigner = createSigner

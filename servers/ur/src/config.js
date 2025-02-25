@@ -40,20 +40,7 @@ const serverConfigSchema = z.object({
   ),
   aoUnit: z.enum(['cu', 'mu']),
   strategy: z.enum(['proxy', 'redirect']),
-  surUrl: z.string().url(),
-  /**
-   * @deprecated - use ownerToHost or processToHost to
-   * achieve subrouting
-   */
-  subrouterUrl: z.string().nullable().optional(),
-  /**
-   * @deprecated - use ownerToHost or processToHost to
-   * achieve subrouting
-   */
-  owners: z.preprocess(
-    (arg) => (typeof arg === 'string' ? arg.split(',').map(str => str.trim()) : arg),
-    z.array(z.string())
-  ).nullable().optional()
+  surUrl: z.string().url()
 })
 
 /**
@@ -70,7 +57,6 @@ const CONFIG_ENVS = {
     processToHost: process.env.PROCESS_TO_HOST || JSON.stringify({}),
     ownerToHost: process.env.OWNER_TO_HOST || JSON.stringify({}),
     fromModuleToHost: process.env.FROM_MODULE_TO_HOST || JSON.stringify({}),
-
     /**
      * default to the CU for no hassle startup in development mode,
      *
@@ -78,18 +64,7 @@ const CONFIG_ENVS = {
      */
     aoUnit: process.env.AO_UNIT || 'cu',
     strategy: process.env.STRATEGY || 'proxy',
-
-    surUrl: process.env.SUR_URL,
-    /**
-     * @deprecated - use ownerToHost or processToHost to
-     * achieve subrouting
-     */
-    subrouterUrl: process.env.SUBROUTER_URL,
-    /**
-     * @deprecated - use ownerToHost or processToHost to
-     * achieve subrouting
-     */
-    owners: process.env.OWNERS
+    surUrl: process.env.SUR_URL
   },
   production: {
     MODE,
@@ -98,21 +73,9 @@ const CONFIG_ENVS = {
     processToHost: process.env.PROCESS_TO_HOST || JSON.stringify({}),
     ownerToHost: process.env.OWNER_TO_HOST || JSON.stringify({}),
     fromModuleToHost: process.env.FROM_MODULE_TO_HOST || JSON.stringify({}),
-    
     aoUnit: process.env.AO_UNIT,
     strategy: process.env.STRATEGY || 'proxy',
-
-    surUrl: process.env.SUR_URL,
-    /**
-     * @deprecated - use ownerToHost or processToHost to
-     * achieve subrouting
-     */
-    subrouterUrl: process.env.SUBROUTER_URL,
-    /**
-     * @deprecated - use ownerToHost or processToHost to
-     * achieve subrouting
-     */
-    owners: process.env.OWNERS
+    surUrl: process.env.SUR_URL
   }
 }
 

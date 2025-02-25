@@ -13,7 +13,7 @@ import { uploadUnmonitorWith } from './upload-unmonitor.js'
  * @typedef SendMonitorArgs
  * @property {string} process
  * @property {string} [data]
- * @property {Types['signer']} signer
+ * @property {Types['signer']} [signer]
  *
  * @callback SendMonitor
  * @param {SendMonitorArgs} args

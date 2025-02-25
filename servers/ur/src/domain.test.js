@@ -42,7 +42,7 @@ describe('domain', () => {
       test('should bailout if the process fromModule is mapped to a specific host', async () => {
         const fetchMock = async (url) => {
           assert.equal(url, 'surUrl1/processes/process-123')
-          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{name:'From-Module', value: 'fromModule1'}] }))
+          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{ name: 'From-Module', value: 'fromModule1' }] }))
         }
 
         const bailout = bailoutWith({
@@ -60,7 +60,7 @@ describe('domain', () => {
       test('should NOT bailout if the process owner is not mapped to a specific host', async () => {
         const fetchMock = async (url) => {
           assert.equal(url, 'surUrl1/processes/process-123')
-          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{name:'From-Module', value: 'fromModule1'}] }))
+          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{ name: 'From-Module', value: 'fromModule1' }] }))
         }
 
         const bailout = bailoutWith({
@@ -79,7 +79,7 @@ describe('domain', () => {
       test('should NOT bailout if no fromModuleToHost is provided', async () => {
         const fetchMock = async (url) => {
           assert.equal(url, 'surUrl1/processes/process-123')
-          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{name:'From-Module', value: 'fromModule1'}] }))
+          return new Response(JSON.stringify({ owner: { address: 'owner2' }, tags: [{ name: 'From-Module', value: 'fromModule1' }] }))
         }
 
         const determineHostEmptyMapping = determineHostWith({
@@ -171,54 +171,6 @@ describe('domain', () => {
         })
         const host1 = await determineHostNoMapping({ processId: 'process-123', failoverAttempt: 0 })
         assert.ok(HOSTS.includes(host1))
-      })
-    })
-
-    /**
-     * @deprecated - this functionality is subsumed by ownerToHost
-     * and will eventually be removed, along with the tests
-     */
-    describe('subRouter - DEPRECATED', () => {
-      test('should redirect to the subrouterUrl', async () => {
-        const fetchMock = async (url) => {
-          assert.equal(url, 'surUrl1/processes/process-123')
-          return new Response(JSON.stringify({ owner: { address: 'owner2' } }))
-        }
-
-        const bailout = bailoutWith({
-          fetch: fetchMock,
-          surUrl: 'surUrl1',
-          subrouterUrl: 'subrouterUrl1',
-          owners: ['owner1', 'owner2']
-        })
-
-        const determineHost = determineHostWith({ hosts: HOSTS, bailout })
-
-        assert(await determineHost({ processId: 'process-123', failoverAttempt: 0 }))
-        assert.equal(await determineHost({ processId: 'process-123', failoverAttempt: 0 }), 'subrouterUrl1')
-      })
-
-      test('should not redirect to the subrouterUrl', async () => {
-        const fetchMock = async (url) => {
-          assert.equal(url, 'surUrl1/processes/process-123')
-          /**
-           * Here the owner does not match any in the list
-           * this will cause it to not redirect to the subrouter
-           */
-          return new Response(JSON.stringify({ owner: { address: 'owner3' } }))
-        }
-
-        const bailout = bailoutWith({
-          fetch: fetchMock,
-          surUrl: 'surUrl1',
-          subrouterUrl: 'subrouterUrl1',
-          owners: ['owner1', 'owner2']
-        })
-
-        const determineHost = determineHostWith({ hosts: HOSTS, bailout })
-
-        assert(await determineHost({ processId: 'process-123', failoverAttempt: 0 }))
-        assert.equal(await determineHost({ processId: 'process-123', failoverAttempt: 0 }), 'http://fizz.buzz')
       })
     })
   })

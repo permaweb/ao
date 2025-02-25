@@ -3,7 +3,7 @@ import createKeccakHash from 'keccak'
 import { Rejected, Resolved } from 'hyper-async'
 import {
   F, T, __, allPass, always, append, assoc, chain, concat, cond, defaultTo, equals,
-  filter, has, head, ifElse, includes, is, join, map, pipe, propEq, propOr, reduce, reject
+  filter, has, head, ifElse, includes, is, join, map, path, pipe, propEq, propOr, reduce, reject
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
@@ -400,6 +400,31 @@ export const backoff = (
   }
 
   return action(0, delay)
+}
+
+/**
+ * A function that will throw an error if the response is not ok
+ */
+export const okRes = (res) => {
+  if (res.ok) return res
+  throw res
+}
+
+/**
+ * A function that will throw an error if the response is not ok OR if the response node does not exist
+ */
+export const okResWithNodeWith = (logger, id) => async (res) => {
+  if (res.ok) {
+    const json = await res.json()
+    const node = path(['data', 'transactions', 'edges', '0', 'node'], json)
+    if (!node) {
+      logger('Error Encountered when fetching transaction \'%s\' from gateway', id)
+      throw new Error(`Gateway returned no transaction for '${id}'`)
+    }
+    return json
+  }
+  logger('Error Encountered when fetching transaction \'%s\' from gateway', id)
+  throw new Error(`${res.status}: ${await res.text()}`)
 }
 
 /**

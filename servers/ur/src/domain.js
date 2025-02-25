@@ -3,7 +3,7 @@ import { LRUCache } from 'lru-cache'
 
 const isNotEmpty = complement(isEmpty)
 
-export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHost, ownerToHost, fromModuleToHost }) {
+export function bailoutWith ({ fetch, surUrl, processToHost, ownerToHost, fromModuleToHost }) {
   const processToOwnerCache = new LRUCache({
     /**
        * 10MB
@@ -23,7 +23,7 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
     /**
        * A number is 8 bytes
        */
-    sizeCalculation: () => 8 
+    sizeCalculation: () => 8
   })
 
   async function findProcessOwner (processId) {
@@ -78,25 +78,13 @@ export function bailoutWith ({ fetch, subrouterUrl, surUrl, owners, processToHos
     }
 
     /**
-     * If there are fromModule -> host configured, then we lookup the 
+     * If there are fromModule -> host configured, then we lookup the
      * from-module and return the specific host if found
      */
     if (fromModuleToHost && isNotEmpty(fromModuleToHost)) {
       const module = await findFromModule(processId)
       if (fromModuleToHost[module]) return fromModuleToHost[module]
     }
-    
-    /**
-     * @deprecated - this functionality is subsumed by ownerToHost
-     * and will eventually be removed
-     *
-     * All three of these must be set for the
-     * subrouter logic to work so if any are
-     * not set just return.
-     */
-    if (!subrouterUrl || !surUrl || !owners) return
-    const owner = await findProcessOwner(processId)
-    if (owners.includes(owner)) return subrouterUrl
   }
 }
 

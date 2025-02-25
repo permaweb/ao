@@ -1,4 +1,4 @@
-# `ao` Messanger Unit
+# `ao` Messenger Unit
 
 This is an spec compliant `ao` Messenger Unit, implemented as a Node Express
 Server.

@@ -81,7 +81,6 @@ worker({
         if (message && !message['Read-Only']) {
           await eventVacuum.processLogs(
             output.Error ?? output.Output.data,
-
             processId,
             +ordinate,
             output.GasUsed,

@@ -916,12 +916,7 @@ impl DataStore for StoreClient {
         // Determine if the 'from' timestamp matches the process timestamp and if assignment is present
         let include_process = process_in.assignment.is_some()
             && match from {
-                Some(from_timestamp_str) => {
-                    let from_timestamp = from_timestamp_str
-                        .parse::<i64>()
-                        .map_err(StoreErrorType::from)?;
-                    from_timestamp == process_in.process.timestamp
-                }
+                Some(_) => false,
                 None => true, // No 'from' timestamp means it's the first page
             };
 
@@ -1638,7 +1633,7 @@ pub async fn migrate_to_disk() -> io::Result<()> {
         .expect("Failed to connect to bytestore");
 
     let args: Vec<String> = env::args().collect();
-    let range: &String = args.get(1).expect("Range argument not provided");
+    let range: &String = args.get(2).expect("Range argument not provided");
     let parts: Vec<&str> = range.split('-').collect();
     let from = parts[0].parse().expect("Invalid starting offset");
     let to = if parts.len() > 1 {

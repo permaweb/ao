@@ -16,6 +16,18 @@ const positiveIntSchema = z.preprocess((val) => {
   return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
 }, z.number().nonnegative())
 
+const jsonObjectSchema = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val);
+    } catch (error) {
+      return {}; // Default to an empty object if parsing fails
+    }
+  }
+  return val;
+}, z.any())
+
+
 /**
  * Some frameworks will implicitly override NODE_ENV
  *
@@ -62,7 +74,8 @@ export const domainConfigSchema = z.object({
   GET_RESULT_MAX_RETRIES: positiveIntSchema,
   GET_RESULT_RETRY_DELAY: positiveIntSchema,
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
-  MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema
+  MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
+  RELAY_MAP: jsonObjectSchema
 })
 
 /**
@@ -112,7 +125,8 @@ const CONFIG_ENVS = {
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
-    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000
+    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
+    RELAY_MAP: process.env.RELAY_MAP || ''
   },
   production: {
     MODE,
@@ -139,7 +153,8 @@ const CONFIG_ENVS = {
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
-    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000
+    MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
+    RELAY_MAP: process.env.RELAY_MAP || ''
   }
 }
 

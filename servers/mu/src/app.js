@@ -18,8 +18,11 @@ export const server = pipe(
     })
 
     process.on('SIGTERM', () => {
-      logger({ log: 'Recevied SIGTERM. Gracefully shutting down server...' })
-      server.close(() => logger({ log: 'Server Shut Down' }))
+      logger({ log: 'Received SIGTERM. Gracefully shutting down server...' })
+      server.close(() => {
+        logger({ log: 'Server Shut Down' })
+        process.exit()
+      })
     })
 
     domain.apis.initCronProcs().then(() => {
