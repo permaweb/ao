@@ -1,5 +1,4 @@
 import { ConsoleTransport, HoneycombTransport, KinesisTransport, CompositeTransport } from './event-transport.js'
-import { ConsoleTransport, HoneycombTransport, KinesisTransport, CompositeTransport } from './event-transport.js'
 
 export class EventVacuum {
   constructor (transport) {
@@ -29,21 +28,6 @@ export class EventVacuum {
   // Check if the parsed object is a matching event
   isEvent (parsed) {
     return parsed && typeof parsed._e === 'number' && parsed._e === 1
-  }
-
-  normalizeTimestamps (event) {
-    // Normalize timestamp fields to ISO strings
-    for (const timestampKey of ['timestamp', 'Timestamp']) {
-      if (event[timestampKey]) {
-        try {
-          const date = new Date(event[timestampKey])
-          event[timestampKey] = date.toISOString()
-        } catch (e) {
-          delete event[timestampKey]
-        }
-      }
-    }
-    return event
   }
 
   normalizeTimestamps (event) {
