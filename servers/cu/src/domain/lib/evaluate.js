@@ -105,6 +105,7 @@ export function evaluateWith (env) {
           Assignments: pathOr([], ['result', 'Assignments']),
           Spawns: pathOr([], ['result', 'Spawns']),
           Output: pathOr('', ['result', 'Output']),
+          Patches: pathOr([], ['result', 'Patches']),
           GasUsed: pathOr(undefined, ['result', 'GasUsed']),
           noSave: always(true)
         })(ctx)

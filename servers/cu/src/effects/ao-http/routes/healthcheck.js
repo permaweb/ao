@@ -1,13 +1,13 @@
 import { always, compose } from 'ramda'
 
-import { withMiddleware } from './middleware/index.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
 
 export const withHealthcheckRoutes = (app) => {
   // healthcheck
   app.get(
     '/',
     compose(
-      withMiddleware,
+      withErrorHandler,
       always(async (req, res) => {
         const { domain: { apis: { healthcheck } } } = req
 

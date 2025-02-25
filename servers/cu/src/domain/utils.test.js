@@ -225,19 +225,19 @@ describe('utils', () => {
   })
 
   describe('isLaterThan', () => {
-    const now = new Date()
+    const now = new Date().getTime()
     const tenSecondsAgo = now - 10000
 
     test('should return whether the right is later than the left', () => {
-      // later timestamp
-      assert.ok(isLaterThan({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // later ordinate
+      assert.ok(isLaterThan({ ordinate: '9' }, { ordinate: '10' }))
       // later cron (when left has no cron)
       assert.ok(isLaterThan({ timestamp: tenSecondsAgo }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
       // later cron
       assert.ok(isLaterThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo, cron: '1-1-minute' }))
 
-      // earlier timestamp
-      assert.ok(!isLaterThan({ timestamp: now }, { timestamp: tenSecondsAgo }))
+      // earlier ordinate
+      assert.ok(!isLaterThan({ ordinate: '10' }, { ordinate: '9' }))
       // earlier cron (when right has no cron)
       assert.ok(!isLaterThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo }))
       // earlier cron
@@ -246,19 +246,19 @@ describe('utils', () => {
   })
 
   describe('isEarlierThan', () => {
-    const now = new Date()
+    const now = new Date().getTime()
     const tenSecondsAgo = now - 10000
 
     test('should return whether the right is later than the left', () => {
-      // later timestamp
-      assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo }, { timestamp: now }))
+      // later ordinate
+      assert.ok(!isEarlierThan({ ordinate: '9' }, { ordinate: '10' }))
       // later cron (when left has no cron)
       assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo }, { timestamp: tenSecondsAgo, cron: '0-1-minute' }))
       // later cron
       assert.ok(!isEarlierThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo, cron: '1-1-minute' }))
 
-      // earlier timestamp
-      assert.ok(isEarlierThan({ timestamp: now }, { timestamp: tenSecondsAgo }))
+      // earlier ordinate
+      assert.ok(isEarlierThan({ ordinate: '10' }, { ordinate: '9' }))
       // earlier cron (when right has no cron)
       assert.ok(isEarlierThan({ timestamp: tenSecondsAgo, cron: '0-1-minute' }, { timestamp: tenSecondsAgo }))
       // earlier cron
@@ -266,8 +266,8 @@ describe('utils', () => {
     })
   })
 
-  describe('isEarlierThan', () => {
-    const now = new Date()
+  describe('isEqualTo', () => {
+    const now = new Date().getTime()
     const tenSecondsAgo = now - 10000
 
     test('should return whether the right is equal to the left', () => {

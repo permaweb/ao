@@ -43,9 +43,9 @@ const serverConfigSchema = domainConfigSchema.extend({
   MODE: z.enum(['development', 'production']),
   /**
    * Whether the unit is operating as a Compute Unit
-   * or Read Unit. Defaults to 'cu'.
+   * or Read Unit or HyperBEAM Unit. Defaults to 'cu'.
    */
-  UNIT_MODE: z.enum(['cu', 'ru']),
+  UNIT_MODE: z.enum(['cu', 'ru', 'hbu']),
   port: positiveIntSchema,
   ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
 })
@@ -59,20 +59,22 @@ const serverConfigSchema = domainConfigSchema.extend({
 const preprocessUnitMode = (envConfig) => {
   const { UNIT_MODE } = envConfig
 
-  if (UNIT_MODE === 'cu') return envConfig
-
   /**
    * A Read Unit's primary concern is serving dry-runs,
    * and so does not create checkpoints and does not cache evaluation
    * results to be served later.
    */
-  return {
-    ...envConfig,
-    DISABLE_PROCESS_EVALUATION_CACHE: true,
-    DISABLE_PROCESS_CHECKPOINT_CREATION: true,
-    DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
-    PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: 0
+  if (UNIT_MODE === 'ru') {
+    return {
+      ...envConfig,
+      DISABLE_PROCESS_EVALUATION_CACHE: true,
+      DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+      DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+      PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: 0
+    }
   }
+
+  return envConfig
 }
 
 /**
@@ -136,6 +138,7 @@ const CONFIG_ENVS = {
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
+    HB_URL: process.env.HB_URL,
     DB_URL: process.env.DB_URL || 'ao-cache',
     WALLET: process.env.WALLET,
     WALLET_FILE: process.env.WALLET_FILE,
@@ -188,6 +191,7 @@ const CONFIG_ENVS = {
     CHECKPOINT_GRAPHQL_URL: process.env.CHECKPOINT_GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
     UPLOADER_URL: process.env.UPLOADER_URL || 'https://up.arweave.net',
+    HB_URL: process.env.HB_URL,
     DB_URL: process.env.DB_URL || 'ao-cache',
     WALLET: process.env.WALLET,
     WALLET_FILE: process.env.WALLET_FILE,

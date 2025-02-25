@@ -79,6 +79,7 @@ export const domainConfigSchema = z.object({
    * The connection string to the database
    */
   DB_URL: z.string().min(1, 'DB_URL must be set to the database connection string'),
+  HB_URL: z.string().url().nullish(),
   /**
    * The wallet for the CU
    */
@@ -242,7 +243,7 @@ export const processSchema = z.object({
   signature: z.string().nullish(),
   data: z.any().nullish(),
   anchor: z.string().nullish(),
-  owner: ownerSchema,
+  owner: ownerSchema.partial({ key: true }),
   tags: z.array(rawTagSchema),
   block: blockSchema
 })
@@ -454,6 +455,7 @@ export const evaluationSchema = z.object({
     Assignments: z.array(z.any()).nullish(),
     Spawns: z.array(z.any()).nullish(),
     Output: z.any().nullish(),
+    Patches: z.array(z.any()).nullish(),
     GasUsed: z.number().nullish(),
     Error: z.any().nullish()
   })
