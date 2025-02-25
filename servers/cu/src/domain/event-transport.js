@@ -67,7 +67,6 @@ class NonceTracker {
         this.db = this.createDatabase()
       } else {
         this.db = new Database(this.dbFilePath)
-        this.loadLargestNonces()
       }
       this.loadLargestNonces()
       this.updateNonceStmt = this.db.prepare(`
@@ -115,8 +114,6 @@ export class HoneycombTransport {
 
     if (nonce > currentMaxNonce) {
       events.forEach((event) => {
-        const honeyEvent = this.honey.newEvent()
-        honeyEvent.add({
         const honeyEvent = this.honey.newEvent()
         honeyEvent.add({
           processId,
