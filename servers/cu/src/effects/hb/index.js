@@ -317,6 +317,18 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
       )
     }
 
+    /**
+     * The HB SU has a bug where some boolean values
+     * are being sent as string values like 'true'
+     * and 'false', which will always be truthy.
+     *
+     * So as a workaround, we check whether the value is 'false'
+     * and coerce to false, and otherwise cast to a boolean.
+     */
+    function toBoolean (value) {
+      return value === 'false' ? false : Boolean(value)
+    }
+
     return async function * scheduled () {
       let curPage = []
       let curFrom = from
@@ -336,8 +348,8 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           .then(({ page_info, edges }) => {
             total += edges.length
             curPage = edges
-            hasNextPage = page_info.has_next_page
-            curFrom = page_info.has_next_page && pipe(
+            hasNextPage = toBoolean(page_info.has_next_page)
+            curFrom = hasNextPage && pipe(
               last,
               path(['cursor'])
             )(edges)
