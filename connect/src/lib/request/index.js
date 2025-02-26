@@ -84,7 +84,7 @@ export function requestWith (env) {
       .bimap(errFrom, identity)
 
     return (
-      retry(operation, { path: `/~${device}`, device, ...fields, method: fields.method ?? method }, 1)
+      retry(operation, { path: `/~${device}`, ...fields, method: fields.method ?? method }, 1)
         .toPromise()
     )
   }

@@ -66,7 +66,6 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
           headers,
           body
         }))
-        .then(x => (console.log('headers', headers), headers))
       }
       ))
       .chain(fromPromise(async ({ path, method, headers, body }) =>
@@ -276,7 +275,7 @@ export function queryResultsWith ({ fetch, HB_URL, logger, signer }) {
     // them using a promise.all
     return of().chain(fromPromise(async () => {
       // TODO: need to figure out how best to pass this from client
-      const processId = 'Vj1efidjweGtv7YVDmD1rUEd7cUK7MCr6OQ6Jv04Qd0'
+      // const processId = 'Vj1efidjweGtv7YVDmD1rUEd7cUK7MCr6OQ6Jv04Qd0'
       const { headers, body } = await encodeDataItem({ processId })
       // headers.append('slot+integer', id)
       headers.append('accept', 'application/json')
