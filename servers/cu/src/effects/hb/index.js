@@ -369,7 +369,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     }
   }
 
-  function mapAoMessage ({ processId, processBlock, assignmentId, hashChain, processOwner, processTags, moduleId, moduleOwner, moduleTags, logger }) {
+  function mapAoMessage ({
+    processId, processBlock, assignmentId, hashChain, from, isColdStart,
+    processOwner, processTags, moduleId, moduleOwner, moduleTags, logger
+  }) {
     const AoGlobal = {
       Process: { Id: processId, Owner: processOwner, Tags: processTags },
       Module: { Id: moduleId, Owner: moduleOwner, Tags: moduleTags }
@@ -389,6 +392,14 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     let simulateError = false
     let prevAssignmentId = assignmentId
     let prevHashChain = hashChain
+    /**
+     * On a cold start, we include evaluating slot 0
+     * and so the expected slot should increment from 0.
+     *
+     * Otherwise (not a cold start), the expected slot should
+     * succeed 'from' and so our expected is 'from' + 1
+     */
+    let expectedNonce = isColdStart ? 0 : parseInt(`${from}`) + 1
     return async function * (edges) {
       for await (const edge of edges) {
         const scheduled = pipe(
@@ -402,6 +413,12 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
             return scheduled
           }
         )(edge)
+
+        if (expectedNonce !== scheduled.message.Nonce) {
+          const err = new Error(`Non-incrementing slot: expected ${expectedNonce} but got ${scheduled.message.Nonce}`)
+          err.status = 422
+          throw err
+        }
 
         if (simulateError) {
           logger('<SIMULATED ERROR> message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
@@ -419,6 +436,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           }
         }
 
+        expectedNonce = expectedNonce + 1
         prevAssignmentId = scheduled.assignmentId
         prevHashChain = scheduled.message['Hash-Chain']
 
