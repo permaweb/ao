@@ -299,14 +299,19 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
    * When the currently fetched page is drained, the next page is fetched
    * dynamically
    */
-  function fetchAllPages ({ suUrl, processId, from, to }) {
+  function fetchAllPages ({ suUrl, processId, isColdStart, from, to }) {
     /**
      * The HB SU 'from' and 'to' are both inclusive.
      * So when we pass from (which is the cached most recent evaluated message)
      * we need to increment by 1, so as to not include the message we have
      * already evaluated.
+     *
+     * But in the case of a cold start, we _do_ need to include the process
+     * message and so do not increment by 1.
+     *
+     * Similar logic can be found below when checking for the expected nonce
      */
-    if (from && from > 0) from = from + 1
+    if (!isColdStart) from = from + 1
 
     async function fetchPage ({ from }) {
       const params = toParams({ processId, from, to, pageSize })
@@ -425,15 +430,18 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
   return (args) => Promise.resolve(args)
     .then(({
       suUrl, processId, block: processBlock, owner: processOwner, tags: processTags,
-      moduleId, moduleOwner, moduleTags, fromOrdinate, toOrdinate, assignmentId, hashChain
+      moduleId, moduleOwner, moduleTags, fromOrdinate, toOrdinate, assignmentId, hashChain,
+      isColdStart
     }) => {
       return [
-        Readable.from(fetchAllPages({ suUrl, processId, from: fromOrdinate, to: toOrdinate })()),
+        Readable.from(fetchAllPages({ suUrl, processId, isColdStart, from: fromOrdinate, to: toOrdinate })()),
         Transform.from(mapAoMessage({
           processId,
           processBlock,
           assignmentId,
           hashChain,
+          from: fromOrdinate,
+          isColdStart,
           processOwner,
           processTags,
           moduleId,
