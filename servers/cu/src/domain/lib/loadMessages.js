@@ -491,7 +491,8 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
           to: ctx.to, // could be undefined
           toOrdinate: ctx.toOrdinate, // could be undefined
           assignmentId: ctx.mostRecentAssignmentId,
-          hashChain: ctx.mostRecentHashChain
+          hashChain: ctx.mostRecentHashChain,
+          isColdStart: ctx.isColdStart
         })
       )
 }

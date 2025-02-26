@@ -189,7 +189,8 @@ export const loadMessagesSchema = z.function()
       to: z.coerce.number().nullish(),
       toOrdinate: z.coerce.number().nullish(),
       assignmentId: z.string().nullish(),
-      hashChain: z.string().nullish()
+      hashChain: z.string().nullish(),
+      isColdStart: z.boolean()
     })
   )
   /**

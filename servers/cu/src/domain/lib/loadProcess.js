@@ -12,6 +12,7 @@ import { findEvaluationSchema, findLatestProcessMemorySchema, saveLatestProcessM
  * is always added to context
  */
 const ctxSchema = z.object({
+  isColdStart: z.boolean(),
   /**
    * The ordinate of the scheduled message we are
    * evaluating up to.
@@ -98,7 +99,8 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
           ordinate: evaluation.ordinate,
           fromBlockHeight: evaluation.blockHeight,
           fromCron: evaluation.cron,
-          exact: true
+          exact: true,
+          isColdStart: false
         }
       })
       .bimap(() => ctx, identity)
@@ -132,13 +134,15 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
           found.ordinate === ctx.ordinate &&
           found.cron === ctx.cron
 
+        const isColdStart = ['cold_start'].includes(found.src)
+
         return of()
           .chain(() => {
             /**
              * Nothing to backfill in-memory cache with,
              * so simply noop
              */
-            if (['cold_start'].includes(found.src)) return Resolved(found)
+            if (isColdStart) return Resolved(found)
             if (['memory'].includes(found.src) && !found.fromFile) return Resolved(found)
 
             /**
@@ -187,7 +191,8 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
              * So we still signal to the caller whether an exact match
              * was found, for potential optimizations.
              */
-            exact
+            exact,
+            isColdStart
           }))
       })
   }

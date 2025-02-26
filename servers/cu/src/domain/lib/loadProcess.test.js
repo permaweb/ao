@@ -35,6 +35,7 @@ describe('loadProcess', () => {
     assert.equal(res.ordinate, '0')
     assert.equal(res.id, PROCESS)
     assert.equal(res.toOrdinate, 10)
+    assert.ok(res.isColdStart)
   })
 
   test('use exact match from db', async () => {
