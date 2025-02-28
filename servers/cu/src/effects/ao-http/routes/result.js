@@ -1,4 +1,4 @@
-import { compose } from 'ramda'
+import { compose, pipe, prop, sum, values } from 'ramda'
 import { z } from 'zod'
 
 import { busyIn } from '../../../domain/utils.js'
@@ -13,6 +13,8 @@ const inputSchema = z.object({
   messageUid: z.string().min(1, 'a message unique identifier is required'),
   processId: z.string().min(1, 'a process-id query parameter is required')
 })
+
+const gatherStatCounts = pipe(prop('messages'), values, sum)
 
 export const withResultRoutes = app => {
   app.get(
@@ -48,7 +50,45 @@ export const withResultRoutes = app => {
           return busyIn(
             noBusy ? 0 : BUSY_THRESHOLD,
             readResult(input)
-              .map((output) => [output])
+              .map((result) => {
+                const { output, last, isColdStart, exact, stats } = result
+
+                /**
+                 * Set various headers that contain metadata concerning the eval
+                 * stream
+                 */
+                const cacheableHeaders = []
+
+                if (last.id) cacheableHeaders.push(['Message', last.id])
+                cacheableHeaders.push(['timestamp', last.timestamp])
+                cacheableHeaders.push(['block-height', last.blockHeight])
+                cacheableHeaders.push(['slot', last.ordinate])
+
+                const aoTypes = [
+                  ['timestamp', 'integer'],
+                  ['block-height', 'integer'],
+                  ['slot', 'integer'],
+                  ['cold-start', 'atom'],
+                  ['cu-cached', 'atom'],
+                  ['eval-stream-length', 'integer']
+                ].map(t => t.join('='))
+                cacheableHeaders.push(['ao-types', aoTypes.join(',')])
+
+                /**
+                 * Some headers ought not be cached on the edge,
+                 * as they have to do with this specific evaluation stream
+                 * -- this specific request
+                 *
+                 * So we set them here, so that they are not included as part
+                 * of subsequent cached responses, but still included
+                 * on this specific response
+                 */
+                res.header('cold-start', isColdStart)
+                res.header('cu-cached', exact)
+                res.header('eval-stream-length', gatherStatCounts(stats))
+
+                return [output, cacheableHeaders]
+              })
               .toPromise(),
             () => {
               res.status(202)

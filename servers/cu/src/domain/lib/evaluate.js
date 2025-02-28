@@ -26,7 +26,7 @@ const ctxSchema = z.object({
     timestamp: z.coerce.number(),
     blockHeight: z.coerce.number(),
     ordinate: z.coerce.string()
-  })
+  }).passthrough()
 }).passthrough()
 
 const toEvaledCron = ({ timestamp, cron }) => `${timestamp}-${cron}`
@@ -339,9 +339,15 @@ export function evaluateWith (env) {
         return {
           output: prev,
           last: {
+            /**
+             * id could be undefined, since the latest message evaluated
+             * could have been a Cron Message, and so will not have an 'id'.
+             */
+            id: pathOr(undefined, ['message', 'Id'], prev),
             timestamp: pathOr(ctx.from, ['message', 'Timestamp'], prev),
             blockHeight: pathOr(ctx.fromBlockHeight, ['message', 'Block-Height'], prev),
-            ordinate: pathOr(ctx.ordinate, ['ordinate'], prev)
+            ordinate: pathOr(ctx.ordinate, ['ordinate'], prev),
+            cron: pathOr(ctx.fromCron, ['cron'], prev)
           }
         }
       }))

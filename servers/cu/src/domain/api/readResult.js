@@ -43,7 +43,25 @@ export function readResultWith (env) {
         cron: undefined,
         needsOnlyMemory: false
       }))
-      .map((res) => res.output)
-      .map(omit(['Memory']))
+      .map((res) => ({
+        output: omit(['Memory'], res.output),
+        last: res.exact
+          /**
+           * The message was cached, and so not eval stream
+           * was spun up, so map the cached value to the
+           * shape of 'last'
+           */
+          ? {
+              id: res.messageId,
+              timestamp: res.from,
+              blockHeight: res.fromBlockHeight,
+              ordinate: res.ordinate,
+              cron: res.fromCron
+            }
+          : res.last,
+        isColdStart: res.isColdStart,
+        exact: res.exact,
+        stats: res.stats
+      }))
   }
 }
