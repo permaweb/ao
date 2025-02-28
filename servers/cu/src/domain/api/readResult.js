@@ -10,7 +10,7 @@ import { loadMessageMetaWith } from '../lib/loadMessageMeta.js'
  * @typedef Result
  *
  * @typedef ReadResultArgs
- * @property {string} messageTxId
+ * @property {string} messageUid
  *
  * @callback ReadResult
  * @param {ReadResultArgs} args
@@ -23,12 +23,12 @@ export function readResultWith (env) {
   const loadMessageMeta = loadMessageMetaWith(env)
   const readState = readStateWith(env)
 
-  return ({ processId, messageTxId }) => {
-    return of({ processId, messageTxId })
+  return ({ processId, messageUid }) => {
+    return of({ processId, messageUid })
       .chain(loadMessageMeta)
       .chain(res => readState({
         processId: res.processId,
-        messageId: messageTxId,
+        messageId: messageUid,
         to: res.timestamp,
         /**
          * The ordinate for a scheduled message is it's nonce
@@ -43,7 +43,25 @@ export function readResultWith (env) {
         cron: undefined,
         needsOnlyMemory: false
       }))
-      .map((res) => res.output)
-      .map(omit(['Memory']))
+      .map((res) => ({
+        output: omit(['Memory'], res.output),
+        last: res.exact
+          /**
+           * The message was cached, and so not eval stream
+           * was spun up, so map the cached value to the
+           * shape of 'last'
+           */
+          ? {
+              id: res.messageId,
+              timestamp: res.from,
+              blockHeight: res.fromBlockHeight,
+              ordinate: res.ordinate,
+              cron: res.fromCron
+            }
+          : res.last,
+        isColdStart: res.isColdStart,
+        exact: res.exact,
+        stats: res.stats
+      }))
   }
 }

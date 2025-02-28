@@ -14,9 +14,10 @@ This is an spec compliant `ao` Compute Unit, implemented using NodeJS
 - [Project Structure](#project-structure)
   - [Business Logic](#business-logic)
     - [Driven Adapters](#driven-adapters)
+    - [Driving Adapter](#driving-adapter)
+      - [Routes](#routes)
+        - [Route Middleware](#route-middleware)
     - [Entrypoint](#entrypoint)
-  - [Routes](#routes)
-    - [Middleware](#middleware)
 - [System Requirements](#system-requirements)
 
 <!-- tocstop -->
@@ -140,7 +141,8 @@ There are a few environment variables that you can set. Besides
 - `PROCESS_CHECKPOINT_TRUSTED_OWNERS`: A list of wallets whose checkpoints are
   trusted and the CU can start from
 - `DEFAULT_LOG_LEVEL`: the logging level to use (defaults to `debug`)
-- `LOG_CONFIG_PATH`: the path to the file used to dynamically set the logging level (see [here](#dynamically-change-the-log-level))
+- `LOG_CONFIG_PATH`: the path to the file used to dynamically set the logging
+  level (see [here](#dynamically-change-the-log-level))
 
 ## Tests
 
@@ -177,11 +179,11 @@ If you'd like to dynamically change the log level on a running CU, you may set
 the desired level in a `.loglevel` file in the working directory. The CU will
 automatically adjust its logging level accordingly, for all new logs.
 
-If the `.loglevel` file does not exist, is empty, the logging level will be reset
-to the `DEFAULT_LOG_LEVEL`.
+If the `.loglevel` file does not exist, is empty, the logging level will be
+reset to the `DEFAULT_LOG_LEVEL`.
 
-> You can also specify the `LOG_CONFIG_PATH` environment variable to configure
-> a different file to use for dynamically setting the log level
+> You can also specify the `LOG_CONFIG_PATH` environment variable to configure a
+> different file to use for dynamically setting the log level
 
 ## Manually Trigger Checkpointing
 
@@ -232,31 +234,33 @@ API. Thus our unit tests are simoultaneously contract tests.
 
 All driven adapters are located in `effects`
 
-`effects` contains implementations, of the contracts in `dal.js`, for
-various platforms. The unit tests for the implementations in `effects` also
-import contracts from `domain/dal.js` to help ensure that the implementation properly
+`effects` contains implementations, of the contracts in `dal.js`, for various
+platforms. The unit tests for the implementations in `effects` also import
+contracts from `domain/dal.js` to help ensure that the implementation properly
 satisfies the API.
 
-#### Entrypoint
+#### Driving Adapter
 
-Finally, the entrypoint `bootstrap.js` sets up the appropriate
-implementations from `effects` and injects them into the public apis from `domain/apis`.
+All driving adapters, which is to say the public API, are also located in
+effects.
 
-Anything outside of domain should only ever import from the top level of `domain/*` or
-`domain/apis/*`.
+The driving adapter is responsible for receving `domain` and returning an
+interface to `start` and `stop` the application. The driving adapter is
+responsible for injecting the `domain` into whereever it needs to, from the
+public API it exposes.
 
-### Routes
+##### Routes
 
-All public routes exposed by the `ao` Compute Unit can be found in `/routes`.
-Each route is composed in `/route/index.js`, which is then composed further in
-`app.js`, the Fastify server. This is the Driving Adapter.
+All public routes are provided by the driving Adapter. For example, the
+`effects/ao-http` adapter exposes a public API that can be consumed over HTTP
+and whose interface is understood by other AO units.
 
-#### Middleware
+###### Route Middleware
 
-This `ao` Compute Unit uses simple function composition to achieve middleware
-behavior on routes. This allows for a more idiomatic developer experience -- if
-an error occurs, it can simply be thrown, which bubbles and is caught by a
-middleware that is composed at the top (see `withErrorHandler.js`).
+This `ao-http` driving adapter uses simple function composition to achieve middleware
+behavior on Driving adapter routes. This allows for a more idiomatic developer
+experience -- if an error occurs, it can simply be thrown, which bubbles and is
+caught by a middleware that is composed at the top.
 
 In fact, our routes don't event import `fastify`, and instead are injected an
 instance of `fastify` to mount routes onto.
@@ -264,10 +268,12 @@ instance of `fastify` to mount routes onto.
 > `fastify` middleware is still leveraged, it is abstracted away from the
 > majority of the developer experience, only existing in `app.js`
 
-Business logic is injected into routes via a composed middleware `withDomain.js`
-that attached `config` and business logic apis to `req.domain`. This is how
-routes call into business logic, thus completing the Ports and Adapters
-Architecture.
+#### Entrypoint
+
+Finally, the entrypoint `app.js` builds the appropriate effects based on the
+`UNIT_MODE`, then passes those effects into `domain/index.js` that will then
+bootstrap the application. `app.js` then starts the application, thus completing
+the Ports and Adapters Architecture.
 
 ## System Requirements
 

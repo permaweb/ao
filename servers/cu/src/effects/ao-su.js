@@ -267,7 +267,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
      */
     const isHashChainValidationEnabled = processBlock.height >= 1440000
     if (!isHashChainValidationEnabled) {
-      logger('HashChain validation disabled for old process "%s" at block [%j]', [processId, processBlock])
+      logger('HashChain validation disabled for old process "%s" at block [%j]', processId, processBlock)
     }
 
     // Set this to simulate a stream error
@@ -433,15 +433,15 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
 
   const mapMeta = ifElse(has('assignment'), meta, legacyMeta)
 
-  return async ({ suUrl, processId, messageTxId }) => {
+  return async ({ suUrl, processId, messageUid }) => {
     return backoff(
-      () => fetch(`${suUrl}/${messageTxId}?process-id=${processId}`, { method: 'GET' }).then(okRes),
-      { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageTxId })})` }
+      () => fetch(`${suUrl}/${messageUid}?process-id=${processId}`, { method: 'GET' }).then(okRes),
+      { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
     )
       .catch(async (err) => {
         logger(
           'Error Encountered when loading message meta for message "%s" to process "%s" from SU "%s"',
-          messageTxId, processId, suUrl
+          messageUid, processId, suUrl
         )
         throw new Error(`Error Encountered when loading message from Scheduler Unit: ${await strFromFetchError(err)}`)
       })

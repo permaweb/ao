@@ -281,32 +281,53 @@ export async function busyIn (millis, p, busyFn) {
 }
 
 export function isLaterThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp || 0}`
-  const t2 = `${eval2.timestamp || 0}`
   /**
-   * timestamps are equal some might be two crons on overlapping interval,
-   * so compare the crons
+   * One of the messages is a cron produced
+   * message, so we must compare timestamps
+   * instead
    */
-  if (t2 === t1) return (eval2.cron || '') > (eval1.cron || '')
+  if (eval2.cron || eval1.cron) {
+    const t1 = parseInt(`${eval1.timestamp || 0}`)
+    const t2 = parseInt(`${eval2.timestamp || 0}`)
+    /**
+     * timestamps are equal some might be two crons on overlapping interval,
+     * so compare the crons
+     */
+    if (t2 === t1) return (eval2.cron || '') > (eval1.cron || '')
+    return t2 > t1
+  }
 
-  return t2 > t1
+  const o1 = parseInt(eval1.ordinate)
+  const o2 = parseInt(eval2.ordinate)
+  return o2 > o1
 }
 
 export function isEarlierThan (eval1, eval2) {
-  const t1 = `${eval1.timestamp || 0}`
-  const t2 = `${eval2.timestamp || 0}`
   /**
-   * timestamps are equal some might be two crons on overlapping interval,
-   * so compare the crons
+   * One of the messages is a cron produced
+   * message, so we must compare timestamps
+   * instead
    */
-  if (t2 === t1) return (eval2.cron || '') < (eval1.cron || '')
+  if (eval2.cron || eval1.cron) {
+    const t1 = parseInt(`${eval1.timestamp || 0}`)
+    const t2 = parseInt(`${eval2.timestamp || 0}`)
+    /**
+     * timestamps are equal some might be two crons on overlapping interval,
+     * so compare the crons
+     */
+    if (t2 === t1) return (eval2.cron || '') < (eval1.cron || '')
+    return t2 > t1
+  }
 
-  return t2 < t1
+  const o1 = parseInt(eval1.ordinate)
+  const o2 = parseInt(eval2.ordinate)
+
+  return o2 < o1
 }
 
 export function isEqualTo (eval1, eval2) {
-  const t1 = `${eval1.timestamp}`
-  const t2 = `${eval2.timestamp}`
+  const t1 = parseInt(`${eval1.timestamp}`)
+  const t2 = parseInt(`${eval2.timestamp}`)
 
   return t2 === t1 &&
     (eval1.ordinate === eval2.ordinate) &&
@@ -535,6 +556,12 @@ const cache = new LRUCache({ max: 1000 })
  * @returns {string}
  */
 export const addressFrom = ({ address, key }) => {
+  /**
+   * If we do not have the key, then the address
+   * MUST be what we use
+   */
+  if (!key) return address
+
   const cKey = `${address}-${key}`
   if (cache.has(cKey)) return cache.get(cKey)
 
@@ -553,10 +580,4 @@ export const addressFrom = ({ address, key }) => {
   cache.set(cKey, _address)
 
   return _address
-}
-
-export function readableToAsyncGenerator (stream) {
-  return (async function * () {
-    for await (const d of stream) yield d
-  })()
 }

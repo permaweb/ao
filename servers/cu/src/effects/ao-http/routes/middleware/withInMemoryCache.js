@@ -1,7 +1,5 @@
 import { LRUCache } from 'lru-cache'
 
-import { logger as _logger } from '../../logger.js'
-
 /**
  * A middleware that provides a response from an In-Memory LRUCache.
  *
@@ -33,9 +31,26 @@ export const withInMemoryCache = ({
     sizeCalculation: (value) => JSON.stringify(value).length
   })
 
-  const logger = _logger.child('InMemoryCache')
+  let logger
+
+  const response = (res, [result, headers = []], isCached = false) => {
+    if (headers) {
+      headers.forEach(([name, value]) => res.header(name, value))
+    }
+
+    /**
+     * cached on the endpoint edge
+     */
+    if (isCached) res.header('cu-cached', true)
+    /**
+     * TODO: maybe add Cache-Control headers as well,
+     * so that clients can also cache the request
+     */
+    res.send(result)
+  }
 
   return async (req, res) => {
+    logger = logger || req.logger.child('InMemoryCache')
     const key = keyer(req)
 
     /**
@@ -47,16 +62,12 @@ export const withInMemoryCache = ({
     const cached = cache.get(key, { status })
     logger(`"%s" for key ${key}`, status.get.toUpperCase())
 
-    if (cached) return res.send(cached)
+    if (cached) return response(res, cached, true)
 
     await loader({ req, res })
-      .then(([result, noCache]) => {
-        if (!noCache) cache.set(key, result)
-        /**
-         * TODO: maybe add Cache-Control headers as well,
-         * so that clients can also cache the request
-         */
-        res.send(result)
+      .then(([result, headers, noCache = false]) => {
+        if (!noCache) cache.set(key, [result, headers])
+        response(res, [result, headers])
       })
       .catch((err) => {
         if (evict(req, err)) {

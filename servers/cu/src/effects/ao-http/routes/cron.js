@@ -1,8 +1,10 @@
 import { always, compose, identity } from 'ramda'
 import { z } from 'zod'
 
-import { withMetrics, withMiddleware, withProcessRestrictionFromPath } from './middleware/index.js'
+import { withErrorHandler } from './middleware/withErrorHandler.js'
 import { withCuMode } from './middleware/withCuMode.js'
+import { withMetrics } from './middleware/withMetrics.js'
+import { withProcessRestrictionFromPath } from './middleware/withProcessRestriction.js'
 
 /**
  * TODO: could be moved into a route utils or middleware
@@ -37,7 +39,7 @@ export const withCronRoutes = app => {
   app.get(
     '/cron/:processId',
     compose(
-      withMiddleware,
+      withErrorHandler,
       withCuMode,
       withProcessRestrictionFromPath,
       withMetrics({ tracesFrom: (req) => ({ process_id: req.params.processId }) }),

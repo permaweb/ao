@@ -21,7 +21,7 @@ describe('loadMessageMeta', () => {
         assert.deepStrictEqual(args, {
           suUrl: 'https://foo.bar',
           processId: 'process-123',
-          messageTxId: 'message-tx-123'
+          messageUid: 'message-tx-123'
         })
         return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
       },
@@ -40,7 +40,7 @@ describe('loadMessageMeta', () => {
       logger
     })
 
-    const res = await loadMessageMeta({ processId: 'process-123', messageTxId: 'message-tx-123' })
+    const res = await loadMessageMeta({ processId: 'process-123', messageUid: 'message-tx-123' })
       .toPromise()
 
     assert.deepStrictEqual(res, { processId: 'process-123', timestamp: 1697574792000, nonce: 1 })
@@ -69,7 +69,7 @@ describe('loadMessageMeta', () => {
         assert.deepStrictEqual(args, {
           suUrl: 'https://from.cache',
           processId: 'process-123',
-          messageTxId: 'message-tx-123'
+          messageUid: 'message-tx-123'
         })
         return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
       },
@@ -88,7 +88,7 @@ describe('loadMessageMeta', () => {
       logger
     })
 
-    await loadMessageMeta({ processId: 'process-123', messageTxId: 'message-tx-123' })
+    await loadMessageMeta({ processId: 'process-123', messageUid: 'message-tx-123' })
       .toPromise()
   })
 
@@ -122,7 +122,7 @@ describe('loadMessageMeta', () => {
       logger
     })
 
-    const res = await loadMessageMeta({ processId: 'process-123', messageTxId: 'process-123' })
+    const res = await loadMessageMeta({ processId: 'process-123', messageUid: 'process-123' })
       .toPromise()
 
     assert.deepStrictEqual(res, {
