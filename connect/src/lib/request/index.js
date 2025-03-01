@@ -69,7 +69,7 @@ export function requestWith (env) {
       }, of)
 
     const operation = (ctx) => verifyInput(ctx)
-      .map(handleFormat(mode))
+      .map(handleFormat(mode, device))
       .chain(dispatch({ request, spawn, message, result, dryrun, signer }))
       .map((_) => {
         logger(
@@ -78,12 +78,11 @@ export function requestWith (env) {
         )
         return _
       })
-      // .map(x => (console.log(x.Messages), x))
-      // .chain(getResult(request))
-      .map(transformToMap(ctx.device))
+      .map(transformToMap(device))
       .bimap(errFrom, identity)
 
     return (
+      
       retry(operation, { path: `/~${device}`, ...fields, method: fields.method ?? method }, 1)
         .toPromise()
     )

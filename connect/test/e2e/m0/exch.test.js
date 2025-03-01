@@ -66,7 +66,7 @@ test.skip('m2: check balance and transfer token', async () => {
   assert.equal(result.Messages[0].Balance, '10000000000000000')
 })
 
-test.skip('m0: check balance and transfer token', async () => {
+test('m0: check balance and transfer token', async () => {
   const { request } = connect({
     MODE: 'mainnet',
     device: 'relay@1.0',

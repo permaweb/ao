@@ -37,7 +37,7 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
           })
       )(ctx)
       .chain(fromPromise(msg => result({process: ctx.dataItem.target, message: msg})))
-      .map(res => (console.log(res), res))
+      .map(res => ({res}))
     }
     if (ctx.type === 'Process' && ctx.dataItem) {
      

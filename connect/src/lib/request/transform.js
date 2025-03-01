@@ -1,12 +1,12 @@
-export const transformToMap = (mode) => (ctx) => {
+export const transformToMap = (device) => (ctx) => {
   const result = ctx.res
   const map = {}
 
-  if (mode === 'relay@1.0') {
+  if (device === 'relay@1.0') {
     if (typeof result === 'string') {
       return result
     }
-
+  
     if (result.Output && result.Output.data) {
       map.Output = result.Output
     }
