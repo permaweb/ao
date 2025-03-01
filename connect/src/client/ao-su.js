@@ -22,8 +22,11 @@ export const getMessageById = ({fetch, locate }) => {
 }
 
 export const getLastSlotWith = ({ fetch, locate }) => {
-  return async ({ processId}) => {
-    const from = (Date.now()) - (10 * 60 * 1000)
+  return async ({ processId, since }) => {
+    if (!since) {
+      since = (10 * 60 * 1000) //  10 minutes
+    }
+    const from = (Date.now()) - since
     const suUrl =  (await locate(processId)).url
     return fetch(`${suUrl}/${processId}?process-id=${processId}&limit=100&from=${from}`)
       .then(res => res.json())

@@ -1,3 +1,13 @@
+import { z } from 'zod'
+
+const inputSchema = z
+  .object({
+    processId: z.string(),
+    since: z.number().optional()
+  })
+  .passthrough()
+
+
 /**
  * @callback ProcessId
  * @param {Record<string, any>} fields
@@ -12,6 +22,7 @@ export function processIdWith (env) {
      */
     const processId = env.processId
     return (fields) => {
+        fields = inputSchema.parse(fields)
         return processId(fields)
     }
 

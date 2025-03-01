@@ -23,7 +23,7 @@ export function messageIdWith (env) {
      */
     const getMessageId = env.getMessageId
     return (fields) => {
-
+        fields = inputSchema.parse(fields)
         return getMessageId(fields)
     }
 
