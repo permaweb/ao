@@ -1,11 +1,15 @@
-import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
+import { connect as schedulerUtilsConnect, locate } from '@permaweb/ao-scheduler-utils'
 
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as GatewayClient from './client/gateway.js'
 import * as HbClient from './client/hb.js'
+import * as SuClient from './client/ao-su.js'
+
 import { createLogger } from './logger.js'
 
+import { messageIdWith } from './lib/message-id/index.js'
+import { processIdWith } from './lib/process-id/index.js'
 import { requestWith } from './lib/request/index.js'
 import { resultWith } from './lib/result/index.js'
 import { messageWith } from './lib/message/index.js'
@@ -433,6 +437,17 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
         signer
       })
 
+    const getMessageById = messageIdWith({
+      getMessageId: SuClient.getMessageById({ fetch, locate })
+    })
+
+    const getLastSlot = processIdWith({
+      processId: SuClient.getLastSlotWith({
+        fetch,
+        locate
+      })
+    })
+
     const results = resultsWith({
       signer,
       queryResults,
@@ -573,6 +588,8 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     return {
       MODE: isRelayMode ? 'relay' : 'mainnet',
       request,
+      getLastSlot,
+      getMessageById,
       get,
       post,
       result,

@@ -17,5 +17,6 @@ const WALLET = {
 test('get my balance for node', async () => {
   const { getNodeBalance } = connect({ MODE: 'mainnet', URL: 'https://relay.ao-hb.xyz', signer: createSigner(WALLET) })
   const balance = await getNodeBalance()
+  console.log(balance)
   assert.ok(Number(balance) > 0)
 })

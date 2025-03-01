@@ -4,8 +4,8 @@ if mode == 'legacy' then request should create an ans-104 from fields
 if mode == 'relay' then request should create a hybrid ans-104/httpsig from fields
 if mode == 'process' then request should create a pure httpsig from fields
   */
-export const handleFormat = (mode) => (fields) => {
-  if (mode === 'mainnet' && fields.device === 'relay@1.0') {
+export const handleFormat = (mode, device) => (fields) => {
+  if (mode === 'mainnet' && device === 'relay@1.0') {
     const dataItem = {
       target: fields.Target ?? fields.process,
       anchor: fields.Anchor ?? '',

@@ -14,7 +14,7 @@ export async function encodeDataItem ({ processId, data, tags, anchor }) {
 
   if (processId) obj.target = processId
   if (anchor) obj.anchor = anchor
-  if (tags) tags.forEach(t => { obj[t.name] = t.value })
+  if (tags) tags.forEach(t => { obj[t.name.toLowerCase()] = t.value })
   /**
    * Always ensure the variant is mainnet for hyperbeam
    * TODO: change default variant to be this eventually
@@ -53,20 +53,67 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
-  const logger = _logger.child('request')
+async function hashAndBase64(input) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashBase64 = btoa(String.fromCharCode(...hashArray));
+  return hashBase64;
+}
 
+function extractSignature(header) {
+  const match = header.match(/Signature:\s*'http-sig-[^:]+:([^']+)'/);
+  return match ? match[1] : null;
+}
+
+
+export function processIdWith({ logger: _logger, signer, HB_URL }) {
+  const logger = _logger.child('id')
   return (fields) => {
     const { path, method, ...restFields } = fields
-
     return of({ path, method, fields: restFields })
-      .chain(fromPromise(({ path, method, fields }) =>
-        encode(fields).then(({ headers, body }) => ({
+      .chain(fromPromise(({ path, method, fields }) => {
+        return encode(fields).then(({ headers, body }) => ({
           path,
           method,
           headers,
           body
         }))
+      }
+      ))
+      .chain(fromPromise(async ({ path, method, headers, body }) =>
+        toHttpSigner(signer)(toSigBaseArgs({
+          url: joinUrl({ url: HB_URL, path }),
+          method,
+          headers
+          // this does not work with hyperbeam
+          // includePath: true
+        })).then((req) => ({ ...req, body }))
+      ))
+      .map(logger.tap('Sending HTTP signed message to HB: %o'))
+      .chain(fromPromise(res => {
+        
+        return hashAndBase64(extractSignature(res.headers.Signature))
+      }))
+      .toPromise()
+  }
+}
+
+export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('request')
+
+  return (fields) => {
+    const { path, method, ...restFields } = fields
+    return of({ path, method, fields: restFields })
+      .chain(fromPromise(({ path, method, fields }) => {
+        return encode(fields).then(({ headers, body }) => ({
+          path,
+          method,
+          headers,
+          body
+        }))
+      }
       ))
       .chain(fromPromise(async ({ path, method, headers, body }) =>
         toHttpSigner(signer)(toSigBaseArgs({
@@ -82,26 +129,19 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .chain(fromPromise(({ url, method, headers, body }) => {
           return fetch(url, { method, headers, body, redirect: 'follow' })
             .then(async res => {
-              if (res.status < 300) {
-                const contentType = res.headers.get('content-type')
+              if (res.status >= 300) return res
 
-                if (contentType && contentType.includes('multipart/form-data')) {
-                  return res
-                } else if (contentType && contentType.includes('application/json')) {
-                  const body = await res.json()
-                  return {
-                    headers: res.headers,
-                    body
-                  }
-                } else {
-                  const body = await res.text()
-                  return {
-                    headers: res.headers,
-                    body
-                  }
-                }
+              const contentType = res.headers.get('content-type')
+              if (contentType && contentType.includes('multipart/form-data')) {
+                // TODO: maybe add hbDecode here to decode multipart into maps of { headers, body }
+                return res
+              } else if (contentType && contentType.includes('application/json')) {
+                const body = await res.json()
+                return { headers: res.headers, body }
+              } else {
+                const body = await res.text()
+                return { headers: res.headers, body }
               }
-              return res
             })
         }
         ))
@@ -282,7 +322,7 @@ export function queryResultsWith ({ fetch, HB_URL, logger, signer }) {
     // them using a promise.all
     return of().chain(fromPromise(async () => {
       // TODO: need to figure out how best to pass this from client
-      const processId = 'Vj1efidjweGtv7YVDmD1rUEd7cUK7MCr6OQ6Jv04Qd0'
+      // const processId = 'Vj1efidjweGtv7YVDmD1rUEd7cUK7MCr6OQ6Jv04Qd0'
       const { headers, body } = await encodeDataItem({ processId })
       // headers.append('slot+integer', id)
       headers.append('accept', 'application/json')
@@ -360,6 +400,9 @@ export function relayerWith ({ fetch, logger, HB_URL, signer }) {
     })
 
     return fetch(hb, { ...options, headers: signedHeaders }).then(res => {
+      // const err = new RedirectRequested('Redirect with new format!')
+      // err.device = 'process@1.0'
+      // throw err
       if (res.status === 400) {
         const err = new InsufficientFunds('Insufficient Funds for request!')
         err.price = res.headers.get('price')

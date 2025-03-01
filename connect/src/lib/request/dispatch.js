@@ -1,4 +1,4 @@
-import { fromPromise } from 'hyper-async'
+import { fromPromise, of, Rejected } from 'hyper-async'
 
 export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
   return function (ctx) {
@@ -28,21 +28,19 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
           data: ctx.dataItem.data ?? '',
           signer
         })
-          .then((id) =>
-            result({
-              process: ctx.dataItem.target,
-              message: id
-            }).then(res => ({ res }))
-          )
+          //.then(res => (console.log(res), res))
           .catch((err) => {
             if (err.message.includes('Insufficient funds')) {
-              return { error: 'insufficient-funds' }
+              return Rejected({ error: 'insufficient-funds' })
             }
-            throw err
+            return Rejected(err)
           })
       )(ctx)
+      .chain(fromPromise(msg => result({process: ctx.dataItem.target, message: msg})))
+      .map(res => ({res}))
     }
     if (ctx.type === 'Process' && ctx.dataItem) {
+     
       return fromPromise((ctx) =>
         spawn({
           tags: ctx.dataItem.tags,
@@ -60,33 +58,47 @@ export function dispatch ({ request, spawn, message, result, dryrun, signer }) {
             throw err
           })
       )(ctx)
+      .bichain(err => {
+        console.log(ctx)
+        if (err.name === "RedirectRequested") {
+         // switch devices and resubmit
+         
+        }
+     }, of)
     }
     if (ctx.map) {
       return fromPromise((ctx) => {
+        
         return request(ctx.map)
           .then(res => {
-            if (res.status === 200) {
-              const process = res.headers.get('process')
-              const slot = res.headers.get('slot')
-
-              return request({
-                type: 'Message',
-                path: `${process}/compute&slot+integer=${slot}/results/json`,
-                method: 'POST',
-                target: process,
-                'slot+integer': slot,
-                accept: 'application/json'
-              })
-                .then(res2 => {
-                  // if (!res2.process) {
-                  //   console.log(process, slot)
-                  //   res2.headers.set('process', process)
-                  // }
-                  return ({ res: res2, process, slot })
-                })
-            }
-            return ({ res })
+            // const process = res.headers.get('process')
+            // const slot = res.headers.get('slot')
+            return ({res})
           })
+          // don't get the compute result
+          // .then(res => {
+          //   if (res.status === 200) {
+          //     const process = res.headers.get('process')
+          //     const slot = res.headers.get('slot')
+
+          //     return request({
+          //       type: 'Message',
+          //       path: `${process}/compute&slot+integer=${slot}/results/json`,
+          //       method: 'POST',
+          //       target: process,
+          //       'slot+integer': slot,
+          //       accept: 'application/json'
+          //     })
+          //       .then(res2 => {
+          //         // if (!res2.process) {
+          //         //   console.log(process, slot)
+          //         //   res2.headers.set('process', process)
+          //         // }
+          //         return ({ res: res2, process, slot })
+          //       })
+          //   }
+          //   return ({ res })
+          // })
       })(ctx)
     }
   }

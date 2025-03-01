@@ -1,8 +1,6 @@
 import { test } from 'node:test'
 import * as assert from 'node:assert'
-import { connectWith } from '../../../src/index.common.js'
-import { WalletClient } from '../../../src/client/node/index.js'
-import { createSigner } from '../../../src/client/node/wallet.js'
+import { connect, createSigner } from '../../../src/index.js'
 
 // this is a test wallet do not use for anything other than testing
 const WALLET = {
@@ -17,62 +15,22 @@ const WALLET = {
   qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-test('post: connectWith use mainnet device=relay@1.0 mode process', async () => {
-  const connect = connectWith({
-    createDataItemSigner: WalletClient.createSigner,
-    createSigner: WalletClient.createSigner
-  })
+test('Get Balance From AO Token', async () => {
+  const TOKEN = "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
+  const { getMessageById } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
 
-  const { request } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
-  const Ticker = await request({
-    path: `/schedule`,
-    method: 'POST',
-    type: 'Message',
-    process: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
-    Action: 'Info',
-    'Data-Protocol': 'ao',
-    Variant: 'ao.N.1'
-  })
-  .then(map => map.Messages[0].Ticker)
-
-  assert.equal(Ticker, 'PNTS')
+  const MESSAGE = 'G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0'
+  const PROCESS = '0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'
+  const result = await getMessageById({messageId: MESSAGE, processId: PROCESS})
+  assert.equal(result.message.id, 'G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0')
+  //console.log(result)
 })
 
-test('post: connectWith use mainnet device=relay@1.0 mode to message on a process', async () => {
-  const connect = connectWith({
-    createDataItemSigner: WalletClient.createSigner,
-    createSigner: WalletClient.createSigner
-  })
+test('Get highest slot from AO Token', async () => {
+  const TOKEN = "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
+  const PROCESS = '0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'
+  const { getLastSlot } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
 
-  const { request } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
-  const Error = await request({
-    type: 'Message',
-    path: '/schedule',
-    method: 'POST',
-    process: 'WWjq4e5Oigct0QfBPdVF6a-zDKNMRoGPAojgv5yFcLU',
-    Action: 'Transfer',
-    Quantity: '10000',
-    Recipient: 'cHencOZC-aCbPCDH2tEZ3Lhw3EM5oRw3kxgj-eEgtNc'
-  }).then(map => map.Messages[0].Error)
-
-  assert.equal(Error, 'Insufficient Balance!')
-})
-
-test('post: connectWith use mainnet device=relay@1.0 mode to spawn a process', async () => {
-  const connect = connectWith({
-    createDataItemSigner: WalletClient.createSigner,
-    createSigner: WalletClient.createSigner
-  })
-
-  const { request } = connect({ MODE: 'mainnet', signer: createSigner(WALLET) })
-  const process = await request({
-    Type: 'Process',
-    Name: 'MyNewProcess',
-    Module: 'JArYBF-D8q2OmZ4Mok00sD2Y_6SYEQ7Hjx-6VZ_jl3g',
-    Scheduler: '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
-  })
-  // .then(result => result.Output.text())
-  // console.log(result.Output.text())
-  // .then(map => map)
-  assert.equal(process.length, 43)
+  const result = await getLastSlot({ processId: PROCESS })
+  assert.ok(result > 0)
 })

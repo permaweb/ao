@@ -1,7 +1,8 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { loadProcessMetaWith } from './ao-su.js'
+import { loadProcessMetaWith, getLastSlotWith, getMessageById } from './ao-su.js'
+import { locate } from '@permaweb/ao-scheduler-utils'
 import { loadProcessMetaSchema } from '../dal.js'
 import { createLogger } from '../logger.js'
 
@@ -11,6 +12,28 @@ const SU_URL = globalThis.SU_URL || 'https://su.foo'
 const PROCESS_ID = 'uPKuZ6SABUXvgaEL3ZS3ku5QR1RLwE70V6IUslmZJFI'
 
 describe('ao-su', () => {
+  describe('getMessageById', async () => {
+    const fn = getMessageById({
+     fetch,
+     locate 
+    })
+    const result = await fn({
+      processId: "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc",
+      messageId: "G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0"
+    }) 
+    assert.equal(result.message.id, "G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0")
+ })
+  describe('getLastWith', async () => {
+     const fn = getLastSlotWith({
+      fetch,
+      locate 
+     })
+     const result = await fn({
+       processId: "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
+     }) 
+     //console.log(result)
+     assert.ok(result > 0)
+  })
   describe('loadProcessMeta', () => {
     const tags = [
       {
