@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.76](https://github.com/permaweb/ao/compare/connect@v0.0.75...connect@v0.0.76) (2025-03-01)
+
+
+### Features
+
+* **connect:** add ao-types structured field dict in lieu of converge-type-* fields in hb encode ([8dc5691](https://github.com/permaweb/ao/commit/8dc5691e0ce20d985a6d917002298a0a0f35becb))
+* **connect:** added the stripping of device ([799a6e2](https://github.com/permaweb/ao/commit/799a6e238503f36e5a47d04b4a89aa7d37af928f))
+* **connect:** adding getMessageById and getLastSlot for mainnet mode ([5f9b8ca](https://github.com/permaweb/ao/commit/5f9b8cabc652d1b42718f44b574bea838f44fba2))
+* **connect:** adding mainnet methods making range to find last slot extendable ([5620368](https://github.com/permaweb/ao/commit/562036882ad377d49165623fb337edf03717213b))
+* **connect:** combine ao-types, lifting objects, and max header length, encodings ([e0377d9](https://github.com/permaweb/ao/commit/e0377d9ea233278d221d4339e1299f1256cb312d))
+* **connect:** lift all maps to top level, then encode to multipart ([ea8c57f](https://github.com/permaweb/ao/commit/ea8c57f16987603d480e4942c9849f2788495dd9))
+* **connect:** push messages ([286b893](https://github.com/permaweb/ao/commit/286b893939b4695365eba98fc9a0e286db2c7481))
+* **connect:** take into account ao-types size and conditionally lift as separate part ([971ce48](https://github.com/permaweb/ao/commit/971ce48bd0725968d13f4334805fc9f937505a04))
+
+
+### Bug Fixes
+
+* remove device from all messages unless specified by caller ([54e43ee](https://github.com/permaweb/ao/commit/54e43eec12d699ea8a0a971106059f46600f0d12))
+
 ## [0.0.75](https://github.com/permaweb/ao/compare/connect@v0.0.74...connect@v0.0.75) (2025-02-21)
 
 ## [0.0.74](https://github.com/permaweb/ao/compare/connect@v0.0.73...connect@v0.0.74) (2025-02-20)
