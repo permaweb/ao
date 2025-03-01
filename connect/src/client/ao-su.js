@@ -11,6 +11,29 @@ export const createProcessMetaCache = ({ MAX_SIZE }) => {
   return processMetaCache
 }
 
+export const getMessageById = ({fetch, locate }) => {
+  return async ({processId, messageId}) => {
+    const suUrl = (await locate(processId)).url
+    return fetch(`${suUrl}/${messageId}?process-id=${processId}`)
+      .then(res => res.json())
+
+  }
+
+}
+
+export const getLastSlotWith = ({ fetch, locate }) => {
+  return async ({ processId}) => {
+    const from = (Date.now()) - (10 * 60 * 1000)
+    const suUrl =  (await locate(processId)).url
+    return fetch(`${suUrl}/${processId}?process-id=${processId}&limit=100&from=${from}`)
+      .then(res => res.json())
+      .then(suResult => {
+        return suResult.edges[suResult?.edges?.length - 1]?.node?.assignment?.tags?.find(t => t.name === "Nonce")?.value
+        //return suResult.edges
+      })
+  }
+} 
+
 export const loadProcessMetaWith = ({ logger, fetch, cache = processMetaCache }) => {
   return async ({ suUrl, processId }) => {
     if (cache.has(processId)) return cache.get(processId)

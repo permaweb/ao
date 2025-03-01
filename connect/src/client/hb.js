@@ -53,6 +53,53 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
+async function hashAndBase64(input) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashBase64 = btoa(String.fromCharCode(...hashArray));
+  return hashBase64;
+}
+
+function extractSignature(header) {
+  const match = header.match(/Signature:\s*'http-sig-[^:]+:([^']+)'/);
+  return match ? match[1] : null;
+}
+
+
+export function processIdWith({ logger: _logger, signer, HB_URL }) {
+  const logger = _logger.child('id')
+  return (fields) => {
+    const { path, method, ...restFields } = fields
+    return of({ path, method, fields: restFields })
+      .chain(fromPromise(({ path, method, fields }) => {
+        return encode(fields).then(({ headers, body }) => ({
+          path,
+          method,
+          headers,
+          body
+        }))
+      }
+      ))
+      .chain(fromPromise(async ({ path, method, headers, body }) =>
+        toHttpSigner(signer)(toSigBaseArgs({
+          url: joinUrl({ url: HB_URL, path }),
+          method,
+          headers
+          // this does not work with hyperbeam
+          // includePath: true
+        })).then((req) => ({ ...req, body }))
+      ))
+      .map(logger.tap('Sending HTTP signed message to HB: %o'))
+      .chain(fromPromise(res => {
+        
+        return hashAndBase64(extractSignature(res.headers.Signature))
+      }))
+      .toPromise()
+  }
+}
+
 export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
   const logger = _logger.child('request')
 
