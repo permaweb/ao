@@ -120,6 +120,8 @@ There are a few environment variables that you can set. Besides
   `Checkpoint` creation to the file system. (You must explicitly enable
   `Checkpoint` creation by setting - `DISABLE_PROCESS_FILE_CHECKPOINT_CREATION`
   to `'false'`)
+- `DISABLE_NON_HASH_CHAIN_CHECKPOINTS`: Whether to disable non-hash chain
+  checkpoints. Set to `true` to disable non-hash chain checkpoints.
 - `EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD`: If a process uses this amount of
   gas, then it will immediately create a Checkpoint at the end of the evaluation
   stream.

@@ -348,6 +348,7 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false,
         DIR: 'fake/directory/'
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -500,7 +501,8 @@ describe('ao-process', () => {
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
-        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -618,6 +620,7 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false,
         DIR: 'fake/directory/'
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -759,7 +762,8 @@ describe('ao-process', () => {
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
-        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -859,6 +863,7 @@ describe('ao-process', () => {
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             PROCESS_CHECKPOINT_TRUSTED_OWNERS: ['wallet-123', 'wallet-456'],
+            DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false,
             queryGateway: async ({ query, variables }) => {
               try {
                 assert.deepStrictEqual(variables, { owners: ['wallet-123', 'wallet-456'], processId: 'process-123', limit: 50 })
@@ -993,6 +998,91 @@ describe('ao-process', () => {
         assert.deepStrictEqual(res.ordinate, '11')
       })
 
+      test('should use the latest retrieved checkpoint that is NOT ignored and HAS an assignment and hash-chain', async () => {
+        const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
+          ...deps,
+          queryGateway: async () => ({
+            data: {
+              transactions: {
+                edges: [
+                  edges[0], // node to be used
+                  {
+                    // node to be ignored due to 'ignored' id
+                    node: {
+                      ...edges[0].node,
+                      id: 'ignored',
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: '12' },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  },
+                  {
+                    // node to be ignored due to missing assignment and hash-chain
+                    node: {
+                      ...edges[0].node,
+                      id: 'tx-456',
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp + 2000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: '13' },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  },
+                  {
+                    // node to be ignored due to missing assignment
+                    node: {
+                      ...edges[0].node,
+                      id: 'tx-456',
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp + 3000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: '14' },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  },
+                  {
+                    // node to be ignored due to missing hash-chain
+                    node: {
+                      ...edges[0].node,
+                      id: 'tx-456',
+                      tags: [
+                        { name: 'Module', value: `${cachedEval.moduleId}` },
+                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+                        { name: 'Timestamp', value: `${cachedEval.timestamp + 4000}` },
+                        { name: 'Epoch', value: `${cachedEval.epoch}` },
+                        { name: 'Nonce', value: '15' },
+                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }),
+          IGNORE_ARWEAVE_CHECKPOINTS: ['ignored'],
+          DISABLE_NON_HASH_CHAIN_CHECKPOINTS: true
+        }))
+
+        const res = await findLatestProcessMemory(target)
+
+        assert.deepStrictEqual(res.ordinate, '11')
+      })
+
       test('should retry querying the gateway', async () => {
         let count = 1
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
@@ -1094,7 +1184,8 @@ describe('ao-process', () => {
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
-        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false
       }
       const COLDSTART = {
         src: 'cold_start',
@@ -1170,7 +1261,8 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1207,7 +1299,8 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1247,6 +1340,7 @@ describe('ao-process', () => {
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
           PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false,
           fileExists: () => true,
           DIR: 'fake/directory/'
         }
@@ -1301,6 +1395,7 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          DISABLE_NON_HASH_CHAIN_CHECKPOINTS: false,
           fileExists: () => true,
           DIR: 'fake/directory/'
         }

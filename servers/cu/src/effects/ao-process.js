@@ -798,6 +798,7 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+  DISABLE_NON_HASH_CHAIN_CHECKPOINTS,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -852,6 +853,17 @@ export function findLatestProcessMemoryWith ({
     return transduce(
       compose(
         map(prop('node')),
+        filter((node) => {
+          if (DISABLE_NON_HASH_CHAIN_CHECKPOINTS) {
+            const hasAssignment = node.tags.find((tag) => tag.name === 'Assignment')
+            const hasHashChain = node.tags.find((tag) => tag.name === 'Hash-Chain')
+            if (!hasAssignment || !hasHashChain) {
+              logger('Encountered Checkpoint "%s" from Arweave without Assignment or Hash-Chain. Skipping...', node.id)
+              return false
+            }
+          }
+          return true
+        }),
         filter((node) => {
           const isIgnored = isCheckpointIgnored(node.id)
           if (isIgnored) logger('Encountered Ignored Checkpoint "%s" from Arweave. Skipping...', node.id)

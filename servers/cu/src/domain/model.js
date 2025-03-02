@@ -109,6 +109,10 @@ export const domainConfigSchema = z.object({
    */
   DISABLE_PROCESS_EVALUATION_CACHE: z.preprocess((val) => !!val, z.boolean()),
   /**
+   * Whether to disable non-hash chain checkpoints
+   */
+  DISABLE_NON_HASH_CHAIN_CHECKPOINTS: z.preprocess((val) => !!val, z.boolean()),
+  /**
    * If a process uses this amount of
    * gas, then it will immediately create a Checkpoint at the end of the
    * evaluation stream.
