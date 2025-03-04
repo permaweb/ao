@@ -208,6 +208,7 @@ export const createApis = async (ctx) => {
   })
 
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
+  ctx.logger('Disabling non-hash chain checkpoints is set to "%s"', ctx.DISABLE_NON_HASH_CHAIN_CHECKPOINTS)
   ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
@@ -332,6 +333,7 @@ export const createApis = async (ctx) => {
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
       IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
       PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+      DISABLE_NON_HASH_CHAIN_CHECKPOINTS: ctx.DISABLE_NON_HASH_CHAIN_CHECKPOINTS,
       logger
     }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({

@@ -144,6 +144,7 @@ const CONFIG_ENVS = {
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_EVALUATION_CACHE: process.env.DISABLE_PROCESS_EVALUATION_CACHE,
+    DISABLE_NON_HASH_CHAIN_CHECKPOINTS: process.env.DISABLE_NON_HASH_CHAIN_CHECKPOINTS === 'true',
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute. After 2 hours, this process used
@@ -197,6 +198,7 @@ const CONFIG_ENVS = {
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_EVALUATION_CACHE: process.env.DISABLE_PROCESS_EVALUATION_CACHE,
+    DISABLE_NON_HASH_CHAIN_CHECKPOINTS: process.env.DISABLE_NON_HASH_CHAIN_CHECKPOINTS === 'true',
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute by adding and clearing a table.
