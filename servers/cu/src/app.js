@@ -1,5 +1,4 @@
 import { unapply, pipeWith } from 'ramda'
-import ms from 'ms'
 
 import Fastify from 'fastify'
 import FastifyMiddie from '@fastify/middie'

@@ -1520,11 +1520,11 @@ describe('ao-process', () => {
       }
 
       test('should not create checkpoint if gasUsed less than checkpoint threshold', async () => {
-        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({ 
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
           ...deps,
           saveCheckpoint: async () => {
             assert.fail('should not call if gasUsed less than checkpoint threshold')
-          },
+          }
         }))
         const res = await saveLatestProcessMemory(targetWithLessGasUsed)
         assert.equal(res, undefined)
@@ -1548,7 +1548,7 @@ describe('ao-process', () => {
           ...deps,
           saveCheckpoint: async () => {
             assert.fail('should not call if no gasUsed and no evalTime')
-          },
+          }
         }))
         const res = await saveLatestProcessMemory(targetWithNoGasUsed)
         assert.equal(res, undefined)
