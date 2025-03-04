@@ -295,6 +295,7 @@ const processDocSchema = z.object({
 
 function latestCheckpointBefore (destination) {
   return (curLatest, checkpoint) => {
+    console.log('curLatest', curLatest)
     /**
      * Often times, we are just interested in the latest checkpoint --
      * the latest point we can start evaluating from, up to the present.
@@ -798,6 +799,7 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+  loadEvaluator,
   logger: _logger
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
@@ -848,7 +850,7 @@ export function findLatestProcessMemoryWith ({
   /**
    * TODO: lots of room for optimization here
    */
-  function determineLatestCheckpoint (edges) {
+  async function determineLatestVerified (edges) {
     return transduce(
       compose(
         map(prop('node')),
@@ -889,6 +891,8 @@ export function findLatestProcessMemoryWith ({
       edges
     )
   }
+
+  const determineLatestCheckpoint = fromPromise(determineLatestVerified)
 
   function decodeData (encoding) {
     /**
@@ -1153,7 +1157,7 @@ export function findLatestProcessMemoryWith ({
         })
       })
       .map(path(['data', 'transactions', 'edges']))
-      .map(determineLatestCheckpoint)
+      .chain(determineLatestCheckpoint)
       .chain((latestCheckpoint) => {
         if (!latestCheckpoint) return Rejected(args)
 

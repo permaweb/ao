@@ -368,28 +368,12 @@ export const createApis = async (ctx) => {
              * but also feels kind of misplaced
              */
             if (args.close) return broadcastCloseStream(args.streamId)
-
+  
             return primaryWorkerPool.exec('evaluate', [args], options)
           })
       ),
       logger
-    }),
-    findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
-    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
-    loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
-    loadMessages: AoSuClient.loadMessagesWith({
-      hashChain: (...args) => hashChainWorker.exec('hashChain', args),
-      fetch: ctx.fetch,
-      pageSize: 1000,
-      logger
-    }),
-    locateProcess: locateDataloader.load.bind(locateDataloader),
-    isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
-    isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
-    isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
-    isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
-    MODULE_MODE: ctx.MODULE_MODE,
-    logger
+    })
   })
   /**
    * default readState that works OOTB
