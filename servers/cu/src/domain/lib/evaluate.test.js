@@ -63,6 +63,7 @@ describe('evaluate', () => {
       moduleId: 'foo-module',
       moduleOptions,
       stats: {
+        startTime: new Date(),
         messages: {
           scheduled: 0,
           cron: 0,
@@ -198,6 +199,7 @@ describe('evaluate', () => {
       moduleId: 'foo-module',
       moduleOptions,
       stats: {
+        startTime: new Date(),
         messages: {
           scheduled: 0,
           cron: 0,
@@ -313,6 +315,7 @@ describe('evaluate', () => {
       moduleId: 'foo-module',
       moduleOptions,
       stats: {
+        startTime: new Date(),
         messages: {
           scheduled: 0,
           cron: 0,
@@ -460,6 +463,7 @@ describe('evaluate', () => {
       moduleId: 'foo-module',
       moduleOptions,
       stats: {
+        startTime: new Date(),
         messages: {
           scheduled: 0,
           cron: 0,
@@ -570,6 +574,7 @@ describe('evaluate', () => {
       moduleId: 'foo-module',
       moduleOptions,
       stats: {
+        startTime: new Date(),
         messages: {
           scheduled: 0,
           cron: 0,
@@ -708,6 +713,7 @@ describe('evaluate', () => {
       mostRecentHashChain: 'init-hashchain-123',
       moduleOptions,
       stats: {
+        startTime: new Date(),
         messages: {
           scheduled: 0,
           cron: 0,

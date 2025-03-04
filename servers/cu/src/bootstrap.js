@@ -5,7 +5,6 @@ import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
-import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
 import workerpool from 'workerpool'
@@ -338,6 +337,7 @@ export const createApis = async (ctx) => {
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+      EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
       saveCheckpoint,
       logger
     }),
@@ -476,58 +476,7 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readResultsLogger })
   })
 
-  let checkpointP
-  const checkpointWasmMemoryCache = fromPromise(async () => {
-    if (checkpointP) {
-      ctx.logger('Checkpointing of WASM Memory Cache already in progress. Nooping...')
-      return checkpointP
-    }
-
-    const pArgs = []
-    /**
-     * push a new object to keep references to original data intact
-     */
-    wasmMemoryCache.data.forEach((value) =>
-      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
-    )
-
-    checkpointP = pMap(
-      pArgs,
-      (value) => saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        }),
-      {
-        /**
-         * TODO: allow to be configured on CU
-         *
-         * Helps prevent the gateway from being overwhelmed and then timing out
-         */
-        concurrency: 10,
-        /**
-         * Prevent any one rejected promise from causing other invocations
-         * to not be attempted.
-         *
-         * The overall promise will still reject, which is why we have
-         * an empty catch below, which will allow all Promises to either resolve,
-         * or reject, then the final wrapping promise to always resolve.
-         *
-         * https://github.com/sindresorhus/p-map?tab=readme-ov-file#stoponerror
-         */
-        stopOnError: false
-      }
-    )
-      .catch(() => {})
-
-    await checkpointP
-    checkpointP = undefined
-  })
-
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
+  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, healthcheck }
 }
