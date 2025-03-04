@@ -8,6 +8,7 @@ import * as SuClient from './client/ao-su.js'
 
 import { createLogger } from './logger.js'
 
+import { messagesWith } from './lib/messages/index.js'
 import { messageIdWith } from './lib/message-id/index.js'
 import { processIdWith } from './lib/process-id/index.js'
 import { requestWith } from './lib/request/index.js'
@@ -441,6 +442,10 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       getMessageId: SuClient.getMessageById({ fetch, locate })
     })
 
+    const getMessages = messagesWith({
+      messages: SuClient.getMessagesByRange({ fetch, locate })
+    })
+
     const getLastSlot = processIdWith({
       processId: SuClient.getLastSlotWith({
         fetch,
@@ -588,6 +593,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     return {
       MODE: isRelayMode ? 'relay' : 'mainnet',
       request,
+      getMessages,
       getLastSlot,
       getMessageById,
       get,
