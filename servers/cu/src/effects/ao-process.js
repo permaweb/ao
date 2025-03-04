@@ -1367,7 +1367,7 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
       )(cached)
     }
     const gasThresholdReached = incrementedGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && incrementedGasUsed >= EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD
-    const evalTimeThresholdReached = incrementedGasUsed && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && incrementedEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+    const evalTimeThresholdReached = incrementedEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && incrementedEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
     const eitherThresholdReached = gasThresholdReached || evalTimeThresholdReached
 
     const evaluation = {

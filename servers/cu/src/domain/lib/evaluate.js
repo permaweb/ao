@@ -318,6 +318,10 @@ export function evaluateWith (env) {
         const { noSave, cron, ordinate, message } = prev
 
         if (!noSave && prev.Memory) {
+          const now = new Date()
+          // If there is no startTime, then we use the current time which will make evalTime = 0
+          const startTime = pathOr(now, ['stats', 'startTime'], ctx)
+
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,
@@ -332,7 +336,7 @@ export function evaluateWith (env) {
             cron,
             Memory: prev.Memory,
             gasUsed: totalGasUsed,
-            evalTime: new Date().getTime() - ctx.stats.startTime.getTime() // The eval time in ms: currTime - startTime
+            evalTime: now.getTime() - startTime.getTime() // The eval time in ms: currTime - startTime
           })
         }
 
