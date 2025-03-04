@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.77](https://github.com/permaweb/ao/compare/connect@v0.0.76...connect@v0.0.77) (2025-03-04)
+
+
+### Features
+
+* **connect:** add ability to get messages by range ([a20fd8e](https://github.com/permaweb/ao/commit/a20fd8ebda7b6cf076631e9184c828bbc474fcd8))
+* **connect:** add business rule and test ([6ce91f0](https://github.com/permaweb/ao/commit/6ce91f0d05968149d96a7caa0e67bd50e19cf39c))
+
 ## [0.0.76](https://github.com/permaweb/ao/compare/connect@v0.0.75...connect@v0.0.76) (2025-03-01)
 
 
