@@ -39,34 +39,35 @@ export const server = pipeP(
     }, config.MEM_MONITOR_INTERVAL)
     memMonitor.unref()
 
-    if (config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL) {
-      logger('Setting up Interval to Checkpoint all Processes every %s', ms(config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL))
-      const cacheCheckpointInterval = setInterval(async () => {
-        logger('Checkpoint Interval Reached. Attempting to Checkpoint all Processes currently in WASM heap cache...')
-        await domain.apis.checkpointWasmMemoryCache().toPromise()
-        logger('Interval Checkpoint Done. Done checkpointing all processes in WASM heap cache.')
-      }, config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL)
-      cacheCheckpointInterval.unref()
-    }
+    // DEPRECATED: Checkpointing is no longer done on an interval, as we are using the eager checkpointing feature
+    // if (config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL) {
+    //   logger('Setting up Interval to Checkpoint all Processes every %s', ms(config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL))
+    //   const cacheCheckpointInterval = setInterval(async () => {
+    //     logger('Checkpoint Interval Reached. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+    //     await domain.apis.checkpointWasmMemoryCache().toPromise()
+    //     logger('Interval Checkpoint Done. Done checkpointing all processes in WASM heap cache.')
+    //   }, config.PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL)
+    //   cacheCheckpointInterval.unref()
+    // }
 
-    process.on('SIGTERM', async () => {
-      logger('Received SIGTERM. Gracefully shutting down server...')
-      app.close(
-        () => logger('Server shut down.'),
-        (e) => logger('Failed to shut down server!', e)
-      )
+    // process.on('SIGTERM', async () => {
+    //   logger('Received SIGTERM. Gracefully shutting down server...')
+    //   app.close(
+    //     () => logger('Server shut down.'),
+    //     (e) => logger('Failed to shut down server!', e)
+    //   )
 
-      logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
-      await domain.apis.checkpointWasmMemoryCache().toPromise()
-      logger('Done checkpointing all processes in WASM heap cache. Exiting...')
-      process.exit()
-    })
+    //   logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+    //   await domain.apis.checkpointWasmMemoryCache().toPromise()
+    //   logger('Done checkpointing all processes in WASM heap cache. Exiting...')
+    //   process.exit()
+    // })
 
-    process.on('SIGUSR2', async () => {
-      logger('Received SIGUSR2. Manually Attempting to Checkpoint all Processes currently in WASM heap cache...')
-      await domain.apis.checkpointWasmMemoryCache().toPromise()
-      logger('SIGUSR2 Done. Done checkpointing all processes in WASM heap cache.')
-    })
+    // process.on('SIGUSR2', async () => {
+    //   logger('Received SIGUSR2. Manually Attempting to Checkpoint all Processes currently in WASM heap cache...')
+    //   await domain.apis.checkpointWasmMemoryCache().toPromise()
+    //   logger('SIGUSR2 Done. Done checkpointing all processes in WASM heap cache.')
+    // })
 
     process.on('uncaughtException', (err) => {
       console.trace('Uncaught Exception:', err)

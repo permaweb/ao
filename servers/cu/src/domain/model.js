@@ -115,6 +115,11 @@ export const domainConfigSchema = z.object({
    */
   EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: positiveIntSchema,
   /**
+   * If a process has this amount of eval time, then it will immediately create a Checkpoint at the end of the
+   * evaluation stream.
+   */
+  EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: positiveIntSchema,
+  /**
    * The number of workers to use for evaluating messages
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,

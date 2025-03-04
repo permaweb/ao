@@ -1334,7 +1334,8 @@ describe('ao-process', () => {
       blockHeight: 123,
       ordinate: '11',
       encoding: 'gzip',
-      gasUsed: BigInt(100)
+      gasUsed: BigInt(100),
+      evalTime: 200
     }
     const cachedEvalFuture = {
       processId: PROCESS,
@@ -1370,7 +1371,8 @@ describe('ao-process', () => {
       timestamp: now - 1000,
       ordinate: '13',
       cron: undefined,
-      gasUsed: BigInt(50)
+      gasUsed: BigInt(50),
+      evalTime: 500
     }
 
     describe('updating the cache', () => {
@@ -1481,6 +1483,26 @@ describe('ao-process', () => {
         }))
         await saveLatestProcessMemory(targetWithGasUsed)
       })
+
+      test('should increment evalTime when updating cache', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: (processId, { evaluation }) => {
+              assert.equal(processId, 'process-123')
+              assert.equal(evaluation.gasUsed, BigInt(150))
+              assert.equal(evaluation.evalTime, 700) // 200 (cached) + 500 (target evalTime)
+            }
+          },
+          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: BigInt(200),
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: 1000
+        }))
+        await saveLatestProcessMemory(targetWithGasUsed)
+      })
     })
 
     describe('creating a checkpoint', () => {
@@ -1498,19 +1520,49 @@ describe('ao-process', () => {
       }
 
       test('should not create checkpoint if gasUsed less than checkpoint threshold', async () => {
-        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({ ...deps }))
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({ 
+          ...deps,
+          saveCheckpoint: async () => {
+            assert.fail('should not call if gasUsed less than checkpoint threshold')
+          },
+        }))
         const res = await saveLatestProcessMemory(targetWithLessGasUsed)
         assert.equal(res, undefined)
       })
 
-      test('should not create checkpoint if no gasUsed', async () => {
-        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith(deps))
+      test('should not create checkpoint if evalTime less than checkpoint threshold', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          saveCheckpoint: async () => {
+            assert.fail('should not call if evalTime less than checkpoint threshold')
+          },
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: 10000
+        }))
+
+        const res = await saveLatestProcessMemory(targetWithGasUsed)
+        assert.equal(res, undefined)
+      })
+
+      test('should not create checkpoint if no gasUsed and no evalTime', async () => {
+        const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          saveCheckpoint: async () => {
+            assert.fail('should not call if no gasUsed and no evalTime')
+          },
+        }))
         const res = await saveLatestProcessMemory(targetWithNoGasUsed)
         assert.equal(res, undefined)
       })
 
       test('should not create checkpoint if no checkpoint threshold', async () => {
-        const saveLatestProcessMemoryWithNoThreshold = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({ ...deps, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: 0 }))
+        const saveLatestProcessMemoryWithNoThreshold = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          saveCheckpoint: async () => {
+            assert.fail('should not call if no checkpoint threshold')
+          },
+          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: 0,
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: 0
+        }))
         const res = await saveLatestProcessMemoryWithNoThreshold(targetWithGasUsed)
         assert.equal(res, undefined)
       })
@@ -1533,6 +1585,30 @@ describe('ao-process', () => {
           }
         }))
         await saveLatestProcessMemoryWithNoThreshold({ ...targetWithGasUsed, gasUsed: BigInt(150) })
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        assert.ok(checkpointSaved)
+      })
+
+      test('should create checkpoint if eval time used greater than threshold, reset eval time to 0', async () => {
+        let checkpointSaved = false
+        const saveLatestProcessMemoryWithNoThreshold = saveLatestProcessMemorySchema.implement(saveLatestProcessMemoryWith({
+          ...deps,
+          cache: {
+            get: () => ({
+              Memory,
+              evaluation: cachedEval
+            }),
+            set: (_, { evaluation }) => {
+              assert.equal(evaluation.evalTime, 0)
+            }
+          },
+          saveCheckpoint: async () => {
+            checkpointSaved = true
+          },
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: 1000
+        }))
+        await saveLatestProcessMemoryWithNoThreshold({ ...targetWithGasUsed, evalTime: 1000 })
         await new Promise(resolve => setTimeout(resolve, 100))
 
         assert.ok(checkpointSaved)

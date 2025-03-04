@@ -331,7 +331,8 @@ export function evaluateWith (env) {
             ordinate,
             cron,
             Memory: prev.Memory,
-            gasUsed: totalGasUsed
+            gasUsed: totalGasUsed,
+            evalTime: new Date().getTime() - ctx.stats.startTime.getTime() // The eval time in ms: currTime - startTime
           })
         }
 
