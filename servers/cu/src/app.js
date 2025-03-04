@@ -49,18 +49,19 @@ export const server = pipeP(
     //   cacheCheckpointInterval.unref()
     // }
 
-    // process.on('SIGTERM', async () => {
-    //   logger('Received SIGTERM. Gracefully shutting down server...')
-    //   app.close(
-    //     () => logger('Server shut down.'),
-    //     (e) => logger('Failed to shut down server!', e)
-    //   )
+    process.on('SIGTERM', async () => {
+      logger('Received SIGTERM. Gracefully shutting down server...')
+      app.close(
+        () => logger('Server shut down.'),
+        (e) => logger('Failed to shut down server!', e)
+      )
 
-    //   logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
-    //   await domain.apis.checkpointWasmMemoryCache().toPromise()
-    //   logger('Done checkpointing all processes in WASM heap cache. Exiting...')
-    //   process.exit()
-    // })
+      // logger('Received SIGTERM. Attempting to Checkpoint all Processes currently in WASM heap cache...')
+      // await domain.apis.checkpointWasmMemoryCache().toPromise()
+      // logger('Done checkpointing all processes in WASM heap cache. Exiting...')
+      logger('Exiting...')
+      process.exit()
+    })
 
     // process.on('SIGUSR2', async () => {
     //   logger('Received SIGUSR2. Manually Attempting to Checkpoint all Processes currently in WASM heap cache...')

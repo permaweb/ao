@@ -1399,38 +1399,36 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
     /**
      * Eagerly create the Checkpoint on the next event queue drain
      */
-    setImmediate(() => {
-      if (gasThresholdReached) {
-        logger(
-          'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met when evaluating process "%s" up to "%j" -- "%d" gas used. Eagerly creating a Checkpoint...',
-          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
-          processId,
-          { messageId, timestamp, ordinate, cron, blockHeight },
-          incrementedGasUsed
-        )
-      } else {
-        logger(
-          'Eager Checkpoint Accumulated Eval Time Threshold of "%d" ms eval time met when evaluating process "%s" up to "%j" -- "%d" ms eval time. Eagerly creating a Checkpoint...',
-          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-          processId,
-          { messageId, timestamp, ordinate, cron, blockHeight },
-          incrementedEvalTime
-        )
-      }
+    if (gasThresholdReached) {
+      logger(
+        'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met when evaluating process "%s" up to "%j" -- "%d" gas used. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight },
+        incrementedGasUsed
+      )
+    } else {
+      logger(
+        'Eager Checkpoint Accumulated Eval Time Threshold of "%d" ms eval time met when evaluating process "%s" up to "%j" -- "%d" ms eval time. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight },
+        incrementedEvalTime
+      )
+    }
 
-      /**
-       * Memory will always be defined at this point, so no reason
-       * to pass File
-       */
-      return saveCheckpoint({ Memory, ...evaluation })
-        .catch((err) => {
-          logger(
-            'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
-            evaluation,
-            err
-          )
-        })
-    })
+    /**
+     * Memory will always be defined at this point, so no reason
+     * to pass File
+     */
+    return saveCheckpoint({ Memory, ...evaluation })
+      .catch((err) => {
+        logger(
+          'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
+          evaluation,
+          err
+        )
+      })
   }
 }
 
