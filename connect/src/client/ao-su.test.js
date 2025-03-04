@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 
-import { loadProcessMetaWith, getLastSlotWith, getMessageById } from './ao-su.js'
+import { loadProcessMetaWith, getLastSlotWith, getMessageById, getMessagesByRange } from './ao-su.js'
 import { locate } from '@permaweb/ao-scheduler-utils'
 import { loadProcessMetaSchema } from '../dal.js'
 import { createLogger } from '../logger.js'
@@ -12,27 +12,43 @@ const SU_URL = globalThis.SU_URL || 'https://su.foo'
 const PROCESS_ID = 'uPKuZ6SABUXvgaEL3ZS3ku5QR1RLwE70V6IUslmZJFI'
 
 describe('ao-su', () => {
+  test('getMessagesByRange', async () => {
+    const fn = getMessagesByRange({
+      fetch,
+      locate
+    })
+    const from = Date.now() - (10 * 60 * 1000)
+    const to = Date.now()
+    const results = await fn({
+      processId: '0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc',
+      from: String(from),
+      to: String(to),
+      limit: '1000'
+    })
+    assert.ok(results.edges.length > 0)
+  })
+
   describe('getMessageById', async () => {
     const fn = getMessageById({
-     fetch,
-     locate 
+      fetch,
+      locate
     })
     const result = await fn({
-      processId: "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc",
-      messageId: "G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0"
-    }) 
-    assert.equal(result.message.id, "G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0")
- })
+      processId: '0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc',
+      messageId: 'G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0'
+    })
+    assert.equal(result.message.id, 'G1fpyLXiWIl_Jch5aL5BEADI8XzbsCmV7ziVqRbYDN0')
+  })
   describe('getLastWith', async () => {
-     const fn = getLastSlotWith({
+    const fn = getLastSlotWith({
       fetch,
-      locate 
-     })
-     const result = await fn({
-       processId: "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
-     }) 
-     //console.log(result)
-     assert.ok(result > 0)
+      locate
+    })
+    const result = await fn({
+      processId: '0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc'
+    })
+    // console.log(result)
+    assert.ok(result > 0)
   })
   describe('loadProcessMeta', () => {
     const tags = [

@@ -11,14 +11,20 @@ export const createProcessMetaCache = ({ MAX_SIZE }) => {
   return processMetaCache
 }
 
-export const getMessageById = ({fetch, locate }) => {
-  return async ({processId, messageId}) => {
+export const getMessagesByRange = ({ fetch, locate }) => {
+  return async ({ processId, from, to, limit }) => {
+    const suUrl = (await locate(processId)).url
+    return fetch(`${suUrl}/${processId}?from=${from}&to=${to}&limit=${limit}`)
+      .then(res => res.json())
+  }
+}
+
+export const getMessageById = ({ fetch, locate }) => {
+  return async ({ processId, messageId }) => {
     const suUrl = (await locate(processId)).url
     return fetch(`${suUrl}/${messageId}?process-id=${processId}`)
       .then(res => res.json())
-
   }
-
 }
 
 export const getLastSlotWith = ({ fetch, locate }) => {
@@ -27,15 +33,15 @@ export const getLastSlotWith = ({ fetch, locate }) => {
       since = (10 * 60 * 1000) //  10 minutes
     }
     const from = (Date.now()) - since
-    const suUrl =  (await locate(processId)).url
+    const suUrl = (await locate(processId)).url
     return fetch(`${suUrl}/${processId}?process-id=${processId}&limit=100&from=${from}`)
       .then(res => res.json())
       .then(suResult => {
-        return suResult.edges[suResult?.edges?.length - 1]?.node?.assignment?.tags?.find(t => t.name === "Nonce")?.value
-        //return suResult.edges
+        return suResult.edges[suResult?.edges?.length - 1]?.node?.assignment?.tags?.find(t => t.name === 'Nonce')?.value
+        // return suResult.edges
       })
   }
-} 
+}
 
 export const loadProcessMetaWith = ({ logger, fetch, cache = processMetaCache }) => {
   return async ({ suUrl, processId }) => {
