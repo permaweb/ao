@@ -853,97 +853,83 @@ export function findLatestProcessMemoryWith ({
   const CHECKPONT_VALIDATION_RETRIES = 5
 
   const findLatestVerified = async ({ checkpoints }) => {
-    for(let i = 0; i < MAX_VERIFICATION_RETRIES; i++) {
-        // The Nonces come out of graphql highest nonce first so reverse
-        const verifierSet = checkpoints.length >= CHECKPONT_VALIDATION_STEPS ? 
-          checkpoints.reverse().slice(0, CHECKPONT_VALIDATION_STEPS - 1)
-          : checkpoints.reverse()
-    }
+    const reversedCheckpoints = [...checkpoints].reverse()
 
-    let fromCheckpoint = verifierSet[0]
+    for (let i = 0; i < CHECKPONT_VALIDATION_RETRIES; i++) {
+        const verifierSet = reversedCheckpoints.slice(i, i + CHECKPONT_VALIDATION_STEPS)
+        let fromCheckpoint = verifierSet[0]
+        let finalCheckpoint = verifierSet[verifierSet.length - 1]
+        const correct = 0
+        let mem = await downloadCheckpointFromArweave({ 
+          id: fromCheckpoint.node.id, 
+          encoding: 'gzip' 
+        }).toPromise()
 
-    let finalCheckpointWithMemory = null
+        console.log(`Iteration ${i}:`);
 
-    let mem = await downloadCheckpointFromArweave(
-        fromCheckpoint.node.id
-    ).toPromise()
+        for(let j = 1; j < verifierSet.length; j++) {
+            const checkpointToVerifyAgainst = verifierSet[j]
 
-    const correct = 0
+            let memToVerifyAgainst = await downloadCheckpointFromArweave({
+              id: checkpointToVerifyAgainst.node.id,
+              encoding: 'gzip' 
+            }).toPromise()
 
-    for(let i = 1; i < verifierSet.length; i++) {
-      const checkpointToVerifyAgainst = verifierSet[i]
+            const tagsFrom = parseTags(fromCheckpoint.node.tags)
+            const tagsTo = parseTags(checkpointToVerifyAgainst.node.tags)
+        
+            const evalArgs = {
+              checkpoint: {
+                id: fromCheckpoint.node.id,
+                timestamp: parseInt(tagsFrom.Timestamp),
+                assignmentId: tagsFrom.Assignment,
+                hashChain: tagsFrom['Hash-Chain'],
+                epoch: maybeParseInt(tagsFrom.Epoch),
+                nonce: maybeParseInt(tagsFrom.Nonce),
+                ordinate: tagsFrom.Nonce,
+                module: tagsFrom.Module,
+                blockHeight: parseInt(tagsFrom['Block-Height']),
+                cron: tagsFrom['Cron-Interval'],
+                encoding: tagsFrom['Content-Encoding']
+              },
+              messageId: tagsTo.Assignment,
+              needsOnlyMemory: true,
+              processId: tagsTo.Process,
+              Memory: mem
+            }
+        
+            const result = await readStateFromCheckpoint(evalArgs)
 
-      let memToVerifyAgainst = await downloadCheckpointFromArweave(
-        checkpointToVerifyAgainst.node.id
-      ).toPromise()
+            console.log(result)
 
-      const tagsFrom = parseTags(fromCheckpoint.node.tags)
-      const tagsTo = parseTags(checkpointToVerifyAgainst.node.tags)
-  
-      const evalArgs = {
-        checkpoint: {
-          id: fromCheckpoint.node.id,
-          timestamp: parseInt(tagsFrom.Timestamp),
-          assignmentId: tagsFrom.Assignment,
-          hashChain: tagsFrom['Hash-Chain'],
-          epoch: maybeParseInt(tagsFrom.Epoch),
-          nonce: maybeParseInt(tagsFrom.Nonce),
-          ordinate: tagsFrom.Nonce,
-          module: tagsFrom.Module,
-          blockHeight: parseInt(tagsFrom['Block-Height']),
-          cron: tagsFrom['Cron-Interval'],
-          encoding: tagsFrom['Content-Encoding']
-        },
-        messageId: tagsTo.Assignment,
-        needsOnlyMemory: true,
-        processId: tagsTo.Process,
-        Memory: mem
-      }
-  
-      const result = await readStateFromCheckpoint(evalArgs)
+            // mem = result.result.Memory
+            // fromCheckpoint = checkpointToVerifyAgainst
 
-      mem = result.result.Memory
-      fromCheckpoint = checkpointToVerifyAgainst
-
-      console.log('999999999999999999')
-      console.log(mem)
-
-      // console.log(Readable.from(Buffer.from(result.result.Memory)))
-      
-      // const hashed = await hashWasmMemory(
-      //   Readable.from(
-      //     Buffer.from(result.result.Memory)
-      //   ), 
-      //   tags['Content-Encoding']
-      // ).toPromise()
-
-      // console.log('hashed', hashed)
-      // console.log(latestCheckpoint.sha)
-
-      // if(hashed === latestCheckpoint.sha) {
-      //   console.log('999999999999999999')
-      //   votes++
-      // }
-
-    }
-
-    if( (correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH ) {
-        return {
-            module,
-            assignmentId,
-            hashChain,
-            timestamp,
-            epoch,
-            nonce,
-            ordinate,
-            blockHeight,
-            cron
         }
-    } 
+
+        // if( (correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH ) {
+            const finalTags = parseTags(finalCheckpoint.node.tags)
+            return {
+              id: finalCheckpoint.node.id,
+              timestamp: parseInt(finalTags.Timestamp),
+              assignmentId: finalTags.Assignment,
+              hashChain: finalTags['Hash-Chain'],
+              epoch: maybeParseInt(finalTags.Epoch),
+              nonce: maybeParseInt(finalTags.Nonce),
+              ordinate: finalTags.Nonce,
+              module: finalTags.Module,
+              blockHeight: parseInt(finalTags['Block-Height']),
+              cron: finalTags['Cron-Interval'],
+              encoding: finalTags['Content-Encoding'],
+              Memory: mem
+            }
+        // } 
+        
+    }
   }
 
   const determineLatestVerifiedCheckpoint = (checkpoints) => {
-      return of(checkpoints)
+      return of({checkpoints})
         .chain(fromPromise(findLatestVerified)) 
     }
   
