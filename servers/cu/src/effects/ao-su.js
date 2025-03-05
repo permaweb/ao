@@ -165,6 +165,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
         return Promise.resolve({ 'process-id': processId, from, to, limit: pageSize })
           .then(filter(isNotNil))
           .then(params => new URLSearchParams(params))
+          .then(params => {
+            console.log('jackfrainurl: ', { url: `${suUrl}/${processId}?${params.toString()}` })
+            return params
+          })
           .then((params) => fetch(`${suUrl}/${processId}?${params.toString()}`).then(okRes))
           .catch(async (err) => {
             logger(

@@ -1,0 +1,1197 @@
+
+> @permaweb/ao-cu@1.0.0 dev
+> nodemon
+
+[33m[nodemon] 3.1.9[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): src/**/*[39m
+[33m[nodemon] watching extensions: js[39m
+[32m[nodemon] starting `node --experimental-wasm-memory64 -r dotenv/config src/app.js`[39m
+winston:create-logger: Define prototype method for "error"
+winston:create-logger: Define prototype method for "warn"
+winston:create-logger: Define prototype method for "info"
+winston:create-logger: Define prototype method for "http"
+winston:create-logger: Define prototype method for "verbose"
+winston:create-logger: Define prototype method for "debug"
+winston:create-logger: Define prototype method for "silly"
+winston:create-logger: Define prototype method for "error"
+winston:create-logger: Define prototype method for "warn"
+winston:create-logger: Define prototype method for "info"
+winston:create-logger: Define prototype method for "http"
+winston:create-logger: Define prototype method for "verbose"
+winston:create-logger: Define prototype method for "debug"
+winston:create-logger: Define prototype method for "silly"
+2025-03-05T22:58:36.611Z ao-cu:Jacks-Mac-mini.local [info]: Creating business logic apis
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Process Arweave Checkpoint creation is set to "true"
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Process File Checkpoint creation is set to "false"
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Ignoring Arweave Checkpoints for processes [  ]
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Ignoring Arweave Checkpoints [  ]
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Trusting Arweave Checkpoint Owners [ DgMBhff3Hl5l5zIi2GafUWxfomGq1hIt94VN2ZeuMkM, fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY ]
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Allowing only process owners [  ]
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Restricting processes [  ]
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Allowing only processes [  ]
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Max worker threads set to 9
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Max primary worker threads set to 3
+2025-03-05T22:58:36.618Z ao-cu:Jacks-Mac-mini.local [info]: Max dry-run worker threads set to 6
+2025-03-05T22:58:36.619Z ao-cu:Jacks-Mac-mini.local [info]: Max dry-run worker thread pool queue size set to 3000
+2025-03-05T22:58:36.630Z ao-cu:Jacks-Mac-mini.local:app [info]: Setting up Interval to Checkpoint all Processes every 4h
+2025-03-05T22:58:36.632Z ao-cu:Jacks-Mac-mini.local:app [info]: Server is running on http://localhost:6363
+2025-03-05T22:58:36.632Z ao-cu:Jacks-Mac-mini.local:app [info]: Server in unit mode: "cu"
+queryCheckpoint-fbf7f222: 0.046ms start {"gateway":"gateway","attempt":1,"processId":"xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"}
+queryCheckpoint-fbf7f222: 480.514ms
+jackfrain1: FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH 50
+jackfrain1: CHECKPONT_VALIDATION_RETRIES: 11, slice: 29:39
+jackfrain1: VERIFIER SET: 10
+{
+  verifierSet: [
+    {
+      node: {
+        id: 'Q383llLsYgu2ywBQ3FuxiiSVV4K3w0byz0LcjgiCYy4',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197531' },
+          { name: 'Timestamp', value: '1741205193657' },
+          { name: 'Block-Height', value: '1622808' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '164e08ead375da5b95dff4d1632d88051318c10d8fb209d14880723092e8ec77'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'nYluvTt7la0VpVQAjE_sPaTozyX2afmzUZW6giSz0hE'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'ncSCj01omymbf8x5DrErDwfc6aPOqnUW53EeMTLVBQY'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'SKVd_rnVFZmlVQcZW5ZYuTdWPxGaFSOmRuKLM50Fs_Y',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197532' },
+          { name: 'Timestamp', value: '1741205608378' },
+          { name: 'Block-Height', value: '1622811' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '381a201938ac218502c3412fdb55fc8a0894b6c04024cd07b1d0d35fac7d7552'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'H4tkMWDC3m0Xbr4EhkmwDJCB1G6l64_jIjRa9Qqp4h8'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'ZO3EufKhV69eMNwGsinuKBWxetI6Y0tAb1BT4LYwQ4E'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'OPkrqYNapHb7T1YwM8slRUIlQfA9sYXmtO0pb79DpoY',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197532' },
+          { name: 'Timestamp', value: '1741205608378' },
+          { name: 'Block-Height', value: '1622811' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '5f14306c012ae3eb0c82322c378a607bf625efd2e4be18296c19eebd05e41160'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'H4tkMWDC3m0Xbr4EhkmwDJCB1G6l64_jIjRa9Qqp4h8'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'ZO3EufKhV69eMNwGsinuKBWxetI6Y0tAb1BT4LYwQ4E'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'sdxIjAfR_lQCDjx5N6iDZpooTcgYhMmriu92CCzICOo',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197533' },
+          { name: 'Timestamp', value: '1741205735328' },
+          { name: 'Block-Height', value: '1622811' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '273b1cfdc0efe0bbd33af2487b83807c3847592a0fda8cebbbb771bea35119ef'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'ATkelpDHMTO059UFyUYKs8AX_CWVWWXHwbVXqOzsBr8'
+          },
+          {
+            name: 'Hash-Chain',
+            value: '_5cLDmbsvzMJgnFvVnjsCmENn7WiJL1B88KWI1moHlU'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'aAAoajIKsx4K5lZcxRjUobdZe9CJudhTekQex-sySaI',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197537' },
+          { name: 'Timestamp', value: '1741206735840' },
+          { name: 'Block-Height', value: '1622820' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: 'e7eb3328cbb0dd615ff870771bcd231a733ddd849cc159dd3406aa3df8b12af4'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'BKzgjWptXWfy1x-AlpTgaaLPUCr-9yxuYj2vumPfFDI'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'STfEA7AXBTJXLjrsB96hdm6uj9RBVlCSF_g7kIBADXk'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'QwqroniW8V3TWXnpyV6_fUOIMraD5GB3R9IQ5LC1vjg',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197538' },
+          { name: 'Timestamp', value: '1741207133835' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '250aa3af0adda98c41201a79400df57f4eb4821b455acea91dc6300739a1cae4'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: '3PZ4UfCOYGkJNLhu9JwboGOeXsv_uLLPBox236tF-XU'
+          },
+          {
+            name: 'Hash-Chain',
+            value: '7X8amA_h5-JoQ1j0jEjZwmhveZNzt-S2oendUmYCaVE'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'Q7pnRiYMiLGRJRKTwaahZQOh-mXA4qdivuNH-PzeETM',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197538' },
+          { name: 'Timestamp', value: '1741207133835' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '250aa3af0adda98c41201a79400df57f4eb4821b455acea91dc6300739a1cae4'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: '3PZ4UfCOYGkJNLhu9JwboGOeXsv_uLLPBox236tF-XU'
+          },
+          {
+            name: 'Hash-Chain',
+            value: '7X8amA_h5-JoQ1j0jEjZwmhveZNzt-S2oendUmYCaVE'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'rRUL9-3IxACtvR8WaFGR03mE5xaanlINUfp4K6FGPLw',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197539' },
+          { name: 'Timestamp', value: '1741207399100' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '36dbdbbaada28e559bc949df3805b824294abf394eb6d4ef493fdb2f4c0f98db'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'id4PWbF5lFcCGGsZ4V-DlGDe4-9qqjTAQSpdm6wuL7o'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'dKKKjcoa62o4eHOn7hJajpKLz_MUlC9r5UR-Q-JtWdw'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'gNHl7ZYjQ7WcrRB96ccQNCYzyO1IlKVbNJM1jFMsKgI',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197539' },
+          { name: 'Timestamp', value: '1741207399100' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '4f9784ad7cc454fe6148f3c488ef97b4b2cd09e9d5898c007dc58bd4997591e2'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'id4PWbF5lFcCGGsZ4V-DlGDe4-9qqjTAQSpdm6wuL7o'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'dKKKjcoa62o4eHOn7hJajpKLz_MUlC9r5UR-Q-JtWdw'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'PaGRGVhPOwkcIcZxihgwXPfbnKXRa7sK8ezTFexpiDo',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197555' },
+          { name: 'Timestamp', value: '1741208915953' },
+          { name: 'Block-Height', value: '1622835' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '5b253dad5c7eafe0b1649477dbecbe43bb3109b94b61dc1ccb8f3308152a21e7'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'GZWSgReZITmduA0jm9l67OId2r2R_CACLvkq0Z78R2U'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'jgzWbf_GCgxHb3u6KsvEi7TALivqb3wQZS6Lif4PWxo'
+          }
+        ]
+      }
+    }
+  ]
+}
+downloadCheckpointFromArweave-0363d791: 0.006ms start {"id":"Q383llLsYgu2ywBQ3FuxiiSVV4K3w0byz0LcjgiCYy4"}
+downloadCheckpointFromArweave-0363d791: 104.688ms
+jackfrain1.6 Checkpoint Iteration 1: { checkpointNonce: '197532' }
+jackfrain1.6 { currentNonce: '197531', nextNonce: '197532' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378", Checkpoint Id: Q383llLsYgu2ywBQ3FuxiiSVV4K3w0byz0LcjgiCYy4, Checkpoint Ordinate: 197531, Memory Present: true
+2025-03-05T22:58:41.806Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205193657" and "1741205608378"
+2025-03-05T22:58:41.809Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205193657" and "1741205608378"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205193657&to=1741205608378&limit=1000'
+}
+2025-03-05T22:58:42.208Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 1 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205193657" and "1741205608378"...
+2025-03-05T22:58:42.249Z ao-cu:Jacks-Mac-mini.local [info]: Checking for wasm file to load module "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM"...
+2025-03-05T22:58:42.255Z ao-cu:Jacks-Mac-mini.local [info]: Caching compiled WebAssembly.Module for module "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM" in memory, for next time...
+2025-03-05T22:58:42.433Z ao-cu:Jacks-Mac-mini.local [info]: Spinning up "primary" pool worker with id "a18c0275b67184f6"...
+winston:create-logger: Define prototype method for "error"
+winston:create-logger: Define prototype method for "warn"
+winston:create-logger: Define prototype method for "info"
+winston:create-logger: Define prototype method for "http"
+winston:create-logger: Define prototype method for "verbose"
+winston:create-logger: Define prototype method for "debug"
+winston:create-logger: Define prototype method for "silly"
+winston:create-logger: Define prototype method for "error"
+winston:create-logger: Define prototype method for "warn"
+winston:create-logger: Define prototype method for "info"
+winston:create-logger: Define prototype method for "http"
+winston:create-logger: Define prototype method for "verbose"
+winston:create-logger: Define prototype method for "debug"
+winston:create-logger: Define prototype method for "silly"
+2025-03-05T22:58:42.799Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378" took 997 milliseconds: {"startTime":"2025-03-05T22:58:41.802Z","endTime":"2025-03-05T22:58:42.799Z","messages":{"scheduled":1,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205608378,
+    blockHeight: 1622811,
+    ordinate: '197532'
+  }
+}
+downloadCheckpointFromArweave-70f15cc4: 0.076ms start {"id":"SKVd_rnVFZmlVQcZW5ZYuTdWPxGaFSOmRuKLM50Fs_Y"}
+jackfrain15 { messageId: '6ciwXCYbDODXvPJvlRL15H-SKX1BRQ6d0OBrXGmIf84' }
+2025-03-05T22:58:42.607Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 6ciwXCYbDODXvPJvlRL15H-SKX1BRQ6d0OBrXGmIf84 1741205608378:197532" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-70f15cc4: 230.441ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 1, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 2: { checkpointNonce: '197532' }
+jackfrain1.6 { currentNonce: '197532', nextNonce: '197532' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378", Checkpoint Id: SKVd_rnVFZmlVQcZW5ZYuTdWPxGaFSOmRuKLM50Fs_Y, Checkpoint Ordinate: 197532, Memory Present: true
+2025-03-05T22:58:47.133Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205608378" and "1741205608378"
+2025-03-05T22:58:47.137Z ao-cu:Jacks-Mac-mini.local:app [info]: Stats Usage: {"workers":{"primary":{"totalWorkers":1,"busyWorkers":0,"idleWorkers":1,"pendingTasks":0,"activeTasks":0},"dryRun":{"totalWorkers":0,"busyWorkers":0,"idleWorkers":0,"pendingTasks":0,"activeTasks":0}},"memory":{"rss":877559808,"heapTotal":67158016,"heapUsed":31281648,"external":2728187023,"arrayBuffers":2124897336},"processCache":{"size":0,"calculatedSize":0,"processes":[]}}
+2025-03-05T22:58:47.138Z ao-cu:Jacks-Mac-mini.local:app [info]: Currently Pending readState operations: {"xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo,,,,":{"startTime":"2025-03-05T22:58:38.167Z","pending":{}}}
+2025-03-05T22:58:47.139Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205608378"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205608378&to=1741205608378&limit=1000'
+}
+2025-03-05T22:58:47.254Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 0 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205608378"...
+2025-03-05T22:58:47.255Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378" took 194 milliseconds: {"startTime":"2025-03-05T22:58:47.061Z","endTime":"2025-03-05T22:58:47.255Z","messages":{"scheduled":0,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205608378,
+    blockHeight: 1622811,
+    ordinate: '197532'
+  }
+}
+downloadCheckpointFromArweave-d81ddbc4: 0.028ms start {"id":"OPkrqYNapHb7T1YwM8slRUIlQfA9sYXmtO0pb79DpoY"}
+downloadCheckpointFromArweave-d81ddbc4: 29.567ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 2, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 3: { checkpointNonce: '197533' }
+jackfrain1.6 { currentNonce: '197532', nextNonce: '197533' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205735328", Checkpoint Id: OPkrqYNapHb7T1YwM8slRUIlQfA9sYXmtO0pb79DpoY, Checkpoint Ordinate: 197532, Memory Present: true
+2025-03-05T22:58:50.310Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205608378" and "1741205735328"
+2025-03-05T22:58:50.312Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205735328"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205608378&to=1741205735328&limit=1000'
+}
+2025-03-05T22:58:50.427Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 1 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205735328"...
+jackfrain15 { messageId: 'm43XLKE9JTzR_MDBkuoDQ9eCfTy-kYiHqNoOrzMph0k' }
+2025-03-05T22:58:50.588Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205735328" took 289 milliseconds: {"startTime":"2025-03-05T22:58:50.299Z","endTime":"2025-03-05T22:58:50.588Z","messages":{"scheduled":1,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205735328,
+    blockHeight: 1622811,
+    ordinate: '197533'
+  }
+}
+downloadCheckpointFromArweave-0bf28487: 0.03ms start {"id":"sdxIjAfR_lQCDjx5N6iDZpooTcgYhMmriu92CCzICOo"}
+2025-03-05T22:58:50.466Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message m43XLKE9JTzR_MDBkuoDQ9eCfTy-kYiHqNoOrzMph0k 1741205735328:197533" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-0bf28487: 48.169ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 3, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 4: { checkpointNonce: '197537' }
+jackfrain1.6 { currentNonce: '197533', nextNonce: '197537' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741206735840", Checkpoint Id: sdxIjAfR_lQCDjx5N6iDZpooTcgYhMmriu92CCzICOo, Checkpoint Ordinate: 197533, Memory Present: true
+2025-03-05T22:58:52.943Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205735328" and "1741206735840"
+2025-03-05T22:58:52.947Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205735328" and "1741206735840"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205735328&to=1741206735840&limit=1000'
+}
+2025-03-05T22:58:53.190Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 4 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205735328" and "1741206735840"...
+jackfrain15 { messageId: 'GbdTh4b7EP_enf01zuSvWFajKYzDiuORP3staCiWzZo' }
+2025-03-05T22:58:53.195Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message GbdTh4b7EP_enf01zuSvWFajKYzDiuORP3staCiWzZo 1741206332275:197534" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'rWHz6Or0ICjHGzXwiieD5Y2fQcloX44xbg5bdW4SwWY' }
+2025-03-05T22:58:53.316Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message rWHz6Or0ICjHGzXwiieD5Y2fQcloX44xbg5bdW4SwWY 1741206358131:197535" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'iElPWvJ9wwEgLXitpKFRQ3Xw_0SNzKwnylDTHdiNdHo' }
+2025-03-05T22:58:53.428Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message iElPWvJ9wwEgLXitpKFRQ3Xw_0SNzKwnylDTHdiNdHo 1741206524104:197536" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+2025-03-05T22:58:53.641Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741206735840" took 701 milliseconds: {"startTime":"2025-03-05T22:58:52.940Z","endTime":"2025-03-05T22:58:53.641Z","messages":{"scheduled":4,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741206735840,
+    blockHeight: 1622820,
+    ordinate: '197537'
+  }
+}
+downloadCheckpointFromArweave-6f9a208e: 0.028ms start {"id":"aAAoajIKsx4K5lZcxRjUobdZe9CJudhTekQex-sySaI"}
+jackfrain15 { messageId: '-YSip_Eaz03fB64OOXb6iJ2mmCKsJoQV2nA-0eUNaPA' }
+2025-03-05T22:58:53.531Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message -YSip_Eaz03fB64OOXb6iJ2mmCKsJoQV2nA-0eUNaPA 1741206735840:197537" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-6f9a208e: 47.947ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 4, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 5: { checkpointNonce: '197538' }
+jackfrain1.6 { currentNonce: '197537', nextNonce: '197538' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207133835", Checkpoint Id: aAAoajIKsx4K5lZcxRjUobdZe9CJudhTekQex-sySaI, Checkpoint Ordinate: 197537, Memory Present: true
+2025-03-05T22:58:56.356Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741206735840" and "1741207133835"
+2025-03-05T22:58:56.363Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741206735840" and "1741207133835"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741206735840&to=1741207133835&limit=1000'
+}
+2025-03-05T22:58:56.473Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 1 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741206735840" and "1741207133835"...
+jackfrain15 { messageId: 'N8GkRoch-FWf32TfC-rnJq0t9lHJZBWUxQRMXzBnD40' }
+2025-03-05T22:58:56.825Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207133835" took 489 milliseconds: {"startTime":"2025-03-05T22:58:56.336Z","endTime":"2025-03-05T22:58:56.825Z","messages":{"scheduled":1,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741207133835,
+    blockHeight: 1622823,
+    ordinate: '197538'
+  }
+}
+downloadCheckpointFromArweave-f8f6c9a5: 0.03ms start {"id":"QwqroniW8V3TWXnpyV6_fUOIMraD5GB3R9IQ5LC1vjg"}
+2025-03-05T22:58:56.535Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message N8GkRoch-FWf32TfC-rnJq0t9lHJZBWUxQRMXzBnD40 1741207133835:197538" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-f8f6c9a5: 18.279ms
+2025-03-05T22:58:57.138Z ao-cu:Jacks-Mac-mini.local:app [info]: Stats Usage: {"workers":{"primary":{"totalWorkers":1,"busyWorkers":0,"idleWorkers":1,"pendingTasks":0,"activeTasks":0},"dryRun":{"totalWorkers":0,"busyWorkers":0,"idleWorkers":0,"pendingTasks":0,"activeTasks":0}},"memory":{"rss":1020444672,"heapTotal":66174976,"heapUsed":29230248,"external":1215579942,"arrayBuffers":909954727},"processCache":{"size":0,"calculatedSize":0,"processes":[]}}
+2025-03-05T22:58:57.138Z ao-cu:Jacks-Mac-mini.local:app [info]: Currently Pending readState operations: {"xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo,,,,":{"startTime":"2025-03-05T22:58:38.167Z","pending":{}}}
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 5, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 6: { checkpointNonce: '197538' }
+jackfrain1.6 { currentNonce: '197538', nextNonce: '197538' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207133835", Checkpoint Id: QwqroniW8V3TWXnpyV6_fUOIMraD5GB3R9IQ5LC1vjg, Checkpoint Ordinate: 197538, Memory Present: true
+2025-03-05T22:58:58.879Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741207133835" and "1741207133835"
+2025-03-05T22:58:58.881Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207133835" and "1741207133835"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741207133835&to=1741207133835&limit=1000'
+}
+2025-03-05T22:58:58.993Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 0 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207133835" and "1741207133835"...
+2025-03-05T22:58:58.994Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207133835" took 124 milliseconds: {"startTime":"2025-03-05T22:58:58.870Z","endTime":"2025-03-05T22:58:58.994Z","messages":{"scheduled":0,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741207133835,
+    blockHeight: 1622823,
+    ordinate: '197538'
+  }
+}
+downloadCheckpointFromArweave-2cc22c02: 0.086ms start {"id":"Q7pnRiYMiLGRJRKTwaahZQOh-mXA4qdivuNH-PzeETM"}
+downloadCheckpointFromArweave-2cc22c02: 25.399ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 6, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 7: { checkpointNonce: '197539' }
+jackfrain1.6 { currentNonce: '197538', nextNonce: '197539' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207399100", Checkpoint Id: Q7pnRiYMiLGRJRKTwaahZQOh-mXA4qdivuNH-PzeETM, Checkpoint Ordinate: 197538, Memory Present: true
+2025-03-05T22:59:01.259Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741207133835" and "1741207399100"
+2025-03-05T22:59:01.261Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207133835" and "1741207399100"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741207133835&to=1741207399100&limit=1000'
+}
+2025-03-05T22:59:01.376Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 1 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207133835" and "1741207399100"...
+jackfrain15 { messageId: 'Kgsk4QzqHaOZTKXIpT5Q2A82bUJ7I98_MvNMck4qJgo' }
+2025-03-05T22:59:01.521Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207399100" took 272 milliseconds: {"startTime":"2025-03-05T22:59:01.249Z","endTime":"2025-03-05T22:59:01.521Z","messages":{"scheduled":1,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741207399100,
+    blockHeight: 1622823,
+    ordinate: '197539'
+  }
+}
+downloadCheckpointFromArweave-53861a58: 0.026ms start {"id":"rRUL9-3IxACtvR8WaFGR03mE5xaanlINUfp4K6FGPLw"}
+2025-03-05T22:59:01.403Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message Kgsk4QzqHaOZTKXIpT5Q2A82bUJ7I98_MvNMck4qJgo 1741207399100:197539" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-53861a58: 20.142ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 7, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 8: { checkpointNonce: '197539' }
+jackfrain1.6 { currentNonce: '197539', nextNonce: '197539' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207399100", Checkpoint Id: rRUL9-3IxACtvR8WaFGR03mE5xaanlINUfp4K6FGPLw, Checkpoint Ordinate: 197539, Memory Present: true
+2025-03-05T22:59:04.076Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741207399100" and "1741207399100"
+2025-03-05T22:59:04.087Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207399100" and "1741207399100"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741207399100&to=1741207399100&limit=1000'
+}
+2025-03-05T22:59:04.200Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 0 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207399100" and "1741207399100"...
+2025-03-05T22:59:04.202Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741207399100" took 136 milliseconds: {"startTime":"2025-03-05T22:59:04.066Z","endTime":"2025-03-05T22:59:04.202Z","messages":{"scheduled":0,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741207399100,
+    blockHeight: 1622823,
+    ordinate: '197539'
+  }
+}
+downloadCheckpointFromArweave-f9aa9977: 0.032ms start {"id":"gNHl7ZYjQ7WcrRB96ccQNCYzyO1IlKVbNJM1jFMsKgI"}
+downloadCheckpointFromArweave-f9aa9977: 20.137ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 8, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 9: { checkpointNonce: '197555' }
+jackfrain1.6 { currentNonce: '197539', nextNonce: '197555' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741208915953", Checkpoint Id: gNHl7ZYjQ7WcrRB96ccQNCYzyO1IlKVbNJM1jFMsKgI, Checkpoint Ordinate: 197539, Memory Present: true
+2025-03-05T22:59:06.724Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741207399100" and "1741208915953"
+2025-03-05T22:59:06.726Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207399100" and "1741208915953"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741207399100&to=1741208915953&limit=1000'
+}
+2025-03-05T22:59:07.063Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 16 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741207399100" and "1741208915953"...
+jackfrain15 { messageId: '83OMvOXW0TJKGkEVTY4W0O39U9C_M6abS8JrukNQSvI' }
+2025-03-05T22:59:07.139Z ao-cu:Jacks-Mac-mini.local:app [info]: Stats Usage: {"workers":{"primary":{"totalWorkers":1,"busyWorkers":1,"idleWorkers":0,"pendingTasks":0,"activeTasks":1},"dryRun":{"totalWorkers":0,"busyWorkers":0,"idleWorkers":0,"pendingTasks":0,"activeTasks":0}},"memory":{"rss":1573765120,"heapTotal":67485696,"heapUsed":30396192,"external":1538900694,"arrayBuffers":1190797823},"processCache":{"size":0,"calculatedSize":0,"processes":[]}}
+2025-03-05T22:59:07.139Z ao-cu:Jacks-Mac-mini.local:app [info]: Currently Pending readState operations: {"xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo,,,,":{"startTime":"2025-03-05T22:58:38.167Z","pending":{}}}
+2025-03-05T22:59:07.059Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 83OMvOXW0TJKGkEVTY4W0O39U9C_M6abS8JrukNQSvI 1741207654129:197540" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'nzIWoqEXwkiYyeutScNmyJ2u6gr7utoV8iQek3YgwI0' }
+2025-03-05T22:59:07.212Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message nzIWoqEXwkiYyeutScNmyJ2u6gr7utoV8iQek3YgwI0 1741207874969:197541" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'ZYMaUCU4wLLLynr7yTUjKlzula7Qbg2gwCiTQA8T98M' }
+2025-03-05T22:59:07.323Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message ZYMaUCU4wLLLynr7yTUjKlzula7Qbg2gwCiTQA8T98M 1741207893667:197542" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: '--lH6e_S-nmviOYEa2s192aMi21A503zpnhpDmZd0jk' }
+2025-03-05T22:59:07.415Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message --lH6e_S-nmviOYEa2s192aMi21A503zpnhpDmZd0jk 1741207915979:197543" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'tLYD7dVH1n54-apNbJR-055j_BhVSHOQ6ybC2IAx5DY' }
+2025-03-05T22:59:07.515Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message tLYD7dVH1n54-apNbJR-055j_BhVSHOQ6ybC2IAx5DY 1741207937449:197544" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: '3rOHAc2xc2WtxlGD7Xz8C_8f0VdPVHRArZypu-Vj7I8' }
+2025-03-05T22:59:07.618Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 3rOHAc2xc2WtxlGD7Xz8C_8f0VdPVHRArZypu-Vj7I8 1741207954269:197545" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'mEYjDDTJv4OmbRqhQshI38AhLKM5kmZ3Nz-LoKon-X8' }
+2025-03-05T22:59:07.744Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message mEYjDDTJv4OmbRqhQshI38AhLKM5kmZ3Nz-LoKon-X8 1741208097355:197546" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: '5Byi7Zq4L2Kr9sUf0TFWybEFuk2hLLsoKKp09XbVLAE' }
+2025-03-05T22:59:07.837Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 5Byi7Zq4L2Kr9sUf0TFWybEFuk2hLLsoKKp09XbVLAE 1741208117093:197547" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: '3d6bYXWOR_42GKiuf9Ah8Y1eiFRzAN_khJUHHsSX4SA' }
+2025-03-05T22:59:07.933Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 3d6bYXWOR_42GKiuf9Ah8Y1eiFRzAN_khJUHHsSX4SA 1741208147767:197548" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'IKyNRUoSprE6sV0KmkJN_-0PhX3sELAOodbFTj8TA3A' }
+2025-03-05T22:59:08.033Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message IKyNRUoSprE6sV0KmkJN_-0PhX3sELAOodbFTj8TA3A 1741208164818:197549" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'LuUMYtOxLVL3Qzd1I04NpJwvgLOPvJDz-6xuO6zSAkE' }
+2025-03-05T22:59:08.239Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message LuUMYtOxLVL3Qzd1I04NpJwvgLOPvJDz-6xuO6zSAkE 1741208169769:197550" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'shlVEPwsVu4RTB2awSMxxGUerM4RyfGxdncLIMWOW-w' }
+2025-03-05T22:59:08.349Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message shlVEPwsVu4RTB2awSMxxGUerM4RyfGxdncLIMWOW-w 1741208178749:197551" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'h7FI-Bqb3pS5Mq5f6qxsYmuV5SwVereHd3B-9TVOiFY' }
+2025-03-05T22:59:08.453Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message h7FI-Bqb3pS5Mq5f6qxsYmuV5SwVereHd3B-9TVOiFY 1741208621561:197552" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'o_KiFbxnrwnS5AfIanir5SI_UnSdTJ6byZQaXKbvvbA' }
+2025-03-05T22:59:08.557Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message o_KiFbxnrwnS5AfIanir5SI_UnSdTJ6byZQaXKbvvbA 1741208822429:197553" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: '8ljmNYmTQfTQZKqUIcVpwc9PPzWUXOJwIMWWhM7ZOJg' }
+2025-03-05T22:59:08.662Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 8ljmNYmTQfTQZKqUIcVpwc9PPzWUXOJwIMWWhM7ZOJg 1741208895244:197554" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+2025-03-05T22:59:08.860Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741208915953" took 2146 milliseconds: {"startTime":"2025-03-05T22:59:06.714Z","endTime":"2025-03-05T22:59:08.860Z","messages":{"scheduled":16,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741208915953,
+    blockHeight: 1622835,
+    ordinate: '197555'
+  }
+}
+downloadCheckpointFromArweave-3c782ea4: 0.027ms start {"id":"PaGRGVhPOwkcIcZxihgwXPfbnKXRa7sK8ezTFexpiDo"}
+jackfrain15 { messageId: 'X9Ar5OGuwqJ-HSTKbpiSfrBBIay-aPkn4_9duxZa81k' }
+2025-03-05T22:59:08.760Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message X9Ar5OGuwqJ-HSTKbpiSfrBBIay-aPkn4_9duxZa81k 1741208915953:197555" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-3c782ea4: 19.601ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 11, j: 9, memorysMatch: false }
+jackfrain4 { i: 11, correct: 0 }
+jackfrain1: CHECKPONT_VALIDATION_RETRIES: 12, slice: 28:38
+jackfrain1: VERIFIER SET: 10
+{
+  verifierSet: [
+    {
+      node: {
+        id: 'W2g3QsBJRkq_CoCkDU46qUq0LGy8FqQGtM2yfpcXJZM',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197527' },
+          { name: 'Timestamp', value: '1741204591430' },
+          { name: 'Block-Height', value: '1622803' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '2dca923a85e2c066718d27e31eed871bcdc812a85ab81d07557491d63034c085'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: '93CBEyaR2YuQXLvYbgqr7j3fed3PUQm4ZQsQyykVMvY'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'CKhg7xIvm_6ITYpAq35AULVSC1_ILaa8xdeMySn_wx4'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'Q383llLsYgu2ywBQ3FuxiiSVV4K3w0byz0LcjgiCYy4',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197531' },
+          { name: 'Timestamp', value: '1741205193657' },
+          { name: 'Block-Height', value: '1622808' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '164e08ead375da5b95dff4d1632d88051318c10d8fb209d14880723092e8ec77'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'nYluvTt7la0VpVQAjE_sPaTozyX2afmzUZW6giSz0hE'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'ncSCj01omymbf8x5DrErDwfc6aPOqnUW53EeMTLVBQY'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'SKVd_rnVFZmlVQcZW5ZYuTdWPxGaFSOmRuKLM50Fs_Y',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197532' },
+          { name: 'Timestamp', value: '1741205608378' },
+          { name: 'Block-Height', value: '1622811' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '381a201938ac218502c3412fdb55fc8a0894b6c04024cd07b1d0d35fac7d7552'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'H4tkMWDC3m0Xbr4EhkmwDJCB1G6l64_jIjRa9Qqp4h8'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'ZO3EufKhV69eMNwGsinuKBWxetI6Y0tAb1BT4LYwQ4E'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'OPkrqYNapHb7T1YwM8slRUIlQfA9sYXmtO0pb79DpoY',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197532' },
+          { name: 'Timestamp', value: '1741205608378' },
+          { name: 'Block-Height', value: '1622811' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '5f14306c012ae3eb0c82322c378a607bf625efd2e4be18296c19eebd05e41160'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'H4tkMWDC3m0Xbr4EhkmwDJCB1G6l64_jIjRa9Qqp4h8'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'ZO3EufKhV69eMNwGsinuKBWxetI6Y0tAb1BT4LYwQ4E'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'sdxIjAfR_lQCDjx5N6iDZpooTcgYhMmriu92CCzICOo',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197533' },
+          { name: 'Timestamp', value: '1741205735328' },
+          { name: 'Block-Height', value: '1622811' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '273b1cfdc0efe0bbd33af2487b83807c3847592a0fda8cebbbb771bea35119ef'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'ATkelpDHMTO059UFyUYKs8AX_CWVWWXHwbVXqOzsBr8'
+          },
+          {
+            name: 'Hash-Chain',
+            value: '_5cLDmbsvzMJgnFvVnjsCmENn7WiJL1B88KWI1moHlU'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'aAAoajIKsx4K5lZcxRjUobdZe9CJudhTekQex-sySaI',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197537' },
+          { name: 'Timestamp', value: '1741206735840' },
+          { name: 'Block-Height', value: '1622820' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: 'e7eb3328cbb0dd615ff870771bcd231a733ddd849cc159dd3406aa3df8b12af4'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'BKzgjWptXWfy1x-AlpTgaaLPUCr-9yxuYj2vumPfFDI'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'STfEA7AXBTJXLjrsB96hdm6uj9RBVlCSF_g7kIBADXk'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'QwqroniW8V3TWXnpyV6_fUOIMraD5GB3R9IQ5LC1vjg',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197538' },
+          { name: 'Timestamp', value: '1741207133835' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '250aa3af0adda98c41201a79400df57f4eb4821b455acea91dc6300739a1cae4'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: '3PZ4UfCOYGkJNLhu9JwboGOeXsv_uLLPBox236tF-XU'
+          },
+          {
+            name: 'Hash-Chain',
+            value: '7X8amA_h5-JoQ1j0jEjZwmhveZNzt-S2oendUmYCaVE'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'Q7pnRiYMiLGRJRKTwaahZQOh-mXA4qdivuNH-PzeETM',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197538' },
+          { name: 'Timestamp', value: '1741207133835' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '250aa3af0adda98c41201a79400df57f4eb4821b455acea91dc6300739a1cae4'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: '3PZ4UfCOYGkJNLhu9JwboGOeXsv_uLLPBox236tF-XU'
+          },
+          {
+            name: 'Hash-Chain',
+            value: '7X8amA_h5-JoQ1j0jEjZwmhveZNzt-S2oendUmYCaVE'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'rRUL9-3IxACtvR8WaFGR03mE5xaanlINUfp4K6FGPLw',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197539' },
+          { name: 'Timestamp', value: '1741207399100' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '36dbdbbaada28e559bc949df3805b824294abf394eb6d4ef493fdb2f4c0f98db'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'id4PWbF5lFcCGGsZ4V-DlGDe4-9qqjTAQSpdm6wuL7o'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'dKKKjcoa62o4eHOn7hJajpKLz_MUlC9r5UR-Q-JtWdw'
+          }
+        ]
+      }
+    },
+    {
+      node: {
+        id: 'gNHl7ZYjQ7WcrRB96ccQNCYzyO1IlKVbNJM1jFMsKgI',
+        owner: { address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+        tags: [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Variant', value: 'ao.TN.1' },
+          { name: 'Type', value: 'Checkpoint' },
+          {
+            name: 'Module',
+            value: 'Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM'
+          },
+          {
+            name: 'Process',
+            value: 'xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo'
+          },
+          { name: 'Nonce', value: '197539' },
+          { name: 'Timestamp', value: '1741207399100' },
+          { name: 'Block-Height', value: '1622823' },
+          { name: 'Content-Type', value: 'application/octet-stream' },
+          {
+            name: 'SHA-256',
+            value: '4f9784ad7cc454fe6148f3c488ef97b4b2cd09e9d5898c007dc58bd4997591e2'
+          },
+          { name: 'Content-Encoding', value: 'gzip' },
+          {
+            name: 'Assignment',
+            value: 'id4PWbF5lFcCGGsZ4V-DlGDe4-9qqjTAQSpdm6wuL7o'
+          },
+          {
+            name: 'Hash-Chain',
+            value: 'dKKKjcoa62o4eHOn7hJajpKLz_MUlC9r5UR-Q-JtWdw'
+          }
+        ]
+      }
+    }
+  ]
+}
+downloadCheckpointFromArweave-d768e47b: 0.028ms start {"id":"W2g3QsBJRkq_CoCkDU46qUq0LGy8FqQGtM2yfpcXJZM"}
+downloadCheckpointFromArweave-d768e47b: 246.53ms
+2025-03-05T22:59:17.145Z ao-cu:Jacks-Mac-mini.local:app [info]: Stats Usage: {"workers":{"primary":{"totalWorkers":1,"busyWorkers":0,"idleWorkers":1,"pendingTasks":0,"activeTasks":0},"dryRun":{"totalWorkers":0,"busyWorkers":0,"idleWorkers":0,"pendingTasks":0,"activeTasks":0}},"memory":{"rss":114524160,"heapTotal":66699264,"heapUsed":28697048,"external":1232919397,"arrayBuffers":927294182},"processCache":{"size":0,"calculatedSize":0,"processes":[]}}
+2025-03-05T22:59:17.150Z ao-cu:Jacks-Mac-mini.local:app [info]: Currently Pending readState operations: {"xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo,,,,":{"startTime":"2025-03-05T22:58:38.167Z","pending":{}}}
+jackfrain1.6 Checkpoint Iteration 1: { checkpointNonce: '197531' }
+jackfrain1.6 { currentNonce: '197527', nextNonce: '197531' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205193657", Checkpoint Id: W2g3QsBJRkq_CoCkDU46qUq0LGy8FqQGtM2yfpcXJZM, Checkpoint Ordinate: 197527, Memory Present: true
+2025-03-05T22:59:18.710Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741204591430" and "1741205193657"
+2025-03-05T22:59:18.715Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741204591430" and "1741205193657"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741204591430&to=1741205193657&limit=1000'
+}
+2025-03-05T22:59:19.085Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 4 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741204591430" and "1741205193657"...
+jackfrain15 { messageId: 'ThuHm8dVWUncHHGKet4etC739CGby5MeufuyBOzkKmY' }
+2025-03-05T22:59:19.092Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message ThuHm8dVWUncHHGKet4etC739CGby5MeufuyBOzkKmY 1741204983525:197528" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'oQge6sHiBAZXJIE8VlOgQWb5ELiZnDg25b1xq4Yxudo' }
+2025-03-05T22:59:19.383Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message oQge6sHiBAZXJIE8VlOgQWb5ELiZnDg25b1xq4Yxudo 1741204989046:197529" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+jackfrain15 { messageId: 'q_xXSHc6B77aXU0o4Jg4hn03Kv98c-leFG-GqfLusa0' }
+2025-03-05T22:59:19.560Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message q_xXSHc6B77aXU0o4Jg4hn03Kv98c-leFG-GqfLusa0 1741205034714:197530" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+2025-03-05T22:59:19.753Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205193657" took 1049 milliseconds: {"startTime":"2025-03-05T22:59:18.704Z","endTime":"2025-03-05T22:59:19.753Z","messages":{"scheduled":4,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205193657,
+    blockHeight: 1622808,
+    ordinate: '197531'
+  }
+}
+downloadCheckpointFromArweave-0be9aabf: 0.031ms start {"id":"Q383llLsYgu2ywBQ3FuxiiSVV4K3w0byz0LcjgiCYy4"}
+jackfrain15 { messageId: 'WCTfTRzEUALpW5YLUh_jLPhP87KWTUeIHXNOqxL9H28' }
+2025-03-05T22:59:19.663Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message WCTfTRzEUALpW5YLUh_jLPhP87KWTUeIHXNOqxL9H28 1741205193657:197531" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-0be9aabf: 18.573ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 360601, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 12, j: 1, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 2: { checkpointNonce: '197532' }
+jackfrain1.6 { currentNonce: '197531', nextNonce: '197532' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378", Checkpoint Id: Q383llLsYgu2ywBQ3FuxiiSVV4K3w0byz0LcjgiCYy4, Checkpoint Ordinate: 197531, Memory Present: true
+2025-03-05T22:59:24.487Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205193657" and "1741205608378"
+2025-03-05T22:59:24.490Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205193657" and "1741205608378"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205193657&to=1741205608378&limit=1000'
+}
+2025-03-05T22:59:24.650Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 1 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205193657" and "1741205608378"...
+jackfrain15 { messageId: '6ciwXCYbDODXvPJvlRL15H-SKX1BRQ6d0OBrXGmIf84' }
+2025-03-05T22:59:25.373Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378" took 902 milliseconds: {"startTime":"2025-03-05T22:59:24.471Z","endTime":"2025-03-05T22:59:25.373Z","messages":{"scheduled":1,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205608378,
+    blockHeight: 1622811,
+    ordinate: '197532'
+  }
+}
+downloadCheckpointFromArweave-93afbd97: 0.031ms start {"id":"SKVd_rnVFZmlVQcZW5ZYuTdWPxGaFSOmRuKLM50Fs_Y"}
+2025-03-05T22:59:25.004Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message 6ciwXCYbDODXvPJvlRL15H-SKX1BRQ6d0OBrXGmIf84 1741205608378:197532" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-93afbd97: 38.353ms
+2025-03-05T22:59:27.133Z ao-cu:Jacks-Mac-mini.local:app [info]: Stats Usage: {"workers":{"primary":{"totalWorkers":1,"busyWorkers":0,"idleWorkers":1,"pendingTasks":0,"activeTasks":0},"dryRun":{"totalWorkers":0,"busyWorkers":0,"idleWorkers":0,"pendingTasks":0,"activeTasks":0}},"memory":{"rss":372113408,"heapTotal":66699264,"heapUsed":30867792,"external":1233442560,"arrayBuffers":927817345},"processCache":{"size":0,"calculatedSize":0,"processes":[]}}
+2025-03-05T22:59:27.135Z ao-cu:Jacks-Mac-mini.local:app [info]: Currently Pending readState operations: {"xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo,,,,":{"startTime":"2025-03-05T22:58:38.167Z","pending":{}}}
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+jackfrain4 { i: 12, j: 2, memorysMatch: true }
+jackfrain1.6 Checkpoint Iteration 3: { checkpointNonce: '197532' }
+jackfrain1.6 { currentNonce: '197532', nextNonce: '197532' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378", Checkpoint Id: SKVd_rnVFZmlVQcZW5ZYuTdWPxGaFSOmRuKLM50Fs_Y, Checkpoint Ordinate: 197532, Memory Present: true
+2025-03-05T22:59:30.511Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205608378" and "1741205608378"
+2025-03-05T22:59:30.514Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205608378"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205608378&to=1741205608378&limit=1000'
+}
+2025-03-05T22:59:30.628Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 0 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205608378"...
+2025-03-05T22:59:30.628Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205608378" took 125 milliseconds: {"startTime":"2025-03-05T22:59:30.503Z","endTime":"2025-03-05T22:59:30.628Z","messages":{"scheduled":0,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205608378,
+    blockHeight: 1622811,
+    ordinate: '197532'
+  }
+}
+downloadCheckpointFromArweave-af1adc4b: 0.039ms start {"id":"OPkrqYNapHb7T1YwM8slRUIlQfA9sYXmtO0pb79DpoY"}
+downloadCheckpointFromArweave-af1adc4b: 36.301ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+{ i: 374089, v1l: 297664512, v2l: 297664512 }
+jackfrain4 { i: 12, j: 3, memorysMatch: false }
+jackfrain1.6 Checkpoint Iteration 4: { checkpointNonce: '197533' }
+jackfrain1.6 { currentNonce: '197532', nextNonce: '197533' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205735328", Checkpoint Id: OPkrqYNapHb7T1YwM8slRUIlQfA9sYXmtO0pb79DpoY, Checkpoint Ordinate: 197532, Memory Present: true
+2025-03-05T22:59:33.776Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205608378" and "1741205735328"
+2025-03-05T22:59:33.778Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205735328"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205608378&to=1741205735328&limit=1000'
+}
+2025-03-05T22:59:33.901Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Successfully loaded a total of 1 scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205608378" and "1741205735328"...
+jackfrain15 { messageId: 'm43XLKE9JTzR_MDBkuoDQ9eCfTy-kYiHqNoOrzMph0k' }
+2025-03-05T22:59:34.073Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint [info]: readState for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741205735328" took 317 milliseconds: {"startTime":"2025-03-05T22:59:33.756Z","endTime":"2025-03-05T22:59:34.073Z","messages":{"scheduled":1,"cron":0}}
+jacfrain2 {
+  last: {
+    timestamp: 1741205735328,
+    blockHeight: 1622811,
+    ordinate: '197533'
+  }
+}
+downloadCheckpointFromArweave-3c691fe8: 0.028ms start {"id":"sdxIjAfR_lQCDjx5N6iDZpooTcgYhMmriu92CCzICOo"}
+2025-03-05T22:59:33.947Z ao-cu:Jacks-Mac-mini.local:worker-a18c0275b67184f6 [info]: Evaluating message "Scheduled Message m43XLKE9JTzR_MDBkuoDQ9eCfTy-kYiHqNoOrzMph0k 1741205735328:197533" to process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo"
+downloadCheckpointFromArweave-3c691fe8: 23.551ms
+jackfrain3 {
+  resultMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>,
+  nextCheckpointMemory: <Buffer 65 6d 73 63 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... 297664462 more bytes>
+}
+jackfrain4 { i: 12, j: 4, memorysMatch: true }
+jackfrain1.6 Checkpoint Iteration 5: { checkpointNonce: '197537' }
+jackfrain1.6 { currentNonce: '197533', nextNonce: '197537' }
+jackfrain2.0 readStateFromCheckpoint for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" up to message "1741206735840", Checkpoint Id: sdxIjAfR_lQCDjx5N6iDZpooTcgYhMmriu92CCzICOo, Checkpoint Ordinate: 197533, Memory Present: true
+2025-03-05T22:59:36.848Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:loadMessages [info]: Initializing AsyncIterable of Scheduled messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" between "1741205735328" and "1741206735840"
+2025-03-05T22:59:36.851Z ao-cu:Jacks-Mac-mini.local:readStateFromCheckpoint:ao-su:loadMessages [info]: Loading next page of max 1000 messages for process "xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo" from SU "https://su34.ao-testnet.xyz" between "1741205735328" and "1741206735840"
+jackfrainurl:  {
+  url: 'https://su34.ao-testnet.xyz/xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo?process-id=xKT5_B0-8fpwSUC6VnWggvOzN-mXt28kHVzx4sbvIqo&from=1741205735328&to=1741206735840&limit=1000'
+}
