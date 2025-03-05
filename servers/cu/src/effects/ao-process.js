@@ -799,7 +799,8 @@ export function findLatestProcessMemoryWith ({
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
   logger: _logger,
-  evaluate
+  readStateFromCheckpoint,
+  hashWasmMemory
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -808,6 +809,7 @@ export function findLatestProcessMemoryWith ({
   findFileCheckpointBefore = fromPromise(findFileCheckpointBefore)
   loadTransactionData = fromPromise(loadTransactionData)
   findRecordCheckpointBefore = fromPromise(findRecordCheckpointBefore)
+  hashWasmMemory = fromPromise(hashWasmMemory)
 
   const IGNORED_CHECKPOINTS = new Set(IGNORE_ARWEAVE_CHECKPOINTS)
   const isCheckpointIgnored = (id) => !!IGNORED_CHECKPOINTS.size && IGNORED_CHECKPOINTS.has(id)
@@ -876,7 +878,8 @@ export function findLatestProcessMemoryWith ({
             module: tags.Module,
             blockHeight: parseInt(tags['Block-Height']),
             cron: tags['Cron-Interval'],
-            encoding: tags['Content-Encoding']
+            encoding: tags['Content-Encoding'],
+            sha: tags['SHA-256']
           }
         })
       ),
@@ -891,56 +894,64 @@ export function findLatestProcessMemoryWith ({
     )
   }
 
-  const CHECKPOINT_SPREAD_INTERVAL = 5
+  const CHECKPOINT_SPREAD_INTERVAL = 10
+  const VERIFIER_PERCENTAGE = 0.75
 
-  const verifyLatest = ({ latestCheckpoint, checkpoints }) => {
+  const verifyLatest = async ({ latestCheckpoint, checkpoints }) => {
     const toAssignmentId = latestCheckpoint.assignmentId
 
-    const correctIndex = Math.max(0, checkpoints.length - CHECKPOINT_SPREAD_INTERVAL)
-    const spreadCheckpoint = checkpoints[correctIndex]
+    // The Nonces come out of graphql highest nonce first so reverse
+    const verifierSet = checkpoints.length >= CHECKPOINT_SPREAD_INTERVAL ? 
+        checkpoints.reverse().slice(0, CHECKPOINT_SPREAD_INTERVAL - 1)
+        : checkpoints.reverse()
 
-    const tags = parseTags(spreadCheckpoint.node.tags)
+    let fromCheckpoint = verifierSet[0]
 
-    const evalArgs = {
-      checkpoint: {
-        id: spreadCheckpoint.node.id,
-        timestamp: parseInt(tags.Timestamp),
-        assignmentId: tags.Assignment,
-        hashChain: tags['Hash-Chain'],
-        epoch: maybeParseInt(tags.Epoch),
-        nonce: maybeParseInt(tags.Nonce),
-        ordinate: tags.Nonce,
-        module: tags.Module,
-        blockHeight: parseInt(tags['Block-Height']),
-        cron: tags['Cron-Interval'],
-        encoding: tags['Content-Encoding']
-      },
-      messageId: toAssignmentId,
-      needsOnlyMemory: true,
-      processId: tags.Process
-    }
+    let mem = await downloadCheckpointFromArweave(
+        fromCheckpoint.node.id
+    ).toPromise()
 
-    // run evaluation
-    // get Memory of latestCheckpoint
-    // compare Memory of evaluation to Memory of latest checkpoint
+    const votes = 0;
+    const threshold = verifierSet.length * VERIFIER_PERCENTAGE;
 
-    return Resolved(latestCheckpoint)
+    for(let i = 1; i < verifierSet.length; i++) {
+      const checkpointToVerifyAgainst = verifierSet[i]
+
+      let memToVerify = await downloadCheckpointFromArweave(
+        checkpointToVerify.node.id
+      ).toPromise()
+
+      const tagsFrom = parseTags(fromCheckpoint.node.tags)
+      const tagsTo = parseTags(checkpointToVerifyAgainst.node.tags)
+  
+      const evalArgs = {
+        checkpoint: {
+          id: fromCheckpoint.node.id,
+          timestamp: parseInt(tagsFrom.Timestamp),
+          assignmentId: tagsFrom.Assignment,
+          hashChain: tagsFrom['Hash-Chain'],
+          epoch: maybeParseInt(tagsFrom.Epoch),
+          nonce: maybeParseInt(tagsFrom.Nonce),
+          ordinate: tagsFrom.Nonce,
+          module: tagsFrom.Module,
+          blockHeight: parseInt(tagsFrom['Block-Height']),
+          cron: tagsFrom['Cron-Interval'],
+          encoding: tagsFrom['Content-Encoding']
+        },
+        messageId: tagsTo.Assignment,
+        needsOnlyMemory: true,
+        processId: tags.Process,
+        Memory: mem
+      }
+  
+     
+
+    return latestCheckpoint
   }
 
-  const determineLatestVerifiedCheckpoint = (checkpoints, ignoredCheckpoints = []) => {
+  const determineLatestVerifiedCheckpoint = (checkpoints) => {
       return of(checkpoints)
-        .map(determineLatestCheckpoint)
-        .map((latestCheckpoint) => { return { latestCheckpoint, checkpoints } })
-        .chain(verifyLatest) 
-        .bichain(
-          (_err) => {
-            return determineLatestVerifiedCheckpoint(checkpoints, [
-              ignoredCheckpoints, 
-              ...latestCheckpoint
-            ])
-          },
-          (latest) => Resolved(latest)
-        )
+        .chain(fromPromise(findLatestVerified)) 
     }
   
 

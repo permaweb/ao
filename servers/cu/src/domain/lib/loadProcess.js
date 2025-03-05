@@ -205,13 +205,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
   }
 
   function downloadCheckpointFromArweave (checkpoint) {
-      const { stop: stopTimer } = timer('downloadCheckpointFromArweave', { id: checkpoint.id })
-  
       return loadTransactionData(checkpoint.id)
-        .map((res) => {
-          stopTimer()
-          return res
-        })
         .chain(fromPromise((res) => res.arrayBuffer()))
         .map((arrayBuffer) => Buffer.from(arrayBuffer))
         .chain(fromPromise(decodeData(checkpoint.encoding)))
