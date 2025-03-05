@@ -928,6 +928,7 @@ export function findLatestProcessMemoryWith ({
           currentMemory = resultMemory
           currentCheckpoint = nextCheckpoint
         }
+        console.log('jackfrain4', { i, correct })
 
 
         if ((correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH) {
@@ -952,6 +953,8 @@ export function findLatestProcessMemoryWith ({
           logger(`Determined incorrect checkpoint id:  ${currentCheckpoint.node.id}`)
         }
     }
+
+    return true
   }
 
   const compareArrayBuffers = (buffer1, buffer2) => {

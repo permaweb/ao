@@ -62,6 +62,8 @@ export function readStateFromCheckpointWith (env) {
       return res
     }
 
+    console.log('jackfrain2.0 readStateFromCheckpoint for process "%s" up to message "%s", Checkpoint Id: %s, Checkpoint Ordinate: %s, Memory Present: %s', processId, messageId, checkpoint.id, checkpoint.ordinate, Memory ? 'true' : 'false')
+
     return of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory, checkpoint, Memory })
         .chain(loadProcessMeta)
         .chain(loadProcess)
