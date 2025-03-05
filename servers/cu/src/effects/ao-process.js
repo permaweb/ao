@@ -798,8 +798,8 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
-  loadEvaluator,
-  logger: _logger
+  logger: _logger,
+  evaluate
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -891,8 +891,40 @@ export function findLatestProcessMemoryWith ({
     )
   }
 
+  const CHECKPOINT_SPREAD_INTERVAL = 5
+
   const verifyLatest = ({ latestCheckpoint, checkpoints }) => {
-      return Resolved(latestCheckpoint)
+    const toAssignmentId = latestCheckpoint.assignmentId
+
+    const correctIndex = Math.max(0, checkpoints.length - CHECKPOINT_SPREAD_INTERVAL)
+    const spreadCheckpoint = checkpoints[correctIndex]
+
+    const tags = parseTags(spreadCheckpoint.node.tags)
+
+    const evalArgs = {
+      checkpoint: {
+        id: spreadCheckpoint.node.id,
+        timestamp: parseInt(tags.Timestamp),
+        assignmentId: tags.Assignment,
+        hashChain: tags['Hash-Chain'],
+        epoch: maybeParseInt(tags.Epoch),
+        nonce: maybeParseInt(tags.Nonce),
+        ordinate: tags.Nonce,
+        module: tags.Module,
+        blockHeight: parseInt(tags['Block-Height']),
+        cron: tags['Cron-Interval'],
+        encoding: tags['Content-Encoding']
+      },
+      messageId: toAssignmentId,
+      needsOnlyMemory: true,
+      processId: tags.Process
+    }
+
+    // run evaluation
+    // get Memory of latestCheckpoint
+    // compare Memory of evaluation to Memory of latest checkpoint
+
+    return Resolved(latestCheckpoint)
   }
 
   const determineLatestVerifiedCheckpoint = (checkpoints, ignoredCheckpoints = []) => {
@@ -901,7 +933,7 @@ export function findLatestProcessMemoryWith ({
         .map((latestCheckpoint) => { return { latestCheckpoint, checkpoints } })
         .chain(verifyLatest) 
         .bichain(
-          (err) => {
+          (_err) => {
             return determineLatestVerifiedCheckpoint(checkpoints, [
               ignoredCheckpoints, 
               ...latestCheckpoint
