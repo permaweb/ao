@@ -295,7 +295,6 @@ const processDocSchema = z.object({
 
 function latestCheckpointBefore (destination) {
   return (curLatest, checkpoint) => {
-    console.log('curLatest', curLatest)
     /**
      * Often times, we are just interested in the latest checkpoint --
      * the latest point we can start evaluating from, up to the present.
@@ -850,7 +849,7 @@ export function findLatestProcessMemoryWith ({
   /**
    * TODO: lots of room for optimization here
    */
-  async function determineLatestVerified (edges) {
+  function determineLatestCheckpoint (edges) {
     return transduce(
       compose(
         map(prop('node')),
@@ -892,7 +891,26 @@ export function findLatestProcessMemoryWith ({
     )
   }
 
-  const determineLatestCheckpoint = fromPromise(determineLatestVerified)
+  const verifyLatest = ({ latestCheckpoint, checkpoints }) => {
+      return Resolved(latestCheckpoint)
+  }
+
+  const determineLatestVerifiedCheckpoint = (checkpoints, ignoredCheckpoints = []) => {
+      return of(checkpoints)
+        .map(determineLatestCheckpoint)
+        .map((latestCheckpoint) => { return { latestCheckpoint, checkpoints } })
+        .chain(verifyLatest) 
+        .bichain(
+          (err) => {
+            return determineLatestVerifiedCheckpoint(checkpoints, [
+              ignoredCheckpoints, 
+              ...latestCheckpoint
+            ])
+          },
+          (latest) => Resolved(latest)
+        )
+    }
+  
 
   function decodeData (encoding) {
     /**
@@ -1157,7 +1175,7 @@ export function findLatestProcessMemoryWith ({
         })
       })
       .map(path(['data', 'transactions', 'edges']))
-      .chain(determineLatestCheckpoint)
+      .chain(determineLatestVerifiedCheckpoint)
       .chain((latestCheckpoint) => {
         if (!latestCheckpoint) return Rejected(args)
 
