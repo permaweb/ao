@@ -91,7 +91,7 @@ export function evaluateWith (env) {
       .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
         // If we are evaluating from a checkpoint, we don't want to use cached evals or save any new ones
-        const hasCheckpoint = Boolean(ctx.checkpoint)
+        const hasCheckpoint = Boolean(ctx.checkpoint) && Boolean(ctx.Memory)
 
         // A running tally of gas used in the eval stream
         let totalGasUsed = BigInt(0)

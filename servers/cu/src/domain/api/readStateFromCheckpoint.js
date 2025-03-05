@@ -37,7 +37,7 @@ export function readStateFromCheckpointWith (env) {
   const evaluate = evaluateWith(env)
 
   // Checkpoint: { id, timestamp, ordinate, blockHeight, cron, assignmentId, hashChain, encoding }
-  return ({ processId, messageId, to, ordinate, cron, needsOnlyMemory, checkpoint }) => {
+  return ({ processId, messageId, to, ordinate, cron, needsOnlyMemory, checkpoint, Memory }) => {
     messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'latest'
 
     const stats = {
@@ -62,8 +62,10 @@ export function readStateFromCheckpointWith (env) {
       return res
     }
 
+    env.logger.info('readStateFromCheckpoint for process "%s" up to message "%s", Checkpoint Id: %s, Checkpoint Ordinate: %s, Memory Present: %s', processId, messageId, checkpoint.id, checkpoint.ordinate, Memory ? 'true' : 'false')
 
-    return of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory, checkpoint })
+    logger
+    return of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory, checkpoint, Memory })
         .chain(loadProcessMeta)
         .chain(loadProcess)
         .chain((ctx) => {

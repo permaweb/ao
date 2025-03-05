@@ -1,10 +1,6 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { identity, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
-import { promisify } from 'node:util'
-import { gunzip } from 'node:zlib'
-
-const gunzipP = promisify(gunzip)
 
 import { findEvaluationSchema, findLatestProcessMemorySchema, saveLatestProcessMemorySchema } from '../dal.js'
 
@@ -189,34 +185,9 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
           }))
       })
   }
-  function decodeData (encoding) {
-    /**
-     * TODO: add more encoding options
-     */
-    if (encoding && encoding !== 'gzip') {
-      throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
-    }
 
-    return async (data) => {
-      if (!encoding) return data
-
-      return gunzipP(data)
-    }
-  }
-
-  function downloadCheckpointFromArweave (checkpoint) {
-      return loadTransactionData(checkpoint.id)
-        .chain(fromPromise((res) => res.arrayBuffer()))
-        .map((arrayBuffer) => Buffer.from(arrayBuffer))
-        .chain(fromPromise(decodeData(checkpoint.encoding)))
-    }
-
-  function loadMemoryFromCheckpoint (ctx) {
-    return of({ checkpoint: ctx.checkpoint })
-      .chain(({ checkpoint }) => {
-        return downloadCheckpointFromArweave(checkpoint)
-          .map((Memory) => ({ checkpoint, Memory }))
-      })
+  function useMemoryAndCheckpoint (ctx) {
+    return of({ checkpoint: ctx.checkpoint, Memory: ctx.Memory })
       .map(({ checkpoint, Memory }) => {
         return {
             result: {
@@ -237,7 +208,7 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
   }
   
   return (ctx) => {
-    if (ctx.checkpoint) return loadMemoryFromCheckpoint(ctx)
+    if (ctx.checkpoint && ctx.Memory) return useMemoryAndCheckpoint(ctx)
     return maybeExactEvaluation(ctx)
       .bichain(maybeCachedMemory, Resolved)
   }
