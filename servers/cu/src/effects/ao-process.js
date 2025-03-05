@@ -848,77 +848,33 @@ export function findLatestProcessMemoryWith ({
     }
   `
 
-  /**
-   * TODO: lots of room for optimization here
-   */
-  function determineLatestCheckpoint (edges) {
-    return transduce(
-      compose(
-        map(prop('node')),
-        filter((node) => {
-          const isIgnored = isCheckpointIgnored(node.id)
-          if (isIgnored) logger('Encountered Ignored Checkpoint "%s" from Arweave. Skipping...', node.id)
-          return !isIgnored
-        }),
-        map((node) => {
-          const tags = parseTags(node.tags)
-          return {
-            id: node.id,
-            timestamp: parseInt(tags.Timestamp),
-            assignmentId: tags.Assignment,
-            hashChain: tags['Hash-Chain'],
-            /**
-             * Due to a previous bug, these tags may sometimes
-             * be invalid values, so we've added a utility
-             * to map those invalid values to a valid value
-             */
-            epoch: maybeParseInt(tags.Epoch),
-            nonce: maybeParseInt(tags.Nonce),
-            ordinate: tags.Nonce,
-            module: tags.Module,
-            blockHeight: parseInt(tags['Block-Height']),
-            cron: tags['Cron-Interval'],
-            encoding: tags['Content-Encoding'],
-            sha: tags['SHA-256']
-          }
-        })
-      ),
-      /**
-       * Pass the LATEST flag, which configures latestCheckpointBefore
-       * to only be concerned with finding the absolute latest checkpoint
-       * in the list
-       */
-      latestCheckpointBefore(LATEST),
-      undefined,
-      edges
-    )
-  }
+  const CHECKPONT_VALIDATION_STEPS = 10
+  const CHECKPONT_VALIDATION_THRESH = 0.75
+  const CHECKPONT_VALIDATION_RETRIES = 5
 
-  const CHECKPOINT_SPREAD_INTERVAL = 10
-  const VERIFIER_PERCENTAGE = 0.75
-
-  const verifyLatest = async ({ latestCheckpoint, checkpoints }) => {
-    const toAssignmentId = latestCheckpoint.assignmentId
-
-    // The Nonces come out of graphql highest nonce first so reverse
-    const verifierSet = checkpoints.length >= CHECKPOINT_SPREAD_INTERVAL ? 
-        checkpoints.reverse().slice(0, CHECKPOINT_SPREAD_INTERVAL - 1)
-        : checkpoints.reverse()
+  const findLatestVerified = async ({ checkpoints }) => {
+    for(let i = 0; i < MAX_VERIFICATION_RETRIES; i++) {
+        // The Nonces come out of graphql highest nonce first so reverse
+        const verifierSet = checkpoints.length >= CHECKPONT_VALIDATION_STEPS ? 
+          checkpoints.reverse().slice(0, CHECKPONT_VALIDATION_STEPS - 1)
+          : checkpoints.reverse()
+    }
 
     let fromCheckpoint = verifierSet[0]
+
+    let finalCheckpointWithMemory = null
 
     let mem = await downloadCheckpointFromArweave(
         fromCheckpoint.node.id
     ).toPromise()
 
-    const votes = 0;
-    const threshold = verifierSet.length * VERIFIER_PERCENTAGE;
+    const correct = 0
 
     for(let i = 1; i < verifierSet.length; i++) {
       const checkpointToVerifyAgainst = verifierSet[i]
 
-      let memToVerify = await downloadCheckpointFromArweave(
-        checkpointToVerify.node.id
+      let memToVerifyAgainst = await downloadCheckpointFromArweave(
+        checkpointToVerifyAgainst.node.id
       ).toPromise()
 
       const tagsFrom = parseTags(fromCheckpoint.node.tags)
@@ -940,13 +896,50 @@ export function findLatestProcessMemoryWith ({
         },
         messageId: tagsTo.Assignment,
         needsOnlyMemory: true,
-        processId: tags.Process,
+        processId: tagsTo.Process,
         Memory: mem
       }
   
-     
+      const result = await readStateFromCheckpoint(evalArgs)
 
-    return latestCheckpoint
+      mem = result.result.Memory
+      fromCheckpoint = checkpointToVerifyAgainst
+
+      console.log('999999999999999999')
+      console.log(mem)
+
+      // console.log(Readable.from(Buffer.from(result.result.Memory)))
+      
+      // const hashed = await hashWasmMemory(
+      //   Readable.from(
+      //     Buffer.from(result.result.Memory)
+      //   ), 
+      //   tags['Content-Encoding']
+      // ).toPromise()
+
+      // console.log('hashed', hashed)
+      // console.log(latestCheckpoint.sha)
+
+      // if(hashed === latestCheckpoint.sha) {
+      //   console.log('999999999999999999')
+      //   votes++
+      // }
+
+    }
+
+    if( (correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH ) {
+        return {
+            module,
+            assignmentId,
+            hashChain,
+            timestamp,
+            epoch,
+            nonce,
+            ordinate,
+            blockHeight,
+            cron
+        }
+    } 
   }
 
   const determineLatestVerifiedCheckpoint = (checkpoints) => {
@@ -1227,9 +1220,9 @@ export function findLatestProcessMemoryWith ({
          * now let's load the snapshotted Memory from arweave
          */
         return of()
-          .chain(() => {
-            if (omitMemory) return Resolved(null)
-            return downloadCheckpointFromArweave(latestCheckpoint)
+          .map(() => {
+            if (omitMemory) return null
+            return latestCheckpoint.Memory
           })
           /**
            * Finally map the Checkpoint to the expected shape
