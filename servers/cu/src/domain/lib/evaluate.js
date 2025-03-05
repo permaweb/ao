@@ -90,6 +90,9 @@ export function evaluateWith (env) {
     of(ctx)
       .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
+        // If we are evaluating from a checkpoint, we don't want to use cached evals or save any new ones
+        const hasCheckpoint = Boolean(ctx.checkpoint)
+
         // A running tally of gas used in the eval stream
         let totalGasUsed = BigInt(0)
         let mostRecentAssignmentId = ctx.mostRecentAssignmentId
@@ -171,7 +174,7 @@ export function evaluateWith (env) {
              * TODO: should the CU check every message, ergo not trusting the SU?
              */
             if (
-              (deepHash || isAssignment) &&
+              (deepHash || isAssignment) && (!hasCheckpoint) &&
               await doesMessageExist({
                 messageId: message.Id,
                 deepHash,
@@ -317,7 +320,7 @@ export function evaluateWith (env) {
          */
         const { noSave, cron, ordinate, message } = prev
 
-        if (!noSave && prev.Memory) {
+        if (!noSave && prev.Memory && !hasCheckpoint) {
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,

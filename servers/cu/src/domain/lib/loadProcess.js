@@ -1,6 +1,10 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
 import { identity, mergeRight, pick } from 'ramda'
 import { z } from 'zod'
+import { promisify } from 'node:util'
+import { gunzip } from 'node:zlib'
+
+const gunzipP = promisify(gunzip)
 
 import { findEvaluationSchema, findLatestProcessMemorySchema, saveLatestProcessMemorySchema } from '../dal.js'
 
@@ -61,10 +65,11 @@ const ctxSchema = z.object({
   exact: z.boolean().default(false)
 }).passthrough()
 
-function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, saveLatestProcessMemory, logger }) {
+function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, saveLatestProcessMemory, loadTransactionData, logger }) {
   findEvaluation = fromPromise(findEvaluationSchema.implement(findEvaluation))
   findLatestProcessMemory = fromPromise(findLatestProcessMemorySchema.implement(findLatestProcessMemory))
   saveLatestProcessMemory = fromPromise(saveLatestProcessMemorySchema.implement(saveLatestProcessMemory))
+  loadTransactionData = fromPromise(loadTransactionData)
 
   function maybeExactEvaluation (ctx) {
     /**
@@ -184,9 +189,64 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
           }))
       })
   }
+  function decodeData (encoding) {
+    /**
+     * TODO: add more encoding options
+     */
+    if (encoding && encoding !== 'gzip') {
+      throw new Error('Only GZIP encoding is currently supported for Process Memory Snapshot')
+    }
 
-  return (ctx) => maybeExactEvaluation(ctx)
-    .bichain(maybeCachedMemory, Resolved)
+    return async (data) => {
+      if (!encoding) return data
+
+      return gunzipP(data)
+    }
+  }
+
+  function downloadCheckpointFromArweave (checkpoint) {
+      const { stop: stopTimer } = timer('downloadCheckpointFromArweave', { id: checkpoint.id })
+  
+      return loadTransactionData(checkpoint.id)
+        .map((res) => {
+          stopTimer()
+          return res
+        })
+        .chain(fromPromise((res) => res.arrayBuffer()))
+        .map((arrayBuffer) => Buffer.from(arrayBuffer))
+        .chain(fromPromise(decodeData(checkpoint.encoding)))
+    }
+
+  function loadMemoryFromCheckpoint (ctx) {
+    return of({ checkpoint: ctx.checkpoint })
+      .chain(({ checkpoint }) => {
+        return downloadCheckpointFromArweave(checkpoint)
+          .map((Memory) => ({ checkpoint, Memory }))
+      })
+      .map(({ checkpoint, Memory }) => {
+        return {
+            result: {
+              Memory
+            },
+            from: checkpoint.timestamp,
+            ordinate: checkpoint.ordinate,
+            fromBlockHeight: checkpoint.blockHeight,
+            fromCron: checkpoint.cron,
+            mostRecentAssignmentId: checkpoint.assignmentId,
+            mostRecentHashChain: checkpoint.hashChain,
+            /**
+             * We know this is not an exact match, because we are loading from a previous checkpoint
+             */
+            exact: false
+          }
+      })
+  }
+  
+  return (ctx) => {
+    if (ctx.checkpoint) return loadMemoryFromCheckpoint(ctx)
+    return maybeExactEvaluation(ctx)
+      .bichain(maybeCachedMemory, Resolved)
+  }
 }
 
 /**
