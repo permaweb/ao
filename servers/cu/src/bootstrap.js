@@ -316,30 +316,6 @@ export const createApis = async (ctx) => {
   const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
 
   const sharedDeps = (logger) => {
-    const sharedLoadEvaluator = AoModuleClient.evaluatorWith({
-      loadWasmModule,
-      evaluateWith: (prep) => primaryWorkQueue.add(() =>
-        Promise.resolve()
-          /**
-           * prep work is deferred until the work queue tasks is executed
-           */
-          .then(prep)
-          .then(([args, options]) => {
-            /**
-             * TODO: is this the best place for this?
-             *
-             * It keeps it abstracted away from business logic,
-             * and tied to the specific evaluator, so seems kosher,
-             * but also feels kind of misplaced
-             */
-            if (args.close) return broadcastCloseStream(args.streamId)
-  
-            return primaryWorkerPool.exec('evaluate', [args], options)
-          })
-      ),
-      logger
-    })
-
     return {
       loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
@@ -358,7 +334,6 @@ export const createApis = async (ctx) => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
         IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
-        loadEvaluator: sharedLoadEvaluator,
         logger
       }),
       saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
@@ -377,7 +352,29 @@ export const createApis = async (ctx) => {
       loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
       findModule: AoModuleClient.findModuleWith({ db, logger }),
       saveModule: AoModuleClient.saveModuleWith({ db, logger }),
-      loadEvaluator: sharedLoadEvaluator,
+      loadEvaluator: AoModuleClient.evaluatorWith({
+        loadWasmModule,
+        evaluateWith: (prep) => primaryWorkQueue.add(() =>
+          Promise.resolve()
+            /**
+             * prep work is deferred until the work queue tasks is executed
+             */
+            .then(prep)
+            .then(([args, options]) => {
+              /**
+               * TODO: is this the best place for this?
+               *
+               * It keeps it abstracted away from business logic,
+               * and tied to the specific evaluator, so seems kosher,
+               * but also feels kind of misplaced
+               */
+              if (args.close) return broadcastCloseStream(args.streamId)
+    
+              return primaryWorkerPool.exec('evaluate', [args], options)
+            })
+        ),
+        logger
+      }),
       findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
       loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
       loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
