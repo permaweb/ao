@@ -1,6 +1,6 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
@@ -52,6 +52,8 @@ async function readFile (file) {
 
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
+  const CU_IDENTIFIER = randomUUID()
+  ctx.logger('CU Identifier: %s', CU_IDENTIFIER)
 
   const setTimeout = (...args) => lt.setTimeout(...args)
   const clearTimeout = (...args) => lt.clearTimeout(...args)
@@ -236,7 +238,8 @@ export const createApis = async (ctx) => {
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE,
-    PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR
+    PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR,
+    CU_IDENTIFIER
   })
 
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
