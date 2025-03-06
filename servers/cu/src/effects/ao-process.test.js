@@ -717,23 +717,21 @@ describe('ao-process', () => {
     })
 
     describe('ARWEAVE checkpoint', () => {
-      const edges = [
-        {
-          node: {
-            id: 'tx-123',
-            tags: [
-              { name: 'Module', value: `${cachedEval.moduleId}` },
-              { name: 'Timestamp', value: `${cachedEval.timestamp}` },
-              { name: 'Assignment', value: `${cachedEval.assignmentId}` },
-              { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
-              { name: 'Epoch', value: `${cachedEval.epoch}` },
-              { name: 'Nonce', value: `${cachedEval.nonce}` },
-              { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-              { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-            ]
-          }
+      const edges = Array.from({ length: 15 }, (_, i) => ({
+        node: {
+          id: `tx-123-${i}`,
+          tags: [   
+            { name: 'Module', value: `${cachedEval.moduleId}` },
+            { name: 'Assignment', value: `${cachedEval.assignmentId}` },
+            { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
+            { name: 'Timestamp', value: `${cachedEval.timestamp}` },
+            { name: 'Epoch', value: `${cachedEval.epoch}` },
+            { name: 'Nonce', value: `${cachedEval.nonce}` },
+            { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
+            { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
+          ]
         }
-      ]
+      }))
       const deps = {
         cache: {
           get: () => undefined
@@ -753,13 +751,19 @@ describe('ao-process', () => {
         },
         queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
         loadTransactionData: async (id) => {
-          assert.equal(id, 'tx-123')
+          assert.ok(id.includes('tx-123-'))
           return new Response(Readable.toWeb(Readable.from(zipped)))
         },
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
-        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        CHECKPONT_VALIDATION_STEPS: 10,
+        CHECKPONT_VALIDATION_RETRIES: 1,
+        CHECKPONT_VALIDATION_THRESH: 0.75,
+        readStateFromCheckpoint: async ({ Memory }) => ({
+          result: { Memory }
+        })
       }
       const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
 
@@ -888,30 +892,21 @@ describe('ao-process', () => {
           queryGateway: async () => ({
             data: {
               transactions: {
-                edges: [
-                  {
-                    ...edges[0],
+                edges: edges.map((edge, i) => {
+                  return {
+                    ...edge,
                     node: {
-                      ...edges[0].node,
-                      id: 'tx-not-encoded',
-                      tags: [
-                        { name: 'Module', value: `${cachedEval.moduleId}` },
-                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
-                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
-                        { name: 'Timestamp', value: `${cachedEval.timestamp}` },
-                        { name: 'Epoch', value: `${cachedEval.epoch}` },
-                        { name: 'Nonce', value: `${cachedEval.nonce}` },
-                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                        { name: 'Not-Content-Encoding', value: `${cachedEval.encoding}` }
-                      ]
+                      ...edge.node,
+                      id: `tx-not-encoded-${i}`,
+                      tags: [...edge.node.tags.filter(({ name }) => name !== 'Content-Encoding'), { name: 'Not-Content-Encoding', value: 'gzip' }]
                     }
                   }
-                ]
+                })
               }
             }
           }),
           loadTransactionData: async (id) => {
-            assert.equal(id, 'tx-not-encoded')
+            assert.ok(id.includes('tx-not-encoded-'))
             return new Response(Readable.toWeb(Readable.from(Memory)))
           }
         }))
@@ -920,39 +915,34 @@ describe('ao-process', () => {
         assert.deepStrictEqual(res.Memory, Memory)
       })
 
+      const mappedEdges = edges.map((edge, i) => ({
+        ...edge,
+        node: {
+          ...edge.node,
+          tags: [
+            ...edge.node.tags.filter(({ name }) => name !== 'Timestamp' && name !== 'Nonce'),
+            { name: 'Timestamp', value: `${cachedEval.timestamp + (i * 1000)}` },
+            { name: 'Nonce', value: `${cachedEval.nonce + i}` },
+          ]
+        }
+      }))
+
+      const incrementedTarget = { ...target, timestamp: cachedEval.timestamp + ((mappedEdges.length + 1) * 1000), ordinate: cachedEval.nonce + mappedEdges.length }
+
       test('should use the latest retrieved checkpoint', async () => {
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
           ...deps,
           queryGateway: async () => ({
             data: {
               transactions: {
-                edges: [
-                  edges[0],
-                  {
-                    ...edges[0],
-                    node: {
-                      ...edges[0].node,
-                      tags: [
-                        { name: 'Module', value: `${cachedEval.moduleId}` },
-                        { name: 'Assignment', value: `${cachedEval.assignmentId}` },
-                        { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
-                        { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                        { name: 'Epoch', value: `${cachedEval.epoch}` },
-                        { name: 'Nonce', value: '12' },
-                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                      ]
-                    }
-                  }
-                ]
+                edges: mappedEdges
               }
             }
           })
         }))
 
-        const res = await findLatestProcessMemory(target)
-
-        assert.deepStrictEqual(res.ordinate, '12')
+        const res = await findLatestProcessMemory(incrementedTarget)
+        assert.deepStrictEqual(res.ordinate, mappedEdges[mappedEdges.length - 1].node.tags.find(({ name }) => name === 'Nonce')?.value)
       })
 
       test('should use the latest retrieved checkpoint that is NOT ignored', async () => {
@@ -961,36 +951,17 @@ describe('ao-process', () => {
           queryGateway: async () => ({
             data: {
               transactions: {
-                edges: [
-                  edges[0],
-                  {
-                    node: {
-                      ...edges[0].node,
-                      // latest is ignored, so use earlier found checkpoint
-                      id: 'ignored',
-                      tags: [
-                        { name: 'Module', value: `${cachedEval.moduleId}` },
-                        // purposefully omitted to ensure robustness
-                        // { name: 'Assignment', value: `${cachedEval.assignmentId}` },
-                        // { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
-                        { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                        { name: 'Epoch', value: `${cachedEval.epoch}` },
-                        { name: 'Nonce', value: '12' },
-                        { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                        { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                      ]
-                    }
-                  }
-                ]
+                edges: mappedEdges
               }
             }
           }),
-          IGNORE_ARWEAVE_CHECKPOINTS: ['ignored']
+          IGNORE_ARWEAVE_CHECKPOINTS: ['tx-123-13', 'tx-123-14']
         }))
 
-        const res = await findLatestProcessMemory(target)
+        const res = await findLatestProcessMemory(incrementedTarget)
 
-        assert.deepStrictEqual(res.ordinate, '11')
+        // Subtract 2 because we are ignoring 2 checkpoints
+        assert.deepStrictEqual(res.ordinate, mappedEdges[mappedEdges.length - 1 - 2].node.tags.find(({ name }) => name === 'Nonce')?.value)
       })
 
       test('should retry querying the gateway', async () => {
@@ -1003,33 +974,16 @@ describe('ao-process', () => {
             return {
               data: {
                 transactions: {
-                  edges: [
-                    {
-                      ...edges[0],
-                      node: {
-                        ...edges[0].node,
-                        tags: [
-                          { name: 'Module', value: `${cachedEval.moduleId}` },
-                          { name: 'Assignment', value: `${cachedEval.assignmentId}` },
-                          { name: 'Hash-Chain', value: `${cachedEval.hashChain}` },
-                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                          { name: 'Epoch', value: `${cachedEval.epoch}` },
-                          { name: 'Nonce', value: '12' },
-                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                        ]
-                      }
-                    }
-                  ]
+                  edges: mappedEdges
                 }
               }
             }
           }
         }))
 
-        const res = await findLatestProcessMemory(target)
+        const res = await findLatestProcessMemory(incrementedTarget)
 
-        assert.deepStrictEqual(res.ordinate, '12')
+        assert.deepStrictEqual(res.ordinate, mappedEdges[mappedEdges.length - 1].node.tags.find(({ name }) => name === 'Nonce')?.value)
       })
 
       test('should fallback to Checkpoint gateway if default gateway reaches max retries', async () => {
@@ -1047,31 +1001,16 @@ describe('ao-process', () => {
             return {
               data: {
                 transactions: {
-                  edges: [
-                    {
-                      ...edges[0],
-                      node: {
-                        ...edges[0].node,
-                        tags: [
-                          { name: 'Module', value: `${cachedEval.moduleId}` },
-                          { name: 'Timestamp', value: `${cachedEval.timestamp + 1000}` },
-                          { name: 'Epoch', value: `${cachedEval.epoch}` },
-                          { name: 'Nonce', value: '12' },
-                          { name: 'Block-Height', value: `${cachedEval.blockHeight}` },
-                          { name: 'Content-Encoding', value: `${cachedEval.encoding}` }
-                        ]
-                      }
-                    }
-                  ]
+                  edges: mappedEdges
                 }
               }
             }
           }
         }))
 
-        const res = await findLatestProcessMemory(target)
+        const res = await findLatestProcessMemory(incrementedTarget)
 
-        assert.deepStrictEqual(res.ordinate, '12')
+        assert.deepStrictEqual(res.ordinate, mappedEdges[mappedEdges.length - 1].node.tags.find(({ name }) => name === 'Nonce')?.value)
       })
 
       test.todo('should omit the memory if omitMemory is received', async () => {})
@@ -1273,10 +1212,10 @@ describe('ao-process', () => {
           queryGateway: async () => ({
             data: {
               transactions: {
-                edges: [
+                edges: Array.from({ length: 15 }, (_, i) => (
                   {
                     node: {
-                      id: 'tx-123',
+                      id: `tx-123-${i}`,
                       tags: [
                         { name: 'Module', value: `${laterCachedEval.moduleId}` },
                         { name: 'Assignment', value: `${cachedEval.assignmentId}` },
@@ -1289,19 +1228,29 @@ describe('ao-process', () => {
                       ]
                     }
                   }
-                ]
+                ))
               }
             }
           }),
           queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
           loadTransactionData: async (id) => {
-            assert.equal(id, 'tx-123')
+            assert.ok(id.includes('tx-123-'))
             return new Response(Readable.toWeb(Readable.from(zipped)))
           },
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          CHECKPONT_VALIDATION_STEPS: 10,
+          CHECKPONT_VALIDATION_RETRIES: 1,
+          CHECKPONT_VALIDATION_THRESH: 0.75,
           fileExists: () => true,
+          readStateFromCheckpoint: async ({ Memory }) => {
+            return {
+              result: {
+                Memory
+              }
+            }
+          },
           DIR: 'fake/directory/'
         }
 
