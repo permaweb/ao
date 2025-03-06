@@ -800,7 +800,10 @@ export function findLatestProcessMemoryWith ({
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
   logger: _logger,
   readStateFromCheckpoint,
-  hashWasmMemory
+  hashWasmMemory,
+  CHECKPONT_VALIDATION_STEPS,
+  CHECKPONT_VALIDATION_THRESH,
+  CHECKPONT_VALIDATION_RETRIES
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -848,43 +851,43 @@ export function findLatestProcessMemoryWith ({
     }
   `
 
-  const CHECKPONT_VALIDATION_STEPS = 10
-  const CHECKPONT_VALIDATION_THRESH = 0.75
-  const CHECKPONT_VALIDATION_RETRIES = 5
+  /**
+   * TODO: this doesnt work if the checkpoints list param is
+   * to short, in that case, we should just start at the back
+   * of the sorted list and just move forward
+   */
   const findLatestVerified = async ({ checkpoints }) => {
-    console.log(`jackfrain1: FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpoints.length}`)
-    const oldestToNewestCheckpoints = [...checkpoints].reverse()
-    // [50, 49, 48, ..., 3, 2, 1, 0]
+    logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpoints.length}`)
+    const oldestToNewestCheckpoints = [...checkpoints].reverse().sort((a, b) => {
+      return parseInt(
+        a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
+      )
+    })
 
-    const offset = 11
+    const offset = CHECKPONT_VALIDATION_STEPS + 1
     for (let i = offset; i < CHECKPONT_VALIDATION_RETRIES + offset; i++) {
-      console.log(`jackfrain1: CHECKPONT_VALIDATION_RETRIES: ${i}, slice: ${oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i}:${oldestToNewestCheckpoints.length - i}`)
-        const verifierSet = oldestToNewestCheckpoints.slice(oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i, oldestToNewestCheckpoints.length - i).sort((a, b) => {
-          return parseInt(a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value)
-        })
-        console.log(`jackfrain1: VERIFIER SET: ${verifierSet.length}`)
-        console.dir({ verifierSet}, { depth: null })
+        logger.tap(`CHECKPONT_VALIDATION_RETRIES: ${i}, slice: ${oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i}:${oldestToNewestCheckpoints.length - i}`)
+        const verifierSet = oldestToNewestCheckpoints.slice(
+          oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i, 
+          oldestToNewestCheckpoints.length - i
+        )
+        
         let currentCheckpoint = verifierSet[0]
-        let finalCheckpoint = verifierSet[verifierSet.length - 1]
+
         let correct = 0
         let currentMemory = await downloadCheckpointFromArweave({ 
           id: currentCheckpoint.node.id, 
           encoding: 'gzip' 
         }).toPromise()
 
-
-        // console.log(`jackfrain1.5 Iteration ${i}:`);
-
         for (let j = 1; j < verifierSet.length; j++) {
-          console.log(`jackfrain1.6 Checkpoint Iteration ${j}:`, { checkpointNonce: verifierSet[j].node.tags.find((tag) => tag.name === 'Nonce').value })
+          logger(`Checkpoint Iteration ${j}:, { checkpointNonce: ${verifierSet[j].node.tags.find((tag) => tag.name === 'Nonce').value}}`)
           const nextCheckpoint = verifierSet[j]
-
-
 
           const currentTags = parseTags(currentCheckpoint.node.tags)
           const nextTags = parseTags(nextCheckpoint.node.tags)
       
-          console.log('jackfrain1.6', { currentNonce: currentTags.Nonce, nextNonce: nextTags.Nonce })
+          logger(`Nonce Pair, { currentNonce: ${currentTags.Nonce}, nextNonce: ${nextTags.Nonce} }`)
           const evalArgs = {
             checkpoint: {
               id: currentCheckpoint.node.id,
@@ -900,14 +903,13 @@ export function findLatestProcessMemoryWith ({
               encoding: currentTags['Content-Encoding']
             },
             to: parseInt(nextTags.Timestamp),
-            // messageId: nextTags.Assignment,
             needsOnlyMemory: false,
             processId: nextTags.Process,
             Memory: currentMemory
           }
       
           const result = await readStateFromCheckpoint(evalArgs)
-          console.log('jacfrain2', { last: result.last })
+          logger(`Last from validation result, { last: ${JSON.stringify(result.last)} }`)
           const resultMemory = Buffer.from(result.result.Memory)
           const arweaveCheckpoint = await downloadCheckpointFromArweave({
             id: nextCheckpoint.node.id,
@@ -916,9 +918,8 @@ export function findLatestProcessMemoryWith ({
 
           const nextCheckpointMemory = Buffer.from(arweaveCheckpoint)
 
-          console.log('jackfrain3', { resultMemory, nextCheckpointMemory })
           const memorysMatch = compareArrayBuffers(Buffer.from(resultMemory), Buffer.from(nextCheckpointMemory))
-          console.log('jackfrain4', { i, j, memorysMatch })
+          logger(`Memories match, { ${memorysMatch} }`)
 
           if (memorysMatch) {
             correct++
@@ -926,13 +927,14 @@ export function findLatestProcessMemoryWith ({
           currentMemory = resultMemory
           currentCheckpoint = nextCheckpoint
         }
-        console.log('jackfrain4', { i, correct })
-    }
 
-        // if( (correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH ) {
-      const finalTags = parseTags(finalCheckpoint.node.tags)
-      return {
-              id: finalCheckpoint.node.id,
+
+        if( (correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH ) {
+          const finalTags = parseTags(currentCheckpoint.node.tags)
+          logger(`Determined correct checkpoint id: ${currentCheckpoint.node.id} Process: ${finalTags.Process}`)
+          logger(`Votes: ${correct}`)
+          return {
+              id: currentCheckpoint.node.id,
               timestamp: parseInt(finalTags.Timestamp),
               assignmentId: finalTags.Assignment,
               hashChain: finalTags['Hash-Chain'],
@@ -943,25 +945,22 @@ export function findLatestProcessMemoryWith ({
               blockHeight: parseInt(finalTags['Block-Height']),
               cron: finalTags['Cron-Interval'],
               encoding: finalTags['Content-Encoding'],
-              Memory: mem
-            }
-        // } 
-        
-    // }
+              Memory: currentMemory
+          }
+        } else {
+          logger(`Determined incorrect checkpoint id:  ${currentCheckpoint.node.id}`)
+        }
+    }
   }
 
   const compareArrayBuffers = (buffer1, buffer2) => {
-    // Check if they are the same length
     if (buffer1.byteLength !== buffer2.byteLength) return false;
 
-    // Create typed views for each buffer
     const view1 = new Uint8Array(buffer1);
     const view2 = new Uint8Array(buffer2);
 
-    // Compare each byte
     for (let i = 0; i < view1.length; i++) {
         if (view1[i] !== view2[i]) {
-            console.log({ i, v1l: view1.length, v2l: view2.length })
             return false
         } 
     }
@@ -1241,11 +1240,10 @@ export function findLatestProcessMemoryWith ({
       .chain(determineLatestVerifiedCheckpoint)
       .bimap(
         (err) => {
-          console.log('jackfrain11', { err })
+          logger('Latest checkpoint verification error', { err })
           return err
         },
         (res) => {
-          console.log('jackfrain11', { res })
           return res
         }
       )
@@ -1253,8 +1251,9 @@ export function findLatestProcessMemoryWith ({
         if (!latestCheckpoint) return Rejected(args)
 
         /**
-         * We have found a Checkpoint that we can use, so
-         * now let's load the snapshotted Memory from arweave
+         * We have found a Checkpoint that we can use, and
+         * have evaluated up to its memory to verify, so we
+         * return the already calculated memory
          */
         return of()
           .map(() => {

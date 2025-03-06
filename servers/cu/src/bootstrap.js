@@ -399,6 +399,9 @@ export const createApis = async (ctx) => {
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
         readStateFromCheckpoint,
         hashWasmMemory: WasmClient.hashWasmMemoryWith({ logger: ctx.logger }),
+        CHECKPONT_VALIDATION_STEPS: ctx.CHECKPONT_VALIDATION_STEPS,
+        CHECKPONT_VALIDATION_THRESH: ctx.CHECKPONT_VALIDATION_THRESH,
+        CHECKPONT_VALIDATION_RETRIES: ctx.CHECKPONT_VALIDATION_RETRIES,
         logger
       }),
       saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({

@@ -163,7 +163,6 @@ export function evaluateWith ({
    * Finally, evaluates the message and returns the result of the evaluation.
    */
   return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) => {
-    console.log('jackfrain15', { messageId: message.Id })
     /**
      * Dynamically load the module, either from cache,
      * or from a file
