@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, isNotNil, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
+import { add, always, applySpec, defaultTo, evolve, head, identity, ifElse, isEmpty, isNotNil, omit, path, pathOr, pipe, prop } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
@@ -856,8 +856,8 @@ export function findLatestProcessMemoryWith ({
   }
 
   const findLatestVerified = async ({ checkpoints }) => {
-    if(checkpoints.length < CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { return }
-    
+    if (checkpoints.length < CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { return }
+
     logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpoints.length}`)
     const oldestToNewestCheckpoints = [...checkpoints].reverse().sort((a, b) => {
       return parseInt(
@@ -865,116 +865,112 @@ export function findLatestProcessMemoryWith ({
       )
     })
 
-
     for (let i = 0; i < CHECKPONT_VALIDATION_RETRIES; i++) {
-        logger.tap(`CHECKPONT_VALIDATION_RETRIES: ${i}, slice: ${oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i}:${oldestToNewestCheckpoints.length - i}`)
-        const verifierSet = oldestToNewestCheckpoints.slice(
-          oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i, 
-          oldestToNewestCheckpoints.length - i
-        )
-        
-        let currentCheckpoint = verifierSet[0]
+      logger.tap(`CHECKPONT_VALIDATION_RETRIES: ${i}, slice: ${oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i}:${oldestToNewestCheckpoints.length - i}`)
+      const verifierSet = oldestToNewestCheckpoints.slice(
+        oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i,
+        oldestToNewestCheckpoints.length - i
+      )
 
-        let correct = 0
-        let currentMemory = await downloadCheckpointFromArweave({ 
-          id: currentCheckpoint.node.id, 
-          encoding: currentCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
+      let currentCheckpoint = verifierSet[0]
+      let correct = 0
+      let currentMemory = await downloadCheckpointFromArweave({
+        id: currentCheckpoint.node.id,
+        encoding: currentCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
+      }).toPromise()
+
+      for (let j = 1; j < verifierSet.length; j++) {
+        logger(`Checkpoint Iteration ${j}:, { checkpointNonce: ${verifierSet[j].node.tags.find((tag) => tag.name === 'Nonce').value}}`)
+        const nextCheckpoint = verifierSet[j]
+
+        const currentTags = parseTags(currentCheckpoint.node.tags)
+        const nextTags = parseTags(nextCheckpoint.node.tags)
+
+        logger(`Nonce Pair, { currentNonce: ${currentTags.Nonce}, nextNonce: ${nextTags.Nonce} }`)
+        const evalArgs = {
+          checkpoint: {
+            id: currentCheckpoint.node.id,
+            timestamp: parseInt(currentTags.Timestamp),
+            assignmentId: currentTags.Assignment,
+            hashChain: currentTags['Hash-Chain'],
+            epoch: maybeParseInt(currentTags.Epoch),
+            nonce: maybeParseInt(currentTags.Nonce),
+            ordinate: currentTags.Nonce,
+            module: currentTags.Module,
+            blockHeight: parseInt(currentTags['Block-Height']),
+            cron: currentTags['Cron-Interval'],
+            encoding: currentTags['Content-Encoding']
+          },
+          to: parseInt(nextTags.Timestamp),
+          needsOnlyMemory: false,
+          processId: nextTags.Process,
+          Memory: currentMemory
+        }
+
+        const result = await readStateFromCheckpoint(evalArgs)
+        logger(`Last from validation result, { last: ${JSON.stringify(result.last)} }`)
+        const resultMemory = Buffer.from(result.result.Memory)
+        const arweaveCheckpoint = await downloadCheckpointFromArweave({
+          id: nextCheckpoint.node.id,
+          encoding: nextCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
         }).toPromise()
 
-        for (let j = 1; j < verifierSet.length; j++) {
-          logger(`Checkpoint Iteration ${j}:, { checkpointNonce: ${verifierSet[j].node.tags.find((tag) => tag.name === 'Nonce').value}}`)
-          const nextCheckpoint = verifierSet[j]
+        const nextCheckpointMemory = Buffer.from(arweaveCheckpoint)
 
-          const currentTags = parseTags(currentCheckpoint.node.tags)
-          const nextTags = parseTags(nextCheckpoint.node.tags)
-      
-          logger(`Nonce Pair, { currentNonce: ${currentTags.Nonce}, nextNonce: ${nextTags.Nonce} }`)
-          const evalArgs = {
-            checkpoint: {
-              id: currentCheckpoint.node.id,
-              timestamp: parseInt(currentTags.Timestamp),
-              assignmentId: currentTags.Assignment,
-              hashChain: currentTags['Hash-Chain'],
-              epoch: maybeParseInt(currentTags.Epoch),
-              nonce: maybeParseInt(currentTags.Nonce),
-              ordinate: currentTags.Nonce,
-              module: currentTags.Module,
-              blockHeight: parseInt(currentTags['Block-Height']),
-              cron: currentTags['Cron-Interval'],
-              encoding: currentTags['Content-Encoding']
-            },
-            to: parseInt(nextTags.Timestamp),
-            needsOnlyMemory: false,
-            processId: nextTags.Process,
-            Memory: currentMemory
-          }
-      
-          const result = await readStateFromCheckpoint(evalArgs)
-          logger(`Last from validation result, { last: ${JSON.stringify(result.last)} }`)
-          const resultMemory = Buffer.from(result.result.Memory)
-          const arweaveCheckpoint = await downloadCheckpointFromArweave({
-            id: nextCheckpoint.node.id,
-            encoding: nextCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
-          }).toPromise()
+        const memorysMatch = compareArrayBuffers(Buffer.from(resultMemory), Buffer.from(nextCheckpointMemory))
+        logger(`Memories match, { ${memorysMatch} }`)
 
-          const nextCheckpointMemory = Buffer.from(arweaveCheckpoint)
-
-          const memorysMatch = compareArrayBuffers(Buffer.from(resultMemory), Buffer.from(nextCheckpointMemory))
-          logger(`Memories match, { ${memorysMatch} }`)
-
-          if (memorysMatch) {
-            correct++
-          }
-          currentMemory = resultMemory
-          currentCheckpoint = nextCheckpoint
+        if (memorysMatch) {
+          correct++
         }
+        currentMemory = resultMemory
+        currentCheckpoint = nextCheckpoint
+      }
 
-
-        if ((correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH) {
-          const finalTags = parseTags(currentCheckpoint.node.tags)
-          logger(`Determined correct checkpoint id: ${currentCheckpoint.node.id} Process: ${finalTags.Process}`)
-          logger(`Votes: ${correct}`)
-          return {
-              id: currentCheckpoint.node.id,
-              timestamp: parseInt(finalTags.Timestamp),
-              assignmentId: finalTags.Assignment,
-              hashChain: finalTags['Hash-Chain'],
-              epoch: maybeParseInt(finalTags.Epoch),
-              nonce: maybeParseInt(finalTags.Nonce),
-              ordinate: finalTags.Nonce,
-              module: finalTags.Module,
-              blockHeight: parseInt(finalTags['Block-Height']),
-              cron: finalTags['Cron-Interval'],
-              encoding: finalTags['Content-Encoding'],
-              Memory: currentMemory
-          }
-        } else {
-          logger(`Determined incorrect checkpoint id:  ${currentCheckpoint.node.id}`)
+      if ((correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH) {
+        const finalTags = parseTags(currentCheckpoint.node.tags)
+        logger(`Determined correct checkpoint id: ${currentCheckpoint.node.id} Process: ${finalTags.Process}`)
+        logger(`Votes: ${correct}`)
+        return {
+          id: currentCheckpoint.node.id,
+          timestamp: parseInt(finalTags.Timestamp),
+          assignmentId: finalTags.Assignment,
+          hashChain: finalTags['Hash-Chain'],
+          epoch: maybeParseInt(finalTags.Epoch),
+          nonce: maybeParseInt(finalTags.Nonce),
+          ordinate: finalTags.Nonce,
+          module: finalTags.Module,
+          blockHeight: parseInt(finalTags['Block-Height']),
+          cron: finalTags['Cron-Interval'],
+          encoding: finalTags['Content-Encoding'],
+          Memory: currentMemory
         }
+      } else {
+        logger(`Determined incorrect checkpoint id:  ${currentCheckpoint.node.id}`)
+      }
     }
   }
 
   const compareArrayBuffers = (buffer1, buffer2) => {
-    if (buffer1.byteLength !== buffer2.byteLength) return false;
+    if (buffer1.byteLength !== buffer2.byteLength) return false
 
-    const view1 = new Uint8Array(buffer1);
-    const view2 = new Uint8Array(buffer2);
+    const view1 = new Uint8Array(buffer1)
+    const view2 = new Uint8Array(buffer2)
 
     for (let i = 0; i < view1.length; i++) {
-        if (view1[i] !== view2[i]) {
-            return false
-        } 
+      if (view1[i] !== view2[i]) {
+        return false
+      }
     }
 
     return true
   }
 
   const determineLatestVerifiedCheckpoint = (checkpoints) => {
-      return of({ checkpoints })
-        .map(removeIgnoredCheckpoints)
-        .chain(fromPromise(findLatestVerified)) 
-    }
-  
+    return of({ checkpoints })
+      .map(removeIgnoredCheckpoints)
+      .chain(fromPromise(findLatestVerified))
+  }
 
   function decodeData (encoding) {
     /**

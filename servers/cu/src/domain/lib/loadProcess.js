@@ -190,23 +190,23 @@ function loadLatestEvaluationWith ({ findEvaluation, findLatestProcessMemory, sa
     return of({ checkpoint: ctx.checkpoint, Memory: ctx.Memory })
       .map(({ checkpoint, Memory }) => {
         return {
-            result: {
-              Memory
-            },
-            from: checkpoint.timestamp,
-            ordinate: checkpoint.ordinate,
-            fromBlockHeight: checkpoint.blockHeight,
-            fromCron: checkpoint.cron,
-            mostRecentAssignmentId: checkpoint.assignmentId,
-            mostRecentHashChain: checkpoint.hashChain,
-            /**
-             * We know this is not an exact match, because we are loading from a previous checkpoint
-             */
-            exact: false
-          }
+          result: {
+            Memory
+          },
+          from: checkpoint.timestamp,
+          ordinate: checkpoint.ordinate,
+          fromBlockHeight: checkpoint.blockHeight,
+          fromCron: checkpoint.cron,
+          mostRecentAssignmentId: checkpoint.assignmentId,
+          mostRecentHashChain: checkpoint.hashChain,
+          /**
+           * We know this is not an exact match, because we are loading from a previous checkpoint
+           */
+          exact: false
+        }
       })
   }
-  
+
   return (ctx) => {
     if (ctx.checkpoint && ctx.Memory) return useMemoryAndCheckpoint(ctx)
     return maybeExactEvaluation(ctx)

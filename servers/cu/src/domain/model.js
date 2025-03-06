@@ -9,13 +9,13 @@ export const positiveIntSchema = z.preprocess((val) => {
 }, z.number().nonnegative())
 
 export const decimalSchema = z.preprocess((val) => {
-  if (val == null) return -1;
-  if (typeof val === 'number') return val;
+  if (val == null) return -1
+  if (typeof val === 'number') return val
   if (typeof val === 'string') {
-    const parsed = parseFloat(val.replaceAll('_', ''));
-    return isNaN(parsed) ? -1 : parsed;
+    const parsed = parseFloat(val.replaceAll('_', ''))
+    return isNaN(parsed) ? -1 : parsed
   }
-  return -1;
+  return -1
 }, z.number().nonnegative())
 
 export const commaDelimitedArraySchema = z.preprocess((val) => {

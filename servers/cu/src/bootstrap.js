@@ -350,7 +350,7 @@ export const createApis = async (ctx) => {
                * but also feels kind of misplaced
                */
               if (args.close) return broadcastCloseStream(args.streamId)
-    
+
               return primaryWorkerPool.exec('evaluate', [args], options)
             })
         ),
@@ -437,7 +437,7 @@ export const createApis = async (ctx) => {
                * but also feels kind of misplaced
                */
               if (args.close) return broadcastCloseStream(args.streamId)
-    
+
               return primaryWorkerPool.exec('evaluate', [args], options)
             })
         ),
