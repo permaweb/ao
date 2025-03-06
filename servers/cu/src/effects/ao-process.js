@@ -1539,6 +1539,7 @@ export function saveCheckpointWith ({
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
   DISABLE_PROCESS_CHECKPOINT_CREATION,
   DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
+  CU_IDENTIFIER,
   recentCheckpoints = new Map()
 }) {
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -1597,7 +1598,7 @@ export function saveCheckpointWith ({
     }
   `
 
-  function createCheckpointDataItem (args) {
+  const createCheckpointDataItemWith = ({ CU_IDENTIFIER }) => (args) => {
     const { moduleId, processId, assignmentId, hashChain, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory } = args
 
     return of(Memory)
@@ -1630,7 +1631,9 @@ export function saveCheckpointWith ({
                  * We will always upload Checkpoints to Arweave as
                  * gzipped encoded (see below)
                  */
-                { name: 'Content-Encoding', value: 'gzip' }
+                { name: 'Content-Encoding', value: 'gzip' },
+                { name: 'Unit-Identifier', value: CU_IDENTIFIER }
+
               ]
             }
 
@@ -1772,7 +1775,7 @@ export function saveCheckpointWith ({
       )
   }
 
-  function createArweaveCheckpoint (args) {
+  const createArweaveCheckpointWith = ({ CU_IDENTIFIER }) => (args) => {
     const { encoding, processId, moduleId, assignmentId, hashChain, timestamp, epoch, ordinate, nonce, blockHeight, cron } = args
 
     if (DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected('arweave checkpoint creation is disabled')
@@ -1808,6 +1811,7 @@ export function saveCheckpointWith ({
       }))
       .map(path(['data', 'transactions', 'edges', '0']))
       .chain((checkpoint) => {
+        const createCheckpointDataItem = createCheckpointDataItemWith({ CU_IDENTIFIER })
         if (checkpoint) {
           if (!Array.isArray(checkpoint.node.tags)) {
             // TODO: should probably use a Zod schema to verify 'queryCheckpoints' returns the data structure we expect
@@ -1903,6 +1907,8 @@ export function saveCheckpointWith ({
           .map(() => ctx)
       })
   }
+
+  const createArweaveCheckpoint = createArweaveCheckpointWith({ CU_IDENTIFIER })
 
   function createCheckpoints (args) {
     return of(args)

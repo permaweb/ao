@@ -1811,7 +1811,10 @@ describe('ao-process', () => {
           return Buffer.from([1, 2, 3])
         },
         uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
-        buildAndSignDataItem: (...args) => Promise.resolve(...args),
+        buildAndSignDataItem: (...args) => {
+          assert.equal(args[0].tags.find((tag) => tag.name === 'Unit-Identifier').value, 'unit-identifier')
+          return Promise.resolve(...args)
+        },
         writeCheckpointRecord: (d) => Promise.resolve(),
         writeFileCheckpointMemory: ({ Memory, evaluation }) => {
           assert.ok(Memory)
@@ -1823,7 +1826,8 @@ describe('ao-process', () => {
           return Promise.resolve(file)
         },
         DISABLE_PROCESS_CHECKPOINT_CREATION: false,
-        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false
+        DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: false,
+        CU_IDENTIFIER: 'unit-identifier'
       }
 
       test('when Memory is provided directly', async () => {
@@ -1883,13 +1887,18 @@ describe('ao-process', () => {
           hashWasmMemory: () => Promise.resolve('hash'),
           readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
           uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
-          buildAndSignDataItem: (...args) => Promise.resolve(...args),
+          buildAndSignDataItem: (...args) => {
+            console.log(args[0].tags)
+            assert.equal(args[0].tags.find((tag) => tag.name === 'Unit-Identifier').value, 'unit-identifier')
+            return Promise.resolve(...args)
+          },
           writeCheckpointRecord: (d) => {
             writeCheckpointRecordCalled = true
             return Promise.resolve()
           },
           DISABLE_PROCESS_CHECKPOINT_CREATION: false,
-          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+          CU_IDENTIFIER: 'unit-identifier'
         })
         const [, result] = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
         assert.equal(result.id, 'tx-123')
@@ -1977,10 +1986,14 @@ describe('ao-process', () => {
           hashWasmMemory: () => Promise.resolve('hash'),
           readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
           uploadDataItem: (data) => Promise.reject(new Error('oops')),
-          buildAndSignDataItem: (...args) => Promise.resolve(...args),
+          buildAndSignDataItem: (...args) => {
+            assert.equal(args[0].tags.find((tag) => tag.name === 'Unit-Identifier').value, 'unit-identifier')
+            return Promise.resolve(...args)
+          },
           writeCheckpointRecord: (d) => assert.fail('should not call if upload to arweave fails'),
           DISABLE_PROCESS_CHECKPOINT_CREATION: false,
-          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+          CU_IDENTIFIER: 'unit-identifier'
         })
         const [, result] = await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
         assert.equal(result, undefined)
@@ -1995,10 +2008,14 @@ describe('ao-process', () => {
           hashWasmMemory: () => Promise.resolve('hash'),
           readProcessMemoryFile: () => Promise.resolve(Buffer.from([1, 2, 3])),
           uploadDataItem: (data) => Promise.resolve({ id: 'tx-123' }),
-          buildAndSignDataItem: (...args) => Promise.resolve(...args),
+          buildAndSignDataItem: (...args) => {
+            assert.equal(args[0].tags.find((tag) => tag.name === 'Unit-Identifier').value, 'unit-identifier')
+            return Promise.resolve(...args)
+          },
           writeCheckpointRecord: (d) => Promise.reject(new Error('oops')),
           DISABLE_PROCESS_CHECKPOINT_CREATION: false,
-          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true
+          DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+          CU_IDENTIFIER: 'unit-identifier'
         })
         await saveCheckpoint({ File: 'file', moduleId: 'module-123', processId: 'process-123' })
       })
