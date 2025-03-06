@@ -851,6 +851,10 @@ export function findLatestProcessMemoryWith ({
     }
   `
 
+  const removeIgnoredCheckpoints = ({ checkpoints }) => {
+    return { checkpoints: checkpoints.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)) }
+  }
+
   const findLatestVerified = async ({ checkpoints }) => {
     if(checkpoints.length < CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { return }
     
@@ -861,8 +865,8 @@ export function findLatestProcessMemoryWith ({
       )
     })
 
-    const offset = CHECKPONT_VALIDATION_STEPS + 1
-    for (let i = offset; i < CHECKPONT_VALIDATION_RETRIES + offset; i++) {
+
+    for (let i = 0; i < CHECKPONT_VALIDATION_RETRIES; i++) {
         logger.tap(`CHECKPONT_VALIDATION_RETRIES: ${i}, slice: ${oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i}:${oldestToNewestCheckpoints.length - i}`)
         const verifierSet = oldestToNewestCheckpoints.slice(
           oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i, 
@@ -874,7 +878,7 @@ export function findLatestProcessMemoryWith ({
         let correct = 0
         let currentMemory = await downloadCheckpointFromArweave({ 
           id: currentCheckpoint.node.id, 
-          encoding: 'gzip' 
+          encoding: currentCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
         }).toPromise()
 
         for (let j = 1; j < verifierSet.length; j++) {
@@ -910,7 +914,7 @@ export function findLatestProcessMemoryWith ({
           const resultMemory = Buffer.from(result.result.Memory)
           const arweaveCheckpoint = await downloadCheckpointFromArweave({
             id: nextCheckpoint.node.id,
-            encoding: 'gzip' 
+            encoding: nextCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
           }).toPromise()
 
           const nextCheckpointMemory = Buffer.from(arweaveCheckpoint)
@@ -926,7 +930,7 @@ export function findLatestProcessMemoryWith ({
         }
 
 
-        if( (correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH ) {
+        if ((correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH) {
           const finalTags = parseTags(currentCheckpoint.node.tags)
           logger(`Determined correct checkpoint id: ${currentCheckpoint.node.id} Process: ${finalTags.Process}`)
           logger(`Votes: ${correct}`)
@@ -966,7 +970,8 @@ export function findLatestProcessMemoryWith ({
   }
 
   const determineLatestVerifiedCheckpoint = (checkpoints) => {
-      return of({checkpoints})
+      return of({ checkpoints })
+        .map(removeIgnoredCheckpoints)
         .chain(fromPromise(findLatestVerified)) 
     }
   
