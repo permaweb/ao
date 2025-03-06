@@ -851,12 +851,9 @@ export function findLatestProcessMemoryWith ({
     }
   `
 
-  /**
-   * TODO: this doesnt work if the checkpoints list param is
-   * to short, in that case, we should just start at the back
-   * of the sorted list and just move forward
-   */
   const findLatestVerified = async ({ checkpoints }) => {
+    if(checkpoints.length < CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { return }
+    
     logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpoints.length}`)
     const oldestToNewestCheckpoints = [...checkpoints].reverse().sort((a, b) => {
       return parseInt(
