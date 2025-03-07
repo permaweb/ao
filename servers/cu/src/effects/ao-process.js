@@ -852,6 +852,7 @@ export function findLatestProcessMemoryWith ({
   `
 
   const removeIgnoredCheckpoints = ({ checkpoints }) => {
+    if (!checkpoints || !checkpoints.length) return { checkpoints: [] }
     return { checkpoints: checkpoints.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)) }
   }
 
