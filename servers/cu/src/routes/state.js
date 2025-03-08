@@ -40,15 +40,15 @@ export const withStateRoutes = (app) => {
                */
               res.header('Content-Type', 'application/octet-stream')
 
-              if(rest && rest.last && rest.last.timestamp) {
+              if (rest && rest.last && rest.last.timestamp) {
                 res.header('Last-Timestamp', rest.last.timestamp)
               }
 
-              if(rest && rest.last && rest.last.ordinate) {
+              if (rest && rest.last && rest.last.ordinate) {
                 res.header('Last-Ordinate', rest.last.ordinate)
               }
               
-              if(rest && rest.last && rest.last.blockHeight) {
+              if (rest && rest.last && rest.last.blockHeight) {
                 res.header('Last-Block-Height', rest.last.blockHeight)
               }
 
