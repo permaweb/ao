@@ -16,6 +16,17 @@ if (!globalThis.Buffer) globalThis.Buffer = BufferShim
 
 const MAX_HEADER_LENGTH = 4096
 
+async function hasNewline (value) {
+  if (typeof value === 'string') return value.includes('\n')
+  if (value instanceof Blob) {
+    value = await value.text()
+    return value.includes('\n')
+  }
+  if (isBytes(value)) return Buffer.from(value).includes('\n')
+
+  return false
+}
+
 /**
  * @param {ArrayBuffer} data
  */
@@ -30,6 +41,8 @@ function isBytes (value) {
 
 function isPojo (value) {
   return !isBytes(value) &&
+    !Array.isArray(value) &&
+    !(value instanceof Blob) &&
     typeof value === 'object' &&
     value !== null
 }
@@ -45,8 +58,18 @@ function hbEncodeValue (value) {
     return [undefined, value]
   }
 
-  if (Array.isArray(value) && value.length === 0) {
-    return ['empty-list', undefined]
+  if (Array.isArray(value)) {
+    if (value.length === 0) return ['empty-list', undefined]
+    const encoded = value.reduce(
+      (acc, cur) => {
+        let [type, curEncoded] = hbEncodeValue(cur)
+        if (!type) type = 'binary'
+        acc.push(`(ao-type-${type}) ${curEncoded}`)
+        return acc
+      },
+      []
+    )
+    return ['list', encoded.join(',')]
   }
 
   if (typeof value === 'number') {
@@ -62,7 +85,7 @@ function hbEncodeValue (value) {
 }
 
 export function hbEncodeLift (obj, parent = '', top = {}) {
-  const [flattened, types] = Object.entries(obj)
+  const [flattened, types] = Object.entries({ ...obj })
     .reduce((acc, [key, value]) => {
       const flatK = (parent ? `${parent}/${key}` : key)
         .toLowerCase()
@@ -70,16 +93,18 @@ export function hbEncodeLift (obj, parent = '', top = {}) {
       // skip nullish values
       if (value == null) return acc
 
-      // // first/{idx}/name flatten array
-      // if (Array.isArray(value)) {
-      //   if (value.length === 0) {
-      //     return store(flatK, key, acc, hbEncodeValue(value))
-      //   }
-      //   value.forEach((v, i) =>
-      //     Object.assign(acc[0], hbEncode(v, `${flatK}/${i}`))
-      //   )
-      //   return acc
-      // }
+      // list of objects
+      if (Array.isArray(value) && value.some(isPojo)) {
+        /**
+         * Convert the list of maps into an object
+         * where keys are indices and values are the maps
+         *
+         * This will match the isPojo check below,
+         * which will handle the recursive lifting that we want.
+         */
+        value = value.reduce((indexedObj, v, idx) =>
+          Object.assign(indexedObj, { [idx]: v }), {})
+      }
 
       // first/second lift object
       if (isPojo(value)) {
@@ -207,11 +232,27 @@ export async function encode (obj = {}) {
       }
 
       /**
-       * This value is too large to be encoded into a header
-       * on the message, so it must instead be encoded as the body
-       * in it's own part
+       * There are special cases that will force a field to be
+       * encoded into the body:
+       *
+       * - The field includes any whitespace
+       * - The field includes '/'
+       * - The fields size exceeds the max header length
+       *
+       * In all cases, the field is forced to be encoded into the body
+       * as a sub-part, where the part has a single Content-Disposition
+       * header denoting the field, and the body of the sub-part
+       * being the field value itself.
+       *
+       * (These special cases happen to cover a multitude of issues that
+       * could cause a Data Item's 'data' to not be encodable as a header,
+       * but extends that coverage to any sort of field)
        */
-      if (key.includes('/') || Buffer.from(value).byteLength > MAX_HEADER_LENGTH) {
+      if (
+        await hasNewline(value) ||
+        key.includes('/') ||
+        Buffer.from(value).byteLength > MAX_HEADER_LENGTH
+      ) {
         bodyKeys.push(key)
         flattened[key] = new Blob([
           `content-disposition: form-data;name="${key}"\r\n\r\n`,
@@ -227,6 +268,14 @@ export async function encode (obj = {}) {
   
   const h = new Headers()
   headerKeys.forEach((key) => h.append(key, flattened[key]))
+
+  // If there is a data field that didn't otherwise get encoded into a multipart body,
+  // and there are no other body parts, then we need to encode the data as an
+  // `inline-body-key`. While doing so, we remove the `data` header that would
+  // otherwise be duplicated.
+  if (h.has('data')) {
+    bodyKeys.push('data')
+  }
   /**
    * Add headers that indicates and orders body-keys
    * for the purpose of determinstically reconstructing
@@ -239,44 +288,62 @@ export async function encode (obj = {}) {
   // const bk = hbEncodeValue('body-keys', bodyKeys)
   // Object.keys(bk).forEach((key) => h.append(key, bk[key]))
 
-  let body
+  let body, finalContent
   if (bodyKeys.length) {
-    const bodyParts = await Promise.all(
-      bodyKeys.map((name) => flattened[name].arrayBuffer())
-    )
+    if (bodyKeys.length === 1) {
+      // If there is only one element, promote it to be the full body and set the
+      // `inline-body-key` such that the server knows its name.
+      body = new Blob([obj.data])
+      h.append('inline-body-key', bodyKeys[0])
+      h.delete(bodyKeys[0])
+    } else {
+      // This is a multipart body, so we generate and insert the boundary
+      // appropriately.
+      const bodyParts = await Promise.all(
+        bodyKeys.map((name) => {
+          return flattened[name].arrayBuffer()
+        })
+      )
 
-    /**
-     * Generate a deterministic boundary, from the parts
-     * to use for the multipart body boundary
-     */
-    const base = new Blob(
-      bodyParts.flatMap((p, i, arr) =>
-        i < arr.length - 1 ? [p, '\r\n'] : [p])
-    )
-    const hash = await sha256(await base.arrayBuffer())
-    const boundary = base64url.encode(Buffer.from(hash))
+      /**
+       * Generate a deterministic boundary, from the parts
+       * to use for the multipart body boundary
+       */
+      const base = new Blob(
+        bodyParts.flatMap((p, i, arr) =>
+          i < arr.length - 1 ? [p, '\r\n'] : [p])
+      )
+      const hash = await sha256(await base.arrayBuffer())
+      const boundary = base64url.encode(Buffer.from(hash))
 
-    /**
-     * Segment each part with the multipart boundary
-     */
-    const blobParts = bodyParts
-      .flatMap((p) => [`--${boundary}\r\n`, p, '\r\n'])
+      /**
+       * Segment each part with the multipart boundary
+       */
+      const blobParts = bodyParts
+        .flatMap((p) => [`--${boundary}\r\n`, p, '\r\n'])
 
-    /**
-     * Add the terminating boundary
-     */
-    blobParts.push(`--${boundary}--`)
+      /**
+       * Add the terminating boundary
+       */
+      blobParts.push(`--${boundary}--`)
 
-    body = new Blob(blobParts)
+      h.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
+      body = new Blob(blobParts)
+    }
     /**
      * calculate the content-digest
      */
-    const contentDigest = await sha256(await body.arrayBuffer())
+    finalContent = await body.arrayBuffer()
+    const contentDigest = await sha256(finalContent)
     const base64 = base64url.toBase64(base64url.encode(contentDigest))
 
-    h.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
     h.append('Content-Digest', `sha-256=:${base64}:`)
   }
+
+  console.log('Encoded headers:')
+  console.log(h)
+  console.log('Encoded body:')
+  console.log(finalContent)
 
   return { headers: h, body }
 }

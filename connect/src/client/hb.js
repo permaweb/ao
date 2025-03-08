@@ -134,13 +134,12 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
               const contentType = res.headers.get('content-type')
               if (contentType && contentType.includes('multipart/form-data')) {
                 // TODO: maybe add hbDecode here to decode multipart into maps of { headers, body }
-                return res
+                return { headers: res.headers, body: await res.text() }
               } else if (contentType && contentType.includes('application/json')) {
-                const body = await res.json()
-                return { headers: res.headers, body }
+                const msgJSON = await res.json()
+                return { headers: res.headers, ...msgJSON, body }
               } else {
-                const body = await res.text()
-                return { headers: res.headers, body }
+                return { headers: res.headers, body: await res.text() }
               }
             })
         }
