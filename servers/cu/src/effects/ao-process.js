@@ -859,15 +859,15 @@ export function findLatestProcessMemoryWith ({
   const findLatestVerified = async ({ checkpoints }) => {
     if (checkpoints.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { 
       if(checkpoints.length >= 1){
-        let sorted = checkpoints.sort((a, b) => {
+        const sorted = checkpoints.sort((a, b) => {
           return parseInt(
             a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
           )
         })
-        let useFirst = sorted[0]
+        const useFirst = sorted[0]
         const finalTags = parseTags(useFirst.node.tags)
         logger(`Not enough checkpoints for verfication, use first checkpoint id: ${useFirst.node.id} Process: ${finalTags.Process}`)
-        let firstMemory = await downloadCheckpointFromArweave({
+        const firstMemory = await downloadCheckpointFromArweave({
           id: useFirst.node.id,
           encoding: useFirst.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
         }).toPromise()
