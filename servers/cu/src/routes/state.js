@@ -30,7 +30,7 @@ export const withStateRoutes = (app) => {
         await busyIn(
           BUSY_THRESHOLD,
           readState(input)
-            .map(({ output }) => {
+            .map(({ output, ...rest }) => {
               if (res.raw.writableEnded) return output.Memory
               /**
                * The cu sends the array buffer as binary data,
@@ -39,6 +39,19 @@ export const withStateRoutes = (app) => {
                * and then return only the buffer received from BL
                */
               res.header('Content-Type', 'application/octet-stream')
+
+              if(rest && rest.last && rest.last.timestamp) {
+                res.header('Last-Timestamp', rest.last.timestamp)
+              }
+
+              if(rest && rest.last && rest.last.ordinate) {
+                res.header('Last-Ordinate', rest.last.ordinate)
+              }
+              
+              if(rest && rest.last && rest.last.blockHeight) {
+                res.header('Last-Block-Height', rest.last.blockHeight)
+              }
+
               return output.Memory
             })
             .toPromise(),
