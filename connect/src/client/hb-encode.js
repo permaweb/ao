@@ -259,6 +259,14 @@ export async function encode (obj = {}) {
 
   const h = new Headers()
   headerKeys.forEach((key) => h.append(key, flattened[key]))
+
+  // If there is a data field that didn't otherwise get encoded into a multipart body,
+  // and there are no other body parts, then we need to encode the data as an
+  // `inline-body-key`. While doing so, we remove the `data` header that would
+  // otherwise be duplicated.
+  if (h.has('data')) {
+    bodyKeys.push('data')
+  }
   /**
    * Add headers that indicates and orders body-keys
    * for the purpose of determinstically reconstructing
@@ -271,44 +279,62 @@ export async function encode (obj = {}) {
   // const bk = hbEncodeValue('body-keys', bodyKeys)
   // Object.keys(bk).forEach((key) => h.append(key, bk[key]))
 
-  let body
+  let body, finalContent
   if (bodyKeys.length) {
-    const bodyParts = await Promise.all(
-      bodyKeys.map((name) => flattened[name].arrayBuffer())
-    )
+    if (bodyKeys.length === 1) {
+      // If there is only one element, promote it to be the full body and set the
+      // `inline-body-key` such that the server knows its name.
+      body = new Blob([obj.data])
+      h.append('inline-body-key', bodyKeys[0])
+      h.delete(bodyKeys[0])
+    } else {
+      // This is a multipart body, so we generate and insert the boundary
+      // appropriately.
+      const bodyParts = await Promise.all(
+        bodyKeys.map((name) => {
+          return flattened[name].arrayBuffer()
+        })
+      )
 
-    /**
-     * Generate a deterministic boundary, from the parts
-     * to use for the multipart body boundary
-     */
-    const base = new Blob(
-      bodyParts.flatMap((p, i, arr) =>
-        i < arr.length - 1 ? [p, '\r\n'] : [p])
-    )
-    const hash = await sha256(await base.arrayBuffer())
-    const boundary = base64url.encode(Buffer.from(hash))
+      /**
+       * Generate a deterministic boundary, from the parts
+       * to use for the multipart body boundary
+       */
+      const base = new Blob(
+        bodyParts.flatMap((p, i, arr) =>
+          i < arr.length - 1 ? [p, '\r\n'] : [p])
+      )
+      const hash = await sha256(await base.arrayBuffer())
+      const boundary = base64url.encode(Buffer.from(hash))
 
-    /**
-     * Segment each part with the multipart boundary
-     */
-    const blobParts = bodyParts
-      .flatMap((p) => [`--${boundary}\r\n`, p, '\r\n'])
+      /**
+       * Segment each part with the multipart boundary
+       */
+      const blobParts = bodyParts
+        .flatMap((p) => [`--${boundary}\r\n`, p, '\r\n'])
 
-    /**
-     * Add the terminating boundary
-     */
-    blobParts.push(`--${boundary}--`)
+      /**
+       * Add the terminating boundary
+       */
+      blobParts.push(`--${boundary}--`)
 
-    body = new Blob(blobParts)
+      h.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
+      body = new Blob(blobParts)
+    }
     /**
      * calculate the content-digest
      */
-    const contentDigest = await sha256(await body.arrayBuffer())
+    finalContent = await body.arrayBuffer()
+    const contentDigest = await sha256(finalContent)
     const base64 = base64url.toBase64(base64url.encode(contentDigest))
 
-    h.set('Content-Type', `multipart/form-data; boundary="${boundary}"`)
     h.append('Content-Digest', `sha-256=:${base64}:`)
   }
+
+  console.log('Encoded headers:')
+  console.log(h)
+  console.log('Encoded body:')
+  console.log(finalContent)
 
   return { headers: h, body }
 }
