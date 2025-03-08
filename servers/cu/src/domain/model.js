@@ -170,6 +170,10 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_CHECKPOINT_TRUSTED_OWNERS: commaDelimitedArraySchema,
   /**
+   * A single wallet to prefer.
+   */
+  PROCESS_CHECKPOINT_PREFERRED_OWNERS: commaDelimitedArraySchema,
+  /**
    * An array of checkpoint ids that should not be used
    */
   IGNORE_ARWEAVE_CHECKPOINTS: commaDelimitedArraySchema,

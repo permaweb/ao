@@ -798,6 +798,7 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+  PROCESS_CHECKPOINT_PREFERRED_OWNERS,
   logger: _logger,
   readStateFromCheckpoint,
   hashWasmMemory,
@@ -851,15 +852,22 @@ export function findLatestProcessMemoryWith ({
     }
   `
 
-  const removeIgnoredCheckpoints = ({ checkpoints }) => {
-    if (!checkpoints || !checkpoints.length) return { checkpoints: [] }
-    return { checkpoints: checkpoints.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)) }
+  const removeIgnoredCheckpoints = ({ checkpoints, preferredCheckponts }) => {
+    if (!checkpoints || !checkpoints.length) return { checkpoints: [], preferredCheckponts }
+    return { checkpoints: checkpoints.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)), preferredCheckponts }
   }
 
-  const findLatestVerified = async ({ checkpoints }) => {
-    if (checkpoints.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) {
-      if (checkpoints.length >= 1) {
-        const sorted = checkpoints.sort((a, b) => {
+  const removeIgnoredPreferredCheckpoints = ({ checkpoints, preferredCheckponts }) => {
+    if (!preferredCheckponts || !preferredCheckponts.length) return { checkpoints, preferredCheckponts: [] }
+    return { checkpoints, preferredCheckponts: preferredCheckponts.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)) }
+  }
+
+  const findLatestVerified = async ({ checkpoints, preferredCheckponts }) => {
+    const checkpointsToUse = preferredCheckponts.length > 0 ? preferredCheckponts : checkpoints
+    
+    if (checkpointsToUse.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) {
+      if (checkpointsToUse.length >= 1) {
+        const sorted = checkpointsToUse.sort((a, b) => {
           return parseInt(
             b.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(a.node.tags.find((tag) => tag.name === 'Nonce').value
           )
@@ -890,8 +898,8 @@ export function findLatestProcessMemoryWith ({
       }
     }
 
-    logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpoints.length}`)
-    const oldestToNewestCheckpoints = [...checkpoints].reverse().sort((a, b) => {
+    logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpointsToUse.length}`)
+    const oldestToNewestCheckpoints = [...checkpointsToUse].reverse().sort((a, b) => {
       return parseInt(
         a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
       )
@@ -959,7 +967,7 @@ export function findLatestProcessMemoryWith ({
         currentCheckpoint = nextCheckpoint
       }
 
-      if ((correct / CHECKPONT_VALIDATION_STEPS) > CHECKPONT_VALIDATION_THRESH) {
+      if ((correct / CHECKPONT_VALIDATION_STEPS) >= CHECKPONT_VALIDATION_THRESH) {
         const finalTags = parseTags(currentCheckpoint.node.tags)
         logger(`Determined correct checkpoint id: ${currentCheckpoint.node.id} Process: ${finalTags.Process}`)
         logger(`Votes: ${correct}`)
@@ -998,9 +1006,10 @@ export function findLatestProcessMemoryWith ({
     return true
   }
 
-  const determineLatestVerifiedCheckpoint = (checkpoints) => {
-    return of({ checkpoints })
+  const determineLatestVerifiedCheckpoint = ({ checkpoints, preferredCheckponts}) => {
+    return of({ checkpoints, preferredCheckponts })
       .map(removeIgnoredCheckpoints)
+      .map(removeIgnoredPreferredCheckpoints)
       .chain(fromPromise(findLatestVerified))
   }
 
@@ -1252,7 +1261,7 @@ export function findLatestProcessMemoryWith ({
       return Rejected(args)
     }
 
-    return of({ PROCESS_CHECKPOINT_TRUSTED_OWNERS })
+    return of({ PROCESS_CHECKPOINT_TRUSTED_OWNERS, PROCESS_CHECKPOINT_PREFERRED_OWNERS })
       .chain(({ PROCESS_CHECKPOINT_TRUSTED_OWNERS }) => {
         if (isEmpty(PROCESS_CHECKPOINT_TRUSTED_OWNERS)) return address()
         return Resolved(PROCESS_CHECKPOINT_TRUSTED_OWNERS)
@@ -1267,6 +1276,28 @@ export function findLatestProcessMemoryWith ({
         })
       })
       .map(path(['data', 'transactions', 'edges']))
+      .chain((nonPreferredCheckpoints) => {
+        if (isEmpty(PROCESS_CHECKPOINT_PREFERRED_OWNERS)) {
+          return of({ checkpoints: nonPreferredCheckpoints, preferredCheckponts: []})
+        }
+        return of(PROCESS_CHECKPOINT_PREFERRED_OWNERS)
+          .map((owners) => ifElse(Array.isArray, always(owners), always([owners]))(owners))
+          .chain((owners) => {
+            return queryCheckpoints({
+              query: GET_AO_PROCESS_CHECKPOINTS,
+              variables: { owners, processId, limit: 50 },
+              processId,
+              before: LATEST
+            })
+          })
+          .map(path(['data', 'transactions', 'edges']))
+          .map((preferredCheckponts) => { 
+            return { 
+              checkpoints: nonPreferredCheckpoints, 
+              preferredCheckponts 
+            } 
+          })
+      })
       .chain(determineLatestVerifiedCheckpoint)
       .bimap(
         (err) => {
