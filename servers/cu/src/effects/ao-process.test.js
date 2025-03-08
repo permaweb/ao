@@ -758,6 +758,7 @@ describe('ao-process', () => {
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
         PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        PROCESS_CHECKPOINT_PREFERRED_OWNERS: [],
         CHECKPONT_VALIDATION_STEPS: 10,
         CHECKPONT_VALIDATION_RETRIES: 1,
         CHECKPONT_VALIDATION_THRESH: 0.75,
@@ -863,6 +864,7 @@ describe('ao-process', () => {
           const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
             ...deps,
             PROCESS_CHECKPOINT_TRUSTED_OWNERS: ['wallet-123', 'wallet-456'],
+            PROCESS_CHECKPOINT_PREFERRED_OWNERS: [],
             queryGateway: async ({ query, variables }) => {
               try {
                 assert.deepStrictEqual(variables, { owners: ['wallet-123', 'wallet-456'], processId: 'process-123', limit: 50 })
@@ -1211,7 +1213,8 @@ describe('ao-process', () => {
         logger,
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
         IGNORE_ARWEAVE_CHECKPOINTS: [],
-        PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+        PROCESS_CHECKPOINT_PREFERRED_OWNERS: []
       }
       const COLDSTART = {
         src: 'cold_start',
@@ -1287,7 +1290,8 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          PROCESS_CHECKPOINT_PREFERRED_OWNERS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1324,7 +1328,8 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
-          PROCESS_CHECKPOINT_TRUSTED_OWNERS: []
+          PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          PROCESS_CHECKPOINT_PREFERRED_OWNERS: []
         }
 
         const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith(deps))
@@ -1364,6 +1369,7 @@ describe('ao-process', () => {
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           IGNORE_ARWEAVE_CHECKPOINTS: [],
           PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          PROCESS_CHECKPOINT_PREFERRED_OWNERS: [],
           fileExists: () => true,
           DIR: 'fake/directory/'
         }
@@ -1418,6 +1424,7 @@ describe('ao-process', () => {
           logger,
           PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: [],
           PROCESS_CHECKPOINT_TRUSTED_OWNERS: [],
+          PROCESS_CHECKPOINT_PREFERRED_OWNERS: [],
           CHECKPONT_VALIDATION_STEPS: 10,
           CHECKPONT_VALIDATION_RETRIES: 1,
           CHECKPONT_VALIDATION_THRESH: 0.75,
