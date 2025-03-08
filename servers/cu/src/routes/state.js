@@ -47,7 +47,7 @@ export const withStateRoutes = (app) => {
               if (rest && rest.last && rest.last.ordinate) {
                 res.header('Last-Ordinate', rest.last.ordinate)
               }
-              
+
               if (rest && rest.last && rest.last.blockHeight) {
                 res.header('Last-Block-Height', rest.last.blockHeight)
               }

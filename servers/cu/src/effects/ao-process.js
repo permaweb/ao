@@ -857,8 +857,8 @@ export function findLatestProcessMemoryWith ({
   }
 
   const findLatestVerified = async ({ checkpoints }) => {
-    if (checkpoints.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { 
-      if(checkpoints.length >= 1){
+    if (checkpoints.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) {
+      if (checkpoints.length >= 1) {
         const sorted = checkpoints.sort((a, b) => {
           return parseInt(
             a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
