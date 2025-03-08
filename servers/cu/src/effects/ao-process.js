@@ -857,7 +857,38 @@ export function findLatestProcessMemoryWith ({
   }
 
   const findLatestVerified = async ({ checkpoints }) => {
-    if (checkpoints.length < CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) { return }
+    if (checkpoints.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) {
+      if (checkpoints.length >= 1) {
+        const sorted = checkpoints.sort((a, b) => {
+          return parseInt(
+            a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
+          )
+        })
+        const useFirst = sorted[0]
+        const finalTags = parseTags(useFirst.node.tags)
+        logger(`Not enough checkpoints for verfication, use first checkpoint id: ${useFirst.node.id} Process: ${finalTags.Process}`)
+        const firstMemory = await downloadCheckpointFromArweave({
+          id: useFirst.node.id,
+          encoding: useFirst.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
+        }).toPromise()
+        return {
+          id: useFirst.node.id,
+          timestamp: parseInt(finalTags.Timestamp),
+          assignmentId: finalTags.Assignment,
+          hashChain: finalTags['Hash-Chain'],
+          epoch: maybeParseInt(finalTags.Epoch),
+          nonce: maybeParseInt(finalTags.Nonce),
+          ordinate: finalTags.Nonce,
+          module: finalTags.Module,
+          blockHeight: parseInt(finalTags['Block-Height']),
+          cron: finalTags['Cron-Interval'],
+          encoding: finalTags['Content-Encoding'],
+          Memory: firstMemory
+        }
+      } else {
+        return
+      }
+    }
 
     logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpoints.length}`)
     const oldestToNewestCheckpoints = [...checkpoints].reverse().sort((a, b) => {
@@ -1633,7 +1664,8 @@ export function saveCheckpointWith ({
                  * gzipped encoded (see below)
                  */
                 { name: 'Content-Encoding', value: 'gzip' },
-                { name: 'Unit-Identifier', value: CU_IDENTIFIER }
+                { name: 'Unit-Identifier', value: CU_IDENTIFIER },
+                { name: 'Ordinate', value: `${ordinate}`.trim() }
 
               ]
             }

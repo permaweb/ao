@@ -1032,23 +1032,6 @@ describe('ao-process', () => {
         }))
         const incrementedTarget = { ...target, timestamp: cachedEval.timestamp + ((edges.length + 1) * 1000), ordinate: cachedEval.nonce + edges.length }
 
-        test('should not verify the checkpoint if there are not enough checkpoints', async () => {
-          const findLatestProcessMemory = findLatestProcessMemorySchema.implement(findLatestProcessMemoryWith({
-            ...deps,
-            queryGateway: async () => ({
-              data: {
-                transactions: {
-                  edges: mappedEdges.slice(0, 5) // 5 is less than the number of validation steps
-                }
-              }
-            })
-          }))
-
-          const res = await findLatestProcessMemory(incrementedTarget)
-
-          assert.deepStrictEqual(res.src, 'cold_start')
-        })
-
         test('should not verify the checkpoint if all retries fail', async () => {
           let mismatchedMemories = 0
           const testLogger = (log) => {
