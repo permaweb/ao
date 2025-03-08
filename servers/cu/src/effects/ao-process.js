@@ -861,7 +861,7 @@ export function findLatestProcessMemoryWith ({
       if (checkpoints.length >= 1) {
         const sorted = checkpoints.sort((a, b) => {
           return parseInt(
-            a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
+            b.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(a.node.tags.find((tag) => tag.name === 'Nonce').value
           )
         })
         const useFirst = sorted[0]
