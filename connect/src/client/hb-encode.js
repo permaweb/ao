@@ -331,10 +331,10 @@ export async function encode (obj = {}) {
     h.append('Content-Digest', `sha-256=:${base64}:`)
   }
 
-  console.log('Encoded headers:')
-  console.log(h)
-  console.log('Encoded body:')
-  console.log(finalContent)
+  // console.log('Encoded headers:')
+  // console.log(h)
+  // console.log('Encoded body:')
+  // console.log(finalContent)
 
   return { headers: h, body }
 }

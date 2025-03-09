@@ -184,6 +184,7 @@ if mode == 'process' then request should create a pure httpsig from fields
   const transformToMap = (mode) => (result) => {
     const map = {}
     if (mode === 'relay@1.0') {
+      // console.log('Mainnet (M1) result', result)
       if (typeof result === 'string') {
         return result
       }
@@ -217,6 +218,7 @@ if mode == 'process' then request should create a pure httpsig from fields
       }
       return map
     } else {
+      // console.log('Mainnet (M2) result', result)
       const res = result
       let body = ''
       res.headers.forEach((v, k) => {
@@ -228,38 +230,13 @@ if mode == 'process' then request should create a pure httpsig from fields
       if (typeof res.body === 'string') {
         try {
           body = JSON.parse(res.body)
-
-          if (body.Output && body.Output.data) {
-            map.Output = {
-              text: () => Promise.resolve(body.Output.data)
-            }
-          }
-          if (body.Messages) {
-            map.Messages = body.Messages.map((m) => {
-              const miniMap = {}
-              m.Tags.forEach((t) => {
-                miniMap[t.name] = {
-                  text: () => Promise.resolve(t.value)
-                }
-              })
-              miniMap.Data = {
-                text: () => Promise.resolve(m.Data),
-                json: () => Promise.resolve(JSON.parse(m.Data)),
-                binary: () => Promise.resolve(Buffer.from(m.Data))
-              }
-              miniMap.Target = {
-                text: () => Promise.resolve(m.Target)
-              }
-              miniMap.Anchor = {
-                text: () => Promise.resolve(m.Anchor)
-              }
-              return miniMap
-            })
-          }
+          return { ...map, ...body }
         } catch (e) {
-          map.body = { text: () => Promise.resolve(body) }
+          // console.log('Mainnet (M2) error', e)
+          map.body = body
         }
       }
+      // console.log('Mainnet (M2) default reply', map)
       return map
     }
   }
