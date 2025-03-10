@@ -5,14 +5,17 @@ use bytes::{BufMut, Bytes};
 use super::tags::*;
 
 use base64_url;
-use sha2::{Digest, Sha256, Sha384};
+use sha2::{Digest as Sha2Digest, Sha256, Sha384};
 
 use ring::rand::SecureRandom;
 
-use data_encoding::BASE64URL;
 use jsonwebkey::JsonWebKey;
 use rand::thread_rng;
 use rsa::{pkcs8::DecodePublicKey, PaddingScheme, PublicKey, RsaPublicKey};
+use k256::ecdsa::{Signature, VerifyingKey, RecoveryId};
+use sha3::Keccak256;
+
+use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub enum ByteErrorType {
@@ -185,7 +188,7 @@ pub struct Config {
     pub sig_name: String,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum SignerMap {
     None = -1,
     Arweave = 1,
@@ -482,17 +485,143 @@ impl DataItem {
             ..bundlr_tx
         };
 
+        Ok(data_item)
+    }
+
+    pub fn from_bytes_verify(buffer: Vec<u8>) -> Result<Self, ByteErrorType> {
+        let (bundlr_tx, data_start) = DataItem::from_info_bytes(&buffer)?;
+        let data = &buffer[data_start..buffer.len()];
+
+        let data_item = DataItem {
+            data: Data::Bytes(data.to_vec()),
+            ..bundlr_tx
+        };
+
         // Clone data item for verification
         let mut data_item_clone = data_item.clone();
         data_item_clone.verify()?;
 
         Ok(data_item)
     }
+
     
     pub fn verify(&mut self) -> Result<(), ByteErrorType> {
+        match self.signature_type {
+            SignerMap::Ethereum | SignerMap::TypedEthereum => {
+                self.verify_ethereum()
+            },
+            _ => {
+                self.verify_rsa()
+            },
+        }
+    }
+
+    /// Ethereum (0x MetaMask) Signature Verification
+    fn verify_ethereum(&mut self) -> Result<(), ByteErrorType> {        
+        // Get the message to verify
+        let message = self.get_message()?;
+        
+        // Extract r, s, and v from the signature - standard Ethereum format
+        let r = &self.signature[0..32];
+        let s = &self.signature[32..64];
+        let v = self.signature[64]; // Recovery ID (0, 1, 27, or 28)
+        
+        // Instead of trying to reconstruct the signature verification ourselves,
+        // we'll use the owner public key directly to verify the owner's address
+        if self.owner.len() != 65 {
+            return Err(ByteErrorType::ByteError("Invalid owner format for Ethereum signature".to_string()));
+        }
+        
+        // First byte should be 0x04 for uncompressed
+        if self.owner[0] != 4 {
+            return Err(ByteErrorType::ByteError("Invalid owner format for Ethereum signature".to_string()));
+        }
+        
+        // Extract the public key coordinates
+        let owner_pubkey = &self.owner[1..]; // Skip the 0x04 prefix
+        
+        // Derive the Ethereum address from the public key
+        let mut hasher = Keccak256::new();
+        hasher.update(owner_pubkey);
+        let hash = hasher.finalize();
+        let eth_address = &hash[12..]; // Last 20 bytes
+        
+        // Format the message the same way ethers.js does
+        let prefix = format!("\x19Ethereum Signed Message:\n{}", message.len());
+        
+        // Full signed message
+        let mut eth_msg = Vec::new();
+        eth_msg.extend_from_slice(prefix.as_bytes());
+        eth_msg.extend_from_slice(&message);
+        
+        // Now create the keccak256 hash that was signed
+        let mut msg_hasher = Keccak256::new();
+        msg_hasher.update(&eth_msg);
+        let msg_hash = msg_hasher.finalize();
+        
+        // Adjust v to a recovery id (0 or 1)
+        let recovery_id = match v {
+            27 => 0,
+            28 => 1,
+            _ => {
+                return Err(ByteErrorType::ByteError("Invalid recovery ID for Ethereum signature".to_string()));
+            }
+        };
+        
+        // Combine r and s to form the signature
+        let mut sig_bytes = Vec::with_capacity(64);
+        sig_bytes.extend_from_slice(r);
+        sig_bytes.extend_from_slice(s);
+        
+        // Convert to the k256 recovery ID format
+        let rec_id = match RecoveryId::try_from(recovery_id) {
+            Ok(id) => id,
+            Err(_) => {
+                return Err(ByteErrorType::ByteError("Invalid recovery ID".to_string()));
+            }
+        };
+        
+        // Create the signature
+        let signature = match Signature::from_slice(&sig_bytes) {
+            Ok(sig) => sig,
+            Err(_) => {
+                return Err(ByteErrorType::ByteError("Invalid signature format".to_string()));
+            }
+        };
+        
+        // Use recover_from_prehash instead of recover_ecdsa
+        let recovered_key = match VerifyingKey::recover_from_prehash(msg_hash.as_slice(), &signature, rec_id) {
+            Ok(key) => key,
+            Err(_) => {
+                return Err(ByteErrorType::ByteError("Failed to recover public key".to_string()));
+            }
+        };
+        
+        // Get the uncompressed encoding
+        let recovered_bytes = recovered_key.to_encoded_point(false);
+        
+        // Derive Ethereum address from recovered key
+        let mut rec_hasher = Keccak256::new();
+        rec_hasher.update(&recovered_bytes.as_bytes()[1..]); // Skip the first byte (0x04)
+        let rec_hash = rec_hasher.finalize();
+        let recovered_address = &rec_hash[12..]; // Last 20 bytes
+                
+        // Compare with the address derived from owner
+        let addresses_match = eth_address == recovered_address;
+        
+        if !addresses_match {
+            return Err(ByteErrorType::ByteError("Ethereum signature verification failed".to_string()));
+        }
+        
+        Ok(())
+    }
+
+    /// RSA Signature Verification
+    fn verify_rsa(&mut self) -> Result<(), ByteErrorType> {
+        
         let jwt_str = format!(
             "{{\"kty\":\"RSA\",\"e\":\"AQAB\",\"n\":\"{}\"}}",
-            BASE64URL.encode(self.owner.as_slice())
+            base64_url::encode(self.owner.as_slice())
         );
 
         let jwk: JsonWebKey = match jwt_str.parse() {
