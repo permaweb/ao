@@ -237,7 +237,12 @@ export const domainConfigSchema = z.object({
    * How many times to jump backwards when failing to validate
    * a state from a checkpoint
    */
-  CHECKPONT_VALIDATION_RETRIES: positiveIntSchema
+  CHECKPONT_VALIDATION_RETRIES: positiveIntSchema,
+
+  /**
+   * Whether to ignore local checkpoints. Set to 'true' to ignore local checkpoints (file and record checkpoints).
+   */
+  IGNORE_LOCAL_CHECKPOINTS: z.preprocess((val) => !!val, z.boolean())
 })
 
 export const bufferSchema = z.any().refine(buffer => {
