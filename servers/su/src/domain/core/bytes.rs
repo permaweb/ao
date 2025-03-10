@@ -9,6 +9,11 @@ use sha2::{Digest, Sha256, Sha384};
 
 use ring::rand::SecureRandom;
 
+use data_encoding::BASE64URL;
+use jsonwebkey::JsonWebKey;
+use rand::thread_rng;
+use rsa::{pkcs8::DecodePublicKey, PaddingScheme, PublicKey, PublicKeyParts, RsaPublicKey};
+
 #[derive(Debug)]
 pub enum ByteErrorType {
     ByteError(String),
@@ -39,9 +44,9 @@ impl From<String> for ByteErrorType {
 }
 
 impl From<base64_url::base64::DecodeError> for ByteErrorType {
-  fn from(error: base64_url::base64::DecodeError) -> Self {
-      ByteErrorType::ByteError(format!("Byte error: {:?}", error))
-  }
+    fn from(error: base64_url::base64::DecodeError) -> Self {
+        ByteErrorType::ByteError(format!("Byte error: {:?}", error))
+    }
 }
 
 #[derive(Clone)]
@@ -472,10 +477,97 @@ impl DataItem {
         let (bundlr_tx, data_start) = DataItem::from_info_bytes(&buffer)?;
         let data = &buffer[data_start..buffer.len()];
 
-        Ok(DataItem {
+        let data_item = DataItem {
             data: Data::Bytes(data.to_vec()),
             ..bundlr_tx
-        })
+        };
+
+        // Clone data item for verification
+        let mut data_item_clone = data_item.clone();
+        data_item_clone.verify()?;
+
+        Ok(data_item)
+    }
+
+    pub fn verify(&mut self) -> Result<(), ByteErrorType> {
+        println!("Starting signature verification");
+
+        let jwt_str = format!(
+            "{{\"kty\":\"RSA\",\"e\":\"AQAB\",\"n\":\"{}\"}}",
+            BASE64URL.encode(self.owner.as_slice())
+        );
+        println!("Generated JWT string: {}", jwt_str);
+
+        let jwk: JsonWebKey = match jwt_str.parse() {
+            Ok(key) => {
+                println!("Successfully parsed JWT into JsonWebKey");
+                key
+            }
+            Err(e) => {
+                println!("Error parsing JWT: {:?}", e);
+                return Err(ByteErrorType::ByteError("Failed to parse JWT".to_string()));
+            }
+        };
+
+        println!("Attempting to create RSA public key from DER");
+        let pub_key = match RsaPublicKey::from_public_key_der(jwk.key.to_der().as_slice()) {
+            Ok(key) => {
+                println!(
+                    "Successfully created RSA public key, modulus length: {} bits",
+                    key.n().bits()
+                );
+                key
+            }
+            Err(e) => {
+                println!("Error creating RSA public key: {:?}", e);
+                return Err(ByteErrorType::ByteError(
+                    "Failed to create RSA key".to_string(),
+                ));
+            }
+        };
+
+        println!("Starting message hashing");
+        let mut hasher = sha2::Sha256::new();
+        let message = match self.get_message() {
+            Ok(msg) => {
+                println!(
+                    "Successfully retrieved message of length: {} bytes",
+                    msg.len()
+                );
+                msg
+            }
+            Err(e) => {
+                println!("Error getting message: {:?}", e);
+                return Err(e);
+            }
+        };
+        hasher.update(&message);
+        let hashed = &hasher.finalize();
+        println!("Message hash complete: {:?}", hashed);
+
+        println!("Setting up PSS padding for verification");
+        let rng = thread_rng();
+        let padding = PaddingScheme::PSS {
+            salt_rng: Box::new(rng),
+            digest: Box::new(sha2::Sha256::new()),
+            salt_len: None,
+        };
+
+        println!("Signature length: {} bytes", self.signature.len());
+        println!("Attempting signature verification...");
+
+        let result = pub_key.verify(padding, hashed, self.signature.as_slice());
+        match &result {
+            Ok(_) => println!("✅ Signature verification succeeded!"),
+            Err(e) => {
+                println!("❌ Signature verification failed: {:?}", e);
+                return Err(ByteErrorType::ByteError("Signature verification failed".to_string()));
+            }
+        }
+
+        result
+            .map(|_| ())
+            .map_err(|_| ByteErrorType::ByteError("invalid signature".to_string()))
     }
 
     pub fn as_bytes(&self) -> Result<Vec<u8>, ByteErrorType> {
@@ -542,9 +634,9 @@ impl DataItem {
     pub fn deep_hash(&mut self) -> Result<String, ByteErrorType> {
         let data_chunk = match &mut self.data {
             Data::None => DeepHashChunk::Chunk(Bytes::new()),
-            Data::Bytes(data) => DeepHashChunk::Chunk(data.clone().into())
+            Data::Bytes(data) => DeepHashChunk::Chunk(data.clone().into()),
         };
-        
+
         let encoded_tags = if !self.tags.is_empty() {
             self.tags.encode()?
         } else {
@@ -567,21 +659,21 @@ impl DataItem {
     }
 
     pub fn deep_hash_fields(
-        target: Option<String>, 
-        anchor: Option<String>, 
-        tags: Vec<Tag>, 
-        data: Vec<u8>
+        target: Option<String>,
+        anchor: Option<String>,
+        tags: Vec<Tag>,
+        data: Vec<u8>,
     ) -> Result<String, ByteErrorType> {
         let target_chunk = match target {
             None => DeepHashChunk::Chunk(Bytes::new()),
-            Some(t) => DeepHashChunk::Chunk(base64_url::decode(&t)?.into())
+            Some(t) => DeepHashChunk::Chunk(base64_url::decode(&t)?.into()),
         };
 
         let anchor_chunk = match anchor {
             None => DeepHashChunk::Chunk(Bytes::new()),
-            Some(a) => DeepHashChunk::Chunk(base64_url::decode(&a)?.into())
+            Some(a) => DeepHashChunk::Chunk(base64_url::decode(&a)?.into()),
         };
-        
+
         let encoded_tags = if !tags.is_empty() {
             tags.encode()?
         } else {

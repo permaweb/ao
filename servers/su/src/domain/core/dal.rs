@@ -143,7 +143,11 @@ pub trait DataStore: Send + Sync {
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType>;
     fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
-    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType>;
+    async fn check_existing_deep_hash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType>;
 }
 
 #[async_trait]
@@ -201,7 +205,6 @@ impl RouterDataStore for MockRouterDataStore {
         unreachable!("get_all_schedulers is not implemented in MockRouterDataStore");
     }
 }
-
 
 pub trait CoreMetrics: Send + Sync {
     fn get_process_observe(&self, duration: u128);

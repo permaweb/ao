@@ -814,14 +814,22 @@ impl DataStore for StoreClient {
         }
     }
 
-    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType> {
-      if self.bytestore.is_ready() {
-        match self.bytestore.deep_hash_exists(process_id, deep_hash) {
-          true => return Err(StoreErrorType::MessageExists("Deep hash already exists".to_string())),
-          false => return Ok(())
+    async fn check_existing_deep_hash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType> {
+        if self.bytestore.is_ready() {
+            match self.bytestore.deep_hash_exists(process_id, deep_hash) {
+                true => {
+                    return Err(StoreErrorType::MessageExists(
+                        "Deep hash already exists".to_string(),
+                    ))
+                }
+                false => return Ok(()),
+            }
         }
-      }
-      Ok(())
+        Ok(())
     }
 
     async fn save_message(
@@ -865,13 +873,10 @@ impl DataStore for StoreClient {
                             bundle_in.to_vec(),
                         )?;
                         match deep_hash {
-                          Some(dh) => {
-                              bytestore.save_deep_hash(
-                                  &message.process_id()?,
-                                  dh
-                              )?;
-                          },
-                          None => ()
+                            Some(dh) => {
+                                bytestore.save_deep_hash(&message.process_id()?, dh)?;
+                            }
+                            None => (),
                         };
                     }
                     Ok("saved".to_string())
@@ -1077,7 +1082,10 @@ impl DataStore for StoreClient {
         &self,
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType> {
-        self.logger.log(format!("retreiving latest message for process - {}", &process_id_in));
+        self.logger.log(format!(
+            "retreiving latest message for process - {}",
+            &process_id_in
+        ));
         use super::schema::messages::dsl::*;
         /*
             This must use get_conn because it needs
@@ -1087,7 +1095,8 @@ impl DataStore for StoreClient {
         */
         let conn = &mut self.get_conn()?;
 
-        self.logger.log(format!("connection established - {}", &process_id_in));
+        self.logger
+            .log(format!("connection established - {}", &process_id_in));
 
         // Get the latest DbMessage
         let latest_db_message_result = messages
@@ -1095,7 +1104,10 @@ impl DataStore for StoreClient {
             .order(timestamp.desc())
             .first::<DbMessage>(conn);
 
-        self.logger.log(format!("latest message query complete - {}", &process_id_in));
+        self.logger.log(format!(
+            "latest message query complete - {}",
+            &process_id_in
+        ));
 
         match latest_db_message_result {
             Ok(db_message) => {
@@ -1200,7 +1212,7 @@ impl RouterDataStore for StoreClient {
                 url.eq(&scheduler.url),
                 no_route.eq(&scheduler.no_route),
                 wallets_to_route.eq(&scheduler.wallets_to_route),
-                wallets_only.eq(&scheduler.wallets_only)
+                wallets_only.eq(&scheduler.wallets_only),
             ))
             .execute(conn)
         {
@@ -1560,18 +1572,11 @@ mod bytestore {
         pub fn save_deep_hash(
             &self,
             process_id: &String,
-            deep_hash: &String
+            deep_hash: &String,
         ) -> Result<(), String> {
-            let key = format!(
-                "deephash___{}___{}",
-                process_id, 
-                deep_hash
-            ).into_bytes();
+            let key = format!("deephash___{}___{}", process_id, deep_hash).into_bytes();
 
-            let value = format!(
-                "{}",
-                process_id
-            ).into_bytes();
+            let value = format!("{}", process_id).into_bytes();
 
             let db = match self.db.read() {
                 Ok(r) => r,
@@ -1587,16 +1592,8 @@ mod bytestore {
             }
         }
 
-        pub fn deep_hash_exists(
-            &self,
-            process_id: &String,
-            deep_hash: &String,
-        ) -> bool {
-            let key = format!(
-                "deephash___{}___{}",
-                process_id, 
-                deep_hash
-            ).into_bytes();
+        pub fn deep_hash_exists(&self, process_id: &String, deep_hash: &String) -> bool {
+            let key = format!("deephash___{}___{}", process_id, deep_hash).into_bytes();
 
             let db = match self.db.read() {
                 Ok(r) => r,

@@ -13,7 +13,7 @@ pub struct PromMetrics {
     enabled: bool,
     core_metrics: HistogramVec,
     message_save_failures: IntCounter,
-    registry: Registry
+    registry: Registry,
 }
 
 impl PromMetrics {
