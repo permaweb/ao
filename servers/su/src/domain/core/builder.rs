@@ -194,7 +194,7 @@ impl<'a> Builder<'a> {
     }
 
     pub fn parse_data_item(tx: Vec<u8>) -> Result<DataItem, BuilderErrorType> {
-        Ok(DataItem::from_bytes(tx)?)
+        Ok(DataItem::from_bytes_verify(tx)?)
     }
 
     pub async fn verify_assignment(
