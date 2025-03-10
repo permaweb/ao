@@ -92,7 +92,12 @@ fn get_db_dirs() -> (String, String, String, String) {
         }
     };
 
-    (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir)
+    (
+        su_file_db_dir,
+        su_index_db_dir,
+        su_file_sync_db_dir,
+        su_index_sync_db_dir,
+    )
 }
 
 impl AoConfig {
@@ -161,7 +166,8 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
-        let (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir) = get_db_dirs();
+        let (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir) =
+            get_db_dirs();
         let enable_deep_hash_checks = match env::var("ENABLE_DEEP_HASH_CHECKS") {
             Ok(val) => val == "true",
             Err(_e) => false,
@@ -190,7 +196,7 @@ impl AoConfig {
             su_index_db_dir,
             enable_deep_hash_checks,
             su_file_sync_db_dir,
-            su_index_sync_db_dir
+            su_index_sync_db_dir,
         })
     }
 }

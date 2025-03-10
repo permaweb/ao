@@ -67,7 +67,9 @@ mod tests {
         let message_bundle = create_test_message_bundle();
         let test_message = Message::from_bytes(message_bundle.clone())?;
 
-        client.save_message(&test_message, &message_bundle, None).await?;
+        client
+            .save_message(&test_message, &message_bundle, None)
+            .await?;
         let retrieved_message = client.get_message(&test_message.assignment.id)?;
 
         assert_eq!(retrieved_message.assignment.id, test_message.assignment.id);

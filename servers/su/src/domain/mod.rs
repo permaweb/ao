@@ -30,22 +30,20 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
 
     let data_store = if !config.use_local_store {
-      let ds = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
-      match ds.run_migrations() {
-          Ok(m) => logger.log(m),
-          Err(e) => logger.log(format!("{:?}", e)),
-      }
-      Some(ds)
+        let ds = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
+        match ds.run_migrations() {
+            Ok(m) => logger.log(m),
+            Err(e) => logger.log(format!("{:?}", e)),
+        }
+        Some(ds)
     } else {
-      None
+        None
     };
 
     let router_data_store: Arc<dyn RouterDataStore> = if !config.use_local_store {
-      data_store.clone().unwrap().clone()
+        data_store.clone().unwrap().clone()
     } else {
-      Arc::new(
-        MockRouterDataStore {}
-      ) as Arc<dyn RouterDataStore>
+        Arc::new(MockRouterDataStore {}) as Arc<dyn RouterDataStore>
     };
 
     let main_data_store: Arc<dyn DataStore> = if config.use_local_store {
@@ -103,16 +101,19 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     ));
     let metrics_clone = metrics.clone();
 
-    (Arc::new(Deps {
-        data_store: main_data_store,
-        router_data_store,
-        logger,
-        config,
-        scheduler,
-        gateway,
-        signer,
-        wallet,
-        uploader,
-        metrics,
-    }), metrics_clone)
+    (
+        Arc::new(Deps {
+            data_store: main_data_store,
+            router_data_store,
+            logger,
+            config,
+            scheduler,
+            gateway,
+            signer,
+            wallet,
+            uploader,
+            metrics,
+        }),
+        metrics_clone,
+    )
 }

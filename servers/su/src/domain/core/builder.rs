@@ -3,13 +3,13 @@ use std::sync::Arc;
 use super::tags::Tag;
 
 use super::bytes::{ByteErrorType, DataBundle, DataItem};
-use super::dal::{Gateway, Log, ScheduleProvider, Signer, TxStatus, GatewayTx};
+use super::dal::{Gateway, GatewayTx, Log, ScheduleProvider, Signer, TxStatus};
 use super::json::Process;
 
 pub struct Builder<'a> {
     gateway: Arc<dyn Gateway>,
     signer: Arc<dyn Signer>,
-    logger: &'a Arc<dyn Log>
+    logger: &'a Arc<dyn Log>,
 }
 
 pub struct BuildResult {
@@ -50,7 +50,7 @@ impl<'a> Builder<'a> {
         Ok(Builder {
             gateway,
             signer,
-            logger
+            logger,
         })
     }
 
@@ -228,14 +228,11 @@ impl<'a> Builder<'a> {
                     )),
                 }
             }
-            None => {
-                Ok(Some(self.gateway.gql_tx(&tx_id).await?))
-            }
+            None => Ok(Some(self.gateway.gql_tx(&tx_id).await?)),
         };
 
         result
     }
-
 }
 
 #[cfg(test)]

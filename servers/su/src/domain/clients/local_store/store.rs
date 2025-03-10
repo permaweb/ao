@@ -69,7 +69,10 @@ impl LocalStoreClient {
         })
     }
 
-    pub fn new_read_only(file_db_dir: &String, index_db_dir: &String) -> Result<Self, StoreErrorType> {
+    pub fn new_read_only(
+        file_db_dir: &String,
+        index_db_dir: &String,
+    ) -> Result<Self, StoreErrorType> {
         let logger = SuLog::init();
 
         let mut opts = Options::default();
@@ -91,10 +94,11 @@ impl LocalStoreClient {
 
         let cfs = LocalStoreClient::generate_cfs();
 
-        let index_db = match DB::open_cf_with_opts_for_read_only(&opts_index, &index_db_dir, cfs, false) {
-            Ok(_db) => _db,
-            Err(e) => panic!("failed to open cf with options: {}", e),
-        };
+        let index_db =
+            match DB::open_cf_with_opts_for_read_only(&opts_index, &index_db_dir, cfs, false) {
+                Ok(_db) => _db,
+                Err(e) => panic!("failed to open cf with options: {}", e),
+            };
 
         Ok(LocalStoreClient {
             _logger: logger,
@@ -197,11 +201,12 @@ impl LocalStoreClient {
         ))
     }
 
-    fn deep_hash_key(&self, process_id: &String, deep_hash: &String) -> Result<String, StoreErrorType> {
-        Ok(format!(
-            "deep_hash:{}:{}",
-            process_id, deep_hash
-        ))
+    fn deep_hash_key(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<String, StoreErrorType> {
+        Ok(format!("deep_hash:{}:{}", process_id, deep_hash))
     }
 
     /*
@@ -362,12 +367,15 @@ impl DataStore for LocalStoreClient {
         })?;
 
         match deep_hash {
-          Some(dh) => {
-            let deep_hash_key = self.deep_hash_key(&message.process_id()?, dh)?;
-            self.index_db
-                .put_cf(cf, deep_hash_key.as_bytes(), message.process_id()?.as_bytes())?;
-          },
-          None => ()
+            Some(dh) => {
+                let deep_hash_key = self.deep_hash_key(&message.process_id()?, dh)?;
+                self.index_db.put_cf(
+                    cf,
+                    deep_hash_key.as_bytes(),
+                    message.process_id()?.as_bytes(),
+                )?;
+            }
+            None => (),
         };
 
         Ok("Message saved".to_string())
@@ -455,20 +463,26 @@ impl DataStore for LocalStoreClient {
         }
     }
 
-    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType> {
+    async fn check_existing_deep_hash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType> {
         let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
             StoreErrorType::DatabaseError("Column family 'deep_hash' not found".to_string())
         })?;
 
         let deep_hash_key = self.deep_hash_key(process_id, deep_hash)?;
         match self.index_db.get_cf(cf, deep_hash_key) {
-          Ok(dh) => {
-            match dh {
-              Some(_) => return Err(StoreErrorType::MessageExists("Deep hash already exists".to_string())),
-              None => return Ok(())
-            }
-          },
-          Err(_) => return Ok(())
+            Ok(dh) => match dh {
+                Some(_) => {
+                    return Err(StoreErrorType::MessageExists(
+                        "Deep hash already exists".to_string(),
+                    ))
+                }
+                None => return Ok(()),
+            },
+            Err(_) => return Ok(()),
         }
     }
 
@@ -520,17 +534,17 @@ impl DataStore for LocalStoreClient {
         */
         if include_process && actual_limit == 0 {
             match to {
-              Some(t) => {
-                let timestamp: i64 = t.parse()?;
-                if timestamp == process_in.timestamp()? {
-                  return Ok(PaginatedMessages::from_messages(messages, false)?);
-                } else if timestamp > process_in.timestamp()? {
-                  return Ok(PaginatedMessages::from_messages(messages, true)?);
+                Some(t) => {
+                    let timestamp: i64 = t.parse()?;
+                    if timestamp == process_in.timestamp()? {
+                        return Ok(PaginatedMessages::from_messages(messages, false)?);
+                    } else if timestamp > process_in.timestamp()? {
+                        return Ok(PaginatedMessages::from_messages(messages, true)?);
+                    }
                 }
-              },
-              None => {
-                return Ok(PaginatedMessages::from_messages(messages, false)?);
-              }
+                None => {
+                    return Ok(PaginatedMessages::from_messages(messages, false)?);
+                }
             }
         }
 
@@ -546,7 +560,7 @@ impl DataStore for LocalStoreClient {
         for (_, assignment_id) in paginated_keys {
             let assignment_key = self.msg_assignment_key(&assignment_id);
             /*
-              It is possible the file isnt finished saving and 
+              It is possible the file isnt finished saving and
               available on the file db yet that is why this retry loop
               is here.
             */

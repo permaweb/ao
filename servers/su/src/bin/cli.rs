@@ -1,8 +1,8 @@
 use std::env;
 use std::io;
-use su::domain::sync_local_drives;
-use su::domain::migrate_to_local;
 use su::domain::migrate_to_disk;
+use su::domain::migrate_to_local;
+use su::domain::sync_local_drives;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

@@ -214,15 +214,15 @@ async fn health_check() -> impl Responder {
 }
 
 async fn metrics_route(data: web::Data<AppState>) -> impl Responder {
-  let result = data.metrics.emit_metrics();
-  match result {
-      Ok(metrics_str) => HttpResponse::Ok()
-          .content_type("application/openmetrics-text; version=1.0.0; charset=utf-8")
-          .body(metrics_str),
-      Err(err) => HttpResponse::BadRequest()
-          .content_type("text/plain")
-          .body(err),
-  }
+    let result = data.metrics.emit_metrics();
+    match result {
+        Ok(metrics_str) => HttpResponse::Ok()
+            .content_type("application/openmetrics-text; version=1.0.0; charset=utf-8")
+            .body(metrics_str),
+        Err(err) => HttpResponse::BadRequest()
+            .content_type("text/plain")
+            .body(err),
+    }
 }
 
 struct AppState {
