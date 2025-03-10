@@ -804,7 +804,8 @@ export function findLatestProcessMemoryWith ({
   hashWasmMemory,
   CHECKPONT_VALIDATION_STEPS,
   CHECKPONT_VALIDATION_THRESH,
-  CHECKPONT_VALIDATION_RETRIES
+  CHECKPONT_VALIDATION_RETRIES,
+  IGNORE_LOCAL_CHECKPOINTS
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -1129,6 +1130,12 @@ export function findLatestProcessMemoryWith ({
    */
   function maybeFile (args) {
     const { processId, omitMemory } = args
+    
+    if (IGNORE_LOCAL_CHECKPOINTS) {
+      logger('Local Checkpoints are ignored for this CU. Not attempting to query file checkpoints...', processId)
+      return Rejected(args)
+    }
+
     /**
      * Attempt to find the latest checkpoint in a file
      */
@@ -1183,6 +1190,10 @@ export function findLatestProcessMemoryWith ({
 
   function maybeRecord (args) {
     const { processId, omitMemory } = args
+    if (IGNORE_LOCAL_CHECKPOINTS) {
+      logger('Local Checkpoints are ignored for this CU. Not attempting to query record checkpoints...', processId)
+      return Rejected(args)
+    }
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
       logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query file checkpoints...', processId)
