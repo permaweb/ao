@@ -12,7 +12,7 @@ use ring::rand::SecureRandom;
 use data_encoding::BASE64URL;
 use jsonwebkey::JsonWebKey;
 use rand::thread_rng;
-use rsa::{pkcs8::DecodePublicKey, PaddingScheme, PublicKey, PublicKeyParts, RsaPublicKey};
+use rsa::{pkcs8::DecodePublicKey, PaddingScheme, PublicKey, RsaPublicKey};
 
 #[derive(Debug)]
 pub enum ByteErrorType {
@@ -488,64 +488,45 @@ impl DataItem {
 
         Ok(data_item)
     }
-
+    
     pub fn verify(&mut self) -> Result<(), ByteErrorType> {
-        println!("Starting signature verification");
-
         let jwt_str = format!(
             "{{\"kty\":\"RSA\",\"e\":\"AQAB\",\"n\":\"{}\"}}",
             BASE64URL.encode(self.owner.as_slice())
         );
-        println!("Generated JWT string: {}", jwt_str);
 
         let jwk: JsonWebKey = match jwt_str.parse() {
             Ok(key) => {
-                println!("Successfully parsed JWT into JsonWebKey");
                 key
             }
-            Err(e) => {
-                println!("Error parsing JWT: {:?}", e);
+            Err(_) => {
                 return Err(ByteErrorType::ByteError("Failed to parse JWT".to_string()));
             }
         };
 
-        println!("Attempting to create RSA public key from DER");
         let pub_key = match RsaPublicKey::from_public_key_der(jwk.key.to_der().as_slice()) {
             Ok(key) => {
-                println!(
-                    "Successfully created RSA public key, modulus length: {} bits",
-                    key.n().bits()
-                );
                 key
             }
-            Err(e) => {
-                println!("Error creating RSA public key: {:?}", e);
+            Err(_) => {
                 return Err(ByteErrorType::ByteError(
                     "Failed to create RSA key".to_string(),
                 ));
             }
         };
 
-        println!("Starting message hashing");
         let mut hasher = sha2::Sha256::new();
         let message = match self.get_message() {
             Ok(msg) => {
-                println!(
-                    "Successfully retrieved message of length: {} bytes",
-                    msg.len()
-                );
                 msg
             }
             Err(e) => {
-                println!("Error getting message: {:?}", e);
                 return Err(e);
             }
         };
         hasher.update(&message);
         let hashed = &hasher.finalize();
-        println!("Message hash complete: {:?}", hashed);
 
-        println!("Setting up PSS padding for verification");
         let rng = thread_rng();
         let padding = PaddingScheme::PSS {
             salt_rng: Box::new(rng),
@@ -553,14 +534,11 @@ impl DataItem {
             salt_len: None,
         };
 
-        println!("Signature length: {} bytes", self.signature.len());
-        println!("Attempting signature verification...");
 
         let result = pub_key.verify(padding, hashed, self.signature.as_slice());
         match &result {
-            Ok(_) => println!("✅ Signature verification succeeded!"),
-            Err(e) => {
-                println!("❌ Signature verification failed: {:?}", e);
+            Ok(_) => (),
+            Err(_) => {
                 return Err(ByteErrorType::ByteError("Signature verification failed".to_string()));
             }
         }
