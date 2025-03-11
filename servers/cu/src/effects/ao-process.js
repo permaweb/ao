@@ -865,7 +865,7 @@ export function findLatestProcessMemoryWith ({
 
   const findLatestVerified = async ({ checkpoints, preferredCheckponts }) => {
     const checkpointsToUse = preferredCheckponts.length > 0 ? preferredCheckponts : checkpoints
-    
+
     if (checkpointsToUse.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) {
       if (checkpointsToUse.length >= 1) {
         const sorted = checkpointsToUse.sort((a, b) => {
@@ -1007,7 +1007,7 @@ export function findLatestProcessMemoryWith ({
     return true
   }
 
-  const determineLatestVerifiedCheckpoint = ({ checkpoints, preferredCheckponts}) => {
+  const determineLatestVerifiedCheckpoint = ({ checkpoints, preferredCheckponts }) => {
     return of({ checkpoints, preferredCheckponts })
       .map(removeIgnoredCheckpoints)
       .map(removeIgnoredPreferredCheckpoints)
@@ -1130,7 +1130,7 @@ export function findLatestProcessMemoryWith ({
    */
   function maybeFile (args) {
     const { processId, omitMemory } = args
-    
+
     if (IGNORE_LOCAL_CHECKPOINTS) {
       logger('Local Checkpoints are ignored for this CU. Not attempting to query file checkpoints...', processId)
       return Rejected(args)
@@ -1289,7 +1289,7 @@ export function findLatestProcessMemoryWith ({
       .map(path(['data', 'transactions', 'edges']))
       .chain((nonPreferredCheckpoints) => {
         if (isEmpty(PROCESS_CHECKPOINT_PREFERRED_OWNERS)) {
-          return of({ checkpoints: nonPreferredCheckpoints, preferredCheckponts: []})
+          return of({ checkpoints: nonPreferredCheckpoints, preferredCheckponts: [] })
         }
         return of(PROCESS_CHECKPOINT_PREFERRED_OWNERS)
           .map((owners) => ifElse(Array.isArray, always(owners), always([owners]))(owners))
@@ -1302,11 +1302,11 @@ export function findLatestProcessMemoryWith ({
             })
           })
           .map(path(['data', 'transactions', 'edges']))
-          .map((preferredCheckponts) => { 
-            return { 
-              checkpoints: nonPreferredCheckpoints, 
-              preferredCheckponts 
-            } 
+          .map((preferredCheckponts) => {
+            return {
+              checkpoints: nonPreferredCheckpoints,
+              preferredCheckponts
+            }
           })
       })
       .chain(determineLatestVerifiedCheckpoint)
