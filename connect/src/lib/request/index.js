@@ -256,8 +256,9 @@ if mode == 'process' then request should create a pure httpsig from fields
 
         .map((res) => {
           logger(
-            'Received response from message sent to path "%s"',
-            fields?.path ?? '/'
+            'Received response from message sent to path "%s" with res %O',
+            fields?.path ?? '/',
+            res
           )
           return res
         })

@@ -53,9 +53,9 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
+export function requestWith (args) {
+  const { fetch, logger: _logger, HB_URL, signer, signingFormat = 'HTTP' } = args
   const logger = _logger.child('request')
-
   return (fields) => {
     const { path, method, ...restFields } = fields
 
@@ -82,8 +82,12 @@ export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
         .chain(fromPromise(({ url, method, headers, body }) => {
           return fetch(url, { method, headers, body, redirect: 'follow' })
             .then(async res => {
+              console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
+              if (res.status === 422 && signingFormat === 'HTTP') {
+                return await requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
+              }
+              if (res.status >= 400) throw new Error(`${res.status}: ${await res.text()}`)
               if (res.status >= 300) return res
-
               return { headers: res.headers, body: await res.text() }
             })
         }
