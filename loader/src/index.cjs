@@ -51,7 +51,7 @@ const metering = require('@permaweb/wasm-metering')
 
 /**
  * @typedef Environment
- * @property {{Id: string, Owner: string, Tags: Tag[]}} Process
+ * @property {Message} Process
  */
 
 /**
