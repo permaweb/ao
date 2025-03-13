@@ -15,6 +15,7 @@ const metering = require('@permaweb/wasm-metering')
 
 /**
  * @typedef Message
+ * @property {string} Id
  * @property {string} [Signature]
  * @property {string} Owner
  * @property {string} Target
