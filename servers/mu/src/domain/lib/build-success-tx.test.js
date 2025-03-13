@@ -13,6 +13,7 @@ describe('buildSuccessTx', () => {
     const spawnedTags = [
       { name: 'Type', value: 'Process' },
       { name: 'Variant', value: 'ao.TN.2' },
+      { name: 'Data-Protocol', value: 'zone' },
       { name: '_Ref', value: '123' },
       { name: 'Foo', value: 'Bar' }
     ]
@@ -24,6 +25,8 @@ describe('buildSuccessTx', () => {
           stx.tags,
           [
             // from spawn.Tags
+            { name: 'Variant', value: 'ao.TN.2' },
+            { name: 'Data-Protocol', value: 'zone' },
             { name: '_Ref', value: '123' },
             { name: 'Foo', value: 'Bar' },
             // added by Mu
