@@ -1,6 +1,8 @@
 use std::env;
 use std::io::{self, Error, ErrorKind};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+
 
 use actix_cors::Cors;
 use actix_web::{
@@ -114,6 +116,15 @@ async fn main_post_route(
     req: HttpRequest,
     query_params: web::Query<OptionalAssign>,
 ) -> impl Responder {
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs();
+
+    if current_time < data.startup_time + 300 {
+        return HttpResponse::ServiceUnavailable()
+            .json(json!({"error": "Server is warming up. Please try again later."}));
+    }
     match router::redirect_data_item(
         data.deps.clone(),
         req_body.to_vec(),
@@ -228,6 +239,7 @@ async fn metrics_route(data: web::Data<AppState>) -> impl Responder {
 struct AppState {
     deps: Arc<Deps>,
     metrics: Arc<PromMetrics>,
+    startup_time: u64,
 }
 
 #[actix_web::main]
@@ -252,8 +264,13 @@ async fn main() -> io::Result<()> {
         }
     };
 
+    let startup_time = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("Time went backwards")
+      .as_secs();
+
     let (deps, metrics) = init_deps(mode).await;
-    let app_state = web::Data::new(AppState { deps, metrics });
+    let app_state = web::Data::new(AppState { deps, metrics, startup_time });
 
     let run_deps = app_state.deps.clone();
 
