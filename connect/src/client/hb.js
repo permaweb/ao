@@ -3,7 +3,7 @@ import base64url from 'base64url'
 
 import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
-import { toHttpSigner } from './signer.js'
+import { toHttpSigner, toDataItemSigner } from './signer.js'
 
 /**
  * Map data item members to corresponding HB HTTP message
@@ -53,46 +53,77 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-export function requestWith (args) {
+export function requestWith(args) {
   const { fetch, logger: _logger, HB_URL, signer, signingFormat = 'HTTP' } = args
   const logger = _logger.child('request')
-  return (fields) => {
+  
+  return async function(fields) {
     const { path, method, ...restFields } = fields
+    
+    try {
+      let req = { }
+      // Step 1: Encode the fields to get headers and body
+      if (signingFormat === 'ANS-104') {
+        req = toANS104Request(restFields)
+      } else {
+        req = await encode(restFields)
+      }
 
-    return of({ path, method, fields: restFields })
-      .chain(fromPromise(({ path, method, fields }) =>
-        encode(fields).then(({ headers, body }) => ({
-          path,
-          method,
-          headers,
-          body
-        }))
-      ))
-      .chain(fromPromise(async ({ path, method, headers, body }) =>
-        toHttpSigner(signer)(toSigBaseArgs({
+      let fetch_req = { }
+      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', req)
+      if (signingFormat === 'ANS-104') {
+        const signedRequest = await toANS104Request(restFields)
+        fetch_req = { ...signedRequest, body: req.body }
+      }
+      else {
+        // Step 2: Create and execute the signing request
+        const signingArgs = toSigBaseArgs({
           url: joinUrl({ url: HB_URL, path }),
-          method,
-          headers
-          // this does not work with hyperbeam
-          // includePath: true
-        })).then((req) => ({ ...req, body }))
-      ))
-      .map(logger.tap('Sending HTTP signed message to HB: %o'))
-      .chain((request) => of(request)
-        .chain(fromPromise(({ url, method, headers, body }) => {
-          return fetch(url, { method, headers, body, redirect: 'follow' })
-            .then(async res => {
-              console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
-              if (res.status === 422 && signingFormat === 'HTTP') {
-                return await requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
-              }
-              if (res.status >= 400) throw new Error(`${res.status}: ${await res.text()}`)
-              if (res.status >= 300) return res
-              return { headers: res.headers, body: await res.text() }
-            })
-        }
-        ))
-      ).toPromise()
+          method: method,
+          headers: req.headers
+        })
+        
+        const signedRequest = await toHttpSigner(signer)(signingArgs)
+        fetch_req = { ...signedRequest, body: restFields.body, path, method }
+      }
+      
+      // Log the request
+      logger.tap('Sending HTTP signed message to HB: %o')(fetch_req)
+      
+      // Step 4: Send the request
+      const res = await fetch(fetch_req.url, { 
+        method: fetch_req.method, 
+        headers: fetch_req.headers, 
+        body: fetch_req.body, 
+        redirect: 'follow' 
+      })
+      
+      console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
+      
+      // Step 5: Handle specific status codes
+      if (res.status === 422 && signingFormat === 'HTTP') {
+        // Try again with different signing format
+        return requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
+      }
+      
+      if (res.status >= 400) {
+        throw new Error(`${res.status}: ${await res.text()}`)
+      }
+      
+      if (res.status >= 300) {
+        return res
+      }
+      
+      // Step 6: Return the response
+      return {
+        headers: res.headers,
+        body: await res.text()
+      }
+    } catch (error) {
+      // Handle errors appropriately
+      console.error("Request failed:", error)
+      throw error
+    }
   }
 }
 
@@ -231,6 +262,39 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
       )
       .toPromise()
   }
+}
+
+export function toANS104Request(fields) {
+  const dataItem = {
+    target: fields.Target,
+    anchor: fields.Anchor ?? '',
+    tags: keys(
+      omit(
+        [
+          'Target',
+          'Anchor',
+          'Data',
+          'dryrun',
+          'Type',
+          'Variant',
+          'path',
+          'method'
+        ],
+        fields
+      )
+    )
+      .map(function (key) {
+        return { name: key, value: fields[key] }
+      }, fields)
+      .concat([
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'Type', value: fields.Type ?? 'Message' },
+        { name: 'Variant', value: fields.Variant ?? 'ao.N.1' }
+      ]),
+    data: fields?.data || ''
+  }
+  console.log('ANS104 REQUEST: ', dataItem)
+  return { headers: { 'Content-Type': 'application/ans104' }, body: dataItem }
 }
 
 export class InsufficientFunds extends Error {
