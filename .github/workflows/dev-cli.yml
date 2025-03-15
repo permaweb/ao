@@ -46,6 +46,31 @@ jobs:
           deno task test
         env:
           CI: true
+  build:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lang: [lua, c]
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🦕 Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+            deno-version: 1.x
+
+      - name: Build and install CLI
+        run: deno task build-binaries && deno task install-local
+
+      - name: Verify ao installation
+        run: which ao && ao --version
+
+      - name: Initialize and build template projects
+        run: |
+          echo "Building for language: ${{ matrix.lang }}"
+          ao init -l ${{ matrix.lang }} && ao build
 
   test-node-commands:
     if: github.event_name != 'workflow_dispatch'
