@@ -55,22 +55,32 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 🦕 Setup Deno
         uses: denoland/setup-deno@v1
         with:
             deno-version: 1.x
 
-      - name: Build and install CLI
-        run: deno task build-binaries && deno task install-local
-
-      - name: Verify ao installation
-        run: which ao && ao --version
-
       - name: Initialize and build template projects
         run: |
+          docker build container -t p3rmaw3b/ao
+          echo 'export AO_INSTALL=/home/runner/.ao' >> $GITHUB_PATH
+          echo 'export PATH="$AO_INSTALL/bin:$PATH"' >> $GITHUB_PATH
+          source $GITHUB_PATH
+          echo 'Building and installing binaries'
+          deno task build-binaries && deno task install-local
           echo "Building for language: ${{ matrix.lang }}"
-          ao init -l ${{ matrix.lang }} && ao build
+          ao init my-template -l ${{ matrix.lang }} && cd my-template && ao build
+                    
+          echo 'Checking that process.wasm exists'
+          if [ -f "process.wasm" ]; then
+            echo "✅ process.wasm exists"
+          else
+            echo "❌ process.wasm is missing!" >&2
+            exit 1
+          fi
 
   test-node-commands:
     if: github.event_name != 'workflow_dispatch'

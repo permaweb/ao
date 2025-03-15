@@ -16,6 +16,6 @@ function handle(msgJSON, aoJSON)
     local responseJSON = json.encode({ok = status, response = response})
     -- free 
     response = nil
-    collectgarbage("collect")
+    collectgarbage()
     return responseJSON
 end
