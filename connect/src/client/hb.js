@@ -1,4 +1,5 @@
 import { Rejected, fromPromise, of } from 'hyper-async'
+import { omit, keys } from 'ramda'
 import base64url from 'base64url'
 
 import { joinUrl } from '../lib/utils.js'
@@ -61,22 +62,25 @@ export function requestWith(args) {
     const { path, method, ...restFields } = fields
     
     try {
-      let req = { }
-      // Step 1: Encode the fields to get headers and body
-      if (signingFormat === 'ANS-104') {
-        req = toANS104Request(restFields)
-      } else {
-        req = await encode(restFields)
-      }
 
       let fetch_req = { }
-      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', req)
+      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
       if (signingFormat === 'ANS-104') {
-        const signedRequest = await toANS104Request(restFields)
-        fetch_req = { ...signedRequest, body: req.body }
+        const ans104Request = toANS104Request(restFields)
+        console.log('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
+        const signedRequest = await toDataItemSigner(signer)(ans104Request.item)
+        console.log('SIGNED ANS-104 ITEM: ', signedRequest)
+        fetch_req = {
+          body: signedRequest.raw,
+          url: joinUrl({ url: HB_URL, path }),
+          path,
+          method,
+          headers: ans104Request.headers
+        }
       }
       else {
         // Step 2: Create and execute the signing request
+        const req = await encode(restFields)
         const signingArgs = toSigBaseArgs({
           url: joinUrl({ url: HB_URL, path }),
           method: method,
@@ -84,11 +88,11 @@ export function requestWith(args) {
         })
         
         const signedRequest = await toHttpSigner(signer)(signingArgs)
-        fetch_req = { ...signedRequest, body: restFields.body, path, method }
+        fetch_req = { ...signedRequest, body: req.body, path, method }
       }
       
       // Log the request
-      logger.tap('Sending HTTP signed message to HB: %o')(fetch_req)
+      logger.tap('Sending signed message to HB: %o')(fetch_req)
       
       // Step 4: Send the request
       const res = await fetch(fetch_req.url, { 
@@ -265,9 +269,10 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
 }
 
 export function toANS104Request(fields) {
+  console.log('TO ANS 104 REQUEST: ', fields)
   const dataItem = {
-    target: fields.Target,
-    anchor: fields.Anchor ?? '',
+    target: fields.target,
+    anchor: fields.anchor ?? '',
     tags: keys(
       omit(
         [
@@ -294,7 +299,7 @@ export function toANS104Request(fields) {
     data: fields?.data || ''
   }
   console.log('ANS104 REQUEST: ', dataItem)
-  return { headers: { 'Content-Type': 'application/ans104' }, body: dataItem }
+  return { headers: { 'Content-Type': 'application/ans104', 'codec-device': 'ans104@1.0' }, item: dataItem }
 }
 
 export class InsufficientFunds extends Error {
