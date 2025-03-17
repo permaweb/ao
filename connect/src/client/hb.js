@@ -6,6 +6,8 @@ import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
 import { toHttpSigner, toDataItemSigner } from './signer.js'
 
+let reqFormatCache = {}
+
 /**
  * Map data item members to corresponding HB HTTP message
  * shape
@@ -55,11 +57,16 @@ export function httpSigName (address) {
 }
 
 export function requestWith(args) {
-  const { fetch, logger: _logger, HB_URL, signer, signingFormat = 'HTTP' } = args
+  const { fetch, logger: _logger, HB_URL, signer } = args
+  let signingFormat = args.signingFormat
   const logger = _logger.child('request')
-  
+
   return async function(fields) {
     const { path, method, ...restFields } = fields
+  
+    if (!signingFormat) {
+      signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
+    }
     
     try {
 
@@ -107,10 +114,13 @@ export function requestWith(args) {
       // Step 5: Handle specific status codes
       if (res.status === 422 && signingFormat === 'HTTP') {
         // Try again with different signing format
+        reqFormatCache[fields.path] = 'ANS-104'
         return requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
       }
       
       if (res.status >= 400) {
+        console.log('ERROR RESPONSE: ', res)
+        process.exit(1)
         throw new Error(`${res.status}: ${await res.text()}`)
       }
       
@@ -239,10 +249,10 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
     return of(args)
       .chain(fromPromise(async ({ id, processId }) => {
         const { headers, body } = await encodeDataItem({ processId })
-        headers.append('slot+integer', id)
+        headers.append('slot', id)
         headers.append('accept', 'application/json')
         return toHttpSigner(signer)(toSigBaseArgs({
-          url: `${HB_URL}/${processId}/compute&slot+integer=${id}/results/json`,
+          url: `${HB_URL}/${processId}~process@1.0/compute&slot=${id}/results/json`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -277,11 +287,19 @@ export function toANS104Request(fields) {
       omit(
         [
           'Target',
+          'target',
           'Anchor',
+          'anchor',
           'Data',
-          'dryrun',
-          'Type',
+          'data',
+          'data-protocol',
+          'Data-Protocol',
+          'variant',
           'Variant',
+          'dryrun',
+          'Dryrun',
+          'Type',
+          'type',
           'path',
           'method'
         ],
