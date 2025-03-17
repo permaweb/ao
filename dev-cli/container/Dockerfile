@@ -3,7 +3,7 @@ LABEL maintainer="tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there
 # to expose files on the host to the ao container
-# 
+#
 # https://github.com/emscripten-core/emsdk/blob/9b0db91883452051aca8deddc932363aab29060b/docker/Dockerfile#L120
 
 RUN apt-get update --fix-missing -qq -y
@@ -53,12 +53,12 @@ RUN cp -r /lua-${LUA_VERSION} /lua-${LUA_VERSION}-32
 # And, re-compile lua with "generic WASM"
 RUN cd /lua-${LUA_VERSION} && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1'
 
 # And, re-compile lua with "generic WASM 32-bit"
 RUN cd /lua-${LUA_VERSION}-32 && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='emcc -s WASM=1 -s SUPPORT_LONGJMP=1'
 
 
 #############################
@@ -115,7 +115,7 @@ ENV NM='/emsdk/upstream/bin/llvm-nm'
 ###########################################
 # We first create a directory for the node impls to be placed
 # and dependencies installed
-# 
+#
 # By running npm link, we allow any commands exposed by
 # the node module to be ran globally within the container
 RUN mkdir -p /opt/node
@@ -124,3 +124,21 @@ RUN cd /opt/node && \
   npm install --omit="dev" && \
   npm link
 
+
+###########################################
+### Rust and WASM toolchains ###
+###########################################
+
+# Set environment variables
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:/usr/local/rustup/bin:$PATH
+
+# Install Rust, components, and cbindgen in a single step
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly && \
+    rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu && \
+    cargo install cbindgen && \
+    rustc --version && cargo --version && cbindgen --version && rustup show
+
+# Make build directory
+RUN mkdir /opt/aorustlib
