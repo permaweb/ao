@@ -136,6 +136,8 @@ pub trait DataStore: Send + Sync {
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
+        from_nonce: &Option<String>,
+        to_nonce: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType>;
     fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
     async fn get_latest_message(

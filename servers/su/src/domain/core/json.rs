@@ -835,20 +835,32 @@ impl PaginatedMessages {
     pub fn from_messages(
         messages: Vec<Message>,
         has_next_page: bool,
+        sequence_mode: &'static str,
     ) -> Result<Self, JsonErrorType> {
         let page_info = PageInfo { has_next_page };
 
         let edges = messages
             .into_iter()
             .try_fold(Vec::new(), |mut acc, message| {
-                let timestamp = match message.timestamp() {
-                    Ok(t) => t.to_string(),
-                    Err(e) => return Err(e),
+                let cursor = match sequence_mode {
+                  "timestamp" => {
+                      match message.timestamp() {
+                          Ok(t) => t.to_string(),
+                          Err(e) => return Err(e),
+                      }
+                  },
+                  "nonce" => {
+                      match message.nonce() {
+                          Ok(t) => t.to_string(),
+                          Err(e) => return Err(e),
+                      }
+                  },
+                  _ => return Err(JsonErrorType::JsonError("Invalid sequence mode".to_string()))
                 };
 
                 acc.push(Edge {
                     node: message.clone(),
-                    cursor: timestamp,
+                    cursor,
                 });
 
                 Ok(acc)

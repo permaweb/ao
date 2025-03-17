@@ -412,6 +412,8 @@ pub async fn read_message_data(
     from: Option<String>,
     to: Option<String>,
     limit: Option<i32>,
+    from_nonce: Option<String>,
+    to_nonce: Option<String>,
 ) -> Result<String, String> {
     let start_top_level = Instant::now();
     let start_get_message = Instant::now();
@@ -431,7 +433,7 @@ pub async fn read_message_data(
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&process, &from, &to, &limit)
+            .get_messages(&process, &from, &to, &limit, &from_nonce, &to_nonce)
             .await?;
         let duration = start.elapsed();
         deps.logger
@@ -448,6 +450,17 @@ pub async fn read_message_data(
     }
 
     Err("Message or Process not found".to_string())
+}
+
+pub async fn read_latest_message(
+  deps: Arc<Deps>,
+  process_id: String,
+) -> Result<String, String> {
+  if let Ok(Some(message)) = deps.data_store.get_latest_message(&process_id).await {
+      return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
+  } else {
+      Err("Latest message not available".to_string())
+  }
 }
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {

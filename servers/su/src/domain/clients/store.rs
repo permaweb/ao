@@ -892,6 +892,8 @@ impl DataStore for StoreClient {
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
+        from_nonce: &Option<String>,
+        to_nonce: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn()?;
@@ -899,21 +901,43 @@ impl DataStore for StoreClient {
             .filter(process_id.eq(process_in.process.process_id.clone()))
             .into_boxed();
 
-        // Apply 'from' timestamp filtering if 'from' is provided
-        if let Some(from_timestamp_str) = from {
-            let from_timestamp = from_timestamp_str
-                .parse::<i64>()
-                .map_err(StoreErrorType::from)?;
-            query = query.filter(timestamp.gt(from_timestamp));
-        }
+        let mut sequence_mode = "timstamp";
 
-        // Apply 'to' timestamp filtering if 'to' is provided
-        if let Some(to_timestamp_str) = to {
-            let to_timestamp = to_timestamp_str
-                .parse::<i64>()
-                .map_err(StoreErrorType::from)?;
-            query = query.filter(timestamp.le(to_timestamp));
+        match (from_nonce, to_nonce) {
+            (None, None) => {
+                if let Some(from_timestamp_str) = from {
+                    let from_timestamp = from_timestamp_str
+                        .parse::<i64>()
+                        .map_err(StoreErrorType::from)?;
+                    query = query.filter(timestamp.gt(from_timestamp));
+                }
+        
+                if let Some(to_timestamp_str) = to {
+                    let to_timestamp = to_timestamp_str
+                        .parse::<i64>()
+                        .map_err(StoreErrorType::from)?;
+                    query = query.filter(timestamp.le(to_timestamp));
+                }
+            },
+            (_, _) => {
+                sequence_mode = "nonce";
+
+                if let Some(from_nonce_s) = from_nonce {
+                    let f = from_nonce_s
+                        .parse::<i32>()
+                        .map_err(StoreErrorType::from)?;
+                    query = query.filter(nonce.gt(f));
+                }
+            
+                if let Some(to_nonce_s) = to_nonce {
+                    let t = to_nonce_s
+                        .parse::<i32>()
+                        .map_err(StoreErrorType::from)?;
+                    query = query.filter(nonce.le(t));
+                }
+            }
         }
+      
 
         // Apply limit, converting Option<i32> to i64 and adding 1 to check for the next page
         let limit_val = limit.unwrap_or(100) as i64; // Default limit if none is provided
@@ -1006,7 +1030,7 @@ impl DataStore for StoreClient {
 
                     // Create paginated result
                     let paginated =
-                        PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                        PaginatedMessages::from_messages(messages_mapped, has_next_page, sequence_mode)?;
                     Ok(paginated)
                 }
                 Err(e) => Err(StoreErrorType::from(e)),
@@ -1044,7 +1068,7 @@ impl DataStore for StoreClient {
                     }
 
                     let paginated =
-                        PaginatedMessages::from_messages(messages_mapped, has_next_page)?;
+                        PaginatedMessages::from_messages(messages_mapped, has_next_page, sequence_mode)?;
                     Ok(paginated)
                 }
                 Err(e) => Err(StoreErrorType::from(e)),

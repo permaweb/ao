@@ -289,6 +289,82 @@ impl LocalStoreClient {
 
         Ok((paginated_keys, has_next_page))
     }
+
+    async fn fetch_message_range_nonce(
+        &self,
+        process_id: &String,
+        from_nonce: &Option<String>,
+        to_nonce: &Option<String>,
+        limit: &Option<usize>,
+    ) -> Result<(Vec<(String, String)>, bool), StoreErrorType> {
+        let process_key_prefix = format!("message_ordering:{}:", process_id);
+
+        let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+        })?;
+
+        let iter = self
+            .index_db
+            .prefix_iterator_cf(cf, process_key_prefix.as_bytes());
+
+        let mut paginated_keys = Vec::new();
+        let mut has_next_page = false;
+        let mut count = 0;
+
+        for item in iter {
+            let (key, assignment_id_bytes) = item?;
+            let key_str = String::from_utf8(key.to_vec())?;
+            let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
+
+            /*
+              Extract the nonce out of the key for comparison
+              with the from/to parameters
+            */
+            let parts: Vec<&str> = key_str.split(':').collect();
+            if parts.len() < 4 {
+                continue;
+            }
+
+            let nonce_str = parts[3];
+            let nonce = nonce_str.parse::<i32>().unwrap_or(0);
+
+            /*
+              Application of the from and to parameters
+              from is exclusive while to is inclusive
+            */
+            if let Some(ref from_str) = from_nonce {
+                if let Ok(from_nonce_s) = from_str.parse::<i32>() {
+                    if nonce <= from_nonce_s {
+                        continue;
+                    }
+                }
+            }
+
+            if let Some(ref to_str) = to_nonce {
+                if let Ok(to_nonce_s) = to_str.parse::<i32>() {
+                    if nonce > to_nonce_s {
+                        has_next_page = false;
+                        break;
+                    }
+                }
+            }
+
+            paginated_keys.push((key_str.clone(), assignment_id));
+            count += 1;
+
+            match limit {
+                Some(actual_limit) => {
+                    if count >= *actual_limit {
+                        has_next_page = true;
+                        break;
+                    }
+                }
+                _ => (),
+            };
+        }
+
+        Ok((paginated_keys, has_next_page))
+    }
 }
 
 #[async_trait]
@@ -498,6 +574,8 @@ impl DataStore for LocalStoreClient {
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
+        from_nonce: &Option<String>,
+        to_nonce: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         let process_id = &process_in.process.process_id;
         let limit_val = limit.unwrap_or(100) as usize;
@@ -505,52 +583,120 @@ impl DataStore for LocalStoreClient {
         let mut messages = Vec::new();
         let mut actual_limit = limit_val;
 
-        /*
-          Check if the process has an assignment and
-          should be included as the first message
-        */
-        let include_process = process_in.assignment.is_some()
-            && match from {
-                Some(ref _from_timestamp) => false,
-                /*
-                  No 'from' means it's the first page
-                */
-                None => true,
-            };
+        let mut sequence_mode = "timestamp";
 
-        if include_process {
-            let process_message = Message::from_process(process_in.clone())?;
-            messages.push(process_message);
+        let (paginated_keys, has_next_page) = match (from_nonce, to_nonce) {
             /*
-              Adjust the limit since the process itself
-              is the first message
+              Always use timestamps if not using nonces
             */
-            actual_limit -= 1;
-        }
+            (None, None) => {
+                /*
+                  Check if the process has an assignment and
+                  should be included as the first message
+                */
+                let include_process = process_in.assignment.is_some()
+                    && match from {
+                        Some(ref _from_timestamp) => false,
+                        /*
+                          No 'from' means it's the first page
+                        */
+                        None => true,
+                    };
 
-        /*
-          handles an edge case where "to" is the message right
-          after the process, and limit is 1
-        */
-        if include_process && actual_limit == 0 {
-            match to {
-                Some(t) => {
-                    let timestamp: i64 = t.parse()?;
-                    if timestamp == process_in.timestamp()? {
-                        return Ok(PaginatedMessages::from_messages(messages, false)?);
-                    } else if timestamp > process_in.timestamp()? {
-                        return Ok(PaginatedMessages::from_messages(messages, true)?);
+                if include_process {
+                    let process_message = Message::from_process(process_in.clone())?;
+                    messages.push(process_message);
+                    /*
+                      Adjust the limit since the process itself
+                      is the first message
+                    */
+                    actual_limit -= 1;
+                }
+
+                /*
+                  handles an edge case where "to" is the message right
+                  after the process, and limit is 1
+                */
+                if include_process && actual_limit == 0 {
+                    match to {
+                        Some(t) => {
+                            let timestamp: i64 = t.parse()?;
+                            if timestamp == process_in.timestamp()? {
+                                return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                            } else if timestamp > process_in.timestamp()? {
+                                return Ok(PaginatedMessages::from_messages(messages, true, sequence_mode)?);
+                            }
+                        }
+                        None => {
+                            return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                        }
                     }
                 }
-                None => {
-                    return Ok(PaginatedMessages::from_messages(messages, false)?);
-                }
-            }
-        }
 
-        let (paginated_keys, has_next_page) = self
-            .fetch_message_range(process_id, from, to, &Some(actual_limit))
-            .await?;
+                self
+                    .fetch_message_range(process_id, from, to, &Some(actual_limit))
+                    .await?
+            },
+            (_, _) => {
+                sequence_mode = "nonce";
+
+                /*
+                  Check if the process has an assignment and
+                  should be included as the first message
+                */
+                let include_process = process_in.assignment.is_some()
+                  && match from_nonce {
+                      Some(ref _from_nonce) => {
+                          if _from_nonce.parse::<i32>()? == -1 {
+                            true
+                          } else {
+                            false
+                          }
+                      },
+                      /*
+                        No 'from' means it's the first page
+                      */
+                      None => true,
+                  };
+
+                if include_process {
+                    let process_message = Message::from_process(process_in.clone())?;
+                    messages.push(process_message);
+                    /*
+                      Adjust the limit since the process itself
+                      is the first message
+                    */
+                    actual_limit -= 1;
+                }
+
+                /*
+                  handles an edge case where "to" is the message right
+                  after the process, and limit is 1
+                */
+                if include_process && actual_limit == 0 {
+                    match to {
+                        Some(t) => {
+                            let nonce: i32 = t.parse()?;
+                            if nonce == process_in.nonce()? {
+                                return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                            } else if nonce > process_in.nonce()? {
+                                return Ok(PaginatedMessages::from_messages(messages, true, sequence_mode)?);
+                            }
+                        }
+                        None => {
+                            return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                        }
+                    }
+                }
+
+                self
+                    .fetch_message_range_nonce(process_id, from_nonce, to_nonce, &Some(actual_limit))
+                    .await?
+            }
+        };
+
+
+
 
         /*
           Fetch the messages for each paginated key. This
@@ -575,7 +721,7 @@ impl DataStore for LocalStoreClient {
             }
         }
 
-        Ok(PaginatedMessages::from_messages(messages, has_next_page)?)
+        Ok(PaginatedMessages::from_messages(messages, has_next_page, sequence_mode)?)
     }
 
     /*

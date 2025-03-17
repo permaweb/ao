@@ -22,6 +22,10 @@ struct FromTo {
     limit: Option<i32>,
     #[serde(rename = "process-id")]
     process_id: Option<String>,
+    #[serde(rename = "from-nonce")]
+    from_nonce: Option<String>,
+    #[serde(rename = "to-nonce")]
+    to_nonce: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -167,10 +171,12 @@ async fn main_get_route(
     query_params: web::Query<FromTo>,
 ) -> impl Responder {
     let tx_id = path.tx_id.clone();
-    let from_sort_key = query_params.from.clone();
-    let to_sort_key = query_params.to.clone();
+    let from = query_params.from.clone();
+    let to = query_params.to.clone();
     let limit = query_params.limit.clone();
     let process_id = query_params.process_id.clone();
+    let from_nonce = query_params.from_nonce.clone();
+    let to_nonce = query_params.to_nonce.clone();
 
     match router::redirect_tx_id(data.deps.clone(), tx_id.clone(), process_id.clone()).await {
         Ok(Some(redirect_url)) => {
@@ -184,7 +190,7 @@ async fn main_get_route(
     }
 
     let result =
-        flows::read_message_data(data.deps.clone(), tx_id, from_sort_key, to_sort_key, limit).await;
+        flows::read_message_data(data.deps.clone(), tx_id, from, to, limit, from_nonce, to_nonce).await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -192,6 +198,35 @@ async fn main_get_route(
             .body(processed_str),
         Err(err) => err_response(err.to_string()),
     }
+}
+
+async fn read_latest_route(
+  data: web::Data<AppState>,
+  req: HttpRequest,
+  path: web::Path<ProcessIdRequired>,
+) -> impl Responder {
+  let process_id = path.process_id.clone();
+
+  match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
+      Ok(Some(redirect_url)) => {
+          let target_url = format!("{}{}", redirect_url, req.uri());
+          return HttpResponse::TemporaryRedirect()
+              .insert_header((LOCATION, target_url))
+              .finish();
+      }
+      Ok(None) => (),
+      Err(err) => return err_response(err.to_string()),
+  }
+
+  let result =
+      flows::read_latest_message(data.deps.clone(), process_id).await;
+
+  match result {
+      Ok(processed_str) => HttpResponse::Ok()
+          .content_type("application/json")
+          .body(processed_str),
+      Err(err) => err_response(err.to_string()),
+  }
 }
 
 async fn read_process_route(
@@ -299,6 +334,7 @@ async fn main() -> io::Result<()> {
             .route("/metrics", web::get().to(metrics_route))
             .route("/{tx_id}", web::get().to(main_get_route))
             .route("/processes/{process_id}", web::get().to(read_process_route))
+            .route("/{process_id}/latest", web::get().to(read_latest_route))
     })
     .bind(("0.0.0.0", port))?
     .run()
