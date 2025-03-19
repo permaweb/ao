@@ -832,6 +832,41 @@ impl DataStore for StoreClient {
         Ok(())
     }
 
+    async fn get_deephash_version(&self, process_id: &String) -> Result<String, StoreErrorType> {
+        if self.bytestore.is_ready() {
+            if let Ok(dhv) = self.bytestore.get_deep_hash_version(process_id) {
+                return Ok(dhv);
+            }
+        }
+        Err(StoreErrorType::DatabaseError(
+            "Deep hash version does not exist for this process".to_string(),
+        ))
+    }
+
+    async fn save_deephash_version(
+        &self,
+        process_id: &String,
+        version: &String,
+    ) -> Result<(), StoreErrorType> {
+        if self.bytestore.is_ready() {
+            self.bytestore.save_deep_hash_version(process_id, version)?;
+        }
+        Ok(())
+    }
+
+    async fn save_deephash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType> {
+        if self.bytestore.is_ready() {
+            self.bytestore.save_deep_hash(process_id, deep_hash)?;
+        }
+        Ok(())
+    }
+
+    // async fn save_deep_hash(&self, deep_hash: &String) -> Result<(), StoreErrorType>;
+
     async fn save_message(
         &self,
         message: &Message,
@@ -901,7 +936,7 @@ impl DataStore for StoreClient {
             .filter(process_id.eq(process_in.process.process_id.clone()))
             .into_boxed();
 
-        let mut sequence_mode = "timstamp";
+        let mut sequence_mode = "timestamp";
 
         match (from_nonce, to_nonce) {
             (None, None) => {
@@ -911,43 +946,59 @@ impl DataStore for StoreClient {
                         .map_err(StoreErrorType::from)?;
                     query = query.filter(timestamp.gt(from_timestamp));
                 }
-        
+
                 if let Some(to_timestamp_str) = to {
                     let to_timestamp = to_timestamp_str
                         .parse::<i64>()
                         .map_err(StoreErrorType::from)?;
                     query = query.filter(timestamp.le(to_timestamp));
                 }
-            },
+            }
             (_, _) => {
                 sequence_mode = "nonce";
 
                 if let Some(from_nonce_s) = from_nonce {
-                    let f = from_nonce_s
-                        .parse::<i32>()
-                        .map_err(StoreErrorType::from)?;
+                    let f = from_nonce_s.parse::<i32>().map_err(StoreErrorType::from)?;
                     query = query.filter(nonce.gt(f));
                 }
-            
+
                 if let Some(to_nonce_s) = to_nonce {
-                    let t = to_nonce_s
-                        .parse::<i32>()
-                        .map_err(StoreErrorType::from)?;
+                    let t = to_nonce_s.parse::<i32>().map_err(StoreErrorType::from)?;
                     query = query.filter(nonce.le(t));
                 }
             }
         }
-      
 
         // Apply limit, converting Option<i32> to i64 and adding 1 to check for the next page
         let limit_val = limit.unwrap_or(100) as i64; // Default limit if none is provided
 
-        // Determine if the 'from' timestamp matches the process timestamp and if assignment is present
-        let include_process = process_in.assignment.is_some()
-            && match from {
-                Some(_) => false,
-                None => true, // No 'from' timestamp means it's the first page
-            };
+        let include_process = match (from_nonce, to_nonce) {
+            // we are dealing with timestamps
+            (None, None) => {
+                process_in.assignment.is_some()
+                    && match from {
+                        Some(_) => false,
+                        None => true,
+                    }
+            }
+            // if we are dealing with nonce sequencing
+            (_, _) => {
+                process_in.assignment.is_some()
+                    && match from_nonce {
+                        Some(ref _from_nonce) => {
+                            if _from_nonce.parse::<i32>()? == -1 {
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        /*
+                          No 'from' means it's the first page
+                        */
+                        None => true,
+                    }
+            }
+        };
 
         // If including the process, reduce the limit for the database query by 1
         let adjusted_limit_val = if include_process {
@@ -1029,8 +1080,11 @@ impl DataStore for StoreClient {
                     }
 
                     // Create paginated result
-                    let paginated =
-                        PaginatedMessages::from_messages(messages_mapped, has_next_page, sequence_mode)?;
+                    let paginated = PaginatedMessages::from_messages(
+                        messages_mapped,
+                        has_next_page,
+                        sequence_mode,
+                    )?;
                     Ok(paginated)
                 }
                 Err(e) => Err(StoreErrorType::from(e)),
@@ -1067,13 +1121,138 @@ impl DataStore for StoreClient {
                         messages_mapped.push(mapped);
                     }
 
-                    let paginated =
-                        PaginatedMessages::from_messages(messages_mapped, has_next_page, sequence_mode)?;
+                    let paginated = PaginatedMessages::from_messages(
+                        messages_mapped,
+                        has_next_page,
+                        sequence_mode,
+                    )?;
                     Ok(paginated)
                 }
                 Err(e) => Err(StoreErrorType::from(e)),
             }
         }
+    }
+
+    /*
+      This is a stripped down version of get_messages
+      used to fetch message bunldes for regenerating hash chains
+    */
+    async fn get_message_bundles(
+        &self,
+        process_in: &Process,
+        from: &Option<String>,
+        limit: &Option<i32>,
+    ) -> Result<(Vec<(String, Vec<u8>)>, bool), StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = messages
+            .filter(process_id.eq(process_in.process.process_id.clone()))
+            .into_boxed();
+
+        if let Some(from_timestamp_str) = from {
+            let from_timestamp = from_timestamp_str
+                .parse::<i64>()
+                .map_err(StoreErrorType::from)?;
+            query = query.filter(timestamp.gt(from_timestamp));
+        }
+
+        let limit_val = limit.unwrap_or(100) as i64;
+
+        if self.bytestore.clone().is_ready() {
+            let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
+                .select((
+                    row_id,
+                    process_id,
+                    message_id,
+                    assignment_id,
+                    epoch,
+                    nonce,
+                    timestamp,
+                    hash_chain,
+                ))
+                .order(timestamp.asc())
+                .limit(limit_val + 1)
+                .load(conn);
+
+            match db_messages_result {
+                Ok(db_messages) => {
+                    let has_next_page = db_messages.len() as i64 > limit_val;
+
+                    let messages_o = if has_next_page {
+                        &db_messages[..(limit_val as usize)]
+                    } else {
+                        &db_messages[..]
+                    };
+
+                    let mut message_bundles: Vec<(String, Vec<u8>)> = vec![];
+
+                    let message_ids: Vec<(String, Option<String>, String, String)> = messages_o
+                        .iter()
+                        .map(|msg| {
+                            (
+                                msg.message_id.clone(),
+                                msg.assignment_id.clone(),
+                                msg.process_id.clone(),
+                                msg.timestamp.to_string().clone(),
+                            )
+                        })
+                        .collect();
+
+                    let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
+
+                    for db_message in messages_o.iter() {
+                        match binaries.get(&(
+                            db_message.message_id.clone(),
+                            db_message.assignment_id.clone(),
+                            db_message.process_id.clone(),
+                            db_message.timestamp.to_string().clone(),
+                        )) {
+                            Some(bytes_result) => message_bundles
+                                .push((db_message.message_id.clone(), bytes_result.clone())),
+                            None => {
+                                let full_message = db_message
+                                    .assignment_id
+                                    .as_ref()
+                                    .map(|assignment_id_d| {
+                                        messages
+                                            .filter(
+                                                message_id
+                                                    .eq(db_message.message_id.clone())
+                                                    .and(assignment_id.eq(assignment_id_d)),
+                                            )
+                                            .order(timestamp.asc())
+                                            .first::<DbMessage>(conn)
+                                    })
+                                    .unwrap_or_else(|| {
+                                        messages
+                                            .filter(message_id.eq(db_message.message_id.clone()))
+                                            .order(timestamp.asc())
+                                            .first::<DbMessage>(conn)
+                                    })?;
+
+                                match full_message.assignment_id.clone() {
+                                    Some(a) => {
+                                        message_bundles.push((a, full_message.bundle.clone()))
+                                    }
+                                    /*
+                                      Anything old enough that it doesnt have
+                                      an assignemnt can be ignored
+                                    */
+                                    None => (),
+                                }
+                            }
+                        }
+                    }
+
+                    return Ok((message_bundles, has_next_page));
+                }
+                Err(e) => return Err(StoreErrorType::from(e)),
+            }
+        }
+
+        Err(StoreErrorType::DatabaseError(
+            "Bytestore not ready, cannot regenerate deep hashes".to_string(),
+        ))
     }
 
     fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
@@ -1613,6 +1792,50 @@ mod bytestore {
                 Ok(())
             } else {
                 Err("Database is not initialized".into())
+            }
+        }
+
+        pub fn save_deep_hash_version(
+            &self,
+            process_id: &String,
+            version: &String,
+        ) -> Result<(), String> {
+            let key = format!("deephashversion___{}", process_id).into_bytes();
+
+            let value = format!("{}", version).into_bytes();
+
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Failed to acquire read lock".into()),
+            };
+
+            if let Some(ref db) = *db {
+                db.put(key, value)
+                    .map_err(|e| format!("Failed to write to RocksDB: {:?}", e))?;
+                Ok(())
+            } else {
+                Err("Database is not initialized".into())
+            }
+        }
+
+        pub fn get_deep_hash_version(&self, process_id: &String) -> Result<String, String> {
+            let key = format!("deephashversion___{}", process_id).into_bytes();
+
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Cannot acquire read lock, deep hash version".to_string()),
+            };
+
+            if let Some(ref db) = *db {
+                match db.get(&key) {
+                    Ok(Some(v)) => match String::from_utf8(v) {
+                        Ok(vs) => Ok(vs),
+                        Err(_) => Err("Error parsing deep hash version".to_string()),
+                    },
+                    _ => return Err("No deephash version found".to_string()),
+                }
+            } else {
+                return Err("Cannot acquire read lock, deep hash version, match".to_string());
             }
         }
 

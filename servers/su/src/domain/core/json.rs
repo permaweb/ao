@@ -843,19 +843,19 @@ impl PaginatedMessages {
             .into_iter()
             .try_fold(Vec::new(), |mut acc, message| {
                 let cursor = match sequence_mode {
-                  "timestamp" => {
-                      match message.timestamp() {
-                          Ok(t) => t.to_string(),
-                          Err(e) => return Err(e),
-                      }
-                  },
-                  "nonce" => {
-                      match message.nonce() {
-                          Ok(t) => t.to_string(),
-                          Err(e) => return Err(e),
-                      }
-                  },
-                  _ => return Err(JsonErrorType::JsonError("Invalid sequence mode".to_string()))
+                    "timestamp" => match message.timestamp() {
+                        Ok(t) => t.to_string(),
+                        Err(e) => return Err(e),
+                    },
+                    "nonce" => match message.nonce() {
+                        Ok(t) => t.to_string(),
+                        Err(e) => return Err(e),
+                    },
+                    _ => {
+                        return Err(JsonErrorType::JsonError(
+                            "Invalid sequence mode".to_string(),
+                        ))
+                    }
                 };
 
                 acc.push(Edge {

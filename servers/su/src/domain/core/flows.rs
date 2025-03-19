@@ -73,6 +73,74 @@ fn id_res(deps: &Arc<Deps>, id: String, start_top_level: Instant) -> Result<Stri
 }
 
 /*
+  Recompute and save all deep hashes on a process
+  this is done on demand for a process when writing
+  an item if it isnt up to date with the latest
+  deep hash version.
+*/
+async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result<(), String> {
+    let mut from = None;
+    let limit = Some(500);
+
+    match deps.data_store.get_deephash_version(process_id).await {
+        Ok(d) => {
+            if d == deps.config.current_deephash_version() {
+                return Ok(());
+            }
+        }
+        _ => (),
+    };
+
+    let process = match deps.data_store.get_process(&process_id).await {
+        Ok(p) => p,
+        // the process just hasnt been created yet, do nothing
+        Err(_) => return Ok(())
+    };
+
+    loop {
+        let bundles = deps
+            .data_store
+            .get_message_bundles(&process, &from, &limit)
+            .await?;
+
+        if bundles.0.len() < 1 {
+            break;
+        }
+
+        let final_bundle = bundles.0[bundles.0.len() - 1].clone();
+        let final_message = Message::from_bytes(final_bundle.1)?;
+        from = Some(final_message.timestamp()?.to_string());
+
+        for (_, bundle) in &bundles.0 {
+            let msg = Message::from_bytes(bundle.clone())?;
+            /*
+              msg_deephash produces an error or None for a message
+              that shouldn't get deep hashed. So we swallow the error
+              or None value here to proceed with the full recompute
+              of all the deep hashes
+            */
+            match msg_deephash(deps.gateway.clone(), &msg, bundle).await {
+                Ok(Some(dh)) => {
+                    deps.data_store.save_deephash(process_id, &dh).await?;
+                }
+                Ok(None) => (),
+                Err(_) => (),
+            };
+        }
+
+        if bundles.1 == false {
+            break;
+        }
+    }
+
+    deps.data_store
+        .save_deephash_version(process_id, &deps.config.current_deephash_version())
+        .await?;
+
+    Ok(())
+}
+
+/*
     This writes a message or process data item,
     it detects which it is creating by the tags.
     If the process_id and assign params are set, it
@@ -149,6 +217,12 @@ pub async fn write_item(
 
     deps.logger
         .log(format!("checked for message existence- {}", &target_id));
+
+    /*
+      Regenerate deep hashes if they are the old
+      version on demand for a given process
+    */
+    maybe_recalc_deephashes(deps.clone(), &target_id).await?;
 
     /*
       Increment the scheduling info using the locked mutable reference
@@ -452,15 +526,12 @@ pub async fn read_message_data(
     Err("Message or Process not found".to_string())
 }
 
-pub async fn read_latest_message(
-  deps: Arc<Deps>,
-  process_id: String,
-) -> Result<String, String> {
-  if let Ok(Some(message)) = deps.data_store.get_latest_message(&process_id).await {
-      return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
-  } else {
-      Err("Latest message not available".to_string())
-  }
+pub async fn read_latest_message(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
+    if let Ok(Some(message)) = deps.data_store.get_latest_message(&process_id).await {
+        return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
+    } else {
+        Err("Latest message not available".to_string())
+    }
 }
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
@@ -527,7 +598,7 @@ pub async fn msg_deephash(
     gateway: Arc<dyn Gateway>,
     message: &Message,
     bundle_bytes: &Vec<u8>,
-) -> Result<String, String> {
+) -> Result<Option<String>, String> {
     let bundle_data_item = match DataItem::from_bytes(bundle_bytes.clone()) {
         Ok(b) => b,
         Err(_) => {
@@ -547,12 +618,17 @@ pub async fn msg_deephash(
         }
     };
     match &message.message {
-        Some(_) => {
+        Some(m) => {
             let mut message_item = bundle.items[1].clone();
-            match message_item.deep_hash() {
-                Ok(d) => Ok(d),
-                Err(_) => return Err("Unable to calculate deep hash".to_string()),
-            }
+            let deep_hash = match m.tags.iter().find(|tag| tag.name == "From-Process") {
+                Some(_) => match message_item.deep_hash() {
+                    Ok(d) => Some(d),
+                    Err(_) => return Err("Unable to calculate deep hash".to_string()),
+                },
+                None => None,
+            };
+
+            Ok(deep_hash)
         }
         None => {
             let message_id = &message.message_id()?;
@@ -565,7 +641,7 @@ pub async fn msg_deephash(
                 tx_data,
             )
             .map_err(|_| "Unable to calculate deep hash".to_string())?;
-            Ok(dh)
+            Ok(Some(dh))
         }
     }
 }

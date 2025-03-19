@@ -3,7 +3,6 @@ use std::io::{self, Error, ErrorKind};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-
 use actix_cors::Cors;
 use actix_web::{
     http::header::LOCATION, middleware::Logger, web, App, HttpRequest, HttpResponse, HttpServer,
@@ -125,7 +124,7 @@ async fn main_post_route(
         .expect("Time went backwards")
         .as_secs();
 
-    if current_time < data.startup_time + 300 {
+    if current_time < data.startup_time + 1 {
         return HttpResponse::ServiceUnavailable()
             .json(json!({"error": "Server is warming up. Please try again later."}));
     }
@@ -189,8 +188,16 @@ async fn main_get_route(
         Err(err) => return err_response(err.to_string()),
     }
 
-    let result =
-        flows::read_message_data(data.deps.clone(), tx_id, from, to, limit, from_nonce, to_nonce).await;
+    let result = flows::read_message_data(
+        data.deps.clone(),
+        tx_id,
+        from,
+        to,
+        limit,
+        from_nonce,
+        to_nonce,
+    )
+    .await;
 
     match result {
         Ok(processed_str) => HttpResponse::Ok()
@@ -201,32 +208,31 @@ async fn main_get_route(
 }
 
 async fn read_latest_route(
-  data: web::Data<AppState>,
-  req: HttpRequest,
-  path: web::Path<ProcessIdRequired>,
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<ProcessIdRequired>,
 ) -> impl Responder {
-  let process_id = path.process_id.clone();
+    let process_id = path.process_id.clone();
 
-  match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
-      Ok(Some(redirect_url)) => {
-          let target_url = format!("{}{}", redirect_url, req.uri());
-          return HttpResponse::TemporaryRedirect()
-              .insert_header((LOCATION, target_url))
-              .finish();
-      }
-      Ok(None) => (),
-      Err(err) => return err_response(err.to_string()),
-  }
+    match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
+        Ok(Some(redirect_url)) => {
+            let target_url = format!("{}{}", redirect_url, req.uri());
+            return HttpResponse::TemporaryRedirect()
+                .insert_header((LOCATION, target_url))
+                .finish();
+        }
+        Ok(None) => (),
+        Err(err) => return err_response(err.to_string()),
+    }
 
-  let result =
-      flows::read_latest_message(data.deps.clone(), process_id).await;
+    let result = flows::read_latest_message(data.deps.clone(), process_id).await;
 
-  match result {
-      Ok(processed_str) => HttpResponse::Ok()
-          .content_type("application/json")
-          .body(processed_str),
-      Err(err) => err_response(err.to_string()),
-  }
+    match result {
+        Ok(processed_str) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(processed_str),
+        Err(err) => err_response(err.to_string()),
+    }
 }
 
 async fn read_process_route(
@@ -300,12 +306,16 @@ async fn main() -> io::Result<()> {
     };
 
     let startup_time = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .expect("Time went backwards")
-      .as_secs();
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs();
 
     let (deps, metrics) = init_deps(mode).await;
-    let app_state = web::Data::new(AppState { deps, metrics, startup_time });
+    let app_state = web::Data::new(AppState {
+        deps,
+        metrics,
+        startup_time,
+    });
 
     let run_deps = app_state.deps.clone();
 

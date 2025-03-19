@@ -44,6 +44,8 @@ pub struct AoConfig {
     pub su_index_sync_db_dir: String,
 
     pub enable_deep_hash_checks: bool,
+
+    pub current_deephash_version: String,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -172,6 +174,11 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
+
+        let current_deephash_version = match env::var("CURRENT_DEEPHASH_VERSION") {
+            Ok(val) => val,
+            Err(_e) => "1.0".to_string(),
+        };
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -197,6 +204,7 @@ impl AoConfig {
             enable_deep_hash_checks,
             su_file_sync_db_dir,
             su_index_sync_db_dir,
+            current_deephash_version,
         })
     }
 }
@@ -213,5 +221,8 @@ impl Config for AoConfig {
     }
     fn enable_deep_hash_checks(&self) -> bool {
         self.enable_deep_hash_checks.clone()
+    }
+    fn current_deephash_version(&self) -> String {
+        self.current_deephash_version.clone()
     }
 }

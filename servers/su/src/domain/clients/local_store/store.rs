@@ -9,9 +9,6 @@ use super::super::super::core::dal::{
 };
 use super::super::super::SuLog;
 
-// test that retrieval order is not effected by concurrent writes
-// fetch_message_range should cache in memory and seek from there
-
 pub struct LocalStoreClient {
     _logger: Arc<dyn Log>,
     /*
@@ -150,6 +147,7 @@ impl LocalStoreClient {
             ("message".to_string(), opts_index.clone()),
             ("message_ordering".to_string(), opts_index.clone()),
             ("deep_hash".to_string(), opts_index.clone()),
+            ("deep_hash_version".to_string(), opts_index.clone()),
         ]
     }
 
@@ -207,6 +205,10 @@ impl LocalStoreClient {
         deep_hash: &String,
     ) -> Result<String, StoreErrorType> {
         Ok(format!("deep_hash:{}:{}", process_id, deep_hash))
+    }
+
+    fn deep_hash_version_key(&self, process_id: &String) -> Result<String, StoreErrorType> {
+        Ok(format!("deep_hash_version:{}", process_id))
     }
 
     /*
@@ -562,6 +564,74 @@ impl DataStore for LocalStoreClient {
         }
     }
 
+    async fn get_deephash_version(&self, process_id: &String) -> Result<String, StoreErrorType> {
+        let cf = self
+            .index_db
+            .cf_handle("deep_hash_version")
+            .ok_or_else(|| {
+                StoreErrorType::DatabaseError(
+                    "Column family 'deep_hash_version' not found".to_string(),
+                )
+            })?;
+
+        let deep_hash_version_key = self.deep_hash_version_key(process_id)?;
+        match self.index_db.get_cf(cf, deep_hash_version_key) {
+            Ok(dh) => match dh {
+                Some(d) => Ok(String::from_utf8(d)?),
+                None => {
+                    return Err(StoreErrorType::MessageExists(
+                        "Deep hash version does not exist".to_string(),
+                    ))
+                }
+            },
+            Err(_) => {
+                return Err(StoreErrorType::MessageExists(
+                    "Error retrieving deep hash version".to_string(),
+                ))
+            }
+        }
+    }
+
+    async fn save_deephash_version(
+        &self,
+        process_id: &String,
+        version: &String,
+    ) -> Result<(), StoreErrorType> {
+        let cf = self
+            .index_db
+            .cf_handle("deep_hash_version")
+            .ok_or_else(|| {
+                StoreErrorType::DatabaseError(
+                    "Column family 'deep_hash_version' not found".to_string(),
+                )
+            })?;
+
+        let deep_hash_version_key = self.deep_hash_version_key(process_id)?;
+        self.index_db
+            .put_cf(cf, deep_hash_version_key.as_bytes(), version.as_bytes())?;
+        Ok(())
+    }
+
+    async fn save_deephash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType> {
+        let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+        })?;
+
+        let deep_hash_key = self.deep_hash_key(process_id, deep_hash)?;
+        
+        self.index_db.put_cf(
+            cf,
+            deep_hash_key.as_bytes(),
+            process_id.as_bytes(),
+        )?;
+
+        Ok(())
+    }
+
     /*
       Message list retrieval for the /processid
       query, this returns a paginated list of messages
@@ -622,21 +692,32 @@ impl DataStore for LocalStoreClient {
                         Some(t) => {
                             let timestamp: i64 = t.parse()?;
                             if timestamp == process_in.timestamp()? {
-                                return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                                return Ok(PaginatedMessages::from_messages(
+                                    messages,
+                                    false,
+                                    sequence_mode,
+                                )?);
                             } else if timestamp > process_in.timestamp()? {
-                                return Ok(PaginatedMessages::from_messages(messages, true, sequence_mode)?);
+                                return Ok(PaginatedMessages::from_messages(
+                                    messages,
+                                    true,
+                                    sequence_mode,
+                                )?);
                             }
                         }
                         None => {
-                            return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                            return Ok(PaginatedMessages::from_messages(
+                                messages,
+                                false,
+                                sequence_mode,
+                            )?);
                         }
                     }
                 }
 
-                self
-                    .fetch_message_range(process_id, from, to, &Some(actual_limit))
+                self.fetch_message_range(process_id, from, to, &Some(actual_limit))
                     .await?
-            },
+            }
             (_, _) => {
                 sequence_mode = "nonce";
 
@@ -645,19 +726,19 @@ impl DataStore for LocalStoreClient {
                   should be included as the first message
                 */
                 let include_process = process_in.assignment.is_some()
-                  && match from_nonce {
-                      Some(ref _from_nonce) => {
-                          if _from_nonce.parse::<i32>()? == -1 {
-                            true
-                          } else {
-                            false
-                          }
-                      },
-                      /*
-                        No 'from' means it's the first page
-                      */
-                      None => true,
-                  };
+                    && match from_nonce {
+                        Some(ref _from_nonce) => {
+                            if _from_nonce.parse::<i32>()? == -1 {
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        /*
+                          No 'from' means it's the first page
+                        */
+                        None => true,
+                    };
 
                 if include_process {
                     let process_message = Message::from_process(process_in.clone())?;
@@ -678,25 +759,38 @@ impl DataStore for LocalStoreClient {
                         Some(t) => {
                             let nonce: i32 = t.parse()?;
                             if nonce == process_in.nonce()? {
-                                return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                                return Ok(PaginatedMessages::from_messages(
+                                    messages,
+                                    false,
+                                    sequence_mode,
+                                )?);
                             } else if nonce > process_in.nonce()? {
-                                return Ok(PaginatedMessages::from_messages(messages, true, sequence_mode)?);
+                                return Ok(PaginatedMessages::from_messages(
+                                    messages,
+                                    true,
+                                    sequence_mode,
+                                )?);
                             }
                         }
                         None => {
-                            return Ok(PaginatedMessages::from_messages(messages, false, sequence_mode)?);
+                            return Ok(PaginatedMessages::from_messages(
+                                messages,
+                                false,
+                                sequence_mode,
+                            )?);
                         }
                     }
                 }
 
-                self
-                    .fetch_message_range_nonce(process_id, from_nonce, to_nonce, &Some(actual_limit))
-                    .await?
+                self.fetch_message_range_nonce(
+                    process_id,
+                    from_nonce,
+                    to_nonce,
+                    &Some(actual_limit),
+                )
+                .await?
             }
         };
-
-
-
 
         /*
           Fetch the messages for each paginated key. This
@@ -721,11 +815,49 @@ impl DataStore for LocalStoreClient {
             }
         }
 
-        Ok(PaginatedMessages::from_messages(messages, has_next_page, sequence_mode)?)
+        Ok(PaginatedMessages::from_messages(
+            messages,
+            has_next_page,
+            sequence_mode,
+        )?)
     }
 
     /*
-      Retrieve the lates message for a process.
+      This is a stripped down version of get_messages
+      used for retrieving bundles
+    */
+    async fn get_message_bundles(
+        &self,
+        process: &Process,
+        from: &Option<String>,
+        limit: &Option<i32>,
+    ) -> Result<(Vec<(String, Vec<u8>)>, bool), StoreErrorType> {
+        let limit_val = limit.unwrap_or(100) as usize;
+        let mut bundles = vec![];
+
+        let (paginated_keys, has_next_page) = self
+            .fetch_message_range(&process.process.process_id, from, &None, &Some(limit_val))
+            .await?;
+
+        for (_, assignment_id) in paginated_keys {
+            let assignment_key = self.msg_assignment_key(&assignment_id);
+
+            for _ in 0..10 {
+                if let Some(message_data) = self.file_db.get(assignment_key.as_bytes())? {
+                    let message: Message = Message::from_bytes(message_data.clone())?;
+                    bundles.push((message.assignment.id, message_data));
+                    break;
+                } else {
+                    sleep(Duration::from_millis(100)).await;
+                }
+            }
+        }
+
+        Ok((bundles, has_next_page))
+    }
+
+    /*
+      Retrieve the latest message for a process.
       Currently this is only run once for a process
       per run of the su so it isn't very efficient
       were pulling all the message keys into memory and
