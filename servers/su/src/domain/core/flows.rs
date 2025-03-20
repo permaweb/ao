@@ -12,7 +12,7 @@ use super::json::{Message, Process};
 use super::scheduler;
 
 use super::dal::{
-    Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet,
+    Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet
 };
 
 pub struct Deps {
@@ -70,6 +70,117 @@ fn id_res(deps: &Arc<Deps>, id: String, start_top_level: Instant) -> Result<Stri
         }
         Err(e) => Err(format!("{:?}", e)),
     }
+}
+
+/*
+  Recompute and save all deep hashes on a process
+  this is done on demand for a process when writing
+  an item if it isnt up to date with the latest
+  deep hash version.
+*/
+async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result<(), String> {
+    /*
+      No deep hashing available on purely postgres instances
+    */
+    if !deps.config.use_local_store() && !deps.config.use_disk() {
+        deps.logger
+          .log(format!("Skipping deephash recalc, no deep hash checks available on this SU"));
+
+        return Ok(())
+    }
+
+    let start_recalc = Instant::now();
+
+    deps.logger
+        .log(format!("Checking deephash version for {}", process_id));
+
+    let mut from = None;
+    let limit = Some(deps.config.deephash_recalc_limit());
+    let mut total = 0;
+
+    match deps.data_store.get_deephash_version(process_id).await {
+        Ok(d) => {
+            if d == deps.config.current_deephash_version() {
+                deps.logger
+                    .log(format!("Deephash version up to date for {}", process_id));
+                return Ok(());
+            }
+        }
+        _ => (),
+    };
+
+    deps.logger.log(format!(
+        "Deephash version out of date, recalculating hashes for {}",
+        process_id
+    ));
+
+    let process = match deps.data_store.get_process(&process_id).await {
+        Ok(p) => p,
+        /*
+          the process just hasnt been created yet, do nothing
+        */
+        Err(_) => return Ok(()),
+    };
+
+    loop {
+        let bundles = deps
+            .data_store
+            .get_message_bundles(&process, &from, &limit)
+            .await?;
+
+        if bundles.0.len() < 1 {
+            break;
+        }
+
+        total = total + bundles.0.len();
+
+        deps.logger.log(format!(
+            "Total bundles retrieved in deephash calc for process {}: {}",
+            total, process_id
+        ));
+
+        let final_bundle = bundles.0[bundles.0.len() - 1].clone();
+        let final_message = Message::from_bytes(final_bundle.1)?;
+        from = Some(final_message.timestamp()?.to_string());
+
+        for (_, bundle) in &bundles.0 {
+            let msg = Message::from_bytes(bundle.clone())?;
+            /*
+              msg_deephash produces an error or None for a message
+              that shouldn't get deep hashed. So we swallow the error
+              or None value here to proceed with the full recompute
+              of all the deep hashes
+            */
+            match msg_deephash(deps.gateway.clone(), &msg, bundle).await {
+                Ok(Some(dh)) => {
+                    deps.data_store.save_deephash(&process_id, &dh).await?;
+                }
+                Ok(None) => (),
+                Err(_) => (),
+            };
+        }
+
+        if bundles.1 == false {
+            break;
+        }
+    }
+
+    deps.data_store
+        .save_deephash_version(process_id, &deps.config.current_deephash_version())
+        .await?;
+
+    deps.logger
+        .log(format!("All deep hashes recalculated for {}", process_id));
+
+    let elapsed_recalc = start_recalc.elapsed();
+
+    deps.logger.log(format!(
+        "Deephash recalculation time - {} - {}",
+        process_id,
+        elapsed_recalc.as_millis()
+    ));
+
+    Ok(())
 }
 
 /*
@@ -149,6 +260,20 @@ pub async fn write_item(
 
     deps.logger
         .log(format!("checked for message existence- {}", &target_id));
+
+    /*
+      Regenerate deep hashes if they are the old
+      version on demand for a given process
+    */
+    let t_clone = target_id.clone();
+    let d_clone = deps.clone();
+    let d_clone_log = deps.clone();
+    tokio::task::spawn(async move {
+      match maybe_recalc_deephashes(d_clone, &t_clone).await {
+        Ok(_) => d_clone_log.logger.log("Deep hash recalculation succeeded".to_string()),
+        Err(e) => d_clone_log.logger.log(format!("Deep hash recalculation failed: {:?}", e))
+      }
+    });
 
     /*
       Increment the scheduling info using the locked mutable reference
@@ -412,6 +537,8 @@ pub async fn read_message_data(
     from: Option<String>,
     to: Option<String>,
     limit: Option<i32>,
+    from_nonce: Option<String>,
+    to_nonce: Option<String>,
 ) -> Result<String, String> {
     let start_top_level = Instant::now();
     let start_get_message = Instant::now();
@@ -431,7 +558,7 @@ pub async fn read_message_data(
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&process, &from, &to, &limit)
+            .get_messages(&process, &from, &to, &limit, &from_nonce, &to_nonce)
             .await?;
         let duration = start.elapsed();
         deps.logger
@@ -448,6 +575,14 @@ pub async fn read_message_data(
     }
 
     Err("Message or Process not found".to_string())
+}
+
+pub async fn read_latest_message(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
+    if let Ok(Some(message)) = deps.data_store.get_latest_message(&process_id).await {
+        return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
+    } else {
+        Err("Latest message not available".to_string())
+    }
 }
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
@@ -514,37 +649,53 @@ pub async fn msg_deephash(
     gateway: Arc<dyn Gateway>,
     message: &Message,
     bundle_bytes: &Vec<u8>,
-) -> Result<String, String> {
-    let bundle_data_item = match DataItem::from_bytes(bundle_bytes.clone()) {
-        Ok(b) => b,
-        Err(_) => {
-            return Err("Error parsing bundle for message deephash".to_string());
-        }
-    };
-    let data_bytes = match bundle_data_item.data_bytes() {
-        Some(b) => b,
-        None => {
-            return Err("Error parsing bundle for message deephash".to_string());
-        }
-    };
-    let bundle = match DataBundle::from_bytes(&data_bytes) {
-        Ok(b) => b,
-        Err(_) => {
-            return Err("Error parsing bundle for message deephash".to_string());
-        }
-    };
+) -> Result<Option<String>, String> {
     match &message.message {
-        Some(_) => {
+        Some(m) => {
+            let bundle_data_item = match DataItem::from_bytes(bundle_bytes.clone()) {
+                Ok(b) => b,
+                Err(_) => {
+                    return Err("Error parsing bundle for message deephash".to_string());
+                }
+            };
+            let data_bytes = match bundle_data_item.data_bytes() {
+                Some(b) => b,
+                None => {
+                    return Err("Error parsing bundle for message deephash".to_string());
+                }
+            };
+            let bundle = match DataBundle::from_bytes(&data_bytes) {
+                Ok(b) => b,
+                Err(_) => {
+                    return Err("Error parsing bundle for message deephash".to_string());
+                }
+            };
+
             let mut message_item = bundle.items[1].clone();
-            match message_item.deep_hash() {
-                Ok(d) => Ok(d),
-                Err(_) => return Err("Unable to calculate deep hash".to_string()),
-            }
+            let deep_hash = match m.tags.iter().find(|tag| tag.name == "From-Process") {
+                Some(_) => match message_item.deep_hash() {
+                    Ok(d) => Some(d),
+                    Err(_) => return Err("Unable to calculate deep hash".to_string()),
+                },
+                None => None,
+            };
+
+            Ok(deep_hash)
         }
         None => {
             let message_id = &message.message_id()?;
+
+            /*
+              filter out base layer tx's
+            */
+            match gateway.status(&message_id).await {
+                Ok(_) => return Ok(None),
+                Err(_) => ()
+            };
+
             let gateway_tx = gateway.gql_tx(&message_id).await?;
             let tx_data = gateway.raw(&message_id).await?;
+            
             let dh = DataItem::deep_hash_fields(
                 gateway_tx.recipient,
                 gateway_tx.anchor,
@@ -552,7 +703,8 @@ pub async fn msg_deephash(
                 tx_data,
             )
             .map_err(|_| "Unable to calculate deep hash".to_string())?;
-            Ok(dh)
+
+            Ok(Some(dh))
         }
     }
 }

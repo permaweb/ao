@@ -106,7 +106,7 @@ pub async fn sync_local_drives(interval: u64) -> io::Result<()> {
 
             while has_next_page {
                 let mut messages_fetch = read_only_local_store
-                    .get_messages(&process, &from, &None, &None)
+                    .get_messages(&process, &from, &None, &None, &None, &None)
                     .await
                     .unwrap();
 
@@ -146,6 +146,7 @@ pub async fn sync_local_drives(interval: u64) -> io::Result<()> {
                         Err(StoreErrorType::NotFound(_)) => {
                             let deep_hash = msg_deephash(gw, &message.node, &bundle_data_item)
                                 .await
+                                .unwrap()
                                 .unwrap();
 
                             write_sync_store
