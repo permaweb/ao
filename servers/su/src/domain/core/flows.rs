@@ -98,16 +98,16 @@ async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result
     let limit = Some(deps.config.deephash_recalc_limit());
     let mut total = 0;
 
-    match deps.data_store.get_deephash_version(process_id).await {
-        Ok(d) => {
-            if d == deps.config.current_deephash_version() {
-                deps.logger
-                    .log(format!("Deephash version up to date for {}", process_id));
-                return Ok(());
-            }
-        }
-        _ => (),
-    };
+    // match deps.data_store.get_deephash_version(process_id).await {
+    //     Ok(d) => {
+    //         if d == deps.config.current_deephash_version() {
+    //             deps.logger
+    //                 .log(format!("Deephash version up to date for {}", process_id));
+    //             return Ok(());
+    //         }
+    //     }
+    //     _ => (),
+    // };
 
     deps.logger.log(format!(
         "Deephash version out of date, recalculating hashes for {}",

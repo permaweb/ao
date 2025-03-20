@@ -124,7 +124,7 @@ async fn main_post_route(
         .expect("Time went backwards")
         .as_secs();
 
-    if current_time < data.startup_time + 1 {
+    if current_time < data.startup_time + 300 {
         return HttpResponse::ServiceUnavailable()
             .json(json!({"error": "Server is warming up. Please try again later."}));
     }
