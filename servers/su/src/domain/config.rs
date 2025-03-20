@@ -183,7 +183,7 @@ impl AoConfig {
 
         let deephash_recalc_limit = match env::var("DEEPHASH_RECALC_LIMIT") {
             Ok(val) => val.parse().unwrap(),
-            Err(_e) => 2000,
+            Err(_e) => 400,
         };
 
         Ok(AoConfig {
