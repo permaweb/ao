@@ -46,6 +46,7 @@ pub struct AoConfig {
     pub enable_deep_hash_checks: bool,
 
     pub current_deephash_version: String,
+    pub deephash_recalc_limit: i32,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -179,6 +180,12 @@ impl AoConfig {
             Ok(val) => val,
             Err(_e) => "1.0".to_string(),
         };
+
+        let deephash_recalc_limit = match env::var("DEEPHASH_RECALC_LIMIT") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 2000,
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -205,6 +212,7 @@ impl AoConfig {
             su_file_sync_db_dir,
             su_index_sync_db_dir,
             current_deephash_version,
+            deephash_recalc_limit,
         })
     }
 }
@@ -224,5 +232,14 @@ impl Config for AoConfig {
     }
     fn current_deephash_version(&self) -> String {
         self.current_deephash_version.clone()
+    }
+    fn deephash_recalc_limit(&self) -> i32 {
+        self.deephash_recalc_limit.clone()
+    }
+    fn use_local_store(&self) -> bool {
+        self.use_local_store.clone()
+    }
+    fn use_disk(&self) -> bool {
+        self.use_disk.clone()
     }
 }

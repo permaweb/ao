@@ -70,6 +70,9 @@ pub trait Config: Send + Sync {
     fn enable_process_assignment(&self) -> bool;
     fn enable_deep_hash_checks(&self) -> bool;
     fn current_deephash_version(&self) -> String;
+    fn deephash_recalc_limit(&self) -> i32;
+    fn use_local_store(&self) -> bool;
+    fn use_disk(&self) -> bool;
 }
 
 #[derive(Debug)]

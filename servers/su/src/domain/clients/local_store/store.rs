@@ -622,12 +622,9 @@ impl DataStore for LocalStoreClient {
         })?;
 
         let deep_hash_key = self.deep_hash_key(process_id, deep_hash)?;
-        
-        self.index_db.put_cf(
-            cf,
-            deep_hash_key.as_bytes(),
-            process_id.as_bytes(),
-        )?;
+
+        self.index_db
+            .put_cf(cf, deep_hash_key.as_bytes(), process_id.as_bytes())?;
 
         Ok(())
     }

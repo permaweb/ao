@@ -750,7 +750,7 @@ impl DataItem {
             let filtered: Vec<Tag> = self
                 .tags
                 .iter()
-                .filter(|tag| tag.name == "Pushed-For")
+                .filter(|tag| tag.name != "Pushed-For")
                 .cloned()
                 .collect();
 
@@ -758,6 +758,8 @@ impl DataItem {
         } else {
             Bytes::default()
         };
+
+        
 
         let deep_hash_vec = deep_hash_sync(DeepHashChunk::Chunks(vec![
             DeepHashChunk::Chunk(DATAITEM_AS_BUFFER.into()),
@@ -793,7 +795,7 @@ impl DataItem {
         let encoded_tags = if !tags.is_empty() {
             let filtered: Vec<Tag> = tags
                 .iter()
-                .filter(|tag| tag.name == "Pushed-For")
+                .filter(|tag| tag.name != "Pushed-For")
                 .cloned()
                 .collect();
 
