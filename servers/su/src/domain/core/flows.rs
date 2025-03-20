@@ -2,9 +2,11 @@ use std::sync::Arc;
 use std::time::Instant;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
+use dashmap::DashMap;
 use dotenv::dotenv;
 use serde_json::json;
 use simd_json::to_string as simd_to_string;
+use tokio::sync::Mutex;
 
 use super::builder::Builder;
 use super::bytes::{DataBundle, DataItem};
@@ -33,6 +35,12 @@ pub struct Deps {
         dependencies injected.
     */
     pub scheduler: Arc<scheduler::ProcessScheduler>,
+
+    /*
+      Used to only recalculate the deep hashes once for a 
+      given process
+    */
+    pub deephash_locks: Arc<DashMap<String, Arc<Mutex<String>>>>,
 }
 
 /*
@@ -79,6 +87,27 @@ fn id_res(deps: &Arc<Deps>, id: String, start_top_level: Instant) -> Result<Stri
   deep hash version.
 */
 async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result<(), String> {
+    /*
+      We only want to do the recalc once for a given 
+      process this lock will make the function behave
+      that way
+    */
+    let locked_pid = deps.deephash_locks
+        .entry(process_id.clone())
+        .or_insert_with(|| {
+            Arc::new(Mutex::new(process_id.clone()))
+        })
+        .value()
+        .clone();
+
+    /*
+      This will drop when the function returns
+      allowing the other calls to pass through
+      but the wont recalc because the deephash
+      version will be correct now.
+    */
+    let _l = locked_pid.lock().await;
+
     /*
       No deep hashing available on purely postgres instances
     */

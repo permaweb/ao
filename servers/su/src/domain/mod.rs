@@ -3,6 +3,8 @@ use std::sync::Arc;
 
 use tokio::task::spawn_blocking;
 
+use dashmap::DashMap;
+
 mod clients;
 pub mod config;
 mod core;
@@ -101,6 +103,8 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     ));
     let metrics_clone = metrics.clone();
 
+    let deephash_locks = Arc::new(DashMap::new());
+
     (
         Arc::new(Deps {
             data_store: main_data_store,
@@ -113,6 +117,7 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
             wallet,
             uploader,
             metrics,
+            deephash_locks,
         }),
         metrics_clone,
     )
