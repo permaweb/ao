@@ -24,7 +24,7 @@ pub use core::router;
 pub use flows::Deps;
 pub use local_store::migration::migrate_to_local;
 pub use local_store::sync_local::sync_local_drives;
-pub use store::migrate_to_disk;
+pub use store::{migrate_to_disk, recover_messages};
 
 pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     let logger: Arc<dyn Log> = SuLog::init();

@@ -151,6 +151,7 @@ impl StoreClient {
 
     pub fn new_single_connection() -> Result<Self, StoreErrorType> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
+        println!("{:?}", config);
         let c_clone = config.clone();
         let database_url = config.database_url;
         let database_read_url = config.database_read_url;
@@ -701,6 +702,38 @@ impl StoreClient {
             .log(format!("Number of messages synced: {}", synced_count));
 
         Ok(())
+    }
+
+    async fn save_message_internal(
+        &self,
+        message: &Message,
+        bundle_in: &[u8],
+    ) -> Result<String, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_conn()?;
+
+        let new_message = NewMessage {
+            process_id: &message.process_id()?,
+            message_id: &message.message_id()?,
+            assignment_id: &message.assignment_id()?,
+            message_data: serde_json::to_value(message).expect("Failed to serialize Message"),
+            epoch: &message.epoch()?,
+            nonce: &message.nonce()?,
+            timestamp: &message.timestamp()?,
+            bundle: bundle_in,
+            hash_chain: &message.hash_chain()?,
+        };
+
+        match diesel::insert_into(messages)
+            .values(&new_message)
+            .execute(conn)
+        {
+            Ok(_) => {
+                println!("message saved");
+                Ok("saved".to_string())
+            }
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
     }
 }
 
@@ -1984,6 +2017,61 @@ pub async fn migrate_to_disk() -> io::Result<()> {
     data_store
         .logger
         .log(format!("Time elapsed in data migration is: {:?}", duration));
+
+    Ok(())
+}
+
+
+pub async fn recover_messages() -> io::Result<()> {
+    use std::{fs::File, io::BufReader};
+    dotenv().ok();
+
+    let data_store = Arc::new(StoreClient::new_single_connection().expect("Failed to create StoreClient"));
+    data_store
+        .bytestore
+        .try_read_instance_connect()
+        .expect("Failed to connect to bytestore");
+
+    let args: Vec<String> = env::args().collect();
+    let message_file: &String = args.get(2).expect("message file not provided");
+
+    let file = File::open(message_file)?;
+    let reader = BufReader::new(file);
+
+    let messages: Vec<Message> = serde_json::from_reader(reader)
+        .expect("Failed to parse pid file as JSON");
+
+    let message_ids = messages
+        .iter()
+        .map(|msg| {
+            (
+                msg.message_id().unwrap(),
+                Some(msg.assignment_id().unwrap()),
+                msg.process_id().unwrap(),
+                msg.timestamp().unwrap().to_string(),
+            )
+        })
+        .collect();
+
+    let binaries = data_store.bytestore.clone().read_binaries(message_ids).await.unwrap();
+
+    for m in messages.iter() {
+        match binaries.get(&(
+          m.message_id().unwrap(),
+          Some(m.assignment_id().unwrap()),
+          m.process_id().unwrap(),
+          m.timestamp().unwrap().to_string(),
+        )) {
+            Some(bytes_result) => {
+                println!("message found {:?}", m);
+                data_store.save_message_internal(m, &bytes_result.clone()).await.unwrap();
+                println!("message saved {:?}", m.message_id().unwrap());
+            },
+            None => {
+                println!("message not found {:?}", m);
+            }
+        }
+    }
 
     Ok(())
 }
