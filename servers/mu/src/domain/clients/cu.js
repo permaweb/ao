@@ -27,10 +27,11 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
    * GasUsed - The gas used to process the current message
    */
   return async (txId, processId, logId, customCuUrl) => {
+    let cuUrl = CU_URL
     if (customCuUrl) {
-      CU_URL = customCuUrl
+      cuUrl = customCuUrl
     }
-    logger({ log: `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
+    logger({ log: `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
 
     const requestOptions = {
       timeout: 0
@@ -39,7 +40,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
     return backoff(
       () =>
         resultFetch(
-          `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`,
+          `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`,
           requestOptions,
           logId
         ).then(okRes),
@@ -49,7 +50,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
         log: logger,
         logId,
         name: `fetchResult(${JSON.stringify({
-          CU_URL,
+          cuUrl,
           processId,
           txId
         })})`
