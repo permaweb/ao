@@ -16,7 +16,7 @@ function fetchResultWith ({ fetchResult }) {
   return (ctx) => {
     return of(ctx)
       .chain(() => {
-        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId)
+        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages.map(msg => {

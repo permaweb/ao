@@ -26,7 +26,10 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
    * Output - The message's output
    * GasUsed - The gas used to process the current message
    */
-  return async (txId, processId, logId) => {
+  return async (txId, processId, logId, customCuUrl) => {
+    if (customCuUrl) {
+      CU_URL = customCuUrl
+    }
     logger({ log: `${CU_URL}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
 
     const requestOptions = {

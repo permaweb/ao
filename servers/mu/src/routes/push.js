@@ -16,7 +16,8 @@ const withPushRoute = (app) => {
           domain: { apis: { pushMsg } },
           params: { id, number },
           query: {
-            'process-id': processId
+            'process-id': processId,
+            'cu-url': customCuUrl
           }
         } = req
 
@@ -27,7 +28,7 @@ const withPushRoute = (app) => {
           return res.status(400).send({ error: `'number' parameter must be a valid number` });
         }
 
-        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id })
+        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCuUrl })
           .chain(pushMsg)
           .bimap(
             (e) => {

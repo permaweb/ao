@@ -75,7 +75,8 @@ export const domainConfigSchema = z.object({
   GET_RESULT_RETRY_DELAY: positiveIntSchema,
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
   MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
-  RELAY_MAP: jsonObjectSchema
+  RELAY_MAP: jsonObjectSchema,
+  ENABLE_CUSTOM_PUSH: z.boolean()
 })
 
 /**
@@ -126,7 +127,8 @@ const CONFIG_ENVS = {
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_MAP: process.env.RELAY_MAP || ''
+    RELAY_MAP: process.env.RELAY_MAP || '',
+    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true'
   },
   production: {
     MODE,
@@ -154,7 +156,8 @@ const CONFIG_ENVS = {
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_MAP: process.env.RELAY_MAP || ''
+    RELAY_MAP: process.env.RELAY_MAP || '',
+    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true'
   }
 }
 
