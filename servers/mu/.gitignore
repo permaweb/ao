@@ -12,3 +12,4 @@ trace.sqlite*
 wallet.json
 .wallet.json
 procs.json
+custom-cu-map.json

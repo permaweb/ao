@@ -3,6 +3,7 @@ import { __, assoc, identity } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
+import { getCustomCuAddressWith } from '../lib/get-custom-cu-address.js'
 
 export function pushMsgWith ({
   selectNode,
@@ -11,9 +12,11 @@ export function pushMsgWith ({
   crank,
   logger,
   ALLOW_PUSHES_AFTER,
-  ENABLE_CUSTOM_PUSH
+  ENABLE_CUSTOM_PUSH,
+  CUSTOM_CU_MAP_FILE_PATH
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
+  const getCustomCuAddress = getCustomCuAddressWith({ CUSTOM_CU_MAP_FILE_PATH, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
   const fetchTransactionsAsync = fromPromise(fetchTransactions)
 
@@ -34,16 +37,8 @@ export function pushMsgWith ({
         return Rejected(new Error('Message id not found on the gateway.', { cause: ctx }))
       })
       .chain((ctx) => {
-        if (ENABLE_CUSTOM_PUSH && ctx.customCuUrl) {
-          return of(ctx.customCuUrl)
-            .map(assoc('cuAddress', __, ctx))
-            .bimap(
-              (e) => {
-                return new Error(e, { cause: ctx })
-              },
-              identity
-            )
-            .map(logger.tap({ log: 'Added custom cuAddress to ctx' }))
+        if (ENABLE_CUSTOM_PUSH && ctx.customCu) {
+          return getCustomCuAddress(ctx)
         }
         return getCuAddress(ctx)
       })

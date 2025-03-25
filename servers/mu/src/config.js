@@ -76,7 +76,8 @@ export const domainConfigSchema = z.object({
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
   MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
   RELAY_MAP: jsonObjectSchema,
-  ENABLE_CUSTOM_PUSH: z.boolean()
+  ENABLE_CUSTOM_PUSH: z.boolean(),
+  CUSTOM_CU_MAP_FILE_PATH: z.string()
 })
 
 /**
@@ -128,7 +129,8 @@ const CONFIG_ENVS = {
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
     RELAY_MAP: process.env.RELAY_MAP || '',
-    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true'
+    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
+    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json'
   },
   production: {
     MODE,
@@ -157,7 +159,8 @@ const CONFIG_ENVS = {
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
     RELAY_MAP: process.env.RELAY_MAP || '',
-    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true'
+    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
+    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json'
   }
 }
 
