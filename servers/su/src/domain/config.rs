@@ -47,6 +47,7 @@ pub struct AoConfig {
 
     pub current_deephash_version: String,
     pub deephash_recalc_limit: i32,
+    pub warmup_delay: u64
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -186,6 +187,11 @@ impl AoConfig {
             Err(_e) => 400,
         };
 
+        let warmup_delay = match env::var("WARMUP_DELAY") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 30,
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -213,6 +219,7 @@ impl AoConfig {
             su_index_sync_db_dir,
             current_deephash_version,
             deephash_recalc_limit,
+            warmup_delay
         })
     }
 }
@@ -241,5 +248,8 @@ impl Config for AoConfig {
     }
     fn use_disk(&self) -> bool {
         self.use_disk.clone()
+    }
+    fn warmup_delay(&self) -> u64 {
+        self.warmup_delay.clone()
     }
 }
