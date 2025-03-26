@@ -309,7 +309,9 @@ export const createApis = async (ctx) => {
     crank,
     logger: pushMsgItemLogger,
     fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
-    ALLOW_PUSHES_AFTER
+    ALLOW_PUSHES_AFTER,
+    ENABLE_CUSTOM_PUSH: ctx.ENABLE_CUSTOM_PUSH,
+    CUSTOM_CU_MAP_FILE_PATH: ctx.CUSTOM_CU_MAP_FILE_PATH
   })
 
   const startMessageRecoveryCronLogger = logger.child('messageRecoveryCron')

@@ -52,6 +52,8 @@ There are a few environment variables that you can set:
 - `GET_RESULT_RETRY_DELAY`: The retry delay in between each attempt to get the result of a message from the CU.
 - `MESSAGE_RECOVERY_MAX_RETRIES`: The amount of attempts for the MU to recover a message from the database.
 - `MESSAGE_RECOVERY_RETRY_DELAY`: The retry delay in between each attempt to recover a message from the database.
+- `ENABLE_CUSTOM_PUSH`: Whether or not to allow custom CU URLs to be passed as a query param to the push endpoint.
+- `CUSTOM_CU_MAP_FILE_PATH`: The file path for the custom CU JSON map for message pushing.
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
