@@ -73,6 +73,7 @@ pub trait Config: Send + Sync {
     fn deephash_recalc_limit(&self) -> i32;
     fn use_local_store(&self) -> bool;
     fn use_disk(&self) -> bool;
+    fn warmup_delay(&self) -> u64;
 }
 
 #[derive(Debug)]

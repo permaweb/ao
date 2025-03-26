@@ -7,7 +7,7 @@ use std::{env, io};
 use async_trait::async_trait;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::r2d2::Pool;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dotenv::dotenv;
@@ -519,9 +519,9 @@ impl StoreClient {
         &self,
         message_id_in: &String,
         assignment_id_in: &Option<String>,
+        conn: &mut PooledConnection<ConnectionManager<PgConnection>>
     ) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
 
         /*
             get the oldest match. in the case of a message that has
@@ -865,8 +865,6 @@ impl DataStore for StoreClient {
         Ok(())
     }
 
-    // async fn save_deep_hash(&self, deep_hash: &String) -> Result<(), StoreErrorType>;
-
     async fn save_message(
         &self,
         message: &Message,
@@ -880,7 +878,9 @@ impl DataStore for StoreClient {
             process_id: &message.process_id()?,
             message_id: &message.message_id()?,
             assignment_id: &message.assignment_id()?,
-            message_data: serde_json::to_value(message).expect("Failed to serialize Message"),
+            message_data: serde_json::to_value(
+                message
+            ).expect("Failed to serialize Message"),
             epoch: &message.epoch()?,
             nonce: &message.nonce()?,
             timestamp: &message.timestamp()?,
@@ -888,7 +888,36 @@ impl DataStore for StoreClient {
             hash_chain: &message.hash_chain()?,
         };
 
-        match diesel::insert_into(messages)
+        /*
+          This is moved above the sql logic now, so that
+          if it fails, the message doesnt get scheduled
+          if the server has USE_DISK enabled. It can run without
+          the RocksDB records but if the RocksDB saves fail
+          for a long period of time processes will slow
+          down so it is better to fail loud here. and not
+          schedule the message. 
+        */
+        let bytestore = self.bytestore.clone();
+        if bytestore.is_ready() {
+            bytestore.save_binary(
+                message.message_id()?,
+                Some(message.assignment_id()?),
+                message.process_id()?,
+                message.timestamp()?.to_string(),
+                bundle_in.to_vec(),
+            )?;
+            match deep_hash {
+                Some(dh) => {
+                    bytestore.save_deep_hash(
+                        &message.process_id()?, 
+                        dh
+                    )?;
+                }
+                None => (),
+            };
+        }
+
+        let res = match diesel::insert_into(messages)
             .values(&new_message)
             .execute(conn)
         {
@@ -896,28 +925,42 @@ impl DataStore for StoreClient {
                 if row_count == 0 {
                     Err(StoreErrorType::DatabaseError(
                         "Error saving message".to_string(),
-                    )) // Return a custom error for duplicates
+                    )) 
                 } else {
-                    let bytestore = self.bytestore.clone();
-                    if bytestore.is_ready() {
-                        bytestore.save_binary(
-                            message.message_id()?,
-                            Some(message.assignment_id()?),
-                            message.process_id()?,
-                            message.timestamp()?.to_string(),
-                            bundle_in.to_vec(),
-                        )?;
-                        match deep_hash {
-                            Some(dh) => {
-                                bytestore.save_deep_hash(&message.process_id()?, dh)?;
-                            }
-                            None => (),
-                        };
-                    }
                     Ok("saved".to_string())
                 }
             }
             Err(e) => Err(StoreErrorType::from(e)),
+        };
+
+        /*
+          Clean the message out of the bytestore if the
+          sql insert failed. It would be ok if messages
+          leak into RocksDB that are not in sql because sql
+          controls the schedule, but will avoid it if possible.
+        */
+        match res {
+          Ok(r) => Ok(r),
+          Err(e) => {
+            if bytestore.is_ready() {
+                bytestore.delete_binary(
+                    message.message_id()?,
+                    Some(message.assignment_id()?),
+                    message.process_id()?,
+                    message.timestamp()?.to_string()
+                )?;
+                match deep_hash {
+                    Some(dh) => {
+                        bytestore.delete_deep_hash(
+                            &message.process_id()?, 
+                            dh
+                        )?;
+                    }
+                    None => (),
+                };
+            }
+            Err(e)
+          }
         }
     }
 
@@ -1073,6 +1116,7 @@ impl DataStore for StoreClient {
                                 let full_message = self.get_message_internal(
                                     &db_message.message_id,
                                     &db_message.assignment_id,
+                                    conn
                                 )?;
                                 messages_mapped.push(full_message);
                             }
@@ -1732,6 +1776,29 @@ mod bytestore {
             }
         }
 
+        pub fn delete_binary(
+            &self,
+            message_id: String,
+            assignment_id: Option<String>,
+            process_id: String,
+            timestamp: String,
+        ) -> Result<(), String> {
+            let key = ByteStore::create_key(&message_id, &assignment_id, &process_id, &timestamp);
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Failed to acquire read lock".into()),
+            };
+        
+            if let Some(ref db) = *db {
+                db.delete(key)
+                    .map_err(|e| format!("Failed to delete from RocksDB: {:?}", e))?;
+                Ok(())
+            } else {
+                Err("Database is not initialized".into())
+            }
+        }
+      
+
         fn create_key(
             message_id: &str,
             assignment_id: &Option<String>,
@@ -1794,6 +1861,28 @@ mod bytestore {
                 Err("Database is not initialized".into())
             }
         }
+
+        pub fn delete_deep_hash(
+            &self,
+            process_id: &String,
+            deep_hash: &String,
+        ) -> Result<(), String> {
+            let key = format!("deephash___{}___{}", process_id, deep_hash).into_bytes();
+        
+            let db = match self.db.read() {
+                Ok(r) => r,
+                Err(_) => return Err("Failed to acquire read lock".into()),
+            };
+        
+            if let Some(ref db) = *db {
+                db.delete(key)
+                    .map_err(|e| format!("Failed to delete from RocksDB: {:?}", e))?;
+                Ok(())
+            } else {
+                Err("Database is not initialized".into())
+            }
+        }
+      
 
         pub fn save_deep_hash_version(
             &self,
