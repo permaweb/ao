@@ -64,6 +64,7 @@ export function requestWith(args) {
   return async function(fields) {
     const { path, method, ...restFields } = fields
   
+    signingFormat = fields.signingFormat
     if (!signingFormat) {
       signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
     }
