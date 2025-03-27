@@ -29,7 +29,7 @@ const resToJson = (res) => res.json()
 const toParams = ({ processId, from, to, pageSize }) =>
   new URLSearchParams(filter(
     isNotNil,
-    { target: processId, 'from+Integer': from, 'to+Integer': to, limit: pageSize, accept: 'application/aos-2' }
+    { target: processId, 'from': from, 'to': to, limit: pageSize, accept: 'application/aos-2' }
   ))
 
 const nodeAt = (idx) => pipe(path(['edges']), nth(idx), path(['node']))
@@ -197,7 +197,7 @@ export const mapNode = pipe(
 
 export const loadProcessWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId }) => {
-    const params = toParams({ processId, from: 0, to: 0, pageSize: 1 })
+    const params = toParams({ processId, from: 0, to: 1, pageSize: 1 })
 
     return backoff(
       () => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes),
@@ -262,7 +262,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
     return Promise.allSettled(
       args.map(({ suUrl, processId, from, to, pageSize }) => {
-        return Promise.resolve({ processId, from, to, pageSize })
+        return Promise.resolve({ processId, from: from ? from + 1 : 0, to: to ? to + 1 : undefined, pageSize })
           .then(toParams)
           .then((params) => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`))
           .then(okRes)
@@ -311,7 +311,6 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
      *
      * Similar logic can be found below when checking for the expected nonce
      */
-    if (!isColdStart) from = from + 1
 
     async function fetchPage ({ from }) {
       const params = toParams({ processId, from, to, pageSize })
@@ -392,14 +391,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     let simulateError = false
     let prevAssignmentId = assignmentId
     let prevHashChain = hashChain
-    /**
-     * On a cold start, we include evaluating slot 0
-     * and so the expected slot should increment from 0.
-     *
-     * Otherwise (not a cold start), the expected slot should
-     * succeed 'from' and so our expected is 'from' + 1
-     */
-    let expectedNonce = isColdStart ? 0 : parseInt(`${from}`) + 1
+
+    let expectedNonce = parseInt(`${from}`)
+    logger.info('expectedNonce', { expectedNonce })
+    logger.info('isColdStart', { isColdStart: isColdStart })
     return async function * (edges) {
       for await (const edge of edges) {
         const scheduled = pipe(
@@ -414,6 +409,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           }
         )(edge)
 
+        logger.info('scheduled', { scheduled: scheduled })
         if (expectedNonce !== scheduled.message.Nonce) {
           const err = new Error(`Non-incrementing slot: expected ${expectedNonce} but got ${scheduled.message.Nonce}`)
           err.status = 422
