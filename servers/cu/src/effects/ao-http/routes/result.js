@@ -17,7 +17,7 @@ const inputSchema = z.object({
 const gatherStatCounts = pipe(prop('messages'), values, sum)
 
 export const withResultRoutes = app => {
-  app.get(
+  app.post(
     '/result/:messageUid',
     compose(
       withErrorHandler,
@@ -42,14 +42,15 @@ export const withResultRoutes = app => {
              * Useful for MUs that would rather wait on the evaluation response
              */
             query: { 'process-id': processId, 'no-busy': noBusy },
-            domain: { BUSY_THRESHOLD, apis: { readResult } }
+            domain: { BUSY_THRESHOLD, apis: { readResult } },
+            body
           } = req
 
           const input = inputSchema.parse({ messageUid, processId })
 
           return busyIn(
             noBusy ? 0 : BUSY_THRESHOLD,
-            readResult(input)
+            readResult({ ...input, body })
               .map((result) => {
                 const { output, last, isColdStart, exact, stats } = result
 

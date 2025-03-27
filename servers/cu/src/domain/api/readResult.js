@@ -23,8 +23,9 @@ export function readResultWith (env) {
   const loadMessageMeta = loadMessageMetaWith(env)
   const readState = readStateWith(env)
 
-  return ({ processId, messageUid }) => {
-    return of({ processId, messageUid })
+  return ({ processId, messageUid, body }) => {
+    console.log('body in read result: ', body)
+    return of({ processId, messageUid, body })
       .chain(loadMessageMeta)
       .chain(res => readState({
         processId: res.processId,
@@ -41,7 +42,8 @@ export function readResultWith (env) {
          * So we explicitly set cron to undefined, for posterity
          */
         cron: undefined,
-        needsOnlyMemory: false
+        needsOnlyMemory: false,
+        body: body
       }))
       .map((res) => ({
         output: omit(['Memory'], res.output),

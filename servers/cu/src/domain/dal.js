@@ -190,7 +190,8 @@ export const loadMessagesSchema = z.function()
       toOrdinate: z.coerce.number().nullish(),
       assignmentId: z.string().nullish(),
       hashChain: z.string().nullish(),
-      isColdStart: z.boolean()
+      isColdStart: z.boolean(),
+      body: z.any().optional()
     })
   )
   /**
@@ -224,7 +225,8 @@ export const loadMessageMetaSchema = z.function()
   .args(z.object({
     suUrl: z.string().url(),
     processId: z.string().min(1),
-    messageUid: z.string().min(1)
+    messageUid: z.string().min(1),
+    body: z.any().optional()
   }))
   .returns(z.promise(
     z.object({

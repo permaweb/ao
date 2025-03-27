@@ -11,17 +11,21 @@ const okRes = (res) => {
   throw res
 }
 
-const resToJson = (res) => res.json()
+const resToJson = (res) => {
+  if (res.edges) {
+    return res
+  }
   /**
    * Janky extra parse b/c HB currently sends back a string
    * that contains a JSON object, that must be parsed further.
    *
    * TODO: remove later.
    */
-  .then(maybeJSON => typeof maybeJSON === 'object'
+  return res.json().then(maybeJSON => typeof maybeJSON === 'object'
     ? maybeJSON
     : JSON.parse(maybeJSON)
   )
+}
 
 /**
  * GET /...?target=ProcID[&from=X&to=y]&accept=application/aos-2
@@ -262,7 +266,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
     return Promise.allSettled(
       args.map(({ suUrl, processId, from, to, pageSize }) => {
-        return Promise.resolve({ processId, from: from ? from + 1 : 0, to: to ? to + 1 : undefined, pageSize })
+        return Promise.resolve({ processId, from: from ? from : 0, to: to ? to : undefined, pageSize })
           .then(toParams)
           .then((params) => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`))
           .then(okRes)
@@ -299,7 +303,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
    * When the currently fetched page is drained, the next page is fetched
    * dynamically
    */
-  function fetchAllPages ({ suUrl, processId, isColdStart, from, to }) {
+  function fetchAllPages ({ suUrl, processId, isColdStart, from, to, body }) {
     /**
      * The HB SU 'from' and 'to' are both inclusive.
      * So when we pass from (which is the cached most recent evaluated message)
@@ -312,11 +316,17 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
      * Similar logic can be found below when checking for the expected nonce
      */
 
+    if (!isColdStart) from = from + 1
     async function fetchPage ({ from }) {
       const params = toParams({ processId, from, to, pageSize })
 
       return backoff(
-        () => fetchPageDataloader.load({ suUrl, processId, from, to, pageSize }),
+        () => {
+          if(body) {
+            return body
+          }
+          return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
+        },
         { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
       )
     }
@@ -392,8 +402,8 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     let prevAssignmentId = assignmentId
     let prevHashChain = hashChain
 
-    let expectedNonce = parseInt(`${from}`)
-    logger.info('expectedNonce', { expectedNonce })
+    //let expectedNonce = parseInt(`${from}`)
+    let expectedNonce = isColdStart ? 0 : parseInt(`${from}`) + 1
     logger.info('isColdStart', { isColdStart: isColdStart })
     return async function * (edges) {
       for await (const edge of edges) {
@@ -445,10 +455,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     .then(({
       suUrl, processId, block: processBlock, owner: processOwner, tags: processTags,
       moduleId, moduleOwner, moduleTags, fromOrdinate, toOrdinate, assignmentId, hashChain,
-      isColdStart
+      isColdStart, body
     }) => {
       return [
-        Readable.from(fetchAllPages({ suUrl, processId, isColdStart, from: fromOrdinate, to: toOrdinate })()),
+        Readable.from(fetchAllPages({ suUrl, processId, isColdStart, from: fromOrdinate, to: toOrdinate, body })()),
         Transform.from(mapAoMessage({
           processId,
           processBlock,
@@ -468,11 +478,16 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 }
 
 export const loadMessageMetaWith = ({ fetch, logger }) => {
-  return async ({ suUrl, processId, messageUid }) => {
+  return async ({ suUrl, processId, messageUid, body }) => {
     const params = toParams({ processId, to: messageUid, from: messageUid, pageSize: 1 })
 
     return backoff(
-      () => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes),
+      () => {
+        if(body) {
+          return body
+        }
+        return fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes)
+      },
       { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
     )
       .catch(async (err) => {

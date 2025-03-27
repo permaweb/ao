@@ -95,7 +95,8 @@ export function loadMessageMetaWith (env) {
         return loadMessageMeta({
           suUrl: trimSlash(url),
           processId: ctx.processId,
-          messageUid: ctx.messageUid
+          messageUid: ctx.messageUid,
+          body: ctx.body
         })
       })
       .map(ctxSchema.parse)
