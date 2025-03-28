@@ -50,6 +50,7 @@ There are a few environment variables that you can set:
 - `SPAWN_PUSH_ENABLED`: If enabled, this will make the MU attempt to push messages for a spawn as per AOP 6 Boot loader https://github.com/permaweb/ao/issues/730 
 - `GET_RESULT_MAX_RETRIES`: The amount of attempts for the MU to get the result of a message from the CU.
 - `GET_RESULT_RETRY_DELAY`: The retry delay in between each attempt to get the result of a message from the CU.
+- `ENABLE_MESSAGE_RECOVERY`: Whether or not to enable message recovery.
 - `MESSAGE_RECOVERY_MAX_RETRIES`: The amount of attempts for the MU to recover a message from the database.
 - `MESSAGE_RECOVERY_RETRY_DELAY`: The retry delay in between each attempt to recover a message from the database.
 - `ENABLE_PUSH`: Whether or not to allow the MU to push messages.

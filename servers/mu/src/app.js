@@ -31,6 +31,8 @@ export const server = pipe(
 
     domain.apis.startMessageRecoveryCron().then(() => {
       logger({ log: 'Message recovery cron started' })
+    }).catch((err) => {
+      logger({ log: `Error starting message recovery cron: ${err}`, end: true })
     })
 
     return server
