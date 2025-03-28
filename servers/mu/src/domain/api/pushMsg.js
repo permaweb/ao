@@ -12,6 +12,7 @@ export function pushMsgWith ({
   crank,
   logger,
   ALLOW_PUSHES_AFTER,
+  ENABLE_PUSH,
   ENABLE_CUSTOM_PUSH,
   CUSTOM_CU_MAP_FILE_PATH
 }) {
@@ -21,6 +22,11 @@ export function pushMsgWith ({
   const fetchTransactionsAsync = fromPromise(fetchTransactions)
 
   return (ctx) => {
+    // If push is disabled, return the context immediately
+    if (!ENABLE_PUSH) {
+      return Rejected('Push is disabled')
+    }
+
     return of(ctx)
       .chain((ctx) => {
         return fetchTransactionsAsync([ctx.tx.id])
