@@ -221,7 +221,8 @@ export const createApis = async (ctx) => {
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
     db,
     GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
-    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY
+    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
+    ENABLE_MESSAGE_RECOVERY: ctx.ENABLE_MESSAGE_RECOVERY
   })
 
   const sendAssignLogger = logger.child('sendAssign')
