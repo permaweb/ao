@@ -30,7 +30,8 @@ export function sendDataItemWith ({
   spawnPushEnabled,
   db,
   GET_RESULT_MAX_RETRIES,
-  GET_RESULT_RETRY_DELAY
+  GET_RESULT_RETRY_DELAY,
+  ENABLE_MESSAGE_RECOVERY
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
