@@ -17,8 +17,7 @@ const inputSchema = z.object({
 const gatherStatCounts = pipe(prop('messages'), values, sum)
 
 export const withResultRoutes = app => {
-  app.post(
-    '/result/:messageUid',
+  const route =
     compose(
       withErrorHandler,
       withCuMode,
@@ -104,8 +103,9 @@ export const withResultRoutes = app => {
           )
         }
       })
-    )()
-  )
+    )
 
+  app.post('/result/:messageUid', route())
+  app.get('/result/:messageUid', route())
   return app
 }
