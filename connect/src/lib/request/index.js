@@ -56,6 +56,66 @@ export function requestWith (env) {
     return of(inputSchema.parse(args))
   }
 
+  const transformToMap = (mode) => (result) => {
+    const map = {}
+    if (mode === 'relay@1.0') {
+      // console.log('Mainnet (M1) result', result)
+      if (typeof result === 'string') {
+        return result
+      }
+
+      if (result.Output && result.Output.data) {
+        map.Output = {
+          text: () => Promise.resolve(result.Output.data)
+        }
+      }
+      if (result.Messages) {
+        map.Messages = result.Messages.map((m) => {
+          const miniMap = {}
+          m.Tags.forEach((t) => {
+            miniMap[t.name] = {
+              text: () => Promise.resolve(t.value)
+            }
+          })
+          miniMap.Data = {
+            text: () => Promise.resolve(m.Data),
+            json: () => Promise.resolve(JSON.parse(m.Data)),
+            binary: () => Promise.resolve(Buffer.from(m.Data))
+          }
+          miniMap.Target = {
+            text: () => Promise.resolve(m.Target)
+          }
+          miniMap.Anchor = {
+            text: () => Promise.resolve(m.Anchor)
+          }
+          return miniMap
+        })
+      }
+      return map
+    } else {
+      // console.log('Mainnet (M2) result', result)
+      const res = result
+      let body = ''
+      res.headers.forEach((v, k) => {
+        map[k] = {
+          text: () => Promise.resolve(v)
+        }
+      })
+
+      if (typeof res.body === 'string') {
+        try {
+          body = JSON.parse(res.body)
+          return { ...map, ...body }
+        } catch (e) {
+          // console.log('Mainnet (M2) error', e)
+          map.body = body
+        }
+      }
+      // console.log('Mainnet (M2) default reply', map)
+      return map
+    }
+  }
+
   return (fields) => {
     const retry = (fn, request, attempts) =>
       fn(request).bichain(err => {
@@ -82,8 +142,28 @@ export function requestWith (env) {
       .bimap(errFrom, identity)
 
     return (
-      
-      retry(operation, { path: `/~${device}`, ...fields, method: fields.method ?? method }, 1)
+      of({ path: `/~${device}`, ...fields, method: fields.method ?? method })
+        .chain(verifyInput)
+
+        // is the the best place to either call
+        // legacy mode just an ANS-104
+        // mainnet relay-device = hsig + ans-104
+        // mainnet process-device -> hsig
+        .map(handleFormat)
+
+        .chain(dispatch({ request, spawn, message, result, dryrun }))
+
+        .map((res) => {
+          logger(
+            'Received response from message sent to path "%s" with res %O',
+            fields?.path ?? '/',
+            res
+          )
+          return res
+        })
+        .map(transformToMap(device))
+
+        .bimap(errFrom, identity)
         .toPromise()
     )
   }

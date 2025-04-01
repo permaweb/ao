@@ -1,15 +1,18 @@
 import { Rejected, fromPromise, of } from 'hyper-async'
+import { omit, keys } from 'ramda'
 import base64url from 'base64url'
 
 import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
-import { toHttpSigner } from './signer.js'
+import { toHttpSigner, toDataItemSigner } from './signer.js'
+
+let reqFormatCache = {}
 
 /**
  * Map data item members to corresponding HB HTTP message
  * shape
  */
-export async function encodeDataItem ({ processId, data, tags, anchor }) {
+export async function encodeDataItem({ processId, data, tags, anchor }) {
   const obj = {}
 
   if (processId) obj.target = processId
@@ -27,7 +30,7 @@ export async function encodeDataItem ({ processId, data, tags, anchor }) {
   return res
 }
 
-function toSigBaseArgs ({ url, method, headers, includePath = false }) {
+function toSigBaseArgs({ url, method, headers, includePath = false }) {
   headers = new Headers(headers)
   return {
     /**
@@ -45,7 +48,7 @@ function toSigBaseArgs ({ url, method, headers, includePath = false }) {
   }
 }
 
-export function httpSigName (address) {
+export function httpSigName(address) {
   const decoded = base64url.toBuffer(address)
   const hexString = [...decoded.subarray(1, 9)]
     .map(byte => byte.toString(16).padStart(2, '0'))
@@ -53,103 +56,93 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-async function hashAndBase64(input) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashBase64 = btoa(String.fromCharCode(...hashArray));
-  return hashBase64;
-}
-
-function extractSignature(header) {
-  const match = header.match(/Signature:\s*'http-sig-[^:]+:([^']+)'/);
-  return match ? match[1] : null;
-}
-
-
-export function processIdWith({ logger: _logger, signer, HB_URL }) {
-  const logger = _logger.child('id')
-  return (fields) => {
-    const { path, method, ...restFields } = fields
-    return of({ path, method, fields: restFields })
-      .chain(fromPromise(({ path, method, fields }) => {
-        return encode(fields).then(({ headers, body }) => ({
-          path,
-          method,
-          headers,
-          body
-        }))
-      }
-      ))
-      .chain(fromPromise(async ({ path, method, headers, body }) =>
-        toHttpSigner(signer)(toSigBaseArgs({
-          url: joinUrl({ url: HB_URL, path }),
-          method,
-          headers
-          // this does not work with hyperbeam
-          // includePath: true
-        })).then((req) => ({ ...req, body }))
-      ))
-      .map(logger.tap('Sending HTTP signed message to HB: %o'))
-      .chain(fromPromise(res => {
-        
-        return hashAndBase64(extractSignature(res.headers.Signature))
-      }))
-      .toPromise()
-  }
-}
-
-export function requestWith ({ fetch, logger: _logger, HB_URL, signer }) {
+export function requestWith(args) {
+  const { fetch, logger: _logger, HB_URL, signer } = args
+  let signingFormat = args.signingFormat
   const logger = _logger.child('request')
 
-  return (fields) => {
+  return async function (fields) {
     const { path, method, ...restFields } = fields
-    return of({ path, method, fields: restFields })
-      .chain(fromPromise(({ path, method, fields }) => {
-        return encode(fields).then(({ headers, body }) => ({
+
+    signingFormat = fields.signingFormat
+    if (!signingFormat) {
+      signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
+    }
+
+    try {
+
+      let fetch_req = {}
+      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
+      if (signingFormat === 'ANS-104') {
+        const ans104Request = toANS104Request(restFields)
+        console.log('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
+        const signedRequest = await toDataItemSigner(signer)(ans104Request.item)
+        console.log('SIGNED ANS-104 ITEM: ', signedRequest)
+        fetch_req = {
+          body: signedRequest.raw,
+          url: joinUrl({ url: HB_URL, path }),
           path,
           method,
-          headers,
-          body
-        }))
-      }
-      ))
-      .chain(fromPromise(async ({ path, method, headers, body }) =>
-        toHttpSigner(signer)(toSigBaseArgs({
-          url: joinUrl({ url: HB_URL, path }),
-          method,
-          headers
-          // this does not work with hyperbeam
-          // includePath: true
-        })).then((req) => ({ ...req, body }))
-      ))
-      .map(logger.tap('Sending HTTP signed message to HB: %o'))
-      .chain((request) => of(request)
-        .chain(fromPromise(({ url, method, headers, body }) => {
-          return fetch(url, { method, headers, body, redirect: 'follow' })
-            .then(async res => {
-              if (res.status >= 300) return res
-
-              const contentType = res.headers.get('content-type')
-              if (contentType && contentType.includes('multipart/form-data')) {
-                // TODO: maybe add hbDecode here to decode multipart into maps of { headers, body }
-                return res
-              } else if (contentType && contentType.includes('application/json')) {
-                const body = await res.json()
-                return { headers: res.headers, body }
-              } else {
-                const body = await res.text()
-                return { headers: res.headers, body }
-              }
-            })
+          headers: ans104Request.headers
         }
-        ))
-      ).toPromise()
+      }
+      else {
+        // Step 2: Create and execute the signing request
+        const req = await encode(restFields)
+        const signingArgs = toSigBaseArgs({
+          url: joinUrl({ url: HB_URL, path }),
+          method: method,
+          headers: req.headers
+        })
+
+        const signedRequest = await toHttpSigner(signer)(signingArgs)
+        fetch_req = { ...signedRequest, body: req.body, path, method }
+      }
+
+      // Log the request
+      logger.tap('Sending signed message to HB: %o')(fetch_req)
+
+      // Step 4: Send the request
+      const res = await fetch(fetch_req.url, {
+        method: fetch_req.method,
+        headers: fetch_req.headers,
+        body: fetch_req.body,
+        redirect: 'follow'
+      })
+
+      console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
+
+      // Step 5: Handle specific status codes
+      if (res.status === 422 && signingFormat === 'HTTP') {
+        // Try again with different signing format
+        reqFormatCache[fields.path] = 'ANS-104'
+        return requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
+      }
+
+      if (res.status >= 400) {
+        console.log('ERROR RESPONSE: ', res)
+        process.exit(1)
+        throw new Error(`${res.status}: ${await res.text()}`)
+      }
+
+      if (res.status >= 300) {
+        return res
+      }
+
+      // Step 6: Return the response
+      return {
+        headers: res.headers,
+        body: await res.text()
+      }
+    } catch (error) {
+      // Handle errors appropriately
+      console.error("Request failed:", error)
+      throw error
+    }
   }
 }
 
-export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
+export function deployProcessWith({ fetch, logger: _logger, HB_URL, signer }) {
   const logger = _logger.child('deployProcess')
 
   return (args) => {
@@ -190,7 +183,7 @@ export function deployProcessWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
-export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
+export function deployMessageWith({ fetch, logger: _logger, HB_URL, signer }) {
   const logger = _logger.child('deployMessage')
 
   return (args) => {
@@ -250,17 +243,66 @@ export function deployMessageWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
-export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
+export function signMessage({ fetch, logger: _logger, HB_URL, signer }) {
+  const logger = _logger.child('signMessage')
+
+  return (args) => {
+    return of(args)
+      /**
+       * disregard data item signer passed, as it is not needed
+       * when the HTTP msg is what is actually signed
+       */
+      .chain(fromPromise(({ processId, data, tags, anchor }) =>
+        encodeDataItem({ processId, data, tags, anchor })
+      ))
+      .chain(fromPromise(({ headers, body }) => {
+        return toHttpSigner(signer)(toSigBaseArgs({
+          url: `${HB_URL}/${args.processId}/schedule`,
+          method: 'POST',
+          headers
+        })).then((req) => ({ ...req, body }))
+      }))
+      .toPromise()
+  }
+}
+
+export function sendSignedMessage({ fetch, logger: _logger, HB_URL }) {
+  const logger = _logger.child('sendSignedMessage');
+
+  return (signedRequest) => {
+    return of(signedRequest)
+      .map(logger.tap('Dispatching signed request to HB MU: %o'))
+      .chain(fromPromise(({ url, method, headers, body }) =>
+        fetch(url, { method, headers, body, redirect: 'follow' })
+      ))
+      .bichain(
+        (err) => Rejected(err),
+        fromPromise(async (res) => {
+          if (res.ok) {
+            // For example, if HB returns a "slot" header, you can extract it:
+            const slot = res.headers.get('slot');
+            logger.info('Received slot from HB MU: %s', slot);
+            return { response: res, slot };
+          }
+          throw new Error(`${res.status}: ${await res.text()}`);
+        })
+      )
+      .map(logger.tap('Successfully dispatched signed request to HB MU: %o'))
+      .toPromise();
+  }
+}
+
+export function loadResultWith({ fetch, logger: _logger, HB_URL, signer }) {
   const logger = _logger.child('loadResult')
 
   return (args) => {
     return of(args)
       .chain(fromPromise(async ({ id, processId }) => {
         const { headers, body } = await encodeDataItem({ processId })
-        headers.append('slot+integer', id)
+        headers.append('slot', id)
         headers.append('accept', 'application/json')
         return toHttpSigner(signer)(toSigBaseArgs({
-          url: `${HB_URL}/${processId}/compute&slot+integer=${id}/results/json`,
+          url: `${HB_URL}/${processId}~process@1.0/compute&slot=${id}/results/json`,
           method: 'POST',
           headers
         })).then((req) => ({ ...req, body }))
@@ -286,70 +328,46 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
-/**
- * @typedef Env3
- * @property {fetch} fetch
- * @property {string} CU_URL
- *
- * @typedef QueryResultsArgs
- * @property {string} process - the id of the process being read
- * @property {string} from - cursor to start the list of results
- * @property {string} to - cursor to stop the list of results
- * @property {string} sort - "ASC" or "DESC" to describe the order of list
- * @property {number} limit - the number of results to return
- *
- * @callback QueryResults
- * @param {QueryResultsArgs} args
- * @returns {Promise<Record<string, any>}
- *
- * @param {Env3} env
- * @returns {QueryResults}
- */
-export function queryResultsWith ({ fetch, HB_URL, logger, signer }) {
-  return ({ process, from, to, sort, limit }) => {
-    // const target = new URL(`${CU_URL}/results/${process}`)
-    // const params = new URLSearchParams(target.search)
-    // if (from) { params.append('from', from) }
-    // if (to) { params.append('to', to) }
-    // if (sort) { params.append('sort', sort) }
-    // if (limit) { params.append('limit', limit) }
-    // target.search = params
-
-    // m2 does not have a results endpoint, but you can
-    // access each message by slots, the goal here
-    // would be to create a range of query requests
-    // based on the above parameters and then resolve
-    // them using a promise.all
-    return of().chain(fromPromise(async () => {
-      // TODO: need to figure out how best to pass this from client
-      // const processId = 'Vj1efidjweGtv7YVDmD1rUEd7cUK7MCr6OQ6Jv04Qd0'
-      const { headers, body } = await encodeDataItem({ processId })
-      // headers.append('slot+integer', id)
-      headers.append('accept', 'application/json')
-      return toHttpSigner(signer)(toSigBaseArgs({
-        url: `${HB_URL}/${processId}/state/now`,
-        method: 'GET',
-        headers
-      })).then((req) => ({ ...req, body }))
-    }))
-      .chain((request) => of(request)
-        .chain(fromPromise(({ url, method, headers, body }) =>
-          fetch(url, { method, headers, body, redirect: 'follow' })
-        ))
-        .bichain(
-          (err) => Rejected(err),
-          fromPromise(async (res) => {
-            if (res.ok) return res.json()
-            throw new Error(`${res.status}: ${await res.text()}`)
-          })
-        )
-        .bimap(
-          logger.tap('Error encountered when loading result via HB CU'),
-          logger.tap('Successfully loading result via HB CU')
-        )
+export function toANS104Request(fields) {
+  console.log('TO ANS 104 REQUEST: ', fields)
+  const dataItem = {
+    target: fields.target,
+    anchor: fields.anchor ?? '',
+    tags: keys(
+      omit(
+        [
+          'Target',
+          'target',
+          'Anchor',
+          'anchor',
+          'Data',
+          'data',
+          'data-protocol',
+          'Data-Protocol',
+          'variant',
+          'Variant',
+          'dryrun',
+          'Dryrun',
+          'Type',
+          'type',
+          'path',
+          'method'
+        ],
+        fields
       )
-      .toPromise()
+    )
+      .map(function (key) {
+        return { name: key, value: fields[key] }
+      }, fields)
+      .concat([
+        { name: 'Data-Protocol', value: 'ao' },
+        { name: 'Type', value: fields.Type ?? 'Message' },
+        { name: 'Variant', value: fields.Variant ?? 'ao.N.1' }
+      ]),
+    data: fields?.data || ''
   }
+  console.log('ANS104 REQUEST: ', dataItem)
+  return { headers: { 'Content-Type': 'application/ans104', 'codec-device': 'ans104@1.0' }, item: dataItem }
 }
 
 export class InsufficientFunds extends Error {
@@ -360,7 +378,7 @@ export class RedirectRequested extends Error {
   name = 'RedirectRequested'
 }
 
-export function relayerWith ({ fetch, logger, HB_URL, signer }) {
+export function relayerWith({ fetch, logger, HB_URL, signer }) {
   /**
    * A fetch wrapper that will sign
    *

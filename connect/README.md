@@ -105,7 +105,7 @@ Parameters
 
 #### `message`
 
-send a message to an `ao` Message Unit `mu` targeting an ao `process`.
+Send a message to an `ao` Message Unit `mu` targeting an ao `process`.
 
 ```js
 import { createSigner, message } from "@permaweb/aoconnect";
@@ -119,7 +119,33 @@ const messageId = await message({
 });
 ```
 
+#### `signMessage`
+
+Prepare and sign an `ao` message which can later be dispatched using `sendSignedMessage`
+
+```js
+import { createSigner, signMessage } from "@permaweb/aoconnect";
+
+const signedMessage = await signMessage({
+  process,
+  signer: createSigner(wallet),
+  anchor,
+  tags,
+  data,
+});
+```
+
 > You can pass a 32 byte `anchor` to `message` which will be set on the DataItem
+
+#### `sendSignedMessage`
+
+Dispatch a previously signed message
+
+```js
+import { createSigner, sendSignedMessage } from "@permaweb/aoconnect";
+
+const signedMessage = await sendSignedMessage(signedMessage);
+```
 
 #### `spawn`
 
