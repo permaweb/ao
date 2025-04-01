@@ -14,7 +14,7 @@ use super::json::{Message, Process};
 use super::scheduler;
 
 use super::dal::{
-    Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet
+    Config, CoreMetrics, DataStore, ExtRouter, ExtRouterErrorType, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet
 };
 
 pub struct Deps {
@@ -27,6 +27,7 @@ pub struct Deps {
     pub wallet: Arc<dyn Wallet>,
     pub uploader: Arc<dyn Uploader>,
     pub metrics: Arc<dyn CoreMetrics>,
+    pub ext_router: Arc<dyn ExtRouter>,
 
     /*
         scheduler is part of the core but we initialize
@@ -442,6 +443,39 @@ pub async fn write_item(
           will start at 0 for the first message
         */
         if deps.config.enable_process_assignment() {
+            match deps.config.enable_router_check() {
+              true => {
+                  match deps.ext_router.get_routed_assignment(data_item.id()).await {
+                    Ok(a) => {
+                        /*
+                          This process was spawned on another SU through
+                          the router so we should not allow it to be spawned
+                          here as well.
+                        */
+                        if a != deps.config.assignment() {
+                            return Err("Process does not belong on this SU".to_string())
+                        }
+                    },
+                    Err(e) => {
+                        match e {
+                            /*
+                              The process doesnt exist on the router so we
+                              are safe to proceed.
+                            */
+                            ExtRouterErrorType::NotFound(_) => (),
+                            /*
+                              Some other error occured while attempting to
+                              check the router for a process id we cant determine
+                              if it is safe so throw an error.
+                            */
+                            _ => return Err("Unable to check router".to_string())
+                        }
+                    }
+                  }
+              },
+              false => ()
+            };
+
             match data_item.tags().iter().find(|tag| tag.name == "On-Boot") {
                 Some(boot_tag) => match boot_tag.value.as_str() {
                     "Data" => (),

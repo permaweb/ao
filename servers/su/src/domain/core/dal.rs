@@ -74,6 +74,9 @@ pub trait Config: Send + Sync {
     fn use_local_store(&self) -> bool;
     fn use_disk(&self) -> bool;
     fn warmup_delay(&self) -> u64;
+    fn enable_router_check(&self) -> bool;
+    fn router_url(&self) -> String;
+    fn assignment(&self) -> String;
 }
 
 #[derive(Debug)]
@@ -239,4 +242,15 @@ pub trait CoreMetrics: Send + Sync {
     fn write_assignment_observe(&self, duration: u128);
     fn acquire_write_lock_observe(&self, duration: u128);
     fn failed_message_save(&self);
+}
+
+#[async_trait]
+pub trait ExtRouter: Send + Sync {
+    async fn get_routed_assignment(&self, process_id: String) -> Result<String, ExtRouterErrorType>;
+}
+
+pub enum ExtRouterErrorType {
+    NotFound(String),
+    NetworkError(String),
+    ConfigError(String)
 }

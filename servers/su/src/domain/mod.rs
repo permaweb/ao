@@ -12,10 +12,10 @@ mod logger;
 
 use clients::{
     gateway::ArweaveGateway, local_store, signer::ArweaveSigner, store, uploader::UploaderClient,
-    wallet::FileWallet,
+    wallet::FileWallet, su_router::SuRouter
 };
 use config::AoConfig;
-use core::dal::{Config, DataStore, Gateway, Log, MockRouterDataStore};
+use core::dal::{Config, DataStore, Gateway, Log, MockRouterDataStore, ExtRouter};
 use logger::SuLog;
 
 pub use clients::metrics::PromMetrics;
@@ -105,6 +105,8 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
 
     let deephash_locks = Arc::new(DashMap::new());
 
+    let ext_router: Arc<dyn ExtRouter>  = Arc::new(SuRouter{});
+
     (
         Arc::new(Deps {
             data_store: main_data_store,
@@ -118,6 +120,7 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
             uploader,
             metrics,
             deephash_locks,
+            ext_router
         }),
         metrics_clone,
     )

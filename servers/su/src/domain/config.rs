@@ -47,7 +47,11 @@ pub struct AoConfig {
 
     pub current_deephash_version: String,
     pub deephash_recalc_limit: i32,
-    pub warmup_delay: u64
+    pub warmup_delay: u64,
+
+    pub enable_router_check: bool,
+    pub router_url: String,
+    pub assignment: String
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -192,6 +196,21 @@ impl AoConfig {
             Err(_e) => 30,
         };
 
+        let enable_router_check = match env::var("ENABLE_ROUTER_CHECK") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
+
+        let router_url = match env::var("ROUTER_URL") {
+            Ok(val) => val,
+            Err(_e) => "https://su-router.ao-testnet.xyz".to_string(),
+        };
+
+        let assignment = match env::var("ASSIGNMENT") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -219,7 +238,10 @@ impl AoConfig {
             su_index_sync_db_dir,
             current_deephash_version,
             deephash_recalc_limit,
-            warmup_delay
+            warmup_delay,
+            enable_router_check,
+            router_url,
+            assignment
         })
     }
 }
@@ -251,5 +273,14 @@ impl Config for AoConfig {
     }
     fn warmup_delay(&self) -> u64 {
         self.warmup_delay.clone()
+    }
+    fn enable_router_check(&self) -> bool {
+        self.enable_router_check.clone()
+    }
+    fn router_url(&self) -> String {
+        self.router_url.clone()
+    }
+    fn assignment(&self) -> String {
+        self.assignment.clone()
     }
 }
