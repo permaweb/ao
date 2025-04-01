@@ -146,7 +146,7 @@ Dispatch a previously signed message
 ```js
 import { createSigner, sendSignedMessage } from "@permaweb/aoconnect";
 
-const signedMessage = await sendSignedMessage(signedMessage);
+const messageId = await sendSignedMessage(signedMessage);
 ```
 
 #### `spawn`
