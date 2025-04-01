@@ -19,6 +19,8 @@ This module will run in a browser or server environment.
     - [`result`](#result)
     - [`results`](#results)
     - [`message`](#message)
+    - [`signMessage`](#signMessage)
+    - [`sendSignedMessage`](#sendSignedMessage)
     - [`spawn`](#spawn)
     - [`connect`](#connect)
     - [`monitor`](#monitor)
