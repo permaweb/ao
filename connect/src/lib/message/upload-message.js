@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { __, always, assoc, curry, defaultTo, ifElse, pipe, prop } from 'ramda'
 import { proto } from '@permaweb/protocol-tag-utils'
 
-import { deployMessageSchema, signerSchema } from '../../dal.js'
+import { deployMessageSchema, prepareMessageSchema, sendSignedMessageSchema, signerSchema } from '../../dal.js'
 
 const aoProto = proto('ao')
 const removeAoProtoByName = curry(aoProto.removeAllByName)
@@ -116,6 +116,37 @@ export function uploadMessageWith (env) {
       .chain(buildData)
       .chain(fromPromise(({ id, data, tags, anchor, signer }) =>
         deployMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer || env.signer) })
+      ))
+      .map(res => assoc('messageId', res.messageId, ctx))
+  }
+}
+
+export function prepareMessageWith (env) {
+  const buildTags = buildTagsWith(env)
+  const buildData = buildDataWith(env)
+
+  const signMessage = prepareMessageSchema.implement(env.signMessage)
+
+  return (ctx) => {
+    return of(ctx)
+      .chain(buildTags)
+      .chain(buildData)
+      .chain(fromPromise(({ id, data, tags, anchor, signer }) =>
+        signMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer || env.signer) })
+      ))
+      .map(res => {
+        return res
+      })
+  }
+}
+
+export function sendSignedMessageWith(env) {
+  const sendSignedMessage = sendSignedMessageSchema.implement(env.sendSignedMessage)
+
+  return (ctx) => {
+    return of(ctx)
+      .chain(fromPromise(({ id, raw }) =>
+        sendSignedMessage({ id, raw })
       ))
       .map(res => assoc('messageId', res.messageId, ctx))
   }

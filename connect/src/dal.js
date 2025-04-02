@@ -61,6 +61,32 @@ export const deployMessageSchema = z.function()
     }).passthrough()
   ))
 
+export const prepareMessageSchema = z.function()
+  .args(z.object({
+    processId: z.string(),
+    data: z.any(),
+    tags: z.array(tagSchema),
+    anchor: z.string().optional(),
+    signer: z.any().nullish()
+  }))
+  .returns(z.promise(
+    z.object({
+      id: z.string(),
+      raw: z.any(),
+    }).passthrough()
+  ))
+
+export const sendSignedMessageSchema = z.function()
+  .args(z.object({
+    id: z.string(),
+    raw: z.any(),
+  }))
+  .returns(z.promise(
+    z.object({
+      messageId: z.string(),
+    }).passthrough()
+  ))
+
 export const deployProcessSchema = z.function()
   .args(z.object({
     data: z.any(),

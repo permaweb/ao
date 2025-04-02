@@ -13,7 +13,7 @@ import { messageIdWith } from './lib/message-id/index.js'
 import { processIdWith } from './lib/process-id/index.js'
 import { requestWith } from './lib/request/index.js'
 import { resultWith } from './lib/result/index.js'
-import { messageWith } from './lib/message/index.js'
+import { messageWith, prepareWith, signedMessageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
@@ -43,7 +43,7 @@ export { serializeCron } from './lib/serializeCron/index.js'
 /**
  * @param {{ createDataItemSigner: (wallet:any) => Types['signer'], createSigner: any }}
  */
-export function connectWith ({ createDataItemSigner, createSigner }) {
+export function connectWith({ createDataItemSigner, createSigner }) {
   const _logger = createLogger()
 
   /**
@@ -61,7 +61,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
    * @returns {Omit<ReturnType<connect>, 'createDataItemSigner'> & { createDataItemSigner: () => Types['signer'] }}
    */
   // eslint-disable-next-line no-unused-vars
-  function relayMode ({
+  function relayMode({
     MODE,
     signer,
     GRAPHQL_URL,
@@ -220,7 +220,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     }
   }
 
-  function legacyMode ({
+  function legacyMode({
     MODE,
     GRAPHQL_URL,
     GRAPHQL_MAX_RETRIES,
@@ -258,6 +258,24 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
         logger: messageLogger
       }),
       logger: messageLogger
+    })
+
+    const signMessageLogger = logger.child('signMessage')
+    const signMessage = prepareWith({
+      signMessage: MuClient.signMessageWith({
+        logger: signMessageLogger
+      }),
+      logger: signMessageLogger
+    })
+
+    const sendSignedMessageLogger = logger.child('sendSignedMessage')
+    const sendSignedMessage = signedMessageWith({
+      sendSignedMessage: MuClient.sendSignedMessageWith({
+        fetch,
+        MU_URL,
+        logger: sendSignedMessageLogger
+      }),
+      logger: sendSignedMessageLogger
     })
 
     const spawnLogger = logger.child('spawn')
@@ -336,11 +354,13 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       unmonitor,
       dryrun,
       assign,
-      createDataItemSigner
+      createDataItemSigner,
+      signMessage,
+      sendSignedMessage
     }
   }
 
-  function mainnetMode ({
+  function mainnetMode({
     MODE,
     signer,
     GRAPHQL_URL,
@@ -376,7 +396,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     /**
      * TODO: implement validating a scheduler
      */
-    async function mockValidate (address) {
+    async function mockValidate(address) {
       logger('Mock validation for address "%s"', address)
       return true
     }
@@ -676,7 +696,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
    * @param {ConnectArgs} args
    * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof mainnetMode>}
    */
-  function connect (args = {}) {
+  function connect(args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
 
     if (!GRAPHQL_URL) { GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' }) }
