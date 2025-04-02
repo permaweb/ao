@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.78](https://github.com/permaweb/ao/compare/connect@v0.0.77...connect@v0.0.78) (2025-04-02)
+
+
+### Features
+
+* create standalone signer / dispatch APIs (signMessage / sendSignedMessage) ([6fff158](https://github.com/permaweb/ao/commit/6fff158d2911e831ef73d214003ad2539f9ad5bc))
+
 ## [0.0.77](https://github.com/permaweb/ao/compare/connect@v0.0.76...connect@v0.0.77) (2025-03-04)
 
 
