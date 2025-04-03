@@ -91,7 +91,7 @@ export const mapNode = pipe(
           message: applySpec({
             Target: path(['Process']),
             Epoch: pipe(path(['Epoch']), parseInt),
-            Nonce: pipe(path(['Slot']), parseInt),
+            Nonce: pipe(path(['Slot'])(tags) ? path(['Slot']) : path(['Nonce']), parseInt),
             Timestamp: pipe(path(['Timestamp']), parseInt),
             'Block-Height': pipe(
               /**
@@ -404,7 +404,6 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
     //let expectedNonce = parseInt(`${from}`)
     let expectedNonce = isColdStart ? 0 : parseInt(`${from}`) + 1
-    logger.info('isColdStart', { isColdStart: isColdStart })
     return async function * (edges) {
       for await (const edge of edges) {
         const scheduled = pipe(
@@ -419,7 +418,6 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           }
         )(edge)
 
-        logger.info('scheduled', { scheduled: scheduled })
         if (expectedNonce !== scheduled.message.Nonce) {
           const err = new Error(`Non-incrementing slot: expected ${expectedNonce} but got ${scheduled.message.Nonce}`)
           err.status = 422

@@ -24,7 +24,6 @@ export function readResultWith (env) {
   const readState = readStateWith(env)
 
   return ({ processId, messageUid, body }) => {
-    console.log('body in read result: ', body)
     return of({ processId, messageUid, body })
       .chain(loadMessageMeta)
       .chain(res => readState({
