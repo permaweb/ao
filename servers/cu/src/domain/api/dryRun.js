@@ -72,6 +72,8 @@ export function dryRunWith (env) {
   })
 
   const readStateCache = TtlCache(env)
+  // Cache for dry run results to avoid redundant computation
+  const dryRunResultsCache = TtlCache(env)
 
   function loadMessageCtx ({ messageTxId, processId }) {
     /**
@@ -162,6 +164,16 @@ export function dryRunWith (env) {
   }
 
   return ({ processId, messageTxId, maxProcessAge = DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
+    // Create a cache key based on the request parameters
+    const cacheKey = JSON.stringify({ processId, messageTxId, dryRun })
+    
+    // Check if we have a cached result for this exact request
+    const cachedResult = dryRunResultsCache.get(cacheKey)
+    if (cachedResult) {
+      logger.info('Cached dry run reused for process "%s"', processId)
+      return Resolved(cachedResult)
+    }
+    
     return of({ processId, messageTxId })
       .chain(loadMessageCtx)
       .chain(ensureProcessLoaded({ maxProcessAge }))
@@ -225,6 +237,11 @@ export function dryRunWith (env) {
          */
         return evaluate({ ...ctx, dryRun: true, messages: Readable.from(dryRunMessage()) })
       })
-      .map((res) => omit(['Memory'], res.output))
+      .map((res) => {
+        const result = omit(['Memory'], res.output)
+        // Cache the result for 1 second
+        dryRunResultsCache.set(cacheKey, result, 1000)
+        return result
+      })
   }
 }

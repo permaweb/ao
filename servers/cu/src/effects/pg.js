@@ -168,12 +168,40 @@ const createCheckpointFilesIndexes = async (pool) => pool.query(
  * and less deps. So we'll do this for now.
  */
 function toOrdinals (sql) {
-  let count = 0
-  sql = sql.trim()
+  let count = 0;
+  sql = sql.trim();
+
   if (sql.startsWith('INSERT')) {
-    sql = sql.replace('INSERT OR IGNORE', 'INSERT')
-    if (sql.endsWith(';')) sql = sql.slice(0, -1)
-    sql += ' ON CONFLICT DO NOTHING;'
+    // Handle INSERT OR IGNORE
+    if (sql.includes('INSERT OR IGNORE')) {
+      sql = sql.replace('INSERT OR IGNORE', 'INSERT');
+      if (sql.endsWith(';')) sql = sql.slice(0, -1);
+      sql += ' ON CONFLICT DO NOTHING;';
+    } 
+    // Handle INSERT OR REPLACE
+    else if (sql.includes('INSERT OR REPLACE')) {
+      // Extract table name and column list
+      const tableMatch = sql.match(/INTO\s+(\w+)\s*\(([^)]+)\)/);
+      if (tableMatch) {
+        const tableName = tableMatch[1];
+        const columns = tableMatch[2].split(',').map(col => col.trim().replace(/"/g, ''));
+        
+        // Ensure there's a valid primary key
+        const primaryKeyColumn = 'processId'; // Explicitly set primary key as processId
+        
+        sql = sql.replace('INSERT OR REPLACE', 'INSERT');
+        if (sql.endsWith(';')) sql = sql.slice(0, -1);
+        
+        // Add ON CONFLICT clause for PostgreSQL
+        sql += ` ON CONFLICT (\"${primaryKeyColumn}\") DO UPDATE SET `;
+        
+        // Add SET clause for each column except the primary key
+        const updateClauses = columns.filter(col => col !== primaryKeyColumn).map(col => `"${col}" = EXCLUDED."${col}"`);
+        
+        sql += updateClauses.join(', ') + ';';
+      }
+    }
   }
-  return sql.replace(/\?/g, () => `$${++count}`)
+
+  return sql.replace(/\?/g, () => `$${++count}`);
 }
