@@ -19,15 +19,19 @@ function fetchResultWith ({ fetchResult }) {
         return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
       })
       .chain(fetchedResult => {
-        const msgs = fetchedResult.Messages.map(msg => {
-          return {
-            msg,
-            processId: msg.Target,
-            initialTxId: ctx.initialTxId,
-            fromProcessId: ctx.tx.processId,
-            parentId: ctx.messageId ?? ctx.initialTxId
-          }
-        })
+        const msgs = fetchedResult.Messages
+          .filter(msg => 
+              msg.Target !== undefined && msg.Anchor !== undefined && msg.Tags !== undefined
+          )
+          .map(msg => {
+            return {
+              msg,
+              processId: msg.Target,
+              initialTxId: ctx.initialTxId,
+              fromProcessId: ctx.tx.processId,
+              parentId: ctx.messageId ?? ctx.initialTxId
+            }
+          })
 
         const spawns = fetchedResult.Spawns.map(spawn => {
           return {

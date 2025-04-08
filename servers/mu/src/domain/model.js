@@ -20,8 +20,8 @@ export const processOwnerSchema = z.object({
 
 export const messageSchema = z.object({
   Tags: tagArraySchema,
-  Target: z.string(),
-  Anchor: z.string(),
+  Target: z.string().nullish(),
+  Anchor: z.string().nullish(),
   Data: z.any().nullish()
 })
 export const messageArraySchema = z.array(messageSchema)
