@@ -1,6 +1,6 @@
 {
   "name": "@permaweb/aoconnect",
-  "version": "0.0.78",
+  "version": "0.0.79",
   "repository": {
     "type": "git",
     "url": "https://github.com/permaweb/ao.git",
@@ -46,7 +46,7 @@
     "test:m2": "node --test src/index.common.test.js"
   },
   "dependencies": {
-    "@dha-team/arbundles": "^1.0.1",
+    "@dha-team/arbundles": "1.0.3",
     "@permaweb/ao-scheduler-utils": "~0.0.25",
     "@permaweb/protocol-tag-utils": "~0.0.2",
     "axios": "^1.7.9",

@@ -344,6 +344,21 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       logger: messageLogger
     })
 
+    const getMessageById = messageIdWith({
+      getMessageId: SuClient.getMessageById({ fetch, locate })
+    })
+
+    const getMessages = messagesWith({
+      messages: SuClient.getMessagesByRange({ fetch, locate })
+    })
+
+    const getLastSlot = processIdWith({
+      processId: SuClient.getLastSlotWith({
+        fetch,
+        locate
+      })
+    })
+
     return {
       MODE,
       result,
@@ -356,7 +371,10 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       assign,
       createDataItemSigner,
       signMessage,
-      sendSignedMessage
+      sendSignedMessage,
+      getMessages,
+      getLastSlot,
+      getMessageById
     }
   }
 
