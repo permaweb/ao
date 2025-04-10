@@ -6,7 +6,7 @@ import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
 import { toHttpSigner, toDataItemSigner } from './signer.js'
 
-let reqFormatCache = {}
+const reqFormatCache = {}
 
 /**
  * Map data item members to corresponding HB HTTP message
@@ -56,87 +56,87 @@ export function httpSigName (address) {
   return `http-sig-${hexString}`
 }
 
-export function requestWith(args) {
+export function requestWith (args) {
   const { fetch, logger: _logger, HB_URL, signer } = args
   let signingFormat = args.signingFormat
   const logger = _logger.child('request')
 
-  return async function(fields) {
+  return async function (fields) {
     const { path, method, ...restFields } = fields
-  
+
     signingFormat = fields.signingFormat
     if (!signingFormat) {
       signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
     }
-    
-    try {
 
-      let fetch_req = { }
-      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
+    try {
+      let fetchRequest = { }
+      // console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
       if (signingFormat === 'ANS-104') {
         const ans104Request = toANS104Request(restFields)
-        console.log('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
+        // console.log('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
         const signedRequest = await toDataItemSigner(signer)(ans104Request.item)
-        console.log('SIGNED ANS-104 ITEM: ', signedRequest)
-        fetch_req = {
+        // console.log('SIGNED ANS-104 ITEM: ', signedRequest)
+        fetchRequest = {
           body: signedRequest.raw,
           url: joinUrl({ url: HB_URL, path }),
           path,
           method,
           headers: ans104Request.headers
         }
-      }
-      else {
+      } else {
         // Step 2: Create and execute the signing request
         const req = await encode(restFields)
         const signingArgs = toSigBaseArgs({
           url: joinUrl({ url: HB_URL, path }),
-          method: method,
+          method,
           headers: req.headers
         })
-        
+
         const signedRequest = await toHttpSigner(signer)(signingArgs)
-        fetch_req = { ...signedRequest, body: req.body, path, method }
+        fetchRequest = { ...signedRequest, body: req.body, path, method }
       }
-      
+
       // Log the request
-      logger.tap('Sending signed message to HB: %o')(fetch_req)
-      
+      logger.tap('Sending signed message to HB: %o')(fetchRequest)
+
       // Step 4: Send the request
-      const res = await fetch(fetch_req.url, { 
-        method: fetch_req.method, 
-        headers: fetch_req.headers, 
-        body: fetch_req.body, 
-        redirect: 'follow' 
+      // console.log('SENDING REQUEST: ', fetchRequest)
+
+      const res = await fetch(fetchRequest.url, {
+        method: fetchRequest.method,
+        headers: fetchRequest.headers,
+        body: fetchRequest.body,
+        redirect: 'follow'
       })
-      
-      console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
-      
+
+      // console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
+      const body = await res.text()
       // Step 5: Handle specific status codes
       if (res.status === 422 && signingFormat === 'HTTP') {
         // Try again with different signing format
         reqFormatCache[fields.path] = 'ANS-104'
         return requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
       }
-      
+
       if (res.status >= 400) {
         console.log('ERROR RESPONSE: ', res)
         process.exit(1)
         throw new Error(`${res.status}: ${await res.text()}`)
       }
-      
+
       if (res.status >= 300) {
         return res
       }
-      
+
       // Step 6: Return the response
       return {
         headers: res.headers,
-        body: await res.text()
+        body
       }
     } catch (error) {
       // Handle errors appropriately
-      console.error("Request failed:", error)
+      console.error('Request failed:', error)
       throw error
     }
   }
@@ -279,8 +279,8 @@ export function loadResultWith ({ fetch, logger: _logger, HB_URL, signer }) {
   }
 }
 
-export function toANS104Request(fields) {
-  console.log('TO ANS 104 REQUEST: ', fields)
+export function toANS104Request (fields) {
+  // console.log('TO ANS 104 REQUEST: ', fields)
   const dataItem = {
     target: fields.target,
     anchor: fields.anchor ?? '',
@@ -317,7 +317,7 @@ export function toANS104Request(fields) {
       ]),
     data: fields?.data || ''
   }
-  console.log('ANS104 REQUEST: ', dataItem)
+  // console.log('ANS104 REQUEST: ', dataItem)
   return { headers: { 'Content-Type': 'application/ans104', 'codec-device': 'ans104@1.0' }, item: dataItem }
 }
 

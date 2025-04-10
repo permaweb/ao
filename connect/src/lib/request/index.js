@@ -230,7 +230,10 @@ if mode == 'process' then request should create a pure httpsig from fields
       if (typeof res.body === 'string') {
         try {
           body = JSON.parse(res.body)
-          return { ...map, ...body }
+          if (typeof body === 'object') {
+            return { ...map, ...body }
+          }
+          return { ...map, body }
         } catch (e) {
           // console.log('Mainnet (M2) error', e)
           map.body = body
