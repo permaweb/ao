@@ -33,7 +33,7 @@ const resToJson = (res) => {
 const toParams = ({ processId, from, to, pageSize }) =>
   new URLSearchParams(filter(
     isNotNil,
-    { target: processId, 'from': from, 'to': to, limit: pageSize, accept: 'application/aos-2' }
+    { target: processId, from, to, limit: pageSize, accept: 'application/aos-2' }
   ))
 
 const nodeAt = (idx) => pipe(path(['edges']), nth(idx), path(['node']))
@@ -266,7 +266,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
     return Promise.allSettled(
       args.map(({ suUrl, processId, from, to, pageSize }) => {
-        return Promise.resolve({ processId, from: from ? from : 0, to: to ? to : undefined, pageSize })
+        return Promise.resolve({ processId, from: from || 0, to: to || undefined, pageSize })
           .then(toParams)
           .then((params) => fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`))
           .then(okRes)
@@ -322,7 +322,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
       return backoff(
         () => {
-          if(body) {
+          if (body && body.edges.length === (+to - +from) && body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce')?.value === from) {
             return body
           }
           return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
@@ -340,7 +340,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
      * and coerce to false, and otherwise cast to a boolean.
      */
     function toBoolean (value) {
-      return value === 'false' ? false : Boolean(value)
+      return (value === 'false' || value === 'undefined') ? false : Boolean(value)
     }
 
     return async function * scheduled () {
@@ -402,7 +402,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     let prevAssignmentId = assignmentId
     let prevHashChain = hashChain
 
-    //let expectedNonce = parseInt(`${from}`)
+    // let expectedNonce = parseInt(`${from}`)
     let expectedNonce = isColdStart ? 0 : parseInt(`${from}`) + 1
     return async function * (edges) {
       for await (const edge of edges) {
@@ -481,7 +481,7 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
 
     return backoff(
       () => {
-        if(body) {
+        if (body && body.edges.length === 1 && body.edges[0]?.node?.message?.id === messageUid) {
           return body
         }
         return fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes)
