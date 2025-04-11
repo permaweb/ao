@@ -319,6 +319,7 @@ export const createEffects = async (ctx) => {
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+      EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
       saveCheckpoint,
       logger
     }),

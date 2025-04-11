@@ -1312,9 +1312,11 @@ export function findLatestProcessMemoryWith ({
   }
 }
 
-export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD }) {
-  return async ({ processId, moduleId, assignmentId, messageId, hashChain, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, gasUsed }) => {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD }) {
+  return async ({ processId, moduleId, assignmentId, messageId, hashChain, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, gasUsed, evalTime }) => {
     const cached = cache.get(processId)
+    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
+    let incrementedEvalTime = pathOr(0, ['evaluation', 'evalTime'], cached)
 
     /**
      * Ensure that we are always caching a Buffer and not a TypedArray
@@ -1331,7 +1333,6 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
      * the value currently cached, so overwrite it
      */
 
-    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
     /**
      * The cache is being reseeded ie. Memory was reloaded from a file
      */
@@ -1353,11 +1354,21 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
         processId,
         { messageId, timestamp, ordinate, cron, blockHeight }
       )
+
       incrementedGasUsed = pipe(
         pathOr(BigInt(0), ['evaluation', 'gasUsed']),
         add(gasUsed || BigInt(0))
       )(cached)
+
+      incrementedEvalTime = pipe(
+        pathOr(0, ['evaluation', 'evalTime']),
+        add(evalTime || 0)
+      )(cached)
     }
+
+    const gasThresholdReached = incrementedGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && incrementedGasUsed >= EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD
+    const evalTimeThresholdReached = incrementedEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && incrementedEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+    const eitherThresholdReached = gasThresholdReached || evalTimeThresholdReached
 
     const evaluation = {
       processId,
@@ -1378,16 +1389,17 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
        */
       encoding: undefined,
       cron,
-      gasUsed: incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? incrementedGasUsed : 0
+      gasUsed: eitherThresholdReached ? 0 : incrementedGasUsed,
+      evalTime: eitherThresholdReached ? 0 : incrementedEvalTime
     }
     // cache.set(processId, { Memory: zipped, evaluation })
     cache.set(processId, { Memory, evaluation })
 
-    if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
+    if (!eitherThresholdReached) return
     /**
      * Eagerly create the Checkpoint on the next event queue drain
      */
-    setImmediate(() => {
+    if (gasThresholdReached) {
       logger(
         'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met when evaluating process "%s" up to "%j" -- "%d" gas used. Eagerly creating a Checkpoint...',
         EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
@@ -1395,20 +1407,28 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
         { messageId, timestamp, ordinate, cron, blockHeight },
         incrementedGasUsed
       )
+    } else {
+      logger(
+        'Eager Checkpoint Accumulated Eval Time Threshold of "%d" ms eval time met when evaluating process "%s" up to "%j" -- "%d" ms eval time. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight },
+        incrementedEvalTime
+      )
+    }
 
-      /**
+    /**
        * Memory will always be defined at this point, so no reason
        * to pass File
        */
-      return saveCheckpoint({ Memory, ...evaluation })
-        .catch((err) => {
-          logger(
-            'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
-            evaluation,
-            err
-          )
-        })
-    })
+    return saveCheckpoint({ Memory, ...evaluation })
+      .catch((err) => {
+        logger(
+          'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
+          evaluation,
+          err
+        )
+      })
   }
 }
 
