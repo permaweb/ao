@@ -452,7 +452,10 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     //   logger: messageLogger
     // })
 
-    return { MODE: isRelayMode ? 'relay' : 'mainnet', request, get, post, result, message, spawn, createDataItemSigner: mainnetDataItemSigner, createSigner: mainnetSigner }
+    return { MODE: 'mainnet', 
+      request, 
+      createSigner: mainnetSigner 
+    }
   }
 
   /**

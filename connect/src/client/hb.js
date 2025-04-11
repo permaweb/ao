@@ -72,7 +72,7 @@ export function requestWith(args) {
     try {
 
       let fetch_req = { }
-      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
+//      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
       if (signingFormat === 'ANS-104') {
         const ans104Request = toANS104Request(restFields)
         console.log('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
@@ -110,13 +110,19 @@ export function requestWith(args) {
         redirect: 'follow' 
       })
       
-      console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
+ //     console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
       
       // Step 5: Handle specific status codes
       if (res.status === 422 && signingFormat === 'HTTP') {
         // Try again with different signing format
         reqFormatCache[fields.path] = 'ANS-104'
         return requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
+      }
+      
+      if (res.status === 404) {
+        //console.log('ERROR RESPONSE: ', res)
+        //process.exit(1)
+        throw new Error(`${res.status}: ${await res.text()}`)
       }
       
       if (res.status >= 400) {
@@ -128,15 +134,16 @@ export function requestWith(args) {
       if (res.status >= 300) {
         return res
       }
-      
+      let body = await res.text()
+      // console.log(body)
       // Step 6: Return the response
       return {
         headers: res.headers,
-        body: await res.text()
+        body: body 
       }
     } catch (error) {
       // Handle errors appropriately
-      console.error("Request failed:", error)
+      //console.error("Request failed:", error)
       throw error
     }
   }

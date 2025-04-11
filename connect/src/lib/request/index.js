@@ -25,10 +25,6 @@ export function requestWith (env) {
    */
   const logger = env.logger
   const request = env.request
-  const message = env.message
-  const result = env.result
-  const dryrun = env.dryrun
-  const spawn = env.spawn
 
   const signer = env.signer
   const device = env.device
@@ -92,153 +88,37 @@ if mode == 'process' then request should create a pure httpsig from fields
     }
   }
 
-  function dispatch ({ request, spawn, message, result, dryrun }) {
+  function dispatch ({ request }) {
     return function (ctx) {
-      if (ctx.type === 'dryrun' && ctx.dataItem) {
-        const inputData = {
-          process: ctx.dataItem.target,
-          anchor: ctx.dataItem.anchor,
-          tags: ctx.dataItem.tags,
-          data: ctx.datatItem?.data ?? ''
-        }
-        return fromPromise(() =>
-          dryrun(inputData).catch((err) => {
-            if (err.message.includes('Insufficient funds')) {
-              return { error: 'insufficient-funds' }
-            }
-            throw err
-          })
-        )(ctx)
-      }
-
-      if (ctx.type === 'Message' && ctx.dataItem) {
-        return fromPromise((ctx) =>
-          message({
-            process: ctx.dataItem.target,
-            anchor: ctx.dataItem.anchor,
-            tags: ctx.dataItem.tags,
-            data: ctx.dataItem.data ?? '',
-            signer
-          })
-            .then((id) =>
-              result({
-                process: ctx.dataItem.target,
-                message: id
-              })
-            )
-            .catch((err) => {
-              if (err.message.includes('Insufficient funds')) {
-                return { error: 'insufficient-funds' }
-              }
-              throw err
-            })
-        )(ctx)
-      }
-      if (ctx.type === 'Process' && ctx.dataItem) {
-        return fromPromise((ctx) =>
-          spawn({
-            tags: ctx.dataItem.tags,
-            data: ctx.dataItem.data,
-            scheduler: ctx.dataItem.tags.find((t) => t.name === 'Scheduler')
-              ?.value,
-            module: ctx.dataItem.tags.find((t) => t.name === 'Module')?.value,
-            signer
-          })
-            // .then(id => result({
-            //     process: id,
-            //     message: id
-            // }))
-            .catch((err) => {
-              if (err.message.includes('Insufficient funds')) {
-                return { error: 'insufficient-funds' }
-              }
-              throw err
-            })
-        )(ctx)
-      }
-      if (ctx.map) {
-        return fromPromise((ctx) => {
-          return request(ctx.map)
-        })(ctx)
-      }
+      return fromPromise((ctx) => {
+        return request(ctx)
+      })(ctx)
     }
   }
 
   const verifyInput = (args) => {
-    if (args.device === 'relay@1.0' && args.Type === 'Process') {
-      return of(
-        z
-          .object({
-            path: z.string().min(1, { message: 'path is required' }),
-            method: z.string(),
-            Module: z.string(),
-            Scheduler: z.string()
-          })
-          .passthrough()
-          .parse(args)
-      )
-    }
     return of(inputSchema.parse(args))
   }
 
   const transformToMap = (mode) => (result) => {
     const map = {}
-    if (mode === 'relay@1.0') {
-      // console.log('Mainnet (M1) result', result)
-      if (typeof result === 'string') {
-        return result
+    const res = result
+    map.body = res.body 
+    res.headers.forEach((v, k) => {
+      map[k] = {
+        text: () => Promise.resolve(v)
       }
+    })
 
-      if (result.Output && result.Output.data) {
-        map.Output = {
-          text: () => Promise.resolve(result.Output.data)
-        }
-      }
-      if (result.Messages) {
-        map.Messages = result.Messages.map((m) => {
-          const miniMap = {}
-          m.Tags.forEach((t) => {
-            miniMap[t.name] = {
-              text: () => Promise.resolve(t.value)
-            }
-          })
-          miniMap.Data = {
-            text: () => Promise.resolve(m.Data),
-            json: () => Promise.resolve(JSON.parse(m.Data)),
-            binary: () => Promise.resolve(Buffer.from(m.Data))
-          }
-          miniMap.Target = {
-            text: () => Promise.resolve(m.Target)
-          }
-          miniMap.Anchor = {
-            text: () => Promise.resolve(m.Anchor)
-          }
-          return miniMap
-        })
-      }
-      return map
-    } else {
-      // console.log('Mainnet (M2) result', result)
-      const res = result
-      let body = ''
-      res.headers.forEach((v, k) => {
-        map[k] = {
-          text: () => Promise.resolve(v)
-        }
-      })
-
-      if (typeof res.body === 'string') {
-        try {
-          body = JSON.parse(res.body)
-          return { ...map, ...body }
-        } catch (e) {
-          // console.log('Mainnet (M2) error', e)
-          map.body = body
-        }
-      }
-      // console.log('Mainnet (M2) default reply', map)
-      return map
-    }
+    // if (typeof res.body === 'string') {
+    //   try {
+    //     body = JSON.parse(res.body)
+    //     return { ...map, ...body }
+    //   } catch (e) {
+    //     map.body = body
+    //   }
+    // }
+    return map
   }
 
   return (fields) => {
@@ -250,9 +130,8 @@ if mode == 'process' then request should create a pure httpsig from fields
         // legacy mode just an ANS-104
         // mainnet relay-device = hsig + ans-104
         // mainnet process-device -> hsig
-        .map(handleFormat)
-
-        .chain(dispatch({ request, spawn, message, result, dryrun }))
+        //.map(handleFormat)
+        .chain(dispatch({ request }))
 
         .map((res) => {
           logger(
