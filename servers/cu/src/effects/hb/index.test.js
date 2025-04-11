@@ -232,8 +232,8 @@ describe('hb-su', () => {
             assert.equal(url.pathname, '/~scheduler@1.0/schedule')
             assert.deepStrictEqual(params, {
               target: 'process-123',
-              'from+Integer': '3',
-              'to+Integer': '3',
+              from: '3',
+              to: '3',
               limit: '1',
               accept: 'application/aos-2'
             })
@@ -282,7 +282,8 @@ describe('hb-su', () => {
       const res = await loadMessageMeta({
         suUrl: 'https://foo.bar',
         processId: 'process-123',
-        messageUid: '3'
+        messageUid: '3',
+        body: undefined
       })
 
       assert.deepStrictEqual(res, {
@@ -304,8 +305,8 @@ describe('hb-su', () => {
           assert.equal(url.pathname, '/~scheduler@1.0/schedule')
           assert.deepStrictEqual(params, {
             target: 'pid-1',
-            'from+Integer': '0',
-            'to+Integer': '0',
+            from: '0',
+            to: '1',
             limit: '1',
             accept: 'application/aos-2'
           })
@@ -386,8 +387,8 @@ describe('hb-su', () => {
           assert.equal(url.pathname, '/~scheduler@1.0/schedule')
           assert.deepStrictEqual(params, {
             target: 'pid-1',
-            'from+Integer': '0',
-            'to+Integer': '0',
+            from: '0',
+            to: '0',
             limit: '1',
             accept: 'application/aos-2'
           })
