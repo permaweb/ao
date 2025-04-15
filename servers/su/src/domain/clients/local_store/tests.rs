@@ -67,7 +67,9 @@ mod tests {
         let message_bundle = create_test_message_bundle();
         let test_message = Message::from_bytes(message_bundle.clone())?;
 
-        client.save_message(&test_message, &message_bundle, None).await?;
+        client
+            .save_message(&test_message, &message_bundle, None)
+            .await?;
         let retrieved_message = client.get_message(&test_message.assignment.id)?;
 
         assert_eq!(retrieved_message.assignment.id, test_message.assignment.id);
@@ -91,7 +93,7 @@ mod tests {
 
         // Retrieve messages and check nonce order and continuity
         let result = client
-            .get_messages(&test_process, &None, &None, &None)
+            .get_messages(&test_process, &None, &None, &None, &None, &None)
             .await?;
         let mut previous_nonce: Option<i32> = None;
 
@@ -129,7 +131,7 @@ mod tests {
 
         // Case 1: Default parameters
         let result = client
-            .get_messages(&test_process, &None, &None, &None)
+            .get_messages(&test_process, &None, &None, &None, &None, &None)
             .await?;
         // result should also include the process
         assert_eq!(result.edges.len(), message_bundles.len() + 1);
@@ -138,7 +140,7 @@ mod tests {
         // Case 2: Limit parameter
         let limit = 11;
         let result = client
-            .get_messages(&test_process, &None, &None, &Some(limit))
+            .get_messages(&test_process, &None, &None, &Some(limit), &None, &None)
             .await?;
         assert_eq!(result.edges.len(), limit as usize);
         assert!(result.page_info.has_next_page);
@@ -146,7 +148,14 @@ mod tests {
         // Case 3: With 'from' parameter
         let from = "1728412700914".to_string();
         let result = client
-            .get_messages(&test_process, &Some(from.clone()), &None, &None)
+            .get_messages(
+                &test_process,
+                &Some(from.clone()),
+                &None,
+                &None,
+                &None,
+                &None,
+            )
             .await?;
         assert!(result
             .edges
@@ -156,7 +165,7 @@ mod tests {
         // // Case 4: With 'to' parameter
         let to = "1728412714154".to_string();
         let result = client
-            .get_messages(&test_process, &None, &Some(to.clone()), &None)
+            .get_messages(&test_process, &None, &Some(to.clone()), &None, &None, &None)
             .await?;
         assert!(result
             .edges
@@ -165,7 +174,14 @@ mod tests {
 
         // // Case 5: With 'from' and 'to' parameters
         let result = client
-            .get_messages(&test_process, &Some(from.clone()), &Some(to.clone()), &None)
+            .get_messages(
+                &test_process,
+                &Some(from.clone()),
+                &Some(to.clone()),
+                &None,
+                &None,
+                &None,
+            )
             .await?;
         assert!(result.edges.iter().all(|m| {
             let timestamp = m.node.timestamp().unwrap();
@@ -179,6 +195,8 @@ mod tests {
                 &Some(from.clone()),
                 &Some(to.clone()),
                 &Some(limit),
+                &None,
+                &None,
             )
             .await?;
         assert!(result.edges.iter().all(|m| {
@@ -229,7 +247,7 @@ mod tests {
 
         // Retrieve messages and check length, nonce order, and continuity
         let result = client
-            .get_messages(&test_process, &None, &None, &None)
+            .get_messages(&test_process, &None, &None, &None, &None, &None)
             .await?;
         let mut previous_nonce: Option<i32> = None;
 
@@ -249,6 +267,22 @@ mod tests {
 
             previous_nonce = Some(current_nonce);
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_deep_hash_version() -> Result<(), StoreErrorType> {
+        let test_db = TestDb::new(6);
+        let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
+
+        client
+            .save_deephash_version(&"pid".to_string(), &"1.0".to_string())
+            .await?;
+
+        let dhv = client.get_deephash_version(&"pid".to_string()).await?;
+
+        assert_eq!(dhv, "1.0".to_string());
 
         Ok(())
     }

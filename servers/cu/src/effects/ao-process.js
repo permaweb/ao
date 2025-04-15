@@ -4,7 +4,7 @@ import { Readable } from 'node:stream'
 import { join } from 'node:path'
 
 import { fromPromise, of, Rejected, Resolved } from 'hyper-async'
-import { add, always, applySpec, compose, defaultTo, evolve, filter, head, identity, ifElse, isEmpty, isNotNil, map, omit, path, pathOr, pipe, prop, transduce } from 'ramda'
+import { add, always, applySpec, defaultTo, evolve, head, identity, ifElse, isEmpty, isNotNil, omit, path, pathOr, pipe, prop } from 'ramda'
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 import AsyncLock from 'async-lock'
@@ -798,7 +798,14 @@ export function findLatestProcessMemoryWith ({
   PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
   IGNORE_ARWEAVE_CHECKPOINTS,
   PROCESS_CHECKPOINT_TRUSTED_OWNERS,
-  logger: _logger
+  PROCESS_CHECKPOINT_PREFERRED_OWNERS,
+  logger: _logger,
+  readStateFromCheckpoint,
+  hashWasmMemory,
+  CHECKPONT_VALIDATION_STEPS,
+  CHECKPONT_VALIDATION_THRESH,
+  CHECKPONT_VALIDATION_RETRIES,
+  IGNORE_LOCAL_CHECKPOINTS
 }) {
   const logger = _logger.child('ao-process:findLatestProcessMemory')
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -807,6 +814,7 @@ export function findLatestProcessMemoryWith ({
   findFileCheckpointBefore = fromPromise(findFileCheckpointBefore)
   loadTransactionData = fromPromise(loadTransactionData)
   findRecordCheckpointBefore = fromPromise(findRecordCheckpointBefore)
+  hashWasmMemory = fromPromise(hashWasmMemory)
 
   const IGNORED_CHECKPOINTS = new Set(IGNORE_ARWEAVE_CHECKPOINTS)
   const isCheckpointIgnored = (id) => !!IGNORED_CHECKPOINTS.size && IGNORED_CHECKPOINTS.has(id)
@@ -845,49 +853,165 @@ export function findLatestProcessMemoryWith ({
     }
   `
 
-  /**
-   * TODO: lots of room for optimization here
-   */
-  function determineLatestCheckpoint (edges) {
-    return transduce(
-      compose(
-        map(prop('node')),
-        filter((node) => {
-          const isIgnored = isCheckpointIgnored(node.id)
-          if (isIgnored) logger('Encountered Ignored Checkpoint "%s" from Arweave. Skipping...', node.id)
-          return !isIgnored
-        }),
-        map((node) => {
-          const tags = parseTags(node.tags)
-          return {
-            id: node.id,
-            timestamp: parseInt(tags.Timestamp),
-            assignmentId: tags.Assignment,
-            hashChain: tags['Hash-Chain'],
-            /**
-             * Due to a previous bug, these tags may sometimes
-             * be invalid values, so we've added a utility
-             * to map those invalid values to a valid value
-             */
-            epoch: maybeParseInt(tags.Epoch),
-            nonce: maybeParseInt(tags.Nonce),
-            ordinate: tags.Nonce,
-            module: tags.Module,
-            blockHeight: parseInt(tags['Block-Height']),
-            cron: tags['Cron-Interval'],
-            encoding: tags['Content-Encoding']
-          }
+  const removeIgnoredCheckpoints = ({ checkpoints, preferredCheckponts }) => {
+    if (!checkpoints || !checkpoints.length) return { checkpoints: [], preferredCheckponts }
+    return { checkpoints: checkpoints.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)), preferredCheckponts }
+  }
+
+  const removeIgnoredPreferredCheckpoints = ({ checkpoints, preferredCheckponts }) => {
+    if (!preferredCheckponts || !preferredCheckponts.length) return { checkpoints, preferredCheckponts: [] }
+    return { checkpoints, preferredCheckponts: preferredCheckponts.filter((checkpoint) => !isCheckpointIgnored(checkpoint.node.id)) }
+  }
+
+  const findLatestVerified = async ({ checkpoints, preferredCheckponts }) => {
+    const checkpointsToUse = preferredCheckponts.length > 0 ? preferredCheckponts : checkpoints
+
+    if (checkpointsToUse.length <= CHECKPONT_VALIDATION_STEPS + CHECKPONT_VALIDATION_RETRIES) {
+      if (checkpointsToUse.length >= 1) {
+        const sorted = checkpointsToUse.sort((a, b) => {
+          return parseInt(
+            b.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(a.node.tags.find((tag) => tag.name === 'Nonce').value
+          )
         })
-      ),
-      /**
-       * Pass the LATEST flag, which configures latestCheckpointBefore
-       * to only be concerned with finding the absolute latest checkpoint
-       * in the list
-       */
-      latestCheckpointBefore(LATEST),
-      undefined,
-      edges
-    )
+        const useFirst = sorted[0]
+        const finalTags = parseTags(useFirst.node.tags)
+        logger(`Not enough checkpoints for verfication, use first checkpoint id: ${useFirst.node.id} Process: ${finalTags.Process}`)
+        const firstMemory = await downloadCheckpointFromArweave({
+          id: useFirst.node.id,
+          encoding: useFirst.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
+        }).toPromise()
+        return {
+          id: useFirst.node.id,
+          timestamp: parseInt(finalTags.Timestamp),
+          assignmentId: finalTags.Assignment,
+          hashChain: finalTags['Hash-Chain'],
+          epoch: maybeParseInt(finalTags.Epoch),
+          nonce: maybeParseInt(finalTags.Nonce),
+          ordinate: finalTags.Nonce,
+          module: finalTags.Module,
+          blockHeight: parseInt(finalTags['Block-Height']),
+          cron: finalTags['Cron-Interval'],
+          encoding: finalTags['Content-Encoding'],
+          Memory: firstMemory
+        }
+      } else {
+        return
+      }
+    }
+
+    logger(`FINDING LATEST VERIFIED CHECKPOINT FROM LIST OF CHECKPOINTS OF LENGTH ${checkpointsToUse.length}`)
+    const oldestToNewestCheckpoints = [...checkpointsToUse].reverse().sort((a, b) => {
+      return parseInt(
+        a.node.tags.find((tag) => tag.name === 'Nonce').value) - parseInt(b.node.tags.find((tag) => tag.name === 'Nonce').value
+      )
+    })
+
+    for (let i = 0; i < CHECKPONT_VALIDATION_RETRIES; i++) {
+      logger.tap(`CHECKPONT_VALIDATION_RETRIES: ${i}, slice: ${oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i}:${oldestToNewestCheckpoints.length - i}`)
+      const verifierSet = oldestToNewestCheckpoints.slice(
+        oldestToNewestCheckpoints.length - CHECKPONT_VALIDATION_STEPS - i,
+        oldestToNewestCheckpoints.length - i
+      )
+
+      let currentCheckpoint = verifierSet[0]
+      let correct = 0
+      let currentMemory = await downloadCheckpointFromArweave({
+        id: currentCheckpoint.node.id,
+        encoding: currentCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
+      }).toPromise()
+
+      for (let j = 1; j < verifierSet.length; j++) {
+        logger(`Checkpoint Iteration ${j}:, { checkpointNonce: ${verifierSet[j].node.tags.find((tag) => tag.name === 'Nonce').value}}`)
+        const nextCheckpoint = verifierSet[j]
+
+        const currentTags = parseTags(currentCheckpoint.node.tags)
+        const nextTags = parseTags(nextCheckpoint.node.tags)
+
+        logger(`Nonce Pair, { currentNonce: ${currentTags.Nonce}, nextNonce: ${nextTags.Nonce} }`)
+        const evalArgs = {
+          checkpoint: {
+            id: currentCheckpoint.node.id,
+            timestamp: parseInt(currentTags.Timestamp),
+            assignmentId: currentTags.Assignment,
+            hashChain: currentTags['Hash-Chain'],
+            epoch: maybeParseInt(currentTags.Epoch),
+            nonce: maybeParseInt(currentTags.Nonce),
+            ordinate: currentTags.Nonce,
+            module: currentTags.Module,
+            blockHeight: parseInt(currentTags['Block-Height']),
+            cron: currentTags['Cron-Interval'],
+            encoding: currentTags['Content-Encoding']
+          },
+          to: parseInt(nextTags.Timestamp),
+          needsOnlyMemory: false,
+          processId: nextTags.Process,
+          Memory: currentMemory
+        }
+
+        const result = await readStateFromCheckpoint(evalArgs)
+        logger(`Last from validation result, { last: ${JSON.stringify(result.last)} }`)
+        const resultMemory = Buffer.from(result.result.Memory)
+        const arweaveCheckpoint = await downloadCheckpointFromArweave({
+          id: nextCheckpoint.node.id,
+          encoding: nextCheckpoint.node.tags.find((tag) => tag.name === 'Content-Encoding')?.value || ''
+        }).toPromise()
+
+        const nextCheckpointMemory = Buffer.from(arweaveCheckpoint)
+
+        const memorysMatch = compareArrayBuffers(Buffer.from(resultMemory), Buffer.from(nextCheckpointMemory))
+        logger(`Memories match, { ${memorysMatch} }`)
+
+        if (memorysMatch) {
+          correct++
+        }
+        currentMemory = resultMemory
+        currentCheckpoint = nextCheckpoint
+      }
+
+      if ((correct / CHECKPONT_VALIDATION_STEPS) >= CHECKPONT_VALIDATION_THRESH) {
+        const finalTags = parseTags(currentCheckpoint.node.tags)
+        logger(`Determined correct checkpoint id: ${currentCheckpoint.node.id} Process: ${finalTags.Process}`)
+        logger(`Votes: ${correct}`)
+        return {
+          id: currentCheckpoint.node.id,
+          timestamp: parseInt(finalTags.Timestamp),
+          assignmentId: finalTags.Assignment,
+          hashChain: finalTags['Hash-Chain'],
+          epoch: maybeParseInt(finalTags.Epoch),
+          nonce: maybeParseInt(finalTags.Nonce),
+          ordinate: finalTags.Nonce,
+          module: finalTags.Module,
+          blockHeight: parseInt(finalTags['Block-Height']),
+          cron: finalTags['Cron-Interval'],
+          encoding: finalTags['Content-Encoding'],
+          Memory: currentMemory
+        }
+      } else {
+        logger(`Determined incorrect checkpoint id:  ${currentCheckpoint.node.id}`)
+      }
+    }
+  }
+
+  const compareArrayBuffers = (buffer1, buffer2) => {
+    if (buffer1.byteLength !== buffer2.byteLength) return false
+
+    const view1 = new Uint8Array(buffer1)
+    const view2 = new Uint8Array(buffer2)
+
+    for (let i = 0; i < view1.length; i++) {
+      if (view1[i] !== view2[i]) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const determineLatestVerifiedCheckpoint = ({ checkpoints, preferredCheckponts }) => {
+    return of({ checkpoints, preferredCheckponts })
+      .map(removeIgnoredCheckpoints)
+      .map(removeIgnoredPreferredCheckpoints)
+      .chain(fromPromise(findLatestVerified))
   }
 
   function decodeData (encoding) {
@@ -1006,6 +1130,12 @@ export function findLatestProcessMemoryWith ({
    */
   function maybeFile (args) {
     const { processId, omitMemory } = args
+
+    if (IGNORE_LOCAL_CHECKPOINTS) {
+      logger('Local Checkpoints are ignored for this CU. Not attempting to query file checkpoints...', processId)
+      return Rejected(args)
+    }
+
     /**
      * Attempt to find the latest checkpoint in a file
      */
@@ -1060,6 +1190,10 @@ export function findLatestProcessMemoryWith ({
 
   function maybeRecord (args) {
     const { processId, omitMemory } = args
+    if (IGNORE_LOCAL_CHECKPOINTS) {
+      logger('Local Checkpoints are ignored for this CU. Not attempting to query record checkpoints...', processId)
+      return Rejected(args)
+    }
 
     if (PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.includes(processId)) {
       logger('Arweave Checkpoints are ignored for process "%s". Not attempting to query file checkpoints...', processId)
@@ -1138,7 +1272,7 @@ export function findLatestProcessMemoryWith ({
       return Rejected(args)
     }
 
-    return of({ PROCESS_CHECKPOINT_TRUSTED_OWNERS })
+    return of({ PROCESS_CHECKPOINT_TRUSTED_OWNERS, PROCESS_CHECKPOINT_PREFERRED_OWNERS })
       .chain(({ PROCESS_CHECKPOINT_TRUSTED_OWNERS }) => {
         if (isEmpty(PROCESS_CHECKPOINT_TRUSTED_OWNERS)) return address()
         return Resolved(PROCESS_CHECKPOINT_TRUSTED_OWNERS)
@@ -1153,18 +1287,50 @@ export function findLatestProcessMemoryWith ({
         })
       })
       .map(path(['data', 'transactions', 'edges']))
-      .map(determineLatestCheckpoint)
+      .chain((nonPreferredCheckpoints) => {
+        if (isEmpty(PROCESS_CHECKPOINT_PREFERRED_OWNERS)) {
+          return of({ checkpoints: nonPreferredCheckpoints, preferredCheckponts: [] })
+        }
+        return of(PROCESS_CHECKPOINT_PREFERRED_OWNERS)
+          .map((owners) => ifElse(Array.isArray, always(owners), always([owners]))(owners))
+          .chain((owners) => {
+            return queryCheckpoints({
+              query: GET_AO_PROCESS_CHECKPOINTS,
+              variables: { owners, processId, limit: 50 },
+              processId,
+              before: LATEST
+            })
+          })
+          .map(path(['data', 'transactions', 'edges']))
+          .map((preferredCheckponts) => {
+            return {
+              checkpoints: nonPreferredCheckpoints,
+              preferredCheckponts
+            }
+          })
+      })
+      .chain(determineLatestVerifiedCheckpoint)
+      .bimap(
+        (err) => {
+          logger('Latest checkpoint verification error', { err })
+          return err
+        },
+        (res) => {
+          return res
+        }
+      )
       .chain((latestCheckpoint) => {
         if (!latestCheckpoint) return Rejected(args)
 
         /**
-         * We have found a Checkpoint that we can use, so
-         * now let's load the snapshotted Memory from arweave
+         * We have found a Checkpoint that we can use, and
+         * have evaluated up to its memory to verify, so we
+         * return the already calculated memory
          */
         return of()
-          .chain(() => {
-            if (omitMemory) return Resolved(null)
-            return downloadCheckpointFromArweave(latestCheckpoint)
+          .map(() => {
+            if (omitMemory) return null
+            return latestCheckpoint.Memory
           })
           /**
            * Finally map the Checkpoint to the expected shape
@@ -1312,9 +1478,12 @@ export function findLatestProcessMemoryWith ({
   }
 }
 
-export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD }) {
-  return async ({ processId, moduleId, assignmentId, messageId, hashChain, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, gasUsed }) => {
+export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD }) {
+  return async ({ processId, moduleId, assignmentId, messageId, hashChain, timestamp, epoch, nonce, ordinate, cron, blockHeight, Memory, gasUsed, evalTime }) => {
     const cached = cache.get(processId)
+
+    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
+    let incrementedEvalTime = pathOr(0, ['evaluation', 'evalTime'], cached)
 
     /**
      * Ensure that we are always caching a Buffer and not a TypedArray
@@ -1331,7 +1500,6 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
      * the value currently cached, so overwrite it
      */
 
-    let incrementedGasUsed = pathOr(BigInt(0), ['evaluation', 'gasUsed'], cached)
     /**
      * The cache is being reseeded ie. Memory was reloaded from a file
      */
@@ -1353,11 +1521,20 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
         processId,
         { messageId, timestamp, ordinate, cron, blockHeight }
       )
+
       incrementedGasUsed = pipe(
         pathOr(BigInt(0), ['evaluation', 'gasUsed']),
         add(gasUsed || BigInt(0))
       )(cached)
+
+      incrementedEvalTime = pipe(
+        pathOr(0, ['evaluation', 'evalTime']),
+        add(evalTime || 0)
+      )(cached)
     }
+    const gasThresholdReached = incrementedGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && incrementedGasUsed >= EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD
+    const evalTimeThresholdReached = incrementedEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && incrementedEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+    const eitherThresholdReached = gasThresholdReached || evalTimeThresholdReached
 
     const evaluation = {
       processId,
@@ -1378,16 +1555,17 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
        */
       encoding: undefined,
       cron,
-      gasUsed: incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? incrementedGasUsed : 0
+      gasUsed: eitherThresholdReached ? 0 : incrementedGasUsed,
+      evalTime: eitherThresholdReached ? 0 : incrementedEvalTime
     }
     // cache.set(processId, { Memory: zipped, evaluation })
     cache.set(processId, { Memory, evaluation })
 
-    if (!incrementedGasUsed || !EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || incrementedGasUsed < EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) return
+    if (!eitherThresholdReached) return
     /**
      * Eagerly create the Checkpoint on the next event queue drain
      */
-    setImmediate(() => {
+    if (gasThresholdReached) {
       logger(
         'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met when evaluating process "%s" up to "%j" -- "%d" gas used. Eagerly creating a Checkpoint...',
         EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
@@ -1395,20 +1573,28 @@ export function saveLatestProcessMemoryWith ({ cache, logger, saveCheckpoint, EA
         { messageId, timestamp, ordinate, cron, blockHeight },
         incrementedGasUsed
       )
+    } else {
+      logger(
+        'Eager Checkpoint Accumulated Eval Time Threshold of "%d" ms eval time met when evaluating process "%s" up to "%j" -- "%d" ms eval time. Eagerly creating a Checkpoint...',
+        EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+        processId,
+        { messageId, timestamp, ordinate, cron, blockHeight },
+        incrementedEvalTime
+      )
+    }
 
-      /**
-       * Memory will always be defined at this point, so no reason
-       * to pass File
-       */
-      return saveCheckpoint({ Memory, ...evaluation })
-        .catch((err) => {
-          logger(
-            'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
-            evaluation,
-            err
-          )
-        })
-    })
+    /**
+     * Memory will always be defined at this point, so no reason
+     * to pass File
+     */
+    return saveCheckpoint({ Memory, ...evaluation })
+      .catch((err) => {
+        logger(
+          'Error occurred when creating Eager Checkpoint for evaluation "%j". Skipping...',
+          evaluation,
+          err
+        )
+      })
   }
 }
 
@@ -1427,6 +1613,7 @@ export function saveCheckpointWith ({
   PROCESS_CHECKPOINT_CREATION_THROTTLE,
   DISABLE_PROCESS_CHECKPOINT_CREATION,
   DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
+  CU_IDENTIFIER,
   recentCheckpoints = new Map()
 }) {
   readProcessMemoryFile = fromPromise(readProcessMemoryFile)
@@ -1485,7 +1672,7 @@ export function saveCheckpointWith ({
     }
   `
 
-  function createCheckpointDataItem (args) {
+  const createCheckpointDataItemWith = ({ CU_IDENTIFIER }) => (args) => {
     const { moduleId, processId, assignmentId, hashChain, epoch, nonce, ordinate, timestamp, blockHeight, cron, encoding, Memory } = args
 
     return of(Memory)
@@ -1518,7 +1705,10 @@ export function saveCheckpointWith ({
                  * We will always upload Checkpoints to Arweave as
                  * gzipped encoded (see below)
                  */
-                { name: 'Content-Encoding', value: 'gzip' }
+                { name: 'Content-Encoding', value: 'gzip' },
+                { name: 'Unit-Identifier', value: CU_IDENTIFIER },
+                { name: 'Ordinate', value: `${ordinate}`.trim() }
+
               ]
             }
 
@@ -1660,7 +1850,7 @@ export function saveCheckpointWith ({
       )
   }
 
-  function createArweaveCheckpoint (args) {
+  const createArweaveCheckpointWith = ({ CU_IDENTIFIER }) => (args) => {
     const { encoding, processId, moduleId, assignmentId, hashChain, timestamp, epoch, ordinate, nonce, blockHeight, cron } = args
 
     if (DISABLE_PROCESS_CHECKPOINT_CREATION) return Rejected('arweave checkpoint creation is disabled')
@@ -1696,6 +1886,7 @@ export function saveCheckpointWith ({
       }))
       .map(path(['data', 'transactions', 'edges', '0']))
       .chain((checkpoint) => {
+        const createCheckpointDataItem = createCheckpointDataItemWith({ CU_IDENTIFIER })
         if (checkpoint) {
           if (!Array.isArray(checkpoint.node.tags)) {
             // TODO: should probably use a Zod schema to verify 'queryCheckpoints' returns the data structure we expect
@@ -1791,6 +1982,8 @@ export function saveCheckpointWith ({
           .map(() => ctx)
       })
   }
+
+  const createArweaveCheckpoint = createArweaveCheckpointWith({ CU_IDENTIFIER })
 
   function createCheckpoints (args) {
     return of(args)

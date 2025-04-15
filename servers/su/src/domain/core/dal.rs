@@ -69,6 +69,14 @@ pub trait Config: Send + Sync {
     fn scheduler_list_path(&self) -> String;
     fn enable_process_assignment(&self) -> bool;
     fn enable_deep_hash_checks(&self) -> bool;
+    fn current_deephash_version(&self) -> String;
+    fn deephash_recalc_limit(&self) -> i32;
+    fn use_local_store(&self) -> bool;
+    fn use_disk(&self) -> bool;
+    fn warmup_delay(&self) -> u64;
+    fn enable_router_check(&self) -> bool;
+    fn router_url(&self) -> String;
+    fn assignment(&self) -> String;
 }
 
 #[derive(Debug)]
@@ -136,14 +144,37 @@ pub trait DataStore: Send + Sync {
         from: &Option<String>,
         to: &Option<String>,
         limit: &Option<i32>,
+        from_nonce: &Option<String>,
+        to_nonce: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType>;
+    async fn get_message_bundles(
+        &self,
+        process: &Process,
+        from: &Option<String>,
+        limit: &Option<i32>,
+    ) -> Result<(Vec<(String, Vec<u8>)>, bool), StoreErrorType>;
     fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
     async fn get_latest_message(
         &self,
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType>;
     fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
-    async fn check_existing_deep_hash(&self, process_id: &String, deep_hash: &String) -> Result<(), StoreErrorType>;
+    async fn check_existing_deep_hash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType>;
+    async fn get_deephash_version(&self, process_id: &String) -> Result<String, StoreErrorType>;
+    async fn save_deephash_version(
+        &self,
+        process_id: &String,
+        version: &String,
+    ) -> Result<(), StoreErrorType>;
+    async fn save_deephash(
+        &self,
+        process_id: &String,
+        deep_hash: &String,
+    ) -> Result<(), StoreErrorType>;
 }
 
 #[async_trait]
@@ -202,7 +233,6 @@ impl RouterDataStore for MockRouterDataStore {
     }
 }
 
-
 pub trait CoreMetrics: Send + Sync {
     fn get_process_observe(&self, duration: u128);
     fn get_message_observe(&self, duration: u128);
@@ -212,4 +242,15 @@ pub trait CoreMetrics: Send + Sync {
     fn write_assignment_observe(&self, duration: u128);
     fn acquire_write_lock_observe(&self, duration: u128);
     fn failed_message_save(&self);
+}
+
+#[async_trait]
+pub trait ExtRouter: Send + Sync {
+    async fn get_routed_assignment(&self, process_id: String) -> Result<String, ExtRouterErrorType>;
+}
+
+pub enum ExtRouterErrorType {
+    NotFound(String),
+    NetworkError(String),
+    ConfigError(String)
 }

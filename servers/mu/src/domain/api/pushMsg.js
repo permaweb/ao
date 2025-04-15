@@ -1,7 +1,9 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+import { __, assoc, identity } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
+import { getCustomCuAddressWith } from '../lib/get-custom-cu-address.js'
 
 export function pushMsgWith ({
   selectNode,
@@ -9,13 +11,22 @@ export function pushMsgWith ({
   fetchTransactions,
   crank,
   logger,
-  ALLOW_PUSHES_AFTER
+  ALLOW_PUSHES_AFTER,
+  ENABLE_PUSH,
+  ENABLE_CUSTOM_PUSH,
+  CUSTOM_CU_MAP_FILE_PATH
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
+  const getCustomCuAddress = getCustomCuAddressWith({ CUSTOM_CU_MAP_FILE_PATH, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
   const fetchTransactionsAsync = fromPromise(fetchTransactions)
 
   return (ctx) => {
+    // If push is disabled, return the context immediately
+    if (!ENABLE_PUSH) {
+      return Rejected('Push is disabled')
+    }
+
     return of(ctx)
       .chain((ctx) => {
         return fetchTransactionsAsync([ctx.tx.id])
@@ -31,7 +42,12 @@ export function pushMsgWith ({
         }
         return Rejected(new Error('Message id not found on the gateway.', { cause: ctx }))
       })
-      .chain(getCuAddress)
+      .chain((ctx) => {
+        if (ENABLE_CUSTOM_PUSH && ctx.customCu) {
+          return getCustomCuAddress(ctx)
+        }
+        return getCuAddress(ctx)
+      })
       .chain(pullResult)
       .chain((res) => {
         const { msgs, number } = res

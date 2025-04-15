@@ -71,11 +71,15 @@ export const domainConfigSchema = z.object({
   DISABLE_TRACE: z.boolean(),
   SPAWN_PUSH_ENABLED: z.boolean(),
   ALLOW_PUSHES_AFTER: positiveIntSchema,
+  ENABLE_MESSAGE_RECOVERY: z.boolean(),
   GET_RESULT_MAX_RETRIES: positiveIntSchema,
   GET_RESULT_RETRY_DELAY: positiveIntSchema,
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
   MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
-  RELAY_MAP: jsonObjectSchema
+  RELAY_MAP: jsonObjectSchema,
+  ENABLE_PUSH: z.boolean(),
+  ENABLE_CUSTOM_PUSH: z.boolean(),
+  CUSTOM_CU_MAP_FILE_PATH: z.string()
 })
 
 /**
@@ -122,11 +126,15 @@ const CONFIG_ENVS = {
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
     SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
     ALLOW_PUSHES_AFTER: process.env.ALLOW_PUSHES_AFTER || 1580000,
+    ENABLE_MESSAGE_RECOVERY: process.env.ENABLE_MESSAGE_RECOVERY === 'true',
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_MAP: process.env.RELAY_MAP || ''
+    RELAY_MAP: process.env.RELAY_MAP || '',
+    ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
+    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
+    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json'
   },
   production: {
     MODE,
@@ -150,11 +158,15 @@ const CONFIG_ENVS = {
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
     SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
     ALLOW_PUSHES_AFTER: process.env.ALLOW_PUSHES_AFTER || 1580000,
+    ENABLE_MESSAGE_RECOVERY: process.env.ENABLE_MESSAGE_RECOVERY === 'true',
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_MAP: process.env.RELAY_MAP || ''
+    RELAY_MAP: process.env.RELAY_MAP || '',
+    ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
+    ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
+    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json'
   }
 }
 

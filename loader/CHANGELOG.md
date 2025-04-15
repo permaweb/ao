@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.48](https://github.com/permaweb/ao/compare/loader@v0.0.47...loader@v0.0.48) (2025-02-23)
+
+
+### Features
+
+* **loader:** add optional patches return array for mainnet ([ccc6dc9](https://github.com/permaweb/ao/commit/ccc6dc967b0443afef16e8e6e88efd8abcb81d5d))
+
+
+### Bug Fixes
+
+* **loader:** improved tests to add host tests ([88d8289](https://github.com/permaweb/ao/commit/88d8289e424ea8e307d2e80dcbcd1724f08d9fe7))
+
 ## [0.0.47](https://github.com/permaweb/ao/compare/loader@v0.0.46...loader@v0.0.47) (2025-02-15)
 
 

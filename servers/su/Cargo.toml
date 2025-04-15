@@ -35,6 +35,11 @@ lazy_static = "1.5.0"
 avro-rs = "0.13.0"
 tempdir = "0.3.7"
 
+rand = "0.8.5"
+data-encoding = "2.3.2"
+k256 = "0.13.4"
+sha3 = "0.10.8"
+
 [[bin]]
 name = "su"
 path = "src/main.rs"

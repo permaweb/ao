@@ -230,11 +230,11 @@ impl Gateway for ArweaveGateway {
             .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?;
 
         if response.status().is_success() {
-          let body = response
-              .bytes()
-              .await
-              .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?;
-          Ok(body.to_vec())
+            let body = response
+                .bytes()
+                .await
+                .map_err(|e| GatewayErrorType::StatusError(e.to_string()))?;
+            Ok(body.to_vec())
         } else {
             Err(format!(
                 "Failed to get status. Status code: {}",

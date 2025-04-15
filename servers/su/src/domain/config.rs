@@ -44,6 +44,14 @@ pub struct AoConfig {
     pub su_index_sync_db_dir: String,
 
     pub enable_deep_hash_checks: bool,
+
+    pub current_deephash_version: String,
+    pub deephash_recalc_limit: i32,
+    pub warmup_delay: u64,
+
+    pub enable_router_check: bool,
+    pub router_url: String,
+    pub assignment: String
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -92,7 +100,12 @@ fn get_db_dirs() -> (String, String, String, String) {
         }
     };
 
-    (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir)
+    (
+        su_file_db_dir,
+        su_index_db_dir,
+        su_file_sync_db_dir,
+        su_index_sync_db_dir,
+    )
 }
 
 impl AoConfig {
@@ -161,11 +174,43 @@ impl AoConfig {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
-        let (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir) = get_db_dirs();
+        let (su_file_db_dir, su_index_db_dir, su_file_sync_db_dir, su_index_sync_db_dir) =
+            get_db_dirs();
         let enable_deep_hash_checks = match env::var("ENABLE_DEEP_HASH_CHECKS") {
             Ok(val) => val == "true",
             Err(_e) => false,
         };
+
+        let current_deephash_version = match env::var("CURRENT_DEEPHASH_VERSION") {
+            Ok(val) => val,
+            Err(_e) => "1.0".to_string(),
+        };
+
+        let deephash_recalc_limit = match env::var("DEEPHASH_RECALC_LIMIT") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 400,
+        };
+
+        let warmup_delay = match env::var("WARMUP_DELAY") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 30,
+        };
+
+        let enable_router_check = match env::var("ENABLE_ROUTER_CHECK") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
+
+        let router_url = match env::var("ROUTER_URL") {
+            Ok(val) => val,
+            Err(_e) => "https://su-router.ao-testnet.xyz".to_string(),
+        };
+
+        let assignment = match env::var("ASSIGNMENT") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -190,7 +235,13 @@ impl AoConfig {
             su_index_db_dir,
             enable_deep_hash_checks,
             su_file_sync_db_dir,
-            su_index_sync_db_dir
+            su_index_sync_db_dir,
+            current_deephash_version,
+            deephash_recalc_limit,
+            warmup_delay,
+            enable_router_check,
+            router_url,
+            assignment
         })
     }
 }
@@ -207,5 +258,29 @@ impl Config for AoConfig {
     }
     fn enable_deep_hash_checks(&self) -> bool {
         self.enable_deep_hash_checks.clone()
+    }
+    fn current_deephash_version(&self) -> String {
+        self.current_deephash_version.clone()
+    }
+    fn deephash_recalc_limit(&self) -> i32 {
+        self.deephash_recalc_limit.clone()
+    }
+    fn use_local_store(&self) -> bool {
+        self.use_local_store.clone()
+    }
+    fn use_disk(&self) -> bool {
+        self.use_disk.clone()
+    }
+    fn warmup_delay(&self) -> u64 {
+        self.warmup_delay.clone()
+    }
+    fn enable_router_check(&self) -> bool {
+        self.enable_router_check.clone()
+    }
+    fn router_url(&self) -> String {
+        self.router_url.clone()
+    }
+    fn assignment(&self) -> String {
+        self.assignment.clone()
     }
 }

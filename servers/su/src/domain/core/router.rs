@@ -1,7 +1,7 @@
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::{fmt::Debug, sync::Arc};
 use tokio::{fs::File, io::AsyncReadExt};
-use sha2::{Digest, Sha256};
 
 use super::builder::Builder;
 use crate::domain::core::dal::StoreErrorType;
@@ -41,10 +41,10 @@ struct SchedulerEntry {
 }
 
 pub fn hash(data: &[u8]) -> Vec<u8> {
-  let mut hasher = Sha256::new();
-  hasher.update(data);
-  let result = hasher.finalize();
-  result.to_vec()
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    result.to_vec()
 }
 
 /*
@@ -78,7 +78,7 @@ pub async fn init_schedulers(deps: Arc<Deps>) -> Result<String, String> {
                 process_count: 0,
                 no_route: entry.no_route,
                 wallets_to_route: entry.wallets_to_route.clone(),
-                wallets_only: entry.wallets_only
+                wallets_only: entry.wallets_only,
             };
             deps.router_data_store.save_scheduler(&scheduler)?;
             deps.logger
@@ -178,13 +178,13 @@ pub async fn redirect_data_item(
     let target = item.target().clone();
     let type_tag = tags
         .iter()
-        .find(|tag| tag.name == "Type")
+        .find(|tag| tag.name == "Type" || tag.name == "type")
         .ok_or("Cannot redirect data item, invalid Type Tag")?;
     let owner = item.owner().clone();
 
     let owner_bytes = match base64_url::decode(&owner) {
-      Ok(h) => h,
-      Err(_) => return Err("Failed to parse owner".to_string())
+        Ok(h) => h,
+        Err(_) => return Err("Failed to parse owner".to_string()),
     };
     let address_hash = hash(&owner_bytes);
     let owner_address = base64_url::encode(&address_hash);
@@ -203,7 +203,7 @@ pub async fn redirect_data_item(
                 .collect::<Vec<_>>();
 
             /*
-                This logic is added for routing wallet addresses to 
+                This logic is added for routing wallet addresses to
                 specific schedulers. It will find the first scheduler
                 with a wallet matching the owner and route the new spawn
                 there.
@@ -211,34 +211,34 @@ pub async fn redirect_data_item(
             for scheduler in schedulers.iter_mut() {
                 match &scheduler.wallets_to_route {
                     Some(w) => {
-                        let wallets: Vec<String> = w.split(',')
-                            .map(|s| s.trim().to_string())
-                            .collect();
-                        
+                        let wallets: Vec<String> =
+                            w.split(',').map(|s| s.trim().to_string()).collect();
+
                         for wallet in wallets {
                             if owner_address == wallet {
-                              scheduler.process_count += 1;
-                              deps.router_data_store.update_scheduler(scheduler)?;
+                                scheduler.process_count += 1;
+                                deps.router_data_store.update_scheduler(scheduler)?;
 
-                              let scheduler_row_id = if let Some(m_scheduler_row_id) = scheduler.row_id {
-                                  m_scheduler_row_id
-                              } else {
-                                  /*
-                                      this should be unreachable but return an error
-                                      just in case so the router doesn't crash
-                                  */
-                                  return Err("Missing id on scheduler".to_string());
-                              };
+                                let scheduler_row_id =
+                                    if let Some(m_scheduler_row_id) = scheduler.row_id {
+                                        m_scheduler_row_id
+                                    } else {
+                                        /*
+                                            this should be unreachable but return an error
+                                            just in case so the router doesn't crash
+                                        */
+                                        return Err("Missing id on scheduler".to_string());
+                                    };
 
-                              let process_scheduler = ProcessScheduler {
-                                  row_id: None,
-                                  scheduler_row_id,
-                                  process_id: id,
-                              };
-                              deps.router_data_store
-                                  .save_process_scheduler(&process_scheduler)?;
+                                let process_scheduler = ProcessScheduler {
+                                    row_id: None,
+                                    scheduler_row_id,
+                                    process_id: id,
+                                };
+                                deps.router_data_store
+                                    .save_process_scheduler(&process_scheduler)?;
 
-                              return Ok(Some(scheduler.url.clone()));
+                                return Ok(Some(scheduler.url.clone()));
                             }
                         }
                     }

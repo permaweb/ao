@@ -1,11 +1,10 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { writeFile, mkdir, rename as renameFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { BroadcastChannel } from 'node:worker_threads'
 
-import pMap from 'p-map'
 import PQueue from 'p-queue'
 import Dataloader from 'dataloader'
 import workerpool from 'workerpool'
@@ -26,6 +25,7 @@ import * as MetricsClient from './effects/metrics.js'
 
 import { readResultWith } from './domain/api/readResult.js'
 import { readStateWith, pendingReadStates } from './domain/api/readState.js'
+import { readStateFromCheckpointWith } from './domain/api/readStateFromCheckpoint.js'
 import { readCronResultsWith } from './domain/api/readCronResults.js'
 import { healthcheckWith } from './domain/api/healthcheck.js'
 import { readResultsWith } from './domain/api/readResults.js'
@@ -52,6 +52,8 @@ async function readFile (file) {
 
 export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
+  const CU_IDENTIFIER = randomUUID()
+  ctx.logger('CU Identifier: %s', CU_IDENTIFIER)
 
   const setTimeout = (...args) => lt.setTimeout(...args)
   const clearTimeout = (...args) => lt.clearTimeout(...args)
@@ -236,7 +238,8 @@ export const createApis = async (ctx) => {
     DISABLE_PROCESS_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_CHECKPOINT_CREATION,
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION,
     PROCESS_CHECKPOINT_CREATION_THROTTLE: ctx.PROCESS_CHECKPOINT_CREATION_THROTTLE,
-    PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR
+    PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: ctx.PROCESS_MEMORY_FILE_CHECKPOINTS_DIR,
+    CU_IDENTIFIER
   })
 
   const wasmMemoryCache = await AoProcessClient.createProcessMemoryCache({
@@ -315,82 +318,155 @@ export const createApis = async (ctx) => {
 
   const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
 
-  const sharedDeps = (logger) => ({
-    loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
-    loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
-    isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
-    findProcess: AoProcessClient.findProcessWith({ db, logger }),
-    findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
-      cache: wasmMemoryCache,
+  const sharedDepsCopy = (logger) => {
+    return {
+      loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
-      readProcessMemoryFile,
-      readFileCheckpointMemory,
-      findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db }),
-      findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db }),
-      address,
-      queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
-      queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
-      PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
-      IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
-      PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
-      logger
-    }),
-    saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
-      cache: wasmMemoryCache,
-      EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
-      saveCheckpoint,
-      logger
-    }),
-    evaluationCounter,
-    // gasCounter,
-    saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
-    findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
-    saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
-    findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
-    saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
-    loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
-    findModule: AoModuleClient.findModuleWith({ db, logger }),
-    saveModule: AoModuleClient.saveModuleWith({ db, logger }),
-    loadEvaluator: AoModuleClient.evaluatorWith({
-      loadWasmModule,
-      evaluateWith: (prep) => primaryWorkQueue.add(() =>
-        Promise.resolve()
-          /**
-           * prep work is deferred until the work queue tasks is executed
-           */
-          .then(prep)
-          .then(([args, options]) => {
+      isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
+      findProcess: AoProcessClient.findProcessWith({ db, logger }),
+      findLatestProcessMemory: async () => {},
+      saveLatestProcessMemory: async () => {},
+      evaluationCounter,
+      // gasCounter,
+      saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
+      findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
+      saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
+      findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
+      saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
+      loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
+      findModule: AoModuleClient.findModuleWith({ db, logger }),
+      saveModule: AoModuleClient.saveModuleWith({ db, logger }),
+      loadEvaluator: AoModuleClient.evaluatorWith({
+        loadWasmModule,
+        evaluateWith: (prep) => primaryWorkQueue.add(() =>
+          Promise.resolve()
             /**
-             * TODO: is this the best place for this?
-             *
-             * It keeps it abstracted away from business logic,
-             * and tied to the specific evaluator, so seems kosher,
-             * but also feels kind of misplaced
+             * prep work is deferred until the work queue tasks is executed
              */
-            if (args.close) return broadcastCloseStream(args.streamId)
+            .then(prep)
+            .then(([args, options]) => {
+              /**
+               * TODO: is this the best place for this?
+               *
+               * It keeps it abstracted away from business logic,
+               * and tied to the specific evaluator, so seems kosher,
+               * but also feels kind of misplaced
+               */
+              if (args.close) return broadcastCloseStream(args.streamId)
 
-            return primaryWorkerPool.exec('evaluate', [args], options)
-          })
-      ),
+              return primaryWorkerPool.exec('evaluate', [args], options)
+            })
+        ),
+        logger
+      }),
+      findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
+      loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
+      loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
+      loadMessages: AoSuClient.loadMessagesWith({
+        hashChain: (...args) => hashChainWorker.exec('hashChain', args),
+        fetch: ctx.fetch,
+        pageSize: 1000,
+        logger
+      }),
+      locateProcess: locateDataloader.load.bind(locateDataloader),
+      isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
+      isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
+      isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
+      isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
+      MODULE_MODE: ctx.MODULE_MODE,
       logger
-    }),
-    findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
-    loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
-    loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
-    loadMessages: AoSuClient.loadMessagesWith({
-      hashChain: (...args) => hashChainWorker.exec('hashChain', args),
-      fetch: ctx.fetch,
-      pageSize: 1000,
+    }
+  }
+
+  const readStateFromCheckpointLogger = ctx.logger.child('readStateFromCheckpoint')
+  const readStateFromCheckpoint = readStateFromCheckpointWith(sharedDepsCopy(readStateFromCheckpointLogger))
+
+  const sharedDeps = (logger) => {
+    return {
+      loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
+      loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
+      isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
+      findProcess: AoProcessClient.findProcessWith({ db, logger }),
+      findLatestProcessMemory: AoProcessClient.findLatestProcessMemoryWith({
+        cache: wasmMemoryCache,
+        loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
+        readProcessMemoryFile,
+        readFileCheckpointMemory,
+        findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db }),
+        findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db }),
+        address,
+        queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
+        queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
+        PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
+        IGNORE_ARWEAVE_CHECKPOINTS: ctx.IGNORE_ARWEAVE_CHECKPOINTS,
+        PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
+        PROCESS_CHECKPOINT_PREFERRED_OWNERS: ctx.PROCESS_CHECKPOINT_PREFERRED_OWNERS,
+        readStateFromCheckpoint,
+        hashWasmMemory: WasmClient.hashWasmMemoryWith({ logger: ctx.logger }),
+        CHECKPONT_VALIDATION_STEPS: ctx.CHECKPONT_VALIDATION_STEPS,
+        CHECKPONT_VALIDATION_THRESH: ctx.CHECKPONT_VALIDATION_THRESH,
+        CHECKPONT_VALIDATION_RETRIES: ctx.CHECKPONT_VALIDATION_RETRIES,
+        IGNORE_LOCAL_CHECKPOINTS: ctx.IGNORE_LOCAL_CHECKPOINTS,
+        logger
+      }),
+      saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
+        cache: wasmMemoryCache,
+        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+        EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+        saveCheckpoint,
+        logger
+      }),
+      evaluationCounter,
+      // gasCounter,
+      saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
+      findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
+      saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
+      findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
+      saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
+      loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
+      findModule: AoModuleClient.findModuleWith({ db, logger }),
+      saveModule: AoModuleClient.saveModuleWith({ db, logger }),
+      loadEvaluator: AoModuleClient.evaluatorWith({
+        loadWasmModule,
+        evaluateWith: (prep) => primaryWorkQueue.add(() =>
+          Promise.resolve()
+            /**
+             * prep work is deferred until the work queue tasks is executed
+             */
+            .then(prep)
+            .then(([args, options]) => {
+              /**
+               * TODO: is this the best place for this?
+               *
+               * It keeps it abstracted away from business logic,
+               * and tied to the specific evaluator, so seems kosher,
+               * but also feels kind of misplaced
+               */
+              if (args.close) return broadcastCloseStream(args.streamId)
+
+              return primaryWorkerPool.exec('evaluate', [args], options)
+            })
+        ),
+        logger
+      }),
+      findMessageBefore: AoEvaluationClient.findMessageBeforeWith({ db, logger }),
+      loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
+      loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
+      loadMessages: AoSuClient.loadMessagesWith({
+        hashChain: (...args) => hashChainWorker.exec('hashChain', args),
+        fetch: ctx.fetch,
+        pageSize: 1000,
+        logger
+      }),
+      locateProcess: locateDataloader.load.bind(locateDataloader),
+      isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
+      isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
+      isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
+      isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
+      MODULE_MODE: ctx.MODULE_MODE,
       logger
-    }),
-    locateProcess: locateDataloader.load.bind(locateDataloader),
-    isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
-    isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
-    isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
-    isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
-    MODULE_MODE: ctx.MODULE_MODE,
-    logger
-  })
+    }
+  }
   /**
    * default readState that works OOTB
    * - Uses PouchDB to cache evaluations and processes
@@ -476,58 +552,7 @@ export const createApis = async (ctx) => {
     findEvaluations: AoEvaluationClient.findEvaluationsWith({ db, logger: readResultsLogger })
   })
 
-  let checkpointP
-  const checkpointWasmMemoryCache = fromPromise(async () => {
-    if (checkpointP) {
-      ctx.logger('Checkpointing of WASM Memory Cache already in progress. Nooping...')
-      return checkpointP
-    }
-
-    const pArgs = []
-    /**
-     * push a new object to keep references to original data intact
-     */
-    wasmMemoryCache.data.forEach((value) =>
-      pArgs.push({ Memory: value.Memory, File: value.File, evaluation: value.evaluation })
-    )
-
-    checkpointP = pMap(
-      pArgs,
-      (value) => saveCheckpoint({ Memory: value.Memory, File: value.File, ...value.evaluation })
-        .catch((err) => {
-          ctx.logger(
-            'Error occurred when creating Checkpoint for evaluation "%j". Skipping...',
-            value.evaluation,
-            err
-          )
-        }),
-      {
-        /**
-         * TODO: allow to be configured on CU
-         *
-         * Helps prevent the gateway from being overwhelmed and then timing out
-         */
-        concurrency: 10,
-        /**
-         * Prevent any one rejected promise from causing other invocations
-         * to not be attempted.
-         *
-         * The overall promise will still reject, which is why we have
-         * an empty catch below, which will allow all Promises to either resolve,
-         * or reject, then the final wrapping promise to always resolve.
-         *
-         * https://github.com/sindresorhus/p-map?tab=readme-ov-file#stoponerror
-         */
-        stopOnError: false
-      }
-    )
-      .catch(() => {})
-
-    await checkpointP
-    checkpointP = undefined
-  })
-
   const healthcheck = healthcheckWith({ walletAddress: address })
 
-  return { metrics, stats, pendingReadStates, readState, dryRun, readResult, readResults, readCronResults, checkpointWasmMemoryCache, healthcheck }
+  return { metrics, stats, pendingReadStates, readState, readStateFromCheckpoint, dryRun, readResult, readResults, readCronResults, healthcheck }
 }

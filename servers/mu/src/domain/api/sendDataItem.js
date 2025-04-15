@@ -30,7 +30,8 @@ export function sendDataItemWith ({
   spawnPushEnabled,
   db,
   GET_RESULT_MAX_RETRIES,
-  GET_RESULT_RETRY_DELAY
+  GET_RESULT_RETRY_DELAY,
+  ENABLE_MESSAGE_RECOVERY
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
@@ -65,6 +66,35 @@ export function sendDataItemWith ({
           (res) => Resolved(res)
         )
         .map(res => {
+          if (!ENABLE_MESSAGE_RECOVERY) {
+            return {
+              ...res,
+              crank: () => of({ ...res, initialTxId: res.tx.id })
+                .chain(getCuAddress)
+                .chain(pullResult)
+                .chain((ctx) => {
+                  const { msgs, spawns, assigns, initialTxId, messageId: parentId } = ctx
+                  return crank({
+                    msgs,
+                    spawns,
+                    assigns,
+                    initialTxId,
+                    parentId
+                  })
+                })
+                .bimap(
+                  (res) => {
+                    logger({ log: 'Failed to push messages', end: true }, ctx)
+                    return res
+                  },
+                  (res) => {
+                    logger({ log: 'Pushing complete', end: true }, ctx)
+                    return res
+                  }
+                )
+            }
+          }
+
           return {
             ...res,
             /**
@@ -346,7 +376,7 @@ function updateMessageTimestampWith ({ db, logger, MESSAGE_RECOVERY_MAX_RETRIES,
   }
 }
 
-export function startMessageRecoveryCronWith ({ selectNode, fetchResult, logger, db, cron, crank, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY, MESSAGE_RECOVERY_MAX_RETRIES, MESSAGE_RECOVERY_RETRY_DELAY }) {
+export function startMessageRecoveryCronWith ({ selectNode, fetchResult, logger, db, cron, crank, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY, MESSAGE_RECOVERY_MAX_RETRIES, MESSAGE_RECOVERY_RETRY_DELAY, ENABLE_MESSAGE_RECOVERY }) {
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const selectMessage = selectMessageWith({ db })
   const deleteMessage = deleteMessageWith({ db })
@@ -362,6 +392,10 @@ export function startMessageRecoveryCronWith ({ selectNode, fetchResult, logger,
    * If the message is successfully recovered, it will be deleted from the database.
    */
   return async () => {
+    if (!ENABLE_MESSAGE_RECOVERY) {
+      logger({ log: 'Message recovery is disabled, not starting cron', end: true })
+      throw new Error('Message recovery is disabled')
+    }
     let ct = null
     let isJobRunning = false
     ct = cron.schedule('*/10 * * * * *', async () => {

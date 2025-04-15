@@ -221,7 +221,8 @@ export const createApis = async (ctx) => {
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
     db,
     GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
-    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY
+    GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
+    ENABLE_MESSAGE_RECOVERY: ctx.ENABLE_MESSAGE_RECOVERY
   })
 
   const sendAssignLogger = logger.child('sendAssign')
@@ -309,7 +310,10 @@ export const createApis = async (ctx) => {
     crank,
     logger: pushMsgItemLogger,
     fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
-    ALLOW_PUSHES_AFTER
+    ALLOW_PUSHES_AFTER,
+    ENABLE_PUSH: ctx.ENABLE_PUSH,
+    ENABLE_CUSTOM_PUSH: ctx.ENABLE_CUSTOM_PUSH,
+    CUSTOM_CU_MAP_FILE_PATH: ctx.CUSTOM_CU_MAP_FILE_PATH
   })
 
   const startMessageRecoveryCronLogger = logger.child('messageRecoveryCron')
@@ -323,7 +327,8 @@ export const createApis = async (ctx) => {
     GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
     GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
     MESSAGE_RECOVERY_MAX_RETRIES: ctx.MESSAGE_RECOVERY_MAX_RETRIES,
-    MESSAGE_RECOVERY_RETRY_DELAY: ctx.MESSAGE_RECOVERY_RETRY_DELAY
+    MESSAGE_RECOVERY_RETRY_DELAY: ctx.MESSAGE_RECOVERY_RETRY_DELAY,
+    ENABLE_MESSAGE_RECOVERY: ctx.ENABLE_MESSAGE_RECOVERY
   })
 
   return {

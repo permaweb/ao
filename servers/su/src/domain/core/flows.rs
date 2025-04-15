@@ -2,17 +2,19 @@ use std::sync::Arc;
 use std::time::Instant;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
+use dashmap::DashMap;
 use dotenv::dotenv;
 use serde_json::json;
 use simd_json::to_string as simd_to_string;
+use tokio::sync::Mutex;
 
 use super::builder::Builder;
+use super::bytes::{DataBundle, DataItem};
 use super::json::{Message, Process};
 use super::scheduler;
-use super::bytes::{DataBundle, DataItem};
 
 use super::dal::{
-    Config, CoreMetrics, DataStore, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet,
+    Config, CoreMetrics, DataStore, ExtRouter, ExtRouterErrorType, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet
 };
 
 pub struct Deps {
@@ -25,6 +27,7 @@ pub struct Deps {
     pub wallet: Arc<dyn Wallet>,
     pub uploader: Arc<dyn Uploader>,
     pub metrics: Arc<dyn CoreMetrics>,
+    pub ext_router: Arc<dyn ExtRouter>,
 
     /*
         scheduler is part of the core but we initialize
@@ -33,6 +36,12 @@ pub struct Deps {
         dependencies injected.
     */
     pub scheduler: Arc<scheduler::ProcessScheduler>,
+
+    /*
+      Used to only recalculate the deep hashes once for a 
+      given process
+    */
+    pub deephash_locks: Arc<DashMap<String, Arc<Mutex<String>>>>,
 }
 
 /*
@@ -73,6 +82,138 @@ fn id_res(deps: &Arc<Deps>, id: String, start_top_level: Instant) -> Result<Stri
 }
 
 /*
+  Recompute and save all deep hashes on a process
+  this is done on demand for a process when writing
+  an item if it isnt up to date with the latest
+  deep hash version.
+*/
+async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result<(), String> {
+    /*
+      We only want to do the recalc once for a given 
+      process this lock will make the function behave
+      that way
+    */
+    let locked_pid = deps.deephash_locks
+        .entry(process_id.clone())
+        .or_insert_with(|| {
+            Arc::new(Mutex::new(process_id.clone()))
+        })
+        .value()
+        .clone();
+
+    /*
+      This will drop when the function returns
+      allowing the other calls to pass through
+      but the wont recalc because the deephash
+      version will be correct now.
+    */
+    let _l = locked_pid.lock().await;
+
+    /*
+      No deep hashing available on purely postgres instances
+    */
+    if !deps.config.use_local_store() && !deps.config.use_disk() {
+        deps.logger
+          .log(format!("Skipping deephash recalc, no deep hash checks available on this SU"));
+
+        return Ok(())
+    }
+
+    let start_recalc = Instant::now();
+
+    deps.logger
+        .log(format!("Checking deephash version for {}", process_id));
+
+    let mut from = None;
+    let limit = Some(deps.config.deephash_recalc_limit());
+    let mut total = 0;
+
+    match deps.data_store.get_deephash_version(process_id).await {
+        Ok(d) => {
+            if d == deps.config.current_deephash_version() {
+                deps.logger
+                    .log(format!("Deephash version up to date for {}", process_id));
+                return Ok(());
+            }
+        }
+        _ => (),
+    };
+
+    deps.logger.log(format!(
+        "Deephash version out of date, recalculating hashes for {}",
+        process_id
+    ));
+
+    let process = match deps.data_store.get_process(&process_id).await {
+        Ok(p) => p,
+        /*
+          the process just hasnt been created yet, do nothing
+        */
+        Err(_) => return Ok(()),
+    };
+
+    loop {
+        let bundles = deps
+            .data_store
+            .get_message_bundles(&process, &from, &limit)
+            .await?;
+
+        if bundles.0.len() < 1 {
+            break;
+        }
+
+        total = total + bundles.0.len();
+
+        deps.logger.log(format!(
+            "Total bundles retrieved in deephash calc for process {}: {}",
+            total, process_id
+        ));
+
+        let final_bundle = bundles.0[bundles.0.len() - 1].clone();
+        let final_message = Message::from_bytes(final_bundle.1)?;
+        from = Some(final_message.timestamp()?.to_string());
+
+        for (_, bundle) in &bundles.0 {
+            let msg = Message::from_bytes(bundle.clone())?;
+            /*
+              msg_deephash produces an error or None for a message
+              that shouldn't get deep hashed. So we swallow the error
+              or None value here to proceed with the full recompute
+              of all the deep hashes
+            */
+            match msg_deephash(deps.gateway.clone(), &msg, bundle).await {
+                Ok(Some(dh)) => {
+                    deps.data_store.save_deephash(&process_id, &dh).await?;
+                }
+                Ok(None) => (),
+                Err(_) => (),
+            };
+        }
+
+        if bundles.1 == false {
+            break;
+        }
+    }
+
+    deps.data_store
+        .save_deephash_version(process_id, &deps.config.current_deephash_version())
+        .await?;
+
+    deps.logger
+        .log(format!("All deep hashes recalculated for {}", process_id));
+
+    let elapsed_recalc = start_recalc.elapsed();
+
+    deps.logger.log(format!(
+        "Deephash recalculation time - {} - {}",
+        process_id,
+        elapsed_recalc.as_millis()
+    ));
+
+    Ok(())
+}
+
+/*
     This writes a message or process data item,
     it detects which it is creating by the tags.
     If the process_id and assign params are set, it
@@ -95,7 +236,11 @@ pub async fn write_item(
         (process_id.clone(), None)
     } else {
         let data_item = Builder::parse_data_item(input.clone())?;
-        match data_item.tags().iter().find(|tag| tag.name == "Type") {
+        match data_item
+            .tags()
+            .iter()
+            .find(|tag| tag.name == "Type" || tag.name == "type")
+        {
             Some(type_tag) => match type_tag.value.as_str() {
                 "Process" => (data_item.id(), Some(data_item)),
                 "Message" => (data_item.target(), Some(data_item)),
@@ -105,7 +250,10 @@ pub async fn write_item(
         }
     };
 
-    deps.logger.log(format!("builder initialized item parsed target - {}", &target_id));
+    deps.logger.log(format!(
+        "builder initialized item parsed target - {}",
+        &target_id
+    ));
 
     /*
       Acquire the lock for a given process id. After acquiring the lock
@@ -123,7 +271,11 @@ pub async fn write_item(
     deps.metrics
         .acquire_write_lock_observe(elapsed_acquire_lock.as_millis());
 
-    deps.logger.log(format!("lock acquired - {} - {}", &target_id, elapsed_acquire_lock.as_millis()));
+    deps.logger.log(format!(
+        "lock acquired - {} - {}",
+        &target_id,
+        elapsed_acquire_lock.as_millis()
+    ));
 
     /*
       Check to see if the message already exists, this
@@ -134,10 +286,24 @@ pub async fn write_item(
     */
     if let Some(ref item) = data_item {
         deps.data_store.check_existing_message(&item.id())?;
-
     };
 
-    deps.logger.log(format!("checked for message existence- {}", &target_id));
+    deps.logger
+        .log(format!("checked for message existence- {}", &target_id));
+
+    /*
+      Regenerate deep hashes if they are the old
+      version on demand for a given process
+    */
+    let t_clone = target_id.clone();
+    let d_clone = deps.clone();
+    let d_clone_log = deps.clone();
+    tokio::task::spawn(async move {
+      match maybe_recalc_deephashes(d_clone, &t_clone).await {
+        Ok(_) => d_clone_log.logger.log("Deep hash recalculation succeeded".to_string()),
+        Err(e) => d_clone_log.logger.log(format!("Deep hash recalculation failed: {:?}", e))
+      }
+    });
 
     /*
       Increment the scheduling info using the locked mutable reference
@@ -148,7 +314,8 @@ pub async fn write_item(
         .increment(&mut *schedule_info, target_id.clone())
         .await?;
 
-    deps.logger.log(format!("incrememted scheduler - {}", &target_id));
+    deps.logger
+        .log(format!("incrememted scheduler - {}", &target_id));
 
     /*
        XOR, if we have one of these, we must have both.
@@ -171,9 +338,10 @@ pub async fn write_item(
 
         let gateway_tx = match builder
             .verify_assignment(&assign, &process, &base_layer)
-            .await? {
-              Some(g) => g,
-              None => return Err("Invalid gateway tx for assignming".to_string())
+            .await?
+        {
+            Some(g) => g,
+            None => return Err("Invalid gateway tx for assignming".to_string()),
         };
 
         /*
@@ -192,17 +360,17 @@ pub async fn write_item(
                     tx_data,
                 )
                 .map_err(|_| "Unable to calculate deep hash".to_string())?;
-        
+
                 if deps.config.enable_deep_hash_checks() {
                     deps.data_store
                         .check_existing_deep_hash(&process_id, &dh)
                         .await?;
                 }
-        
+
                 Some(dh)
             }
         };
-        
+
         let aid = assignment.id();
         let return_aid = assignment.id();
         let build_result = builder.bundle_items(vec![assignment]).await?;
@@ -240,15 +408,19 @@ pub async fn write_item(
     };
 
     let tags = data_item.tags().clone();
-    let type_tag = tags.iter().find(|tag| tag.name == "Type");
-    let proto_tag_exists = tags.iter().any(|tag| tag.name == "Data-Protocol");
+    let type_tag = tags
+        .iter()
+        .find(|tag| tag.name == "Type" || tag.name == "type");
+    let proto_tag_exists = tags
+        .iter()
+        .any(|tag| tag.name == "Data-Protocol" || tag.name == "data-protocol");
     if !proto_tag_exists {
         return Err("Data-Protocol tag not present".to_string());
     }
 
     let type_tag = match type_tag {
         Some(t) => t,
-        None => return Err("Invalid Type Tag".to_string())
+        None => return Err("Invalid Type Tag".to_string()),
     };
 
     if type_tag.value == "Process" {
@@ -271,6 +443,39 @@ pub async fn write_item(
           will start at 0 for the first message
         */
         if deps.config.enable_process_assignment() {
+            match deps.config.enable_router_check() {
+              true => {
+                  match deps.ext_router.get_routed_assignment(data_item.id()).await {
+                    Ok(a) => {
+                        /*
+                          This process was spawned on another SU through
+                          the router so we should not allow it to be spawned
+                          here as well.
+                        */
+                        if a != deps.config.assignment() {
+                            return Err("Process does not belong on this SU".to_string())
+                        }
+                    },
+                    Err(e) => {
+                        match e {
+                            /*
+                              The process doesnt exist on the router so we
+                              are safe to proceed.
+                            */
+                            ExtRouterErrorType::NotFound(_) => (),
+                            /*
+                              Some other error occured while attempting to
+                              check the router for a process id we cant determine
+                              if it is safe so throw an error.
+                            */
+                            _ => return Err("Unable to check router".to_string())
+                        }
+                    }
+                  }
+              },
+              false => ()
+            };
+
             match data_item.tags().iter().find(|tag| tag.name == "On-Boot") {
                 Some(boot_tag) => match boot_tag.value.as_str() {
                     "Data" => (),
@@ -337,33 +542,31 @@ pub async fn write_item(
         let dtarget = data_item.target();
 
         let deep_hash = match tags.iter().find(|tag| tag.name == "From-Process") {
-          /*
-            If the Message contains a From-Process tag it is 
-            a pushed message so we should dedupe it, otherwise
-            it is a user message and we should not
-          */
-          Some(_) => {
-            let mut mutable_item = data_item.clone();
-            let deep_hash = match mutable_item.deep_hash() {
-              Ok(d) => d,
-              Err(_) => return Err("Unable to calculate deep hash".to_string())
-            };
-            
             /*
-              Throw an error if we detect a duplicated pushed
-              message
+              If the Message contains a From-Process tag it is
+              a pushed message so we should dedupe it, otherwise
+              it is a user message and we should not
             */
-            if deps.config.enable_deep_hash_checks() {
-                deps.data_store
-                  .check_existing_deep_hash(&dtarget, &deep_hash)
-                  .await?;
-            }
+            Some(_) => {
+                let mut mutable_item = data_item.clone();
+                let deep_hash = match mutable_item.deep_hash() {
+                    Ok(d) => d,
+                    Err(_) => return Err("Unable to calculate deep hash".to_string()),
+                };
 
-            Some(deep_hash)
-          },
-          None => {
-            None
-          }
+                /*
+                  Throw an error if we detect a duplicated pushed
+                  message
+                */
+                if deps.config.enable_deep_hash_checks() {
+                    deps.data_store
+                        .check_existing_deep_hash(&dtarget, &deep_hash)
+                        .await?;
+                }
+
+                Some(deep_hash)
+            }
+            None => None,
         };
 
         let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
@@ -397,6 +600,8 @@ pub async fn read_message_data(
     from: Option<String>,
     to: Option<String>,
     limit: Option<i32>,
+    from_nonce: Option<String>,
+    to_nonce: Option<String>,
 ) -> Result<String, String> {
     let start_top_level = Instant::now();
     let start_get_message = Instant::now();
@@ -416,7 +621,7 @@ pub async fn read_message_data(
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&process, &from, &to, &limit)
+            .get_messages(&process, &from, &to, &limit, &from_nonce, &to_nonce)
             .await?;
         let duration = start.elapsed();
         deps.logger
@@ -433,6 +638,14 @@ pub async fn read_message_data(
     }
 
     Err("Message or Process not found".to_string())
+}
+
+pub async fn read_latest_message(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
+    if let Ok(Some(message)) = deps.data_store.get_latest_message(&process_id).await {
+        return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
+    } else {
+        Err("Latest message not available".to_string())
+    }
 }
 
 pub async fn read_process(deps: Arc<Deps>, process_id: String) -> Result<String, String> {
@@ -496,34 +709,56 @@ pub async fn health(deps: Arc<Deps>) -> Result<String, String> {
 }
 
 pub async fn msg_deephash(
-    gateway: Arc<dyn Gateway>, 
-    message: &Message, 
-    bundle_bytes: &Vec<u8>
-) -> Result<String, String> {
-    let bundle_data_item = match DataItem::from_bytes(bundle_bytes.clone()) {
-        Ok(b) => b,
-        Err(_) => { return Err("Error parsing bundle for message deephash".to_string()); }
-    };
-    let data_bytes = match bundle_data_item.data_bytes() {
-        Some(b) => b,
-        None => { return Err("Error parsing bundle for message deephash".to_string()); }
-    };
-    let bundle = match DataBundle::from_bytes(&data_bytes) {
-        Ok(b) => b,
-        Err(_) => { return Err("Error parsing bundle for message deephash".to_string()); }
-    };
+    gateway: Arc<dyn Gateway>,
+    message: &Message,
+    bundle_bytes: &Vec<u8>,
+) -> Result<Option<String>, String> {
     match &message.message {
-        Some(_) => {
+        Some(m) => {
+            let bundle_data_item = match DataItem::from_bytes(bundle_bytes.clone()) {
+                Ok(b) => b,
+                Err(_) => {
+                    return Err("Error parsing bundle for message deephash".to_string());
+                }
+            };
+            let data_bytes = match bundle_data_item.data_bytes() {
+                Some(b) => b,
+                None => {
+                    return Err("Error parsing bundle for message deephash".to_string());
+                }
+            };
+            let bundle = match DataBundle::from_bytes(&data_bytes) {
+                Ok(b) => b,
+                Err(_) => {
+                    return Err("Error parsing bundle for message deephash".to_string());
+                }
+            };
+
             let mut message_item = bundle.items[1].clone();
-            match message_item.deep_hash() {
-              Ok(d) => Ok(d),
-              Err(_) => return Err("Unable to calculate deep hash".to_string())
-            }
-        },
+            let deep_hash = match m.tags.iter().find(|tag| tag.name == "From-Process") {
+                Some(_) => match message_item.deep_hash() {
+                    Ok(d) => Some(d),
+                    Err(_) => return Err("Unable to calculate deep hash".to_string()),
+                },
+                None => None,
+            };
+
+            Ok(deep_hash)
+        }
         None => {
             let message_id = &message.message_id()?;
+
+            /*
+              filter out base layer tx's
+            */
+            match gateway.status(&message_id).await {
+                Ok(_) => return Ok(None),
+                Err(_) => ()
+            };
+
             let gateway_tx = gateway.gql_tx(&message_id).await?;
             let tx_data = gateway.raw(&message_id).await?;
+            
             let dh = DataItem::deep_hash_fields(
                 gateway_tx.recipient,
                 gateway_tx.anchor,
@@ -531,7 +766,8 @@ pub async fn msg_deephash(
                 tx_data,
             )
             .map_err(|_| "Unable to calculate deep hash".to_string())?;
-            Ok(dh)
+
+            Ok(Some(dh))
         }
     }
 }
