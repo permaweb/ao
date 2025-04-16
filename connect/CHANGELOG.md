@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.81](https://github.com/permaweb/ao/compare/connect@v0.0.80...connect@v0.0.81) (2025-04-16)
+
+
+### Features
+
+* add multipart parsing to hyperbeam request ([ca29108](https://github.com/permaweb/ao/commit/ca291085e31b65ff592748f406b0cbc2cab88ded))
+
 ## [0.0.80](https://github.com/permaweb/ao/compare/connect@v0.0.79...connect@v0.0.80) (2025-04-16)
 
 
