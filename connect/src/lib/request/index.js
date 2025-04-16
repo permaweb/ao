@@ -49,7 +49,7 @@ function transformToMap (result) {
   // question should we return a js Map to ensure order consistency?
   let map = {}
   const res = result
-  if (res.headers.get('content-type').startsWith('multipart')) {
+  if (res.headers.get('content-type') && res.headers.get('content-type').startsWith('multipart')) {
     map = mergeRight(map, 
       Object.fromEntries(
         parseMultipartContent(res.body, res.headers.get('content-type'))
