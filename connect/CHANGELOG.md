@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.82](https://github.com/permaweb/ao/compare/connect@v0.0.81...connect@v0.0.82) (2025-04-16)
+
+
+### Bug Fixes
+
+* need to check for null on content-type ([6e06859](https://github.com/permaweb/ao/commit/6e06859de48a89fa955e8909d5f75dadc02a0fd9))
+
 ## [0.0.81](https://github.com/permaweb/ao/compare/connect@v0.0.80...connect@v0.0.81) (2025-04-16)
 
 
