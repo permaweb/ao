@@ -1,18 +1,7 @@
 import { identity } from 'ramda'
 import { z } from 'zod'
 import { of, Rejected, fromPromise } from 'hyper-async'
-
 import { errFrom } from '../utils.js'
-import { transformToMap } from './transform.js'
-import { dispatch } from './dispatch.js'
-import { handleFormat } from './format.js'
-
-const inputSchema = z
-  .object({
-    path: z.string().min(1, { message: 'path is required' }),
-    method: z.string()
-  })
-  .passthrough()
 
 /**
  * @callback Request
@@ -22,89 +11,78 @@ const inputSchema = z
  * @returns {Request}
  */
 export function requestWith (env) {
-  /**
-   * TODO: split into separate modules
-   * wrap side effect with schema from dal
-   */
-  const logger = env.logger
-  const request = env.request
-  const message = env.message
-  const result = env.result
-  const dryrun = env.dryrun
-  const spawn = env.spawn
-
-  const signer = env.signer
-  const device = env.device
-  const method = env.method
-
-  const mode = env.MODE
-
-  const verifyInput = (args) => {
-    if (args.device === 'relay@1.0' && args.Type === 'Process') {
-      return of(
-        z
-          .object({
-            path: z.string().min(1, { message: 'path is required' }),
-            method: z.string(),
-            Module: z.string(),
-            Scheduler: z.string()
-          })
-          .passthrough()
-          .parse(args)
-      )
-    }
-    return of(inputSchema.parse(args))
-  }
 
   return (fields) => {
-    const retry = (fn, request, attempts) =>
-      fn(request).bichain(err => {
-        if (err.name !== 'RedirectRequested') return Rejected(err)
-        if (attempts <= 0) return Rejected(err)
-        const newRequest = {
-          ...request,
-          device: err.device
-        }
-        return retry(fn, newRequest, attempts - 1)
-      }, of)
+      return (
+        of({ path: `/~${fields.device ?? env.device}`, ...fields, method: fields.method ?? method })
+          .chain(verifyInput)
 
-    const operation = (ctx) => verifyInput(ctx)
-      .map(handleFormat(mode, device))
-      .chain(dispatch({ request, spawn, message, result, dryrun, signer }))
-      .map((_) => {
-        logger(
-          'Received response from message sent to path "%s"',
-          fields?.path ?? '/'
-        )
-        return _
-      })
-      .map(transformToMap(device))
-      .bimap(errFrom, identity)
+          // is the the best place to either call
+          // legacy mode just an ANS-104
+          // mainnet relay-device = hsig + ans-104
+          // mainnet process-device -> hsig
+          //.map(handleFormat)
+          .chain(dispatch(env))
 
-    return (
-      
-      retry(operation, { path: `/~${device}`, ...fields, method: fields.method ?? method }, 1)
-        .toPromise()
+          .map(logResult(env, fields))
+          .map(transformToMap)
+          .bimap(errFrom, identity)
+          .toPromise()
     )
   }
 }
 
-/**
-
-*/
-// eslint-disable-next-line no-unused-vars
-function getResult (request) {
-  return (payload) => fromPromise((payload) => {
-    const process = payload.headers.get('process')
-    const slot = payload.headers.get('slot')
-    // return Promise.resolve({slot, process})
-    // eslint-disable-next-line no-unused-vars
-    return request({
-      path: `/${process}/compute&slot+integer=${slot}/results/json`,
-      method: 'POST',
-      target: process,
-      'slot+integer': slot,
-      accept: 'application/json'
+// ==== Implementation Details =====
+// verifies input properties, must have path and method
+function verifyInput (args) {
+  const inputSchema = z
+    .object({
+      path: z.string().min(1, { message: 'path is required' }),
+      method: z.string()
     })
-  })(payload)
+    .passthrough()
+  return of(inputSchema.parse(args))
+}
+
+// transforms http request to a map
+function transformToMap (result) {
+  // question should we return a js Map to ensure order consistency?
+  const map = {}
+  const res = result
+  map.body = res.body 
+  res.headers.forEach((v, k) => {
+    map[k] = v 
+  })
+
+  return map
+}
+
+// dispatchs the request from context to hyperbeam
+function dispatch (env) {
+  return fromPromise(env.request)
+}
+
+// TODO: manage any formating required before sending to hyperBEAM
+function handleFormat (fields) {
+  const map = fields
+/**
+if mode == 'legacy' then request should create an ans-104 from fields
+if mode == 'relay' then request should create a hybrid ans-104/httpsig from fields
+if mode == 'process' then request should create a pure httpsig from fields
+*/
+  return {
+    type: fields.Type,
+    map
+  }
+}
+
+function logResult(env, fields) {
+  return (res) => {
+    env.logger(
+      'Received response from message sent to path "%s" with res %O',
+      fields?.path ?? '/',
+      res
+    )
+    return res
+  }
 }

@@ -21,7 +21,7 @@ import { resultsWith } from './lib/results/index.js'
 import { dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
-import { getOperator, getNodeBalance } from './lib/payments/index.js'
+// import { getOperator, getNodeBalance } from './lib/payments/index.js'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from './dal.js'
@@ -45,180 +45,6 @@ export { serializeCron } from './lib/serializeCron/index.js'
  */
 export function connectWith({ createDataItemSigner, createSigner }) {
   const _logger = createLogger()
-
-  /**
-   * Run connect in HyperBEAM mode, relaying network calls through the configured
-   * HyperBEAM node.
-   *
-   * @deprecated - relay mode will instead be triggered by a device passed to
-   * mainnet mode. This should be removed at earliest convenience.
-   *
-   * @typedef HyperBeam
-   * @property {any} wallet - the wallet to use to sign HyperBEAM HTTP messages
-   * @property {string} [RELAY_URL] the HyperBEAM node
-   *
-   * @param {Services & HyperBeam} args
-   * @returns {Omit<ReturnType<connect>, 'createDataItemSigner'> & { createDataItemSigner: () => Types['signer'] }}
-   */
-  // eslint-disable-next-line no-unused-vars
-  function relayMode({
-    MODE,
-    signer,
-    GRAPHQL_URL,
-    GRAPHQL_MAX_RETRIES,
-    GRAPHQL_RETRY_BACKOFF,
-    MU_URL = DEFAULT_RELAY_MU_URL,
-    CU_URL = DEFAULT_RELAY_CU_URL,
-    RELAY_URL = DEFAULT_RELAY_URL,
-    fetch: originalFetch = defaultFetch
-  }) {
-    const logger = _logger.child('relay')
-    logger('Mode Activated 🔀')
-
-    if (!signer) { throw new Error('relay mode requires providing a signer to connect()') }
-
-    const relayDataItemSigner = signer ? () => signer : createDataItemSigner
-
-    const relaySigner = signer ? () => signer : createSigner
-
-    const fetch = HbClient.relayerWith({
-      /**
-       * Always wrap default fetch with relayer,
-       * no embellishment beyond the relayer
-       */
-      fetch: defaultFetch,
-      logger,
-      HB_URL: RELAY_URL,
-      signer
-    })
-
-    const requestLogger = logger.child('request')
-    const request = requestWith({
-      logger: requestLogger,
-      request: HbClient.requestWith({
-        fetch: defaultFetch,
-        logger: requestLogger,
-        HB_URL: RELAY_URL,
-        signer
-      })
-    })
-
-    const { validate } = schedulerUtilsConnect({
-      cacheSize: 100,
-      GRAPHQL_URL,
-      GRAPHQL_MAX_RETRIES,
-      GRAPHQL_RETRY_BACKOFF
-    })
-
-    const resultLogger = logger.child('result')
-    const result = resultWith({
-      signer,
-      loadResult: CuClient.loadResultWith({
-        fetch,
-        CU_URL,
-        logger: resultLogger
-      }),
-      logger: resultLogger
-    })
-
-    const messageLogger = logger.child('message')
-    const message = messageWith({
-      signer,
-      deployMessage: MuClient.deployMessageWith({
-        fetch,
-        MU_URL,
-        logger: messageLogger
-      }),
-      logger: messageLogger
-    })
-
-    const spawnLogger = logger.child('spawn')
-    const spawn = spawnWith({
-      signer,
-      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
-        fetch: originalFetch,
-        GRAPHQL_URL,
-        logger: spawnLogger
-      }),
-      validateScheduler: validate,
-      deployProcess: MuClient.deployProcessWith({
-        fetch,
-        MU_URL,
-        logger: spawnLogger
-      }),
-      logger: spawnLogger
-    })
-
-    const monitorLogger = logger.child('monitor')
-    const monitor = monitorWith({
-      signer,
-      deployMonitor: MuClient.deployMonitorWith({
-        fetch,
-        MU_URL,
-        logger: monitorLogger
-      }),
-      logger: monitorLogger
-    })
-
-    const unmonitorLogger = logger.child('unmonitor')
-    const unmonitor = unmonitorWith({
-      signer,
-      deployUnmonitor: MuClient.deployUnmonitorWith({
-        fetch,
-        MU_URL,
-        logger: unmonitorLogger
-      }),
-      logger: monitorLogger
-    })
-
-    const resultsLogger = logger.child('results')
-    const results = resultsWith({
-      signer,
-      queryResults: CuClient.queryResultsWith({
-        fetch,
-        CU_URL,
-        logger: resultsLogger
-      }),
-      logger: resultsLogger
-    })
-
-    const dryrunLogger = logger.child('dryrun')
-    const dryrun = dryrunWith({
-      signer,
-      dryrunFetch: CuClient.dryrunFetchWith({
-        fetch,
-        CU_URL,
-        logger: dryrunLogger
-      }),
-      logger: dryrunLogger
-    })
-
-    const assignLogger = logger.child('assign')
-    const assign = assignWith({
-      signer,
-      deployAssign: MuClient.deployAssignWith({
-        fetch,
-        MU_URL,
-        logger: assignLogger
-      }),
-      logger: messageLogger
-    })
-
-    return {
-      MODE,
-      request,
-      result,
-      results,
-      message,
-      spawn,
-      monitor,
-      unmonitor,
-      dryrun,
-      assign,
-      ccreateDataItemSigner: relayDataItemSigner,
-      createSigner: relaySigner
-    }
-  }
 
   function legacyMode({
     MODE,
@@ -388,93 +214,14 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     CU_URL = DEFAULT_RELAY_CU_URL,
     fetch = defaultFetch
   }) {
-    const isRelayMode = device === 'relay@1.0'
-    const logger = isRelayMode
-      ? _logger.child('mainnet-relay')
-      : _logger.child('mainnet-process')
-    logger('Mode Activated %s', isRelayMode ? '🔀' : '🐲')
+    const logger = _logger.child('mainnet-process')
+    logger('Mode Activated %s', '🐲')
 
     if (!signer) { throw new Error('mainnet mode requires providing a signer to connect()') }
 
     const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
 
     const mainnetSigner = signer ? () => signer : createSigner
-
-    const relayFetch = HbClient.relayerWith({
-      /**
-       * Always wrap default fetch with relayer,
-       * no embellishment beyond the relayer
-       */
-      fetch: defaultFetch,
-      logger,
-      HB_URL: URL,
-      signer
-    })
-
-    /**
-     * TODO: implement validating a scheduler
-     */
-    async function mockValidate(address) {
-      logger('Mock validation for address "%s"', address)
-      return true
-    }
-
-    const resultLogger = logger.child('result')
-    const loadResult = isRelayMode
-      ? CuClient.loadResultWith({
-        fetch: relayFetch,
-        logger: resultLogger,
-        HB_URL: URL,
-        CU_URL,
-        signer
-      })
-      : HbClient.loadResultWith({
-        fetch: defaultFetch,
-        logger: resultLogger,
-        HB_URL: URL,
-        signer
-      })
-    const result = resultWith({
-      signer,
-      loadResult,
-      logger: resultLogger
-    })
-
-    const messageLogger = logger.child('message')
-    const deployMessage = isRelayMode
-      ? MuClient.deployMessageWith({
-        fetch: isRelayMode ? relayFetch : defaultFetch,
-        logger: messageLogger,
-        HB_URL: URL,
-        MU_URL,
-        CU_URL,
-        signer
-      })
-      : HbClient.deployMessageWith({
-        fetch: defaultFetch,
-        logger: messageLogger,
-        HB_URL: URL,
-        signer
-      })
-    const message = messageWith({
-      signer,
-      deployMessage,
-      logger: messageLogger
-    })
-
-    const resultsLogger = logger.child('results')
-    const queryResults = isRelayMode
-      ? CuClient.queryResultsWith({
-        fetch: relayFetch,
-        CU_URL,
-        logger: resultsLogger
-      })
-      : HbClient.queryResultsWith({
-        fetch: defaultFetch,
-        HB_URL: URL,
-        logger: resultsLogger,
-        signer
-      })
 
     const getMessageById = messageIdWith({
       getMessageId: SuClient.getMessageById({ fetch, locate })
@@ -491,50 +238,6 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
-    const results = resultsWith({
-      signer,
-      queryResults,
-      logger: resultsLogger
-    })
-
-    const spawnLogger = logger.child('spawn')
-    const deployProcess = isRelayMode
-      ? MuClient.deployProcessWith({
-        fetch: relayFetch,
-        HB_URL: URL,
-        MU_URL,
-        logger: spawnLogger
-      })
-      : HbClient.deployProcessWith({
-        fetch: defaultFetch,
-        logger: spawnLogger,
-        HB_URL: URL,
-        signer
-      })
-
-    const spawn = spawnWith({
-      signer,
-      loadTransactionMeta: GatewayClient.loadTransactionMetaWith({
-        fetch,
-        GRAPHQL_URL,
-        logger: spawnLogger
-      }),
-      validateScheduler: mockValidate,
-      deployProcess,
-      logger: spawnLogger
-    })
-
-    const dryrunLogger = logger.child('dryrun')
-    const dryrun = dryrunWith({
-      signer,
-      dryrunFetch: CuClient.dryrunFetchWith({
-        fetch: isRelayMode ? relayFetch : fetch,
-        CU_URL,
-        logger: dryrunLogger
-      }),
-      logger: dryrunLogger
-    })
-
     const requestLogger = logger.child('request')
 
     const request = requestWith({
@@ -542,11 +245,6 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       logger: requestLogger,
       MODE,
       method: 'GET',
-      device,
-      dryrun,
-      message,
-      result,
-      spawn,
       request: HbClient.requestWith({
         fetch: defaultFetch,
         logger: requestLogger,
@@ -555,103 +253,20 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
-    const getLogger = logger.child('get')
-    const get = requestWith({
-      logger: getLogger,
-      MODE,
-      method: 'GET',
-      device,
-      dryrun,
-      message,
-      result,
-      spawn,
-      signer,
-      request: HbClient.requestWith({
-        fetch: defaultFetch,
-        method: 'GET',
-        logger: getLogger,
-        HB_URL: URL,
-        signer
-      })
-    })
 
-    const postLogger = logger.child('post')
-    const post = requestWith({
-      signer,
-      logger: postLogger,
-      MODE,
-      method: 'POST',
-      device,
-      dryrun,
-      message,
-      result,
-      spawn,
-      request: HbClient.requestWith({
-        fetch: defaultFetch,
-        method: 'GET',
-        logger: postLogger,
-        HB_URL: URL,
-        signer
-      })
-    })
-    // const monitorLogger = logger.child('monitor')
-    // const monitor = monitorWith({
-    //   deployMonitor: MuClient.deployMonitorWith({ fetch, MU_URL, logger: monitorLogger }),
-    //   logger: monitorLogger
-    // })
-
-    // const unmonitorLogger = logger.child('unmonitor')
-    // const unmonitor = unmonitorWith({
-    //   deployUnmonitor: MuClient.deployUnmonitorWith({ fetch, MU_URL, logger: unmonitorLogger }),
-    //   logger: monitorLogger
-    // })
-
-    // const resultsLogger = logger.child('results')
-    // const results = resultsWith({
-    //   queryResults: CuClient.queryResultsWith({ fetch, CU_URL, logger: resultsLogger }),
-    //   logger: resultsLogger
-    // })
-
-    // const dryrunLogger = logger.child('dryrun')
-    // const dryrun = dryrunWith({
-    //   dryrunFetch: CuClient.dryrunFetchWith({ fetch, CU_URL, logger: dryrunLogger }),
-    //   logger: dryrunLogger
-    // })
-
-    // const assignLogger = logger.child('assign')
-    // const assign = assignWith({
-    //   deployAssign: MuClient.deployAssignWith({
-    //     fetch,
-    //     MU_URL,
-    //     logger: assignLogger
-    //   }),
-    //   logger: messageLogger
-    // })
-
-    return {
-      MODE: isRelayMode ? 'relay' : 'mainnet',
-      request,
+    return { MODE: 'mainnet', 
+      request, 
+      createSigner: mainnetSigner,
+      createDataItemSigner: mainnetDataItemSigner,
       getMessages,
       getLastSlot,
       getMessageById,
-      get,
-      post,
-      result,
-      message,
-      spawn,
-      results,
-      getOperator: getOperator({ fetch, URL }),
-      getNodeBalance: getNodeBalance({
-        request: HbClient.requestWith({
-          fetch: defaultFetch,
-          method: 'GET',
-          logger: postLogger,
-          HB_URL: URL,
-          signer
-        })
-      }),
-      createDataItemSigner: mainnetDataItemSigner,
-      createSigner: mainnetSigner
+      /**
+      * do we want helpers for payments?
+      *
+      * - getOperator
+      * - getNodeBalance
+      */
     }
   }
 

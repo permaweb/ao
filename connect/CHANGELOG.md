@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.80](https://github.com/permaweb/ao/compare/connect@v0.0.79...connect@v0.0.80) (2025-04-16)
+
+
+### Features
+
+* **connect:** ensure values with newlines are properly encoded, including blob values ([5364350](https://github.com/permaweb/ao/commit/5364350e9eead06fe4f75bb4a0a0ec17151978a5))
+* **connect:** handle lists of primitives and objects in hb encodings ([5110f6f](https://github.com/permaweb/ao/commit/5110f6ff47796ff32e6e70fbc3f81ec48d5a142f))
+* **connect:** impl HB 0.8.1 compat ([b5ad4bc](https://github.com/permaweb/ao/commit/b5ad4bc8229a8a881a0e1246759c22bd47f71e91))
+* **connect:** in-memory cache of preferred endpoint POST format ([08d01d6](https://github.com/permaweb/ao/commit/08d01d64e6a4ff06ddda796d4926f32ca55285d0))
+* **connect:** revert support for direct blob value due to ambiguity in intent ([02cc73c](https://github.com/permaweb/ao/commit/02cc73c8115b965a43efd3891f86d085e7dc4e84))
+* **connect:** support `httpsig@1.0`'s `inline-body-key` encoding form ([82ef5c8](https://github.com/permaweb/ao/commit/82ef5c8b069c67db1889d38ab67ffba480dac8df))
+* merged main and refactored request ([84965bb](https://github.com/permaweb/ao/commit/84965bb3504bae71a204ee7269d7d6ce7808c896))
+
+
+### Bug Fixes
+
+* gather signingFormat from fields ([1f73046](https://github.com/permaweb/ao/commit/1f730464a01a4b625f7b8d6c5b9d79af13098c82))
+
 ## [0.0.79](https://github.com/permaweb/ao/compare/connect@v0.0.78...connect@v0.0.79) (2025-04-10)
 
 ## [0.0.78](https://github.com/permaweb/ao/compare/connect@v0.0.77...connect@v0.0.78) (2025-04-02)
