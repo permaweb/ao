@@ -66,7 +66,8 @@ export function enqueueResultsWith ({ enqueue }) {
         messageId: msg.initialTxId,
         processId: msg.fromProcessId,
         parentId: msg.parentId,
-        logId: randomBytes(8).toString('hex')
+        logId: randomBytes(8).toString('hex'),
+        ip: rest.ip
       })),
       ...spawns.map(spawn => ({
         type: 'SPAWN',
@@ -75,7 +76,8 @@ export function enqueueResultsWith ({ enqueue }) {
         messageId: spawn.initialTxId,
         processId: spawn.processId,
         parentId: spawn.parentId,
-        logId: randomBytes(8).toString('hex')
+        logId: randomBytes(8).toString('hex'),
+        ip: rest.ip
       })),
       ...assigns.flatMap(assign => assign.Processes.map(
         (pid) => ({
@@ -89,7 +91,8 @@ export function enqueueResultsWith ({ enqueue }) {
           messageId: assign.Message,
           processId,
           parentId,
-          logId: randomBytes(8).toString('hex')
+          logId: randomBytes(8).toString('hex'),
+          ip: rest.ip
         })
       ))
     ]

@@ -31,7 +31,9 @@ const withMessageRoutes = (app) => {
 
         const logger = _logger.child('POST_root')
         const logId = randomBytes(8).toString('hex')
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
+            .replace(/^::ffff:/, '')
+
 
 
         if ((processId && !assign) || (!processId && assign)) {
