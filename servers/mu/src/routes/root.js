@@ -31,6 +31,8 @@ const withMessageRoutes = (app) => {
 
         const logger = _logger.child('POST_root')
         const logId = randomBytes(8).toString('hex')
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+
 
         if ((processId && !assign) || (!processId && assign)) {
           res.status(400).send({ error: 'You must set both process-id and assign to send an assignment, not just one' })
@@ -47,7 +49,8 @@ const withMessageRoutes = (app) => {
             },
             processId,
             messageId: assign,
-            logId
+            logId,
+            ip
           })
             .chain(sendAssign)
             .bimap(
@@ -82,7 +85,7 @@ const withMessageRoutes = (app) => {
           /**
            * Forward the DataItem
            */
-          await of({ raw: input.body, logId })
+          await of({ raw: input.body, logId, ip })
             .chain(sendDataItem)
             .bimap(
               (e) => {
