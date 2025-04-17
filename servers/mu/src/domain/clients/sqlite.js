@@ -36,8 +36,7 @@ const createTraces = async (db) => db.prepare(
     wallet TEXT,
     timestamp INTEGER,
     parentId TEXT,
-    logs TEXT,
-    data TEXT,
+    ip TEXT,
     type TEXT
   ) WITHOUT ROWID;`
 ).run()
@@ -54,6 +53,12 @@ const createTracesIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${TRACES_TABLE}_messageId_processId
     ON ${TRACES_TABLE}
     (messageId, processId);`
+).run()
+
+const createTracesWalletIpIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${TRACES_TABLE}_wallet_ip
+    ON ${TRACES_TABLE}
+    (wallet, ip);`
 ).run()
 
 const createTracesTimestampIndexes = async (db) => db.prepare(
@@ -89,6 +94,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       await Promise.resolve()
         .then(() => createTraces(db))
         .then(() => createTracesIndexes(db))
+        .then(() => createTracesWalletIpIndexes(db))
         .then(() => createTracesTimestampIndexes(db))
     }
   }
