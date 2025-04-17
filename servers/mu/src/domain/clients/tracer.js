@@ -159,6 +159,13 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_
   return tracerLogger
 }
 
+/**
+ * Get the most recent traces for a given wallet and ip.
+ * @param {String} wallet - The wallet address to get traces for
+ * @param {String} ip - The ip address to get traces for
+ * @param {Number} timestamp - The timestamp to get traces for
+ * @returns {Array} - The traces
+ */
 export function recentTracesWith ({ db, DISABLE_TRACE }) {
   return async ({ wallet, ip, timestamp }) => {
     if (DISABLE_TRACE) {

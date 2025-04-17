@@ -181,7 +181,9 @@ export const createApis = async (ctx) => {
             DB_URL,
             TRACE_DB_URL,
             TASK_QUEUE_MAX_RETRIES: ctx.TASK_QUEUE_MAX_RETRIES,
-            TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY
+            TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY,
+            IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
+            IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL
           }
         }
       }
@@ -399,13 +401,13 @@ export const createResultApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
     RELAY_MAP,
-    topUp: RelayClient.topUpWith({ 
-      fetch, 
-      logger: processMsgLogger, 
-      wallet: MU_WALLET, 
-      address: walletAddress, 
-      fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) 
-    }),
+    topUp: RelayClient.topUpWith({
+      fetch,
+      logger: processMsgLogger,
+      wallet: MU_WALLET,
+      address: walletAddress,
+      fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
+    })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
