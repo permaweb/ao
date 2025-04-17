@@ -20,8 +20,8 @@ function fetchResultWith ({ fetchResult }) {
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages
-          .filter(msg => 
-              msg.Target !== undefined && msg.Anchor !== undefined && msg.Tags !== undefined
+          .filter(msg =>
+            msg.Target !== undefined && msg.Anchor !== undefined && msg.Tags !== undefined
           )
           .map(msg => {
             return {
@@ -29,7 +29,8 @@ function fetchResultWith ({ fetchResult }) {
               processId: msg.Target,
               initialTxId: ctx.initialTxId,
               fromProcessId: ctx.tx.processId,
-              parentId: ctx.messageId ?? ctx.initialTxId
+              parentId: ctx.messageId ?? ctx.initialTxId,
+              wallet: ctx.wallet ?? ctx.dataItem.owner
             }
           })
 
@@ -39,7 +40,8 @@ function fetchResultWith ({ fetchResult }) {
             processId: ctx.tx.processId,
             initialTxId: ctx.initialTxId,
             fromProcessId: ctx.processId,
-            parentId: ctx.messageId ?? ctx.initialTxId
+            parentId: ctx.messageId ?? ctx.initialTxId,
+            wallet: ctx.wallet ?? ctx.dataItem.owner
           }
         })
 

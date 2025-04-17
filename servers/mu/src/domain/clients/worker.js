@@ -71,6 +71,9 @@ const queue = await createTaskQueue({
   logger: broadcastLogger
 })
 
+const traceDb = await createSqliteClient({ url: workerData.TRACE_DB_URL, bootstrap: false, type: 'traces' })
+const getRecentTraces = recentTracesWith({ db: traceDb, DISABLE_TRACE: workerData.DISABLE_TRACE })
+const deleteOldTraces = deleteOldTracesWith({ db: traceDb, logger: broadcastLogger })
 /**
  * We post a message with the queue size every second to ensure
  * that the sliding window array of queue sizes does not become
@@ -79,8 +82,6 @@ const queue = await createTaskQueue({
 setInterval(() => {
   broadcastChannel.postMessage({ purpose: 'queue-size', size: queue.length, time: Date.now() })
 }, 1000)
-
-const getRecentTraces = recentTracesWith({ db, DISABLE_TRACE: workerData.DISABLE_TRACE })
 
 /**
  * Initialize a set of task ids.
@@ -145,8 +146,6 @@ ct = cron.schedule('*/2 * * * * *', async () => {
 
 let traceCt = null
 let traceIsJobRunning = false
-const traceDb = await createSqliteClient({ url: workerData.TRACE_DB_URL, bootstrap: false, type: 'traces' })
-const deleteOldTraces = deleteOldTracesWith({ db: traceDb, logger: broadcastLogger })
 /**
  * Create cron to clear out traces, each hour
  */

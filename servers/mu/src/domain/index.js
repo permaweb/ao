@@ -164,6 +164,9 @@ export const createApis = async (ctx) => {
   const workerPool = workerpool.pool('./src/domain/clients/worker.js', {
     minWorkers: queueIds.length, // We must have as many workers as there are queues to persist
     maxWorkers: ctx.MAX_WORKERS,
+    onTerminateWorker: (worker) => {
+      console.log('123Terminating worker', worker)
+    },
     onCreateWorker: () => {
       let queueId = randomBytes(8).toString('hex')
 
@@ -202,7 +205,10 @@ export const createApis = async (ctx) => {
   })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
-    return workerPool.exec('enqueueResults', results)
+    return workerPool.exec('enqueueResults', results).catch((err) => {
+      console.log('123Error enqueuing results', err)
+      throw err
+    })
   }
 
   const crank = fromPromise(enqueueResults)

@@ -68,12 +68,14 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, IP_W
     }
   }
   return async (task) => {
-    const timestamp = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
-    const recentTraces = await getRecentTraces({ wallet: task.wallet, ip: task.ip, timestamp })
-    if (recentTraces.length >= IP_WALLET_RATE_LIMIT) {
-      logger({ log: `Rate limit exceeded for wallet ${task.wallet} and ip ${task.ip}, ${recentTraces.length} traces found. Skipping task.` })
+    const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
+    const wallet = task.wallet || task.cachedMsg.wallet
+    const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart })
+    if (recentTraces.wallet.length >= IP_WALLET_RATE_LIMIT || recentTraces.ip.length >= IP_WALLET_RATE_LIMIT) {
+      logger({ log: `Rate limit exceeded for wallet ${task.wallet} and ip ${task.ip}, ${recentTraces.wallet.length} wallet traces, ${recentTraces.ip.length} ip traces found. Skipping task.` })
       return
     }
+    const timestamp = new Date().getTime()
     const randomByteString = randomBytes(8).toString('hex')
     const dbId = `${queueId}-${timestamp}-${randomByteString}`
     queue.push({ ...task, dbId })
