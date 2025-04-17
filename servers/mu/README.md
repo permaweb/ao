@@ -56,6 +56,11 @@ There are a few environment variables that you can set:
 - `ENABLE_PUSH`: Whether or not to allow the MU to push messages.
 - `ENABLE_CUSTOM_PUSH`: Whether or not to allow custom CU URLs to be passed as a query param to the push endpoint.
 - `CUSTOM_CU_MAP_FILE_PATH`: The file path for the custom CU JSON map for message pushing.
+- `IP_WALLET_RATE_LIMIT`: The amount of requests from an IP-wallet pair to allow in an interval (defaults to 100)
+- `IP_WALLET_RATE_LIMIT_INTERVAL`: The interval to allow the rate limit in (defaults to 1h)
+
+
+
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`
