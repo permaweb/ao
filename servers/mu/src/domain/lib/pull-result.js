@@ -30,7 +30,7 @@ function fetchResultWith ({ fetchResult }) {
               initialTxId: ctx.initialTxId,
               fromProcessId: ctx.tx.processId,
               parentId: ctx.messageId ?? ctx.initialTxId,
-              wallet: ctx.wallet ?? ctx.dataItem.owner
+              wallet: ctx.wallet ?? ctx.dataItem?.owner
             }
           })
 
@@ -41,7 +41,7 @@ function fetchResultWith ({ fetchResult }) {
             initialTxId: ctx.initialTxId,
             fromProcessId: ctx.processId,
             parentId: ctx.messageId ?? ctx.initialTxId,
-            wallet: ctx.wallet ?? ctx.dataItem.owner
+            wallet: ctx.wallet ?? ctx.dataItem?.owner
           }
         })
 
