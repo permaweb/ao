@@ -51,7 +51,7 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * and a random hex string. This is so that it can
  * be removed from the database when dequeuing.
  */
-export function enqueueWith ({ queue, queueId, db }) {
+export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL }) {
   function createQuery (task, dbId, timestamp) {
     return {
       sql: `
@@ -67,7 +67,14 @@ export function enqueueWith ({ queue, queueId, db }) {
       ]
     }
   }
-  return (task) => {
+  return async (task) => {
+    const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
+    const wallet = task.wallet || task.cachedMsg.wallet
+    const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart })
+    if (recentTraces.wallet.length >= IP_WALLET_RATE_LIMIT || recentTraces.ip.length >= IP_WALLET_RATE_LIMIT) {
+      logger({ log: `Rate limit exceeded for wallet ${task.wallet} and ip ${task.ip}, ${recentTraces.wallet.length} wallet traces, ${recentTraces.ip.length} ip traces found. Skipping task.` })
+      return
+    }
     const timestamp = new Date().getTime()
     const randomByteString = randomBytes(8).toString('hex')
     const dbId = `${queueId}-${timestamp}-${randomByteString}`

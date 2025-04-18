@@ -19,14 +19,13 @@ const positiveIntSchema = z.preprocess((val) => {
 const jsonObjectSchema = z.preprocess((val) => {
   if (typeof val === 'string') {
     try {
-      return JSON.parse(val);
+      return JSON.parse(val)
     } catch (error) {
-      return {}; // Default to an empty object if parsing fails
+      return {} // Default to an empty object if parsing fails
     }
   }
-  return val;
+  return val
 }, z.any())
-
 
 /**
  * Some frameworks will implicitly override NODE_ENV
@@ -79,7 +78,9 @@ export const domainConfigSchema = z.object({
   RELAY_MAP: jsonObjectSchema,
   ENABLE_PUSH: z.boolean(),
   ENABLE_CUSTOM_PUSH: z.boolean(),
-  CUSTOM_CU_MAP_FILE_PATH: z.string()
+  CUSTOM_CU_MAP_FILE_PATH: z.string(),
+  IP_WALLET_RATE_LIMIT: positiveIntSchema,
+  IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema
 })
 
 /**
@@ -134,7 +135,9 @@ const CONFIG_ENVS = {
     RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
-    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json'
+    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
+    IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 500,
+    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
   },
   production: {
     MODE,
@@ -166,7 +169,9 @@ const CONFIG_ENVS = {
     RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
-    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json'
+    CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
+    IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 500,
+    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
   }
 }
 
