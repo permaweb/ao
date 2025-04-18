@@ -192,8 +192,8 @@ export function recentTracesWith ({ db, DISABLE_TRACE }) {
     if (DISABLE_TRACE) {
       return []
     }
-    const walletResults = await db.query(createWalletQuery({ wallet, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e }))
-    const ipResults = await db.query(createIpQuery({ ip, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e }))
+    const walletResults = wallet ? await db.query(createWalletQuery({ wallet, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e })) : []
+    const ipResults = ip ? await db.query(createIpQuery({ ip, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e })) : []
     return { wallet: walletResults, ip: ipResults }
   }
 }
