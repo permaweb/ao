@@ -206,7 +206,7 @@ export const createApis = async (ctx) => {
 
   const enqueueResults = async (...results) => {
     return workerPool.exec('enqueueResults', results).catch((err) => {
-      console.log('123Error enqueuing results', err)
+      console.log('Error enqueuing results', err)
       throw err
     })
   }

@@ -40,7 +40,9 @@ export function processResultWith ({
           spawns: propOr([], 'spawns', res),
           assigns: propOr([], 'assigns', res),
           parentId: propOr(undefined, 'parentId', res),
-          processId: propOr(undefined, 'processId', res)
+          processId: propOr(undefined, 'processId', res),
+          wallet: propOr(undefined, 'wallet', res),
+          ip: propOr(undefined, 'ip', res)
         })
         return of(res)
       })
