@@ -136,7 +136,7 @@ const CONFIG_ENVS = {
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
-    IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 500,
+    IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
   },
   production: {
@@ -170,7 +170,7 @@ const CONFIG_ENVS = {
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
-    IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 500,
+    IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
   }
 }
