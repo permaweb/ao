@@ -97,7 +97,7 @@ export function enqueueResultsWith ({ enqueue }) {
           parentId,
           logId: randomBytes(8).toString('hex'),
           ip: rest.ip,
-          wallet: assign.wallet
+          wallet: rest.wallet
         })
       ))
     ]
