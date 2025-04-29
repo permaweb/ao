@@ -9,7 +9,7 @@ import { domainConfigSchema, config } from '../../config.js'
 import { createResultApis } from '../../domain/index.js'
 import { createSqliteClient } from './sqlite.js'
 import { broadcastEnqueueWith, enqueueResultsWith, processResultWith, processResultsWith } from './worker-fn.js'
-import { deleteOldTracesWith } from './tracer.js'
+import { deleteOldTracesWith, recentTracesWith } from './tracer.js'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
 
@@ -52,7 +52,6 @@ export const domain = {
   logger: broadcastLogger
 }
 
-
 /**
  * This program utilizes the business logic for
  * processing results but since the worker is also
@@ -72,6 +71,9 @@ const queue = await createTaskQueue({
   logger: broadcastLogger
 })
 
+const traceDb = await createSqliteClient({ url: workerData.TRACE_DB_URL, bootstrap: false, type: 'traces' })
+const getRecentTraces = recentTracesWith({ db: traceDb, DISABLE_TRACE: workerData.DISABLE_TRACE })
+const deleteOldTraces = deleteOldTracesWith({ db: traceDb, logger: broadcastLogger })
 /**
  * We post a message with the queue size every second to ensure
  * that the sliding window array of queue sizes does not become
@@ -80,6 +82,7 @@ const queue = await createTaskQueue({
 setInterval(() => {
   broadcastChannel.postMessage({ purpose: 'queue-size', size: queue.length, time: Date.now() })
 }, 1000)
+
 /**
  * Initialize a set of task ids.
  * These task ids represent database ids
@@ -87,7 +90,15 @@ setInterval(() => {
  */
 const dequeuedTasks = new Set()
 
-const enqueue = enqueueWith({ queue, queueId: workerData.queueId, logger: broadcastLogger, db })
+const enqueue = enqueueWith({
+  queue,
+  queueId: workerData.queueId,
+  logger: broadcastLogger,
+  db,
+  getRecentTraces,
+  IP_WALLET_RATE_LIMIT: workerData.IP_WALLET_RATE_LIMIT,
+  IP_WALLET_RATE_LIMIT_INTERVAL: workerData.IP_WALLET_RATE_LIMIT_INTERVAL
+})
 const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue, broadcastChannel })
 const dequeue = dequeueWith({ queue, logger: broadcastLogger, dequeuedTasks })
 const removeDequeuedTasks = removeDequeuedTasksWith({ dequeuedTasks, queueId: workerData.queueId, db })
@@ -135,8 +146,6 @@ ct = cron.schedule('*/2 * * * * *', async () => {
 
 let traceCt = null
 let traceIsJobRunning = false
-const traceDb = await createSqliteClient({ url: workerData.TRACE_DB_URL, bootstrap: false, type: 'traces' })
-const deleteOldTraces = deleteOldTracesWith({ db: traceDb, logger: broadcastLogger })
 /**
  * Create cron to clear out traces, each hour
  */

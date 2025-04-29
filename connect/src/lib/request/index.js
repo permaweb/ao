@@ -1,8 +1,8 @@
-import { identity } from 'ramda'
+import { identity, mergeRight } from 'ramda'
 import { z } from 'zod'
 import { of, Rejected, fromPromise } from 'hyper-async'
 import { errFrom } from '../utils.js'
-
+import { parseMultipartContent } from './multipart.js'
 /**
  * @callback Request
  * @param {Record<string, any>} fields
@@ -47,9 +47,17 @@ function verifyInput (args) {
 // transforms http request to a map
 function transformToMap (result) {
   // question should we return a js Map to ensure order consistency?
-  const map = {}
+  let map = {}
   const res = result
-  map.body = res.body 
+  if (res.headers.get('content-type') && res.headers.get('content-type').startsWith('multipart')) {
+    map = mergeRight(map, 
+      Object.fromEntries(
+        parseMultipartContent(res.body, res.headers.get('content-type'))
+      )
+    )
+  } else {
+    map.body = res.body
+  }
   res.headers.forEach((v, k) => {
     map[k] = v 
   })

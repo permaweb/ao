@@ -79,7 +79,8 @@ export function sendDataItemWith ({
                     spawns,
                     assigns,
                     initialTxId,
-                    parentId
+                    parentId,
+                    ip: ctx.ip
                   })
                 })
                 .bimap(
@@ -118,7 +119,8 @@ export function sendDataItemWith ({
                       spawns,
                       assigns,
                       initialTxId,
-                      parentId
+                      parentId,
+                      ip: ctx.ip
                     })
                   })
                 .bimap(
@@ -195,7 +197,8 @@ export function sendDataItemWith ({
               msgs: res.msgs,
               spawns: res.spawns,
               assigns,
-              initialTxId: res.tx.id
+              initialTxId: res.tx.id,
+              ip: res.ip
             })
           },
           ({ res }) => {
@@ -207,7 +210,8 @@ export function sendDataItemWith ({
               msgs: res.msgs,
               spawns: res.spawns,
               assigns: res.assigns,
-              initialTxId: res.tx.id
+              initialTxId: res.tx.id,
+              ip: res.ip
             })
           }
         )

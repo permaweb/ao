@@ -164,6 +164,9 @@ export const createApis = async (ctx) => {
   const workerPool = workerpool.pool('./src/domain/clients/worker.js', {
     minWorkers: queueIds.length, // We must have as many workers as there are queues to persist
     maxWorkers: ctx.MAX_WORKERS,
+    onTerminateWorker: (worker) => {
+      console.log('123Terminating worker', worker)
+    },
     onCreateWorker: () => {
       let queueId = randomBytes(8).toString('hex')
 
@@ -181,7 +184,9 @@ export const createApis = async (ctx) => {
             DB_URL,
             TRACE_DB_URL,
             TASK_QUEUE_MAX_RETRIES: ctx.TASK_QUEUE_MAX_RETRIES,
-            TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY
+            TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY,
+            IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
+            IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL
           }
         }
       }
@@ -200,7 +205,10 @@ export const createApis = async (ctx) => {
   })({ payload: event.data })
 
   const enqueueResults = async (...results) => {
-    return workerPool.exec('enqueueResults', results)
+    return workerPool.exec('enqueueResults', results).catch((err) => {
+      console.log('Error enqueuing results', err)
+      throw err
+    })
   }
 
   const crank = fromPromise(enqueueResults)
@@ -399,13 +407,13 @@ export const createResultApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
     RELAY_MAP,
-    topUp: RelayClient.topUpWith({ 
-      fetch, 
-      logger: processMsgLogger, 
-      wallet: MU_WALLET, 
-      address: walletAddress, 
-      fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) 
-    }),
+    topUp: RelayClient.topUpWith({
+      fetch,
+      logger: processMsgLogger,
+      wallet: MU_WALLET,
+      address: walletAddress,
+      fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
+    })
   })
 
   const processSpawnLogger = logger.child('processSpawn')

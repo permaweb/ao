@@ -4,47 +4,25 @@ import { randomBytes } from 'crypto'
 import { TRACES_TABLE } from './sqlite.js'
 
 /**
- * Each minute, a cron runs to check if the trace db is overflowing.
- * If it is, delete a calculated amount of rows to clear up room.
- * @param {{ overflow: string }} overflow - the percentage the database needs to reduce by to return below the memory limit
- */
+   * Each minute, a cron runs to delete all traces older than 2 hours.
+   * This is to prevent the trace database from growing too large.
+   */
 export function deleteOldTracesWith ({ db, logger }) {
   return async () => {
-    function createQuery ({ overflow }) {
+    function createQuery () {
+      const twoHoursAgo = Date.now() - (2 * 1000 * 60 * 60)
       /**
-       * Check if the database has grown to greater than 1GB.
-       * If it has, delete the least recent 10% of traces.
+       * Delete all traces with timestamp older than 2 hours.
        */
       return {
         sql: `
-          WITH delete_entries AS (
-            SELECT COUNT(*) AS total_rows, CEILING(COUNT(*) * ?) AS rows_to_delete
-            FROM ${TRACES_TABLE}
-          )
           DELETE FROM ${TRACES_TABLE}
-          WHERE timestamp IN (
-            SELECT timestamp
-            FROM ${TRACES_TABLE}
-            ORDER BY timestamp ASC
-            LIMIT (SELECT rows_to_delete FROM delete_entries)
-          )
+          WHERE timestamp < ?
         `,
-        parameters: [overflow]
+        parameters: [twoHoursAgo]
       }
     }
-    const pageSize = await db.pragma('page_size', { simple: true })
-    const pageCount = await db.pragma('page_count', { simple: true })
-    /**
-     * Calculate if we are over the maximum amount of bytes allocated
-     * to the trace database. If we are, we will remove the oldest traces
-     * such that we will return to below the maximum amount.
-     */
-    const totalBytes = pageSize * pageCount
-    const maxBytes = 1024 * 1024 * 1024
-    const overflow = maxBytes / totalBytes
-    if (overflow >= 1) return
-    logger(({ log: `Deleting old traces, overflow of ${1 - overflow}` }))
-    await db.run(createQuery({ overflow: 1 - overflow }))
+    await db.run(createQuery())
     await db.run({ sql: 'VACUUM;', parameters: [] })
     logger({ log: 'Deleted old traces.' })
   }
@@ -52,23 +30,22 @@ export function deleteOldTracesWith ({ db, logger }) {
 
 function createTraceWith ({ db }) {
   /**
-   * Persist the logs to the storage system for traces
-   * @param {String[]} logs - The stringified array of logs for this message
+   * Persist the ip and other metadata to the storage system for traces
    * @param {String} messageId - The identifying id for this message
    * @param {String} processId - The id for this message's process
    * @param {String} wallet - The wallet address associated with this message
    * @param {String} parentId - The messageId of this message's 'parent' message
-   * @param {String} data - The stringified context object for this message
+   * @param {String} ip - The ip address of the client that pushed this message
    * @param {'MESSAGE' | 'SPAWN' | 'ASSIGN' } type - The type of this message
    * @returns Sql query and parameters
    */
-  function createQuery (logs, messageId, processId, wallet, parentId, data, type) {
+  function createQuery ({ messageId, processId, wallet, parentId, ip, type }) {
     const randomByteString = randomBytes(8).toString('hex')
     return {
       sql: `
         INSERT OR IGNORE INTO ${TRACES_TABLE}
-        (id, messageId, processId, wallet, timestamp, parentId, logs, data, type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, messageId, processId, wallet, timestamp, parentId, ip, type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       parameters: [
         `${messageId}-${processId}-${wallet}-${randomByteString}`,
@@ -77,29 +54,17 @@ function createTraceWith ({ db }) {
         wallet,
         Date.now(),
         parentId,
-        logs,
-        data, type
+        ip,
+        type
       ]
     }
   }
 
-  return ({ logs, messageId, processId, wallet, parentId, ctx, type }) => {
+  return ({ messageId, processId, wallet, parentId, ip, type }) => {
     /**
-     * If their is a raw data buffer in the ctx object, we want to remove it
-     * and replace it with its length. This is to prevent bloat in the db.
+     * Add the trace to the db.
      */
-    if (ctx?.tx?.data) {
-      ctx.tx.dataLength = ctx.tx.data.length
-      delete ctx.tx.data
-    }
-    if (ctx?.raw) {
-      ctx.rawLength = ctx.raw.length
-      delete ctx.raw
-    }
-    /**
-     * Add the trace to the db. If their is no ctx object, supply an empty object.
-     */
-    db.run(createQuery(logs, messageId, processId, wallet, parentId, JSON.stringify(ctx ?? '{}'), type))
+    db.run(createQuery({ messageId, processId, wallet, parentId, ip, type }))
   }
 }
 
@@ -151,16 +116,16 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_
      */
     if (end) {
       const currentLog = activeTraces.get(logId)
-      const logs = JSON.stringify(currentLog?.logs || [])
       ctx = ctx ?? {}
-      const { messageId, processId, wallet, parentId } = ctx
+      const { messageId, processId, parentId, ip } = ctx
+      const wallet = ctx?.wallet || ctx?.dataItem?.owner
       const type = ctx?.type || ctx?.dataItem?.tags?.find((tag) => tag.name === 'Type')?.value?.toUpperCase()
 
       /**
        * If we have a messageId or processId, save our trace to the DB.
        */
-      if (messageId || processId || !DISABLE_TRACE) {
-        createTrace({ logs, messageId, processId, wallet, parentId, ctx, type })
+      if ((messageId || processId) && !DISABLE_TRACE) {
+        createTrace({ messageId, processId, wallet, parentId, ip, type })
       }
 
       /**
@@ -193,6 +158,44 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_
   }
 
   return tracerLogger
+}
+
+/**
+ * Get the most recent traces for a given wallet and ip.
+ * @param {String} wallet - The wallet address to get traces for
+ * @param {String} ip - The ip address to get traces for
+ * @param {Number} timestamp - The timestamp to get traces for
+ * @returns {Array} - The traces
+ */
+export function recentTracesWith ({ db, DISABLE_TRACE }) {
+  return async ({ wallet, ip, timestamp }) => {
+    const createWalletQuery = ({ wallet, timestamp }) => {
+      return {
+        sql: `
+          SELECT * FROM ${TRACES_TABLE}
+          WHERE wallet = ? AND timestamp > ?
+          ORDER BY timestamp DESC
+        `,
+        parameters: [wallet, timestamp]
+      }
+    }
+    const createIpQuery = ({ ip, timestamp }) => {
+      return {
+        sql: `
+          SELECT * FROM ${TRACES_TABLE}
+          WHERE ip = ? AND timestamp > ?
+          ORDER BY timestamp DESC
+        `,
+        parameters: [ip, timestamp]
+      }
+    }
+    if (DISABLE_TRACE) {
+      return []
+    }
+    const walletResults = wallet ? await db.query(createWalletQuery({ wallet, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e })) : []
+    const ipResults = ip ? await db.query(createIpQuery({ ip, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e })) : []
+    return { wallet: walletResults, ip: ipResults }
+  }
 }
 
 /*
@@ -252,7 +255,7 @@ export function readTracesWith ({ db, DISABLE_TRACE }) {
         sql: `
         WITH RECURSIVE 
             Root AS (
-              SELECT id, messageId, processId, wallet, logs, data, parentId, timestamp, type
+              SELECT id, messageId, processId, wallet, ip, parentId, timestamp, type
               FROM traces
               WHERE messageId LIKE ? AND processId = ?
               ORDER BY timestamp DESC
@@ -261,30 +264,30 @@ export function readTracesWith ({ db, DISABLE_TRACE }) {
               SELECT * FROM Root WHERE type = ?
             ),
             Ancestors AS (
-              SELECT id, messageId, processId, wallet, logs, data, parentId, timestamp, type
+              SELECT id, messageId, processId, wallet, ip, parentId, timestamp, type
               FROM traces
               WHERE messageId IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
               UNION ALL
-              SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId, t.timestamp, t.type
+              SELECT t.id, t.messageId, t.processId, t.wallet, t.ip, t.parentId, t.timestamp, t.type
               FROM traces t
               INNER JOIN Ancestors a ON t.messageId = a.parentId
               WHERE t.messageId NOT IN (SELECT messageId FROM FilteredRoot) AND t.processId IN (SELECT processId FROM FilteredRoot)
             ),
             Descendants AS (
-              SELECT id, messageId, processId, wallet, logs, data, parentId, timestamp, type
+              SELECT id, messageId, processId, wallet, ip, parentId, timestamp, type
               FROM traces
               WHERE messageId IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
               UNION ALL
-              SELECT t.id, t.messageId, t.processId, t.wallet, t.logs, t.data, t.parentId, t.timestamp, t.type
+              SELECT t.id, t.messageId, t.processId, t.wallet, t.ip, t.parentId, t.timestamp, t.type
               FROM traces t
               INNER JOIN Descendants d ON t.parentId = d.messageId
               WHERE t.messageId NOT IN (SELECT messageId FROM FilteredRoot) AND t.processId IN (SELECT processId FROM FilteredRoot)
             )
-            SELECT 'root' AS relation, id, messageId, processId, wallet, logs, data, parentId, timestamp, type FROM ROOT WHERE messageId IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
+            SELECT 'root' AS relation, id, messageId, processId, wallet, ip, parentId, timestamp, type FROM ROOT WHERE messageId IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
             UNION ALL
-            SELECT 'ancestor' AS relation, id, messageId, processId, wallet, logs, data, parentId, timestamp, type FROM Ancestors WHERE messageId NOT IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
+            SELECT 'ancestor' AS relation, id, messageId, processId, wallet, ip, parentId, timestamp, type FROM Ancestors WHERE messageId NOT IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
             UNION ALL
-            SELECT 'descendant' AS relation, id, messageId, processId, wallet, logs, data, parentId, timestamp, type FROM Descendants WHERE messageId NOT IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
+            SELECT 'descendant' AS relation, id, messageId, processId, wallet, ip, parentId, timestamp, type FROM Descendants WHERE messageId NOT IN (SELECT messageId FROM FilteredRoot) AND processId IN (SELECT processId FROM FilteredRoot)
             LIMIT ?, ?;
         `,
         parameters: [
@@ -301,11 +304,7 @@ export function readTracesWith ({ db, DISABLE_TRACE }) {
       return []
     }
 
-    const results = (
-      await db.query(createQuery(message, process, type, offset, limit)).catch((e) => console.error('Error querying database for traces:', { e }))
-    ).map((result) => {
-      return { ...result, logs: JSON.parse(result.logs), data: JSON.parse(result.data) }
-    })
+    const results = await db.query(createQuery(message, process, type, offset, limit))
     return results
   }
 }

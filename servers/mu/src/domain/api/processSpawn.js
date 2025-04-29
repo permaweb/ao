@@ -43,7 +43,9 @@ export function processSpawnWith ({
           messageId: res.processTx,
           initialTxId: ctx.initialTxId,
           tx: { id: res.processTx, processId: res.processTx },
-          logId: ctx.logId
+          logId: ctx.logId,
+          wallet: ctx.wallet,
+          ip: ctx.ip
         }).map((result) => ({
           ...res,
           msgs: result.msgs,

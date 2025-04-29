@@ -18,14 +18,16 @@ describe('pullResultWith', () => {
       fromProcessId: 'from-pid',
       processId: 'target-pid',
       initialTxId: 'i-1',
-      parentId: 'i-1'
+      parentId: 'i-1',
+      wallet: 'owner-address-123'
     }
     const cachedSpawn1 = {
       spawn: spawn1,
       processId: 'from-pid',
       initialTxId: 'i-1',
       parentId: 'i-1',
-      fromProcessId: 'from-pid'
+      fromProcessId: 'from-pid',
+      wallet: 'owner-address-123'
     }
     const pullResult = pullResultWith({
       fetchResult: async (id) => {
@@ -47,7 +49,8 @@ describe('pullResultWith', () => {
       initialTxId: 'i-1',
       processId: 'from-pid',
       tagAssignments: [{ Processes: ['p2'], Message: 'm2' }],
-      logId: 'log-123'
+      logId: 'log-123',
+      wallet: 'owner-address-123'
     }).toPromise()
 
     assert.deepStrictEqual(result.msgs[0], cachedMsg1)

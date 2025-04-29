@@ -27,7 +27,8 @@ describe('processSpawnWith', () => {
           Messages: [{ Tags: [], Data: '', Target: '', Anchor: '' }],
           Spawns: [{ Tags: [], Data: '', Anchor: '' }],
           Assignments: [{ Message: 'm', Processes: ['a', 'b'] }],
-          initialTxId: 'initial-tx-id'
+          initialTxId: 'initial-tx-id',
+          wallet: 'owner-address-123'
         }
       },
       fetchSchedulerProcess: async () => ({
@@ -68,7 +69,9 @@ describe('processSpawnWith', () => {
           ],
           Data: 'some-data'
         }
-      }
+      },
+      wallet: 'owner-address-123',
+      ip: '123.123.123.123'
     }).toPromise()
 
     /**
@@ -81,14 +84,16 @@ describe('processSpawnWith', () => {
         processId: '',
         initialTxId: 'initial-tx-id',
         fromProcessId: 'id-123',
-        parentId: 'id-123'
+        parentId: 'id-123',
+        wallet: 'owner-address-123'
       },
       {
         msg: { Tags: [], Data: '', Target: '', Anchor: '' },
         processId: '',
         initialTxId: 'initial-tx-id',
         fromProcessId: 'process-id',
-        parentId: 'id-123'
+        parentId: 'id-123',
+        wallet: 'owner-address-123'
       }
     ])
 
@@ -103,14 +108,16 @@ describe('processSpawnWith', () => {
         processId: 'id-123',
         initialTxId: 'initial-tx-id',
         fromProcessId: 'id-123',
-        parentId: 'id-123'
+        parentId: 'id-123',
+        wallet: 'owner-address-123'
       },
       {
         spawn: { Tags: [], Data: '', Anchor: '' },
         processId: 'process-id',
         initialTxId: 'initial-tx-id',
         fromProcessId: undefined,
-        parentId: 'id-123'
+        parentId: 'id-123',
+        wallet: 'owner-address-123'
       }
     ])
     // we should have fetched a result for the process id itself only once
