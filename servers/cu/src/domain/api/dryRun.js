@@ -192,7 +192,7 @@ export function dryRunWith (env) {
     pendingDryRuns.set(cacheKey, promise)
 
     // begin async evaluation
-    of({ processId, messageTxId })
+    setImmediate(() => of({ processId, messageTxId })
       .chain(loadMessageCtx)
       .chain(ensureProcessLoaded({ maxProcessAge }))
       .chain(ensureModuleLoaded)
@@ -265,6 +265,7 @@ export function dryRunWith (env) {
         resolve(result)
       })
       .toPromise()
+    )
 
     // return the pending promise
     return of(promise)
