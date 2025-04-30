@@ -186,8 +186,8 @@ export function dryRunWith (env) {
     }
 
     logger.info('Dry run cache [MISS]  for process "%s"', processId)
-    let resolve
-    const promise = new Promise(_resolve => resolve = _resolve)
+    let resolve, reject
+    const promise = new Promise((_resolve, _reject) => (resolve = _resolve, reject = _reject))
     // immediately start enqueueing
     pendingDryRuns.set(cacheKey, promise)
 
@@ -255,15 +255,23 @@ export function dryRunWith (env) {
          */
         return evaluate({ ...ctx, dryRun: true, messages: Readable.from(dryRunMessage()) })
       })
-      .map((res) => {
-        const result = omit(['Memory'], res.output)
-        // Cache the result for 1 second
-        dryRunResultsCache.set(cacheKey, result, 1000)
-        // stop enqueueing
-        pendingDryRuns.delete(cacheKey)
-        // resolve all pending
-        resolve(result)
-      })
+      .bimap(
+        (err) => {
+          // stop enqueueing
+          pendingDryRuns.delete(cacheKey)
+          // reject all pending
+          reject(err)
+        },
+        (res) => {
+          const result = omit(['Memory'], res.output)
+          // Cache the result for 1 second
+          dryRunResultsCache.set(cacheKey, result, 1000)
+          // stop enqueueing
+          pendingDryRuns.delete(cacheKey)
+          // resolve all pending
+          resolve(result)
+        }
+      )
       .toPromise()
     )
 
