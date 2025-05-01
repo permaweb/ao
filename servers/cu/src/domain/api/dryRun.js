@@ -72,8 +72,13 @@ export function dryRunWith (env) {
   })
 
   const readStateCache = TtlCache(env)
+
   // Cache for dry run results to avoid redundant computation
   const dryRunResultsCache = TtlCache(env)
+
+  // Track in-progress dry runs to prevent duplicate concurrent evaluations
+  // Map<cacheKey: string, promise: Promise<EvalResult>>
+  const pendingDryRuns = new Map()
 
   function loadMessageCtx ({ messageTxId, processId }) {
     /**
@@ -170,11 +175,24 @@ export function dryRunWith (env) {
     // Check if we have a cached result for this exact request
     const cachedResult = dryRunResultsCache.get(cacheKey)
     if (cachedResult) {
-      logger.info('Cached dry run reused for process "%s"', processId)
+      logger.info('Dry run cache  [HIT]  for process "%s"', processId)
       return Resolved(cachedResult)
     }
-    
-    return of({ processId, messageTxId })
+
+    // Check if this exact dry run is already in progress
+    if (pendingDryRuns.has(cacheKey)) {
+      logger.info('Dry run cache [QUEUE] process "%s"', processId)
+      return of(pendingDryRuns.get(cacheKey))
+    }
+
+    logger.info('Dry run cache [MISS]  for process "%s"', processId)
+    let resolve, reject
+    const promise = new Promise((_resolve, _reject) => (resolve = _resolve, reject = _reject))
+    // immediately start enqueueing
+    pendingDryRuns.set(cacheKey, promise)
+
+    // begin async evaluation
+    setImmediate(() => of({ processId, messageTxId })
       .chain(loadMessageCtx)
       .chain(ensureProcessLoaded({ maxProcessAge }))
       .chain(ensureModuleLoaded)
@@ -237,11 +255,27 @@ export function dryRunWith (env) {
          */
         return evaluate({ ...ctx, dryRun: true, messages: Readable.from(dryRunMessage()) })
       })
-      .map((res) => {
-        const result = omit(['Memory'], res.output)
-        // Cache the result for 1 second
-        dryRunResultsCache.set(cacheKey, result, 1000)
-        return result
-      })
+      .bimap(
+        (err) => {
+          // stop enqueueing
+          pendingDryRuns.delete(cacheKey)
+          // reject all pending
+          reject(err)
+        },
+        (res) => {
+          const result = omit(['Memory'], res.output)
+          // Cache the result for 1 second
+          dryRunResultsCache.set(cacheKey, result, 1000)
+          // stop enqueueing
+          pendingDryRuns.delete(cacheKey)
+          // resolve all pending
+          resolve(result)
+        }
+      )
+      .toPromise()
+    )
+
+    // return the pending promise
+    return of(promise)
   }
 }
