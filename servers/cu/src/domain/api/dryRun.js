@@ -265,7 +265,7 @@ export function dryRunWith (env) {
         (res) => {
           const result = omit(['Memory'], res.output)
           // Cache the result for 1 second
-          dryRunResultsCache.set(cacheKey, result, 1000)
+          dryRunResultsCache.set(cacheKey, result, 250)
           // stop enqueueing
           pendingDryRuns.delete(cacheKey)
           // resolve all pending
