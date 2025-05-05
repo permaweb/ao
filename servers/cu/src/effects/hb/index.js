@@ -322,9 +322,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
       return backoff(
         () => {
-          if (body && body.edges.length === (+to - +from) && body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce')?.value === from) {
-            return body
-          }
+          const bodyIsValid = body &&
+            body.edges.length === (+to - +from + 1) &&
+            +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce')?.value === +from
+          if (bodyIsValid) return body
           return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
         },
         { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
@@ -481,9 +482,10 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
 
     return backoff(
       () => {
-        if (body && body.edges.length === 1 && body.edges[0]?.node?.message?.id === messageUid) {
-          return body
-        }
+        const bodyIsValid = body &&
+          body.edges.length === 1 &&
+          +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce')?.value === +messageUid
+        if (bodyIsValid) return body
         return fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes)
       },
       { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
