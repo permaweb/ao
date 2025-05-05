@@ -79,6 +79,9 @@ export function evaluateWith (env) {
   const evaluationCounter = env.evaluationCounter
   // const gasCounter = env.gasCounter
   const logger = env.logger.child('evaluate')
+  // Extract checkpoint thresholds from env
+  const EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt(300_000_000_000_000)
+  const EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (15 * 60 * 1000) // 15 minutes in ms
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -217,6 +220,11 @@ export function evaluateWith (env) {
 
                     if (cron) ctx.stats.messages.cron++
                     else ctx.stats.messages.scheduled++
+                    
+                    // Calculate current evaluation time for potential intermediate checkpointing
+                    const now = new Date()
+                    const startTime = pathOr(now, ['stats', 'startTime'], ctx)
+                    const currentEvalTime = now.getTime() - startTime.getTime() // The eval time in ms
 
                     if (output.Error) {
                       logger(
@@ -227,6 +235,63 @@ export function evaluateWith (env) {
                       )
                       ctx.stats.messages.error = ctx.stats.messages.error || 0
                       ctx.stats.messages.error++
+                    }
+                    
+                    // Check if we need to create an intermediate checkpoint based on gas or time thresholds
+                    // Only checkpoint if the message was successfully evaluated and we have memory
+                    if (!noSave && !output.Error && output.Memory && !hasCheckpoint) {
+                      // Check if either threshold has been reached
+                      const gasThresholdReached = totalGasUsed && totalGasUsed >= EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD
+                      const evalTimeThresholdReached = currentEvalTime && currentEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+                      
+                      if (gasThresholdReached || evalTimeThresholdReached) {
+                        // Log the checkpoint reason
+                        if (gasThresholdReached) {
+                          logger(
+                            'Intermediate Checkpoint: Accumulated Gas Threshold of "%d" gas used met during evaluation stream for process "%s" at message "%s" -- "%d" gas used. Creating Checkpoint...',
+                            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+                            ctx.id,
+                            message.Id,
+                            totalGasUsed
+                          )
+                        } else {
+                          logger(
+                            'Intermediate Checkpoint: Accumulated Eval Time Threshold of "%d" ms met during evaluation stream for process "%s" at message "%s" -- "%d" ms eval time. Creating Checkpoint...',
+                            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                            ctx.id,
+                            message.Id,
+                            currentEvalTime
+                          )
+                        }
+                        
+                        // Save intermediate checkpoint with current message's state
+                        await saveLatestProcessMemory({
+                          processId: ctx.id,
+                          moduleId: ctx.moduleId,
+                          messageId: message.Id,
+                          assignmentId: assignmentId || mostRecentAssignmentId,
+                          hashChain: message['Hash-Chain'] || mostRecentHashChain,
+                          timestamp: message.Timestamp,
+                          nonce: message.Nonce,
+                          epoch: message.Epoch,
+                          blockHeight: message['Block-Height'],
+                          ordinate,
+                          cron,
+                          Memory: output.Memory,
+                          gasUsed: totalGasUsed,
+                          evalTime: currentEvalTime
+                        })
+                        
+                        // Reset counters after checkpoint
+                        totalGasUsed = BigInt(0)
+                        ctx.stats.startTime = now // Reset eval time counter
+                        
+                        logger(
+                          'Created intermediate checkpoint for process "%s" at message "%s"',
+                          ctx.id,
+                          message.Id
+                        )
+                      }
                     }
 
                     /**
