@@ -106,7 +106,10 @@ export const createApis = async (ctx) => {
           MODE: ctx.MODE,
           LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
           DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL,
-          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE
+          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
+          // Pass checkpoint thresholds to worker threads for intermediate checkpointing
+          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
         }
       }
     }

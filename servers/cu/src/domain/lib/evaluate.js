@@ -222,6 +222,29 @@ export function evaluateWith (env) {
                     const now = new Date()
                     const startTime = pathOr(now, ['stats', 'startTime'], ctx)
                     const currentEvalTime = now.getTime() - startTime.getTime() // The eval time in ms
+                    
+                    // Log more frequently to show progress toward checkpoint thresholds
+                    if (ctx.stats.messages.scheduled % 20 === 0 || ctx.stats.messages.cron % 20 === 0) {
+                      const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
+                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 15 * 60 * 1000 // 15 minutes in ms
+                      
+                      const gasPercentage = totalGasUsed > 0 && gasThreshold > 0 ? 
+                        (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
+                      const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
+                        (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                        
+                      logger(
+                        'CHECKPOINT PROGRESS: Process "%s" | Message #%d | Gas: %s/%s (%s%%) | Time: %dms/%dms (%s%%)',
+                        ctx.id,
+                        ctx.stats.messages.scheduled + ctx.stats.messages.cron,
+                        totalGasUsed.toString(),
+                        gasThreshold.toString(),
+                        gasPercentage,
+                        currentEvalTime,
+                        timeThreshold,
+                        timePercentage
+                      )
+                    }
 
                     if (output.Error) {
                       logger(
@@ -237,18 +260,32 @@ export function evaluateWith (env) {
                     // Check if we need to create an intermediate checkpoint based on gas or time thresholds
                     // Only checkpoint if the message was successfully evaluated and we have memory
                     if (!noSave && !output.Error && output.Memory && !hasCheckpoint) {
+                      // Use fallback values if thresholds aren't in environment
+                      const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
+                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (15 * 60 * 1000) // 15 minutes in ms
+                      
                       // Check if either threshold has been reached
-                      const gasThresholdReached = totalGasUsed && env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
-                                               totalGasUsed >= env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD
-                      const evalTimeThresholdReached = currentEvalTime && env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
-                                                  currentEvalTime >= env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+                      const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
+                      const evalTimeThresholdReached = currentEvalTime > 0 && currentEvalTime >= timeThreshold
+                      
+                      // Extra logging for debugging threshold checks
+                      if (gasThresholdReached || evalTimeThresholdReached) {
+                        logger(
+                          'CHECKPOINT THRESHOLD MET: Process "%s" | Gas: %s/%s | Time: %dms/%dms',
+                          ctx.id,
+                          totalGasUsed.toString(),
+                          gasThreshold.toString(),
+                          currentEvalTime,
+                          timeThreshold
+                        )
+                      }
                       
                       if (gasThresholdReached || evalTimeThresholdReached) {
                         // Log the checkpoint reason
                         if (gasThresholdReached) {
                           logger(
                             'Intermediate Checkpoint: Accumulated Gas Threshold of "%d" gas used met during evaluation stream for process "%s" at message "%s" -- "%d" gas used. Creating Checkpoint...',
-                            env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+                            gasThreshold,
                             ctx.id,
                             message.Id,
                             totalGasUsed
@@ -256,7 +293,7 @@ export function evaluateWith (env) {
                         } else {
                           logger(
                             'Intermediate Checkpoint: Accumulated Eval Time Threshold of "%d" ms met during evaluation stream for process "%s" at message "%s" -- "%d" ms eval time. Creating Checkpoint...',
-                            env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                            timeThreshold,
                             ctx.id,
                             message.Id,
                             currentEvalTime
