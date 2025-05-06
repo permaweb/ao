@@ -267,21 +267,40 @@ export function evaluateWith (env) {
                       const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
                         (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
                       
-                      // Calculate time remaining for scheduled messages if timestamp is available
+                      // Calculate time info for all messages, with special handling for scheduled messages
                       let timeInfo = ''
-                      if (message && message.Timestamp) {
+                      if (message) {
                         try {
-                          // Get the scheduled message time
-                          const messageTime = parseInt(message.Timestamp.split(':')[0], 10)
-                          const currentTime = Date.now()
-                          const timeDiff = messageTime - currentTime
+                          // For scheduled messages, extract timestamp from message.Timestamp
+                          // For other messages, use the message.Timestamp or message.UnixTime if available
+                          let messageUnixTime = null
+                          let timeDiff = 0
+                          let isScheduled = false
                           
-                          if (timeDiff > 0) {
-                            // Calculate days, hours, minutes, seconds
-                            const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
-                            const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-                            const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
-                            const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
+                          if (message.Timestamp) {
+                            messageUnixTime = parseInt(message.Timestamp.split(':')[0], 10)
+                            const currentTime = Date.now()
+                            timeDiff = messageUnixTime - currentTime
+                            isScheduled = timeDiff > 0
+                          } else if (message.UnixTime) {
+                            messageUnixTime = parseInt(message.UnixTime, 10)
+                            const currentTime = Date.now()
+                            timeDiff = messageUnixTime - currentTime
+                            isScheduled = timeDiff > 0
+                          }
+                          
+                          // Always show message timestamp if available
+                          if (messageUnixTime) {
+                            // Format the date in a compact ISO-like format (YYYY-MM-DD HH:MM:SS)
+                            const msgDate = new Date(messageUnixTime)
+                            const dateStr = msgDate.toISOString().replace('T', ' ').substring(0, 19)
+                            
+                            // Calculate and format time difference from current time
+                            const absDiff = Math.abs(timeDiff)
+                            const days = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+                            const hours = Math.floor((absDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+                            const minutes = Math.floor((absDiff % (60 * 60 * 1000)) / (60 * 1000))
+                            const seconds = Math.floor((absDiff % (60 * 1000)) / 1000)
                             
                             // Format the time difference
                             const parts = []
@@ -290,10 +309,16 @@ export function evaluateWith (env) {
                             if (minutes > 0) parts.push(`${minutes}m`)
                             if (seconds > 0) parts.push(`${seconds}s`)
                             
-                            timeInfo = ` | Scheduled in: ${parts.join(' ')}`
+                            const timeDiffStr = parts.join(' ')
+                            
+                            if (isScheduled) {
+                              timeInfo = ` | Unix: ${messageUnixTime} | Scheduled: ${dateStr} (in ${timeDiffStr})`
+                            } else {
+                              timeInfo = ` | Unix: ${messageUnixTime} | Time: ${dateStr}`
+                            }
                           }
                         } catch (e) {
-                          // If parsing fails, just continue without the scheduled time info
+                          // If parsing fails, just continue without the time info
                         }
                       }
                       
@@ -338,21 +363,40 @@ export function evaluateWith (env) {
                         const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
                           (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
                           
-                        // Calculate time remaining for scheduled messages if timestamp is available
+                        // Calculate time info for all messages, with special handling for scheduled messages
                         let timeInfo = ''
-                        if (message && message.Timestamp) {
+                        if (message) {
                           try {
-                            // Get the scheduled message time
-                            const messageTime = parseInt(message.Timestamp.split(':')[0], 10)
-                            const currentTime = Date.now()
-                            const timeDiff = messageTime - currentTime
+                            // For scheduled messages, extract timestamp from message.Timestamp
+                            // For other messages, use the message.Timestamp or message.UnixTime if available
+                            let messageUnixTime = null
+                            let timeDiff = 0
+                            let isScheduled = false
                             
-                            if (timeDiff > 0) {
-                              // Calculate days, hours, minutes, seconds
-                              const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
-                              const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-                              const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
-                              const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
+                            if (message.Timestamp) {
+                              messageUnixTime = parseInt(message.Timestamp.split(':')[0], 10)
+                              const currentTime = Date.now()
+                              timeDiff = messageUnixTime - currentTime
+                              isScheduled = timeDiff > 0
+                            } else if (message.UnixTime) {
+                              messageUnixTime = parseInt(message.UnixTime, 10)
+                              const currentTime = Date.now()
+                              timeDiff = messageUnixTime - currentTime
+                              isScheduled = timeDiff > 0
+                            }
+                            
+                            // Always show message timestamp if available
+                            if (messageUnixTime) {
+                              // Format the date in a compact ISO-like format (YYYY-MM-DD HH:MM:SS)
+                              const msgDate = new Date(messageUnixTime)
+                              const dateStr = msgDate.toISOString().replace('T', ' ').substring(0, 19)
+                              
+                              // Calculate and format time difference from current time
+                              const absDiff = Math.abs(timeDiff)
+                              const days = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+                              const hours = Math.floor((absDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+                              const minutes = Math.floor((absDiff % (60 * 60 * 1000)) / (60 * 1000))
+                              const seconds = Math.floor((absDiff % (60 * 1000)) / 1000)
                               
                               // Format the time difference
                               const parts = []
@@ -361,10 +405,16 @@ export function evaluateWith (env) {
                               if (minutes > 0) parts.push(`${minutes}m`)
                               if (seconds > 0) parts.push(`${seconds}s`)
                               
-                              timeInfo = ` | Scheduled in: ${parts.join(' ')}`
+                              const timeDiffStr = parts.join(' ')
+                              
+                              if (isScheduled) {
+                                timeInfo = ` | Unix: ${messageUnixTime} | Scheduled: ${dateStr} (in ${timeDiffStr})`
+                              } else {
+                                timeInfo = ` | Unix: ${messageUnixTime} | Time: ${dateStr}`
+                              }
                             }
                           } catch (e) {
-                            // If parsing fails, just continue without the scheduled time info
+                            // If parsing fails, just continue without the time info
                           }
                         }
                           
