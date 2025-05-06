@@ -213,24 +213,32 @@ export function evaluateWith (env) {
                      * for all subsequent evaluations for this evaluation stream
                      */
                     if (first) first = false
-                    // Debug gas value from message evaluation
-                    logger('Message Gas Debug: Message Id "%s" returned GasUsed: %s (type: %s)',
-                      message.Id, 
-                      output.GasUsed?.toString() || 'undefined/null',
-                      output.GasUsed ? typeof output.GasUsed : 'undefined/null'
-                    )
+                    // Use a synthetic gas value approach to ensure checkpoints happen regularly
+                    // even when actual gas reporting isn't available
                     
-                    // More robust gas accumulation - handle all cases
+                    // Define a constant gas value per message - this ensures gas accumulates even if
+                    // the individual message evaluations don't report gas usage
+                    const DEFAULT_GAS_PER_MESSAGE = BigInt(3_000_000_000) // 3 billion gas per message (tunable)
+                    
                     try {
+                      // First try to use the actual reported gas if available
                       if (output.GasUsed !== undefined && output.GasUsed !== null) {
                         // Make sure we're dealing with BigInt values consistently
                         const gasValue = typeof output.GasUsed === 'bigint' ? 
                           output.GasUsed : BigInt(output.GasUsed.toString())
                         totalGasUsed += gasValue
-                        logger('Updated totalGasUsed: %s', totalGasUsed.toString())
+                        logger('Message "%s" used reported gas: %s, total now: %s', 
+                          message.Id, gasValue.toString(), totalGasUsed.toString())
+                      } else {
+                        // Fallback: add synthetic gas usage when not reported
+                        totalGasUsed += DEFAULT_GAS_PER_MESSAGE
+                        logger('Message "%s" using synthetic gas: %s, total now: %s',
+                          message.Id, DEFAULT_GAS_PER_MESSAGE.toString(), totalGasUsed.toString())
                       }
                     } catch (err) {
-                      logger('Error calculating gas: %s. Value was: %s', err.message, output.GasUsed)    
+                      // In case of any errors, still add the synthetic gas
+                      totalGasUsed += DEFAULT_GAS_PER_MESSAGE
+                      logger('Error handling gas (using synthetic): %s', err.message)    
                     }
 
                     if (cron) ctx.stats.messages.cron++
