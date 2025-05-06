@@ -267,17 +267,11 @@ export function evaluateWith (env) {
                       const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
                         (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
                       
-                      // Calculate time remaining for scheduled messages with a simpler approach
+                      // Calculate time remaining for scheduled messages
                       let awayTime = ''
-                      let debugInfo = ''
                       
                       if (message) {
                         try {
-                          // Add debug info about the message timestamp
-                          const timestampType = message.Timestamp ? typeof message.Timestamp : 'undefined'
-                          const timestampValue = message.Timestamp ? String(message.Timestamp) : 'null'
-                          debugInfo = ` [TS:${timestampType}:${timestampValue}]`
-                          
                           // Extract the timestamp from the message - handle different formats
                           let messageTime = null
                           
@@ -294,18 +288,12 @@ export function evaluateWith (env) {
                             }
                           }
                           
-                          // Add to debug info regardless of validity
-                          debugInfo += ` [MT:${messageTime}]`
-                          
                           // Only proceed if we have a valid timestamp
                           if (messageTime && !isNaN(messageTime)) {
                             const currentTime = Date.now()
-                            debugInfo += ` [CT:${currentTime}]`
-                            
                             const timeDiff = messageTime - currentTime
-                            debugInfo += ` [TD:${timeDiff}]`
                             
-                            // Always generate an Away time for debugging, even if past
+                            // Calculate time components
                             const absDiff = Math.abs(timeDiff)
                             const days = Math.floor(absDiff / (24 * 60 * 60 * 1000))
                             const hours = Math.floor((absDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
@@ -319,7 +307,7 @@ export function evaluateWith (env) {
                             if (minutes > 0) parts.push(`${minutes}m`)
                             if (seconds > 0) parts.push(`${seconds}s`)
                             
-                            // Use the exact format requested: "Away: ~xd-yh-zm-ns"
+                            // Use the format: "Away: ~xd-yh-zm-ns"
                             if (parts.length > 0) {
                               const timeStr = parts.join('-')
                               // For future events, show as "away", for past events as "ago"
@@ -327,23 +315,19 @@ export function evaluateWith (env) {
                               awayTime = `${timePrefix}: ~${timeStr} | `
                             }
                           }
-                          
                         } catch (e) {
                           // If parsing fails, just continue without the time info
-                          console.error('Error parsing timestamp:', e)
-                          debugInfo += ` [ERROR:${e.message}]`
                         }
                       }
                       
                       // Always show percentage-based progress with consistent formatting
                       // Place awayTime at the beginning for better visibility
                       logger(
-                        'Checkpoint progress: %sProcess "%s" | Gas: %s%% | Time: %s%%%s',
-                        awayTime || '', // Show remaining time if available (now at beginning)
+                        'Checkpoint progress: %sProcess "%s" | Gas: %s%% | Time: %s%%',
+                        awayTime || '', // Show remaining time if available at beginning
                         ctx.id,
                         gasPercentage,
-                        timePercentage,
-                        debugInfo || '' // Show debug info in dev environments
+                        timePercentage
                       )
                     }
 
@@ -429,12 +413,11 @@ export function evaluateWith (env) {
                         }
                           
                         logger(
-                          'MID-EVAL CHECKPOINT TRIGGERED: %sProcess "%s" | Gas: %s%% | Time: %s%%%s',
-                          awayTime || '', // Show remaining time if available (now at beginning)
+                          'MID-EVAL CHECKPOINT TRIGGERED: %sProcess "%s" | Gas: %s%% | Time: %s%%',
+                          awayTime || '', // Show remaining time if available at beginning
                           ctx.id,
                           gasPercentage,
-                          timePercentage,
-                          debugInfo || '' // Show debug info in dev environments
+                          timePercentage
                         )
                       }
                       
