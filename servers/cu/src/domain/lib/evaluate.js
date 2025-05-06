@@ -213,7 +213,25 @@ export function evaluateWith (env) {
                      * for all subsequent evaluations for this evaluation stream
                      */
                     if (first) first = false
-                    if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
+                    // Debug gas value from message evaluation
+                    logger('Message Gas Debug: Message Id "%s" returned GasUsed: %s (type: %s)',
+                      message.Id, 
+                      output.GasUsed?.toString() || 'undefined/null',
+                      output.GasUsed ? typeof output.GasUsed : 'undefined/null'
+                    )
+                    
+                    // More robust gas accumulation - handle all cases
+                    try {
+                      if (output.GasUsed !== undefined && output.GasUsed !== null) {
+                        // Make sure we're dealing with BigInt values consistently
+                        const gasValue = typeof output.GasUsed === 'bigint' ? 
+                          output.GasUsed : BigInt(output.GasUsed.toString())
+                        totalGasUsed += gasValue
+                        logger('Updated totalGasUsed: %s', totalGasUsed.toString())
+                      }
+                    } catch (err) {
+                      logger('Error calculating gas: %s. Value was: %s', err.message, output.GasUsed)    
+                    }
 
                     if (cron) ctx.stats.messages.cron++
                     else ctx.stats.messages.scheduled++
