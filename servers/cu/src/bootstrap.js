@@ -216,10 +216,7 @@ export const createApis = async (ctx) => {
 
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
-  ctx.logger('Mid-Evaluation Checkpointing is set to "%s" (env value: "%s", typeof: %s)', 
-    ctx.MID_EVALUATION_CHECKPOINTING, 
-    process.env.MID_EVALUATION_CHECKPOINTING, 
-    typeof process.env.MID_EVALUATION_CHECKPOINTING)
+  ctx.logger('Mid-Evaluation Checkpointing is set to "%s"', ctx.MID_EVALUATION_CHECKPOINTING)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Trusting Arweave Checkpoint Owners [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))
