@@ -239,18 +239,13 @@ export function evaluateWith (env) {
                       if (useReportedGas) {
                         // Use the actual reported gas value
                         totalGasUsed += gasValue;
-                        logger('Message "%s" used actual gas: %s, total now: %s', 
-                          message.Id, gasValue.toString(), totalGasUsed.toString())
                       } else {
                         // Use synthetic gas when gas is unreported, null, or zero
                         totalGasUsed += DEFAULT_GAS_PER_MESSAGE;
-                        logger('Message "%s" using synthetic gas: %s, total now: %s',
-                          message.Id, DEFAULT_GAS_PER_MESSAGE.toString(), totalGasUsed.toString())
                       }
                     } catch (err) {
                       // In case of any errors, still add the synthetic gas
                       totalGasUsed += DEFAULT_GAS_PER_MESSAGE;
-                      logger('Error handling gas (using synthetic): %s', err.message)    
                     }
 
                     if (cron) ctx.stats.messages.cron++
@@ -261,27 +256,36 @@ export function evaluateWith (env) {
                     const startTime = pathOr(now, ['stats', 'startTime'], ctx)
                     const currentEvalTime = now.getTime() - startTime.getTime() // The eval time in ms
                     
-                    // Log more frequently to show progress toward checkpoint thresholds
-                    if (ctx.stats.messages.scheduled % 20 === 0 || ctx.stats.messages.cron % 20 === 0) {
+                    // Log checkpoint progress occasionally to monitor without excessive output
+                    if (ctx.stats.messages.scheduled % 500 === 0 || ctx.stats.messages.cron % 500 === 0) {
                       const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
                       const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 15 * 60 * 1000 // 15 minutes in ms
                       
-                      const gasPercentage = totalGasUsed > 0 && gasThreshold > 0 ? 
-                        (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
-                      const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
-                        (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
-                        
-                      logger(
-                        'CHECKPOINT PROGRESS: Process "%s" | Message #%d | Gas: %s/%s (%s%%) | Time: %dms/%dms (%s%%)',
-                        ctx.id,
-                        ctx.stats.messages.scheduled + ctx.stats.messages.cron,
-                        totalGasUsed.toString(),
-                        gasThreshold.toString(),
-                        gasPercentage,
-                        currentEvalTime,
-                        timeThreshold,
-                        timePercentage
-                      )
+                      // Only show percentage-based progress if mid-evaluation checkpointing is enabled
+                      if (env.MID_EVALUATION_CHECKPOINTING) {
+                        const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                          (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
+                        const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
+                          (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                          
+                        logger(
+                          'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Message #%d',
+                          ctx.id,
+                          gasPercentage,
+                          timePercentage,
+                          ctx.stats.messages.scheduled + ctx.stats.messages.cron
+                        )
+                      } else {
+                        logger(
+                          'Checkpoint progress: Process "%s" | Message #%d | Gas: %s/%s | Time: %dms/%dms',
+                          ctx.id,
+                          ctx.stats.messages.scheduled + ctx.stats.messages.cron,
+                          totalGasUsed.toString(),
+                          gasThreshold.toString(),
+                          currentEvalTime,
+                          timeThreshold
+                        )
+                      }
                     }
 
                     if (output.Error) {
@@ -296,8 +300,9 @@ export function evaluateWith (env) {
                     }
                     
                     // Check if we need to create an intermediate checkpoint based on gas or time thresholds
-                    // Only checkpoint if the message was successfully evaluated and we have memory
-                    if (!noSave && !output.Error && output.Memory && !hasCheckpoint) {
+                    // Only checkpoint if mid-evaluation checkpointing is enabled, the message was 
+                    // successfully evaluated, and we have memory to checkpoint
+                    if (env.MID_EVALUATION_CHECKPOINTING && !noSave && !output.Error && output.Memory && !hasCheckpoint) {
                       // Use fallback values if thresholds aren't in environment
                       const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
                       const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (15 * 60 * 1000) // 15 minutes in ms
@@ -306,15 +311,19 @@ export function evaluateWith (env) {
                       const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
                       const evalTimeThresholdReached = currentEvalTime > 0 && currentEvalTime >= timeThreshold
                       
-                      // Extra logging for debugging threshold checks
+                      // Notify when a checkpoint threshold is reached
                       if (gasThresholdReached || evalTimeThresholdReached) {
+                        const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                          (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
+                        const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
+                          (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                          
                         logger(
-                          'CHECKPOINT THRESHOLD MET: Process "%s" | Gas: %s/%s | Time: %dms/%dms',
+                          'MID-EVAL CHECKPOINT TRIGGERED: Process "%s" | Gas: %s%% | Time: %s%% | Message "%s"',
                           ctx.id,
-                          totalGasUsed.toString(),
-                          gasThreshold.toString(),
-                          currentEvalTime,
-                          timeThreshold
+                          gasPercentage,
+                          timePercentage,
+                          message.Id
                         )
                       }
                       
