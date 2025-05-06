@@ -269,8 +269,15 @@ export function evaluateWith (env) {
                       
                       // Calculate time remaining for scheduled messages with a simpler approach
                       let awayTime = ''
+                      let debugInfo = ''
+                      
                       if (message) {
                         try {
+                          // Add debug info about the message timestamp
+                          const timestampType = message.Timestamp ? typeof message.Timestamp : 'undefined'
+                          const timestampValue = message.Timestamp ? String(message.Timestamp) : 'null'
+                          debugInfo = ` [TS:${timestampType}:${timestampValue}]`
+                          
                           // Extract the timestamp from the message - handle different formats
                           let messageTime = null
                           
@@ -287,44 +294,56 @@ export function evaluateWith (env) {
                             }
                           }
                           
+                          // Add to debug info regardless of validity
+                          debugInfo += ` [MT:${messageTime}]`
+                          
                           // Only proceed if we have a valid timestamp
                           if (messageTime && !isNaN(messageTime)) {
                             const currentTime = Date.now()
-                            const timeDiff = messageTime - currentTime
+                            debugInfo += ` [CT:${currentTime}]`
                             
-                            if (timeDiff > 0) {
-                              // Calculate time components
-                              const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
-                              const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-                              const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
-                              const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
-                              
-                              // Format in the exact format requested
-                              let parts = []
-                              if (days > 0) parts.push(`${days}d`)
-                              if (hours > 0) parts.push(`${hours}h`)
-                              if (minutes > 0) parts.push(`${minutes}m`)
-                              if (seconds > 0) parts.push(`${seconds}s`)
-                              
-                              // Use the exact format requested: "Away: ~xd-yh-zm-ns"
-                              if (parts.length > 0) {
-                                awayTime = ` | Away: ~${parts.join('-')}`
-                              }
+                            const timeDiff = messageTime - currentTime
+                            debugInfo += ` [TD:${timeDiff}]`
+                            
+                            // Always generate an Away time for debugging, even if past
+                            const absDiff = Math.abs(timeDiff)
+                            const days = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+                            const hours = Math.floor((absDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+                            const minutes = Math.floor((absDiff % (60 * 60 * 1000)) / (60 * 1000))
+                            const seconds = Math.floor((absDiff % (60 * 1000)) / 1000)
+                            
+                            // Format in the exact format requested
+                            let parts = []
+                            if (days > 0) parts.push(`${days}d`)
+                            if (hours > 0) parts.push(`${hours}h`)
+                            if (minutes > 0) parts.push(`${minutes}m`)
+                            if (seconds > 0) parts.push(`${seconds}s`)
+                            
+                            // Use the exact format requested: "Away: ~xd-yh-zm-ns"
+                            if (parts.length > 0) {
+                              const timeStr = parts.join('-')
+                              // For future events, show as "away", for past events as "ago"
+                              const timePrefix = timeDiff > 0 ? 'Away' : 'Ago'
+                              awayTime = `${timePrefix}: ~${timeStr} | `
                             }
                           }
+                          
                         } catch (e) {
                           // If parsing fails, just continue without the time info
                           console.error('Error parsing timestamp:', e)
+                          debugInfo += ` [ERROR:${e.message}]`
                         }
                       }
                       
                       // Always show percentage-based progress with consistent formatting
+                      // Place awayTime at the beginning for better visibility
                       logger(
-                        'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%%%s',
+                        'Checkpoint progress: %sProcess "%s" | Gas: %s%% | Time: %s%%%s',
+                        awayTime || '', // Show remaining time if available (now at beginning)
                         ctx.id,
                         gasPercentage,
                         timePercentage,
-                        awayTime || '' // Show remaining time if available
+                        debugInfo || '' // Show debug info in dev environments
                       )
                     }
 
@@ -410,11 +429,12 @@ export function evaluateWith (env) {
                         }
                           
                         logger(
-                          'MID-EVAL CHECKPOINT TRIGGERED: Process "%s" | Gas: %s%% | Time: %s%%%s',
+                          'MID-EVAL CHECKPOINT TRIGGERED: %sProcess "%s" | Gas: %s%% | Time: %s%%%s',
+                          awayTime || '', // Show remaining time if available (now at beginning)
                           ctx.id,
                           gasPercentage,
                           timePercentage,
-                          awayTime || '' // Show remaining time if available
+                          debugInfo || '' // Show debug info in dev environments
                         )
                       }
                       
