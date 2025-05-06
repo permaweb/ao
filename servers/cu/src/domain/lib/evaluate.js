@@ -353,10 +353,10 @@ export function evaluateWith (env) {
                     // Check if we need to create an intermediate checkpoint based on gas or time thresholds
                     // Only checkpoint if mid-evaluation checkpointing is enabled, the message was 
                     // successfully evaluated, and we have memory to checkpoint
-                    // Allow checkpoints for dry runs during catch-up when time threshold is significantly exceeded
+                    // Allow checkpoints for dry runs during catch-up when time threshold is exceeded (≥100%)
                     if ((env.MID_EVALUATION_CHECKPOINTING && !noSave && !output.Error && output.Memory && !hasCheckpoint) ||
                         (env.MID_EVALUATION_CHECKPOINTING && ctx.dryRun && !output.Error && output.Memory && !hasCheckpoint && 
-                         currentEvalTime > 0 && timeThreshold > 0 && (currentEvalTime / timeThreshold) >= 2)) {
+                         currentEvalTime > 0 && timeThreshold > 0 && (currentEvalTime / timeThreshold) >= 1)) {
                       // Use fallback values if thresholds aren't in environment
                       const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
                       const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (15 * 60 * 1000) // 15 minutes in ms
