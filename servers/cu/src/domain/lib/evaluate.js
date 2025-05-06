@@ -269,12 +269,26 @@ export function evaluateWith (env) {
                       
                       // Calculate time remaining for scheduled messages with a simpler approach
                       let awayTime = ''
-                      if (message && message.Timestamp) {
+                      if (message) {
                         try {
-                          // Extract the timestamp from the message
-                          const messageTimeParts = message.Timestamp.split(':')
-                          if (messageTimeParts.length > 0) {
-                            const messageTime = parseInt(messageTimeParts[0], 10)
+                          // Extract the timestamp from the message - handle different formats
+                          let messageTime = null
+                          
+                          if (message.Timestamp) {
+                            if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
+                              // Handle string format with colon (e.g., "1741858046480:5963484")
+                              messageTime = parseInt(message.Timestamp.split(':')[0], 10)
+                            } else if (typeof message.Timestamp === 'string') {
+                              // Handle plain string format
+                              messageTime = parseInt(message.Timestamp, 10)
+                            } else if (typeof message.Timestamp === 'number') {
+                              // Handle numeric format
+                              messageTime = message.Timestamp
+                            }
+                          }
+                          
+                          // Only proceed if we have a valid timestamp
+                          if (messageTime && !isNaN(messageTime)) {
                             const currentTime = Date.now()
                             const timeDiff = messageTime - currentTime
                             
@@ -346,12 +360,26 @@ export function evaluateWith (env) {
                           
                         // Calculate time remaining for scheduled messages with a simpler approach
                         let awayTime = ''
-                        if (message && message.Timestamp) {
+                        if (message) {
                           try {
-                            // Extract the timestamp from the message
-                            const messageTimeParts = message.Timestamp.split(':')
-                            if (messageTimeParts.length > 0) {
-                              const messageTime = parseInt(messageTimeParts[0], 10)
+                            // Extract the timestamp from the message - handle different formats
+                            let messageTime = null
+                            
+                            if (message.Timestamp) {
+                              if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
+                                // Handle string format with colon (e.g., "1741858046480:5963484")
+                                messageTime = parseInt(message.Timestamp.split(':')[0], 10)
+                              } else if (typeof message.Timestamp === 'string') {
+                                // Handle plain string format
+                                messageTime = parseInt(message.Timestamp, 10)
+                              } else if (typeof message.Timestamp === 'number') {
+                                // Handle numeric format
+                                messageTime = message.Timestamp
+                              }
+                            }
+                            
+                            // Only proceed if we have a valid timestamp
+                            if (messageTime && !isNaN(messageTime)) {
                               const currentTime = Date.now()
                               const timeDiff = messageTime - currentTime
                               
