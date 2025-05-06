@@ -174,7 +174,10 @@ export const domainConfigSchema = z.object({
    * When enabled, checkpoints will be created mid-stream whenever gas usage or evaluation time thresholds are reached.
    * This improves recovery after interruptions by avoiding the need to re-process messages from the beginning.
    */
-  MID_EVALUATION_CHECKPOINTING: z.boolean().default(false),
+  MID_EVALUATION_CHECKPOINTING: z.preprocess((val) => {
+    if (val === undefined || val === null) return false
+    return val === true || val === 'true' || val === '1' || val === 'yes'
+  }, z.boolean().default(false)),
   /**
    * A single wallet to prefer.
    */
