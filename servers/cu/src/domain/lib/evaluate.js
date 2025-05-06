@@ -261,31 +261,51 @@ export function evaluateWith (env) {
                       const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
                       const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 15 * 60 * 1000 // 15 minutes in ms
                       
-                      // Only show percentage-based progress if mid-evaluation checkpointing is enabled
-                      if (env.MID_EVALUATION_CHECKPOINTING) {
-                        const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                          (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
-                        const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
-                          (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                      // Calculate percentages for both gas and time thresholds
+                      const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                        (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
+                      const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
+                        (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                      
+                      // Calculate time remaining for scheduled messages if timestamp is available
+                      let timeInfo = ''
+                      if (message && message.Timestamp) {
+                        try {
+                          // Get the scheduled message time
+                          const messageTime = parseInt(message.Timestamp.split(':')[0], 10)
+                          const currentTime = Date.now()
+                          const timeDiff = messageTime - currentTime
                           
-                        logger(
-                          'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Message #%d',
-                          ctx.id,
-                          gasPercentage,
-                          timePercentage,
-                          ctx.stats.messages.scheduled + ctx.stats.messages.cron
-                        )
-                      } else {
-                        logger(
-                          'Checkpoint progress: Process "%s" | Message #%d | Gas: %s/%s | Time: %dms/%dms',
-                          ctx.id,
-                          ctx.stats.messages.scheduled + ctx.stats.messages.cron,
-                          totalGasUsed.toString(),
-                          gasThreshold.toString(),
-                          currentEvalTime,
-                          timeThreshold
-                        )
+                          if (timeDiff > 0) {
+                            // Calculate days, hours, minutes, seconds
+                            const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
+                            const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+                            const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
+                            const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
+                            
+                            // Format the time difference
+                            const parts = []
+                            if (days > 0) parts.push(`${days}d`)
+                            if (hours > 0) parts.push(`${hours}h`)
+                            if (minutes > 0) parts.push(`${minutes}m`)
+                            if (seconds > 0) parts.push(`${seconds}s`)
+                            
+                            timeInfo = ` | Scheduled in: ${parts.join(' ')}`
+                          }
+                        } catch (e) {
+                          // If parsing fails, just continue without the scheduled time info
+                        }
                       }
+                      
+                      // Always show percentage-based progress with consistent formatting
+                      logger(
+                        'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Message #%d%s',
+                        ctx.id,
+                        gasPercentage,
+                        timePercentage,
+                        ctx.stats.messages.scheduled + ctx.stats.messages.cron,
+                        timeInfo
+                      )
                     }
 
                     if (output.Error) {
@@ -318,12 +338,43 @@ export function evaluateWith (env) {
                         const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
                           (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
                           
+                        // Calculate time remaining for scheduled messages if timestamp is available
+                        let timeInfo = ''
+                        if (message && message.Timestamp) {
+                          try {
+                            // Get the scheduled message time
+                            const messageTime = parseInt(message.Timestamp.split(':')[0], 10)
+                            const currentTime = Date.now()
+                            const timeDiff = messageTime - currentTime
+                            
+                            if (timeDiff > 0) {
+                              // Calculate days, hours, minutes, seconds
+                              const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
+                              const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+                              const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
+                              const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
+                              
+                              // Format the time difference
+                              const parts = []
+                              if (days > 0) parts.push(`${days}d`)
+                              if (hours > 0) parts.push(`${hours}h`)
+                              if (minutes > 0) parts.push(`${minutes}m`)
+                              if (seconds > 0) parts.push(`${seconds}s`)
+                              
+                              timeInfo = ` | Scheduled in: ${parts.join(' ')}`
+                            }
+                          } catch (e) {
+                            // If parsing fails, just continue without the scheduled time info
+                          }
+                        }
+                          
                         logger(
-                          'MID-EVAL CHECKPOINT TRIGGERED: Process "%s" | Gas: %s%% | Time: %s%% | Message "%s"',
+                          'MID-EVAL CHECKPOINT TRIGGERED: Process "%s" | Gas: %s%% | Time: %s%% | Message "%s"%s',
                           ctx.id,
                           gasPercentage,
                           timePercentage,
-                          message.Id
+                          message.Id,
+                          timeInfo
                         )
                       }
                       
