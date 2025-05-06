@@ -324,12 +324,11 @@ export function evaluateWith (env) {
                       
                       // Always show percentage-based progress with consistent formatting
                       logger(
-                        'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Message #%d%s',
+                        'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%%%s',
                         ctx.id,
                         gasPercentage,
                         timePercentage,
-                        ctx.stats.messages.scheduled + ctx.stats.messages.cron,
-                        timeInfo
+                        timeInfo || '' // Only show time info if available
                       )
                     }
 
@@ -419,12 +418,11 @@ export function evaluateWith (env) {
                         }
                           
                         logger(
-                          'MID-EVAL CHECKPOINT TRIGGERED: Process "%s" | Gas: %s%% | Time: %s%% | Message "%s"%s',
+                          'MID-EVAL CHECKPOINT TRIGGERED: Process "%s" | Gas: %s%% | Time: %s%%%s',
                           ctx.id,
                           gasPercentage,
                           timePercentage,
-                          message.Id,
-                          timeInfo
+                          timeInfo || '' // Only show time info if available
                         )
                       }
                       
