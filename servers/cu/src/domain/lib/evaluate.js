@@ -320,6 +320,24 @@ export function evaluateWith (env) {
                     
                     const shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary
                     
+                    // Helper function to format time offset in days, hours, minutes and seconds
+                    const formatTimeOffset = (offsetInSeconds) => {
+                      const absOffset = Math.abs(offsetInSeconds);
+                      
+                      const days = Math.floor(absOffset / 86400);
+                      const hours = Math.floor((absOffset % 86400) / 3600);
+                      const minutes = Math.floor((absOffset % 3600) / 60);
+                      const seconds = absOffset % 60;
+                      
+                      let result = '';
+                      if (days > 0) result += `${days}d-`;
+                      if (hours > 0 || days > 0) result += `${hours}h-`;
+                      if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m-`;
+                      result += `${seconds}s`;
+                      
+                      return result;
+                    };
+                    
                     // Extract message timestamp if available in the message name
                     let messageTimestamp = null;
                     let timeOffset = null;
@@ -360,8 +378,8 @@ export function evaluateWith (env) {
                       // Format time offset for display if available
                       const timeOffsetStr = timeOffset !== null 
                         ? timeOffset > 0 
-                          ? `[Future: +${timeOffset}s]` 
-                          : `[Past: ${timeOffset}s]` 
+                          ? `[Future: ${formatTimeOffset(timeOffset)}]` 
+                          : `[Past: ${formatTimeOffset(timeOffset)}]` 
                         : '';
                       
                       logger(
@@ -387,8 +405,8 @@ export function evaluateWith (env) {
                       // Format time offset string for checkpoint logging
                       const timeOffsetStr = timeOffset !== null 
                         ? timeOffset > 0 
-                          ? `| Message timestamp: Future +${timeOffset}s` 
-                          : `| Message timestamp: Past ${timeOffset}s` 
+                          ? `| Message timestamp: Future ${formatTimeOffset(timeOffset)}` 
+                          : `| Message timestamp: Past ${formatTimeOffset(timeOffset)}` 
                         : '';
                         
                       if (gasThresholdReached) {
