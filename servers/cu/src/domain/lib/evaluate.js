@@ -259,7 +259,12 @@ export function evaluateWith (env) {
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
-                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    
+                    // Make sure lastCheckpointTime is properly initialized and safe to use
+                    // This ensures we don't get errors during dry runs or other edge cases
+                    const safeLastCheckpointTime = typeof lastCheckpointTime !== 'undefined' ? lastCheckpointTime : 
+                                               (typeof evalStartTime !== 'undefined' ? evalStartTime : now);
+                    const currentEvalTime = now.getTime() - safeLastCheckpointTime.getTime();
                     
                     // Use config constants for thresholds
                     const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
@@ -342,19 +347,24 @@ export function evaluateWith (env) {
                     let messageTimestamp = null;
                     let timeOffset = null;
                     
-                    if (name && name.includes('Scheduled Message')) {
-                      // Format: "Scheduled Message {messageId} {timestamp}:{nonce}"
-                      const parts = name.split(' ');
-                      if (parts.length >= 4) {
-                        const timestampParts = parts[3].split(':');
-                        if (timestampParts.length >= 1) {
-                          messageTimestamp = parseInt(timestampParts[0], 10);
-                          if (!isNaN(messageTimestamp)) {
-                            // Calculate time difference in seconds
-                            timeOffset = Math.floor((messageTimestamp - now.getTime()) / 1000);
+                    try {
+                      if (name && name.includes('Scheduled Message')) {
+                        // Format: "Scheduled Message {messageId} {timestamp}:{nonce}"
+                        const parts = name.split(' ');
+                        if (parts.length >= 4) {
+                          const timestampParts = parts[3].split(':');
+                          if (timestampParts.length >= 1) {
+                            messageTimestamp = parseInt(timestampParts[0], 10);
+                            if (!isNaN(messageTimestamp)) {
+                              // Calculate time difference in seconds
+                              timeOffset = Math.floor((messageTimestamp - now.getTime()) / 1000);
+                            }
                           }
                         }
                       }
+                    } catch (e) {
+                      // Silently handle any errors in timestamp parsing
+                      logger('Error parsing message timestamp: %s', e.message);
                     }
                     
                     if (shouldLogProgress) {
