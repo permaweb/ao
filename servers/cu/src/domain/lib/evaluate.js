@@ -83,7 +83,7 @@ export function evaluateWith (env) {
   // Get checkpoint threshold values from config
   const EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD = env.config?.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000
   const EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD = env.config?.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 60000 // Default 1 minute
-  const MID_EVALUATION_CHECKPOINTING = env.config?.MID_EVALUATION_CHECKPOINTING === true
+  const MID_EVALUATION_CHECKPOINTING = env.config?.MID_EVALUATION_CHECKPOINTING || false // Default to disabled
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -158,21 +158,18 @@ export function evaluateWith (env) {
           
           // Simple tracking variables for the last logged percentage for each metric
           // Each process has its own tracking variables in a shared map
-          // Only initialize tracking if mid-evaluation checkpointing is enabled
-          if (MID_EVALUATION_CHECKPOINTING) {
-            // This ensures we log exactly once when crossing each 10% milestone (10%, 20%, etc.)
-            if (!env.lastLoggedPercentages) {
-              env.lastLoggedPercentages = new Map()
-            }
-            
-            // Get or create tracking for this process
-            if (!env.lastLoggedPercentages.has(ctx.id)) {
-              env.lastLoggedPercentages.set(ctx.id, {
-                messagePercent: 0,  // Last message percentage we logged (10, 20, 30, etc.)
-                gasPercent: 0,      // Last gas percentage we logged
-                timePercent: 0       // Last time percentage we logged
-              })
-            }
+          // This ensures we log exactly once when crossing each 10% milestone (10%, 20%, etc.)
+          if (!env.lastLoggedPercentages) {
+            env.lastLoggedPercentages = new Map()
+          }
+          
+          // Get or create tracking for this process
+          if (!env.lastLoggedPercentages.has(ctx.id)) {
+            env.lastLoggedPercentages.set(ctx.id, {
+              messagePercent: 0,  // Last message percentage we logged (10, 20, 30, etc.)
+              gasPercent: 0,      // Last gas percentage we logged
+              timePercent: 0       // Last time percentage we logged
+            })
           }
           
           // Log initial checkpoint settings
@@ -262,18 +259,16 @@ export function evaluateWith (env) {
                     if (cron) ctx.stats.messages.cron++
                     else ctx.stats.messages.scheduled++
                     
-                    // Only perform checkpoint tracking if MID_EVALUATION_CHECKPOINTING is enabled
+                    // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
                     const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
                     
-                    // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
-                    // Only when MID_EVALUATION_CHECKPOINTING is enabled
-                    const gasThresholdReached = MID_EVALUATION_CHECKPOINTING && totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
+                    // Use config constants for thresholds
+                    const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
                                               totalGasUsed >= BigInt(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)
-                    const evalTimeThresholdReached = MID_EVALUATION_CHECKPOINTING && currentEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
+                    const evalTimeThresholdReached = currentEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
                                                   currentEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
-                    const messageCountThresholdReached = MID_EVALUATION_CHECKPOINTING && 
-                                                       messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
+                    const messageCountThresholdReached = messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
                     
                     // Calculate progress percentages for each threshold
                     const messagesProgress = ((messageCounter - lastCheckpointMessageCount) / MESSAGE_CHECKPOINT_INTERVAL) * 100;
@@ -325,8 +320,7 @@ export function evaluateWith (env) {
                                                  !crossedGasBoundary && 
                                                  !crossedTimeBoundary;
                     
-                    // Only log progress if mid-evaluation checkpointing is enabled
-                    const shouldLogProgress = MID_EVALUATION_CHECKPOINTING && (crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary)
+                    const shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary
                     
                     if (shouldLogProgress) {
                       // Update our tracking variables to the current percentages if we crossed a boundary
@@ -361,7 +355,9 @@ export function evaluateWith (env) {
                       )
                     }
                     
-                    if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
+                    // Only perform mid-evaluation checkpointing if the feature is enabled
+                    if (!noSave && output.Memory && !hasCheckpoint && MID_EVALUATION_CHECKPOINTING && 
+                        (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
                       if (gasThresholdReached) {
