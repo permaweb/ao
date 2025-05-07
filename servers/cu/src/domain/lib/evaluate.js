@@ -350,35 +350,100 @@ export function evaluateWith (env) {
                       ctx.stats.messages.error++
                     }
                     
-                    // Check if we need to create an intermediate checkpoint based on gas or time thresholds
-                    // Only checkpoint if mid-evaluation checkpointing is enabled, the message was 
-                    // successfully evaluated, and we have memory to checkpoint
+                    // Debug logging for key variables that affect checkpointing
+                    if (ctx.stats.messages.scheduled % 50 === 0 || ctx.stats.messages.cron % 50 === 0) {
+                      logger(
+                        'DEBUG: Process "%s" | MsgCount: %d | noSave: %s | hasErr: %s | hasMemory: %s | hasCheckpoint: %s | MID_EVAL: %s | dry: %s',
+                        ctx.id,
+                        ctx.stats.messages.scheduled + ctx.stats.messages.cron,
+                        noSave ? 'YES' : 'NO',
+                        output.Error ? 'YES' : 'NO',
+                        output.Memory ? 'YES' : 'NO',
+                        hasCheckpoint ? 'YES' : 'NO',
+                        env.MID_EVALUATION_CHECKPOINTING ? 'YES' : 'NO',
+                        ctx.dryRun ? 'YES' : 'NO'
+                      )
+                    }
                     
-                    // Gas and time thresholds with fallback values
+                    // -------------- CHECKPOINT MECHANISM START --------------
+                    // Get or set thresholds with fallback values
                     const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
                     const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute in ms
                     
-                    // Calculate threshold percentages for logging
+                    // Calculate checkpoint threshold percentages for logging
                     const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
                       (currentEvalTime / timeThreshold * 100) : 0
                     const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
                       (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
                     
-                    // Log progress periodically
+                    // Log progress periodically using the user's preferred format
                     if (timePercentageValue >= 50 || gasPercentageValue >= 50 || 
                         ctx.stats.messages.scheduled % 100 === 0 || ctx.stats.messages.cron % 100 === 0) {
+                      // Format the time remaining for scheduled messages if available
+                      let awayTimeLabel = ''
+                      if (message && message.Timestamp) {
+                        try {
+                          // Extract the timestamp from the message - handle different formats
+                          let messageTime = null
+                          
+                          if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
+                            // Handle string format with colon (e.g., "1741858046480:5963484")
+                            messageTime = parseInt(message.Timestamp.split(':')[0], 10)
+                          } else if (typeof message.Timestamp === 'string') {
+                            // Handle plain string format
+                            messageTime = parseInt(message.Timestamp, 10)
+                          } else if (typeof message.Timestamp === 'number') {
+                            // Handle numeric format
+                            messageTime = message.Timestamp
+                          }
+                          
+                          // Only proceed if we have a valid timestamp
+                          if (messageTime && !isNaN(messageTime)) {
+                            const currentTime = Date.now()
+                            const timeDiff = messageTime - currentTime
+                            
+                            if (timeDiff > 0) {
+                              // Calculate time components
+                              const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
+                              const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+                              const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
+                              const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
+                              
+                              // Format in the exact format requested
+                              let parts = []
+                              if (days > 0) parts.push(`${days}d`)
+                              if (hours > 0) parts.push(`${hours}h`)
+                              if (minutes > 0) parts.push(`${minutes}m`)
+                              if (seconds > 0) parts.push(`${seconds}s`)
+                              
+                              if (parts.length > 0) {
+                                formattedTime = parts.join('-')
+                              }
+                            }
+                          }
+                        } catch (e) {
+                          // Silent catch - we'll just not show the remaining time
+                        }
+                      }
+                      
+                      // Format percentages with fixed decimal places
+                      const gasPercentFormatted = gasPercentageValue.toFixed(2)
+                      const timePercentFormatted = timePercentageValue.toFixed(2)
+                      
+                      // Use the exact format requested in user preferences
                       logger(
-                        'CHECKPOINT PROGRESS: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s',
+                        'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Unix: %s | Scheduled: %s (in %s)',
                         ctx.id,
-                        timePercentageValue,
-                        Number(currentEvalTime),
-                        Number(timeThreshold),
-                        gasPercentageValue,
-                        ctx.dryRun ? 'YES' : 'NO'
+                        gasPercentFormatted,
+                        timePercentFormatted,
+                        unixTime,
+                        scheduledTime,
+                        formattedTime || 'N/A'
                       )
                     }
                     
-                    // Check if threshold reached for checkpointing
+                    // -------------- CHECKPOINT CONDITIONS --------------
+                    // Critical: Check if threshold reached for checkpointing
                     const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
                     const evalTimeThresholdReached = currentEvalTime > 0 && currentEvalTime >= timeThreshold
                     
@@ -388,7 +453,7 @@ export function evaluateWith (env) {
                                            !output.Error && 
                                            output.Memory && 
                                            !hasCheckpoint && 
-                                           (gasThresholdReached || evalTimeThresholdReached)
+                                           evalTimeThresholdReached
                     
                     // Dry run checkpoint condition - only time-based for dry runs
                     const dryRunCondition = env.MID_EVALUATION_CHECKPOINTING && 
@@ -398,75 +463,31 @@ export function evaluateWith (env) {
                                        !hasCheckpoint && 
                                        evalTimeThresholdReached
                     
+                    // -------------- CHECKPOINT CREATION --------------
                     // Create checkpoint if any condition met
                     if (standardCondition || dryRunCondition) {
                       try {
-                        // Calculate time remaining for scheduled messages with a simpler approach
-                        let awayTime = ''
-                        if (message && message.Timestamp) {
-                          try {
-                            // Extract the timestamp from the message - handle different formats
-                            let messageTime = null
-                            
-                            if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
-                              // Handle string format with colon (e.g., "1741858046480:5963484")
-                              messageTime = parseInt(message.Timestamp.split(':')[0], 10)
-                            } else if (typeof message.Timestamp === 'string') {
-                              // Handle plain string format
-                              messageTime = parseInt(message.Timestamp, 10)
-                            } else if (typeof message.Timestamp === 'number') {
-                              // Handle numeric format
-                              messageTime = message.Timestamp
-                            }
-                            
-                            // Only proceed if we have a valid timestamp
-                            if (messageTime && !isNaN(messageTime)) {
-                              const currentTime = Date.now()
-                              const timeDiff = messageTime - currentTime
-                              
-                              if (timeDiff > 0) {
-                                // Calculate time components
-                                const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
-                                const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-                                const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
-                                const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
-                                
-                                // Format in the exact format requested
-                                let parts = []
-                                if (days > 0) parts.push(`${days}d`)
-                                if (hours > 0) parts.push(`${hours}h`)
-                                if (minutes > 0) parts.push(`${minutes}m`)
-                                if (seconds > 0) parts.push(`${seconds}s`)
-                                
-                                // Use the exact format requested: "Away: ~xd-yh-zm-ns"
-                                if (parts.length > 0) {
-                                  awayTime = ` | Away: ~${parts.join('-')}`
-                                }
-                              }
-                            }
-                          } catch (e) {
-                            console.error('Error parsing trigger timestamp:', e)
-                          }
-                        }
+                        // Determine the reason for checkpointing
+                        const reason = dryRunCondition ? "DRY_RUN_TIME_THRESHOLD" : 
+                          (gasThresholdReached ? "GAS_THRESHOLD" : "TIME_THRESHOLD")
                         
-                        // Format percentages for logging
-                        const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                          (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
-                        const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
-                          (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                        // Format Unix timestamp and scheduled time information for logs
+                        const unixTime = Date.now()
+                        const scheduledTime = message && message.Timestamp ? `${message.Timestamp}` : 'N/A'
                         
-                        // Log detailed checkpoint triggered message
+                        // Log when threshold is detected, using exact user-preferred format
                         logger(
-                          'MID-EVAL CHECKPOINT TRIGGERED: %sProcess "%s" | Gas: %s%% | Time: %s%% | Reason: %s',
-                          awayTime || '', // Show remaining time if available at beginning
+                          'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Unix: %s | Scheduled: %s (in %s) | THRESHOLD REACHED: %s',
                           ctx.id,
-                          gasPercentage,
-                          timePercentage,
-                          dryRunCondition ? 'DRY_RUN_TIME_THRESHOLD' : 
-                            (gasThresholdReached ? 'GAS_THRESHOLD' : 'TIME_THRESHOLD')
+                          gasPercentageValue.toFixed(2),
+                          timePercentageValue.toFixed(2),
+                          unixTime,
+                          scheduledTime,
+                          "N/A", // Not important for threshold logs
+                          reason
                         )
                         
-                        // Log detailed threshold message
+                        // Detailed log to match the exact format seen in your logs
                         if (gasThresholdReached) {
                           logger(
                             'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met during evaluation stream for process "%s" at message "%s" -- "%d" gas used. Eagerly creating a Checkpoint...',
@@ -485,7 +506,7 @@ export function evaluateWith (env) {
                           )
                         }
                         
-                        // Save intermediate checkpoint with current message's state
+                        // This is the critical part - create checkpoint during evaluation
                         await saveLatestProcessMemory({
                           processId: ctx.id,
                           moduleId: ctx.moduleId,
@@ -505,14 +526,16 @@ export function evaluateWith (env) {
                         
                         // Reset counters after checkpoint
                         totalGasUsed = BigInt(0)
-                        ctx.stats.startTime = now // Reset eval time counter
+                        ctx.stats.startTime = now
                         
+                        // Log checkpoint creation success
                         logger(
                           'Successfully created intermediate checkpoint for process "%s" at message "%s"',
                           ctx.id,
                           message.Id
                         )
                       } catch (err) {
+                        // Log any errors during checkpoint creation
                         logger('ERROR creating checkpoint: %s', err.message || err)
                       }
                     }
