@@ -83,6 +83,10 @@ export function evaluateWith (env) {
   // Get checkpoint threshold values from config
   const EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD = env.config?.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000
   const EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD = env.config?.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 60000 // Default 1 minute
+  
+  // Estimate gas per message for progress tracking (if actual values can't be determined)
+  // Since real processes might use ~300T gas for 2 hours of compute, we estimate a reasonable value per message
+  const ESTIMATED_GAS_PER_MESSAGE = BigInt(1_000_000_000)
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -149,6 +153,8 @@ export function evaluateWith (env) {
           const evalStartTime = new Date()
           // Keep track of when we last checkpointed
           let lastCheckpointTime = evalStartTime
+          // Track the time at the start of each message evaluation for accurate time measurement
+          let messageStartTime = evalStartTime
           // Counter for message-based checkpointing
           let messageCounter = 0
           let lastCheckpointMessageCount = 0
@@ -244,7 +250,10 @@ export function evaluateWith (env) {
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
+                    // Track elapsed time since start of this message processing batch
                     const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    // Update message start time for next iteration
+                    messageStartTime = now
                     
                     // Use config constants for thresholds
                     const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
@@ -255,37 +264,66 @@ export function evaluateWith (env) {
                     
                     // Calculate progress percentages for each threshold
                     const messagesProgress = ((messageCounter - lastCheckpointMessageCount) / MESSAGE_CHECKPOINT_INTERVAL) * 100;
-                    // Safe BigInt calculation to avoid Number overflow
-                    const gasProgress = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
-                      totalGasUsed * BigInt(100) / BigInt(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) : BigInt(0);
-                    const timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
+                    
+                    // Use actual gas if available, otherwise estimate
+                    let effectiveGasUsed = totalGasUsed;
+                    if (effectiveGasUsed === BigInt(0) && messageCounter > lastCheckpointMessageCount) {
+                      // If no actual gas is recorded, estimate based on message count
+                      effectiveGasUsed = (messageCounter - lastCheckpointMessageCount) * ESTIMATED_GAS_PER_MESSAGE;
+                    }
+                    
+                    // Safe BigInt calculation to avoid Number overflow - ensure this is a percentage, not a ratio
+                    const gasProgress = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && effectiveGasUsed > BigInt(0) ? 
+                      (effectiveGasUsed * BigInt(100)) / BigInt(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) : BigInt(0);
+                      
+                    // Calculate time progress percentage
+                    const timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && currentEvalTime > 0 ? 
                       (currentEvalTime / EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
                       
-                    // Track last logged progress percentages to only log at 10% increments
-                    const lastMessagesProgressKey = Math.floor(messagesProgress / 10);
-                    const lastGasProgressKey = Number(gasProgress / BigInt(10));
-                    const lastTimeProgressKey = Math.floor(timeProgress / 10);
+                    // Track the progress against 10% boundaries to avoid excessive logging
+                    const messagesProgressBucket = Math.floor(messagesProgress / 10);
+                    const gasProgressBucket = Number(gasProgress / BigInt(10));
+                    const timeProgressBucket = Math.floor(timeProgress / 10);
                     
-                    // Log progress at 10% increments of any threshold
-                    // We use messageCounter % 100 === 0 to ensure we get some regular updates regardless
-                    const shouldLogProgress = messageCounter % 100 === 0 || 
-                                             messagesProgress % 10 < 1 || // Log at each 10% of message progress
-                                             (gasProgress > BigInt(0) && gasProgress % BigInt(10) === BigInt(0)) || // Log at each 10% of gas progress
-                                             (timeProgress > 0 && timeProgress % 10 < 1); // Log at each 10% of time progress
+                    // Store last progress buckets in a WeakMap to track when we cross 10% thresholds
+                    if (!this.lastProgressBuckets) {
+                      this.lastProgressBuckets = new Map();
+                    }
+                    
+                    const progressKey = `${ctx.id}:${messageCounter-10}`;
+                    const previousBuckets = this.lastProgressBuckets.get(progressKey) || { msg: -1, gas: -1, time: -1 };
+                    
+                    // Log progress when crossing 10% boundaries or every 100 messages (but not too frequently)
+                    const shouldLogForMessage = messageCounter % 100 === 0;
+                    const shouldLogForProgress = 
+                      (messagesProgressBucket !== previousBuckets.msg && messagesProgressBucket > previousBuckets.msg) || 
+                      (gasProgressBucket !== previousBuckets.gas && gasProgressBucket > previousBuckets.gas) || 
+                      (timeProgressBucket !== previousBuckets.time && timeProgressBucket > previousBuckets.time);
+                    
+                    // Only log when significant progress has been made
+                    const shouldLogProgress = shouldLogForMessage || shouldLogForProgress;
+                    
+                    // Store current progress buckets for comparison in next iteration
+                    this.lastProgressBuckets.set(`${ctx.id}:${messageCounter}`, {
+                      msg: messagesProgressBucket,
+                      gas: gasProgressBucket, 
+                      time: timeProgressBucket
+                    });
                     
                     if (shouldLogProgress) {
+                      // Fixed string formatting to avoid raw format specifiers showing up in logs
                       logger(
-                        'CHECKPOINT PROGRESS - Process: "%s", Message: %d/%d (%.1f%%), Gas: %s/%s (%s%%), Time: %dms/%dms (%.1f%%)',
+                        'CHECKPOINT PROGRESS - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%s%%), Time: %dms/%dms (%d%%)',
                         ctx.id,
                         messageCounter - lastCheckpointMessageCount,
                         MESSAGE_CHECKPOINT_INTERVAL,
-                        messagesProgress,
-                        totalGasUsed.toString(),
+                        Math.floor(messagesProgress),
+                        effectiveGasUsed.toString(),
                         EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
                         gasProgress.toString(),
                         currentEvalTime,
                         EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                        timeProgress
+                        Math.floor(timeProgress)
                       )
                     }
                     
