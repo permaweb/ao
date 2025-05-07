@@ -569,7 +569,10 @@ export function evaluateWith (env) {
           const startTime = pathOr(now, ['stats', 'startTime'], ctx)
           
           // Calculate final eval time from the last checkpoint (or start) to now
-          const finalEvalTime = now.getTime() - lastCheckpointTime.getTime()
+          // Safety check for lastCheckpointTime - this is where the error was happening
+          // Dry runs might not set lastCheckpointTime as they don't create intermediate checkpoints
+          const safeCheckpointTime = (lastCheckpointTime && lastCheckpointTime instanceof Date) ? lastCheckpointTime : evalStartTime
+          const finalEvalTime = now.getTime() - safeCheckpointTime.getTime()
           
           await saveLatestProcessMemory({
             processId: ctx.id,
