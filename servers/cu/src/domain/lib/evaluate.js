@@ -355,9 +355,25 @@ export function evaluateWith (env) {
                       )
                     }
                     
-                    // Only perform mid-evaluation checkpointing if the feature is enabled
-                    if (!noSave && output.Memory && !hasCheckpoint && MID_EVALUATION_CHECKPOINTING && 
-                        (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
+                    // Add debug logging about checkpointing conditions
+                    if (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached) {
+                      logger(
+                        'CHECKPOINT DEBUG - Process: "%s", MID_EVALUATION_CHECKPOINTING=%s, noSave=%s, hasMemory=%s, hasCheckpoint=%s',
+                        ctx.id,
+                        MID_EVALUATION_CHECKPOINTING,
+                        noSave,
+                        !!output.Memory,
+                        hasCheckpoint
+                      )
+                    }
+                    
+                    // For backward compatibility, default to enabled if not explicitly set
+                    // (This ensures existing systems continue working as before)
+                    const checkpointingEnabled = MID_EVALUATION_CHECKPOINTING !== false;
+                    
+                    // Create checkpoint if conditions are met
+                    if (!noSave && output.Memory && !hasCheckpoint && 
+                        (checkpointingEnabled && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached))) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
                       if (gasThresholdReached) {
