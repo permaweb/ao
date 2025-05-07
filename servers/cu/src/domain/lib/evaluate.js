@@ -156,10 +156,8 @@ export function evaluateWith (env) {
           let first = true
           // Track when we started this evaluation stream
           const evalStartTime = new Date()
-          // Keep track of when we last checkpointed
-          // IMPORTANT: Explicitly define this as a let in the outer scope
-          // so it's accessible throughout the evaluation process
-          let lastCheckpointTime = evalStartTime
+          // Use the global checkpoint time for this process
+          // No local variable needed as we'll access the global map
           // Counter for message-based checkpointing
           let messageCounter = 0
           let lastCheckpointMessageCount = 0
