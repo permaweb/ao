@@ -100,6 +100,11 @@ export function evaluateWith (env) {
         let totalGasUsed = BigInt(0)
         let mostRecentAssignmentId = ctx.mostRecentAssignmentId
         let mostRecentHashChain = ctx.mostRecentHashChain
+        
+        // Track when we started this evaluation stream - defined outside evalStream scope
+        const evalStartTime = new Date()
+        // Keep track of when we last checkpointed - defined outside evalStream to be accessible in final checkpoint
+        let lastCheckpointTime = evalStartTime
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -144,11 +149,8 @@ export function evaluateWith (env) {
            * and evaluate each one
            */
           let first = true
-          // Track when we started this evaluation stream
-          const evalStartTime = new Date()
-          // Keep track of when we last checkpointed
-          // Initialize with the start time and ensure it's always a Date object
-          let lastCheckpointTime = evalStartTime
+          // evalStartTime and lastCheckpointTime are now defined outside of this function
+          // to ensure they're accessible in the final checkpoint logic
           // Counter for message-based checkpointing
           let messageCounter = 0
           let lastCheckpointMessageCount = 0
@@ -568,11 +570,9 @@ export function evaluateWith (env) {
           // If there is no startTime, then we use the current time which will make evalTime = 0
           const startTime = pathOr(now, ['stats', 'startTime'], ctx)
           
-          // Calculate final eval time from the last checkpoint (or start) to now
-          // Safety check for lastCheckpointTime - this is where the error was happening
-          // Dry runs might not set lastCheckpointTime as they don't create intermediate checkpoints
-          const safeCheckpointTime = (lastCheckpointTime && lastCheckpointTime instanceof Date) ? lastCheckpointTime : evalStartTime
-          const finalEvalTime = now.getTime() - safeCheckpointTime.getTime()
+          // Calculate total evaluation time from start to now
+          // We use evalStartTime which is always defined (moved outside evalStream function)
+          const finalEvalTime = now.getTime() - evalStartTime.getTime()
           
           await saveLatestProcessMemory({
             processId: ctx.id,
