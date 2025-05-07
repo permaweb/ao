@@ -261,7 +261,10 @@ export function evaluateWith (env) {
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
-                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    // Make sure lastCheckpointTime is defined before using it
+                    // If it's not defined, use evalStartTime as a fallback, or just use now as a safe default
+                    const checkpointTimeReference = lastCheckpointTime || evalStartTime || now
+                    const currentEvalTime = now.getTime() - checkpointTimeReference.getTime()
                     
                     // Use config constants for thresholds
                     const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
