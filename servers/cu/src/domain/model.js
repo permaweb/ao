@@ -224,6 +224,25 @@ export const domainConfigSchema = z.object({
    * aka. whitelist of processes created by these wallets
    */
   ALLOW_OWNERS: commaDelimitedArraySchema,
+  
+  /**
+   * Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
+   * This is the baseline for checkpointing as no process should need to spend more than two hours
+   * catching up to a previous checkpoint.
+   */
+  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: positiveIntSchema,
+
+  /**
+   * Time threshold in milliseconds for eager checkpointing during evaluation
+   */
+  EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: positiveIntSchema,
+
+  /**
+   * Controls whether checkpoints are created during message evaluation streams
+   * When enabled, checkpoints can be created mid-stream based on thresholds
+   * When disabled, checkpoints are only created after completing a full evaluation
+   */
+  MID_EVALUATION_CHECKPOINTING: z.boolean().optional(),
 
   /**
    * The number of checkpoints to go backward in time when validating
