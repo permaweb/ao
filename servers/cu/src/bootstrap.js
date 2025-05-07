@@ -216,6 +216,15 @@ export const createApis = async (ctx) => {
 
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
+  // Debug: log all ctx properties related to checkpointing
+  ctx.logger('DEBUG - MID_EVALUATION_CHECKPOINTING exists: %s', Object.prototype.hasOwnProperty.call(ctx, 'MID_EVALUATION_CHECKPOINTING'))
+  
+  // If MID_EVALUATION_CHECKPOINTING isn't in ctx, add it directly using environment variable with default true
+  if (!Object.prototype.hasOwnProperty.call(ctx, 'MID_EVALUATION_CHECKPOINTING')) {
+    ctx.MID_EVALUATION_CHECKPOINTING = process.env.MID_EVALUATION_CHECKPOINTING !== 'false';
+    ctx.logger('Added MID_EVALUATION_CHECKPOINTING directly from environment: %s', ctx.MID_EVALUATION_CHECKPOINTING);
+  }
+  
   ctx.logger('Mid-evaluation checkpointing is set to "%s"', ctx.MID_EVALUATION_CHECKPOINTING)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
