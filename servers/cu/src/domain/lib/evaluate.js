@@ -155,11 +155,18 @@ export function evaluateWith (env) {
           // How many messages to process before checkpointing - setting to 1000 as requested
           const MESSAGE_CHECKPOINT_INTERVAL = 1000
           
-          // Track the last logged progress milestone for each metric (in 10% increments)
-          // This ensures we only log once per 10% milestone
-          let lastLoggedMessageMilestone = -1 // -1 means no milestone logged yet
-          let lastLoggedGasMilestone = -1
-          let lastLoggedTimeMilestone = -1
+          // We'll use a more precise approach with exact tracking for parallel evaluations
+          // Store the previous exact progress values to compare for milestone crossings
+          let prevMessagesProgress = 0
+          let prevGasProgress = 0
+          let prevTimeProgress = 0
+          
+          // Track milestones we've logged for this process (indexed by process ID)
+          // This helps prevent duplicate logging across parallel evaluation streams
+          // Format: { processId: { messageMilestones: Set(), gasMilestones: Set(), timeMilestones: Set() } }
+          if (!env.progressMilestones) {
+            env.progressMilestones = new Map()
+          }
           
           // Log initial checkpoint settings
           logger(
@@ -283,36 +290,72 @@ export function evaluateWith (env) {
                     const gasProgressRounded = Math.round(gasProgress * 10) / 10;
                     const timeProgressRounded = Math.round(timeProgress * 10) / 10;
                     
-                    // Calculate the current progress milestone (0-10) for each metric
+                    // Get or create milestone tracking sets for this process
+                    if (!env.progressMilestones.has(ctx.id)) {
+                      env.progressMilestones.set(ctx.id, {
+                        messageMilestones: new Set(),
+                        gasMilestones: new Set(),
+                        timeMilestones: new Set()
+                      })
+                    }
+                    const processMilestones = env.progressMilestones.get(ctx.id)
+                    
+                    // Calculate milestone numbers (1 = 10%, 2 = 20%, etc.)
                     const messageMilestone = Math.floor(messagesProgress / 10);
                     const gasMilestone = Math.floor(gasProgress / 10);
                     const timeMilestone = Math.floor(timeProgress / 10);
                     
-                    // Check if we've crossed any 10% milestone since the last log
-                    // We only want to log once when crossing each milestone
-                    const crossedMessageMilestone = messageMilestone > lastLoggedMessageMilestone;
-                    const crossedGasMilestone = gasMilestone > lastLoggedGasMilestone && gasMilestone > 0;
-                    const crossedTimeMilestone = timeMilestone > lastLoggedTimeMilestone && timeMilestone > 0;
+                    // Check if we've precisely crossed a 10% boundary since the last check
+                    // This is more precise than just checking if the milestone changed
+                    const exactCrossedMessageBoundary = 
+                      Math.floor(prevMessagesProgress / 10) < Math.floor(messagesProgress / 10) && 
+                      messageMilestone > 0 && 
+                      !processMilestones.messageMilestones.has(messageMilestone);
+                      
+                    const exactCrossedGasBoundary = 
+                      Math.floor(prevGasProgress / 10) < Math.floor(gasProgress / 10) && 
+                      gasMilestone > 0 && 
+                      !processMilestones.gasMilestones.has(gasMilestone);
+                      
+                    const exactCrossedTimeBoundary = 
+                      Math.floor(prevTimeProgress / 10) < Math.floor(timeProgress / 10) && 
+                      timeMilestone > 0 && 
+                      !processMilestones.timeMilestones.has(timeMilestone);
                     
-                    // Also log periodically based on message count (every 100 messages)
-                    // But only if we haven't just logged a milestone
+                    // Also log on regular 100-message boundaries, but avoid logging if we just logged a milestone
                     const atMessageCountBoundary = messageCounter % 100 === 0 && 
                                                  messageCounter > 0 && 
-                                                 !crossedMessageMilestone && 
-                                                 !crossedGasMilestone && 
-                                                 !crossedTimeMilestone;
+                                                 Math.abs(messageCounter - lastCheckpointMessageCount - 100) < 5 && // More precise message count boundary
+                                                 !exactCrossedMessageBoundary && 
+                                                 !exactCrossedGasBoundary && 
+                                                 !exactCrossedTimeBoundary;
                     
-                    const shouldLogProgress = crossedMessageMilestone || crossedGasMilestone || crossedTimeMilestone || atMessageCountBoundary
+                    // Track previous values for next comparison
+                    prevMessagesProgress = messagesProgress;
+                    prevGasProgress = gasProgress;
+                    prevTimeProgress = timeProgress;
+                    
+                    const shouldLogProgress = exactCrossedMessageBoundary || exactCrossedGasBoundary || exactCrossedTimeBoundary || atMessageCountBoundary
                     
                     if (shouldLogProgress) {
-                      // Update our milestone trackers to prevent duplicate logs
-                      if (crossedMessageMilestone) lastLoggedMessageMilestone = messageMilestone;
-                      if (crossedGasMilestone) lastLoggedGasMilestone = gasMilestone;
-                      if (crossedTimeMilestone) lastLoggedTimeMilestone = timeMilestone;
+                      // Mark these milestones as logged for this process to prevent duplicates
+                      if (exactCrossedMessageBoundary && messageMilestone > 0) {
+                        processMilestones.messageMilestones.add(messageMilestone);
+                      }
+                      if (exactCrossedGasBoundary && gasMilestone > 0) {
+                        processMilestones.gasMilestones.add(gasMilestone);
+                      }
+                      if (exactCrossedTimeBoundary && timeMilestone > 0) {
+                        processMilestones.timeMilestones.add(timeMilestone);
+                      }
                       
-                      // For regular interval logs, don't update milestones
+                      // Add a bit of info about which milestone we're logging
+                      const milestoneReason = exactCrossedMessageBoundary ? 'M' : 
+                                             exactCrossedGasBoundary ? 'G' : 
+                                             exactCrossedTimeBoundary ? 'T' : '-'
                       logger(
-                        'CHECKPOINT PROGRESS - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%)',
+                        'CHECKPOINT PROGRESS [%s] - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%)',
+                        milestoneReason, // Indicates which milestone triggered this log (M=message, G=gas, T=time, -=regular interval)
                         ctx.id,
                         messageCounter - lastCheckpointMessageCount,
                         MESSAGE_CHECKPOINT_INTERVAL,
