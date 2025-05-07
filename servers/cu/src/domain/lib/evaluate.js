@@ -285,30 +285,17 @@ export function evaluateWith (env) {
                     const gasProgressBucket = Number(gasProgress / BigInt(10));
                     const timeProgressBucket = Math.floor(timeProgress / 10);
                     
-                    // Store last progress buckets in a WeakMap to track when we cross 10% thresholds
-                    if (!this.lastProgressBuckets) {
-                      this.lastProgressBuckets = new Map();
-                    }
-                    
-                    const progressKey = `${ctx.id}:${messageCounter-10}`;
-                    const previousBuckets = this.lastProgressBuckets.get(progressKey) || { msg: -1, gas: -1, time: -1 };
-                    
-                    // Log progress when crossing 10% boundaries or every 100 messages (but not too frequently)
-                    const shouldLogForMessage = messageCounter % 100 === 0;
-                    const shouldLogForProgress = 
-                      (messagesProgressBucket !== previousBuckets.msg && messagesProgressBucket > previousBuckets.msg) || 
-                      (gasProgressBucket !== previousBuckets.gas && gasProgressBucket > previousBuckets.gas) || 
-                      (timeProgressBucket !== previousBuckets.time && timeProgressBucket > previousBuckets.time);
-                    
-                    // Only log when significant progress has been made
-                    const shouldLogProgress = shouldLogForMessage || shouldLogForProgress;
-                    
-                    // Store current progress buckets for comparison in next iteration
-                    this.lastProgressBuckets.set(`${ctx.id}:${messageCounter}`, {
-                      msg: messagesProgressBucket,
-                      gas: gasProgressBucket, 
-                      time: timeProgressBucket
-                    });
+                    // Simpler approach: log every 100 messages and at 10% boundaries
+                    // This avoids state tracking issues that were causing errors
+                    const shouldLogProgress = 
+                      // Every 100 messages
+                      messageCounter % 100 === 0 || 
+                      // At 10% message boundaries: 0%, 10%, 20%, etc.
+                      Math.floor(messagesProgress) % 10 === 0 || 
+                      // At significant gas thresholds 
+                      Number(gasProgress) > 0 && Number(gasProgress) % 10 === 0 || 
+                      // At significant time thresholds
+                      Math.floor(timeProgress) > 0 && Math.floor(timeProgress) % 10 === 0;
                     
                     if (shouldLogProgress) {
                       // Fixed string formatting to avoid raw format specifiers showing up in logs
