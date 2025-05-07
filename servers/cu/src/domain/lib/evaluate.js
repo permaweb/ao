@@ -155,6 +155,12 @@ export function evaluateWith (env) {
           // How many messages to process before checkpointing - setting to 1000 as requested
           const MESSAGE_CHECKPOINT_INTERVAL = 1000
           
+          // Track the last logged progress milestone for each metric (in 10% increments)
+          // This ensures we only log once per 10% milestone
+          let lastLoggedMessageMilestone = -1 // -1 means no milestone logged yet
+          let lastLoggedGasMilestone = -1
+          let lastLoggedTimeMilestone = -1
+          
           // Log initial checkpoint settings
           logger(
             'Evaluation stream started for process "%s" with checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
@@ -277,21 +283,34 @@ export function evaluateWith (env) {
                     const gasProgressRounded = Math.round(gasProgress * 10) / 10;
                     const timeProgressRounded = Math.round(timeProgress * 10) / 10;
                     
-                    // Track last logged progress percentages to only log at 10% increments
-                    const lastMessagesProgressKey = Math.floor(messagesProgress / 10);
-                    const lastGasProgressKey = Math.floor(gasProgress / 10);
-                    const lastTimeProgressKey = Math.floor(timeProgress / 10);
+                    // Calculate the current progress milestone (0-10) for each metric
+                    const messageMilestone = Math.floor(messagesProgress / 10);
+                    const gasMilestone = Math.floor(gasProgress / 10);
+                    const timeMilestone = Math.floor(timeProgress / 10);
                     
-                    // Log progress at 10% increments of any threshold, but limit frequency to avoid log spam
-                    // Only log on multiples of 100 messages or at 10% percentage boundaries
-                    const atMessageCountBoundary = messageCounter % 100 === 0;
-                    const atMessageProgressBoundary = Math.floor(messagesProgress / 10) !== Math.floor((messagesProgress - 1) / 10);
-                    const atGasProgressBoundary = gasProgress >= 10 && Math.floor(gasProgress / 10) !== Math.floor((gasProgress - 0.1) / 10);
-                    const atTimeProgressBoundary = timeProgress >= 10 && Math.floor(timeProgress / 10) !== Math.floor((timeProgress - 0.1) / 10);
+                    // Check if we've crossed any 10% milestone since the last log
+                    // We only want to log once when crossing each milestone
+                    const crossedMessageMilestone = messageMilestone > lastLoggedMessageMilestone;
+                    const crossedGasMilestone = gasMilestone > lastLoggedGasMilestone && gasMilestone > 0;
+                    const crossedTimeMilestone = timeMilestone > lastLoggedTimeMilestone && timeMilestone > 0;
                     
-                    const shouldLogProgress = atMessageCountBoundary || atMessageProgressBoundary || atGasProgressBoundary || atTimeProgressBoundary
+                    // Also log periodically based on message count (every 100 messages)
+                    // But only if we haven't just logged a milestone
+                    const atMessageCountBoundary = messageCounter % 100 === 0 && 
+                                                 messageCounter > 0 && 
+                                                 !crossedMessageMilestone && 
+                                                 !crossedGasMilestone && 
+                                                 !crossedTimeMilestone;
+                    
+                    const shouldLogProgress = crossedMessageMilestone || crossedGasMilestone || crossedTimeMilestone || atMessageCountBoundary
                     
                     if (shouldLogProgress) {
+                      // Update our milestone trackers to prevent duplicate logs
+                      if (crossedMessageMilestone) lastLoggedMessageMilestone = messageMilestone;
+                      if (crossedGasMilestone) lastLoggedGasMilestone = gasMilestone;
+                      if (crossedTimeMilestone) lastLoggedTimeMilestone = timeMilestone;
+                      
+                      // For regular interval logs, don't update milestones
                       logger(
                         'CHECKPOINT PROGRESS - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%)',
                         ctx.id,
