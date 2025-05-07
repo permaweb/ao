@@ -134,10 +134,6 @@ export const domainConfigSchema = z.object({
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,
   /**
-   * Whether to enable or disable taking checkpoints while in a evaluation stream
-   */
-  MID_EVALUATION_CHECKPOINTING: z.preprocess((val) => !!val, z.boolean()),
-  /**
    * The max size of the dry run worker thread pool queue
    * of work. If the queue size hits this value,
    * then subsequent enqueues are rejected.

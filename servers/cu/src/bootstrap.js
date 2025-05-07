@@ -54,7 +54,6 @@ export const createApis = async (ctx) => {
   ctx.logger('Creating business logic apis')
   const CU_IDENTIFIER = randomUUID()
   ctx.logger('CU Identifier: %s', CU_IDENTIFIER)
-  ctx.logger('Mid-evaluation checkpointing is set to "%s"', ctx.MID_EVALUATION_CHECKPOINTING)
 
   const setTimeout = (...args) => lt.setTimeout(...args)
   const clearTimeout = (...args) => lt.clearTimeout(...args)

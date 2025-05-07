@@ -83,7 +83,6 @@ export function evaluateWith (env) {
   // Get checkpoint threshold values from config
   const EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD = env.config?.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000
   const EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD = env.config?.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 60000 // Default 1 minute
-  const MID_EVALUATION_CHECKPOINTING = env.config?.MID_EVALUATION_CHECKPOINTING || false // Default to disabled
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -355,25 +354,7 @@ export function evaluateWith (env) {
                       )
                     }
                     
-                    // Add debug logging about checkpointing conditions
-                    if (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached) {
-                      logger(
-                        'CHECKPOINT DEBUG - Process: "%s", MID_EVALUATION_CHECKPOINTING=%s, noSave=%s, hasMemory=%s, hasCheckpoint=%s',
-                        ctx.id,
-                        MID_EVALUATION_CHECKPOINTING,
-                        noSave,
-                        !!output.Memory,
-                        hasCheckpoint
-                      )
-                    }
-                    
-                    // For backward compatibility, default to enabled if not explicitly set
-                    // (This ensures existing systems continue working as before)
-                    const checkpointingEnabled = MID_EVALUATION_CHECKPOINTING !== false;
-                    
-                    // Create checkpoint if conditions are met
-                    if (!noSave && output.Memory && !hasCheckpoint && 
-                        (checkpointingEnabled && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached))) {
+                    if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
                       if (gasThresholdReached) {
