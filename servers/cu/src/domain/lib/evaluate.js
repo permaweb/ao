@@ -320,25 +320,6 @@ export function evaluateWith (env) {
                     
                     const shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary
                     
-                    // Extract message timestamp if available in the message name
-                    let messageTimestamp = null;
-                    let timeOffset = null;
-                    
-                    if (name && name.includes('Scheduled Message')) {
-                      // Format: "Scheduled Message {messageId} {timestamp}:{nonce}"
-                      const parts = name.split(' ');
-                      if (parts.length >= 4) {
-                        const timestampParts = parts[3].split(':');
-                        if (timestampParts.length >= 1) {
-                          messageTimestamp = parseInt(timestampParts[0], 10);
-                          if (!isNaN(messageTimestamp)) {
-                            // Calculate time difference in seconds
-                            timeOffset = Math.floor((messageTimestamp - now.getTime()) / 1000);
-                          }
-                        }
-                      }
-                    }
-                    
                     if (shouldLogProgress) {
                       // Update our tracking variables to the current percentages if we crossed a boundary
                       // This prevents logging the same milestone multiple times
@@ -355,17 +336,9 @@ export function evaluateWith (env) {
                       // Add a bit of info about which milestone we're logging
                       const milestoneReason = crossedMessageBoundary ? 'M' : 
                                              crossedGasBoundary ? 'G' : 
-                                             crossedTimeBoundary ? 'T' : '-';
-                                             
-                      // Format time offset for display if available
-                      const timeOffsetStr = timeOffset !== null 
-                        ? timeOffset > 0 
-                          ? `[Future: +${timeOffset}s]` 
-                          : `[Past: ${timeOffset}s]` 
-                        : '';
-                      
+                                             crossedTimeBoundary ? 'T' : '-'
                       logger(
-                        'CHECKPOINT PROGRESS [%s] - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%) %s',
+                        'CHECKPOINT PROGRESS [%s] - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%)',
                         milestoneReason, // Indicates which milestone triggered this log (M=message, G=gas, T=time, -=regular interval)
                         ctx.id,
                         messageCounter - lastCheckpointMessageCount,
@@ -376,24 +349,16 @@ export function evaluateWith (env) {
                         Math.floor(gasProgressRounded),
                         currentEvalTime,
                         EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                        Math.floor(timeProgressRounded),
-                        timeOffsetStr
+                        Math.floor(timeProgressRounded)
                       )
                     }
                     
                     if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
-                      // Format time offset string for checkpoint logging
-                      const timeOffsetStr = timeOffset !== null 
-                        ? timeOffset > 0 
-                          ? `| Message timestamp: Future +${timeOffset}s` 
-                          : `| Message timestamp: Past ${timeOffset}s` 
-                        : '';
-                        
                       if (gasThresholdReached) {
                         logger(
-                          'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%) %s',
+                          'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%)',
                           ctx.id,
                           message.Id,
                           messageCounter,
@@ -405,12 +370,11 @@ export function evaluateWith (env) {
                           Math.floor(timeProgressRounded),
                           messageCounter - lastCheckpointMessageCount,
                           MESSAGE_CHECKPOINT_INTERVAL,
-                          Math.floor(messagesProgressRounded),
-                          timeOffsetStr
+                          Math.floor(messagesProgressRounded)
                         )
                       } else if (evalTimeThresholdReached) {
                         logger(
-                          'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%) %s',
+                          'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%)',
                           ctx.id,
                           message.Id,
                           messageCounter,
@@ -422,12 +386,11 @@ export function evaluateWith (env) {
                           Math.floor(gasProgressRounded),
                           messageCounter - lastCheckpointMessageCount,
                           MESSAGE_CHECKPOINT_INTERVAL,
-                          Math.floor(messagesProgressRounded),
-                          timeOffsetStr
+                          Math.floor(messagesProgressRounded)
                         )
                       } else {
                         logger(
-                          'INTERMEDIATE CHECKPOINT (Messages): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) %s',
+                          'INTERMEDIATE CHECKPOINT (Message): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%)',
                           ctx.id,
                           message.Id,
                           messageCounter,
@@ -439,8 +402,7 @@ export function evaluateWith (env) {
                           Math.floor(gasProgressRounded),
                           currentEvalTime,
                           EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                          Math.floor(timeProgressRounded),
-                          timeOffsetStr
+                          Math.floor(timeProgressRounded)
                         )
                       }
                       
