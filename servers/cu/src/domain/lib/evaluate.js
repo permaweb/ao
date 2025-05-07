@@ -3,6 +3,33 @@ import { pipeline } from 'node:stream/promises'
 
 import { always, applySpec, evolve, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+
+/**
+ * Helper function to calculate time difference and format as "Xd-Xh-Xm-Xs"
+ * @param {number|string} timestamp - Unix timestamp (can be in ms or seconds)
+ * @returns {string} - Formatted time difference string
+ */
+function formatTimeAgo(timestamp) {
+  // Ensure timestamp is a number and in milliseconds
+  const ts = Number(timestamp)
+  // If timestamp is in seconds (typical Unix format), convert to milliseconds
+  const tsInMs = ts < 1000000000000 ? ts * 1000 : ts
+  
+  // Get current time in milliseconds
+  const now = Date.now()
+  
+  // Calculate difference in milliseconds
+  const diffMs = Math.max(0, now - tsInMs)
+  
+  // Convert to days, hours, minutes, seconds
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000)
+  
+  // Format the string as "Xd-Xh-Xm-Xs"
+  return `${days}d-${hours}h-${minutes}m-${seconds}s`
+}
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
@@ -365,8 +392,12 @@ export function evaluateWith (env) {
                       const milestoneReason = crossedMessageBoundary ? 'M' : 
                                              crossedGasBoundary ? 'G' : 
                                              crossedTimeBoundary ? 'T' : '-'
+                      // Calculate how long ago the message timestamp is
+                      const messageTimestamp = message.Timestamp || message.timestamp
+                      const timeAgo = messageTimestamp ? formatTimeAgo(messageTimestamp) : 'Unknown'
+                      
                       logger(
-                        'CHECKPOINT PROGRESS [%s] - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%)',
+                        'CHECKPOINT PROGRESS [%s] - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%), Away: %s',
                         milestoneReason, // Indicates which milestone triggered this log (M=message, G=gas, T=time, -=regular interval)
                         ctx.id,
                         messageCounter - lastCheckpointMessageCount,
@@ -377,16 +408,21 @@ export function evaluateWith (env) {
                         Math.floor(gasProgressRounded),
                         currentEvalTime,
                         EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                        Math.floor(timeProgressRounded)
+                        Math.floor(timeProgressRounded),
+                        timeAgo
                       )
                     }
                     
                     if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
+                      // Calculate how long ago the message timestamp is
+                      const messageTimestamp = message.Timestamp || message.timestamp
+                      const timeAgo = messageTimestamp ? formatTimeAgo(messageTimestamp) : 'Unknown'
+                      
                       if (gasThresholdReached) {
                         logger(
-                          'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%)',
+                          'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%) | Away: %s',
                           ctx.id,
                           message.Id,
                           messageCounter,
@@ -398,11 +434,12 @@ export function evaluateWith (env) {
                           Math.floor(timeProgressRounded),
                           messageCounter - lastCheckpointMessageCount,
                           MESSAGE_CHECKPOINT_INTERVAL,
-                          Math.floor(messagesProgressRounded)
+                          Math.floor(messagesProgressRounded),
+                          timeAgo
                         )
                       } else if (evalTimeThresholdReached) {
                         logger(
-                          'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%)',
+                          'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%) | Away: %s',
                           ctx.id,
                           message.Id,
                           messageCounter,
@@ -414,11 +451,12 @@ export function evaluateWith (env) {
                           Math.floor(gasProgressRounded),
                           messageCounter - lastCheckpointMessageCount,
                           MESSAGE_CHECKPOINT_INTERVAL,
-                          Math.floor(messagesProgressRounded)
+                          Math.floor(messagesProgressRounded),
+                          timeAgo
                         )
                       } else {
                         logger(
-                          'INTERMEDIATE CHECKPOINT (Message): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%)',
+                          'INTERMEDIATE CHECKPOINT (Message): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Away: %s',
                           ctx.id,
                           message.Id,
                           messageCounter,
@@ -430,7 +468,8 @@ export function evaluateWith (env) {
                           Math.floor(gasProgressRounded),
                           currentEvalTime,
                           EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                          Math.floor(timeProgressRounded)
+                          Math.floor(timeProgressRounded),
+                          timeAgo
                         )
                       }
                       
