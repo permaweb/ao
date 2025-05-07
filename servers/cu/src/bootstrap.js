@@ -106,7 +106,11 @@ export const createApis = async (ctx) => {
           MODE: ctx.MODE,
           LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
           DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL,
-          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE
+          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
+          // Pass checkpoint configuration to worker threads
+          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+          MID_EVALUATION_CHECKPOINTING: ctx.MID_EVALUATION_CHECKPOINTING
         }
       }
     }
@@ -212,6 +216,7 @@ export const createApis = async (ctx) => {
 
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
+  ctx.logger('Mid-evaluation checkpointing is set to "%s"', ctx.MID_EVALUATION_CHECKPOINTING)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Trusting Arweave Checkpoint Owners [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))

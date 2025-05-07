@@ -145,6 +145,13 @@ const CONFIG_ENVS = {
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_EVALUATION_CACHE: process.env.DISABLE_PROCESS_EVALUATION_CACHE,
     /**
+     * Whether to enable intermediate checkpoints during message evaluation streams.
+     * When enabled, checkpoints will be created at regular intervals during long-running
+     * evaluation streams, allowing recovery from the last intermediate checkpoint
+     * rather than starting from the beginning if evaluation is interrupted.
+     */
+    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING === 'true',
+    /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute. After 2 hours, this process used
      *  300 trillion gas. This is the baseline for checkpointing as no process should need to spend more than two hours
@@ -202,6 +209,13 @@ const CONFIG_ENVS = {
     DISABLE_PROCESS_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: process.env.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION !== 'false',
     DISABLE_PROCESS_EVALUATION_CACHE: process.env.DISABLE_PROCESS_EVALUATION_CACHE,
+    /**
+     * Whether to enable intermediate checkpoints during message evaluation streams.
+     * When enabled, checkpoints will be created at regular intervals during long-running
+     * evaluation streams, allowing recovery from the last intermediate checkpoint
+     * rather than starting from the beginning if evaluation is interrupted.
+     */
+    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING === 'true',
     /**
      *  EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Amount of gas for 2 hours of continuous compute (300_000_000_000_000)
      *  This was calculated by creating a process built to do continuous compute by adding and clearing a table.
