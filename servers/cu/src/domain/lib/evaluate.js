@@ -249,31 +249,74 @@ export function evaluateWith (env) {
                                                   currentEvalTime >= env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
                     const messageCountThresholdReached = messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
                     
-                    // Calculate progress percentages for each threshold
-                    const messagesProgress = ((messageCounter - lastCheckpointMessageCount) / MESSAGE_CHECKPOINT_INTERVAL) * 100;
-                    // Safe BigInt calculation to avoid Number overflow
-                    const gasProgress = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
-                      totalGasUsed * BigInt(100) / BigInt(env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) : BigInt(0);
-                    const timeProgress = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
-                      (currentEvalTime / env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
+                    // Track the previous 10% thresholds to avoid duplicate logs
+                    if (!ctx.lastCheckpointProgressLog) {
+                      ctx.lastCheckpointProgressLog = {
+                        messagesProgressDecile: 0,
+                        gasProgressDecile: 0,
+                        timeProgressDecile: 0
+                      };
+                    }
                     
-                    // Log progress every 100 messages or when any threshold reaches 75%
-                    if (messageCounter % 100 === 0 || 
-                        gasProgress >= BigInt(75) || 
-                        timeProgress >= 75) {
+                    // Calculate progress percentages for each threshold
+                    const messageCount = messageCounter - lastCheckpointMessageCount;
+                    const messagesProgress = (messageCount / MESSAGE_CHECKPOINT_INTERVAL) * 100;
+                    
+                    // Handle gas progress calculation safely
+                    let gasProgress = 0;
+                    if (env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
+                        BigInt(env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD) > BigInt(0)) {
+                      // Convert to Number for percentage calculation (safe for display purposes)
+                      // Using Number() directly on BigInt can overflow, so we use a string conversion first
+                      const gasRatio = Number(totalGasUsed.toString()) / Number(env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString());
+                      gasProgress = Math.min(gasRatio * 100, 100); // Cap at 100%
+                    }
+                    
+                    // Time progress calculation
+                    const timeProgress = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
+                      Math.min((currentEvalTime / env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100, 100) : 0;
+                    
+                    // Calculate current deciles (0-10 representing 0-100% in 10% increments)
+                    const messagesDecile = Math.floor(messagesProgress / 10);
+                    const gasDecile = Math.floor(gasProgress / 10);
+                    const timeDecile = Math.floor(timeProgress / 10);
+                    
+                    // Determine if we should log based on crossing a 10% threshold or periodic message count
+                    const crossedMessagesThreshold = messagesDecile > ctx.lastCheckpointProgressLog.messagesProgressDecile;
+                    const crossedGasThreshold = gasDecile > ctx.lastCheckpointProgressLog.gasProgressDecile;
+                    const crossedTimeThreshold = timeDecile > ctx.lastCheckpointProgressLog.timeProgressDecile;
+                    
+                    // Log progress at 10% intervals or every 100 messages
+                    if (messageCounter % 100 === 0 || crossedMessagesThreshold || crossedGasThreshold || crossedTimeThreshold) {
+                      // Update which thresholds were crossed
+                      let thresholdInfo = '';
+                      if (crossedMessagesThreshold) {
+                        thresholdInfo += ' MESSAGE_THRESHOLD';
+                        ctx.lastCheckpointProgressLog.messagesProgressDecile = messagesDecile;
+                      }
+                      if (crossedGasThreshold) {
+                        thresholdInfo += ' GAS_THRESHOLD';
+                        ctx.lastCheckpointProgressLog.gasProgressDecile = gasDecile;
+                      }
+                      if (crossedTimeThreshold) {
+                        thresholdInfo += ' TIME_THRESHOLD';
+                        ctx.lastCheckpointProgressLog.timeProgressDecile = timeDecile;
+                      }
+                      
                       logger(
-                        'CHECKPOINT PROGRESS - Process: "%s", Message: %d/%d (%.1f%%), Gas: %d/%d (%d%%), Time: %dms/%dms (%.1f%%)',
+                        'CHECKPOINT PROGRESS - Process: "%s"%s | Message: %d/%d (%.1f%%) | Gas: %s/%s (%.1f%%) | Time: %dms/%dms (%.1f%%)',
                         ctx.id,
-                        messageCounter - lastCheckpointMessageCount,
+                        thresholdInfo,
+                        messageCount,
                         MESSAGE_CHECKPOINT_INTERVAL,
-                        messagesProgress.toFixed(1),
+                        messagesProgress,
                         totalGasUsed.toString(),
-                        env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
-                        gasProgress.toString(),
+                        env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                        gasProgress,
                         currentEvalTime,
                         env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                        timeProgress.toFixed(1)
-                      )
+                        timeProgress
+                      );
                     }
                     
                     if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
