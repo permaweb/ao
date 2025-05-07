@@ -146,8 +146,8 @@ export function evaluateWith (env) {
           let first = true
           // Track when we started this evaluation stream
           const evalStartTime = new Date()
-          // Keep track of when we last checkpointed
-          let lastCheckpointTime = evalStartTime
+          // Keep track of when we last checkpointed - initialize with a valid value
+          let lastCheckpointTime = evalStartTime // Never null/undefined
           // Counter for message-based checkpointing
           let messageCounter = 0
           let lastCheckpointMessageCount = 0
@@ -162,13 +162,16 @@ export function evaluateWith (env) {
           }
           
           // Get or create tracking for this process
-          if (!env.lastLoggedPercentages.has(ctx.id)) {
-            env.lastLoggedPercentages.set(ctx.id, {
-              messagePercent: 0,  // Last message percentage we logged (10, 20, 30, etc.)
-              gasPercent: 0,      // Last gas percentage we logged
-              timePercent: 0       // Last time percentage we logged
-            })
+          if (!env.lastLoggedPercentages) {
+            env.lastLoggedPercentages = new Map()
           }
+          
+          // Always set the tracking object to ensure it exists
+          env.lastLoggedPercentages.set(ctx.id, env.lastLoggedPercentages.get(ctx.id) || {
+            messagePercent: 0,  // Last message percentage we logged (10, 20, 30, etc.)
+            gasPercent: 0,      // Last gas percentage we logged
+            timePercent: 0       // Last time percentage we logged
+          })
           
           // Log initial checkpoint settings
           logger(
@@ -294,8 +297,18 @@ export function evaluateWith (env) {
                     const gasProgressRounded = Math.round(gasProgress * 10) / 10;
                     const timeProgressRounded = Math.round(timeProgress * 10) / 10;
                     
-                    // Get the tracking object for this process
-                    const lastLogged = env.lastLoggedPercentages.get(ctx.id);
+                    // Get the tracking object for this process - ensure it exists
+                    const lastLogged = env.lastLoggedPercentages?.get(ctx.id) || {
+                      messagePercent: 0,
+                      gasPercent: 0,
+                      timePercent: 0
+                    };
+                    
+                    // Ensure we have the tracking object in the map
+                    if (!env.lastLoggedPercentages?.has(ctx.id)) {
+                      if (!env.lastLoggedPercentages) env.lastLoggedPercentages = new Map();
+                      env.lastLoggedPercentages.set(ctx.id, lastLogged);
+                    }
                     
                     // Calculate the current percentages rounded down to nearest 10% (0, 10, 20, etc.)
                     const currentMessagePercent = Math.floor(messagesProgressRounded / 10) * 10;
@@ -428,7 +441,8 @@ export function evaluateWith (env) {
                       
                       // Reset accumulated gas and update last checkpoint time
                       totalGasUsed = BigInt(0)
-                      lastCheckpointTime = now
+                      // Always set a valid Date object for the checkpoint time
+                      lastCheckpointTime = now || new Date()
                       lastCheckpointMessageCount = messageCounter
                     }
 
