@@ -216,16 +216,6 @@ export const createApis = async (ctx) => {
 
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
   ctx.logger('Process File Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_FILE_CHECKPOINT_CREATION)
-  // Debug: log all ctx properties related to checkpointing
-  ctx.logger('DEBUG - MID_EVALUATION_CHECKPOINTING exists: %s', Object.prototype.hasOwnProperty.call(ctx, 'MID_EVALUATION_CHECKPOINTING'))
-  
-  // If MID_EVALUATION_CHECKPOINTING isn't in ctx, add it directly using environment variable with default true
-  if (!Object.prototype.hasOwnProperty.call(ctx, 'MID_EVALUATION_CHECKPOINTING')) {
-    ctx.MID_EVALUATION_CHECKPOINTING = process.env.MID_EVALUATION_CHECKPOINTING !== 'false';
-    ctx.logger('Added MID_EVALUATION_CHECKPOINTING directly from environment: %s', ctx.MID_EVALUATION_CHECKPOINTING);
-  }
-  
-  ctx.logger('Mid-evaluation checkpointing is set to "%s"', ctx.MID_EVALUATION_CHECKPOINTING)
   ctx.logger('Ignoring Arweave Checkpoints for processes [ %s ]', ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Ignoring Arweave Checkpoints [ %s ]', ctx.IGNORE_ARWEAVE_CHECKPOINTS.join(', '))
   ctx.logger('Trusting Arweave Checkpoint Owners [ %s ]', ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS.join(', '))
@@ -400,7 +390,6 @@ export const createApis = async (ctx) => {
       // Pass checkpoint threshold values to all functions that need them
       EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
       EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-      MID_EVALUATION_CHECKPOINTING: ctx.MID_EVALUATION_CHECKPOINTING,
       loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
