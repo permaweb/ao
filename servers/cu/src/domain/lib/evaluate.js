@@ -89,22 +89,12 @@ export function evaluateWith (env) {
 
   const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(env.saveLatestProcessMemory)
 
-  // Create a global map to store checkpoint times for each process
-  if (!env.checkpointTimes) {
-    env.checkpointTimes = new Map()
-  }
-
   return (ctx) =>
     of(ctx)
       .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
         // If we are evaluating from a checkpoint, we don't want to use cached evals or save any new ones
         const hasCheckpoint = Boolean(ctx.checkpoint) && Boolean(ctx.Memory)
-        
-        // Initialize the checkpoint time for this process if it doesn't exist
-        if (!env.checkpointTimes.has(ctx.id)) {
-          env.checkpointTimes.set(ctx.id, new Date())
-        }
 
         // A running tally of gas used in the eval stream
         let totalGasUsed = BigInt(0)
@@ -156,8 +146,8 @@ export function evaluateWith (env) {
           let first = true
           // Track when we started this evaluation stream
           const evalStartTime = new Date()
-          // Use the global checkpoint time for this process
-          // No local variable needed as we'll access the global map
+          // Keep track of when we last checkpointed
+          let lastCheckpointTime = evalStartTime
           // Counter for message-based checkpointing
           let messageCounter = 0
           let lastCheckpointMessageCount = 0
@@ -268,11 +258,10 @@ export function evaluateWith (env) {
                     else ctx.stats.messages.scheduled++
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
-                    const now = new Date()
-                    // Make sure lastCheckpointTime is defined before using it
-                    // If it's not defined, use evalStartTime as a fallback, or just use now as a safe default
-                    const checkpointTimeReference = lastCheckpointTime || evalStartTime || now
-                    const currentEvalTime = now.getTime() - checkpointTimeReference.getTime()
+            const now = new Date()
+            // Ensure lastCheckpointTime is defined with a fallback to evalStartTime
+            const checkpointTime = lastCheckpointTime || evalStartTime
+            const currentEvalTime = now.getTime() - checkpointTime.getTime()
                     
                     // Use config constants for thresholds
                     const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
