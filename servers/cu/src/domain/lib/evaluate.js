@@ -350,44 +350,98 @@ export function evaluateWith (env) {
                       ctx.stats.messages.error++
                     }
                     
-                    // We'll calculate the percentages inside the checkpoint condition to avoid early calculation issues
-                    
                     // Check if we need to create an intermediate checkpoint based on gas or time thresholds
-                    // Only checkpoint if mid-evaluation checkpointing is enabled, the message was 
-                    // successfully evaluated, and we have memory to checkpoint
-                    // Allow checkpoints for dry runs during catch-up when time threshold is exceeded (≥100%)
-                    if ((env.MID_EVALUATION_CHECKPOINTING && !noSave && !output.Error && output.Memory && !hasCheckpoint) ||
-                        (env.MID_EVALUATION_CHECKPOINTING && ctx.dryRun && !output.Error && output.Memory && !hasCheckpoint && 
-                         currentEvalTime > 0 && timeThreshold > 0 && (currentEvalTime / timeThreshold) >= 1)) {
-                      // Use fallback values if thresholds aren't in environment
+                    let shouldCreateCheckpoint = false
+                    let gasThresholdReached = false
+                    let evalTimeThresholdReached = false
+                    let loggingInfo = {}
+                    
+                    try {
+                      // Safe values to prevent null/undefined errors
+                      const safeGasUsed = typeof totalGasUsed === 'bigint' ? totalGasUsed : BigInt(0)
+                      const safeEvalTime = typeof currentEvalTime === 'number' ? currentEvalTime : 0
                       const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
-                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute in ms (reduced from 15 minutes)
+                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute
                       
-                      // Check if either threshold has been reached
-                      const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
-                      const evalTimeThresholdReached = Number(currentEvalTime) > 0 && Number(currentEvalTime) >= Number(timeThreshold)
+                      // Calculate percentages for monitoring
+                      const timePercentageValue = safeEvalTime > 0 && timeThreshold > 0 ? 
+                        (safeEvalTime / timeThreshold * 100) : 0
+                      const gasPercentageValue = Number(safeGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                        (Number(safeGasUsed) / Number(gasThreshold) * 100) : 0
                       
-                      // Calculate percentage values for debugging
-                      const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
-                        (currentEvalTime / timeThreshold * 100) : 0
-                      const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                        (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
-                      
-                      // Log at 100% of gas OR time to help with debugging
-                      if (timePercentageValue >= 100 || gasPercentageValue >= 100) {
+                      // Store values for later logging
+                      loggingInfo = {
+                        timePercentage: timePercentageValue,
+                        gasPercentage: gasPercentageValue,
+                        evalTime: safeEvalTime,
+                        timeThreshold,
+                        isDryRun: ctx.dryRun,
+                        midEvalEnabled: env.MID_EVALUATION_CHECKPOINTING,
+                        noSave,
+                        hasError: !!output.Error,
+                        hasMemory: !!output.Memory,
+                        hasCheckpoint
+                      }
+                        
+                      // Log status on regular intervals or when approaching thresholds
+                      if (ctx.stats.messages.scheduled % 100 === 0 || ctx.stats.messages.cron % 100 === 0 ||
+                          timePercentageValue >= 50 || gasPercentageValue >= 50) {
                         logger(
-                          'CHECKPOINT READY: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s | NoSave: %s | HasMem: %s | HasErr: %s',
+                          'CHECKPOINT STATUS: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s',
                           ctx.id,
                           timePercentageValue,
-                          Number(currentEvalTime),
+                          Number(safeEvalTime),
                           Number(timeThreshold),
                           gasPercentageValue,
-                          ctx.dryRun ? 'YES' : 'NO',
-                          noSave ? 'YES' : 'NO',
-                          output.Memory ? 'YES' : 'NO',
-                          output.Error ? 'YES' : 'NO'
+                          ctx.dryRun ? 'YES' : 'NO'
                         )
                       }
+                      
+                      // Calculate if the checkpoint conditions are met for dry runs
+                      const timeThresholdExceeded = safeEvalTime > 0 && timeThreshold > 0 && 
+                        (safeEvalTime / timeThreshold) >= 1
+                      
+                      // Evaluate standard checkpoint condition
+                      const standardCondition = !!(env.MID_EVALUATION_CHECKPOINTING && 
+                                               !noSave && 
+                                               !output.Error && 
+                                               output.Memory && 
+                                               !hasCheckpoint)
+                      
+                      // Evaluate dry run specific checkpoint condition                               
+                      const dryRunCondition = !!(env.MID_EVALUATION_CHECKPOINTING && 
+                                           ctx.dryRun && 
+                                           !output.Error && 
+                                           output.Memory && 
+                                           !hasCheckpoint && 
+                                           timeThresholdExceeded)
+                      
+                      // Check if we should create a checkpoint
+                      shouldCreateCheckpoint = standardCondition || dryRunCondition
+                      
+                      // Check if thresholds are reached - only relevant if we're creating a checkpoint
+                      if (shouldCreateCheckpoint) {
+                        gasThresholdReached = safeGasUsed > 0 && safeGasUsed >= gasThreshold
+                        evalTimeThresholdReached = safeEvalTime > 0 && safeEvalTime >= timeThreshold
+                        
+                        logger(
+                          'CHECKPOINT TRIGGERED: Process "%s" | Time: %.2f%% | Gas: %.2f%% | DryRun: %s | Condition: %s',
+                          ctx.id,
+                          timePercentageValue,
+                          gasPercentageValue,
+                          ctx.dryRun ? 'YES' : 'NO',
+                          dryRunCondition ? 'DRY_RUN' : 'STANDARD'
+                        )
+                      }
+                    } catch (err) {
+                      // Log any errors in checkpoint evaluation but continue
+                      logger('ERROR in checkpoint evaluation: %s', err.message || err)
+                    }
+                    
+                    // If checkpoint should be created, do it outside the try/catch to avoid swallowing errors
+                    if (shouldCreateCheckpoint) {
+                      const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
+                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute
                       
                       // Notify when a checkpoint threshold is reached
                       if (gasThresholdReached || evalTimeThresholdReached) {
