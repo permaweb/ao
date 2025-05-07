@@ -351,123 +351,72 @@ export function evaluateWith (env) {
                     }
                     
                     // Check if we need to create an intermediate checkpoint based on gas or time thresholds
-                    let shouldCreateCheckpoint = false
-                    let gasThresholdReached = false
-                    let evalTimeThresholdReached = false
-                    let loggingInfo = {}
+                    // Only checkpoint if mid-evaluation checkpointing is enabled, the message was 
+                    // successfully evaluated, and we have memory to checkpoint
                     
-                    try {
-                      // Safe values to prevent null/undefined errors
-                      const safeGasUsed = typeof totalGasUsed === 'bigint' ? totalGasUsed : BigInt(0)
-                      const safeEvalTime = typeof currentEvalTime === 'number' ? currentEvalTime : 0
-                      const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
-                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute
-                      
-                      // Calculate percentages for monitoring
-                      const timePercentageValue = safeEvalTime > 0 && timeThreshold > 0 ? 
-                        (safeEvalTime / timeThreshold * 100) : 0
-                      const gasPercentageValue = Number(safeGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                        (Number(safeGasUsed) / Number(gasThreshold) * 100) : 0
-                      
-                      // Store values for later logging
-                      loggingInfo = {
-                        timePercentage: timePercentageValue,
-                        gasPercentage: gasPercentageValue,
-                        evalTime: safeEvalTime,
-                        timeThreshold,
-                        isDryRun: ctx.dryRun,
-                        midEvalEnabled: env.MID_EVALUATION_CHECKPOINTING,
-                        noSave,
-                        hasError: !!output.Error,
-                        hasMemory: !!output.Memory,
-                        hasCheckpoint
-                      }
-                        
-                      // Log status on regular intervals or when approaching thresholds
-                      if (ctx.stats.messages.scheduled % 100 === 0 || ctx.stats.messages.cron % 100 === 0 ||
-                          timePercentageValue >= 50 || gasPercentageValue >= 50) {
-                        logger(
-                          'CHECKPOINT STATUS: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s',
-                          ctx.id,
-                          timePercentageValue,
-                          Number(safeEvalTime),
-                          Number(timeThreshold),
-                          gasPercentageValue,
-                          ctx.dryRun ? 'YES' : 'NO'
-                        )
-                      }
-                      
-                      // Calculate if the checkpoint conditions are met for dry runs
-                      const timeThresholdExceeded = safeEvalTime > 0 && timeThreshold > 0 && 
-                        (safeEvalTime / timeThreshold) >= 1
-                      
-                      // Evaluate standard checkpoint condition
-                      const standardCondition = !!(env.MID_EVALUATION_CHECKPOINTING && 
-                                               !noSave && 
-                                               !output.Error && 
-                                               output.Memory && 
-                                               !hasCheckpoint)
-                      
-                      // Evaluate dry run specific checkpoint condition                               
-                      const dryRunCondition = !!(env.MID_EVALUATION_CHECKPOINTING && 
-                                           ctx.dryRun && 
+                    // Gas and time thresholds with fallback values
+                    const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
+                    const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute in ms
+                    
+                    // Calculate threshold percentages for logging
+                    const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
+                      (currentEvalTime / timeThreshold * 100) : 0
+                    const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                      (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
+                    
+                    // Log progress periodically
+                    if (timePercentageValue >= 50 || gasPercentageValue >= 50 || 
+                        ctx.stats.messages.scheduled % 100 === 0 || ctx.stats.messages.cron % 100 === 0) {
+                      logger(
+                        'CHECKPOINT PROGRESS: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s',
+                        ctx.id,
+                        timePercentageValue,
+                        Number(currentEvalTime),
+                        Number(timeThreshold),
+                        gasPercentageValue,
+                        ctx.dryRun ? 'YES' : 'NO'
+                      )
+                    }
+                    
+                    // Check if threshold reached for checkpointing
+                    const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
+                    const evalTimeThresholdReached = currentEvalTime > 0 && currentEvalTime >= timeThreshold
+                    
+                    // Standard checkpoint condition (non-dry run)
+                    const standardCondition = env.MID_EVALUATION_CHECKPOINTING && 
+                                           !noSave && 
                                            !output.Error && 
                                            output.Memory && 
                                            !hasCheckpoint && 
-                                           timeThresholdExceeded)
-                      
-                      // Check if we should create a checkpoint
-                      shouldCreateCheckpoint = standardCondition || dryRunCondition
-                      
-                      // Check if thresholds are reached - only relevant if we're creating a checkpoint
-                      if (shouldCreateCheckpoint) {
-                        gasThresholdReached = safeGasUsed > 0 && safeGasUsed >= gasThreshold
-                        evalTimeThresholdReached = safeEvalTime > 0 && safeEvalTime >= timeThreshold
-                        
-                        logger(
-                          'CHECKPOINT TRIGGERED: Process "%s" | Time: %.2f%% | Gas: %.2f%% | DryRun: %s | Condition: %s',
-                          ctx.id,
-                          timePercentageValue,
-                          gasPercentageValue,
-                          ctx.dryRun ? 'YES' : 'NO',
-                          dryRunCondition ? 'DRY_RUN' : 'STANDARD'
-                        )
-                      }
-                    } catch (err) {
-                      // Log any errors in checkpoint evaluation but continue
-                      logger('ERROR in checkpoint evaluation: %s', err.message || err)
-                    }
+                                           (gasThresholdReached || evalTimeThresholdReached)
                     
-                    // If checkpoint should be created, do it outside the try/catch to avoid swallowing errors
-                    if (shouldCreateCheckpoint) {
-                      const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
-                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute
-                      
-                      // Notify when a checkpoint threshold is reached
-                      if (gasThresholdReached || evalTimeThresholdReached) {
-                        const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                          (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
-                        const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
-                          (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
-                          
+                    // Dry run checkpoint condition - only time-based for dry runs
+                    const dryRunCondition = env.MID_EVALUATION_CHECKPOINTING && 
+                                       ctx.dryRun && 
+                                       !output.Error && 
+                                       output.Memory && 
+                                       !hasCheckpoint && 
+                                       evalTimeThresholdReached
+                    
+                    // Create checkpoint if any condition met
+                    if (standardCondition || dryRunCondition) {
+                      try {
                         // Calculate time remaining for scheduled messages with a simpler approach
                         let awayTime = ''
-                        if (message) {
+                        if (message && message.Timestamp) {
                           try {
                             // Extract the timestamp from the message - handle different formats
                             let messageTime = null
                             
-                            if (message.Timestamp) {
-                              if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
-                                // Handle string format with colon (e.g., "1741858046480:5963484")
-                                messageTime = parseInt(message.Timestamp.split(':')[0], 10)
-                              } else if (typeof message.Timestamp === 'string') {
-                                // Handle plain string format
-                                messageTime = parseInt(message.Timestamp, 10)
-                              } else if (typeof message.Timestamp === 'number') {
-                                // Handle numeric format
-                                messageTime = message.Timestamp
-                              }
+                            if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
+                              // Handle string format with colon (e.g., "1741858046480:5963484")
+                              messageTime = parseInt(message.Timestamp.split(':')[0], 10)
+                            } else if (typeof message.Timestamp === 'string') {
+                              // Handle plain string format
+                              messageTime = parseInt(message.Timestamp, 10)
+                            } else if (typeof message.Timestamp === 'number') {
+                              // Handle numeric format
+                              messageTime = message.Timestamp
                             }
                             
                             // Only proceed if we have a valid timestamp
@@ -496,62 +445,31 @@ export function evaluateWith (env) {
                               }
                             }
                           } catch (e) {
-                            // Log diagnostic information for checkpoint creation variables
-                            // Track even percentages approaching the threshold to better understand behavior
-                            const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
-                              (currentEvalTime / timeThreshold * 100) : 0
-                            const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                              (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
-                            
-                            // Log details every 200 messages or when percentage is over 50%
-                            if (timePercentageValue > 50 || gasPercentageValue > 50 || 
-                                ctx.stats.messages.scheduled % 200 === 0 || ctx.stats.messages.cron % 200 === 0) {
-                              logger(
-                                'CHECKPOINT VARS: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s | NoSave: %s | HasErr: %s | HasMemory: %s | HasCheckpoint: %s | MsgCount: %d',
-                                ctx.id,
-                                timePercentageValue,
-                                Number(currentEvalTime),
-                                Number(timeThreshold),
-                                gasPercentageValue,
-                                ctx.dryRun ? 'YES' : 'NO',
-                                noSave ? 'YES' : 'NO',
-                                output.Error ? 'YES' : 'NO',
-                                output.Memory ? 'YES' : 'NO',
-                                hasCheckpoint ? 'YES' : 'NO',
-                                ctx.stats.messages.scheduled + ctx.stats.messages.cron
-                              )
-                              
-                              // Also log the checkpoint eligibility condition result
-                              const standardCheckpointCondition = env.MID_EVALUATION_CHECKPOINTING && !noSave && !output.Error && output.Memory && !hasCheckpoint;
-                              const dryRunCheckpointCondition = env.MID_EVALUATION_CHECKPOINTING && ctx.dryRun && !output.Error && output.Memory && !hasCheckpoint && 
-                                                            currentEvalTime > 0 && timeThreshold > 0 && (currentEvalTime / timeThreshold) >= 1;
-                              
-                              logger(
-                                'CHECKPOINT ELIGIBILITY: Process "%s" | StandardCondition: %s | DryRunCondition: %s | Combined: %s',
-                                ctx.id,
-                                standardCheckpointCondition ? 'YES' : 'NO',
-                                dryRunCheckpointCondition ? 'YES' : 'NO',
-                                (standardCheckpointCondition || dryRunCheckpointCondition) ? 'YES' : 'NO'
-                              )
-                            }
                             console.error('Error parsing trigger timestamp:', e)
                           }
                         }
-                          
+                        
+                        // Format percentages for logging
+                        const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                          (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
+                        const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
+                          (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
+                        
+                        // Log detailed checkpoint triggered message
                         logger(
-                          'MID-EVAL CHECKPOINT TRIGGERED: %sProcess "%s" | Gas: %s%% | Time: %s%%',
+                          'MID-EVAL CHECKPOINT TRIGGERED: %sProcess "%s" | Gas: %s%% | Time: %s%% | Reason: %s',
                           awayTime || '', // Show remaining time if available at beginning
                           ctx.id,
                           gasPercentage,
-                          timePercentage
+                          timePercentage,
+                          dryRunCondition ? 'DRY_RUN_TIME_THRESHOLD' : 
+                            (gasThresholdReached ? 'GAS_THRESHOLD' : 'TIME_THRESHOLD')
                         )
-                      }
-                      
-                      if (gasThresholdReached || evalTimeThresholdReached) {
-                        // Log the checkpoint reason
+                        
+                        // Log detailed threshold message
                         if (gasThresholdReached) {
                           logger(
-                            'Intermediate Checkpoint: Accumulated Gas Threshold of "%d" gas used met during evaluation stream for process "%s" at message "%s" -- "%d" gas used. Creating Checkpoint...',
+                            'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met during evaluation stream for process "%s" at message "%s" -- "%d" gas used. Eagerly creating a Checkpoint...',
                             gasThreshold,
                             ctx.id,
                             message.Id,
@@ -559,7 +477,7 @@ export function evaluateWith (env) {
                           )
                         } else {
                           logger(
-                            'Intermediate Checkpoint: Accumulated Eval Time Threshold of "%d" ms met during evaluation stream for process "%s" at message "%s" -- "%d" ms eval time. Creating Checkpoint...',
+                            'Eager Checkpoint Accumulated Eval Time Threshold of "%d" ms eval time met during evaluation stream for process "%s" at message "%s" -- "%d" ms eval time. Eagerly creating a Checkpoint...',
                             timeThreshold,
                             ctx.id,
                             message.Id,
@@ -590,10 +508,12 @@ export function evaluateWith (env) {
                         ctx.stats.startTime = now // Reset eval time counter
                         
                         logger(
-                          'Created intermediate checkpoint for process "%s" at message "%s"',
+                          'Successfully created intermediate checkpoint for process "%s" at message "%s"',
                           ctx.id,
                           message.Id
                         )
+                      } catch (err) {
+                        logger('ERROR creating checkpoint: %s', err.message || err)
                       }
                     }
 
