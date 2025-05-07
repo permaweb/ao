@@ -147,8 +147,20 @@ export function evaluateWith (env) {
           // Track when we started this evaluation stream
           const evalStartTime = new Date()
           // Keep track of when we last checkpointed
-          // Always initialize to a valid Date to avoid 'not defined' errors
+          // IMPORTANT: Always initialize to a valid Date to avoid 'not defined' errors
           let lastCheckpointTime = evalStartTime
+          
+          // Safety check to ensure lastCheckpointTime is never undefined even outside normal code flow
+          Object.defineProperty(this, 'safeGetCheckpointTime', {
+            value: function() {
+              if (lastCheckpointTime === undefined || lastCheckpointTime === null) {
+                lastCheckpointTime = evalStartTime || new Date();
+              }
+              return lastCheckpointTime;
+            },
+            writable: false,
+            configurable: false
+          });
           // Counter for message-based checkpointing
           let messageCounter = 0
           let lastCheckpointMessageCount = 0
@@ -260,11 +272,10 @@ export function evaluateWith (env) {
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
-                    // Ensure lastCheckpointTime is defined (defensive check)
-                    if (!lastCheckpointTime) {
-                      lastCheckpointTime = evalStartTime || now;
-                    }
-                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    
+                    // Get safe lastCheckpointTime using our safety function
+                    const safeLastCheckpointTime = this.safeGetCheckpointTime();
+                    const currentEvalTime = now.getTime() - safeLastCheckpointTime.getTime()
                     
                     // Use config constants for thresholds
                     const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
@@ -431,7 +442,7 @@ export function evaluateWith (env) {
                       
                       // Reset accumulated gas and update last checkpoint time
                       totalGasUsed = BigInt(0)
-                      lastCheckpointTime = now
+                      lastCheckpointTime = now || new Date() // Ensure we never set to undefined
                       lastCheckpointMessageCount = messageCounter
                     }
 
