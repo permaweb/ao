@@ -130,6 +130,12 @@ export const domainConfigSchema = z.object({
    */
   EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: positiveIntSchema,
   /**
+   * Controls whether checkpoints are created during message evaluation streams
+   * When enabled, checkpoints can be created mid-stream based on thresholds
+   * When disabled, checkpoints are only created after completing a full evaluation
+   */
+  MID_EVALUATION_CHECKPOINTING: z.preprocess((val) => val === 'true', z.boolean()),
+  /**
    * The number of workers to use for evaluating messages
    */
   WASM_EVALUATION_MAX_WORKERS: positiveIntSchema,

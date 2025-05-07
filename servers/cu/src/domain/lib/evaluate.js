@@ -81,7 +81,7 @@ export function evaluateWith (env) {
   const logger = env.logger.child('evaluate')
   
   // Access checkpoint threshold values from environment
-  const { EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD } = env
+  const { EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD, MID_EVALUATION_CHECKPOINTING } = env
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -170,14 +170,21 @@ export function evaluateWith (env) {
             })
           }
           
-          // Log initial checkpoint settings
-          logger(
-            'Evaluation stream started for process "%s" with checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
-            ctx.id,
-            MESSAGE_CHECKPOINT_INTERVAL,
-            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
-            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
-          )
+          // Log initial checkpoint settings only if mid-evaluation checkpointing is enabled
+          if (MID_EVALUATION_CHECKPOINTING) {
+            logger(
+              'Evaluation stream started for process "%s" with mid-evaluation checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
+              ctx.id,
+              MESSAGE_CHECKPOINT_INTERVAL,
+              EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+              EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+            )
+          } else {
+            logger(
+              'Evaluation stream started for process "%s" with mid-evaluation checkpointing disabled',
+              ctx.id
+            )
+          }
           for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
             // Increment message counter
             messageCounter++
@@ -318,8 +325,9 @@ export function evaluateWith (env) {
                                                  !crossedGasBoundary && 
                                                  !crossedTimeBoundary;
                     
-                    const shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary
+                    const shouldLogProgress = (crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary) && MID_EVALUATION_CHECKPOINTING
                     
+                    // Only log progress if MID_EVALUATION_CHECKPOINTING is enabled
                     if (shouldLogProgress) {
                       // Update our tracking variables to the current percentages if we crossed a boundary
                       // This prevents logging the same milestone multiple times
@@ -353,7 +361,8 @@ export function evaluateWith (env) {
                       )
                     }
                     
-                    if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
+                    // Only perform mid-evaluation checkpointing if the flag is enabled
+                    if (MID_EVALUATION_CHECKPOINTING && !noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
                       if (gasThresholdReached) {
