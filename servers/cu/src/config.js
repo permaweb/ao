@@ -157,7 +157,7 @@ const CONFIG_ENVS = {
      * When enabled, checkpoints can be created mid-stream based on thresholds
      * When disabled, checkpoints are only created after completing a full evaluation
      */
-    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING === 'true',
+    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING !== 'false',
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || bytes('1gb'),
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
@@ -221,7 +221,7 @@ const CONFIG_ENVS = {
      * When enabled, checkpoints can be created mid-stream based on thresholds
      * When disabled, checkpoints are only created after completing a full evaluation
      */
-    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING === 'true',
+    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING !== 'false',
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || bytes('1gb'), // 1GB
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,

@@ -22,7 +22,6 @@ import * as AoModuleClient from './effects/ao-module.js'
 import * as AoEvaluationClient from './effects/ao-evaluation.js'
 import * as AoBlockClient from './effects/ao-block.js'
 import * as MetricsClient from './effects/metrics.js'
-import { config } from './config.js'
 
 import { readResultWith } from './domain/api/readResult.js'
 import { readStateWith, pendingReadStates } from './domain/api/readState.js'
@@ -52,9 +51,6 @@ async function readFile (file) {
 }
 
 export const createApis = async (ctx) => {
-  // Ensure the MID_EVALUATION_CHECKPOINTING config value is explicitly set in ctx
-  ctx.MID_EVALUATION_CHECKPOINTING = config.MID_EVALUATION_CHECKPOINTING
-  
   ctx.logger('Creating business logic apis')
   const CU_IDENTIFIER = randomUUID()
   ctx.logger('CU Identifier: %s', CU_IDENTIFIER)
