@@ -112,6 +112,10 @@ There are a few environment variables that you can set. Besides
   already created a Checkpoint for that process, since it last started. This is
   effectively a throttle on `Checkpoint` creation, for a given process (defaults
   to `30 minutes`)
+- `MID_EVALUATION_CHECKPOINTING`: Controls whether checkpoints are created during message evaluation streams.
+  When enabled (`true`), checkpoints can be created mid-stream based on message count, gas usage, and time thresholds,
+  and progress will be logged at 10% milestones. When disabled (`false`), checkpoints are only created after
+  completing a full evaluation (defaults to `false`)
 - `DISABLE_PROCESS_CHECKPOINT_CREATION`: Whether to disable process `Checkpoint`
   creation uploads to Arweave. Set to any value to disable `Checkpoint`
   creation. (You must explicitly enable `Checkpoint` creation by setting -
@@ -126,7 +130,6 @@ There are a few environment variables that you can set. Besides
 - `EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD`: If a process has this amount of eval
   time, then it will immediately create a Checkpoint at the end of the
   evaluation stream.
-- `MID_EVALUATION_CHECKPOINTING`: When set to 'true', enables creation of checkpoints during message evaluation based on thresholds (gas, time, message count). When disabled (default), checkpoints are only created after completing a full evaluation.
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
 - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for

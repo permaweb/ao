@@ -170,21 +170,14 @@ export function evaluateWith (env) {
             })
           }
           
-          // Log initial checkpoint settings only if mid-evaluation checkpointing is enabled
-          if (MID_EVALUATION_CHECKPOINTING) {
-            logger(
-              'Evaluation stream started for process "%s" with mid-evaluation checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
-              ctx.id,
-              MESSAGE_CHECKPOINT_INTERVAL,
-              EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
-              EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
-            )
-          } else {
-            logger(
-              'Evaluation stream started for process "%s" with mid-evaluation checkpointing disabled',
-              ctx.id
-            )
-          }
+          // Log initial checkpoint settings
+          logger(
+            'Evaluation stream started for process "%s" with checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
+            ctx.id,
+            MESSAGE_CHECKPOINT_INTERVAL,
+            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+          )
           for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
             // Increment message counter
             messageCounter++
@@ -264,70 +257,96 @@ export function evaluateWith (env) {
                     if (cron) ctx.stats.messages.cron++
                     else ctx.stats.messages.scheduled++
                     
-                    // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
-                    const now = new Date()
-                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    // Only perform mid-evaluation checkpointing if enabled
+                    let gasThresholdReached = false
+                    let evalTimeThresholdReached = false
+                    let messageCountThresholdReached = false
+                    let currentEvalTime = 0
                     
-                    // Use config constants for thresholds
-                    const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
-                                              totalGasUsed >= BigInt(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)
-                    const evalTimeThresholdReached = currentEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
-                                                  currentEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
-                    const messageCountThresholdReached = messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
-                    
-                    // Calculate progress percentages for each threshold
-                    const messagesProgress = ((messageCounter - lastCheckpointMessageCount) / MESSAGE_CHECKPOINT_INTERVAL) * 100;
-                    
-                    // Make sure gas is always increasing by adding a small amount if output.GasUsed isn't available
-                    // This simulates reasonable gas usage per message for better progress tracking
-                    if (!output.GasUsed) {
-                      // Assuming a reasonable average gas usage per message (adjust if needed)
-                      const estimatedGasPerMessage = BigInt(3_000_000_000);
-                      totalGasUsed += estimatedGasPerMessage;
+                    if (MID_EVALUATION_CHECKPOINTING) {
+                      // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
+                      const now = new Date()
+                      currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                      
+                      // Use config constants for thresholds
+                      gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
+                                            totalGasUsed >= BigInt(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)
+                      evalTimeThresholdReached = currentEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
+                                                currentEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+                      messageCountThresholdReached = messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
                     }
                     
-                    // Safe BigInt calculation to avoid Number overflow
-                    const gasProgress = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
-                      (Number(totalGasUsed) / Number(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)) * 100 : 0;
+                    // Progress tracking variables, initialized to avoid undefined issues
+                    let messagesProgress = 0;
+                    let gasProgress = 0;
+                    let timeProgress = 0;
+                    let messagesProgressRounded = 0;
+                    let gasProgressRounded = 0;
+                    let timeProgressRounded = 0;
+                    let currentMessagePercent = 0;
+                    let currentGasPercent = 0;
+                    let currentTimePercent = 0;
+                    let crossedMessageBoundary = false;
+                    let crossedGasBoundary = false;
+                    let crossedTimeBoundary = false;
+                    let atMessageCountBoundary = false;
+                    let shouldLogProgress = false;
+                    
+                    // Only calculate progress and potentially log if mid-evaluation checkpointing is enabled
+                    if (MID_EVALUATION_CHECKPOINTING) {
+                      // Calculate progress percentages for each threshold
+                      messagesProgress = ((messageCounter - lastCheckpointMessageCount) / MESSAGE_CHECKPOINT_INTERVAL) * 100;
                       
-                    // Make sure time is properly tracked
-                    const timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
-                      (currentEvalTime / EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
-                    
-                    // Round progress values for display
-                    const messagesProgressRounded = Math.round(messagesProgress * 10) / 10;
-                    const gasProgressRounded = Math.round(gasProgress * 10) / 10;
-                    const timeProgressRounded = Math.round(timeProgress * 10) / 10;
-                    
-                    // Get the tracking object for this process
-                    const lastLogged = env.lastLoggedPercentages.get(ctx.id);
-                    
-                    // Calculate the current percentages rounded down to nearest 10% (0, 10, 20, etc.)
-                    const currentMessagePercent = Math.floor(messagesProgressRounded / 10) * 10;
-                    const currentGasPercent = Math.floor(gasProgressRounded / 10) * 10;
-                    const currentTimePercent = Math.floor(timeProgressRounded / 10) * 10;
-                    
-                    // Check if we've crossed a 10% boundary since the last log
-                    // We only want to log once per 10% threshold
-                    const crossedMessageBoundary = 
-                      currentMessagePercent > lastLogged.messagePercent && currentMessagePercent > 0;
+                      // Make sure gas is always increasing by adding a small amount if output.GasUsed isn't available
+                      // This simulates reasonable gas usage per message for better progress tracking
+                      if (!output.GasUsed) {
+                        // Assuming a reasonable average gas usage per message (adjust if needed)
+                        const estimatedGasPerMessage = BigInt(3_000_000_000);
+                        totalGasUsed += estimatedGasPerMessage;
+                      }
                       
-                    const crossedGasBoundary = 
-                      currentGasPercent > lastLogged.gasPercent && currentGasPercent > 0;
+                      // Safe BigInt calculation to avoid Number overflow
+                      gasProgress = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
+                        (Number(totalGasUsed) / Number(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)) * 100 : 0;
+                        
+                      // Make sure time is properly tracked
+                      timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
+                        (currentEvalTime / EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
                       
-                    const crossedTimeBoundary = 
-                      currentTimePercent > lastLogged.timePercent && currentTimePercent > 0;
+                      // Round progress values for display
+                      messagesProgressRounded = Math.round(messagesProgress * 10) / 10;
+                      gasProgressRounded = Math.round(gasProgress * 10) / 10;
+                      timeProgressRounded = Math.round(timeProgress * 10) / 10;
+                      
+                      // Get the tracking object for this process
+                      const lastLogged = env.lastLoggedPercentages.get(ctx.id);
+                      
+                      // Calculate the current percentages rounded down to nearest 10% (0, 10, 20, etc.)
+                      currentMessagePercent = Math.floor(messagesProgressRounded / 10) * 10;
+                      currentGasPercent = Math.floor(gasProgressRounded / 10) * 10;
+                      currentTimePercent = Math.floor(timeProgressRounded / 10) * 10;
+                      
+                      // Check if we've crossed a 10% boundary since the last log
+                      // We only want to log once per 10% threshold
+                      crossedMessageBoundary = 
+                        currentMessagePercent > lastLogged.messagePercent && currentMessagePercent > 0;
+                        
+                      crossedGasBoundary = 
+                        currentGasPercent > lastLogged.gasPercent && currentGasPercent > 0;
+                        
+                      crossedTimeBoundary = 
+                        currentTimePercent > lastLogged.timePercent && currentTimePercent > 0;
+                      
+                      // Also log on regular 100-message boundaries, but only if not crossing a milestone
+                      atMessageCountBoundary = messageCounter % 100 === 0 && 
+                                                   messageCounter > 0 && 
+                                                   !crossedMessageBoundary && 
+                                                   !crossedGasBoundary && 
+                                                   !crossedTimeBoundary;
+                      
+                      shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary;
+                    }
                     
-                    // Also log on regular 100-message boundaries, but only if not crossing a milestone
-                    const atMessageCountBoundary = messageCounter % 100 === 0 && 
-                                                 messageCounter > 0 && 
-                                                 !crossedMessageBoundary && 
-                                                 !crossedGasBoundary && 
-                                                 !crossedTimeBoundary;
-                    
-                    const shouldLogProgress = (crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary) && MID_EVALUATION_CHECKPOINTING
-                    
-                    // Only log progress if MID_EVALUATION_CHECKPOINTING is enabled
                     if (shouldLogProgress) {
                       // Update our tracking variables to the current percentages if we crossed a boundary
                       // This prevents logging the same milestone multiple times
@@ -361,7 +380,7 @@ export function evaluateWith (env) {
                       )
                     }
                     
-                    // Only perform mid-evaluation checkpointing if the flag is enabled
+                    // Only create intermediate checkpoints if mid-evaluation checkpointing is enabled
                     if (MID_EVALUATION_CHECKPOINTING && !noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
                       // Create intermediate checkpoint with current evaluation state
                       // Enhanced checkpoint logging with more details about what triggered it
