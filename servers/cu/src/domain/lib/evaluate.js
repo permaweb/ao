@@ -147,6 +147,7 @@ export function evaluateWith (env) {
           // Track when we started this evaluation stream
           const evalStartTime = new Date()
           // Keep track of when we last checkpointed
+          // Always initialize to a valid Date to avoid 'not defined' errors
           let lastCheckpointTime = evalStartTime
           // Counter for message-based checkpointing
           let messageCounter = 0
@@ -259,6 +260,10 @@ export function evaluateWith (env) {
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
+                    // Ensure lastCheckpointTime is defined (defensive check)
+                    if (!lastCheckpointTime) {
+                      lastCheckpointTime = evalStartTime || now;
+                    }
                     const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
                     
                     // Use config constants for thresholds
