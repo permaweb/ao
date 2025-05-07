@@ -259,12 +259,7 @@ export function evaluateWith (env) {
                     
                     // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
-                    
-                    // Make sure lastCheckpointTime is properly initialized and safe to use
-                    // This ensures we don't get errors during dry runs or other edge cases
-                    const safeLastCheckpointTime = typeof lastCheckpointTime !== 'undefined' ? lastCheckpointTime : 
-                                               (typeof evalStartTime !== 'undefined' ? evalStartTime : now);
-                    const currentEvalTime = now.getTime() - safeLastCheckpointTime.getTime();
+                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
                     
                     // Use config constants for thresholds
                     const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
@@ -325,46 +320,23 @@ export function evaluateWith (env) {
                     
                     const shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary
                     
-                    // Helper function to format time offset in days, hours, minutes and seconds
-                    const formatTimeOffset = (offsetInSeconds) => {
-                      const absOffset = Math.abs(offsetInSeconds);
-                      
-                      const days = Math.floor(absOffset / 86400);
-                      const hours = Math.floor((absOffset % 86400) / 3600);
-                      const minutes = Math.floor((absOffset % 3600) / 60);
-                      const seconds = absOffset % 60;
-                      
-                      let result = '';
-                      if (days > 0) result += `${days}d-`;
-                      if (hours > 0 || days > 0) result += `${hours}h-`;
-                      if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m-`;
-                      result += `${seconds}s`;
-                      
-                      return result;
-                    };
-                    
                     // Extract message timestamp if available in the message name
                     let messageTimestamp = null;
                     let timeOffset = null;
                     
-                    try {
-                      if (name && name.includes('Scheduled Message')) {
-                        // Format: "Scheduled Message {messageId} {timestamp}:{nonce}"
-                        const parts = name.split(' ');
-                        if (parts.length >= 4) {
-                          const timestampParts = parts[3].split(':');
-                          if (timestampParts.length >= 1) {
-                            messageTimestamp = parseInt(timestampParts[0], 10);
-                            if (!isNaN(messageTimestamp)) {
-                              // Calculate time difference in seconds
-                              timeOffset = Math.floor((messageTimestamp - now.getTime()) / 1000);
-                            }
+                    if (name && name.includes('Scheduled Message')) {
+                      // Format: "Scheduled Message {messageId} {timestamp}:{nonce}"
+                      const parts = name.split(' ');
+                      if (parts.length >= 4) {
+                        const timestampParts = parts[3].split(':');
+                        if (timestampParts.length >= 1) {
+                          messageTimestamp = parseInt(timestampParts[0], 10);
+                          if (!isNaN(messageTimestamp)) {
+                            // Calculate time difference in seconds
+                            timeOffset = Math.floor((messageTimestamp - now.getTime()) / 1000);
                           }
                         }
                       }
-                    } catch (e) {
-                      // Silently handle any errors in timestamp parsing
-                      logger('Error parsing message timestamp: %s', e.message);
                     }
                     
                     if (shouldLogProgress) {
@@ -388,8 +360,8 @@ export function evaluateWith (env) {
                       // Format time offset for display if available
                       const timeOffsetStr = timeOffset !== null 
                         ? timeOffset > 0 
-                          ? `[Future: ${formatTimeOffset(timeOffset)}]` 
-                          : `[Past: ${formatTimeOffset(timeOffset)}]` 
+                          ? `[Future: +${timeOffset}s]` 
+                          : `[Past: ${timeOffset}s]` 
                         : '';
                       
                       logger(
@@ -415,8 +387,8 @@ export function evaluateWith (env) {
                       // Format time offset string for checkpoint logging
                       const timeOffsetStr = timeOffset !== null 
                         ? timeOffset > 0 
-                          ? `| Message timestamp: Future ${formatTimeOffset(timeOffset)}` 
-                          : `| Message timestamp: Past ${formatTimeOffset(timeOffset)}` 
+                          ? `| Message timestamp: Future +${timeOffset}s` 
+                          : `| Message timestamp: Past ${timeOffset}s` 
                         : '';
                         
                       if (gasThresholdReached) {
