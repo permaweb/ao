@@ -141,7 +141,18 @@ export function evaluateWith (env) {
            * and evaluate each one
            */
           let first = true
+          // Track when we started this evaluation stream
+          const evalStartTime = new Date()
+          // Keep track of when we last checkpointed
+          let lastCheckpointTime = evalStartTime
+          // Counter for message-based checkpointing
+          let messageCounter = 0
+          let lastCheckpointMessageCount = 0
+          // How many messages to process before checkpointing
+          const MESSAGE_CHECKPOINT_INTERVAL = 100
           for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
+            // Increment message counter
+            messageCounter++
             if (cron) {
               const key = toEvaledCron({ timestamp: message.Timestamp, cron })
               if (evaledCrons.has(key)) continue
@@ -213,130 +224,70 @@ export function evaluateWith (env) {
                      * for all subsequent evaluations for this evaluation stream
                      */
                     if (first) first = false
-                    // Use a synthetic gas value approach to ensure checkpoints happen regularly
-                    // even when actual gas reporting isn't available
-                    
-                    // Define a constant gas value per message - this ensures gas accumulates even if
-                    // the individual message evaluations don't report gas usage
-                    const DEFAULT_GAS_PER_MESSAGE = BigInt(3_000_000_000) // 3 billion gas per message (tunable)
-                    
-                    try {
-                      // Check if gas is reported and non-zero
-                      let useReportedGas = false;
-                      let gasValue = BigInt(0);
-                      
-                      if (output.GasUsed !== undefined && output.GasUsed !== null) {
-                        // Convert to BigInt consistently
-                        gasValue = typeof output.GasUsed === 'bigint' ? 
-                          output.GasUsed : BigInt(output.GasUsed.toString())
-                          
-                        // Only use reported gas if it's greater than 0
-                        if (gasValue > BigInt(0)) {
-                          useReportedGas = true;
-                        }
-                      }
-                      
-                      if (useReportedGas) {
-                        // Use the actual reported gas value
-                        totalGasUsed += gasValue;
-                      } else {
-                        // Use synthetic gas when gas is unreported, null, or zero
-                        totalGasUsed += DEFAULT_GAS_PER_MESSAGE;
-                      }
-                    } catch (err) {
-                      // In case of any errors, still add the synthetic gas
-                      totalGasUsed += DEFAULT_GAS_PER_MESSAGE;
-                    }
+                    if (output.GasUsed) totalGasUsed += BigInt(output.GasUsed ?? 0)
 
                     if (cron) ctx.stats.messages.cron++
                     else ctx.stats.messages.scheduled++
                     
-                    // Calculate current evaluation time for potential intermediate checkpointing
+                    // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
                     const now = new Date()
-                    const startTime = pathOr(now, ['stats', 'startTime'], ctx)
-                    const currentEvalTime = now.getTime() - startTime.getTime() // The eval time in ms
+                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    const gasThresholdReached = totalGasUsed && env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
+                                              totalGasUsed >= BigInt(env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)
+                    const evalTimeThresholdReached = currentEvalTime && env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
+                                                  currentEvalTime >= env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+                    const messageCountThresholdReached = messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
                     
-                    // Log checkpoint progress occasionally to monitor without excessive output
-                    if (ctx.stats.messages.scheduled % 500 === 0 || ctx.stats.messages.cron % 500 === 0) {
-                      const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
-                      const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 1 * 60 * 1000 // 1 minute in ms
-                      
-                      // Calculate percentages for both gas and time thresholds
-                      const gasPercentage = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                        (Number(totalGasUsed) / Number(gasThreshold) * 100).toFixed(2) : 0
-                      const timePercentage = currentEvalTime > 0 && timeThreshold > 0 ? 
-                        (currentEvalTime / timeThreshold * 100).toFixed(2) : 0
-                      
-                      // Calculate time remaining for scheduled messages
-                      let awayTime = ''
-                      
-                      if (message) {
-                        try {
-                          // Extract the timestamp from the message - handle different formats
-                          let messageTime = null
-                          
-                          if (message.Timestamp) {
-                            if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
-                              // Handle string format with colon (e.g., "1741858046480:5963484")
-                              messageTime = parseInt(message.Timestamp.split(':')[0], 10)
-                            } else if (typeof message.Timestamp === 'string') {
-                              // Handle plain string format
-                              messageTime = parseInt(message.Timestamp, 10)
-                            } else if (typeof message.Timestamp === 'number') {
-                              // Handle numeric format
-                              messageTime = message.Timestamp
-                            }
-                          }
-                          
-                          // Only proceed if we have a valid timestamp
-                          if (messageTime && !isNaN(messageTime)) {
-                            const currentTime = Date.now()
-                            const timeDiff = messageTime - currentTime
-                            
-                            // Assuming timeDiff is in milliseconds
-                            const absDiff = Math.abs(timeDiff);
-                            
-                            // Time constants
-                            const MS_PER_SECOND = 1000;
-                            const MS_PER_MINUTE = MS_PER_SECOND * 60;
-                            const MS_PER_HOUR = MS_PER_MINUTE * 60;
-                            const MS_PER_DAY = MS_PER_HOUR * 24;
-                            
-                            // Calculate time components
-                            const days = Math.floor(absDiff / MS_PER_DAY);
-                            const hours = Math.floor((absDiff % MS_PER_DAY) / MS_PER_HOUR);
-                            const minutes = Math.floor((absDiff % MS_PER_HOUR) / MS_PER_MINUTE);
-                            const seconds = Math.floor((absDiff % MS_PER_MINUTE) / MS_PER_SECOND);
-                            
-                            // Format in the exact format requested
-                            let parts = []
-                            if (days > 0) parts.push(`${days}d`)
-                            if (hours > 0) parts.push(`${hours}h`)
-                            if (minutes > 0) parts.push(`${minutes}m`)
-                            if (seconds > 0) parts.push(`${seconds}s`)
-                            
-                            // Use the format: "Away: ~xd-yh-zm-ns"
-                            if (parts.length > 0) {
-                              const timeStr = parts.join('-')
-                              // For future events, show as "away", for past events as "ago"
-                              const timePrefix = timeDiff > 0 ? 'Away' : 'Ago'
-                              awayTime = `${timePrefix}: ~${timeStr} | `
-                            }
-                          }
-                        } catch (e) {
-                          // If parsing fails, just continue without the time info
-                        }
+                    if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
+                      // Create intermediate checkpoint with current evaluation state
+                      if (gasThresholdReached) {
+                        logger(
+                          'Intermediate Checkpoint: Gas Threshold of %d reached during stream evaluation for process "%s" at message "%s" - %d gas used',
+                          env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+                          ctx.id,
+                          message.Id,
+                          totalGasUsed
+                        )
+                      } else if (evalTimeThresholdReached) {
+                        logger(
+                          'Intermediate Checkpoint: Eval Time Threshold of %d ms reached during stream evaluation for process "%s" at message "%s" - %d ms elapsed',
+                          env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          ctx.id,
+                          message.Id,
+                          currentEvalTime
+                        )
+                      } else {
+                        logger(
+                          'Intermediate Checkpoint: Message Count Threshold of %d reached during stream evaluation for process "%s" at message "%s" - processed %d messages',
+                          MESSAGE_CHECKPOINT_INTERVAL,
+                          ctx.id,
+                          message.Id,
+                          messageCounter - lastCheckpointMessageCount
+                        )
                       }
                       
-                      // Always show percentage-based progress with consistent formatting
-                      // Place awayTime at the beginning for better visibility
-                      logger(
-                        'Checkpoint progress: %sProcess "%s" | Gas: %s%% | Time: %s%%',
-                        awayTime || '', // Show remaining time if available at beginning
-                        ctx.id,
-                        gasPercentage,
-                        timePercentage
-                      )
+                      // IMPORTANT: Save checkpoint with the current message's details
+                      await saveLatestProcessMemory({
+                        processId: ctx.id,
+                        moduleId: ctx.moduleId,
+                        messageId: message.Id,
+                        assignmentId: assignmentId || mostRecentAssignmentId,
+                        hashChain: message['Hash-Chain'] || mostRecentHashChain,
+                        timestamp: message.Timestamp,
+                        nonce: message.Nonce,
+                        epoch: message.Epoch,
+                        blockHeight: message['Block-Height'],
+                        ordinate,
+                        cron,
+                        Memory: output.Memory,
+                        gasUsed: totalGasUsed,
+                        evalTime: currentEvalTime
+                      })
+                      
+                      // Reset accumulated gas and update last checkpoint time
+                      totalGasUsed = BigInt(0)
+                      lastCheckpointTime = now
+                      lastCheckpointMessageCount = messageCounter
                     }
 
                     if (output.Error) {
@@ -348,196 +299,6 @@ export function evaluateWith (env) {
                       )
                       ctx.stats.messages.error = ctx.stats.messages.error || 0
                       ctx.stats.messages.error++
-                    }
-                    
-                    // Debug logging for key variables that affect checkpointing
-                    if (ctx.stats.messages.scheduled % 50 === 0 || ctx.stats.messages.cron % 50 === 0) {
-                      logger(
-                        'DEBUG: Process "%s" | MsgCount: %d | noSave: %s | hasErr: %s | hasMemory: %s | hasCheckpoint: %s | MID_EVAL: %s | dry: %s',
-                        ctx.id,
-                        ctx.stats.messages.scheduled + ctx.stats.messages.cron,
-                        noSave ? 'YES' : 'NO',
-                        output.Error ? 'YES' : 'NO',
-                        output.Memory ? 'YES' : 'NO',
-                        hasCheckpoint ? 'YES' : 'NO',
-                        env.MID_EVALUATION_CHECKPOINTING ? 'YES' : 'NO',
-                        ctx.dryRun ? 'YES' : 'NO'
-                      )
-                    }
-                    
-                    // -------------- CHECKPOINT MECHANISM START --------------
-                    // Get or set thresholds with fallback values
-                    const gasThreshold = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt('300000000000000')
-                    const timeThreshold = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || (1 * 60 * 1000) // 1 minute in ms
-                    
-                    // Calculate checkpoint threshold percentages for logging
-                    const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
-                      (currentEvalTime / timeThreshold * 100) : 0
-                    const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                      (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
-                    
-                    // Log progress periodically using the user's preferred format
-                    if (timePercentageValue >= 50 || gasPercentageValue >= 50 || 
-                        ctx.stats.messages.scheduled % 100 === 0 || ctx.stats.messages.cron % 100 === 0) {
-                      // Format the time remaining for scheduled messages if available
-                      let awayTimeLabel = ''
-                      if (message && message.Timestamp) {
-                        try {
-                          // Extract the timestamp from the message - handle different formats
-                          let messageTime = null
-                          
-                          if (typeof message.Timestamp === 'string' && message.Timestamp.includes(':')) {
-                            // Handle string format with colon (e.g., "1741858046480:5963484")
-                            messageTime = parseInt(message.Timestamp.split(':')[0], 10)
-                          } else if (typeof message.Timestamp === 'string') {
-                            // Handle plain string format
-                            messageTime = parseInt(message.Timestamp, 10)
-                          } else if (typeof message.Timestamp === 'number') {
-                            // Handle numeric format
-                            messageTime = message.Timestamp
-                          }
-                          
-                          // Only proceed if we have a valid timestamp
-                          if (messageTime && !isNaN(messageTime)) {
-                            const currentTime = Date.now()
-                            const timeDiff = messageTime - currentTime
-                            
-                            if (timeDiff > 0) {
-                              // Calculate time components
-                              const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
-                              const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-                              const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
-                              const seconds = Math.floor((timeDiff % (60 * 1000)) / 1000)
-                              
-                              // Format in the exact format requested
-                              let parts = []
-                              if (days > 0) parts.push(`${days}d`)
-                              if (hours > 0) parts.push(`${hours}h`)
-                              if (minutes > 0) parts.push(`${minutes}m`)
-                              if (seconds > 0) parts.push(`${seconds}s`)
-                              
-                              if (parts.length > 0) {
-                                formattedTime = parts.join('-')
-                              }
-                            }
-                          }
-                        } catch (e) {
-                          // Silent catch - we'll just not show the remaining time
-                        }
-                      }
-                      
-                      // Format percentages with fixed decimal places
-                      const gasPercentFormatted = gasPercentageValue.toFixed(2)
-                      const timePercentFormatted = timePercentageValue.toFixed(2)
-                      
-                      // Use the exact format requested in user preferences
-                      logger(
-                        'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Unix: %s | Scheduled: %s (in %s)',
-                        ctx.id,
-                        gasPercentFormatted,
-                        timePercentFormatted,
-                        unixTime,
-                        scheduledTime,
-                        formattedTime || 'N/A'
-                      )
-                    }
-                    
-                    // -------------- CHECKPOINT CONDITIONS --------------
-                    // Critical: Check if threshold reached for checkpointing
-                    const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
-                    const evalTimeThresholdReached = currentEvalTime > 0 && currentEvalTime >= timeThreshold
-                    
-                    // Standard checkpoint condition (non-dry run)
-                    const standardCondition = env.MID_EVALUATION_CHECKPOINTING && 
-                                           !noSave && 
-                                           !output.Error && 
-                                           output.Memory && 
-                                           !hasCheckpoint && 
-                                           evalTimeThresholdReached
-                    
-                    // Dry run checkpoint condition - only time-based for dry runs
-                    const dryRunCondition = env.MID_EVALUATION_CHECKPOINTING && 
-                                       ctx.dryRun && 
-                                       !output.Error && 
-                                       output.Memory && 
-                                       !hasCheckpoint && 
-                                       evalTimeThresholdReached
-                    
-                    // -------------- CHECKPOINT CREATION --------------
-                    // Create checkpoint if any condition met
-                    if (standardCondition || dryRunCondition) {
-                      try {
-                        // Determine the reason for checkpointing
-                        const reason = dryRunCondition ? "DRY_RUN_TIME_THRESHOLD" : 
-                          (gasThresholdReached ? "GAS_THRESHOLD" : "TIME_THRESHOLD")
-                        
-                        // Format Unix timestamp and scheduled time information for logs
-                        const unixTime = Date.now()
-                        const scheduledTime = message && message.Timestamp ? `${message.Timestamp}` : 'N/A'
-                        
-                        // Log when threshold is detected, using exact user-preferred format
-                        logger(
-                          'Checkpoint progress: Process "%s" | Gas: %s%% | Time: %s%% | Unix: %s | Scheduled: %s (in %s) | THRESHOLD REACHED: %s',
-                          ctx.id,
-                          gasPercentageValue.toFixed(2),
-                          timePercentageValue.toFixed(2),
-                          unixTime,
-                          scheduledTime,
-                          "N/A", // Not important for threshold logs
-                          reason
-                        )
-                        
-                        // Detailed log to match the exact format seen in your logs
-                        if (gasThresholdReached) {
-                          logger(
-                            'Eager Checkpoint Accumulated Gas Threshold of "%d" gas used met during evaluation stream for process "%s" at message "%s" -- "%d" gas used. Eagerly creating a Checkpoint...',
-                            gasThreshold,
-                            ctx.id,
-                            message.Id,
-                            totalGasUsed
-                          )
-                        } else {
-                          logger(
-                            'Eager Checkpoint Accumulated Eval Time Threshold of "%d" ms eval time met during evaluation stream for process "%s" at message "%s" -- "%d" ms eval time. Eagerly creating a Checkpoint...',
-                            timeThreshold,
-                            ctx.id,
-                            message.Id,
-                            currentEvalTime
-                          )
-                        }
-                        
-                        // This is the critical part - create checkpoint during evaluation
-                        await saveLatestProcessMemory({
-                          processId: ctx.id,
-                          moduleId: ctx.moduleId,
-                          messageId: message.Id,
-                          assignmentId: assignmentId || mostRecentAssignmentId,
-                          hashChain: message['Hash-Chain'] || mostRecentHashChain,
-                          timestamp: message.Timestamp,
-                          nonce: message.Nonce,
-                          epoch: message.Epoch,
-                          blockHeight: message['Block-Height'],
-                          ordinate,
-                          cron,
-                          Memory: output.Memory,
-                          gasUsed: totalGasUsed,
-                          evalTime: currentEvalTime
-                        })
-                        
-                        // Reset counters after checkpoint
-                        totalGasUsed = BigInt(0)
-                        ctx.stats.startTime = now
-                        
-                        // Log checkpoint creation success
-                        logger(
-                          'Successfully created intermediate checkpoint for process "%s" at message "%s"',
-                          ctx.id,
-                          message.Id
-                        )
-                      } catch (err) {
-                        // Log any errors during checkpoint creation
-                        logger('ERROR creating checkpoint: %s', err.message || err)
-                      }
                     }
 
                     /**
@@ -635,6 +396,10 @@ export function evaluateWith (env) {
           const now = new Date()
           // If there is no startTime, then we use the current time which will make evalTime = 0
           const startTime = pathOr(now, ['stats', 'startTime'], ctx)
+          
+          // Calculate final eval time from the last checkpoint (or start) to now
+          const finalEvalTime = now.getTime() - lastCheckpointTime.getTime()
+          
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,
@@ -649,7 +414,7 @@ export function evaluateWith (env) {
             cron,
             Memory: prev.Memory,
             gasUsed: totalGasUsed,
-            evalTime: now.getTime() - startTime.getTime() // The eval time in ms: currTime - startTime
+            evalTime: finalEvalTime // Only count time since last checkpoint
           })
         }
 

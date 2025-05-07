@@ -170,12 +170,6 @@ export const domainConfigSchema = z.object({
    */
   PROCESS_CHECKPOINT_TRUSTED_OWNERS: commaDelimitedArraySchema,
   /**
-   * Controls whether checkpoints can be created during message evaluation streams rather than only at the end.
-   * When enabled, checkpoints will be created mid-stream whenever gas usage or evaluation time thresholds are reached.
-   * This improves recovery after interruptions by avoiding the need to re-process messages from the beginning.
-   */
-  MID_EVALUATION_CHECKPOINTING: z.boolean().default(false),
-  /**
    * A single wallet to prefer.
    */
   PROCESS_CHECKPOINT_PREFERRED_OWNERS: commaDelimitedArraySchema,
