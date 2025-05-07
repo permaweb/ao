@@ -350,27 +350,7 @@ export function evaluateWith (env) {
                       ctx.stats.messages.error++
                     }
                     
-                    // Add diagnostic logging to track key variables for checkpointing when we're at or near thresholds
-                    const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
-                      (currentEvalTime / timeThreshold * 100) : 0
-                    const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
-                      (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
-                      
-                    // Only log at 100% of gas OR time to avoid excessive logs
-                    if (timePercentageValue >= 100 || gasPercentageValue >= 100) {
-                      logger(
-                        'CHECKPOINT READY: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s | NoSave: %s | HasMem: %s | HasErr: %s',
-                        ctx.id,
-                        timePercentageValue,
-                        Number(currentEvalTime),
-                        Number(timeThreshold),
-                        gasPercentageValue,
-                        ctx.dryRun ? 'YES' : 'NO',
-                        noSave ? 'YES' : 'NO',
-                        output.Memory ? 'YES' : 'NO',
-                        output.Error ? 'YES' : 'NO'
-                      )
-                    }
+                    // We'll calculate the percentages inside the checkpoint condition to avoid early calculation issues
                     
                     // Check if we need to create an intermediate checkpoint based on gas or time thresholds
                     // Only checkpoint if mid-evaluation checkpointing is enabled, the message was 
@@ -385,7 +365,29 @@ export function evaluateWith (env) {
                       
                       // Check if either threshold has been reached
                       const gasThresholdReached = totalGasUsed > 0 && totalGasUsed >= gasThreshold
-                      const evalTimeThresholdReached = currentEvalTime > 0 && currentEvalTime >= timeThreshold
+                      const evalTimeThresholdReached = Number(currentEvalTime) > 0 && Number(currentEvalTime) >= Number(timeThreshold)
+                      
+                      // Calculate percentage values for debugging
+                      const timePercentageValue = currentEvalTime > 0 && timeThreshold > 0 ? 
+                        (currentEvalTime / timeThreshold * 100) : 0
+                      const gasPercentageValue = Number(totalGasUsed) > 0 && Number(gasThreshold) > 0 ? 
+                        (Number(totalGasUsed) / Number(gasThreshold) * 100) : 0
+                      
+                      // Log at 100% of gas OR time to help with debugging
+                      if (timePercentageValue >= 100 || gasPercentageValue >= 100) {
+                        logger(
+                          'CHECKPOINT READY: Process "%s" | Time: %.2f%% (%dms/%dms) | Gas: %.2f%% | IsDryRun: %s | NoSave: %s | HasMem: %s | HasErr: %s',
+                          ctx.id,
+                          timePercentageValue,
+                          Number(currentEvalTime),
+                          Number(timeThreshold),
+                          gasPercentageValue,
+                          ctx.dryRun ? 'YES' : 'NO',
+                          noSave ? 'YES' : 'NO',
+                          output.Memory ? 'YES' : 'NO',
+                          output.Error ? 'YES' : 'NO'
+                        )
+                      }
                       
                       // Notify when a checkpoint threshold is reached
                       if (gasThresholdReached || evalTimeThresholdReached) {
