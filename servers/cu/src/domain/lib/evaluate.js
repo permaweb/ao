@@ -79,6 +79,9 @@ export function evaluateWith (env) {
   const evaluationCounter = env.evaluationCounter
   // const gasCounter = env.gasCounter
   const logger = env.logger.child('evaluate')
+  
+  // Access checkpoint threshold values from environment
+  const { EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD } = env
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -172,8 +175,8 @@ export function evaluateWith (env) {
             'Evaluation stream started for process "%s" with checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
             ctx.id,
             MESSAGE_CHECKPOINT_INTERVAL,
-            env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
-            env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
           )
           for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
             // Increment message counter
@@ -258,11 +261,11 @@ export function evaluateWith (env) {
                     const now = new Date()
                     const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
                     
-                    // Use config constants from env object
-                    const gasThresholdReached = totalGasUsed && env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
-                                              totalGasUsed >= BigInt(env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)
-                    const evalTimeThresholdReached = currentEvalTime && env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
-                                                  currentEvalTime >= env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+                    // Use config constants for thresholds
+                    const gasThresholdReached = totalGasUsed && EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD && 
+                                              totalGasUsed >= BigInt(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)
+                    const evalTimeThresholdReached = currentEvalTime && EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD && 
+                                                  currentEvalTime >= EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
                     const messageCountThresholdReached = messageCounter >= (lastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
                     
                     // Calculate progress percentages for each threshold
@@ -276,13 +279,13 @@ export function evaluateWith (env) {
                       totalGasUsed += estimatedGasPerMessage;
                     }
                     
-                    // Safe calculation using env variables
-                    const gasProgress = env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
-                      (Number(totalGasUsed) / Number(env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)) * 100 : 0;
+                    // Safe BigInt calculation to avoid Number overflow
+                    const gasProgress = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
+                      (Number(totalGasUsed) / Number(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)) * 100 : 0;
                       
                     // Make sure time is properly tracked
-                    const timeProgress = env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
-                      (currentEvalTime / env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
+                    const timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
+                      (currentEvalTime / EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
                     
                     // Round progress values for display
                     const messagesProgressRounded = Math.round(messagesProgress * 10) / 10;
@@ -342,10 +345,10 @@ export function evaluateWith (env) {
                         MESSAGE_CHECKPOINT_INTERVAL,
                         Math.floor(messagesProgressRounded),
                         totalGasUsed.toString(),
-                        env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
                         Math.floor(gasProgressRounded),
                         currentEvalTime,
-                        env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                        EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
                         Math.floor(timeProgressRounded)
                       )
                     }
@@ -360,10 +363,10 @@ export function evaluateWith (env) {
                           message.Id,
                           messageCounter,
                           totalGasUsed.toString(),
-                          env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
                           Math.floor(gasProgressRounded),
                           currentEvalTime,
-                          env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
                           Math.floor(timeProgressRounded),
                           messageCounter - lastCheckpointMessageCount,
                           MESSAGE_CHECKPOINT_INTERVAL,
@@ -376,10 +379,10 @@ export function evaluateWith (env) {
                           message.Id,
                           messageCounter,
                           currentEvalTime,
-                          env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
                           Math.floor(timeProgressRounded),
                           totalGasUsed.toString(),
-                          env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
                           Math.floor(gasProgressRounded),
                           messageCounter - lastCheckpointMessageCount,
                           MESSAGE_CHECKPOINT_INTERVAL,
@@ -395,10 +398,10 @@ export function evaluateWith (env) {
                           MESSAGE_CHECKPOINT_INTERVAL,
                           Math.floor(messagesProgressRounded),
                           totalGasUsed.toString(),
-                          env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
                           Math.floor(gasProgressRounded),
                           currentEvalTime,
-                          env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
                           Math.floor(timeProgressRounded)
                         )
                       }
