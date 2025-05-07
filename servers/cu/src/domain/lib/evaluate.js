@@ -163,22 +163,42 @@ export function evaluateWith (env) {
           // How many messages to process before checkpointing - setting to 1000 as requested
           const MESSAGE_CHECKPOINT_INTERVAL = 1000
           
-          // Simple tracking variables for the last logged percentage for each metric
-          // Each process has its own tracking variables in a shared map
-          // This ensures we log exactly once when crossing each 10% milestone (10%, 20%, etc.)
-          if (!env.lastLoggedPercentages) {
-            env.lastLoggedPercentages = new Map()
+          // Global tracking maps to ensure consistent tracking across parallel evaluations
+          // These maps are shared by all evaluator instances
+          if (!global._checkpointTracking) {
+            global._checkpointTracking = {
+              // Track the last logged percentage milestone for each process
+              lastLoggedPercentages: new Map(),
+              // Track which checkpoint types have been created for each process
+              checkpointCreation: new Map(),
+              // A lock mechanism to prevent race conditions when updating shared state
+              processLocks: new Map()
+            }
           }
-          
-          // Get or create tracking for this process
-          if (!env.lastLoggedPercentages.has(ctx.id)) {
-            env.lastLoggedPercentages.set(ctx.id, {
+
+          // Get or create milestone tracking for this process
+          if (!global._checkpointTracking.lastLoggedPercentages.has(ctx.id)) {
+            global._checkpointTracking.lastLoggedPercentages.set(ctx.id, {
               messagePercent: 0,  // Last message percentage we logged (10, 20, 30, etc.)
               gasPercent: 0,      // Last gas percentage we logged
-              timePercent: 0       // Last time percentage we logged
+              timePercent: 0      // Last time percentage we logged
             })
           }
-          
+
+          // Get or create checkpoint creation tracking for this process
+          if (!global._checkpointTracking.checkpointCreation.has(ctx.id)) {
+            global._checkpointTracking.checkpointCreation.set(ctx.id, {
+              gasCheckpointCreated: false,
+              timeCheckpointCreated: false,
+              messageCheckpointCreated: false
+            })
+          }
+
+          // Initialize a process lock if needed
+          if (!global._checkpointTracking.processLocks.has(ctx.id)) {
+            global._checkpointTracking.processLocks.set(ctx.id, false)
+          }
+
           // Log initial checkpoint settings
           logger(
             'Evaluation stream started for process "%s" with checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
@@ -296,23 +316,17 @@ export function evaluateWith (env) {
                     const timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
                       (currentEvalTime / EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
                     
-                    // Get the checkpoint tracking for this process
-                    if (!env.lastCheckpointCreation.has(ctx.id)) {
-                      env.lastCheckpointCreation.set(ctx.id, {
-                        gasCheckpointCreated: false,
-                        timeCheckpointCreated: false,
-                        messageCheckpointCreated: false
-                      });
-                    }
-                    const checkpointTracking = env.lastCheckpointCreation.get(ctx.id);
+                    // Access shared global state for checkpoint tracking
+                    const checkpointTracking = global._checkpointTracking.checkpointCreation.get(ctx.id);
                     
-                    // Update our checkpoint tracking flags
+                    // Use global tracking to track which thresholds have been reached
+                    // This ensures consistent tracking across parallel evaluations
                     if (gasThresholdReached) checkpointTracking.gasCheckpointCreated = true;
                     if (evalTimeThresholdReached) checkpointTracking.timeCheckpointCreated = true;
                     if (messageCountThresholdReached) checkpointTracking.messageCheckpointCreated = true;
                     
-                    // Get the milestone tracking object for this process
-                    const lastLogged = env.lastLoggedPercentages.get(ctx.id);
+                    // Get the milestone tracking object for this process from global state
+                    const lastLogged = global._checkpointTracking.lastLoggedPercentages.get(ctx.id);
                     
                     // Calculate the EXACT percentages without rounding for boundary detection
                     // We want to be precise about when we cross a 10% boundary
@@ -354,16 +368,30 @@ export function evaluateWith (env) {
                     const timeProgressRounded = Math.round(timeProgress * 10) / 10;
                     
                     if (shouldLogProgress) {
-                      // Update our tracking variables to the current percentages if we crossed a boundary
-                      // This prevents logging the same milestone multiple times
-                      if (crossedMessageBoundary) {
-                        lastLogged.messagePercent = exactMessagePercent;
-                      }
-                      if (crossedGasBoundary) {
-                        lastLogged.gasPercent = exactGasPercent;
-                      }
-                      if (crossedTimeBoundary) {
-                        lastLogged.timePercent = exactTimePercent;
+                      // Get a lock on this process to prevent multiple concurrent log updates
+                      if (!global._checkpointTracking.processLocks.get(ctx.id)) {
+                        // Set lock
+                        global._checkpointTracking.processLocks.set(ctx.id, true);
+                        
+                        try {
+                          // Update our tracking variables in the global map
+                          // This prevents logging the same milestone multiple times across threads
+                          if (crossedMessageBoundary) {
+                            lastLogged.messagePercent = exactMessagePercent;
+                          }
+                          if (crossedGasBoundary) {
+                            lastLogged.gasPercent = exactGasPercent;
+                          }
+                          if (crossedTimeBoundary) {
+                            lastLogged.timePercent = exactTimePercent;
+                          }
+                        } finally {
+                          // Release lock
+                          global._checkpointTracking.processLocks.set(ctx.id, false);
+                        }
+                      } else {
+                        // Another evaluator thread has the lock, skip this update
+                        shouldLogProgress = false;
                       }
                       
                       // Add a bit of info about which milestone we're logging
@@ -390,101 +418,120 @@ export function evaluateWith (env) {
                     // Each threshold type (gas, time, message) will only create ONE checkpoint
                     if (!noSave && output.Memory && !hasCheckpoint) {
                       
-                      // Determine which type of checkpoint to create (only one at a time)
-                      let checkpointType = null;
-                      
-                      if (gasThresholdReached && !checkpointTracking.gasCheckpointCreated) {
-                        checkpointType = 'Gas';
-                        checkpointTracking.gasCheckpointCreated = true;
-                      } else if (evalTimeThresholdReached && !checkpointTracking.timeCheckpointCreated) {
-                        checkpointType = 'Time';
-                        checkpointTracking.timeCheckpointCreated = true;
-                      } else if (messageCountThresholdReached && !checkpointTracking.messageCheckpointCreated) {
-                        checkpointType = 'Message';
-                        checkpointTracking.messageCheckpointCreated = true;
+                      // Get a lock to ensure only one checkpoint is created
+                      // This prevents race conditions with parallel evaluations
+                      let acquiredLock = false;
+                      if (!global._checkpointTracking.processLocks.get(ctx.id)) {
+                        global._checkpointTracking.processLocks.set(ctx.id, true);
+                        acquiredLock = true;
                       }
                       
-                      // Only create and log a checkpoint if we have determined a type
-                      if (checkpointType) {
-                        // Update all tracking milestones to the current progress
-                        // This prevents future logs until we cross the next 10% boundary
-                        lastLogged.messagePercent = exactMessagePercent;
-                        lastLogged.gasPercent = exactGasPercent;
-                        lastLogged.timePercent = exactTimePercent;
-                        
-                        // Log the checkpoint creation based on type
-                        if (checkpointType === 'Gas') {
-                          logger(
-                            'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%)',
-                            ctx.id,
-                            message.Id,
-                            messageCounter,
-                            totalGasUsed.toString(),
-                            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
-                            Math.floor(gasProgressRounded),
-                            currentEvalTime,
-                            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                            Math.floor(timeProgressRounded),
-                            messageCounter - lastCheckpointMessageCount,
-                            MESSAGE_CHECKPOINT_INTERVAL,
-                            Math.floor(messagesProgressRounded)
-                          )
-                        } else if (checkpointType === 'Time') {
-                          logger(
-                            'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%)',
-                            ctx.id,
-                            message.Id,
-                            messageCounter,
-                            currentEvalTime,
-                            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                            Math.floor(timeProgressRounded),
-                            totalGasUsed.toString(),
-                            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
-                            Math.floor(gasProgressRounded),
-                            messageCounter - lastCheckpointMessageCount,
-                            MESSAGE_CHECKPOINT_INTERVAL,
-                            Math.floor(messagesProgressRounded)
-                          )
-                        } else {
-                          logger(
-                            'INTERMEDIATE CHECKPOINT (Message): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%)',
-                            ctx.id,
-                            message.Id,
-                            messageCounter,
-                            messageCounter - lastCheckpointMessageCount,
-                            MESSAGE_CHECKPOINT_INTERVAL,
-                            Math.floor(messagesProgressRounded),
-                            totalGasUsed.toString(),
-                            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
-                            Math.floor(gasProgressRounded),
-                            currentEvalTime,
-                            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
-                            Math.floor(timeProgressRounded)
-                          )
+                      // Only proceed if we got the lock
+                      if (acquiredLock) {
+                        try {
+                          // Get fresh global tracking state to prevent race conditions
+                          const freshCheckpointTracking = global._checkpointTracking.checkpointCreation.get(ctx.id);
+                          
+                          // Determine which type of checkpoint to create (only one at a time)
+                          let checkpointType = null;
+                          
+                          if (gasThresholdReached && !freshCheckpointTracking.gasCheckpointCreated) {
+                            checkpointType = 'Gas';
+                            freshCheckpointTracking.gasCheckpointCreated = true;
+                          } else if (evalTimeThresholdReached && !freshCheckpointTracking.timeCheckpointCreated) {
+                            checkpointType = 'Time';
+                            freshCheckpointTracking.timeCheckpointCreated = true;
+                          } else if (messageCountThresholdReached && !freshCheckpointTracking.messageCheckpointCreated) {
+                            checkpointType = 'Message';
+                            freshCheckpointTracking.messageCheckpointCreated = true;
+                          }
+                          
+                          // Only create and log a checkpoint if we have determined a type
+                          if (checkpointType) {
+                            // Update all tracking milestones to the current progress
+                            // This prevents future logs until we cross the next 10% boundary
+                            lastLogged.messagePercent = exactMessagePercent;
+                            lastLogged.gasPercent = exactGasPercent;
+                            lastLogged.timePercent = exactTimePercent;
+                            
+                            // Log the checkpoint creation based on type
+                            if (checkpointType === 'Gas') {
+                              logger(
+                                'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%)',
+                                ctx.id,
+                                message.Id,
+                                messageCounter,
+                                totalGasUsed.toString(),
+                                EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                                Math.floor(gasProgressRounded),
+                                currentEvalTime,
+                                EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                                Math.floor(timeProgressRounded),
+                                messageCounter - lastCheckpointMessageCount,
+                                MESSAGE_CHECKPOINT_INTERVAL,
+                                Math.floor(messagesProgressRounded)
+                              )
+                            } else if (checkpointType === 'Time') {
+                              logger(
+                                'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%)',
+                                ctx.id,
+                                message.Id,
+                                messageCounter,
+                                currentEvalTime,
+                                EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                                Math.floor(timeProgressRounded),
+                                totalGasUsed.toString(),
+                                EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                                Math.floor(gasProgressRounded),
+                                messageCounter - lastCheckpointMessageCount,
+                                MESSAGE_CHECKPOINT_INTERVAL,
+                                Math.floor(messagesProgressRounded)
+                              )
+                            } else {
+                              logger(
+                                'INTERMEDIATE CHECKPOINT (Message): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%)',
+                                ctx.id,
+                                message.Id,
+                                messageCounter,
+                                messageCounter - lastCheckpointMessageCount,
+                                MESSAGE_CHECKPOINT_INTERVAL,
+                                Math.floor(messagesProgressRounded),
+                                totalGasUsed.toString(),
+                                EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                                Math.floor(gasProgressRounded),
+                                currentEvalTime,
+                                EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                                Math.floor(timeProgressRounded)
+                              )
+                            }
+                          
+                            // IMPORTANT: Save checkpoint with the current message's details
+                            await saveLatestProcessMemory({
+                              processId: ctx.id,
+                              moduleId: ctx.moduleId,
+                              messageId: message.Id,
+                              assignmentId: assignmentId || mostRecentAssignmentId,
+                              hashChain: message['Hash-Chain'] || mostRecentHashChain,
+                              timestamp: message.Timestamp,
+                              nonce: message.Nonce,
+                              epoch: message.Epoch,
+                              blockHeight: message['Block-Height'],
+                              ordinate,
+                              cron,
+                              Memory: output.Memory,
+                              gasUsed: totalGasUsed,
+                              evalTime: currentEvalTime
+                            })
+                            
+                            // Reset accumulated gas and update last checkpoint time
+                            totalGasUsed = BigInt(0)
+                            lastCheckpointTime = now
+                            lastCheckpointMessageCount = messageCounter
+                          }
+                        } finally {
+                          // Release lock
+                          global._checkpointTracking.processLocks.set(ctx.id, false);
                         }
-                      
-                        // IMPORTANT: Save checkpoint with the current message's details
-                        await saveLatestProcessMemory({
-                          processId: ctx.id,
-                          moduleId: ctx.moduleId,
-                          messageId: message.Id,
-                          assignmentId: assignmentId || mostRecentAssignmentId,
-                          hashChain: message['Hash-Chain'] || mostRecentHashChain,
-                          timestamp: message.Timestamp,
-                          nonce: message.Nonce,
-                          epoch: message.Epoch,
-                          blockHeight: message['Block-Height'],
-                          ordinate,
-                          cron,
-                          Memory: output.Memory,
-                          gasUsed: totalGasUsed,
-                          evalTime: currentEvalTime
-                        })
-                        
-                        // Reset accumulated gas and update last checkpoint time
-                        totalGasUsed = BigInt(0)
-                        lastCheckpointTime = now
-                        lastCheckpointMessageCount = messageCounter
                       }
                     }
 
