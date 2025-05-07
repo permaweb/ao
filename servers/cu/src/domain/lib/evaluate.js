@@ -89,12 +89,22 @@ export function evaluateWith (env) {
 
   const saveLatestProcessMemory = saveLatestProcessMemorySchema.implement(env.saveLatestProcessMemory)
 
+  // Create a global map to store checkpoint times for each process
+  if (!env.checkpointTimes) {
+    env.checkpointTimes = new Map()
+  }
+
   return (ctx) =>
     of(ctx)
       .chain(loadEvaluator)
       .chain(fromPromise(async (ctx) => {
         // If we are evaluating from a checkpoint, we don't want to use cached evals or save any new ones
         const hasCheckpoint = Boolean(ctx.checkpoint) && Boolean(ctx.Memory)
+        
+        // Initialize the checkpoint time for this process if it doesn't exist
+        if (!env.checkpointTimes.has(ctx.id)) {
+          env.checkpointTimes.set(ctx.id, new Date())
+        }
 
         // A running tally of gas used in the eval stream
         let totalGasUsed = BigInt(0)
