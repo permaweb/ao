@@ -40,12 +40,16 @@ export function spawnProcessWith (env) {
   return (ctx) => {
     if (!checkStage('spawn-process')(ctx)) return Resolved(ctx)
     const { Tags, Data } = ctx.cachedSpawn.spawn
-
-    const tagsIn = Tags.filter(tag => ![
-      'Data-Protocol',
-      'Type',
-      'Variant'
-    ].includes(tag.name))
+    const tagsIn = Tags
+      .filter((tag) => {
+        return !(
+          (tag.name === 'Data-Protocol' && tag.value === 'ao') ||
+          (tag.name === 'Type' && tag.value === 'Process') ||
+          (tag.name === 'Variant' && tag.value === 'ao.TN.1') ||
+          tag.name === 'From-Process' ||
+          tag.name === 'Pushed-For'
+        )
+      })
 
     tagsIn.push({ name: 'Data-Protocol', value: 'ao' })
     tagsIn.push({ name: 'Type', value: 'Process' })

@@ -21,8 +21,11 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
        * the success message, so to avoid conflicts
        */
       .map(removeTagsByNameMaybeValue('Data-Protocol', 'ao'))
-      .map(removeTagsByNameMaybeValue('Variant'))
-      .map(removeTagsByNameMaybeValue('Type'))
+      .map(removeTagsByNameMaybeValue('Variant', 'ao.TN.1'))
+      .map(removeTagsByNameMaybeValue('Type', 'Process'))
+      .map(removeTagsByNameMaybeValue('Type', 'Message'))
+      .map(removeTagsByNameMaybeValue('Process'))
+      .map(removeTagsByNameMaybeValue('Action', 'Spawned'))
       /**
        * Append tags explicitly set by the MU on the success
        * message send to the spawning process
