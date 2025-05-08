@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.83](https://github.com/permaweb/ao/compare/connect@v0.0.82...connect@v0.0.83) (2025-05-08)
+
 ## [0.0.82](https://github.com/permaweb/ao/compare/connect@v0.0.81...connect@v0.0.82) (2025-04-16)
 
 
