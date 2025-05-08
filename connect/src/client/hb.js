@@ -119,12 +119,12 @@ export function requestWith(args) {
     try {
 
       let fetch_req = { }
-//      console.log('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)
+      //logger.tap('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)()
       if (signingFormat === 'ANS-104') {
         const ans104Request = toANS104Request(restFields)
-        console.log('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
+        // logger.tap('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)()
         const signedRequest = await toDataItemSigner(signer)(ans104Request.item)
-        console.log('SIGNED ANS-104 ITEM: ', signedRequest)
+        //logger.tap('SIGNED ANS-104 ITEM: ', signedRequest)()
         fetch_req = {
           body: signedRequest.raw,
           url: joinUrl({ url: HB_URL, path }),
@@ -147,7 +147,7 @@ export function requestWith(args) {
       }
       
       // Log the request
-      logger.tap('Sending signed message to HB: %o')(fetch_req)
+      // logger.tap('Sending signed message to HB: %o')(fetch_req)
       
       // Step 4: Send the request
       const res = await fetch(fetch_req.url, { 
@@ -167,13 +167,13 @@ export function requestWith(args) {
       }
       
       if (res.status === 404) {
-        console.log('ERROR RESPONSE: ', res)
+        // logger.tap('ERROR RESPONSE: ', res)()
         //process.exit(1)
         throw new Error(`${res.status}: ${await res.text()}`)
       }
       
       if (res.status >= 400) {
-        console.log('ERROR RESPONSE: ', res)
+        // logger.tap('ERROR RESPONSE: ', res)()
         process.exit(1)
         throw new Error(`${res.status}: ${await res.text()}`)
       }
@@ -197,7 +197,7 @@ export function requestWith(args) {
 }
 
 export function toANS104Request(fields) {
-  console.log('TO ANS 104 REQUEST: ', fields)
+  // logger.tap('TO ANS 104 REQUEST: ', fields)()
   const dataItem = {
     target: fields.target,
     anchor: fields.anchor ?? '',
@@ -234,7 +234,7 @@ export function toANS104Request(fields) {
       ]),
     data: fields?.data || ''
   }
-  console.log('ANS104 REQUEST: ', dataItem)
+  // logger.tap('ANS104 REQUEST: ', dataItem)()
   return { headers: { 'Content-Type': 'application/ans104', 'codec-device': 'ans104@1.0' }, item: dataItem }
 }
 
