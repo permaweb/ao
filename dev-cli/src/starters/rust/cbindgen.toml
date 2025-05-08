@@ -1,0 +1,7 @@
+language = "C"
+
+[defines]
+MY_DEFINE = "1"
+
+[export]
+include = ["process_handler"]
