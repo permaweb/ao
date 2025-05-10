@@ -106,7 +106,11 @@ export const createApis = async (ctx) => {
           MODE: ctx.MODE,
           LOG_CONFIG_PATH: ctx.LOG_CONFIG_PATH,
           DEFAULT_LOG_LEVEL: ctx.DEFAULT_LOG_LEVEL,
-          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE
+          DISABLE_PROCESS_EVALUATION_CACHE: ctx.DISABLE_PROCESS_EVALUATION_CACHE,
+          // Pass checkpoint thresholds to worker threads for intermediate checkpointing
+          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+          MID_EVALUATION_CHECKPOINTING: ctx.MID_EVALUATION_CHECKPOINTING
         }
       }
     }
@@ -383,6 +387,9 @@ export const createApis = async (ctx) => {
 
   const sharedDeps = (logger) => {
     return {
+      // Pass checkpoint threshold values to all functions that need them
+      EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+      EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: ctx.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
       loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),

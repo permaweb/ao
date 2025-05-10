@@ -3,6 +3,33 @@ import { pipeline } from 'node:stream/promises'
 
 import { always, applySpec, evolve, mergeLeft, mergeRight, pathOr, pipe } from 'ramda'
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+
+/**
+ * Helper function to calculate time difference and format as "Xd-Xh-Xm-Xs"
+ * @param {number|string} timestamp - Unix timestamp (can be in ms or seconds)
+ * @returns {string} - Formatted time difference string
+ */
+function formatTimeAgo(timestamp) {
+  // Ensure timestamp is a number and in milliseconds
+  const ts = Number(timestamp)
+  // If timestamp is in seconds (typical Unix format), convert to milliseconds
+  const tsInMs = ts < 1000000000000 ? ts * 1000 : ts
+  
+  // Get current time in milliseconds
+  const now = Date.now()
+  
+  // Calculate difference in milliseconds
+  const diffMs = Math.max(0, now - tsInMs)
+  
+  // Convert to days, hours, minutes, seconds
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000)
+  
+  // Format the string as "Xd-Xh-Xm-Xs"
+  return `${days}d-${hours}h-${minutes}m-${seconds}s`
+}
 import { z } from 'zod'
 import { LRUCache } from 'lru-cache'
 
@@ -79,6 +106,9 @@ export function evaluateWith (env) {
   const evaluationCounter = env.evaluationCounter
   // const gasCounter = env.gasCounter
   const logger = env.logger.child('evaluate')
+  
+  // Access checkpoint threshold values from environment
+  const { EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD, EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD } = env
   env = { ...env, logger }
 
   const doesMessageExist = doesMessageExistWith(env)
@@ -97,6 +127,11 @@ export function evaluateWith (env) {
         let totalGasUsed = BigInt(0)
         let mostRecentAssignmentId = ctx.mostRecentAssignmentId
         let mostRecentHashChain = ctx.mostRecentHashChain
+        
+        // Track when we started this evaluation stream - defined outside evalStream scope
+        const evalStartTime = new Date()
+        // Keep track of when we last checkpointed - defined outside evalStream to be accessible in final checkpoint
+        let lastCheckpointTime = evalStartTime
         let prev = applySpec({
           /**
            * Ensure all result fields are initialized
@@ -141,7 +176,41 @@ export function evaluateWith (env) {
            * and evaluate each one
            */
           let first = true
+          // evalStartTime and lastCheckpointTime are now defined outside of this function
+          // to ensure they're accessible in the final checkpoint logic
+          // Counter for message-based checkpointing
+          let messageCounter = 0
+          let lastCheckpointMessageCount = 0
+          // How many messages to process before checkpointing - setting to 1000 as requested
+          const MESSAGE_CHECKPOINT_INTERVAL = 1000
+          
+          // Simple tracking variables for the last logged percentage for each metric
+          // Each process has its own tracking variables in a shared map
+          // This ensures we log exactly once when crossing each 10% milestone (10%, 20%, etc.)
+          if (!env.lastLoggedPercentages) {
+            env.lastLoggedPercentages = new Map()
+          }
+          
+          // Get or create tracking for this process
+          if (!env.lastLoggedPercentages.has(ctx.id)) {
+            env.lastLoggedPercentages.set(ctx.id, {
+              messagePercent: 0,  // Last message percentage we logged (10, 20, 30, etc.)
+              gasPercent: 0,      // Last gas percentage we logged
+              timePercent: 0       // Last time percentage we logged
+            })
+          }
+          
+          // Log initial checkpoint settings
+          logger(
+            'Evaluation stream started for process "%s" with checkpoint settings: Message interval=%d, Gas threshold=%d, Time threshold=%dms',
+            ctx.id,
+            MESSAGE_CHECKPOINT_INTERVAL,
+            EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
+            EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD
+          )
           for await (const { noSave, cron, ordinate, name, message, deepHash, isAssignment, assignmentId, AoGlobal } of messages) {
+            // Increment message counter
+            messageCounter++
             if (cron) {
               const key = toEvaledCron({ timestamp: message.Timestamp, cron })
               if (evaledCrons.has(key)) continue
@@ -217,6 +286,221 @@ export function evaluateWith (env) {
 
                     if (cron) ctx.stats.messages.cron++
                     else ctx.stats.messages.scheduled++
+                    
+                    // Check if we should create an intermediate checkpoint based on message count, gas, or time thresholds
+                    const now = new Date()
+                    // Ensure lastCheckpointTime is defined and is a Date object before using getTime()
+                    // If it's not defined (which shouldn't happen), reset it to evalStartTime
+                    if (!lastCheckpointTime || !(lastCheckpointTime instanceof Date)) {
+                      lastCheckpointTime = evalStartTime
+                    }
+                    const currentEvalTime = now.getTime() - lastCheckpointTime.getTime()
+                    
+                    // Use config constants for thresholds with safety checks for undefined values
+                    // Ensure EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD is defined - use a safe fallback if not
+                    const safeGasThreshold = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || BigInt(300_000_000_000_000)
+                    const gasThresholdReached = totalGasUsed >= BigInt(safeGasThreshold)
+                    
+                    // Ensure EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD is defined - use a safe fallback if not
+                    const safeTimeThreshold = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || 60000 // Default 1 minute
+                    const evalTimeThresholdReached = currentEvalTime >= safeTimeThreshold
+                    
+                    // Ensure lastCheckpointMessageCount is defined
+                    const safeLastCheckpointMessageCount = lastCheckpointMessageCount || 0
+                    const messageCountThresholdReached = messageCounter >= (safeLastCheckpointMessageCount + MESSAGE_CHECKPOINT_INTERVAL)
+                    
+                    // Calculate progress percentages for each threshold
+                    const messagesProgress = ((messageCounter - lastCheckpointMessageCount) / MESSAGE_CHECKPOINT_INTERVAL) * 100;
+                    
+                    // Make sure gas is always increasing by adding a small amount if output.GasUsed isn't available
+                    // This simulates reasonable gas usage per message for better progress tracking
+                    if (!output.GasUsed) {
+                      // Assuming a reasonable average gas usage per message (adjust if needed)
+                      const estimatedGasPerMessage = BigInt(3_000_000_000);
+                      totalGasUsed += estimatedGasPerMessage;
+                    }
+                    
+                    // Safe BigInt calculation to avoid Number overflow
+                    const gasProgress = EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD ? 
+                      (Number(totalGasUsed) / Number(EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD)) * 100 : 0;
+                      
+                    // Make sure time is properly tracked
+                    const timeProgress = EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD ? 
+                      (currentEvalTime / EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD) * 100 : 0;
+                    
+                    // Round progress values for display
+                    const messagesProgressRounded = Math.round(messagesProgress * 10) / 10;
+                    const gasProgressRounded = Math.round(gasProgress * 10) / 10;
+                    const timeProgressRounded = Math.round(timeProgress * 10) / 10;
+                    
+                    // Make sure env.lastLoggedPercentages is initialized
+                    if (!env.lastLoggedPercentages) {
+                      env.lastLoggedPercentages = new Map()
+                    }
+                    
+                    // Make sure this process has an entry in the map
+                    if (!env.lastLoggedPercentages.has(ctx.id)) {
+                      env.lastLoggedPercentages.set(ctx.id, {
+                        messagePercent: 0,
+                        gasPercent: 0,
+                        timePercent: 0
+                      })
+                    }
+                    
+                    // Get the tracking object for this process
+                    const lastLogged = env.lastLoggedPercentages.get(ctx.id)
+                    
+                    // Calculate the current percentages rounded down to nearest 10% (0, 10, 20, etc.)
+                    const currentMessagePercent = Math.floor(messagesProgressRounded / 10) * 10;
+                    const currentGasPercent = Math.floor(gasProgressRounded / 10) * 10;
+                    const currentTimePercent = Math.floor(timeProgressRounded / 10) * 10;
+                    
+                    // Check if we've crossed a 10% boundary since the last log
+                    // We only want to log once per 10% threshold
+                    const crossedMessageBoundary = 
+                      currentMessagePercent > lastLogged.messagePercent && currentMessagePercent > 0;
+                      
+                    const crossedGasBoundary = 
+                      currentGasPercent > lastLogged.gasPercent && currentGasPercent > 0;
+                      
+                    const crossedTimeBoundary = 
+                      currentTimePercent > lastLogged.timePercent && currentTimePercent > 0;
+                    
+                    // Also log on regular 100-message boundaries, but only if not crossing a milestone
+                    const atMessageCountBoundary = messageCounter % 100 === 0 && 
+                                                 messageCounter > 0 && 
+                                                 !crossedMessageBoundary && 
+                                                 !crossedGasBoundary && 
+                                                 !crossedTimeBoundary;
+                    
+                    const shouldLogProgress = crossedMessageBoundary || crossedGasBoundary || crossedTimeBoundary || atMessageCountBoundary
+                    
+                    if (shouldLogProgress) {
+                      // Update our tracking variables to the current percentages if we crossed a boundary
+                      // This prevents logging the same milestone multiple times
+                      if (crossedMessageBoundary) {
+                        lastLogged.messagePercent = currentMessagePercent;
+                      }
+                      if (crossedGasBoundary) {
+                        lastLogged.gasPercent = currentGasPercent;
+                      }
+                      if (crossedTimeBoundary) {
+                        lastLogged.timePercent = currentTimePercent;
+                      }
+                      
+                      // Add a bit of info about which milestone we're logging
+                      const milestoneReason = crossedMessageBoundary ? 'M' : 
+                                             crossedGasBoundary ? 'G' : 
+                                             crossedTimeBoundary ? 'T' : '-'
+                      // Calculate how long ago the message timestamp is
+                      const messageTimestamp = message.Timestamp || message.timestamp
+                      const timeAgo = messageTimestamp ? formatTimeAgo(messageTimestamp) : 'Unknown'
+                      
+                      logger(
+                        'CHECKPOINT PROGRESS [%s] - Process: "%s", Message: %d/%d (%d%%), Gas: %s/%s (%d%%), Time: %dms/%dms (%d%%), Away: %s',
+                        milestoneReason, // Indicates which milestone triggered this log (M=message, G=gas, T=time, -=regular interval)
+                        ctx.id,
+                        messageCounter - lastCheckpointMessageCount,
+                        MESSAGE_CHECKPOINT_INTERVAL,
+                        Math.floor(messagesProgressRounded),
+                        totalGasUsed.toString(),
+                        EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                        Math.floor(gasProgressRounded),
+                        currentEvalTime,
+                        EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                        Math.floor(timeProgressRounded),
+                        timeAgo
+                      )
+                    }
+                    
+                    if (!noSave && output.Memory && !hasCheckpoint && (gasThresholdReached || evalTimeThresholdReached || messageCountThresholdReached)) {
+                      // Create intermediate checkpoint with current evaluation state
+                      // Enhanced checkpoint logging with more details about what triggered it
+                      // Calculate how long ago the message timestamp is
+                      const messageTimestamp = message.Timestamp || message.timestamp
+                      const timeAgo = messageTimestamp ? formatTimeAgo(messageTimestamp) : 'Unknown'
+                      
+                      if (gasThresholdReached) {
+                        logger(
+                          'INTERMEDIATE CHECKPOINT (Gas): Process "%s" at message "%s" (#%d) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Messages: %d/%d (%d%%) | Away: %s',
+                          ctx.id,
+                          message.Id,
+                          messageCounter,
+                          totalGasUsed.toString(),
+                          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                          Math.floor(gasProgressRounded),
+                          currentEvalTime,
+                          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          Math.floor(timeProgressRounded),
+                          messageCounter - lastCheckpointMessageCount,
+                          MESSAGE_CHECKPOINT_INTERVAL,
+                          Math.floor(messagesProgressRounded),
+                          timeAgo
+                        )
+                      } else if (evalTimeThresholdReached) {
+                        logger(
+                          'INTERMEDIATE CHECKPOINT (Time): Process "%s" at message "%s" (#%d) | Time: %dms/%dms (%d%%) | Gas used: %s/%s (%d%%) | Messages: %d/%d (%d%%) | Away: %s',
+                          ctx.id,
+                          message.Id,
+                          messageCounter,
+                          currentEvalTime,
+                          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          Math.floor(timeProgressRounded),
+                          totalGasUsed.toString(),
+                          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                          Math.floor(gasProgressRounded),
+                          messageCounter - lastCheckpointMessageCount,
+                          MESSAGE_CHECKPOINT_INTERVAL,
+                          Math.floor(messagesProgressRounded),
+                          timeAgo
+                        )
+                      } else {
+                        logger(
+                          'INTERMEDIATE CHECKPOINT (Message): Process "%s" at message "%s" (#%d) | Messages: %d/%d (%d%%) | Gas used: %s/%s (%d%%) | Time: %dms/%dms (%d%%) | Away: %s',
+                          ctx.id,
+                          message.Id,
+                          messageCounter,
+                          messageCounter - lastCheckpointMessageCount,
+                          MESSAGE_CHECKPOINT_INTERVAL,
+                          Math.floor(messagesProgressRounded),
+                          totalGasUsed.toString(),
+                          EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD.toString(),
+                          Math.floor(gasProgressRounded),
+                          currentEvalTime,
+                          EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD,
+                          Math.floor(timeProgressRounded),
+                          timeAgo
+                        )
+                      }
+                      
+                      // IMPORTANT: Save checkpoint with the current message's details
+                      await saveLatestProcessMemory({
+                        processId: ctx.id,
+                        moduleId: ctx.moduleId,
+                        messageId: message.Id,
+                        assignmentId: assignmentId || mostRecentAssignmentId,
+                        hashChain: message['Hash-Chain'] || mostRecentHashChain,
+                        timestamp: message.Timestamp,
+                        nonce: message.Nonce,
+                        epoch: message.Epoch,
+                        blockHeight: message['Block-Height'],
+                        ordinate,
+                        cron,
+                        Memory: output.Memory,
+                        gasUsed: totalGasUsed,
+                        evalTime: currentEvalTime
+                      })
+                      
+                      // Reset accumulated gas and update last checkpoint time
+                      totalGasUsed = BigInt(0)
+                      // Make sure now is a valid Date before using it
+                      if (now && now instanceof Date) {
+                        lastCheckpointTime = now
+                      } else {
+                        lastCheckpointTime = new Date() // Fallback to current time
+                      }
+                      lastCheckpointMessageCount = messageCounter
+                    }
 
                     if (output.Error) {
                       logger(
@@ -324,6 +608,11 @@ export function evaluateWith (env) {
           const now = new Date()
           // If there is no startTime, then we use the current time which will make evalTime = 0
           const startTime = pathOr(now, ['stats', 'startTime'], ctx)
+          
+          // Calculate total evaluation time from start to now
+          // We use evalStartTime which is always defined (moved outside evalStream function)
+          const finalEvalTime = now.getTime() - evalStartTime.getTime()
+          
           await saveLatestProcessMemory({
             processId: ctx.id,
             moduleId: ctx.moduleId,
@@ -338,7 +627,7 @@ export function evaluateWith (env) {
             cron,
             Memory: prev.Memory,
             gasUsed: totalGasUsed,
-            evalTime: now.getTime() - startTime.getTime() // The eval time in ms: currTime - startTime
+            evalTime: finalEvalTime // Only count time since last checkpoint
           })
         }
 

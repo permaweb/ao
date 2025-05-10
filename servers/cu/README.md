@@ -126,6 +126,7 @@ There are a few environment variables that you can set. Besides
 - `EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD`: If a process has this amount of eval
   time, then it will immediately create a Checkpoint at the end of the
   evaluation stream.
+- `MID_EVALUATION_CHECKPOINTING`: Whether to enable mid-evaluation checkpointing (experimental!).
 - `MEM_MONITOR_INTERVAL`: The interval, in milliseconds, at which to log memory
   usage on this CU.
 - `BUSY_THRESHOLD`: The amount of time, in milliseconds, the CU should wait for

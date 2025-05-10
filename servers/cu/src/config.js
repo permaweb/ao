@@ -151,7 +151,13 @@ const CONFIG_ENVS = {
      *  catching up to a previous checkpoint.
      */
     EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: process.env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000,
-    EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: process.env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || ms('15m'),
+    EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: process.env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || ms('1m'),
+    /**
+     * Controls whether checkpoints are created during message evaluation streams
+     * When enabled, checkpoints can be created mid-stream based on thresholds
+     * When disabled, checkpoints are only created after completing a full evaluation
+     */
+    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING !== 'false',
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || bytes('1gb'),
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
@@ -209,7 +215,13 @@ const CONFIG_ENVS = {
      *  This is the baseline for checkpointing as no process should need to spend more than two hours catching up to a previous checkpoint.
      */
     EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: process.env.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD || 300_000_000_000_000,
-    EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: process.env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || ms('15m'),
+    EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: process.env.EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD || ms('1m'),
+    /**
+     * Controls whether checkpoints are created during message evaluation streams
+     * When enabled, checkpoints can be created mid-stream based on thresholds
+     * When disabled, checkpoints are only created after completing a full evaluation
+     */
+    MID_EVALUATION_CHECKPOINTING: process.env.MID_EVALUATION_CHECKPOINTING !== 'false',
     PROCESS_WASM_MEMORY_MAX_LIMIT: process.env.PROCESS_WASM_MEMORY_MAX_LIMIT || bytes('1gb'), // 1GB
     PROCESS_WASM_COMPUTE_MAX_LIMIT: process.env.PROCESS_WASM_COMPUTE_MAX_LIMIT || 9_000_000_000_000, // 9t
     PROCESS_WASM_SUPPORTED_FORMATS: process.env.PROCESS_WASM_SUPPORTED_FORMATS || DEFAULT_PROCESS_WASM_MODULE_FORMATS,
