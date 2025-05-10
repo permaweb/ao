@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.84](https://github.com/permaweb/ao/compare/connect@v0.0.83...connect@v0.0.84) (2025-05-10)
+
+
+### Bug Fixes
+
+* deprecated code that was removing device ([674f551](https://github.com/permaweb/ao/commit/674f551eeaf7fe87d5b823bb406ba1784c58a485))
+
 ## [0.0.83](https://github.com/permaweb/ao/compare/connect@v0.0.82...connect@v0.0.83) (2025-05-08)
 
 ## [0.0.82](https://github.com/permaweb/ao/compare/connect@v0.0.81...connect@v0.0.82) (2025-04-16)
