@@ -14,7 +14,7 @@ export function requestWith (env) {
 
   return (fields) => {
       return (
-        of({ path: `/~${fields.device ?? env.device}`, ...fields, method: fields.method ?? method })
+        of(fields)
           .chain(verifyInput)
 
           // is the the best place to either call

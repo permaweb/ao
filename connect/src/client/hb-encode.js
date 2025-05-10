@@ -193,15 +193,6 @@ function encodePart (name, { headers, body }) {
 export async function encode (obj = {}) {
   if (Object.keys(obj) === 0) return
 
-  if (obj.type !== 'Process') {
-    obj = Object.keys(obj).reduce((acc, h) =>  {
-      if (h !== 'device') {
-        acc[h] = obj[h]
-      }
-      return acc
-    }, {})  
-  }
-
   const flattened = hbEncodeLift(obj)
 
   /**
