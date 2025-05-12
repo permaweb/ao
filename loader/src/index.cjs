@@ -110,16 +110,12 @@ const metering = require('@permaweb/wasm-metering') // Re-enabled metering
 // Save the original WebAssembly.compile and compileStreaming functions
 const originalCompileStreaming = WebAssembly.compileStreaming
 const originalCompile = WebAssembly.compile
-
-// Updated shouldApplyMetering to respect importObject.format only
 const shouldApplyMetering = (importObject = {}) => {
-  // Original logic: meter only if format explicitly asks for it
   return ['wasm32-unknown-emscripten-metering', 'wasm64-unknown-emscripten-draft_2024_10_16-metering'].includes(importObject.format);
 };
 
-// Re-enabled and corrected applyMetering function
 const applyMetering = (arrayBuffer, importObject) => {
-  const { format } = importObject; // This format is key.
+  const { format } = importObject;
 
   const view = ArrayBuffer.isView(arrayBuffer)
     ? arrayBuffer
@@ -143,7 +139,6 @@ WebAssembly.compileStreaming = async function (source, importObject = {}) {
 // Override WebAssembly.compile to apply metering conditionally
 WebAssembly.compile = async function (source, importObject = {}) {
   if (!shouldApplyMetering(importObject)) return originalCompile(source);
-  // source is already an ArrayBuffer or WebAssembly.Module here
   return applyMetering(source, importObject);
 };
 
