@@ -1,5 +1,3 @@
-let __DISABLE_METERING_FOR_LOADER = false; // Global flag for disabling metering
-
 const Emscripten = require('./formats/emscripten.cjs')
 const Emscripten2 = require('./formats/emscripten2.cjs')
 const Emscripten3 = require('./formats/emscripten3.cjs')
@@ -113,9 +111,8 @@ const metering = require('@permaweb/wasm-metering') // Re-enabled metering
 const originalCompileStreaming = WebAssembly.compileStreaming
 const originalCompile = WebAssembly.compile
 
-// Updated shouldApplyMetering to respect __DISABLE_METERING_FOR_LOADER and importObject.format
+// Updated shouldApplyMetering to respect importObject.format only
 const shouldApplyMetering = (importObject = {}) => {
-  if (__DISABLE_METERING_FOR_LOADER) return false; // If metering is globally disabled for this call, never meter
   // Original logic: meter only if format explicitly asks for it
   return ['wasm32-unknown-emscripten-metering', 'wasm64-unknown-emscripten-draft_2024_10_16-metering'].includes(importObject.format);
 };
@@ -157,24 +154,22 @@ module.exports = async function (binary, options) {
     options = { format: 'wasm32-unknown-emscripten' };
   }
 
-  const disableMetering = options.DISABLE_METERING === true;
   const unsafeMemory = options.UNSAFE_MEMORY === true;
-
-  const originalGlobalDisableMeteringFlag = __DISABLE_METERING_FOR_LOADER;
-  __DISABLE_METERING_FOR_LOADER = disableMetering; // Set global flag based on option
 
   try {
     let instance = null;
     let doHandle = null;
     let meterType;
 
-    if (!disableMetering) { // meterType is only needed if metering is not disabled
-      const currentFormat = options.format || 'wasm32-unknown-emscripten';
+    // Determine meterType if a metering format is potentially used
+    const currentFormat = options.format || 'wasm32-unknown-emscripten';
+    if (shouldApplyMetering({ format: currentFormat })) {
       meterType = currentFormat.startsWith("wasm32") ? "i32" : "i64";
     }
 
     if (options.format === "wasm32-unknown-emscripten") {
       instance = await Emscripten(binary, options)
+      options.instantiateWasm = binary
     } else if (options.format === "wasm32-unknown-emscripten2") {
       instance = await Emscripten2(binary, options)
     } else if (options.format === "wasm32-unknown-emscripten3") {
@@ -183,8 +178,8 @@ module.exports = async function (binary, options) {
       if (typeof binary === "function") {
         options.instantiateWasm = binary
       } else {
-        // Local metering for specific formats, only if metering is NOT disabled
-        if (!disableMetering && (options.format === "wasm32-unknown-emscripten-metering" || options.format === "wasm64-unknown-emscripten-draft_2024_10_16-metering")) {
+        // Local metering for specific formats
+        if (options.format === "wasm32-unknown-emscripten-metering" || options.format === "wasm64-unknown-emscripten-draft_2024_10_16-metering") {
           if (metering && meterType) {
             binary = metering.meterWASM(binary, { meterType });
           }
@@ -263,9 +258,9 @@ module.exports = async function (binary, options) {
           instance.HEAPU8.set(buffer)
         }
         /**
-         * Make sure to refill the gas tank for each invocation, if metering is not disabled
+         * Make sure to refill the gas tank for each invocation
          */
-        if (!disableMetering && instance.gas && typeof instance.gas.refill === 'function') {
+        if (instance.gas && typeof instance.gas.refill === 'function') {
           instance.gas.refill();
         }
 
@@ -291,20 +286,23 @@ module.exports = async function (binary, options) {
           Patches: response.Patches || [],
         };
 
-        // Add GasUsed only if metering is not disabled
-        if (!disableMetering && instance.gas && typeof instance.gas.used !== 'undefined') {
+        // Add GasUsed if metering was applied
+        if (instance.gas && typeof instance.gas.used !== 'undefined') {
           result.GasUsed = instance.gas.used;
         }
-        return result;
-      } finally {
+
+        /** unmock functions */
         // eslint-disable-next-line no-global-assign
         // Date = OriginalDate
         Math.random = originalRandom
         console.log = originalLog
-        buffer = null
-      }
+        /** end unmock */
+        buffer = null // Clear buffer reference
+
+        return result;
+      } // End of try block
+      finally { }
     };
-  } finally {
-    __DISABLE_METERING_FOR_LOADER = originalGlobalDisableMeteringFlag; // Restore global flag
-  }
+  } // End of outer try block
+  finally { }
 };
