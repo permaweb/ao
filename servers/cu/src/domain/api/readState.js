@@ -1,5 +1,5 @@
 import { isNotNil, join, split } from 'ramda'
-import { Resolved, of, fromPromise } from 'hyper-async'
+import { Resolved, of, fromPromise, Rejected } from 'hyper-async'
 
 import { chainEvaluationWith } from '../lib/chainEvaluation.js'
 import { loadProcessWith } from '../lib/loadProcess.js'
@@ -22,11 +22,19 @@ const removePendingReadState = (key) => (res) => {
   pendingReadState.delete(key)
   return res
 }
-
+const updatePendingReadStateNonce = (key) => (nonce) => {
+  const entry = pendingReadState.get(key)
+  if (!entry) return
+  entry.currentNonce = nonce
+  pendingReadState.set(key, entry)
+  return nonce
+}
 export const pendingReadStates = () => Object.fromEntries(pendingReadState.entries())
-
 export function readStateWith (env) {
+  const nonceLimit = env.HYDRATION_MODE_NONCE_LIMIT
+  console.log({ nonceLimit })
   env.pendingReadState = pendingReadState
+  env.updatePendingReadStateNonce = updatePendingReadStateNonce
   env.fromPendingKey = split(',')
 
   const chainEvaluation = chainEvaluationWith(env)
@@ -37,7 +45,7 @@ export function readStateWith (env) {
   const loadModule = loadModuleWith(env)
   const evaluate = evaluateWith(env)
 
-  return ({ processId, messageId, to, ordinate, cron, needsOnlyMemory }) => {
+  return ({ processId, messageId, to, ordinate, cron, needsOnlyMemory, evalToNonce }) => {
     messageId = messageId || [to, ordinate, cron].filter(isNotNil).join(':') || 'latest'
 
     const stats = {
@@ -73,6 +81,7 @@ export function readStateWith (env) {
      * is never executed, and so no additional work is performed
      */
     let pending
+    let startNonce = 0
     function next () {
       if (pending) return pending
 
@@ -84,10 +93,11 @@ export function readStateWith (env) {
        * there is only one instance of the work used to resolve each Async,
        * every time, thus preventing duplication of work
        */
-      pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory })
+      pending = of({ id: processId, messageId, to, ordinate, cron, stats, needsOnlyMemory, key })
         .chain(loadProcessMeta)
         .chain(loadProcess)
         .chain((ctx) => {
+          startNonce = ctx.ordinate
           /**
            * An exact match was found, either a cached evaluation
            * or the cache memory needed. So just return it without
@@ -120,7 +130,11 @@ export function readStateWith (env) {
 
     return chainEvaluation({ pendingKey: key, processId, messageId, to, ordinate, cron, needsOnlyMemory })
       .map(([isNewEntry, res]) => {
-        if (!isNewEntry) return res
+        /**
+         * Add the isRepeatEntry key to the result if it's not a new entry,
+         * so that the next step knows to check for a nonce limit
+         */
+        if (!isNewEntry) return { ...res, isRepeatEntry: key }
 
         /**
          * New evaluations must be performed, so place it
@@ -129,6 +143,7 @@ export function readStateWith (env) {
          */
         const newEntry = {
           startTime: res.startTime,
+          currentNonce: startNonce,
           chainedTo: res.chainedTo,
           pending: res.pending
             .then(next)
@@ -137,6 +152,28 @@ export function readStateWith (env) {
         pendingReadState.set(key, newEntry)
 
         return newEntry
+      })
+      .chain((res) => {
+        // If setting is disabled, return the result
+        if (!nonceLimit) return Resolved(res)
+
+        // If not chained or repeat, return the result
+        const { chainedTo, isRepeatEntry } = res
+        if (!chainedTo && !isRepeatEntry) return Resolved(res)
+
+        // Get the readState that we are chaining to / repeat of
+        const chainedReadState = pendingReadState.get(chainedTo || isRepeatEntry)
+
+        // Get the nonce to, from, and difference
+        const nonceTo = +ordinate || evalToNonce
+        const nonceFrom = chainedReadState.currentNonce
+        const nonceDifference = +nonceTo - +nonceFrom
+
+        // If chained and nonce difference is greater than nonceLimit, reject
+        if (nonceDifference > nonceLimit) {
+          return Rejected({ status: 503, message: `Nonce limit exceeded: the process is currently hydrating with >${nonceLimit} nonces remaining. Please try again later.` })
+        }
+        return Resolved(res)
       })
       .chain(fromPromise((res) => res.pending))
   }

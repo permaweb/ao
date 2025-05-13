@@ -198,6 +198,18 @@ export const loadProcessSchema = z.function()
     processId: z.string().min(1)
   })))
 
+export const loadProcessLatestSchema = z.function()
+  .args(z.object({
+    suUrl: z.string().url(),
+    processId: z.string().min(1)
+  }))
+  .returns(z.promise(z.object({
+    timestamp: z.number().min(1).nullish(),
+    nonce: z.number().min(0).nullish(),
+    processId: z.string().min(1),
+    evalToNonce: z.number().min(0)
+  })))
+
 export const loadTimestampSchema = z.function()
   .args(z.object({
     suUrl: z.string().url(),
