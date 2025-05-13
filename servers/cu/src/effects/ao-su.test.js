@@ -3,10 +3,10 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { createHash } from 'node:crypto'
 
-import { loadMessageMetaSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
+import { loadMessageMetaSchema, loadProcessLatestSchema, loadProcessSchema, loadTimestampSchema } from '../domain/dal.js'
 import { messageSchema } from '../domain/model.js'
 import { createTestLogger } from '../domain/logger.js'
-import { isHashChainValidWith, loadMessageMetaWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
+import { isHashChainValidWith, loadMessageMetaWith, loadProcessLatestWith, loadProcessWith, loadTimestampWith, mapNode } from './ao-su.js'
 import { hashChain } from './worker/hashChain/main.js'
 
 const withoutAoGlobal = messageSchema.omit({ AoGlobal: true })
@@ -415,6 +415,45 @@ describe('ao-su', () => {
       assert.deepStrictEqual(result, {
         timestamp: 123456,
         height: 1
+      })
+    })
+  })
+
+  describe('loadProcessLatestWith', () => {
+    test('load the process latest', async () => {
+      const loadProcessLatest = loadProcessLatestSchema.implement(loadProcessLatestWith({
+        fetch: async (url, options) => {
+          assert.equal(url, 'https://foo.bar/process-123/latest')
+          assert.deepStrictEqual(options, { method: 'GET' })
+          return {
+            ok: true,
+            json: () => {
+              return {
+                message: {},
+                assignment: {
+                  tags: [
+                    { name: 'Process', value: 'process-123' },
+                    { name: 'Nonce', value: '500' },
+                    { name: 'Timestamp', value: '12345' }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        logger
+      }))
+
+      const result = await loadProcessLatest({
+        suUrl: 'https://foo.bar',
+        processId: 'process-123'
+      })
+
+      assert.deepStrictEqual(result, {
+        processId: 'process-123',
+        timestamp: undefined,
+        nonce: undefined,
+        evalToNonce: 500
       })
     })
   })

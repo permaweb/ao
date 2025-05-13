@@ -37,6 +37,7 @@ describe('loadMessageMeta', () => {
         nonce: 0,
         processId
       }),
+      loadProcessLatest: async () => assert.fail('should not call if process is cached'),
       logger
     })
 
@@ -85,6 +86,7 @@ describe('loadMessageMeta', () => {
         nonce: 0,
         processId
       }),
+      loadProcessLatest: async () => assert.fail('should not call if process is cached'),
       logger
     })
 
@@ -119,6 +121,7 @@ describe('loadMessageMeta', () => {
           processId
         }
       },
+      loadProcessLatest: async () => assert.fail('should not call if process is cached'),
       logger
     })
 
@@ -137,5 +140,51 @@ describe('loadMessageMeta', () => {
       nonce: 0,
       processId: 'process-123'
     })
+  })
+
+  test('if no messageId, should return undefined timestamp and nonce if no messageTxId is provided, return evalToNonce', async () => {
+    const loadMessageMeta = loadMessageMetaWith({
+      findProcess: async () => { throw new Error('woops') },
+      locateScheduler: async () => assert.fail('should not call if process is not cached'),
+      locateProcess: async ({ processId: id, schedulerHint }) => {
+        assert.equal(id, 'process-123')
+        assert.ok(schedulerHint === undefined)
+        return { url: 'https://foo.bar' }
+      },
+      loadMessageMeta: async (args) => {
+        assert.deepStrictEqual(args, {
+          suUrl: 'https://foo.bar',
+          processId: 'process-123',
+          messageTxId: 'message-tx-123'
+        })
+        return { processId: 'process-123', timestamp: 1697574792000, nonce: 1 }
+      },
+      loadProcess: async ({ processId }) => ({
+        owner: { address: 'woohoo', key: 'key-123' },
+        tags: [
+          { name: 'Module', value: 'foobar' },
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Process' }
+        ],
+        block: { height: 123, timestamp: 1697574792000 },
+        timestamp: 1697574792000,
+        nonce: 0,
+        processId
+      }),
+      loadProcessLatest: async () => ({
+        processId: 'process-123',
+        timestamp: undefined,
+        nonce: undefined,
+        evalToNonce: 500
+      }),
+      logger
+    })
+
+    const res = await loadMessageMeta({ processId: 'process-123' })
+      .toPromise()
+
+    console.log({ res })
+
+    assert.deepStrictEqual(res, { processId: 'process-123', timestamp: undefined, nonce: undefined, evalToNonce: 500 })
   })
 })
