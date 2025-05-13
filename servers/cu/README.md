@@ -144,6 +144,8 @@ There are a few environment variables that you can set. Besides
   trusted and the CU can start from
 - `DEFAULT_LOG_LEVEL`: the logging level to use (defaults to `debug`)
 - `LOG_CONFIG_PATH`: the path to the file used to dynamically set the logging level (see [here](#dynamically-change-the-log-level))
+- `HYDRATION_MODE_NONCE_LIMIT`: the maximum nonce difference for incoming dryruns vs their pending eval streams.
+  If a eval stream is more nonces behind than this limit, a 503 is returned.
 
 ## Tests
 

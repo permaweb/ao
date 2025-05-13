@@ -246,7 +246,14 @@ export const domainConfigSchema = z.object({
   /**
    * Whether to ignore local checkpoints. Set to 'true' to ignore local checkpoints (file and record checkpoints).
    */
-  IGNORE_LOCAL_CHECKPOINTS: z.preprocess((val) => !!val, z.boolean())
+  IGNORE_LOCAL_CHECKPOINTS: z.preprocess((val) => !!val, z.boolean()),
+  /**
+   * The nonce limit for Hydration Mode. If the CU currently has an
+   * eval stream with more nonces remaining than this value, then the CU
+   * will return a busy response.
+   *
+   */
+  HYDRATION_MODE_NONCE_LIMIT: positiveIntSchema
 })
 
 export const bufferSchema = z.any().refine(buffer => {

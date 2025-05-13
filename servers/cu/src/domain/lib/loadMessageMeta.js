@@ -1,7 +1,7 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import { z } from 'zod'
 
-import { findProcessSchema, loadMessageMetaSchema, locateProcessSchema, loadProcessSchema } from '../dal.js'
+import { findProcessSchema, loadMessageMetaSchema, locateProcessSchema, loadProcessSchema, loadProcessLatestSchema } from '../dal.js'
 import { findRawTag, trimSlash } from '../utils.js'
 
 /**
@@ -17,7 +17,7 @@ const ctxSchema = z.object({
   }),
   timestamp: z.number().refine((val) => !!val, {
     message: 'timestamp must be attached to context'
-  }),
+  }).nullish(),
   /**
    * nonce can be 0, so we can't just use falsey here.
    *
@@ -25,7 +25,7 @@ const ctxSchema = z.object({
    */
   nonce: z.number().refine((val) => val != null, {
     message: 'nonce must be attached to context'
-  })
+  }).nullish()
 }).passthrough()
 
 function maybeCachedWith ({ locateProcess, findProcess }) {
@@ -68,12 +68,22 @@ export function loadMessageMetaWith (env) {
 
   const loadMessageMeta = fromPromise(loadMessageMetaSchema.implement(env.loadMessageMeta))
   const loadProcess = fromPromise(loadProcessSchema.implement(env.loadProcess))
-
+  const loadProcessLatest = fromPromise(loadProcessLatestSchema.implement(env.loadProcessLatest))
   const maybeCached = maybeCachedWith(env)
 
   return (ctx) => {
     return maybeCached(ctx.processId)
       .chain(({ url }) => {
+        /**
+         * If no messageTxId is provided, then we need to load the latest process
+         * to know the latest nonce to evaluate up to
+         */
+        if (!ctx.messageTxId) {
+          return loadProcessLatest({
+            suUrl: trimSlash(url),
+            processId: ctx.processId
+          })
+        }
         /**
          * This condition handles the aop6 Boot Loader functionality
          * It is here so that this function can be called with a process id

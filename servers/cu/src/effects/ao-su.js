@@ -456,3 +456,59 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
       .then(mapMeta)
   }
 }
+
+export const loadProcessLatestWith = ({ fetch, logger }) => {
+  const legacyMeta = (res) => ({
+    processId: res.process_id,
+    timestamp: res.timestamp,
+    nonce: res.nonce
+  })
+
+  const meta = pipe(
+    pathOr([], ['assignment', 'tags']),
+    parseTags,
+    applySpec({
+      processId: path(['Process']),
+      timestamp: pipe(
+        path(['Timestamp']),
+        parseInt
+      ),
+      nonce: pipe(
+        path(['Nonce']),
+        parseInt
+      )
+    })
+  )
+
+  const mapMeta = ifElse(has('assignment'), meta, legacyMeta)
+  return async ({ suUrl, processId }) => {
+    return backoff(
+      () => fetch(`${suUrl}/${processId}/latest`, { method: 'GET' }).then(okRes),
+      { maxRetries: 5, delay: 500, log: logger, name: `loadProcessLatest(${JSON.stringify({ suUrl, processId })})` }
+    )
+      .catch(async (err) => {
+        logger(
+          'Error Encountered when loading latest process "%s" from SU "%s"',
+          processId, suUrl
+        )
+        throw new Error(`Error Encountered when loading latest message from Scheduler Unit: ${await strFromFetchError(err)}`)
+      })
+      .then(resToJson)
+      .then(mapMeta)
+      .then((res) => {
+        /**
+         * Set the timestamp and nonce to undefined,
+         * so that later on we query the SU for the latest timestamp and nonce.
+         * Set evalToNonce to the nonce of the latest message,
+         * so that we can use it determine the nonce difference.
+         */
+        return {
+          processId: res.processId,
+          timestamp: undefined,
+          nonce: undefined,
+          evalToNonce: res.nonce
+        }
+      }
+      )
+  }
+}

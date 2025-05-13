@@ -79,16 +79,7 @@ export function dryRunWith (env) {
      * it's timestamp and ordinate, so readState can evaluate
      * up to that point (if it hasn't already)
      */
-    if (messageTxId) return loadMessageMeta({ processId, messageTxId })
-
-    /**
-     * No messageTxId provided so evaluate up to latest
-     */
-    return Resolved({
-      processId,
-      timestamp: undefined,
-      nonce: undefined
-    })
+    return loadMessageMeta({ processId, messageTxId })
   }
 
   function ensureProcessLoaded ({ maxProcessAge }) {
@@ -126,7 +117,12 @@ export function dryRunWith (env) {
            * So we explicitly set cron to undefined, for posterity
            */
           cron: undefined,
-          needsOnlyMemory: true
+          needsOnlyMemory: true,
+          /**
+           * If the dryrun has no messageTxId, then we need to
+           * evaluate up to the nonce of the latest message on the process
+           */
+          evalToNonce: res?.evalToNonce
         }).map((res) => {
           const cached = { age: new Date().getTime(), ctx: res }
           /**
