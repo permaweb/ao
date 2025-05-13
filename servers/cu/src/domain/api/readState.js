@@ -32,7 +32,6 @@ const updatePendingReadStateNonce = (key) => (nonce) => {
 export const pendingReadStates = () => Object.fromEntries(pendingReadState.entries())
 export function readStateWith (env) {
   const nonceLimit = env.HYDRATION_MODE_NONCE_LIMIT
-  console.log({ nonceLimit })
   env.pendingReadState = pendingReadState
   env.updatePendingReadStateNonce = updatePendingReadStateNonce
   env.fromPendingKey = split(',')
