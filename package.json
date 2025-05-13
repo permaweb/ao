@@ -1,7 +1,6 @@
 {
   "name": "@permaweb/ao",
   "description": "ao monorepo",
-  "type": "module",
   "workspaces": [],
   "scripts": {
     "fmt": "standard --fix",
