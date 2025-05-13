@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.49](https://github.com/permaweb/ao/compare/loader@v0.0.48...loader@v0.0.49) (2025-05-13)
+
+
+### Features
+
+* **loader:** add unsafe mode ([7fbe0f2](https://github.com/permaweb/ao/commit/7fbe0f20fe168b4878ce14b3dae170ced3956e99))
+
 ## [0.0.48](https://github.com/permaweb/ao/compare/loader@v0.0.47...loader@v0.0.48) (2025-02-23)
 
 
