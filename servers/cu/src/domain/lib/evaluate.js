@@ -104,6 +104,7 @@ function doesMessageExistWith ({ findMessageBefore }) {
  */
 export function evaluateWith (env) {
   const evaluationCounter = env.evaluationCounter
+  const updatePendingReadStateNonce = env.updatePendingReadStateNonce
   // const gasCounter = env.gasCounter
   const logger = env.logger.child('evaluate')
   
@@ -529,6 +530,9 @@ export function evaluateWith (env) {
                       },
                       { processId: ctx.id }
                     )
+                    if (ctx.key && updatePendingReadStateNonce) {
+                      updatePendingReadStateNonce(ctx.key)(+ordinate)
+                    }
                     /**
                      * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
                      */

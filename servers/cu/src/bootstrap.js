@@ -372,12 +372,14 @@ export const createApis = async (ctx) => {
         pageSize: 1000,
         logger
       }),
+      loadProcessLatest: AoSuClient.loadProcessLatestWith({ fetch: ctx.fetch, logger }),
       locateProcess: locateDataloader.load.bind(locateDataloader),
       isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
       isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
       isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
       isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
       MODULE_MODE: ctx.MODULE_MODE,
+      HYDRATION_MODE_NONCE_LIMIT: ctx.HYDRATION_MODE_NONCE_LIMIT,
       logger
     }
   }
@@ -465,12 +467,14 @@ export const createApis = async (ctx) => {
         pageSize: 1000,
         logger
       }),
+      loadProcessLatest: AoSuClient.loadProcessLatestWith({ fetch: ctx.fetch, logger }),
       locateProcess: locateDataloader.load.bind(locateDataloader),
       isModuleMemoryLimitSupported: WasmClient.isModuleMemoryLimitSupportedWith({ PROCESS_WASM_MEMORY_MAX_LIMIT: ctx.PROCESS_WASM_MEMORY_MAX_LIMIT }),
       isModuleComputeLimitSupported: WasmClient.isModuleComputeLimitSupportedWith({ PROCESS_WASM_COMPUTE_MAX_LIMIT: ctx.PROCESS_WASM_COMPUTE_MAX_LIMIT }),
       isModuleFormatSupported: WasmClient.isModuleFormatSupportedWith({ PROCESS_WASM_SUPPORTED_FORMATS: ctx.PROCESS_WASM_SUPPORTED_FORMATS }),
       isModuleExtensionSupported: WasmClient.isModuleExtensionSupportedWith({ PROCESS_WASM_SUPPORTED_EXTENSIONS: ctx.PROCESS_WASM_SUPPORTED_EXTENSIONS }),
       MODULE_MODE: ctx.MODULE_MODE,
+      HYDRATION_MODE_NONCE_LIMIT: ctx.HYDRATION_MODE_NONCE_LIMIT,
       logger
     }
   }

@@ -27,9 +27,19 @@ const testCases = [
     options: { format: 'wasm32-unknown-emscripten4' } // Format for 32-bit
   },
   {
+    name: 'Emscripten4 (32-bit) Unsafe',
+    binaryPath: './test/emscripten4/process.wasm',
+    options: { format: 'wasm32-unknown-emscripten4', UNSAFE_MEMORY: true }
+  },
+  {
     name: 'Wasm64-Emscripten (64-bit)', // Test for the 64-bit WASM
     binaryPath: './test/wasm64-emscripten/process.wasm', // Path to the 64-bit WASM binary
     options: { format: 'wasm64-unknown-emscripten-draft_2024_02_15' } // Format for 64-bit
+  },
+  {
+    name: 'Wasm64-Emscripten (64-bit) Unsafe',
+    binaryPath: './test/wasm64-emscripten/process.wasm',
+    options: { format: 'wasm64-unknown-emscripten-draft_2024_02_15', UNSAFE_MEMORY: true }
   },
   {
     name: 'Emscripten4 Metering (32-bit)', // Test for the 32-bit WASM
@@ -37,9 +47,19 @@ const testCases = [
     options: { format: 'wasm32-unknown-emscripten-metering' } // Format for 32-bit metering
   },
   {
+    name: 'Emscripten4 Metering (32-bit) Unsafe',
+    binaryPath: './test/emscripten4/process.wasm',
+    options: { format: 'wasm32-unknown-emscripten-metering', UNSAFE_MEMORY: true }
+  },
+  {
     name: 'Wasm64-Emscripten Metering (64-bit)', // Test for the 64-bit WASM
     binaryPath: './test/wasm64-emscripten/process.wasm', // Path to the 64-bit WASM binary
     options: { format: 'wasm64-unknown-emscripten-draft_2024_10_16-metering' } // Format for 64-bit metering
+  },
+  {
+    name: 'Wasm64-Emscripten Metering (64-bit) Unsafe',
+    binaryPath: './test/wasm64-emscripten/process.wasm',
+    options: { format: 'wasm64-unknown-emscripten-draft_2024_10_16-metering', UNSAFE_MEMORY: true }
   }
 ]
 
@@ -79,7 +99,7 @@ describe('AoLoader Functionality Tests', () => {
       it('load wasm and evaluate message', async () => {
         const handle = await AoLoader(wasmBinary, options)
         const mainResult = await handle(null, getMsg('return \'Hello World\''), getEnv())
-        //const mainResult = await handle(null, getMsg("print(os.getenv(\"PATH\"))"),getEnv())
+        // const mainResult = await handle(null, getMsg("print(os.getenv(\"PATH\"))"),getEnv())
         // Check basic properties of the result
         assert.ok(mainResult.Memory)
         assert.ok(mainResult.hasOwnProperty('Messages'))
