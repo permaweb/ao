@@ -122,7 +122,7 @@ export function dryRunWith (env) {
            * If the dryrun has no messageTxId, then we need to
            * evaluate up to the nonce of the latest message on the process
            */
-          evalToNonce: res?.evalToNonce
+          evalToNonce: ctx?.evalToNonce
         }).map((res) => {
           const cached = { age: new Date().getTime(), ctx: res }
           /**
