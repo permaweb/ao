@@ -24,7 +24,7 @@ const removePendingReadState = (key) => (res) => {
 }
 const updatePendingReadStateNonce = (key) => (nonce) => {
   const entry = pendingReadState.get(key)
-  if (!entry) return
+  if (!entry || (!entry.currentNonce && entry.currentNonce !== 0)) return
   entry.currentNonce = nonce
   pendingReadState.set(key, entry)
   return nonce
@@ -165,12 +165,12 @@ export function readStateWith (env) {
 
         // Get the nonce to, from, and difference
         const nonceTo = +ordinate || evalToNonce
-        const nonceFrom = chainedReadState.currentNonce
+        const nonceFrom = chainedReadState?.currentNonce || 0
         const nonceDifference = +nonceTo - +nonceFrom
 
         // If chained and nonce difference is greater than nonceLimit, reject
         if (nonceDifference > nonceLimit) {
-          return Rejected({ status: 503, message: `Nonce limit exceeded: the process is currently hydrating with >${nonceLimit} nonces remaining. Please try again later.` })
+          return Rejected({ status: 503, message: `Nonce limit exceeded: process ${processId} is currently hydrating with >${nonceLimit} nonces remaining (${nonceDifference} remaining). Please try again later.` })
         }
         return Resolved(res)
       })
