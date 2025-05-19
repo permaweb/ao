@@ -324,7 +324,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
         () => {
           const bodyIsValid = body &&
             body.edges.length === (+to - +from + 1) &&
-            +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce')?.value === +from
+            +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce' || t.name === 'Slot')?.value === +from
           if (bodyIsValid) return body
           return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
         },
@@ -484,7 +484,7 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
       () => {
         const bodyIsValid = body &&
           body.edges.length === 1 &&
-          +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce')?.value === +messageUid
+          +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce' || t.name === 'Slot')?.value === +messageUid
         if (bodyIsValid) return body
         return fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes)
       },
