@@ -10,3 +10,9 @@ export const createLogger = (name = '@permaweb/aoconnect') => {
 
   return logger
 }
+
+export const verboseLog = (...args) => {
+  if (process.env.DEBUG) {
+    console.log(...args)
+  }
+}

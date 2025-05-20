@@ -248,7 +248,7 @@ function ao.spawn(module, msg)
             Action = "Spawned",
             From = ao.id,
             ["Reference"] = spawnRef
-        }, callback)
+        }, callback)`
     end
 
     spawn.receive = function()
