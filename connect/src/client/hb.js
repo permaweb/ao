@@ -5,6 +5,7 @@ import base64url from 'base64url'
 import { joinUrl } from '../lib/utils.js'
 import { encode } from './hb-encode.js'
 import { toHttpSigner, toDataItemSigner } from './signer.js'
+import { verboseLog } from '../logger.js'
 
 let reqFormatCache = {}
 
@@ -12,7 +13,7 @@ let reqFormatCache = {}
  * Map data item members to corresponding HB HTTP message
  * shape
  */
-export async function encodeDataItem ({ processId, data, tags, anchor }) {
+export async function encodeDataItem({ processId, data, tags, anchor }) {
   const obj = {}
 
   if (processId) obj.target = processId
@@ -30,7 +31,7 @@ export async function encodeDataItem ({ processId, data, tags, anchor }) {
   return res
 }
 
-function toSigBaseArgs ({ url, method, headers, includePath = false }) {
+function toSigBaseArgs({ url, method, headers, includePath = false }) {
   headers = new Headers(headers)
   return {
     /**
@@ -48,7 +49,7 @@ function toSigBaseArgs ({ url, method, headers, includePath = false }) {
   }
 }
 
-export function httpSigName (address) {
+export function httpSigName(address) {
   const decoded = base64url.toBuffer(address)
   const hexString = [...decoded.subarray(1, 9)]
     .map(byte => byte.toString(16).padStart(2, '0'))
@@ -96,7 +97,7 @@ export function processIdWith({ logger: _logger, signer, HB_URL }) {
       ))
       .map(logger.tap('Sending HTTP signed message to HB: %o'))
       .chain(fromPromise(res => {
-        
+
         return hashAndBase64(extractSignature(res.headers.Signature))
       }))
       .toPromise()
@@ -108,23 +109,26 @@ export function requestWith(args) {
   let signingFormat = args.signingFormat
   const logger = _logger.child('request')
 
-  return async function(fields) {
+  return async function (fields) {
     const { path, method, ...restFields } = fields
-  
+
     signingFormat = fields.signingFormat
     if (!signingFormat) {
       signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
     }
-    
-    try {
 
-      let fetch_req = { }
-      //logger.tap('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields)()
+    try {
+      let fetch_req = {}
+
+      verboseLog('SIGNING FORMAT: ', signingFormat, '. REQUEST: ', fields);
+
       if (signingFormat === 'ANS-104') {
         const ans104Request = toANS104Request(restFields)
-        // logger.tap('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)()
+        verboseLog('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
+
         const signedRequest = await toDataItemSigner(signer)(ans104Request.item)
-        //logger.tap('SIGNED ANS-104 ITEM: ', signedRequest)()
+        verboseLog('SIGNED ANS-104 ITEM: ', signedRequest)
+
         fetch_req = {
           body: signedRequest.raw,
           url: joinUrl({ url: HB_URL, path }),
@@ -141,63 +145,65 @@ export function requestWith(args) {
           method: method,
           headers: req.headers
         })
-        
+
         const signedRequest = await toHttpSigner(signer)(signingArgs)
         fetch_req = { ...signedRequest, body: req.body, path, method }
       }
-      
-      // Log the request
-      // logger.tap('Sending signed message to HB: %o')(fetch_req)
-      
+
+      verboseLog('Sending signed message to HB: %o')
+
       // Step 4: Send the request
-      const res = await fetch(fetch_req.url, { 
-        method: fetch_req.method, 
-        headers: fetch_req.headers, 
-        body: fetch_req.body, 
-        redirect: 'follow' 
+      const res = await fetch(fetch_req.url, {
+        method: fetch_req.method,
+        headers: fetch_req.headers,
+        body: fetch_req.body,
+        redirect: 'follow'
       })
-      
- //     console.log('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
-      
+
+      verboseLog('PUSH FORMAT: ', signingFormat, '. RESPONSE:', res)
+
       // Step 5: Handle specific status codes
       if (res.status === 422 && signingFormat === 'HTTP') {
         // Try again with different signing format
         reqFormatCache[fields.path] = 'ANS-104'
         return requestWith({ ...args, signingFormat: 'ANS-104' })(fields)
       }
-      
+
+      if (res.status == 500) {
+        verboseLog('ERROR RESPONSE: ', res)
+        throw new Error(`${res.status}: ${await res.text()}`)
+      }
+
       if (res.status === 404) {
-        // logger.tap('ERROR RESPONSE: ', res)()
-        //process.exit(1)
+        verboseLog('ERROR RESPONSE: ', res)
         throw new Error(`${res.status}: ${await res.text()}`)
       }
-      
+
       if (res.status >= 400) {
-        // logger.tap('ERROR RESPONSE: ', res)()
-        process.exit(1)
+        logger.tap('ERROR RESPONSE: ', res)
         throw new Error(`${res.status}: ${await res.text()}`)
       }
-      
+
       if (res.status >= 300) {
         return res
       }
+
       let body = await res.text()
-      // console.log(body)
       // Step 6: Return the response
       return {
         headers: res.headers,
-        body: body 
+        body: body
       }
     } catch (error) {
       // Handle errors appropriately
-      //console.error("Request failed:", error)
+      verboseLog('ERROR RESPONSE: ', error)
       throw error
     }
   }
 }
 
 export function toANS104Request(fields) {
-  // logger.tap('TO ANS 104 REQUEST: ', fields)()
+  verboseLog('TO ANS 104 REQUEST: ', fields)
   const dataItem = {
     target: fields.target,
     anchor: fields.anchor ?? '',
@@ -234,7 +240,7 @@ export function toANS104Request(fields) {
       ]),
     data: fields?.data || ''
   }
-  // logger.tap('ANS104 REQUEST: ', dataItem)()
+  verboseLog('ANS104 REQUEST: ', dataItem)
   return { headers: { 'Content-Type': 'application/ans104', 'codec-device': 'ans104@1.0' }, item: dataItem }
 }
 
