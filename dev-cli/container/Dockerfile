@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.59
+FROM emscripten/emsdk:3.1.68
 LABEL maintainer="tom wilson <tom@hyper.io>"
 
 # The working directory used by the base image is /src, so we can mount volumes to there
@@ -12,6 +12,12 @@ RUN apt-get install -y curl vim make gcc libreadline6-dev libssl-dev zlib1g-dev 
 ENV LUA_VERSION=5.3.4
 ENV LUAROCKS_VERSION=2.4.4
 ENV PYTHON_VERSION=3.6.6
+ENV EMCC_FLAGS_BASE="-sWASM=1 -sPURE_WASI=1 -fno-rtti -fno-exceptions -Wno-experimental -sSUPPORT_LONGJMP=1 -sMINIMAL_RUNTIME=1 -sDYNCALLS=1"
+ENV EMCC_PRE_LINK="${EMCC_FLAGS_BASE} -s ERROR_ON_UNDEFINED_SYMBOLS=0 " 
+ENV EMCC_LINK_FLAGS="${EMCC_FLAGS_BASE}"
+ENV EMCC_32="emcc ${EMCC_PRE_LINK}"
+ENV EMCC_64="emcc ${EMCC_PRE_LINK} -s MEMORY64=1"
+RUN embuilder --wasm64 build libcompiler_rt-wasm-sjlj
 
 # install deno
 # RUN curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -53,12 +59,13 @@ RUN cp -r /lua-${LUA_VERSION} /lua-${LUA_VERSION}-32
 # And, re-compile lua with "generic WASM"
 RUN cd /lua-${LUA_VERSION} && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='${EMCC_64}'
 
 # And, re-compile lua with "generic WASM 32-bit"
+# Copy the contents of ./src/lua to the lua-5.3.4-32/src directory
 RUN cd /lua-${LUA_VERSION}-32 && \
   make clean && \
-  make generic CC='emcc -s WASM=1 -s SUPPORT_LONGJMP=1' 
+  make generic CC='${EMCC_32}'
 
 
 #############################
@@ -101,13 +108,13 @@ RUN chmod +x /usr/local/bin/ao-build-module
 ###################################
 COPY ./src/aolibc /opt/aolibc
 ## Build aolibc for 32-bit and rename to aolibc32
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4-32/src/liblua.a -I/lua-5.3.4-32/src" && cp ./aolibc.a ./aolibc32.a
+RUN cd /opt/aolibc && make CC="${EMCC_32} -I/lua-5.3.4-32/src" && cp ./aolibc.a ./aolibc32.a
 RUN rm /opt/aolibc/aolibc.a
 RUN rm /opt/aolibc/aostdio.o
 # Build aolibc for 64-bit
-RUN cd /opt/aolibc && make CC="emcc -s WASM=1 -s MEMORY64=1 -s SUPPORT_LONGJMP=1 /lua-5.3.4/src/liblua.a -I/lua-5.3.4/src"
+RUN cd /opt/aolibc && make CC="${EMCC_64} -I/lua-5.3.4/src"
 
-ENV CC='emcc -s WASM=1'
+ENV CC='${EMCC_32}'
 ENV NM='/emsdk/upstream/bin/llvm-nm'
 
 ###########################################
