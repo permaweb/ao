@@ -97,6 +97,7 @@ export function readStateWith (env) {
         .chain(loadProcess)
         .chain((ctx) => {
           startNonce = ctx.ordinate
+
           /**
            * An exact match was found, either a cached evaluation
            * or the cache memory needed. So just return it without
@@ -160,8 +161,18 @@ export function readStateWith (env) {
         const { chainedTo, isRepeatEntry } = res
         if (!chainedTo && !isRepeatEntry) return Resolved(res)
 
+        // Maximum of 50 traverses through the map
+        let fallbackAmount = 50
         // Get the readState that we are chaining to / repeat of
-        const chainedReadState = pendingReadState.get(chainedTo || isRepeatEntry)
+        let chainedReadState = pendingReadState.get(chainedTo || isRepeatEntry)
+
+        // Traverse through the map to find the original readState
+        if (startNonce === 0) {
+          while (fallbackAmount > 0 && chainedReadState?.chainedTo && pendingReadState.has(chainedReadState.chainedTo)) {
+            chainedReadState = pendingReadState.get(chainedReadState.chainedTo)
+            fallbackAmount--
+          }
+        }
 
         // Get the nonce to, from, and difference
         const nonceTo = +ordinate || evalToNonce
@@ -169,7 +180,7 @@ export function readStateWith (env) {
         const nonceDifference = +nonceTo - +nonceFrom
 
         // If chained and nonce difference is greater than nonceLimit, reject
-        if (nonceDifference > nonceLimit) {
+        if (nonceDifference > nonceLimit && nonceFrom !== 0) {
           return Rejected({ status: 503, message: `Nonce limit exceeded: process ${processId} is currently hydrating with >${nonceLimit} nonces remaining (${nonceDifference} remaining). Please try again later.` })
         }
         return Resolved(res)
