@@ -644,7 +644,12 @@ pub async fn read_latest_message(deps: Arc<Deps>, process_id: String) -> Result<
     if let Ok(Some(message)) = deps.data_store.get_latest_message(&process_id).await {
         return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
     } else {
-        Err("Latest message not available".to_string())
+        if let Ok(process) = deps.data_store.get_process(&process_id).await {
+            let message = Message::from_process(process)?;
+            return serde_json::to_string(&message).map_err(|e| format!("{:?}", e));
+        } else {
+            Err("Latest message not available".to_string())
+        }
     }
 }
 

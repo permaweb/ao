@@ -73,13 +73,15 @@ export function pushMsgWith ({
         crank: () => of({ ...res })
           .chain((ctx) => {
             const { msgs, initialTxId, messageId: parentId, number } = ctx
-            return crank({
-              msgs: [msgs[number]],
-              spawns: [],
-              assigns: [],
-              initialTxId,
-              parentId
-            })
+            console.log('push v', msgs[number])
+            console.log('push v', msgs[number].msg.Tags)
+            // return crank({
+            //   msgs: [msgs[number]],
+            //   spawns: [],
+            //   assigns: [],
+            //   initialTxId,
+            //   parentId
+            // })
           })
           .bimap(
             (res) => {
