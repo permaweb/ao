@@ -111,7 +111,7 @@ def main():
             "-msimd128",
             "--pre-js",
             "/opt/pre.js",
-            # "-lcompiler_rt-wasm-sjlj",
+            "-lcompiler_rt-wasm-sjlj",
         ]
     )
     

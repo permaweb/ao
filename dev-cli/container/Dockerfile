@@ -12,7 +12,7 @@ RUN apt-get install -y curl vim make gcc libreadline6-dev libssl-dev zlib1g-dev 
 ENV LUA_VERSION=5.3.4
 ENV LUAROCKS_VERSION=2.4.4
 ENV PYTHON_VERSION=3.6.6
-ENV EMCC_FLAGS_BASE="-sWASM=1 -sPURE_WASI=1 -fno-rtti -fno-exceptions -Wno-experimental -sSUPPORT_LONGJMP=1 -sMINIMAL_RUNTIME=1 -sDYNCALLS=1"
+ENV EMCC_FLAGS_BASE="-sWASM=1 -sPURE_WASI=1 -fno-rtti -Wno-experimental -sSUPPORT_LONGJMP=wasm"
 ENV EMCC_PRE_LINK="${EMCC_FLAGS_BASE} -s ERROR_ON_UNDEFINED_SYMBOLS=0 " 
 ENV EMCC_LINK_FLAGS="${EMCC_FLAGS_BASE}"
 ENV EMCC_32="emcc ${EMCC_PRE_LINK}"
