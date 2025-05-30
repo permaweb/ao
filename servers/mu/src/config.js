@@ -78,7 +78,9 @@ export const domainConfigSchema = z.object({
   RELAY_MAP: jsonObjectSchema,
   ENABLE_PUSH: z.boolean(),
   ENABLE_CUSTOM_PUSH: z.boolean(),
+  ENABLE_FILE_PUSH: z.boolean(),
   CUSTOM_CU_MAP_FILE_PATH: z.string(),
+  RESULT_FILE_DIRECTORY: z.string(),
   IP_WALLET_RATE_LIMIT: positiveIntSchema,
   IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema
 })
@@ -135,7 +137,9 @@ const CONFIG_ENVS = {
     RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
+    ENABLE_FILE_PUSH: process.env.ENABLE_FILE_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
+    RESULT_FILE_DIRECTORY: process.env.RESULT_FILE_DIRECTORY || 'results',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
   },
@@ -169,7 +173,9 @@ const CONFIG_ENVS = {
     RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
+    ENABLE_FILE_PUSH: process.env.ENABLE_FILE_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
+    RESULT_FILE_DIRECTORY: process.env.RESULT_FILE_DIRECTORY || 'results',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
   }

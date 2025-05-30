@@ -17,7 +17,8 @@ const withPushRoute = (app) => {
           params: { id, number },
           query: {
             'process-id': processId,
-            'custom-cu': customCu
+            'custom-cu': customCu,
+            'result-file': resultFile
           }
         } = req
 
@@ -28,7 +29,7 @@ const withPushRoute = (app) => {
           return res.status(400).send({ error: `'number' parameter must be a valid number` });
         }
 
-        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCu })
+        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCu, resultFile })
           .chain(pushMsg)
           .bimap(
             (e) => {
