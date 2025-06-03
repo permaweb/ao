@@ -22,7 +22,7 @@ export const [PROCESSES_TABLE, BLOCKS_TABLE, MODULES_TABLE, EVALUATIONS_TABLE, M
  * Use a high value unicode character to terminate a range query prefix.
  * This will cause only string with a given prefix to match a range query
  */
-export const COLLATION_SEQUENCE_MAX_CHAR = '\u{10FFFF}'
+export const COLLATION_SEQUENCE_MAX_CHAR = '9'
 
 /**
  * This technically isn't the smallest char, but it's small enough for our needs
