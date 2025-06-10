@@ -1,3 +1,4 @@
+import { messageSchema } from '../model.js'
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
@@ -58,7 +59,14 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
     )
       .then((res) => res.json())
       .then((res) => {
-        return res
+        const parsedMessages = res.Messages.filter(msg => {
+          const { success, error } = messageSchema.safeParse(msg)
+          if (!success && error) {
+            logger({ log: `Failed to parse message, skipping: ${error.toString()}` })
+          }
+          return success
+        })
+        return { ...res, Messages: parsedMessages }
       })
       .then(
         (res) =>

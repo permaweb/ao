@@ -18,7 +18,7 @@ import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 import { resultsWith } from './lib/results/index.js'
-import { dryrunWith } from './lib/dryrun/index.js'
+import { dryrunMainnetWith, dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
 // import { getOperator, getNodeBalance } from './lib/payments/index.js'
@@ -43,10 +43,10 @@ export { serializeCron } from './lib/serializeCron/index.js'
 /**
  * @param {{ createDataItemSigner: (wallet:any) => Types['signer'], createSigner: any }}
  */
-export function connectWith({ createDataItemSigner, createSigner }) {
+export function connectWith ({ createDataItemSigner, createSigner }) {
   const _logger = createLogger()
 
-  function legacyMode({
+  function legacyMode ({
     MODE,
     GRAPHQL_URL,
     GRAPHQL_MAX_RETRIES,
@@ -204,7 +204,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     }
   }
 
-  function mainnetMode({
+  function mainnetMode ({
     MODE,
     signer,
     GRAPHQL_URL,
@@ -253,14 +253,27 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
+    const dryrunLogger = logger.child('dryrun')
+    const dryrun = dryrunMainnetWith({
+      dryrunFetch: HbClient.requestWith({
+        fetch,
+        logger: dryrunLogger,
+        HB_URL: URL,
+        signer
+      }),
+      request,
+      logger: dryrunLogger
+    })
 
-    return { MODE: 'mainnet', 
-      request, 
+    return {
+      MODE: 'mainnet',
+      request,
+      dryrun,
       createSigner: mainnetSigner,
       createDataItemSigner: mainnetDataItemSigner,
       getMessages,
       getLastSlot,
-      getMessageById,
+      getMessageById
       /**
       * do we want helpers for payments?
       *
@@ -329,7 +342,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
    * @param {ConnectArgs} args
    * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof mainnetMode>}
    */
-  function connect(args = {}) {
+  function connect (args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
 
     if (!GRAPHQL_URL) { GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' }) }
