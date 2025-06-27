@@ -1,5 +1,5 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { __, assoc, T } from 'ramda'
+import { __, assoc } from 'ramda'
 import z from 'zod'
 import { checkStage, setStage } from '../utils.js'
 import { uploadDataItemSchema, writeDataItemSchema } from '../dal.js'
@@ -35,26 +35,26 @@ export function writeMessageTxWith (env) {
 
     return of()
       .chain(() => {
-        if(RELAY_MAP && Object.keys(RELAY_MAP).includes(ctx.tx.processId)) {
-          if(ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Action' && t.value === 'Credit-Notice')) {
-            let sender = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Sender')?.value;
-            let amount = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Quantity')?.value;
+        if (RELAY_MAP && Object.keys(RELAY_MAP).includes(ctx.tx.processId)) {
+          if (ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Action' && t.value === 'Credit-Notice')) {
+            const sender = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Sender')?.value
+            const amount = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Quantity')?.value
 
-            if(!amount || !sender) {
+            if (!amount || !sender) {
               return Rejected(new Error('Must set Sender and Quantity to top up.', { cause: ctx }))
             }
 
-            if(!Object.keys(RELAY_MAP).includes("ALLOWED_CURRENCIES")) {
+            if (!Object.keys(RELAY_MAP).includes('ALLOWED_CURRENCIES')) {
               return Rejected(new Error('No allowed currencies configured on this MU.', { cause: ctx }))
             }
 
-            if(!RELAY_MAP["ALLOWED_CURRENCIES"].includes("ALL")) {
-              if(!RELAY_MAP["ALLOWED_CURRENCIES"].includes(ctx.cachedMsg.fromProcessId)) {
+            if (!RELAY_MAP.ALLOWED_CURRENCIES.includes('ALL')) {
+              if (!RELAY_MAP.ALLOWED_CURRENCIES.includes(ctx.cachedMsg.fromProcessId)) {
                 return Rejected(new Error('This currency is not supported on this MU.', { cause: ctx }))
               }
             }
-            
-            return topUp({ctx, relayUrls: RELAY_MAP[ctx.tx.processId], amount, recipientProcessId: sender})
+
+            return topUp({ ctx, relayUrls: RELAY_MAP[ctx.tx.processId], amount, recipientProcessId: sender })
               .bimap(
                 (e) => {
                   return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
@@ -68,10 +68,19 @@ export function writeMessageTxWith (env) {
       .chain(() => {
         if (ctx.schedLocation) {
           ctx = setStage('write-message', 'write-message-su')(ctx)
-    
+
           if (!checkStage('write-message-su')(ctx)) return Resolved(ctx)
-    
-          return writeDataItem({ suUrl: ctx.schedLocation.url, data: ctx.tx.data.toString('base64'), logId: ctx.logId })
+
+          return writeDataItem({
+            suUrl: ctx.schedLocation.url,
+            data: ctx.tx.data.toString('base64'),
+            logId: ctx.logId,
+            schedulerType: ctx.schedulerType,
+            processId: ctx.tx.processId,
+            id: ctx.dataItem?.id || '',
+            tags: ctx.dataItem?.tags || [],
+            dataStr: ctx.dataItem?.data || ''
+          })
             .map(assoc('schedulerTx', __, ctx))
             .map(ctxSchema.parse)
             .bimap(
@@ -82,9 +91,9 @@ export function writeMessageTxWith (env) {
             )
         } else {
           ctx = setStage('write-message', 'write-message-arweave')(ctx)
-    
+
           if (!checkStage('write-message-arweave')(ctx)) return Resolved(ctx)
-    
+
           return writeDataItemArweave(ctx.tx.data)
             .map(assoc('arweaveTx', __, ctx))
             .map(ctxSchemaArweave.parse)
