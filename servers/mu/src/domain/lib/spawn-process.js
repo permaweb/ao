@@ -43,13 +43,17 @@ export function spawnProcessWith (env) {
 
     const tagsIn = Tags.filter(tag => ![
       'Data-Protocol',
-      'Type',
-      'Variant'
+      'Type'
     ].includes(tag.name))
+
+    // Preserve existing Variant tag if present, otherwise default to ao.N.1 for backwards compatibility
+    const existingVariant = Tags.find(tag => tag.name === 'Variant')
+    if (!existingVariant) {
+      tagsIn.push({ name: 'Variant', value: 'ao.N.1' })
+    }
 
     tagsIn.push({ name: 'Data-Protocol', value: 'ao' })
     tagsIn.push({ name: 'Type', value: 'Process' })
-    tagsIn.push({ name: 'Variant', value: 'ao.TN.1' })
     tagsIn.push({ name: 'From-Process', value: ctx.cachedSpawn.processId })
 
     if (ctx.cachedSpawn.initialTxId) {
