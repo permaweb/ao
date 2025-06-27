@@ -5,6 +5,7 @@ function isWalletWith ({
   fetch,
   histogram,
   ARWEAVE_URL,
+  GRAPHQL_URL,
   logger,
   setById,
   getById
@@ -49,7 +50,7 @@ function isWalletWith ({
         walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
           .then(okRes),
       {
-        maxRetries: 6,
+        maxRetries: 4,
         delay: 500,
         log: logger,
         logId,
@@ -62,13 +63,75 @@ function isWalletWith ({
         })
       })
       .catch((_err) => {
-        return setById(id, { isWallet: true }).then(() => {
-          return true
+        logger({ log: `Arweave HEAD request failed for ${id}, trying GraphQL fallback`, logId })
+
+        const query = `
+          query GetTransactionByID($id: ID!) {
+            transactions(
+              tags: [
+                {name:"Data-Protocol", values: ["ao"]},
+                {name:"Type", values: ["Process"]}
+              ]
+              first: 100
+              sort:HEIGHT_DESC
+              ids:[$id]
+            ) {
+              edges {
+                cursor
+                node {
+                  id 
+                  data {
+                    size
+                  }
+                  owner{
+                    address
+                  }
+                  tags {
+                    name 
+                    value 
+                  }
+                  bundledIn {
+                    id
+                  }
+                  signature
+                  recipient
+                }
+              }
+            }
+          }
+        `
+
+        return fetch(GRAPHQL_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            variables: { id }
+          })
         })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`GraphQL request failed: ${response.statusText}`)
+            }
+            return response.json()
+          })
+          .then(result => {
+            const hasProcessTransaction = result.data?.transactions?.edges?.length > 0
+            const isWallet = !hasProcessTransaction
+
+            logger({ log: `GraphQL result for ${id}: ${hasProcessTransaction ? 'found process' : 'no process found'}, isWallet: ${isWallet}`, logId })
+
+            return setById(id, { isWallet }).then(() => isWallet)
+          })
+          .catch(gqlError => {
+            logger({ log: `GraphQL fallback also failed for ${id}, defaulting to wallet: ${gqlError.message}`, logId })
+            return setById(id, { isWallet: true }).then(() => {
+              return true
+            })
+          })
       })
   }
 }
-
 
 /**
  * @name fetchTransactionDetails
@@ -79,7 +142,7 @@ function isWalletWith ({
  * @param {function} fetch - The fetch implementation to use for HTTP requests.
  * @returns {Promise<object>} The GraphQL query result.
  */
-function fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) {
+function fetchTransactionDetailsWith ({ fetch, GRAPHQL_URL }) {
   return async (ids) => {
     const query = `
       query {
@@ -130,22 +193,21 @@ function fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }) {
           }
         }
       }
-    `;
-  
+    `
+
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
-    });
-  
-    if (!response.ok) {
-      throw new Error(`Failed to fetch transaction details: ${response.statusText}`);
-    }
-  
-    return response.json();
-  } 
-}
+    })
 
+    if (!response.ok) {
+      throw new Error(`Failed to fetch transaction details: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+}
 
 export default {
   isWalletWith,

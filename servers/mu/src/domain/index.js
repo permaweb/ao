@@ -84,6 +84,7 @@ const arweave = Arweave.init()
  */
 export const createApis = async (ctx) => {
   const CU_URL = ctx.CU_URL
+  const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
@@ -165,7 +166,7 @@ export const createApis = async (ctx) => {
     minWorkers: queueIds.length, // We must have as many workers as there are queues to persist
     maxWorkers: ctx.MAX_WORKERS,
     onTerminateWorker: (worker) => {
-      console.log('123Terminating worker', worker)
+      console.log('Terminating worker', worker)
     },
     onCreateWorker: () => {
       let queueId = randomBytes(8).toString('hex')
@@ -219,11 +220,12 @@ export const createApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
+    fetchHyperBeamResult: schedulerClient.fetchHyperBeamResultWith({ fetch, histogram, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: sendDataItemLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, logger: sendDataItemLogger }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
@@ -400,11 +402,12 @@ export const createResultApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processMsgLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processMsgLogger, wallet: MU_WALLET }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
+    fetchHyperBeamResult: schedulerClient.fetchHyperBeamResultWith({ fetch, histogram, logger: processMsgLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
     RELAY_MAP,
     topUp: RelayClient.topUpWith({
@@ -423,7 +426,7 @@ export const createResultApis = async (ctx) => {
     locateProcess: locate,
     locateNoRedirect,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED

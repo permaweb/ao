@@ -10,13 +10,25 @@ const ctxSchema = z.object({
   initialTxId: z.any()
 }).passthrough()
 
-function fetchResultWith ({ fetchResult }) {
+function fetchResultWith ({ fetchResult, fetchHyperBeamResult }) {
   const fetchResultAsync = fromPromise(resultSchema.implement(fetchResult))
+  const fetchHyperBeamResultAsync = fetchHyperBeamResult ? fromPromise(fetchHyperBeamResult) : null
 
   return (ctx) => {
     return of(ctx)
       .chain(() => {
-        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
+        // Use HyperBeam result fetching if scheduler type is hyperbeam and we have assignment info
+        if (ctx.schedulerType === 'hyperbeam' && fetchHyperBeamResultAsync && ctx.schedulerTx?.slot) {
+          return fetchHyperBeamResultAsync({
+            processId: ctx.tx.processId,
+            suUrl: ctx.schedLocation.url,
+            assignmentNum: ctx.schedulerTx.slot, // Use scheduler tx id as assignment number
+            logId: ctx.logId
+          })
+        } else {
+          // Use legacy CU result fetching
+          return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
+        }
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages

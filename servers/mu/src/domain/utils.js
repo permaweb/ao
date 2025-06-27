@@ -233,6 +233,31 @@ export const okRes = (res) => {
 }
 
 /**
+ * Checks if a HB response is OK. Otherwise, throw response.
+ *
+ * @param {Response} res - The response to check
+ * @returns
+ */
+export const okResHb = (res) => {
+  if (+res.status === 200) return res
+  throw res
+}
+
+/**
+ * Checks if a message is a HyperBeam message.
+ *
+ * @param {Object} msg - The message to check
+ * @returns
+ */
+export const isHyperBeamMessage = (msg) => {
+  let tags = []
+  if (Array.isArray(msg)) tags = msg
+  else if (msg.tags) tags = msg.tags
+  else if (msg.dataItem.tags) tags = msg.Tags
+
+  return tags.find(tag => tag.name === 'Variant')?.value === 'ao.N.1'
+}
+/**
  * Checks if we are at a provided stage
  *
  * @param {String} stage - The stage to check against

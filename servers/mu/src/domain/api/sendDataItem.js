@@ -23,6 +23,7 @@ export function sendDataItemWith ({
   locateScheduler,
   locateProcess,
   fetchResult,
+  fetchHyperBeamResult,
   crank,
   logger,
   fetchSchedulerProcess,
@@ -37,7 +38,7 @@ export function sendDataItemWith ({
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, logger })
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
@@ -235,6 +236,8 @@ export function sendDataItemWith ({
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
           .chain(({ isMessage }) => {
             if (isMessage) {
+              const variant = ctx.dataItem.tags.find(tag => tag.name === 'Variant')?.value
+              const schedulerType = variant === 'ao.N.1' ? 'hyperbeam' : 'legacy'
               /*
                   add schedLocation into the context if the
                   target is a process. if its a wallet dont add
@@ -243,7 +246,7 @@ export function sendDataItemWith ({
               */
               return locateProcessLocal(ctx.dataItem.target)
                 .map(logger.tap({ log: 'Successfully located process scheduler', logId: ctx.logId }))
-                .chain((schedLocation) => sendMessage({ ...ctx, schedLocation }))
+                .chain((schedLocation) => sendMessage({ ...ctx, schedLocation, schedulerType }))
             }
             return sendProcess(ctx)
           })
