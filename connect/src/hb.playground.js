@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import Arweave from 'arweave'
 import { tap } from 'ramda'
 
-import { connect } from './index.js'
+import { connect, createDataItemSigner } from './index.js'
 
 describe('hb playground', () => {
   /**
@@ -30,54 +30,24 @@ describe('hb playground', () => {
     test('should relay the message through HyperBEAM', async () => {
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
 
-      const { request, spawn, message, result, createDataItemSigner } = connect({
-        MODE: 'mainnet',
-        wallet,
-        device: 'process@1.0',
-        URL: process.env.HB_URL || 'http://localhost:8734'
+      const { message } = connect({
+        MODE: 'legacy',
+        MU_URL: 'http://localhost:3004'
       })
 
-      const address = await fetch(process.env.HB_URL + '/~meta@1.0/info/address').then((res) => res.text())
-
-      console.log(address)
-      // uncomment examples as needed
-
-      const res = await request(`~simple-pay@1.0/balance?address=${address}`, {
-        method: 'GET'
+      const msg1 = await message({
+        process: 'oQHqnr9IZkrA6ENrgVy9QYMlpDUixCHqN5Gl_FjpFj0',
+        signer: createDataItemSigner(wallet),
+        tags: [
+          { name: 'Variant', value: 'ao.N.1' },
+          { name: 'Type', value: 'Message' },
+          { name: 'Action', value: 'Foo' },
+          { name: 'TagData', value: 'Foo' }
+        ],
+        data: 'ao.send({ Target = ao.id, Data = "Resultant Message" })'
       })
 
-      // const p = await spawn({
-      //   scheduler: address,
-      //   module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
-      //   data: 'print("Process initialized.")',
-      //   tags: [
-      //     { name: 'device', value: 'process@1.0' },
-      //     { name: 'scheduler-device', value: 'scheduler@1.0' },
-      //     { name: 'execution-device', value: 'compute-lite@1.0' },
-      //     { name: 'authority', value: address },
-      //     { name: 'scheduler-location', value: address },
-      //     { name: 'scheduler', value: address },
-      //     { name: 'random-seed', value: randomBytes(16).toString('hex') }
-      //   ],
-      //   signer: createDataItemSigner()
-      // }).then(tap(console.log))
-
-      // const m = await message({
-      //   process: p,
-      //   tags: [
-      //     { name: 'Action', value: 'Eval' },
-      //     { name: 'Data-Protocol', value: 'ao' },
-      //     { name: 'Variant', value: 'ao.TN.1' },
-      //     { name: 'Type', value: 'Message' }
-      //   ],
-      //   data: "Send({ Target = ao.id, Data = 'gday mate' })",
-      //   signer: createDataItemSigner()
-      // }).then(tap(console.log))
-
-      // console.log('READY TO LOAD RESULT. m:', m)
-
-      // const r = await result({ message: m, process: p })
-      //   .then(tap(console.log)).catch(console.error)
+      console.log({ msg1 })
     })
   })
 })
