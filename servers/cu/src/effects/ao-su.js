@@ -299,14 +299,14 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           throw err
         }
 
-        if (isHashChainValidationEnabled) {
-          if (!(await isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled))) {
-            logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
-            const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
-            err.status = 422
-            throw err
-          }
-        }
+        // if (isHashChainValidationEnabled) {
+        //   if (!(await isHashChainValid({ assignmentId: prevAssignmentId, hashChain: prevHashChain }, scheduled))) {
+        //     logger('HashChain invalid on message "%s" scheduled on process "%s"', scheduled.message.Id, processId)
+        //     const err = new Error(`HashChain invalid on message ${scheduled.message.Id}`)
+        //     err.status = 422
+        //     throw err
+        //   }
+        // }
 
         prevAssignmentId = scheduled.assignmentId
         prevHashChain = scheduled.message['Hash-Chain']
