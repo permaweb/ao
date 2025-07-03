@@ -7,9 +7,7 @@ import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 
 import Arweave from 'arweave'
-import { tap } from 'ramda'
-
-import { connect, createDataItemSigner } from './index.js'
+import { connect, createSigner } from './index.js'
 
 describe('hb playground', () => {
   /**
@@ -28,26 +26,57 @@ describe('hb playground', () => {
 
   describe('HyperBEAM mode', () => {
     test('should relay the message through HyperBEAM', async () => {
+      const pid = 'C1YcmYARIs5Tjx5CVqM1TH62IBxust8TfhtfHng8DI0'
+      const tags = [
+        { name: 'Action', value: 'Info' }
+      ]
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
-
-      const { message } = connect({
+      const { dryrun: legacyDryrun } = connect({
         MODE: 'legacy',
-        MU_URL: 'http://localhost:3004'
+        GATEWAY_URL: 'https://arweave.net/graphql',
+        URL: 'http://localhost:8734'
       })
 
-      const msg1 = await message({
-        process: 'oQHqnr9IZkrA6ENrgVy9QYMlpDUixCHqN5Gl_FjpFj0',
-        signer: createDataItemSigner(wallet),
-        tags: [
-          { name: 'Variant', value: 'ao.N.1' },
-          { name: 'Type', value: 'Message' },
-          { name: 'Action', value: 'Foo' },
-          { name: 'TagData', value: 'Foo' }
-        ],
-        data: 'ao.send({ Target = ao.id, Data = "Resultant Message" })'
+      const legacyDryrunRes = await legacyDryrun({
+        tags,
+        process: '7GoQfmSOct_aUOWKM4xbKGg6DzAmOgdKwg8Kf-CbHm4',
+        data: '1+15',
+        foo: 'bar'
+      })
+      console.log({ legacyDryrunRes })
+      const { dryrun } = connect({
+        MODE: 'mainnet',
+        device: 'process@1.0',
+        signer: createSigner(wallet),
+        GATEWAY_URL: 'https://arweave.net/graphql',
+        URL: 'http://localhost:8734'
       })
 
-      console.log({ msg1 })
+      // const resultPath = `/${pid}~process@1.0/compute/serialize~json@1.0`
+      // const resultParams = {
+      //   type: 'Message',
+      //   path: resultPath,
+      //   method: 'POST',
+      //   ...tags.filter(t => t.name !== 'device').reduce((a, t) => assoc(t.name, t.value, a), {}),
+      //   data: '1+15',
+      //   'data-protocol': 'ao',
+      //   variant: 'ao.N.1',
+      //   target: pid,
+      //   "accept-bundle": "true",
+      //   "accept-codec": "httpsig@1.0",
+      //   signingFormat: 'ANS-104',
+      // }
+      // const resultRes = await request(resultParams).then((res) => JSON.parse(res.body))
+      // console.dir(resultRes, { depth: null, colors: true })
+
+      const dryrunRes = await dryrun({
+        tags,
+        process: pid,
+        data: '1+15',
+        foo: 'bar',
+        signingFormat: 'ANS-104'
+      })
+      console.log({ dryrunRes })
     })
   })
 })
