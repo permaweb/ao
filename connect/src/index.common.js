@@ -1,5 +1,8 @@
 import { connect as schedulerUtilsConnect, locate } from '@permaweb/ao-scheduler-utils'
 
+import AOCore from '@permaweb/ao-core-libs';
+
+import * as CoreClient from './client/ao-core.js'
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as GatewayClient from './client/gateway.js'
@@ -29,7 +32,7 @@ import { Types } from './dal.js'
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
 const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
-const DEFAULT_RELAY_URL = 'http://relay.ao-hb.xyz'
+const DEFAULT_HB_URL = 'https://tee-6.forward.computer'
 // eslint-disable-next-line no-unused-vars
 const DEFAULT_AO_URL = 'http://m2.ao.computer'
 const DEFAULT_RELAY_CU_URL = 'http://cu.s451-comm3-main.xyz'
@@ -209,7 +212,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     signer,
     GRAPHQL_URL,
     device = DEFAULT_DEVICE,
-    URL = DEFAULT_RELAY_URL,
+    URL = DEFAULT_HB_URL,
     MU_URL = DEFAULT_RELAY_MU_URL,
     CU_URL = DEFAULT_RELAY_CU_URL,
     fetch = defaultFetch
@@ -218,6 +221,11 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     logger('Mode Activated %s', '🐲')
 
     if (!signer) { throw new Error('mainnet mode requires providing a signer to connect()') }
+
+    let aoCoreDeps = { signer };
+    if (URL) aoCoreDeps.url = URL;
+
+    const aoCore = AOCore.init(aoCoreDeps);
 
     const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
 
@@ -253,9 +261,14 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
+    const message = CoreClient.messageWith({ aoCore });
+    const spawn = CoreClient.spawnWith({ aoCore });
 
-    return { MODE: 'mainnet', 
-      request, 
+    return {
+      MODE: 'mainnet',
+      spawn,
+      message,
+      request,
       createSigner: mainnetSigner,
       createDataItemSigner: mainnetDataItemSigner,
       getMessages,
