@@ -23,7 +23,7 @@ const spawn = CoreClient.spawnWith({ aoCore });
 
 describe('ao-core', () => {
     describe('spawn', () => {
-        test.skip('spawn a process with ao-core', async () => {
+        test('spawn a process with ao-core', async () => {
             const processId = await spawn({
                 tags: [{ name: 'Name', value: 'Test-Process' }]
             });
@@ -34,10 +34,10 @@ describe('ao-core', () => {
         })
     })
     describe('message', () => {
-        test.skip('send a message with ao-core', async () => {
+        test('send a message with ao-core', async () => {
             const processId = 'gvYy6HJdCcd2g00wRLFoYn6IxiWjGtghNT2myJngWTQ'
 
-            console.log(`Using existing process (${processId})... `)
+            console.log(`Using existing process (${processId})...`)
 
             const result = await message({
                 process: processId,
@@ -51,7 +51,7 @@ describe('ao-core', () => {
     })
     describe('spawn and message', () => {
         test('spawn and send a message with ao-core', async () => {
-             const processId = await spawn({
+            const processId = await spawn({
                 tags: [{ name: 'Name', value: 'Test-Process' }]
             });
 
@@ -64,7 +64,7 @@ describe('ao-core', () => {
                 tags: [{ name: 'Action', value: 'Eval' }],
                 data: `require('.process')._version`
             });
-            
+
             assert.equal(result.process, processId)
         })
     })

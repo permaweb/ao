@@ -8,7 +8,7 @@ export function messageWith(deps) {
                 'data-protocol': 'ao',
                 variant: 'ao.N.1',
                 target: args.process,
-                'signingFormat': 'ans104',
+                'signingFormat': 'ANS-104',
                 data: args.data ?? '1234',
                 'accept-bundle': 'true',
                 'accept-codec': 'httpsig@1.0',
@@ -45,7 +45,7 @@ export function spawnWith(deps) {
                 variant: 'ao.N.1',
                 'Authority': AUTHORITY,
                 'accept-bundle': 'true',
-                'signingFormat': 'ans104',
+                'signingFormat': 'ANS-104',
                 Module: MODULE,
                 'execution-device': 'genesis-wasm@1.0',
                 ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
