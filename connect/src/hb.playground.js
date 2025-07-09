@@ -1,15 +1,13 @@
 /* eslint-disable no-unused-vars */
 import { describe, test, before } from 'node:test'
-// import * as assert from 'node:assert'
+import * as assert from 'node:assert'
 import { tmpdir } from 'node:os'
 import { writeFileSync, readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 
 import Arweave from 'arweave'
-import { tap } from 'ramda'
-
-import { connect } from './index.js'
+import { connect, createSigner } from './index.js'
 
 describe('hb playground', () => {
   /**
@@ -28,56 +26,59 @@ describe('hb playground', () => {
 
   describe('HyperBEAM mode', () => {
     test('should relay the message through HyperBEAM', async () => {
+      const pid = 'C1YcmYARIs5Tjx5CVqM1TH62IBxust8TfhtfHng8DI0'
+      const tags = [
+        { name: 'Action', value: 'Info' }
+      ]
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
+      const { dryrun: legacyDryrun } = connect({
+        MODE: 'legacy',
+        GATEWAY_URL: 'https://arweave.net/graphql',
+        URL: 'http://localhost:8734'
+      })
 
-      const { request, spawn, message, result, createDataItemSigner } = connect({
+      const legacyDryrunRes = await legacyDryrun({
+        tags,
+        process: '7GoQfmSOct_aUOWKM4xbKGg6DzAmOgdKwg8Kf-CbHm4',
+        data: '1+15',
+        foo: 'bar'
+      })
+      console.log({ legacyDryrunRes })
+      const { dryrun } = connect({
         MODE: 'mainnet',
-        wallet,
         device: 'process@1.0',
-        URL: process.env.HB_URL || 'http://localhost:8734'
+        signer: createSigner(wallet),
+        GATEWAY_URL: 'https://arweave.net/graphql',
+        URL: 'http://localhost:8734'
       })
 
-      const address = await fetch(process.env.HB_URL + '/~meta@1.0/info/address').then((res) => res.text())
+      // const resultPath = `/${pid}~process@1.0/compute/serialize~json@1.0`
+      // const resultParams = {
+      //   type: 'Message',
+      //   path: resultPath,
+      //   method: 'POST',
+      //   ...tags.filter(t => t.name !== 'device').reduce((a, t) => assoc(t.name, t.value, a), {}),
+      //   data: '1+15',
+      //   'data-protocol': 'ao',
+      //   variant: 'ao.N.1',
+      //   target: pid,
+      //   "accept-bundle": "true",
+      //   "accept-codec": "httpsig@1.0",
+      //   signingFormat: 'ANS-104',
+      // }
+      // const resultRes = await request(resultParams).then((res) => JSON.parse(res.body))
+      // console.dir(resultRes, { depth: null, colors: true })
 
-      console.log(address)
-      // uncomment examples as needed
-
-      const res = await request(`~simple-pay@1.0/balance?address=${address}`, {
-        method: 'GET'
+      const dryrunRes = await dryrun({
+        tags,
+        process: pid,
+        data: '1+15',
+        foo: 'bar',
+        signingFormat: 'ANS-104'
       })
-
-      // const p = await spawn({
-      //   scheduler: address,
-      //   module: 'bkjb55i07GUCUSWROtKK4HU1mBS_X0TyH3M5jMV6aPg',
-      //   data: 'print("Process initialized.")',
-      //   tags: [
-      //     { name: 'device', value: 'process@1.0' },
-      //     { name: 'scheduler-device', value: 'scheduler@1.0' },
-      //     { name: 'execution-device', value: 'compute-lite@1.0' },
-      //     { name: 'authority', value: address },
-      //     { name: 'scheduler-location', value: address },
-      //     { name: 'scheduler', value: address },
-      //     { name: 'random-seed', value: randomBytes(16).toString('hex') }
-      //   ],
-      //   signer: createDataItemSigner()
-      // }).then(tap(console.log))
-
-      // const m = await message({
-      //   process: p,
-      //   tags: [
-      //     { name: 'Action', value: 'Eval' },
-      //     { name: 'Data-Protocol', value: 'ao' },
-      //     { name: 'Variant', value: 'ao.TN.1' },
-      //     { name: 'Type', value: 'Message' }
-      //   ],
-      //   data: "Send({ Target = ao.id, Data = 'gday mate' })",
-      //   signer: createDataItemSigner()
-      // }).then(tap(console.log))
-
-      // console.log('READY TO LOAD RESULT. m:', m)
-
-      // const r = await result({ message: m, process: p })
-      //   .then(tap(console.log)).catch(console.error)
+      const msg = dryrunRes.Messages[0]
+      console.log({ msg })
+      assert.equal(msg.Data, 3)
     })
   })
 })

@@ -21,7 +21,7 @@ import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 import { resultsWith } from './lib/results/index.js'
-import { dryrunWith } from './lib/dryrun/index.js'
+import { dryrunMainnetWith, dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
 // import { getOperator, getNodeBalance } from './lib/payments/index.js'
@@ -261,6 +261,18 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
+    const dryrunLogger = logger.child('dryrun')
+    const dryrun = dryrunMainnetWith({
+      dryrunFetch: HbClient.requestWith({
+        fetch,
+        logger: dryrunLogger,
+        HB_URL: URL,
+        signer
+      }),
+      request,
+      logger: dryrunLogger
+    })
+
     const message = CoreClient.messageWith({ aoCore });
     const spawn = CoreClient.spawnWith({ aoCore });
 
@@ -268,12 +280,13 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       MODE: 'mainnet',
       spawn,
       message,
+      dryrun,
       request,
       createSigner: mainnetSigner,
       createDataItemSigner: mainnetDataItemSigner,
       getMessages,
       getLastSlot,
-      getMessageById,
+      getMessageById
       /**
       * do we want helpers for payments?
       *
