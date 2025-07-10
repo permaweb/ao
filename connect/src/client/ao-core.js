@@ -27,34 +27,33 @@ export function messageWith(deps) {
 
 export function spawnWith(deps) {
     return async (args) => {
-        // const SCHEDULER = process.env.SCHEDULER || 'nKVqLQN6g_bU5xhHPyW-ZSf4EiHTbRu-z_Rpk3j2MtQ';
-        // const AUTHORITY = process.env.AUTHORITY || SCHEDULER;
-        
-        // const SCHEDULER = 'nKVqLQN6g_bU5xhHPyW-ZSf4EiHTbRu-z_Rpk3j2MtQ'; // TEE 6 Address
-        // const AUTHORITY = 'vS4pfDUbLMHhBcTZBg-nyb8nLpX4APq2oD8oJoJdIVQ'; // GZ Init Node Address
-        
-        const SCHEDULER = 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc';
-        const AUTHORITY = 'mYJTM8VpIibDLuyGLQTcbcPy-LeOY48qzECADTUYfWc';
+        let scheduler = process.env.SCHEDULER;
+        if (!scheduler && deps.url) {
+            const schedulerRes = await fetch(`${deps.url}/~meta@1.0/info/address`);
+            scheduler = await schedulerRes.text();
+        }
+        else throw new Error('No scheduler provided');
 
-        const MODULE = process.env.MODULE || 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s';
+        const authority = process.env.AUTHORITY || scheduler;
+        const module = process.env.MODULE || 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s';
 
         try {
             const params = {
                 path: '/push',
                 method: 'POST',
-                Type: 'Process',
-                scheduler: SCHEDULER,
                 device: 'process@1.0',
+                scheduler: scheduler,
+                'scheduler-location': scheduler,
                 'scheduler-device': 'scheduler@1.0',
                 'push-device': 'push@1.0',
-                'scheduler-location': SCHEDULER,
                 'data-protocol': 'ao',
                 variant: 'ao.N.1',
-                'Authority': AUTHORITY,
+                'Authority': authority,
                 'accept-bundle': 'true',
                 'signingFormat': 'ANS-104',
-                Module: MODULE,
                 'execution-device': 'genesis-wasm@1.0',
+                Module: module,
+                Type: 'Process',
                 ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
             }
 

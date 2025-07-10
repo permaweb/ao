@@ -16,10 +16,11 @@ const WALLET = {
     qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-const aoCore = AOCore.init({ signer: createSigner(WALLET), url: 'http://localhost:8734' });
+const url = 'https://dev-compute-1.forward.computer';
+const aoCore = AOCore.init({ signer: createSigner(WALLET), url: url });
 
-const message = CoreClient.messageWith({ aoCore });
-const spawn = CoreClient.spawnWith({ aoCore });
+const message = CoreClient.messageWith({ aoCore, url });
+const spawn = CoreClient.spawnWith({ aoCore, url });
 
 describe('ao-core', () => {
     describe('spawn', () => {
@@ -35,7 +36,7 @@ describe('ao-core', () => {
     })
     describe('message', () => {
         test.skip('send a message with ao-core', async () => {
-            const processId = 'gvYy6HJdCcd2g00wRLFoYn6IxiWjGtghNT2myJngWTQ'
+            const processId = 'yCRv5L_zwwCgiEFjhz5ev_jUBKgW7QnaFDlfCvQ8V4s'
 
             console.log(`Using existing process (${processId})...`)
 
@@ -52,11 +53,9 @@ describe('ao-core', () => {
     })
     describe('spawn and message', () => {
         test('spawn and send a message with ao-core', async () => {
-            // const processId = await spawn({
-            //     tags: [{ name: 'Name', value: 'Test-Process' }]
-            // });
-            
-            const processId = 'GYAVcYcmfiEDMFYSmee2dTEQ5gJERCAO4DcEZ5vMUm0';
+            const processId = await spawn({
+                tags: [{ name: 'Name', value: 'Test-Process' }]
+            });
 
             console.log(`Process ID: ${processId}`)
 
