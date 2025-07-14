@@ -481,6 +481,7 @@ export const createApis = async (ctx) => {
   const readState = readStateWith(sharedDeps(readStateLogger))
 
   const dryRunLogger = ctx.logger.child('dryRun')
+  console.log({ DRY_RUN_DEFAULT_MAX_PROCESS_AGE: ctx.DRY_RUN_DEFAULT_MAX_PROCESS_AGE, DRY_RUN_PROCESS_CACHE_TTL: ctx.DRY_RUN_PROCESS_CACHE_TTL })
   const dryRun = dryRunWith({
     ...sharedDeps(dryRunLogger),
     setTimeout,
@@ -529,7 +530,9 @@ export const createApis = async (ctx) => {
           )
       ),
       logger: dryRunLogger
-    })
+    }),
+    DRY_RUN_DEFAULT_MAX_PROCESS_AGE: ctx.DRY_RUN_DEFAULT_MAX_PROCESS_AGE,
+    DRY_RUN_PROCESS_CACHE_TTL: ctx.DRY_RUN_PROCESS_CACHE_TTL
   })
 
   /**

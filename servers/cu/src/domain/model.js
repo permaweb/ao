@@ -253,7 +253,16 @@ export const domainConfigSchema = z.object({
    * will return a busy response.
    *
    */
-  HYDRATION_MODE_NONCE_LIMIT: positiveIntSchema
+  HYDRATION_MODE_NONCE_LIMIT: positiveIntSchema,
+  /**
+   * The default maximum age of a process that may be
+   * retrieved from the dry run cache.
+   */
+  DRY_RUN_DEFAULT_MAX_PROCESS_AGE: positiveIntSchema,
+  /**
+   * The TTL of the dry run process cache in milliseconds.
+   */
+  DRY_RUN_PROCESS_CACHE_TTL: positiveIntSchema
 })
 
 export const bufferSchema = z.any().refine(buffer => {
