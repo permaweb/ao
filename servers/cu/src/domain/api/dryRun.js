@@ -9,7 +9,6 @@ import { loadModuleWith } from '../lib/loadModule.js'
 import { mapFrom } from '../utils.js'
 import { readStateWith } from './readState.js'
 
-const DEFAULT_MAX_PROCESS_AGE = 100
 /**
  * TODO: should this be an effect or shared util?
  * just keeping here for sake of locality for now
@@ -58,6 +57,8 @@ const TtlCache = ({ setTimeout, clearTimeout }) => {
  * @returns {ReadResult}
  */
 export function dryRunWith (env) {
+  const DRY_RUN_DEFAULT_MAX_PROCESS_AGE = env.DRY_RUN_DEFAULT_MAX_PROCESS_AGE
+  const DRY_RUN_PROCESS_CACHE_TTL = env.DRY_RUN_PROCESS_CACHE_TTL
   const logger = env.logger
   const loadMessageMeta = loadMessageMetaWith(env)
   const loadModule = loadModuleWith(env)
@@ -131,7 +132,7 @@ export function dryRunWith (env) {
            * the overhead of maintaining the map, timers, for the specified
            * age
            */
-          readStateCache.set(res.id, cached, 2000)
+          readStateCache.set(res.id, cached, DRY_RUN_PROCESS_CACHE_TTL)
           return res
         }),
         Resolved
@@ -157,7 +158,7 @@ export function dryRunWith (env) {
     return Resolved(ctx)
   }
 
-  return ({ processId, messageTxId, maxProcessAge = DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
+  return ({ processId, messageTxId, maxProcessAge = DRY_RUN_DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
     return of({ processId, messageTxId })
       .chain(loadMessageCtx)
       .chain(ensureProcessLoaded({ maxProcessAge }))
