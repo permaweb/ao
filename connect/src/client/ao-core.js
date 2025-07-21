@@ -1,3 +1,17 @@
+function convertToLegacyOutput (res) {
+  let body = {}
+  try {
+    body = JSON.parse(JSON.parse(res?.body)?.results?.json?.body)
+  } catch (_) {}
+  return {
+    Output: body?.Output || {},
+    Messages: body?.Messages || [],
+    Assignments: body?.Assignments || [],
+    Spawns: body?.Spawns || [],
+    Error: body?.Error
+  }
+}
+
 export function messageWith(deps) {
     return async (args) => {
         try {
@@ -16,7 +30,43 @@ export function messageWith(deps) {
             }
 
             const response = await deps.aoCore.request(params);
-            if (response.ok) return await response.json();
+            if (response.ok) {
+                const parsedResponse = await response.json();
+
+                if (args.opts?.fullResponse) return convertToLegacyOutput(parsedResponse);
+                else return parsedResponse.slot;
+            }
+            return null;
+        }
+        catch (e) {
+            throw new Error(e.message ?? 'Error sending mainnet message');
+        }
+    }
+}
+
+export function resultWith(deps) {
+    return async (args) => {
+        try {
+            const params = {
+                path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
+                method: 'POST',
+                type: 'Message',
+                'data-protocol': 'ao',
+                variant: 'ao.N.1',
+                target: args.process,
+                'signingFormat': 'ANS-104',
+                data: args.data ?? '1234',
+                'accept-bundle': 'true',
+                'accept-codec': 'httpsig@1.0',
+                'slot': args.slot ?? args.message,
+                ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
+            }
+
+            const response = await deps.aoCore.request(params);
+            if (response.ok) {
+                const parsedResponse = await response.json();
+                return convertToLegacyOutput(parsedResponse);
+            }
             return null;
         }
         catch (e) {

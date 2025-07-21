@@ -16,15 +16,16 @@ const WALLET = {
     qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-const url = 'https://dev-compute-1.forward.computer';
+const url = 'http://localhost:8734';
 const aoCore = AOCore.init({ signer: createSigner(WALLET), url: url });
 
-const message = CoreClient.messageWith({ aoCore, url });
 const spawn = CoreClient.spawnWith({ aoCore, url });
+const message = CoreClient.messageWith({ aoCore, url });
+const coreResult = CoreClient.resultWith({ aoCore, url });
 
 describe('ao-core', () => {
     describe('spawn', () => {
-        test.skip('spawn a process with ao-core', async () => {
+        test('spawn a process with ao-core', async () => {
             const processId = await spawn({
                 tags: [{ name: 'Name', value: 'Test-Process' }]
             });
@@ -35,8 +36,8 @@ describe('ao-core', () => {
         })
     })
     describe('message', () => {
-        test.skip('send a message with ao-core', async () => {
-            const processId = 'yCRv5L_zwwCgiEFjhz5ev_jUBKgW7QnaFDlfCvQ8V4s'
+        test('send a message with ao-core', async () => {
+            const processId = 'ytk5FZXEIs4C7-qBdh4fqa1nOtjwd5VkLim9CsdVx3E'
 
             console.log(`Using existing process (${processId})...`)
 
@@ -46,9 +47,39 @@ describe('ao-core', () => {
                 data: `require('.process')._version`
             });
 
-            console.log(result)
+            assert.equal(typeof result, 'number');
+        })
+    })
+    describe('message - full response', () => {
+        test('send a message with ao-core (full response)', async () => {
+            const processId = 'ytk5FZXEIs4C7-qBdh4fqa1nOtjwd5VkLim9CsdVx3E'
 
-            assert.equal(result.process, processId)
+            console.log(`Using existing process (${processId})...`)
+
+            const result = await message({
+                process: processId,
+                tags: [{ name: 'Action', value: 'Eval' }],
+                data: `require('.process')._version`,
+                opts: {
+                    fullResponse: true
+                }
+            });
+            
+            assert.strictEqual(result.Messages.length, 0);
+        })
+    })
+    describe('result', () => {
+        test('get the result of an ao-core message', async () => {
+            const processId = 'ytk5FZXEIs4C7-qBdh4fqa1nOtjwd5VkLim9CsdVx3E'
+
+            console.log(`Using existing process (${processId})...`)
+
+            const result = await coreResult({
+                process: processId,
+                message: '19'
+            });
+            
+            assert.strictEqual(result.Messages.length, 0);
         })
     })
     describe('spawn and message', () => {
