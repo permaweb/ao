@@ -109,8 +109,6 @@ export function spawnWith(deps) {
                 'accept-bundle': 'true',
                 'signingFormat': 'ANS-104',
                 'execution-device': 'genesis-wasm@1.0',
-                'aos-version': '2.0.7',
-                'App-Name': 'aos',
                 Module: module,
                 Type: 'Process',
                 ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
