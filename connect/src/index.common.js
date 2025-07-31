@@ -210,11 +210,8 @@ export function connectWith({ createDataItemSigner, createSigner }) {
   function mainnetMode({
     MODE,
     signer,
-    GRAPHQL_URL,
-    device = DEFAULT_DEVICE,
     URL = DEFAULT_HB_URL,
-    MU_URL = DEFAULT_RELAY_MU_URL,
-    CU_URL = DEFAULT_RELAY_CU_URL,
+    SCHEDULER,
     fetch = defaultFetch
   }) {
     const logger = _logger.child('mainnet-process')
@@ -226,6 +223,9 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     if (URL) aoCoreDeps.url = URL;
 
     const aoCore = AOCore.init(aoCoreDeps);
+
+    let coreClientDeps = { aoCore, url: URL, signer };
+    if (SCHEDULER) coreClientDeps.scheduler = SCHEDULER;
 
     const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
 
@@ -273,8 +273,8 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       logger: dryrunLogger
     })
 
-    const message = CoreClient.messageWith({ aoCore });
-    const spawn = CoreClient.spawnWith({ aoCore });
+    const message = CoreClient.messageWith(coreClientDeps);
+    const spawn = CoreClient.spawnWith(coreClientDeps);
 
     return {
       MODE: 'mainnet',

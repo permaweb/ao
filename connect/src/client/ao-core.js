@@ -1,15 +1,17 @@
-function convertToLegacyOutput (res) {
-  let body = {}
-  try {
-    body = JSON.parse(JSON.parse(res?.body)?.results?.json?.body)
-  } catch (_) {}
-  return {
-    Output: body?.Output || {},
-    Messages: body?.Messages || [],
-    Assignments: body?.Assignments || [],
-    Spawns: body?.Spawns || [],
-    Error: body?.Error
-  }
+import { debugLog } from '../logger';
+
+function convertToLegacyOutput(res) {
+    let body = {}
+    try {
+        body = JSON.parse(JSON.parse(res?.body)?.results?.json?.body)
+    } catch (_) { }
+    return {
+        Output: body?.Output || {},
+        Messages: body?.Messages || [],
+        Assignments: body?.Assignments || [],
+        Spawns: body?.Spawns || [],
+        Error: body?.Error
+    }
 }
 
 export function messageWith(deps) {
@@ -18,9 +20,8 @@ export function messageWith(deps) {
             const params = {
                 path: `/${args.process}~process@1.0/push/serialize~json@1.0`,
                 method: 'POST',
-                type: 'Message',
-                'data-protocol': 'ao',
-                variant: 'ao.N.1',
+                Type: 'Message',
+                Variant: 'ao.N.1',
                 target: args.process,
                 'signingFormat': 'ANS-104',
                 data: args.data ?? '1234',
@@ -50,8 +51,7 @@ export function resultWith(deps) {
             const params = {
                 path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
                 method: 'POST',
-                type: 'Message',
-                'data-protocol': 'ao',
+                Type: 'Message',
                 variant: 'ao.N.1',
                 target: args.process,
                 'signingFormat': 'ANS-104',
@@ -77,15 +77,22 @@ export function resultWith(deps) {
 
 export function spawnWith(deps) {
     return async (args) => {
-        let scheduler = process.env.SCHEDULER;
+        let scheduler = deps.scheduler;
+
         if (!scheduler && deps.url) {
             const schedulerRes = await fetch(`${deps.url}/~meta@1.0/info/address`);
             scheduler = await schedulerRes.text();
         }
-        else throw new Error('No scheduler provided');
+
+        if (!scheduler) throw new Error('No scheduler provided');
 
         const authority = process.env.AUTHORITY || scheduler;
         const module = process.env.MODULE || 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s';
+
+        debugLog('info', 'Node URL:', deps.url);
+        debugLog('info', 'Scheduler:', scheduler);
+        debugLog('info', 'Authority:', authority);
+        debugLog('info', 'Module:', module);
 
         try {
             const params = {
@@ -96,12 +103,14 @@ export function spawnWith(deps) {
                 'scheduler-location': scheduler,
                 'scheduler-device': 'scheduler@1.0',
                 'push-device': 'push@1.0',
-                'data-protocol': 'ao',
-                variant: 'ao.N.1',
+                'Data-Protocol': 'ao',
+                Variant: 'ao.N.1',
                 'Authority': authority,
                 'accept-bundle': 'true',
                 'signingFormat': 'ANS-104',
                 'execution-device': 'genesis-wasm@1.0',
+                'aos-version': '2.0.7',
+                'App-Name': 'aos',
                 Module: module,
                 Type: 'Process',
                 ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
