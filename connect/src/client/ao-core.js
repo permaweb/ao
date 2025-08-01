@@ -115,11 +115,63 @@ export function spawnWith(deps) {
             }
 
             const response = await deps.aoCore.request(params);
-            if (response.ok) return response.headers.get('process');
-            return null;
+
+            try {
+                const processId = response.headers.get('process');
+
+                await retryInitPush(deps, args, processId);
+
+                return processId;
+            }
+            catch (e) {
+                throw new Error(e.message ?? 'Error spawning mainnet process');
+            }
         }
         catch (e) {
             throw new Error(e.message ?? 'Error spawning mainnet process');
         }
     }
+}
+
+async function retryInitPush(deps, args, processId, maxAttempts = 10) {
+    const baseParams = {
+        path: `/${processId}~process@1.0/push/serialize~json@1.0`,
+        method: 'POST',
+        Type: 'Message',
+        Variant: 'ao.N.1',
+        target: processId,
+        signingFormat: 'ANS-104',
+        Action: 'Eval',
+        data: `require('.process')._version`,
+        'accept-bundle': 'true',
+        'accept-codec': 'httpsig@1.0',
+        ...(args.tags ? Object.fromEntries(args.tags.map((tag) => [tag.name, tag.value])) : {}),
+    };
+
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const initPush = await deps.aoCore.request(baseParams);
+            if (initPush.ok) {
+                debugLog('info', `initPush succeeded on attempt ${attempt}`);
+                return initPush;
+            } else {
+                debugLog('warn', `initPush attempt ${attempt} returned ok=false`, {
+                    status: initPush.status,
+                    body: initPush,
+                });
+                lastError = new Error(`initPush returned ok=false (status=${initPush.status})`);
+            }
+        } catch (err) {
+            debugLog('warn', `initPush attempt ${attempt} threw`, err);
+            lastError = err;
+        }
+
+        if (attempt === maxAttempts) break;
+
+        await new Promise((r) => setTimeout(r, 500));
+    }
+
+    throw new Error(`initPush failed after ${maxAttempts} attempts: ${lastError?.message || 'unknown'}`);
 }
