@@ -12,6 +12,7 @@ import { withDryRunRoutes } from './routes/dryRun.js'
 import { withResultsRoutes } from './routes/results.js'
 import { withCronRoutes } from './routes/cron.js'
 import { withHealthcheckRoutes } from './routes/healthcheck.js'
+import { withSnapshotRoutes } from './routes/snapshot.js'
 
 const pipeP = unapply(pipeWith((fn, p) => Promise.resolve(p).then(fn)))
 
@@ -22,7 +23,8 @@ const withRoutes = pipe(
   withDryRunRoutes,
   withResultsRoutes,
   withCronRoutes,
-  withMetricRoutes
+  withMetricRoutes,
+  withSnapshotRoutes
 )
 
 export const createAoHttp = async ({ logger: _logger, domain, ...config }) => {

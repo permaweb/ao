@@ -74,6 +74,23 @@ const preprocessUnitMode = (envConfig) => {
     }
   }
 
+  /**
+   * When running in HyperBeam Unit mode, disable automatic checkpointing
+   * so that all checkpoints are manually triggered by HB to ensure perfect sync
+   */
+  if (UNIT_MODE === 'hbu') {
+    return {
+      ...envConfig,
+      // Disable all automatic checkpoint creation
+      DISABLE_PROCESS_CHECKPOINT_CREATION: true,
+      DISABLE_PROCESS_FILE_CHECKPOINT_CREATION: true,
+      PROCESS_MEMORY_CACHE_CHECKPOINT_INTERVAL: 0,
+      // Set eager checkpoint thresholds to effectively infinite values to prevent automatic checkpointing
+      EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: Number.MAX_SAFE_INTEGER,
+      EAGER_CHECKPOINT_EVAL_TIME_THRESHOLD: Number.MAX_SAFE_INTEGER
+    }
+  }
+
   return envConfig
 }
 

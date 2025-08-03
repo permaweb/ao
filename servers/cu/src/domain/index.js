@@ -10,6 +10,7 @@ import { healthcheckWith } from './api/healthcheck.js'
 import { readResultsWith } from './api/readResults.js'
 import { dryRunWith } from './api/dryRun.js'
 import { statsWith } from './api/perf.js'
+import { forceSnapshotWith } from './api/forceSnapshot.js'
 
 export const bootstrap = async ({ config, effects }) => {
   const logger = effects.logger
@@ -86,6 +87,13 @@ export const bootstrap = async ({ config, effects }) => {
 
   const healthcheck = healthcheckWith({ walletAddress: effects.address })
 
+  const forceSnapshotLogger = logger.child('forceSnapshot')
+  const forceSnapshot = forceSnapshotWith({
+    saveCheckpoint: effects.saveCheckpoint,
+    findLatestProcessMemory: commonDeps(forceSnapshotLogger).findLatestProcessMemory,
+    logger: forceSnapshotLogger
+  })
+
   /**
    * The CU domain -- the business logic of the unit
    */
@@ -101,7 +109,8 @@ export const bootstrap = async ({ config, effects }) => {
       readResult,
       readResults,
       readCronResults,
-      healthcheck
+      healthcheck,
+      forceSnapshot
     }
   }
 
