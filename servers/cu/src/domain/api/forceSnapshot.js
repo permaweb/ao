@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { of, fromPromise } from 'hyper-async'
 import { z } from 'zod'
 
 const inputSchema = z.object({
@@ -24,10 +24,13 @@ export function forceSnapshotWith ({ saveCheckpoint, findLatestProcessMemory, lo
 
             logger('Found cached memory for process %s, saving snapshot...', processId)
 
-            return saveCheckpoint({
-              Memory: latestMemory.Memory,
-              evaluation: latestMemory.evaluation
-            })
+            return of(latestMemory)
+              .chain(fromPromise(({ Memory, evaluation }) =>
+                saveCheckpoint({
+                  Memory,
+                  evaluation
+                })
+              ))
               .map(() => ({
                 success: true,
                 message: `Snapshot forced for process ${processId}`,
