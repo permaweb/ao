@@ -5,36 +5,40 @@ const inputSchema = z.object({
   processId: z.string()
 })
 
-export function forceSnapshotWith ({ saveCheckpoint, findLatestProcessMemory, logger }) {
+export function forceSnapshotWith ({ writeFileCheckpointMemory, writeFileCheckpointRecord, cache, logger }) {
+  writeFileCheckpointMemory = fromPromise(writeFileCheckpointMemory)
+  writeFileCheckpointRecord = fromPromise(writeFileCheckpointRecord)
+
   return (input) => {
     return of(input)
       .map(inputSchema.parse)
       .chain(({ processId }) => {
         logger('Manually forcing snapshot for process %s', processId)
 
-        return of(processId)
-          .chain(findLatestProcessMemory)
+        const latestMemory = cache.get(processId)
+
+        return of(latestMemory)
           .chain((latestMemory) => {
-            if (!latestMemory) {
+            if (!latestMemory || !latestMemory.Memory) {
               return of({
                 success: false,
                 message: `No cached memory found for process ${processId}`
               })
             }
 
-            logger('Found cached memory for process %s, saving snapshot...', processId)
+            logger('Found cached memory for process %s, saving file checkpoint...', processId)
 
-            return of(latestMemory)
-              .chain(fromPromise(({ Memory, evaluation }) =>
-                saveCheckpoint({
-                  Memory,
-                  evaluation
-                })
-              ))
-              .map(() => ({
+            return of({ Memory: latestMemory.Memory, evaluation: latestMemory.evaluation })
+              .chain(writeFileCheckpointMemory)
+              .chain((file) =>
+                writeFileCheckpointRecord(latestMemory.evaluation, file)
+                  .map(() => file)
+              )
+              .map((file) => ({
                 success: true,
-                message: `Snapshot forced for process ${processId}`,
+                message: `File snapshot forced for process ${processId}`,
                 processId,
+                file,
                 timestamp: latestMemory.evaluation.timestamp,
                 ordinate: latestMemory.evaluation.ordinate,
                 // Include all critical sync information

@@ -89,8 +89,9 @@ export const bootstrap = async ({ config, effects }) => {
 
   const forceSnapshotLogger = logger.child('forceSnapshot')
   const forceSnapshot = forceSnapshotWith({
-    saveCheckpoint: effects.saveCheckpoint,
-    findLatestProcessMemory: commonDeps(forceSnapshotLogger).findLatestProcessMemory,
+    writeFileCheckpointMemory: effects.writeFileCheckpointMemory,
+    writeFileCheckpointRecord: effects.writeFileCheckpointRecord,
+    cache: effects.wasmMemoryCache,
     logger: forceSnapshotLogger
   })
 

@@ -196,6 +196,8 @@ export const createEffects = async (ctx) => {
     mkdir
   })
 
+  const writeFileCheckpointRecord = AoProcessClient.writeFileCheckpointRecordWith({ db })
+
   // TODO: these log statements ought to be moved close to the code that is pertinent
   // For now, just keeping here
   ctx.logger('Process Arweave Checkpoint creation is set to "%s"', !ctx.DISABLE_PROCESS_CHECKPOINT_CREATION)
@@ -437,6 +439,8 @@ export const createEffects = async (ctx) => {
     loadDryRunEvaluator,
     findEvaluations,
     saveCheckpoint,
+    writeFileCheckpointMemory,
+    writeFileCheckpointRecord,
     app
   }
 }
