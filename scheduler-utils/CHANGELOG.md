@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.26](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.25...scheduler-utils@v0.0.26) (2025-08-04)
+
+
+### Features
+
+* **scheduler-utils:** match tag values case insensitively ([b936f35](https://github.com/permaweb/ao/commit/b936f358cb8665098f280f937d9c1bb7721b8c81))
+
 ## [0.0.25](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.24...scheduler-utils@v0.0.25) (2024-11-22)
 
 ## [0.0.24](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.23...scheduler-utils@v0.0.24) (2024-08-19)
