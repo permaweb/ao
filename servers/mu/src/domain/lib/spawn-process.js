@@ -49,7 +49,7 @@ export function spawnProcessWith (env) {
     // Preserve existing Variant tag if present, otherwise default to ao.N.1 for backwards compatibility
     const existingVariant = Tags.find(tag => tag.name === 'Variant')
     if (!existingVariant) {
-      tagsIn.push({ name: 'Variant', value: 'ao.N.1' })
+      tagsIn.push({ name: 'Variant', value: 'ao.TN.1' })
     }
 
     tagsIn.push({ name: 'Data-Protocol', value: 'ao' })
