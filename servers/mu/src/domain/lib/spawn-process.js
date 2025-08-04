@@ -46,9 +46,12 @@ export function spawnProcessWith (env) {
       'Type'
     ].includes(tag.name))
 
-    // Preserve existing Variant tag if present, otherwise default to ao.N.1 for backwards compatibility
+    // Preserve ao.N.1 Variant tag if present,
+    // otherwise default to ao.TN.1 for backwards compatibility
     const existingVariant = Tags.find(tag => tag.name === 'Variant')
-    if (!existingVariant) {
+    if (existingVariant?.value === 'ao.N.1') {
+      tagsIn.push({ name: 'Variant', value: 'ao.N.1' })
+    } else {
       tagsIn.push({ name: 'Variant', value: 'ao.TN.1' })
     }
 
