@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.86](https://github.com/permaweb/ao/compare/connect@v0.0.85...connect@v0.0.86) (2025-08-04)
+
+
+### Bug Fixes
+
+* **connect:** allow variant tag to be passed ([e3cee35](https://github.com/permaweb/ao/commit/e3cee35b449b29fb634543ed0c3461e00266c920))
+
 ## [0.0.85](https://github.com/permaweb/ao/compare/connect@v0.0.84...connect@v0.0.85) (2025-05-21)
 
 ## [0.0.84](https://github.com/permaweb/ao/compare/connect@v0.0.83...connect@v0.0.84) (2025-05-10)
