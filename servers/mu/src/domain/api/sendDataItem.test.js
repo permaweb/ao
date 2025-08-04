@@ -21,7 +21,8 @@ describe('sendDataItemWith', () => {
               { name: 'Data-Protocol', value: 'ao' },
               { name: 'Type', value: 'Process' },
               { name: 'Scheduler', value: 'scheduler-id' }
-            ]
+            ],
+            data: 'test-data'
           }),
           writeDataItem: async (res) => ({
             ...res,
@@ -66,7 +67,8 @@ describe('sendDataItemWith', () => {
               { name: 'Data-Protocol', value: 'ao' },
               { name: 'Type', value: 'Process' },
               { name: 'Scheduler', value: 'scheduler-id' }
-            ]
+            ],
+            data: 'test-data'
           }),
           writeDataItem: async (res) => ({
             ...res,
@@ -113,7 +115,8 @@ describe('sendDataItemWith', () => {
               { name: 'Data-Protocol', value: 'ao' },
               { name: 'Type', value: 'Process' },
               { name: 'Scheduler', value: 'scheduler-id' }
-            ]
+            ],
+            data: 'test-data'
           }),
           writeDataItem: async (res) => ({
             ...res,

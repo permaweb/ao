@@ -44,8 +44,8 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
 
         // Preserve the original Variant tag from the spawn if it exists
         const originalVariant = ctx.cachedSpawn.spawn.Tags?.find(tag => tag.name === 'Variant')
-        if (originalVariant) {
-          successTags.push({ name: 'Variant', value: originalVariant.value })
+        if (originalVariant?.value === 'ao.N.1') {
+          successTags.push({ name: 'Variant', value: 'ao.N.1' })
         } else {
           successTags.push({ name: 'Variant', value: 'ao.TN.1' })
         }
