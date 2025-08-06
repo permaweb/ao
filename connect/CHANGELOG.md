@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.87](https://github.com/permaweb/ao/compare/connect@v0.0.86...connect@v0.0.87) (2025-08-06)
+
+
+### Features
+
+* **connect:** do not automatically set variant to ao.TN.1 ([3087f52](https://github.com/permaweb/ao/commit/3087f52de85270dbc213b4b3338a131b5315274a))
+
+
+### Bug Fixes
+
+* **connect:** allow variant tag to match case insensitively ([342b07f](https://github.com/permaweb/ao/commit/342b07f8eb5e542e30c16fde0d2a746b9a7c8212))
+
 ## [0.0.86](https://github.com/permaweb/ao/compare/connect@v0.0.85...connect@v0.0.86) (2025-08-04)
 
 
