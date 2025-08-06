@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.27](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.26...scheduler-utils@v0.0.27) (2025-08-06)
+
+
+### Bug Fixes
+
+* **scheduler-utils:** gql query processes with ao data protocol ([f2a22ba](https://github.com/permaweb/ao/commit/f2a22ba0ae30455fe89a1acac9c945c4bbb71b69))
+
 ## [0.0.26](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.25...scheduler-utils@v0.0.26) (2025-08-04)
 
 
