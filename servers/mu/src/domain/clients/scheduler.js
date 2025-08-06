@@ -72,20 +72,39 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
             }, {})
 
             // Create push request parameters following mainnet.js pattern
-            const pushParams = {
-              type: 'Message',
-              path: `/${processId}~process@1.0/push`,
-              method: 'POST',
-              ...tagsToObj,
-              'data-protocol': 'ao',
-              'scheduler-device': 'scheduler@1.0',
-              'push-device': 'push@1.0',
-              variant: 'ao.N.1',
-              target: processId,
-              signingFormat: 'ANS-104',
-              'accept-bundle': 'true',
-              'accept-codec': 'httpsig@1.0',
-              data: dataStr
+            let pushParams = {}
+            if (tagsToObj.Type === 'Process') {
+              pushParams = {
+                path: '/push',
+                method: 'POST',
+                Type: 'Process',
+                device: 'process@1.0',
+                'scheduler-device': 'scheduler@1.0',
+                'push-device': 'push@1.0',
+                'scheduler-location': tagsToObj.Scheduler,
+                'data-protocol': 'ao',
+                variant: 'ao.N.1',
+                ...tagsToObj,
+                Authority: tagsToObj.Scheduler,
+                'accept-bundle': 'true',
+                signingFormat: 'ANS-104'
+              }
+            } else {
+              pushParams = {
+                type: 'Message',
+                path: `/${processId}~process@1.0/push`,
+                method: 'POST',
+                ...tagsToObj,
+                'data-protocol': 'ao',
+                'scheduler-device': 'scheduler@1.0',
+                'push-device': 'push@1.0',
+                variant: 'ao.N.1',
+                target: processId,
+                signingFormat: 'ANS-104',
+                'accept-bundle': 'true',
+                'accept-codec': 'httpsig@1.0',
+                data: dataStr
+              }
             }
 
             return aoConnect.request(pushParams)
@@ -130,7 +149,7 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
           if (schedulerType === 'hyperbeam') {
             if (+res.status === 200) {
               // TODO: fix this
-              return { id, timestamp: Date.now(), slot: +res.slot }
+              return { id, timestamp: Date.now(), slot: +res.slot, process: res?.process }
             }
             throw new Error(`${res.status}: Error posting to HyperBeam`)
           }

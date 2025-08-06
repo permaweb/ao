@@ -1,5 +1,5 @@
 import { of, fromPromise, Rejected, Resolved } from 'hyper-async'
-import { __, assoc, defaultTo, is } from 'ramda'
+import { assoc, defaultTo, is } from 'ramda'
 import z from 'zod'
 
 import { parseTags } from '../utils.js'
@@ -34,9 +34,27 @@ export function writeProcessTxWith (env) {
       .chain(findSchedulerTag)
       .chain((schedulerAddress) => {
         return locateScheduler(schedulerAddress)
-          .chain(({ url }) => writeDataItem({ suUrl: url, data: ctx.tx.data.toString('base64'), logId: ctx.logId }))
+          .chain(({ url }) => {
+            return writeDataItem({
+              suUrl: url,
+              data: ctx.tx.data.toString('base64'),
+              logId: ctx.logId,
+              schedulerType: ctx.schedulerType,
+              processId: ctx.tx.id,
+              id: ctx.dataItem?.id || '',
+              tags: ctx.dataItem?.tags || [],
+              dataStr: ctx.dataItem?.data || ''
+            })
+          })
       })
-      .map(assoc('schedulerTx', __, ctx))
+      .map((res) => {
+        if (res?.process) {
+          ctx.processId = res.process
+          ctx.tx.id = res.process
+          ctx.tx.processId = res.process
+        }
+        return assoc('schedulerTx', res, ctx)
+      })
       .map(ctxSchema.parse)
       .map(logger.tap({ log: 'Added "schedulerTx" to ctx' }))
   }

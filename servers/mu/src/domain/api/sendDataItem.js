@@ -235,9 +235,9 @@ export function sendDataItemWith ({
         verifyParsedDataItem(ctx.dataItem)
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
           .chain(({ isMessage }) => {
+            const variant = ctx.dataItem.tags.find(tag => tag.name === 'Variant')?.value
+            const schedulerType = variant === 'ao.N.1' ? 'hyperbeam' : 'legacy'
             if (isMessage) {
-              const variant = ctx.dataItem.tags.find(tag => tag.name === 'Variant')?.value
-              const schedulerType = variant === 'ao.N.1' ? 'hyperbeam' : 'legacy'
               /*
                   add schedLocation into the context if the
                   target is a process. if its a wallet dont add
@@ -248,7 +248,7 @@ export function sendDataItemWith ({
                 .map(logger.tap({ log: 'Successfully located process scheduler', logId: ctx.logId }))
                 .chain((schedLocation) => sendMessage({ ...ctx, schedLocation, schedulerType }))
             }
-            return sendProcess(ctx)
+            return sendProcess({ ...ctx, schedulerType })
           })
           .bimap(
             (e) => new Error(e, { cause: ctx }),
