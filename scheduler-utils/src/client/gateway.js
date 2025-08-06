@@ -43,7 +43,12 @@ export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETR
 
   const GET_TRANSACTIONS_QUERY = `
     query GetTransactions ($transactionIds: [ID!]!) {
-      transactions(ids: $transactionIds) {
+      transactions(
+        ids: $transactionIds
+        tags: [
+          { name: "Data-Protocol", values: ["ao"] }
+        ]
+      ) {
         edges {
           node {
             tags {
