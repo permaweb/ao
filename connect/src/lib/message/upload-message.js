@@ -39,7 +39,7 @@ const tagSchema = z.array(z.object({
  */
 function buildTagsWith () {
   return (ctx) => {
-    const variant = ctx?.tags?.find(tag => tag.name === 'Variant')?.value || 'ao.TN.1'
+    const variant = ctx?.tags?.find(tag => tag.name.toLowerCase() === 'variant')?.value || 'ao.TN.1'
     return of(ctx.tags)
       .map(defaultTo([]))
       .map(removeAoProtoByName('Variant'))
