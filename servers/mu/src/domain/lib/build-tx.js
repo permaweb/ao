@@ -1,7 +1,32 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
-import { checkStage, isHyperBeamMessage } from '../utils.js'
+import { checkStage } from '../utils.js'
 import { buildAndSignSchema, fetchSchedulerProcessSchema, isWalletSchema, locateProcessSchema } from '../dal.js'
+
+/**
+ * Checks if a process is a HyperBeam process.
+ *
+ * @param {Object} processId - The process to check
+ * @returns
+ */
+const isHyperBeamProcessWith = ({
+  getIsHyperBeamProcess,
+  setIsHyperBeamProcess,
+  fetchTransactionDetails
+}) => {
+  return async (processId) => {
+    const cached = await getIsHyperBeamProcess(processId)
+    if (cached) return cached
+    const process = await fetchTransactionDetails([processId])
+      .then(res => res?.data?.transactions?.edges?.[0]?.node)
+    if (!process) return false
+    const variant = process.tags.find(t => t.name === 'Variant')?.value
+    if (!variant) return false
+    const isHyperBeam = variant === 'ao.N.1'
+    await setIsHyperBeamProcess(processId, isHyperBeam)
+    return isHyperBeam
+  }
+}
 
 const ctxSchema = z.object({
   tx: z.object({
@@ -15,12 +40,22 @@ const ctxSchema = z.object({
 }).passthrough()
 
 export function buildTxWith (env) {
-  let { buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet } = env
+  let {
+    buildAndSign,
+    logger,
+    locateProcess,
+    fetchSchedulerProcess,
+    isWallet,
+    getIsHyperBeamProcess,
+    setIsHyperBeamProcess,
+    fetchTransactionDetails
+  } = env
   locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   fetchSchedulerProcess = fromPromise(fetchSchedulerProcessSchema.implement(fetchSchedulerProcess))
   buildAndSign = fromPromise(buildAndSignSchema.implement(buildAndSign))
   isWallet = fromPromise(isWalletSchema.implement(isWallet))
 
+  const isHyperBeamProcess = fromPromise(isHyperBeamProcessWith({ getIsHyperBeamProcess, setIsHyperBeamProcess, fetchTransactionDetails }))
   return (ctx) => {
     if (!checkStage('build-tx')(ctx)) return Resolved(ctx)
     return isWallet(ctx.cachedMsg.processId, ctx.logId)
@@ -30,8 +65,9 @@ export function buildTxWith (env) {
             .chain(
               (fromSchedLocation) => {
                 return of()
-                  .chain(() => {
-                    if (isHyperBeamMessage(ctx.cachedMsg.msg.Tags)) {
+                  .chain(() => isHyperBeamProcess(ctx.cachedMsg.msg.Target))
+                  .chain((isHyperBeam) => {
+                    if (isHyperBeam) {
                       const fromProcessSchedData = {
                         tags: ctx.cachedMsg.msg.Tags || [],
                         schedulerType: 'hyperbeam'

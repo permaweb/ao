@@ -395,6 +395,10 @@ export const createResultApis = async (ctx) => {
   const getById = InMemoryClient.getByIdWith({ cache: isWalletCache })
   const setById = InMemoryClient.setByIdWith({ cache: isWalletCache })
 
+  const isHyperBeamProcessCache = InMemoryClient.createLruCache({ size: 1000, ttl: SIXTY_MINUTES_IN_MS })
+  const getIsHyperBeamProcess = InMemoryClient.getByIdWith({ cache: isHyperBeamProcessCache })
+  const setIsHyperBeamProcess = InMemoryClient.setByIdWith({ cache: isHyperBeamProcessCache })
+
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
     logger: processMsgLogger,
@@ -416,7 +420,10 @@ export const createResultApis = async (ctx) => {
       wallet: MU_WALLET,
       address: walletAddress,
       fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
-    })
+    }),
+    getIsHyperBeamProcess,
+    setIsHyperBeamProcess,
+    fetchTransactionDetails: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
