@@ -21,10 +21,11 @@ export function processMsgWith ({
   isWallet,
   fetchSchedulerProcess,
   fetchHyperBeamResult,
+  RELAY_MAP,
   topUp,
-  RELAY_MAP
+  isHyperBeamProcess
 }) {
-  const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet })
+  const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess })
   const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, RELAY_MAP, topUp })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger })

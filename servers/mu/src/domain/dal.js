@@ -222,7 +222,8 @@ export const writeDataItemSchema = z.function()
       z.object({
         id: z.string(),
         timestamp: z.coerce.number(),
-        slot: z.coerce.number().nullish()
+        slot: z.coerce.number().nullish(),
+        process: z.string().nullish()
       })
     )
   )

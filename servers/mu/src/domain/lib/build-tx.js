@@ -1,6 +1,6 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
-import { checkStage, isHyperBeamMessage } from '../utils.js'
+import { checkStage } from '../utils.js'
 import { buildAndSignSchema, fetchSchedulerProcessSchema, isWalletSchema, locateProcessSchema } from '../dal.js'
 
 const ctxSchema = z.object({
@@ -15,7 +15,14 @@ const ctxSchema = z.object({
 }).passthrough()
 
 export function buildTxWith (env) {
-  let { buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet } = env
+  let {
+    buildAndSign,
+    logger,
+    locateProcess,
+    fetchSchedulerProcess,
+    isWallet,
+    isHyperBeamProcess
+  } = env
   locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   fetchSchedulerProcess = fromPromise(fetchSchedulerProcessSchema.implement(fetchSchedulerProcess))
   buildAndSign = fromPromise(buildAndSignSchema.implement(buildAndSign))
@@ -31,7 +38,9 @@ export function buildTxWith (env) {
               (fromSchedLocation) => {
                 return of()
                   .chain(() => {
-                    if (isHyperBeamMessage(ctx.cachedMsg.msg.Tags)) {
+                    const isHyperBeam = isHyperBeamProcess(ctx.cachedMsg.msg.Target, ctx.logId)
+                    console.log({ m: 'buildTxWith1', isHyperBeam })
+                    if (isHyperBeam) {
                       const fromProcessSchedData = {
                         tags: ctx.cachedMsg.msg.Tags || [],
                         schedulerType: 'hyperbeam'

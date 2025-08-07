@@ -32,9 +32,7 @@ const withMessageRoutes = (app) => {
         const logger = _logger.child('POST_root')
         const logId = randomBytes(8).toString('hex')
         const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
-            .replace(/^::ffff:/, '')
-
-
+          .replace(/^::ffff:/, '')
 
         if ((processId && !assign) || (!processId && assign)) {
           res.status(400).send({ error: 'You must set both process-id and assign to send an assignment, not just one' })
@@ -96,12 +94,18 @@ const withMessageRoutes = (app) => {
               },
               logger.tap({ log: 'Successfully sent DataItem. Beginning to push...' })
             )
-            .chain(({ tx, crank: crankIt }) => {
+            .chain(({ tx, schedulerType, crank: crankIt }) => {
               /**
                * Respond to the client after the initial data item has been forwarded,
                * then transparently continue cranking its results
                */
-              res.status(202).send({ message: 'Processing DataItem', id: tx.id })
+              res.status(202).send({
+                message: 'Processing DataItem',
+                id: tx.id,
+                processId: (schedulerType === 'hyperbeam' && tx.processId)
+                  ? tx.processId
+                  : undefined
+              })
               return crankIt()
             })
             .toPromise()
