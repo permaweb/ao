@@ -209,7 +209,99 @@ function fetchTransactionDetailsWith ({ fetch, GRAPHQL_URL }) {
   }
 }
 
+/**
+ * Checks if a process is a HyperBeam process.
+ *
+ * @param {string} processId - The process to check
+ * @returns {Promise<boolean>} - Whether the process is a HyperBeam process
+ */
+export const isHyperBeamProcessWith = ({
+  fetch,
+  GRAPHQL_URL,
+  logger,
+  getIsHyperBeamProcess,
+  setIsHyperBeamProcess
+}) => {
+  return async (processId, logId) => {
+    const cached = await getIsHyperBeamProcess(processId)
+    if (cached) {
+      logger({ log: `Found cached isHyperBeam state for process ${processId} cached: ${cached}`, logId })
+      return cached.isHyperBeam
+    }
+
+    logger({ log: `No cached isHyperBeam state for process ${processId}, fetching from GQL`, logId })
+    const query = `
+      query {
+        transactions(ids: ["${processId}"]) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              anchor
+              signature
+              recipient
+              block {
+                timestamp
+              }
+              owner {
+                address
+                key
+              }
+              fee {
+                winston
+                ar
+              }
+              quantity {
+                winston
+                ar
+              }
+              data {
+                size
+                type
+              }
+              tags {
+                name
+                value
+              }
+              block {
+                id
+                timestamp
+                height
+                previous
+              }
+              parent {
+                id
+              }
+            }
+          }
+        }
+      }
+    `
+    const process = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch transaction details: ${response.statusText}`)
+      }
+      return response.json()
+    }).then(res => res?.data?.transactions?.edges?.[0]?.node)
+    if (!process) return false
+    const variant = process.tags.find(t => t.name === 'Variant')?.value
+    if (!variant) return false
+    logger({ log: `isHyperBeamProcess: Fetched process ${processId} from GQL with variant ${variant}`, logId })
+    const isHyperBeam = variant === 'ao.N.1'
+    await setIsHyperBeamProcess(processId, { isHyperBeam })
+    return isHyperBeam
+  }
+}
+
 export default {
   isWalletWith,
-  fetchTransactionDetailsWith
+  fetchTransactionDetailsWith,
+  isHyperBeamProcessWith
 }

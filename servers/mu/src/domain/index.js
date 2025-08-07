@@ -214,6 +214,10 @@ export const createApis = async (ctx) => {
 
   const crank = fromPromise(enqueueResults)
 
+  const isHyperBeamProcessCache = InMemoryClient.createLruCache({ size: 1000, ttl: SIXTY_MINUTES_IN_MS })
+  const getIsHyperBeamProcess = InMemoryClient.getByIdWith({ cache: isHyperBeamProcessCache })
+  const setIsHyperBeamProcess = InMemoryClient.setByIdWith({ cache: isHyperBeamProcessCache })
+
   const sendDataItemLogger = logger.child('sendDataItem')
   const sendDataItem = sendDataItemWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
@@ -226,6 +230,7 @@ export const createApis = async (ctx) => {
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, logger: sendDataItemLogger }),
+    isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ fetch, GRAPHQL_URL, logger: sendDataItemLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
@@ -413,6 +418,7 @@ export const createResultApis = async (ctx) => {
     fetchHyperBeamResult: schedulerClient.fetchHyperBeamResultWith({ fetch, histogram, logger: processMsgLogger }),
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
+    isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ fetch, GRAPHQL_URL, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     RELAY_MAP,
     topUp: RelayClient.topUpWith({
       fetch,
@@ -420,10 +426,7 @@ export const createResultApis = async (ctx) => {
       wallet: MU_WALLET,
       address: walletAddress,
       fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
-    }),
-    getIsHyperBeamProcess,
-    setIsHyperBeamProcess,
-    fetchTransactionDetails: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
+    })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
