@@ -43,6 +43,7 @@ if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 
 export const domainConfigSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
+  HB_URL: z.string().url('HB_URL must be a a valid URL').optional(),
   MU_WALLET: z.record(z.any()),
   SCHEDULED_INTERVAL: z.number(),
   DUMP_PATH: z.string(),
@@ -111,6 +112,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'http://localhost:6363',
+    HB_URL: process.env.HB_URL || 'http://localhost:8734',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
@@ -145,6 +147,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
+    HB_URL: process.env.HB_URL || 'https://forward.computer',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,

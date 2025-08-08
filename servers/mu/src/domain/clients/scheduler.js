@@ -328,69 +328,8 @@ function fetchSchedulerProcessWith ({
   }
 }
 
-function fetchHyperBeamResultWith ({ fetch, histogram, logger }) {
-  const hbFetch = withTimerMetricsFetch({
-    fetch,
-    timer: histogram,
-    startLabelsFrom: () => ({
-      operation: 'fetchHyperBeamResult'
-    }),
-    logger
-  })
-
-  /**
-   * fetchHyperBeamResult
-   * Fetches result from HyperBeam scheduler using the new endpoint format
-   *
-   * @param {string} processId - The process ID
-   * @param {string} suUrl - The HyperBeam scheduler URL
-   * @param {string} assignmentNum - The assignment/slot number
-   * @param {string} logId - The logId to aggregate the logs by
-   *
-   * @returns result data from HyperBeam scheduler
-   */
-  return async ({ processId, suUrl, assignmentNum, logId }) => {
-    const resultUrl = `${suUrl}/${processId}~process@1.0/compute&slot=${assignmentNum}/results/serialize~json@1.0`
-
-    logger({ log: `Fetching result from HyperBeam: ${resultUrl}`, logId })
-
-    return backoff(
-      () => hbFetch(resultUrl).then((res) => okRes(res)),
-      {
-        maxRetries: 5,
-        delay: 500,
-        log: logger,
-        logId,
-        name: `fetchHyperBeamResult(${processId}, ${assignmentNum})`
-      }
-    )
-      .then(async (res) => {
-        if (!res?.ok) {
-          const text = await res.text()
-          throw new Error(`${res.status}: ${text}`)
-        }
-        return res.json()
-      })
-      .then((res) => {
-      // Parse result so that MU can use it
-        const result = JSON.parse(res.json.body)
-        // Attach isHyperBeamResult to result
-        return { ...result, isHyperBeamResult: true }
-      })
-      .then((result) => {
-        logger({ log: 'Successfully fetched result from HyperBeam scheduler', logId })
-        return result
-      })
-      .catch((e) => {
-        logger({ log: `Error fetching result from HyperBeam scheduler: ${e}`, logId })
-        throw e
-      })
-  }
-}
-
 export default {
   writeDataItemWith,
   writeAssignmentWith,
-  fetchSchedulerProcessWith,
-  fetchHyperBeamResultWith
+  fetchSchedulerProcessWith
 }
