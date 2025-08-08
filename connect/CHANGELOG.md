@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.88](https://github.com/permaweb/ao/compare/connect@v0.0.87...connect@v0.0.88) (2025-08-08)
+
+
+### Features
+
+* **connect:** attach timestamp to process tags ([6109df2](https://github.com/permaweb/ao/commit/6109df2726b4069ace9718d6da68ff66ff72aa0e))
+
 ## [0.0.87](https://github.com/permaweb/ao/compare/connect@v0.0.86...connect@v0.0.87) (2025-08-06)
 
 
