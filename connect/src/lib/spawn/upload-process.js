@@ -41,7 +41,8 @@ function buildTagsWith () {
         { name: 'Variant', value: variant },
         { name: 'Type', value: 'Process' },
         { name: 'Module', value: ctx.module },
-        { name: 'Scheduler', value: ctx.scheduler }
+        { name: 'Scheduler', value: ctx.scheduler },
+        { name: 'Timestamp', value: Date.now().toString() }
       ]))
       .map(tagsSchema.parse)
       .map(assoc('tags', __, ctx))
