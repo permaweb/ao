@@ -51,12 +51,11 @@ export function sendDataItemWith ({
      * must also be performed.
      */
   const sendMessage = (ctx) => of({ ...ctx, message: ctx.dataItem })
-    .map((ctx) => {
-      const isHyperBeam = isHyperBeamProcess(ctx.dataItem.target, ctx.logId)
+    .chain(fromPromise(async (ctx) => {
+      const isHyperBeam = await isHyperBeamProcess(ctx.dataItem.target, ctx.logId)
       return { ...ctx, schedulerType: isHyperBeam ? 'hyperbeam' : 'legacy' }
-    })
+    }))
     .map(logger.tap({ log: 'Sending message...' }))
-
     .map(({ message, ...rest }) => ({
       ...rest,
       message
