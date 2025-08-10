@@ -97,10 +97,10 @@ export function updateCronProcessCursorWith ({ db }) {
   }
 }
 
-function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
+function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, getCronProcessCursor, updateCronProcessCursor, logger, STALE_CURSOR_RANGE }) {
   /**
    * Run upon server initialization.
-   * Checks the database for cron processes. If found, start those processes.
+   * Checks the database for cron processes. If found, clear stale cursors and start those processes.
    */
   return async () => {
     /**
@@ -110,7 +110,35 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
     if (!cronProcesses) return
 
     /*
-     * Iterate through new processes when the server starts
+     * Clear stale cursors before starting processes
+     */
+    const staleThreshold = Date.now() - STALE_CURSOR_RANGE
+    for (const { processId } of cronProcesses) {
+      try {
+        const cursor = await getCronProcessCursor({ processId })
+        if (cursor) {
+          try {
+            const cursorData = JSON.parse(atob(cursor))
+            const cursorTimestamp = parseInt(cursorData.timestamp)
+            
+            if (cursorTimestamp < staleThreshold) {
+              logger({ log: `Clearing stale cursor for process ${processId} (older than configured range)` })
+              await updateCronProcessCursor({ processId, cursor: null })
+            } else {
+              logger({ log: `Keeping fresh cursor for process ${processId}` })
+            }
+          } catch (error) {
+            logger({ log: `Failed to parse cursor for process ${processId}, clearing it: ${error}` })
+            await updateCronProcessCursor({ processId, cursor: null })
+          }
+        }
+      } catch (e) {
+        logger({ log: `Error checking cursor for process ${processId}: ${e}` })
+      }
+    }
+
+    /*
+     * Iterate through processes and start monitoring
      */
     for (const { processId } of cronProcesses) {
       try {
@@ -122,7 +150,19 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses }) {
   }
 }
 
-function startMonitoredProcessWith ({ fetch, cron, histogram, logger, CU_URL, fetchCron, crank, monitorGauge, saveCronProcess, getCronProcessCursor, updateCronProcessCursor }) {
+function startMonitoredProcessWith ({ 
+  fetch, 
+  cron, 
+  histogram, 
+  logger, 
+  CU_URL, 
+  fetchCron, 
+  crank, 
+  monitorGauge, 
+  saveCronProcess, 
+  getCronProcessCursor, 
+  updateCronProcessCursor
+}) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,

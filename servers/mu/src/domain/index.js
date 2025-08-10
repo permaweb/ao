@@ -93,6 +93,7 @@ export const createApis = async (ctx) => {
   const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
   const ALLOW_PUSHES_AFTER = ctx.ALLOW_PUSHES_AFTER
+  const STALE_CURSOR_RANGE = ctx.STALE_CURSOR_RANGE
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -358,7 +359,11 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      getCronProcesses
+      getCronProcesses,
+      getCronProcessCursor,
+      updateCronProcessCursor,
+      logger: monitorProcessLogger,
+      STALE_CURSOR_RANGE
     }),
     startMessageRecoveryCron
   }

@@ -22,7 +22,11 @@ describe('cron', () => {
         getCronProcesses: () => undefined,
         startMonitoredProcess: async () => {
           assert.fail('should not start process')
-        }
+        },
+        getCronProcessCursor: async () => null,
+        updateCronProcessCursor: async () => {},
+        logger,
+        STALE_CURSOR_RANGE: 7 * 24 * 60 * 60 * 1000
       })()
     })
 
@@ -33,12 +37,77 @@ describe('cron', () => {
         startMonitoredProcess: async () => {
           startMonitoredProcessCalls++
           return Promise.resolve()
-        }
+        },
+        getCronProcessCursor: async () => null,
+        updateCronProcessCursor: async () => {},
+        logger,
+        STALE_CURSOR_RANGE: 7 * 24 * 60 * 60 * 1000
       })
 
       test('should start process by reading proc db and starting processes', async () => {
         await initCronProcs()
         assert.equal(startMonitoredProcessCalls, 2)
+      })
+    })
+
+    describe('stale cursor handling', () => {
+      test('should clear stale cursors before starting processes', async () => {
+        const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000) - 1000 // 1 second older than threshold
+        const staleCursor = btoa(JSON.stringify({ timestamp: oneWeekAgo, ordinate: 1, cron: null, sort: 'ASC' }))
+        
+        let cursorCleared = false
+        const initCronProcs = cron.initCronProcsWith({
+          getCronProcesses: () => [{ processId: 'stale-process', status: 'running' }],
+          getCronProcessCursor: async () => staleCursor,
+          updateCronProcessCursor: async ({ cursor }) => {
+            if (cursor === null) cursorCleared = true
+          },
+          startMonitoredProcess: async () => {},
+          logger,
+          STALE_CURSOR_RANGE: 7 * 24 * 60 * 60 * 1000
+        })
+
+        await initCronProcs()
+        assert.ok(cursorCleared, 'Stale cursor should have been cleared')
+      })
+
+      test('should not clear fresh cursors', async () => {
+        const now = Date.now()
+        const freshCursor = btoa(JSON.stringify({ timestamp: now, ordinate: 1, cron: null, sort: 'ASC' }))
+        
+        let cursorCleared = false
+        const initCronProcs = cron.initCronProcsWith({
+          getCronProcesses: () => [{ processId: 'fresh-process', status: 'running' }],
+          getCronProcessCursor: async () => freshCursor,
+          updateCronProcessCursor: async ({ cursor }) => {
+            if (cursor === null) cursorCleared = true
+          },
+          startMonitoredProcess: async () => {},
+          logger,
+          STALE_CURSOR_RANGE: 7 * 24 * 60 * 60 * 1000
+        })
+
+        await initCronProcs()
+        assert.ok(!cursorCleared, 'Fresh cursor should not have been cleared')
+      })
+
+      test('should clear invalid cursors', async () => {
+        const invalidCursor = 'invalid-base64-cursor'
+        
+        let cursorCleared = false
+        const initCronProcs = cron.initCronProcsWith({
+          getCronProcesses: () => [{ processId: 'invalid-cursor-process', status: 'running' }],
+          getCronProcessCursor: async () => invalidCursor,
+          updateCronProcessCursor: async ({ cursor }) => {
+            if (cursor === null) cursorCleared = true
+          },
+          startMonitoredProcess: async () => {},
+          logger,
+          STALE_CURSOR_RANGE: 7 * 24 * 60 * 60 * 1000
+        })
+
+        await initCronProcs()
+        assert.ok(cursorCleared, 'Invalid cursor should have been cleared')
       })
     })
   })
