@@ -81,7 +81,8 @@ export const domainConfigSchema = z.object({
   ENABLE_CUSTOM_PUSH: z.boolean(),
   CUSTOM_CU_MAP_FILE_PATH: z.string(),
   IP_WALLET_RATE_LIMIT: positiveIntSchema,
-  IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema
+  IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema,
+  STALE_CURSOR_RANGE: positiveIntSchema
 })
 
 /**
@@ -139,7 +140,8 @@ const CONFIG_ENVS = {
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
-    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
+    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000
   },
   production: {
     MODE,
@@ -174,7 +176,8 @@ const CONFIG_ENVS = {
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
-    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
+    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000
   }
 }
 
