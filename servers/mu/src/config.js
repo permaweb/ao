@@ -141,7 +141,7 @@ const CONFIG_ENVS = {
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
-    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 7 * 24 * 60 * 60 * 1000
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000
   },
   production: {
     MODE,
@@ -177,7 +177,7 @@ const CONFIG_ENVS = {
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
-    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 7 * 24 * 60 * 60 * 1000
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000
   }
 }
 
