@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.89](https://github.com/permaweb/ao/compare/connect@v0.0.88...connect@v0.0.89) (2025-08-11)
+
+
+### Features
+
+* **connect:** hb.playground.js ([62b64c0](https://github.com/permaweb/ao/commit/62b64c0a48ff66ec880560cbde60d1d6ebb35fe5))
+
+
+### Bug Fixes
+
+* set accept-bundle on ans104 headers and allow signing-format not signingFormat ([7bbea4a](https://github.com/permaweb/ao/commit/7bbea4aff2442297270f5337304ba82891b4d4b6))
+
 ## [0.0.88](https://github.com/permaweb/ao/compare/connect@v0.0.87...connect@v0.0.88) (2025-08-08)
 
 
