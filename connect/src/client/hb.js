@@ -103,16 +103,18 @@ export function processIdWith({ logger: _logger, signer, HB_URL }) {
       .toPromise()
   }
 }
-
+// headers is not pulling accept-bundle
+// signingFormat should be signing-format
 export function requestWith(args) {
   const { fetch, logger: _logger, HB_URL, signer } = args
-  let signingFormat = args.signingFormat
+  // let signingFormat = args.signingFormat
+  let signingFormat = args['signing-format'] || args.signingFormat
   const logger = _logger.child('request')
 
   return async function (fields) {
     const { path, method, ...restFields } = fields
 
-    signingFormat = fields.signingFormat
+    signingFormat = fields['signing-format'] || fields.signingFormat
     if (!signingFormat) {
       signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
     }
@@ -225,7 +227,9 @@ export function toANS104Request(fields) {
           'Type',
           'type',
           'path',
-          'method'
+          'method',
+          'signingFormat',
+          'signing-format'
         ],
         fields
       )
@@ -241,6 +245,10 @@ export function toANS104Request(fields) {
     data: fields?.data || ''
   }
   verboseLog('ANS104 REQUEST: ', dataItem)
-  return { headers: { 'Content-Type': 'application/ans104', 'codec-device': 'ans104@1.0' }, item: dataItem }
+  return { headers: { 
+    'Content-Type': 'application/ans104', 
+    'codec-device': 'ans104@1.0',
+    'accept-bundle': 'true'
+  }, item: dataItem }
 }
 
