@@ -1,33 +1,54 @@
-import { debugLog } from '../logger';
+import { debugLog } from '../logger.js';
 
-function convertToLegacyOutput(res) {
+function convertToLegacyOutput(jsonRes) {
     let body = {}
     try {
-        body = JSON.parse(JSON.parse(res?.body)?.results?.json?.body)
+        body = JSON.parse(jsonRes?.results?.json?.body);
+        debugLog('info', 'HyperBEAM Response Body:', body);
     } catch (_) { }
+
+    debugLog('info', 'Parsed HyperBEAM Response Body:', body);
+
     return {
         Output: body?.Output || {},
         Messages: body?.Messages || [],
         Assignments: body?.Assignments || [],
         Spawns: body?.Spawns || [],
-        Error: body?.Error
+        Error: body?.Error,
+        ...(body ?? {})
     }
 }
+
+const baseParams = {
+    'method': 'POST',
+    'signing-format': 'ans104',
+    'accept-bundle': 'true',
+    'accept-codec': 'httpsig@1.0',
+}
+
+const getAOParams = (type) => ({
+    'Type': type,
+    'Data-Protocol': 'ao',
+    'Variant': 'ao.N.1'
+});
+
+const getTags = (args) =>
+    args.tags
+        ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value]))
+        : {};
+
+const getData = (args) => args.data ?? '1984';
 
 export function messageWith(deps) {
     return async (args) => {
         try {
             const params = {
                 path: `/${args.process}~process@1.0/push/serialize~json@1.0`,
-                method: 'POST',
-                Type: 'Message',
-                Variant: 'ao.N.1',
                 target: args.process,
-                'signingFormat': 'ANS-104',
-                data: args.data ?? '1234',
-                'accept-bundle': 'true',
-                'accept-codec': 'httpsig@1.0',
-                ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
+                data: getData(args),
+                ...getTags(args),
+                ...getAOParams('Message'),
+                ...baseParams,
             }
 
             const response = await deps.aoCore.request(params);
@@ -50,22 +71,67 @@ export function resultWith(deps) {
         try {
             const params = {
                 path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
-                method: 'POST',
-                Type: 'Message',
-                variant: 'ao.N.1',
                 target: args.process,
-                'signingFormat': 'ANS-104',
-                data: args.data ?? '1234',
-                'accept-bundle': 'true',
-                'accept-codec': 'httpsig@1.0',
-                'slot': args.slot ?? args.message,
-                ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
+                slot: args.slot ?? args.message,
+                data: getData(args),
+                ...getTags(args),
+                ...baseParams,
             }
 
             const response = await deps.aoCore.request(params);
             if (response.ok) {
                 const parsedResponse = await response.json();
                 return convertToLegacyOutput(parsedResponse);
+            }
+            return null;
+        }
+        catch (e) {
+            throw new Error(e.message ?? 'Error sending mainnet message');
+        }
+    }
+}
+
+export function resultsWith(deps) {
+    return async (args) => {
+        try {
+            const slotParams = {
+                path: `/${args.process}~process@1.0/slot/current/body/serialize~json@1.0`,
+                ...baseParams
+            }
+
+            const slotResponse = await deps.aoCore.request(slotParams);
+            if (slotResponse.ok) {
+                const parsedSlotResponse = await slotResponse.json();
+
+                try {
+                    const currentSlot = parsedSlotResponse.body;
+
+                    const resultsParams = {
+                        path: `/${args.process}~process@1.0/compute&slot=${currentSlot}/serialize~json@1.0`,
+                        ...baseParams
+                    }
+
+                    const resultsResponse = await deps.aoCore.request(resultsParams);
+                    if (resultsResponse.ok) {
+                        const parsedResultsResponse = await resultsResponse.json();
+                        return {
+                            edges: [
+                                {
+                                    cursor: currentSlot,
+                                    node: {
+                                        ...convertToLegacyOutput(parsedResultsResponse)
+                                    }
+                                }
+                            ]
+                        }
+                    }
+
+                    return null;
+
+                }
+                catch (e) {
+                    throw new Error(e.message ?? 'Error getting current process slot');
+                }
             }
             return null;
         }
@@ -96,28 +162,27 @@ export function spawnWith(deps) {
 
         try {
             const params = {
-                path: '/push',
-                method: 'POST',
-                device: 'process@1.0',
-                scheduler: scheduler,
+                'path': '/push',
+                'device': 'process@1.0',
+                'scheduler': scheduler,
                 'scheduler-location': scheduler,
                 'scheduler-device': 'scheduler@1.0',
                 'push-device': 'push@1.0',
-                'Data-Protocol': 'ao',
-                Variant: 'ao.N.1',
-                'Authority': authority,
-                'accept-bundle': 'true',
-                'signingFormat': 'ANS-104',
                 'execution-device': 'genesis-wasm@1.0',
-                Module: module,
-                Type: 'Process',
-                ...(args.tags ? Object.fromEntries(args.tags.map(tag => [tag.name, tag.value])) : {})
+                'Authority': authority,
+                'Module': module,
+                'data': getData(args),
+                ...getTags(args),
+                ...getAOParams('Process'),
+                ...baseParams,
             }
 
             const response = await deps.aoCore.request(params);
 
             try {
                 const processId = response.headers.get('process');
+
+                debugLog('info', 'Process ID:', processId);
 
                 await retryInitPush(deps, args, processId);
 
@@ -134,37 +199,33 @@ export function spawnWith(deps) {
 }
 
 async function retryInitPush(deps, args, processId, maxAttempts = 10) {
-    const baseParams = {
+    const params = {
         path: `/${processId}~process@1.0/push/serialize~json@1.0`,
-        method: 'POST',
-        Type: 'Message',
-        Variant: 'ao.N.1',
         target: processId,
-        signingFormat: 'ANS-104',
         Action: 'Eval',
         data: `require('.process')._version`,
-        'accept-bundle': 'true',
-        'accept-codec': 'httpsig@1.0',
-        ...(args.tags ? Object.fromEntries(args.tags.map((tag) => [tag.name, tag.value])) : {}),
+        ...getTags(args),
+        ...getAOParams('Message'),
+        ...baseParams,
     };
 
     let lastError = null;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-            const initPush = await deps.aoCore.request(baseParams);
+            const initPush = await deps.aoCore.request(params);
             if (initPush.ok) {
-                debugLog('info', `initPush succeeded on attempt ${attempt}`);
+                debugLog('info', `Init push succeeded on attempt ${attempt}`);
                 return initPush;
             } else {
-                debugLog('warn', `initPush attempt ${attempt} returned ok=false`, {
+                debugLog('warn', `Init push attempt ${attempt} returned ok=false`, {
                     status: initPush.status,
                     body: initPush,
                 });
-                lastError = new Error(`initPush returned ok=false (status=${initPush.status})`);
+                lastError = new Error(`Init push returned ok=false (status=${initPush.status})`);
             }
         } catch (err) {
-            debugLog('warn', `initPush attempt ${attempt} threw`, err);
+            debugLog('warn', `Init push attempt ${attempt} threw`, err);
             lastError = err;
         }
 
@@ -173,5 +234,5 @@ async function retryInitPush(deps, args, processId, maxAttempts = 10) {
         await new Promise((r) => setTimeout(r, 500));
     }
 
-    throw new Error(`initPush failed after ${maxAttempts} attempts: ${lastError?.message || 'unknown'}`);
+    throw new Error(`Init push failed after ${maxAttempts} attempts: ${lastError?.message || 'unknown'}`);
 }

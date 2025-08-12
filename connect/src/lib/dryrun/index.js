@@ -74,7 +74,7 @@ function convertToRequest (args) {
     target: process,
     'accept-bundle': 'true',
     'accept-codec': 'httpsig@1.0',
-    signingFormat: 'ANS-104',
+    'signing-format': 'ans104',
     ...tags.filter(t => t.name !== 'device').reduce((a, t) => assoc(t.name, t.value, a), {}),
     ...rest
   }

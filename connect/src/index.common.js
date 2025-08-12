@@ -275,11 +275,15 @@ export function connectWith({ createDataItemSigner, createSigner }) {
 
     const message = CoreClient.messageWith(coreClientDeps);
     const spawn = CoreClient.spawnWith(coreClientDeps);
+    const result = CoreClient.resultWith(coreClientDeps);
+    const results = CoreClient.resultsWith(coreClientDeps);
 
     return {
       MODE: 'mainnet',
       spawn,
       message,
+      result,
+      results,
       dryrun,
       request,
       createSigner: mainnetSigner,
