@@ -1,6 +1,6 @@
 import { connect as schedulerUtilsConnect, locate } from '@permaweb/ao-scheduler-utils'
 
-import AOCore from '@permaweb/ao-core-libs';
+import AOCore from '@permaweb/ao-core-libs'
 
 import * as CoreClient from './client/ao-core.js'
 import * as MuClient from './client/ao-mu.js'
@@ -21,7 +21,7 @@ import { spawnWith } from './lib/spawn/index.js'
 import { monitorWith } from './lib/monitor/index.js'
 import { unmonitorWith } from './lib/unmonitor/index.js'
 import { resultsWith } from './lib/results/index.js'
-import { dryrunMainnetWith, dryrunWith } from './lib/dryrun/index.js'
+import { dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
 // import { getOperator, getNodeBalance } from './lib/payments/index.js'
@@ -33,11 +33,6 @@ const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
 const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
 const DEFAULT_HB_URL = 'https://tee-6.forward.computer'
-// eslint-disable-next-line no-unused-vars
-const DEFAULT_AO_URL = 'http://m2.ao.computer'
-const DEFAULT_RELAY_CU_URL = 'http://cu.s451-comm3-main.xyz'
-const DEFAULT_RELAY_MU_URL = 'http://mu.s451-comm3-main.xyz'
-const DEFAULT_DEVICE = 'relay@1.0'
 
 const defaultFetch = fetch
 
@@ -46,10 +41,10 @@ export { serializeCron } from './lib/serializeCron/index.js'
 /**
  * @param {{ createDataItemSigner: (wallet:any) => Types['signer'], createSigner: any }}
  */
-export function connectWith({ createDataItemSigner, createSigner }) {
+export function connectWith ({ createDataItemSigner, createSigner }) {
   const _logger = createLogger()
 
-  function legacyMode({
+  function legacyMode ({
     MODE,
     GRAPHQL_URL,
     GRAPHQL_MAX_RETRIES,
@@ -207,7 +202,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     }
   }
 
-  function mainnetMode({
+  function mainnetMode ({
     MODE,
     signer,
     URL = DEFAULT_HB_URL,
@@ -219,13 +214,13 @@ export function connectWith({ createDataItemSigner, createSigner }) {
 
     if (!signer) { throw new Error('mainnet mode requires providing a signer to connect()') }
 
-    let aoCoreDeps = { signer };
-    if (URL) aoCoreDeps.url = URL;
+    const aoCoreDeps = { signer }
+    if (URL) aoCoreDeps.url = URL
 
-    const aoCore = AOCore.init(aoCoreDeps);
+    const aoCore = AOCore.init(aoCoreDeps)
 
-    let coreClientDeps = { aoCore, url: URL, signer };
-    if (SCHEDULER) coreClientDeps.scheduler = SCHEDULER;
+    const coreClientDeps = { aoCore, url: URL, signer }
+    if (SCHEDULER) coreClientDeps.scheduler = SCHEDULER
 
     const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
 
@@ -261,22 +256,11 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
-    const dryrunLogger = logger.child('dryrun')
-    const dryrun = dryrunMainnetWith({
-      dryrunFetch: HbClient.requestWith({
-        fetch,
-        logger: dryrunLogger,
-        HB_URL: URL,
-        signer
-      }),
-      request,
-      logger: dryrunLogger
-    })
-
-    const message = CoreClient.messageWith(coreClientDeps);
-    const spawn = CoreClient.spawnWith(coreClientDeps);
-    const result = CoreClient.resultWith(coreClientDeps);
-    const results = CoreClient.resultsWith(coreClientDeps);
+    const message = CoreClient.messageWith(coreClientDeps)
+    const spawn = CoreClient.spawnWith(coreClientDeps)
+    const result = CoreClient.resultWith(coreClientDeps)
+    const results = CoreClient.resultsWith(coreClientDeps)
+    const dryrun = CoreClient.dryrunWith(coreClientDeps)
 
     return {
       MODE: 'mainnet',
@@ -359,7 +343,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
    * @param {ConnectArgs} args
    * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof mainnetMode>}
    */
-  function connect(args = {}) {
+  function connect (args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
 
     if (!GRAPHQL_URL) { GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' }) }
