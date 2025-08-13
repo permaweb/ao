@@ -198,13 +198,18 @@ export function spawnWith (deps) {
 export function dryrunWith (deps) {
   return async (args) => {
     try {
+      const tags = getTags(args)
+      const tagsAsParams = Object.entries(tags)?.length > 0
+        ? `&${Object.entries(tags).map(([key, value]) => `${key}=${value}`).join('&')}`
+        : ''
+
+      const path = `/${args.process}~process@1.0/as=execution/compute${tagsAsParams}/serialize~json@1.0`
       const params = {
-        path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
+        path,
         target: args.process,
         data: getData(args),
-        ...getTags(args),
         ...baseParams,
-        owner: '1234'
+        'signing-format': 'httpsig'
       }
 
       const response = await deps.aoCore.request(params)
