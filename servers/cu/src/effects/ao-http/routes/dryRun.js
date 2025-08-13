@@ -42,6 +42,15 @@ export const withDryRunRoutes = app => {
           domain: { BUSY_THRESHOLD, apis: { dryRun } }
         } = req
 
+        if (!body.Owner) {
+          body.Owner = '1234'
+        }
+        if (!body.From) {
+          body.From = '1234'
+        }
+        if (!body.Target) {
+          body.Target = processId
+        }
         const input = inputSchema.parse({ processId, messageUid, maxProcessAge, dryRun: body })
 
         await busyIn(
@@ -51,7 +60,9 @@ export const withDryRunRoutes = app => {
             res.status(202)
             return { message: `Evaluation of process "${input.processId}" to "${input.messageUid || 'latest'}" is in progress.` }
           }
-        ).then((output) => res.send(output))
+        ).then((output) => {
+          return res.send(output)
+        })
       })
     )()
   )
