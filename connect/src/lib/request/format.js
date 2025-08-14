@@ -28,9 +28,9 @@ export const handleFormat = (mode, device) => (fields) => {
           return { name: key, value: fields[key] }
         }, fields)
         .concat([
-          { name: 'Data-Protocol', value: 'ao' },
-          { name: 'Type', value: fields.Type ?? 'Message' },
-          { name: 'Variant', value: fields.Variant ?? 'ao.N.1' }
+          { name: 'data-protocol', value: 'ao' },
+          { name: 'type', value: fields.type ?? 'Message' },
+          { name: 'variant', value: fields.variant ?? 'ao.N.1' }
         ]),
       data: fields?.data || ''
     }
