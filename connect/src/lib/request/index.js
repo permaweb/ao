@@ -79,7 +79,7 @@ if mode == 'relay' then request should create a hybrid ans-104/httpsig from fiel
 if mode == 'process' then request should create a pure httpsig from fields
 */
   return {
-    type: fields.Type,
+    type: fields.type,
     map
   }
 }
