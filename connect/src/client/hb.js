@@ -109,6 +109,7 @@ export function requestWith(args) {
   const { fetch, logger: _logger, HB_URL, signer } = args
   // let signingFormat = args.signingFormat
   let signingFormat = args['signing-format'] || args.signingFormat
+  
   const logger = _logger.child('request')
 
   return async function (fields) {
@@ -118,7 +119,7 @@ export function requestWith(args) {
     if (!signingFormat) {
       signingFormat = reqFormatCache[fields.path] ?? 'HTTP'
     }
-
+    
     try {
       let fetch_req = {}
 
@@ -126,7 +127,7 @@ export function requestWith(args) {
 
       if (signingFormat === 'ANS-104') {
         const ans104Request = toANS104Request(restFields)
-        verboseLog('ANS-104 REQUEST PRE-SIGNING: ', ans104Request)
+        verboseLog('ANS-104 REQUEST PRE-SIGNING: ', JSON.stringify(ans104Request, null, 2))
 
         const signedRequest = await toDataItemSigner(signer)(ans104Request.item)
         verboseLog('SIGNED ANS-104 ITEM: ', signedRequest)
@@ -238,13 +239,13 @@ export function toANS104Request(fields) {
         return { name: key, value: fields[key] }
       }, fields)
       .concat([
-        { name: 'Data-Protocol', value: 'ao' },
-        { name: 'Type', value: fields.Type ?? 'Message' },
-        { name: 'Variant', value: fields.Variant ?? 'ao.N.1' }
+        { name: 'data-protocol', value: 'ao' },
+        { name: 'type', value: fields.type ?? 'Message' },
+        { name: 'variant', value: fields.variant ?? 'ao.N.1' }
       ]),
     data: fields?.data || ''
   }
-  verboseLog('ANS104 REQUEST: ', dataItem)
+  verboseLog('ANS104 REQUEST: ', JSON.stringify(dataItem, null, 2))
   return { headers: { 
     'Content-Type': 'application/ans104', 
     'codec-device': 'ans104@1.0',
