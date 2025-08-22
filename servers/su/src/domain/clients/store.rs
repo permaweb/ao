@@ -2076,3 +2076,45 @@ pub async fn migrate_to_disk() -> io::Result<()> {
 
     Ok(())
 }
+
+
+pub async fn reinsert_message(process_id: String, timestamp: String, message_id: String, assignment_id: String) -> io::Result<()> {
+    let config = AoConfig::new(None).expect("Failed to read configuration");
+
+    let local_reader = bytestore::ByteStore::new(config.clone());
+
+    local_reader.try_read_instance_connect().unwrap();
+
+    let pg_store = StoreClient::new().expect("Failed to create StoreClient");
+
+    let full_message_binary = local_reader.read_binaries(vec![
+      (message_id.clone(), Some(assignment_id.clone()), process_id.clone(), timestamp.clone())
+    ]).await.expect("Failed to get message");
+
+    let parsed_message = Message::from_bytes(
+        full_message_binary.get(&(
+          message_id.clone(), 
+          Some(assignment_id.clone()), 
+          process_id.clone(), 
+          timestamp.clone()
+        )).unwrap().clone()
+    ).expect("Failed to parse message");
+
+    println!("Reinserting message: {:?}", parsed_message);
+
+    pg_store
+        .save_message(
+            &parsed_message,
+            &full_message_binary.get(&(
+                message_id.clone(),
+                Some(assignment_id.clone()),
+                process_id.clone(),
+                timestamp.clone(),
+            )).unwrap().clone(),
+            None
+        )
+        .await
+        .expect("Failed to save message");
+
+    Ok(())
+}
