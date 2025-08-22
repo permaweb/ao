@@ -287,6 +287,48 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_get_latest_message() -> Result<(), StoreErrorType> {
+        let test_db = TestDb::new(10);
+        let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
+
+        let (process_bundle, message_bundles) = bundle_list();
+        let test_process = Process::from_bytes(process_bundle.clone())?;
+        let process_id = &test_process.process.process_id;
+
+        // Test with no messages - should return None
+        let latest = client.get_latest_message(process_id).await?;
+        assert!(latest.is_none());
+
+        client.save_process(&test_process, &process_bundle)?;
+
+        // Save messages with different timestamps to test ordering
+        for (_i, bundle) in message_bundles.iter().enumerate() {
+            let message = Message::from_bytes(bundle.clone())?;
+            client.save_message(&message, bundle, None).await?;
+        }
+
+        // Get the latest message
+        let latest_message = client.get_latest_message(process_id).await?;
+        assert!(latest_message.is_some());
+
+        let latest = latest_message.unwrap();
+        
+        // The last message should have the highest timestamp
+        // Based on the bundle_list() messages, we expect the message with highest timestamp
+        let all_messages: Vec<Message> = message_bundles.iter()
+            .map(|b| Message::from_bytes(b.clone()).unwrap())
+            .collect();
+        let expected_latest = all_messages.iter()
+            .max_by_key(|m| m.timestamp().unwrap_or(0))
+            .unwrap();
+
+        assert_eq!(latest.assignment.id, expected_latest.assignment.id);
+        assert_eq!(latest.timestamp()?, expected_latest.timestamp()?);
+
+        Ok(())
+    }
+
     /*
       Helper functions to create test data using
       base64_url encoded bundles
