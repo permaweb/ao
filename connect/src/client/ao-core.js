@@ -1,6 +1,6 @@
 import { debugLog } from '../logger.js'
 
-function convertToLegacyOutput (jsonRes) {
+function convertToLegacyOutput(jsonRes) {
   let body = {}
   try {
     body = JSON.parse(jsonRes?.results?.json?.body)
@@ -39,108 +39,7 @@ const getTags = (args) =>
 
 const getData = (args) => args.data ?? '1984'
 
-export function messageWith (deps) {
-  return async (args) => {
-    try {
-      const params = {
-        path: `/${args.process}~process@1.0/push/serialize~json@1.0`,
-        target: args.process,
-        data: getData(args),
-        ...getTags(args),
-        ...getAOParams('Message'),
-        ...baseParams
-      }
-
-      const response = await deps.aoCore.request(params)
-      if (response.ok) {
-        const parsedResponse = await response.json()
-
-        if (args.opts?.fullResponse) return convertToLegacyOutput(parsedResponse)
-        else return parsedResponse.slot
-      }
-      return null
-    } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
-    }
-  }
-}
-
-export function resultWith (deps) {
-  return async (args) => {
-    try {
-      const params = {
-        path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
-        target: args.process,
-        slot: args.slot ?? args.message,
-        data: getData(args),
-        ...getTags(args),
-        ...baseParams,
-        method: 'GET',
-        'signing-format': 'httpsig'
-      }
-
-      const response = await deps.aoCore.request(params)
-      if (response.ok) {
-        const parsedResponse = await response.json()
-        return convertToLegacyOutput(parsedResponse)
-      }
-      return null
-    } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
-    }
-  }
-}
-
-export function resultsWith (deps) {
-  return async (args) => {
-    try {
-      const slotParams = {
-        path: `/${args.process}~process@1.0/slot/current/body/serialize~json@1.0`,
-        ...baseParams
-      }
-
-      const slotResponse = await deps.aoCore.request(slotParams)
-      if (slotResponse.ok) {
-        const parsedSlotResponse = await slotResponse.json()
-
-        try {
-          const currentSlot = parsedSlotResponse.body
-
-          const resultsParams = {
-            path: `/${args.process}~process@1.0/compute&slot=${currentSlot}/serialize~json@1.0`,
-            ...baseParams,
-            method: 'GET',
-            'signing-format': 'httpsig'
-          }
-
-          const resultsResponse = await deps.aoCore.request(resultsParams)
-          if (resultsResponse.ok) {
-            const parsedResultsResponse = await resultsResponse.json()
-            return {
-              edges: [
-                {
-                  cursor: currentSlot,
-                  node: {
-                    ...convertToLegacyOutput(parsedResultsResponse)
-                  }
-                }
-              ]
-            }
-          }
-
-          return null
-        } catch (e) {
-          throw new Error(e.message ?? 'Error getting current process slot')
-        }
-      }
-      return null
-    } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
-    }
-  }
-}
-
-export function spawnWith (deps) {
+export function spawnWith(deps) {
   return async (args) => {
     let scheduler = deps.scheduler
 
@@ -152,7 +51,8 @@ export function spawnWith (deps) {
     if (!scheduler) throw new Error('No scheduler provided')
 
     const authority = process.env.AUTHORITY || scheduler
-    const module = process.env.MODULE || 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s'
+    // const module = process.env.MODULE || 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s' // TODO
+    const module = process.env.MODULE || 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk';
 
     debugLog('info', 'Node URL:', deps.url)
     debugLog('info', 'Scheduler:', scheduler)
@@ -183,9 +83,13 @@ export function spawnWith (deps) {
 
         debugLog('info', 'Process ID:', processId)
 
-        await retryInitPush(deps, args, processId)
+        if (processId) {
+          await retryInitPush(deps, args, processId)
 
-        return processId
+          return processId
+        }
+
+        return null;
       } catch (e) {
         throw new Error(e.message ?? 'Error spawning mainnet process')
       }
@@ -195,21 +99,44 @@ export function spawnWith (deps) {
   }
 }
 
-export function dryrunWith (deps) {
+export function messageWith(deps) {
   return async (args) => {
     try {
-      const tags = getTags(args)
-      const tagsAsParams = Object.entries(tags)?.length > 0
-        ? `&${Object.entries(tags).map(([key, value]) => `${key}=${value}`).join('&')}`
-        : ''
-
-      const path = `/${args.process}~process@1.0/as=execution/compute${tagsAsParams}/serialize~json@1.0`
       const params = {
-        path,
+        path: `/${args.process}~process@1.0/push/serialize~json@1.0`,
         target: args.process,
         data: getData(args),
+        ...getTags(args),
+        ...getAOParams('Message'),
+        ...baseParams
+      }
+
+      const response = await deps.aoCore.request(params)
+      if (response.ok) {
+        const parsedResponse = await response.json()
+
+        if (args.opts?.fullResponse) return convertToLegacyOutput(parsedResponse)
+        else return parsedResponse.slot
+      }
+      return null
+    } catch (e) {
+      throw new Error(e.message ?? 'Error sending mainnet message')
+    }
+  }
+}
+
+export function resultWith(deps) {
+  return async (args) => {
+    try {
+      const params = {
+        path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
+        target: args.process,
+        slot: args.slot ?? args.message,
+        data: getData(args),
+        ...getTags(args),
         ...baseParams,
-        'signing-format': 'httpsig'
+        method: 'POST',
+        'signing-format': 'ans104'
       }
 
       const response = await deps.aoCore.request(params)
@@ -224,7 +151,80 @@ export function dryrunWith (deps) {
   }
 }
 
-async function retryInitPush (deps, args, processId, maxAttempts = 10) {
+export function resultsWith(deps) {
+  return async (args) => {
+    try {
+      const slotParams = {
+        path: `/${args.process}~process@1.0/slot/current`,
+        ...baseParams
+      }
+
+      const slotResponse = await deps.aoCore.request(slotParams)
+      if (slotResponse.ok) {
+        try {
+          const currentSlot = await slotResponse.text();
+          
+          const resultsParams = {
+            path: `/${args.process}~process@1.0/compute&slot=${currentSlot}/serialize~json@1.0`,
+            ...baseParams
+          }
+
+          const resultsResponse = await deps.aoCore.request(resultsParams)
+          if (resultsResponse.ok) {
+            const parsedResultsResponse = await resultsResponse.json()
+            return {
+              edges: [
+                {
+                  cursor: currentSlot,
+                  node: {
+                    ...convertToLegacyOutput(parsedResultsResponse)
+                  }
+                }
+              ]
+            }
+          }
+
+          return null
+        } catch (e) {
+          throw new Error(e.message ?? 'Error getting current process slot')
+        }
+      }
+      return null
+    } catch (e) {
+      throw new Error(e.message ?? 'Error sending mainnet message')
+    }
+  }
+}
+
+export function dryrunWith(deps) {
+  return async (args) => {
+    try {
+      const tags = getTags(args)
+      const tagsAsParams = Object.entries(tags)?.length > 0
+        ? `&${Object.entries(tags).map(([key, value]) => `${key}=${value}`).join('&')}`
+        : ''
+
+      const path = `/${args.process}~process@1.0/as=execution/compute${tagsAsParams}/serialize~json@1.0`
+      const params = {
+        path,
+        target: args.process,
+        data: getData(args),
+        ...baseParams,
+      }
+
+      const response = await deps.aoCore.request(params)
+      if (response.ok) {
+        const parsedResponse = await response.json()
+        return convertToLegacyOutput(parsedResponse)
+      }
+      return null
+    } catch (e) {
+      throw new Error(e.message ?? 'Error sending mainnet message')
+    }
+  }
+}
+
+async function retryInitPush(deps, args, processId, maxAttempts = 10) {
   const params = {
     path: `/${processId}~process@1.0/push/serialize~json@1.0`,
     target: processId,

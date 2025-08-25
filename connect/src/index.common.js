@@ -323,6 +323,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
    * @property {number} [GRAPHQL_RETRY_BACKOFF] - the initial backoff, in milliseconds (moot if GRAPHQL_MAX_RETRIES is set to 0)
    * @property {string} [MU_URL] - the url of the desried ao Messenger Unit. Also used as the relay MU in 'relay' mode
    * @property {string} [CU_URL] - the url of the desried ao Compute Unit. Also used as the relay CU in 'relay' mode
+   * @property {string} [SCHEDULER] - the url of the desried Scheduler Unit
    *
    * @typedef ConnectArgsMainnet
    * @property {Types['signer']} [signer] - the signer used to sign Data items and HTTP messages.
