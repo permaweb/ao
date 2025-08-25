@@ -270,7 +270,11 @@ export const domainConfigSchema = z.object({
   /**
    * The HB router url to default to when checking if target is a wallet
    */
-  HB_ROUTER_URL: z.string()
+  HB_ROUTER_URL: z.string(),
+  /**
+   * Whether to enable HB wallet check when checking if target is a wallet
+   */
+  ENABLE_HB_WALLET_CHECK: z.boolean()
 })
 
 export const bufferSchema = z.any().refine(buffer => {

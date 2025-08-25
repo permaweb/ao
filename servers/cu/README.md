@@ -151,6 +151,7 @@ to be retrieved from the dryrun cache.
   If a eval stream is more nonces behind than this limit, a 503 is returned.
 - `SU_ROUTER_URL`: the SU router url to default to when checking if target is a wallet
 - `HB_ROUTER_URL`: the HB router url to default to when checking if target is a wallet
+- `ENABLE_HB_WALLET_CHECK`: whether to enable HB wallet check when checking if target is a wallet
 
 ## Tests
 

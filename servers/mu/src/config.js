@@ -84,7 +84,8 @@ export const domainConfigSchema = z.object({
   IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema,
   STALE_CURSOR_RANGE: positiveIntSchema,
   SU_ROUTER_URL: z.string(),
-  HB_ROUTER_URL: z.string()
+  HB_ROUTER_URL: z.string(),
+  ENABLE_HB_WALLET_CHECK: z.boolean()
 })
 
 /**
@@ -145,7 +146,8 @@ const CONFIG_ENVS = {
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
     STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
-    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer'
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false'
   },
   production: {
     MODE,
@@ -183,7 +185,8 @@ const CONFIG_ENVS = {
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
     STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
-    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer'
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false'
   }
 }
 
