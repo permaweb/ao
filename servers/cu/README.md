@@ -149,6 +149,8 @@ There are a few environment variables that you can set. Besides
 to be retrieved from the dryrun cache.
 - `DRY_RUN_PROCESS_CACHE_TTL`: the TTL of the dryrun process memory cache.
   If a eval stream is more nonces behind than this limit, a 503 is returned.
+- `SU_ROUTER_URL`: the SU router url to default to when checking if target is a wallet
+- `HB_ROUTER_URL`: the HB router url to default to when checking if target is a wallet
 
 ## Tests
 

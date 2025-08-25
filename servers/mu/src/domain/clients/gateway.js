@@ -6,6 +6,8 @@ function isWalletWith ({
   histogram,
   ARWEAVE_URL,
   GRAPHQL_URL,
+  SU_ROUTER_URL,
+  HB_ROUTER_URL,
   logger,
   setById,
   getById
@@ -43,7 +45,7 @@ function isWalletWith ({
     // Step 1: Check SU router
     try {
       logger({ log: `Step 1: Checking SU router for process ${id}`, logId })
-      const suResponse = await walletFetch(`https://su-router.ao-testnet.xyz/processes/${id}`)
+      const suResponse = await walletFetch(`${SU_ROUTER_URL}/processes/${id}`)
       if (suResponse.ok) {
         logger({ log: `Found process in SU router for ${id}`, logId })
         return setById(id, { isWallet: false }).then(() => false)
@@ -55,7 +57,7 @@ function isWalletWith ({
     // Step 2: Check HyperBeam
     try {
       logger({ log: `Step 2: Checking HyperBeam for process ${id}`, logId })
-      const hyperbeamResponse = await walletFetch(`http://forward.computer/${id}~meta@1.0/info/serialize~json@1.0`)
+      const hyperbeamResponse = await walletFetch(`${HB_ROUTER_URL}/${id}~meta@1.0/info/serialize~json@1.0`)
       if (hyperbeamResponse.status === 200) {
         logger({ log: `Found process in HyperBeam for ${id}`, logId })
         return setById(id, { isWallet: false }).then(() => false)

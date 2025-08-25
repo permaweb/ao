@@ -94,6 +94,8 @@ export const createApis = async (ctx) => {
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
   const ALLOW_PUSHES_AFTER = ctx.ALLOW_PUSHES_AFTER
   const STALE_CURSOR_RANGE = ctx.STALE_CURSOR_RANGE
+  const SU_ROUTER_URL = ctx.SU_ROUTER_URL
+  const HB_ROUTER_URL = ctx.HB_ROUTER_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -231,7 +233,7 @@ export const createApis = async (ctx) => {
     fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, HB_URL, histogram, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, logger: sendDataItemLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, SU_ROUTER_URL, HB_ROUTER_URL, logger: sendDataItemLogger }),
     isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ fetch, GRAPHQL_URL, logger: sendDataItemLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
@@ -384,6 +386,8 @@ export const createResultApis = async (ctx) => {
   const ARWEAVE_URL = ctx.ARWEAVE_URL
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
   const RELAY_MAP = ctx.RELAY_MAP
+  const SU_ROUTER_URL = ctx.SU_ROUTER_URL
+  const HB_ROUTER_URL = ctx.HB_ROUTER_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -423,7 +427,7 @@ export const createResultApis = async (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, HB_URL, histogram, logger: processMsgLogger }),
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, logger: processMsgLogger, setById, getById }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, GRAPHQL_URL, SU_ROUTER_URL, HB_ROUTER_URL, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
     isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ fetch, GRAPHQL_URL, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     RELAY_MAP,
