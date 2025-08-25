@@ -82,7 +82,10 @@ export const domainConfigSchema = z.object({
   CUSTOM_CU_MAP_FILE_PATH: z.string(),
   IP_WALLET_RATE_LIMIT: positiveIntSchema,
   IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema,
-  STALE_CURSOR_RANGE: positiveIntSchema
+  STALE_CURSOR_RANGE: positiveIntSchema,
+  SU_ROUTER_URL: z.string(),
+  HB_ROUTER_URL: z.string(),
+  ENABLE_HB_WALLET_CHECK: z.boolean()
 })
 
 /**
@@ -141,7 +144,10 @@ const CONFIG_ENVS = {
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
-    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
+    SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false'
   },
   production: {
     MODE,
@@ -177,7 +183,10 @@ const CONFIG_ENVS = {
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
-    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
+    SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false'
   }
 }
 
