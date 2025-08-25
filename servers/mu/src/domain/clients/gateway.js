@@ -22,7 +22,7 @@ function isWalletWith ({
   /**
    * @name isWallet
    * Given an id, check if it is a process or a wallet.
-   * First, check the cache. Then, check Arweave.
+   * 4-step process: 1. Check SU router, 2. Check HyperBeam, 3. Check Arweave, 4. Check GraphQL
    *
    * @param id - The id to check if it is a process or a wallet
    * @param logId - The logId to aggregate the logs by
@@ -38,98 +38,121 @@ function isWalletWith ({
       return cachedIsWallet.isWallet
     }
 
-    logger({ log: `id: ${id} not cached checking arweave for tx`, logId })
+    logger({ log: `id: ${id} not cached, starting 4-step check`, logId })
 
-    /*
-      Only if this is actually a tx will this
-      return true. That means if it doesn't its
-      either a wallet or something else.
-    */
-    return backoff(
-      () =>
-        walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
-          .then(okRes),
-      {
-        maxRetries: 4,
-        delay: 500,
-        log: logger,
-        logId,
-        name: `isWallet(${id})`
+    // Step 1: Check SU router
+    try {
+      logger({ log: `Step 1: Checking SU router for process ${id}`, logId })
+      const suResponse = await walletFetch(`https://su-router.ao-testnet.xyz/processes/${id}`)
+      if (suResponse.ok) {
+        logger({ log: `Found process in SU router for ${id}`, logId })
+        return setById(id, { isWallet: false }).then(() => false)
       }
-    )
-      .then((res) => {
-        return setById(id, { isWallet: !res.ok }).then(() => {
-          return !res.ok
-        })
-      })
-      .catch((_err) => {
-        logger({ log: `Arweave HEAD request failed for ${id}, trying GraphQL fallback`, logId })
+    } catch (err) {
+      logger({ log: `Step 1: SU router check failed for ${id}: ${err.message}`, logId })
+    }
 
-        const query = `
-          query GetTransactionByID($id: ID!) {
-            transactions(
-              tags: [
-                {name:"Data-Protocol", values: ["ao"]},
-                {name:"Type", values: ["Process"]}
-              ]
-              first: 100
-              sort:HEIGHT_DESC
-              ids:[$id]
-            ) {
-              edges {
-                cursor
-                node {
-                  id 
-                  data {
-                    size
-                  }
-                  owner{
-                    address
-                  }
-                  tags {
-                    name 
-                    value 
-                  }
-                  bundledIn {
-                    id
-                  }
-                  signature
-                  recipient
+    // Step 2: Check HyperBeam
+    try {
+      logger({ log: `Step 2: Checking HyperBeam for process ${id}`, logId })
+      const hyperbeamResponse = await walletFetch(`http://forward.computer/${id}~meta@1.0/info/serialize~json@1.0`)
+      if (hyperbeamResponse.status === 200) {
+        logger({ log: `Found process in HyperBeam for ${id}`, logId })
+        return setById(id, { isWallet: false }).then(() => false)
+      }
+    } catch (err) {
+      logger({ log: `Step 2: HyperBeam check failed for ${id}: ${err.message}`, logId })
+    }
+
+    // Step 3: Check Arweave
+    try {
+      logger({ log: `Step 3: Checking Arweave for ${id}`, logId })
+      const arweaveResponse = await backoff(
+        () =>
+          walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
+            .then(okRes),
+        {
+          maxRetries: 4,
+          delay: 500,
+          log: logger,
+          logId,
+          name: `isWallet(${id})`
+        }
+      )
+
+      if (arweaveResponse.ok) {
+        logger({ log: `Found transaction in Arweave for ${id}`, logId })
+        return setById(id, { isWallet: false }).then(() => false)
+      }
+    } catch (err) {
+      logger({ log: `Step 3: Arweave check failed for ${id}: ${err.message}`, logId })
+    }
+
+    // Step 4: Check GraphQL
+    try {
+      logger({ log: `Step 4: Checking GraphQL for ${id}`, logId })
+
+      const query = `
+        query GetTransactionByID($id: ID!) {
+          transactions(
+            tags: [
+              {name:"Data-Protocol", values: ["ao"]},
+              {name:"Type", values: ["Process"]}
+            ]
+            first: 100
+            sort:HEIGHT_DESC
+            ids:[$id]
+          ) {
+            edges {
+              cursor
+              node {
+                id 
+                data {
+                  size
                 }
+                owner{
+                  address
+                }
+                tags {
+                  name 
+                  value 
+                }
+                bundledIn {
+                  id
+                }
+                signature
+                recipient
               }
             }
           }
-        `
+        }
+      `
 
-        return fetch(GRAPHQL_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query,
-            variables: { id }
-          })
+      const gqlResponse = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          variables: { id }
         })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`GraphQL request failed: ${response.statusText}`)
-            }
-            return response.json()
-          })
-          .then(result => {
-            const hasProcessTransaction = result.data?.transactions?.edges?.length > 0
-            const isWallet = !hasProcessTransaction
-
-            logger({ log: `GraphQL result for ${id}: ${hasProcessTransaction ? 'found process' : 'no process found'}, isWallet: ${isWallet}`, logId })
-
-            return setById(id, { isWallet }).then(() => isWallet)
-          })
-          .catch(gqlError => {
-            logger({ log: `GraphQL fallback also failed for ${id}, defaulting to wallet: ${gqlError.message}`, logId })
-            return setById(id, { isWallet: true }).then(() => {
-              return true
-            })
-          })
       })
+
+      if (gqlResponse.ok) {
+        const result = await gqlResponse.json()
+        const hasProcessTransaction = result.data?.transactions?.edges?.length > 0
+
+        if (hasProcessTransaction) {
+          logger({ log: `Found process in GraphQL for ${id}`, logId })
+          return setById(id, { isWallet: false }).then(() => false)
+        }
+      }
+    } catch (err) {
+      logger({ log: `Step 4: GraphQL check failed for ${id}: ${err.message}`, logId })
+    }
+
+    // If no process found in any step, it's a wallet
+    logger({ log: `No process found in any step for ${id}, treating as wallet`, logId })
+    return setById(id, { isWallet: true }).then(() => true)
   }
 }
 
