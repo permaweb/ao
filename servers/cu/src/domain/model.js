@@ -262,19 +262,7 @@ export const domainConfigSchema = z.object({
   /**
    * The TTL of the dry run process cache in milliseconds.
    */
-  DRY_RUN_PROCESS_CACHE_TTL: positiveIntSchema,
-  /**
-   * The SU router url to default to when checking if target is a wallet
-   */
-  SU_ROUTER_URL: z.string(),
-  /**
-   * The HB router url to default to when checking if target is a wallet
-   */
-  HB_ROUTER_URL: z.string(),
-  /**
-   * Whether to enable HB wallet check when checking if target is a wallet
-   */
-  ENABLE_HB_WALLET_CHECK: z.boolean()
+  DRY_RUN_PROCESS_CACHE_TTL: positiveIntSchema
 })
 
 export const bufferSchema = z.any().refine(buffer => {
