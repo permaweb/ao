@@ -230,7 +230,6 @@ async function retryInitPush(deps, args, processId, maxAttempts = 10) {
     target: processId,
     Action: 'Eval',
     data: 'require(\'.process\')._version',
-    ...getTags(args),
     ...getAOParams('Message'),
     ...baseParams
   }
@@ -241,14 +240,15 @@ async function retryInitPush(deps, args, processId, maxAttempts = 10) {
     try {
       const initPush = await deps.aoCore.request(params)
       if (initPush.ok) {
-        debugLog('info', `Init push succeeded on attempt ${attempt}`)
+        debugLog('info', `Init push succeeded on attempt ${attempt}`);
         return initPush
       } else {
         debugLog('warn', `Init push attempt ${attempt} returned ok=false`, {
           status: initPush.status,
           body: initPush
         })
-        lastError = new Error(`Init push returned ok=false (status=${initPush.status})`)
+        lastError = new Error(`Init push returned ok=false (status=${initPush.status})`);
+        await new Promise((r) => setTimeout(r, 500));
       }
     } catch (err) {
       debugLog('warn', `Init push attempt ${attempt} threw`, err)
