@@ -1,6 +1,7 @@
 import { debugLog } from '../logger.js'
 
 function convertToLegacyOutput(jsonRes) {
+  console.log({ jsonRes })
   let body = {}
   try {
     body = JSON.parse(jsonRes?.results?.json?.body)
@@ -19,11 +20,27 @@ function convertToLegacyOutput(jsonRes) {
   }
 }
 
+const spawnParams = {
+  method: 'POST',
+  'signing-format': 'ans104',
+  'accept-bundle': 'true',
+  'accept-codec': 'httpsig@1.0'
+}
+
 const baseParams = {
   method: 'POST',
   'signing-format': 'ans104',
   'accept-bundle': 'true',
   'accept-codec': 'httpsig@1.0'
+}
+
+const messageParams = {
+  type: 'Message',
+  method: 'POST',
+  'signing-format': 'ans104',
+  'data-protocol': 'ao',
+  'accept': 'application/json',
+  'accept-bundle': 'true'
 }
 
 const getAOParams = (type) => ({
@@ -41,6 +58,7 @@ const getData = (args) => args.data ?? '1984'
 
 export function spawnWith(deps) {
   return async (args) => {
+    console.log('SPAWNING WITH ARGS', args)
     let scheduler = deps.scheduler
 
     if (!scheduler && deps.url) {
@@ -101,17 +119,20 @@ export function spawnWith(deps) {
 
 export function messageWith(deps) {
   return async (args) => {
+    console.log('1.MESSAGE ARGS', args)
     try {
       const params = {
-        path: `/${args.process}~process@1.0/push/serialize~json@1.0`,
+        path: `/${args.process}/push`,
         target: args.process,
         data: getData(args),
         ...getTags(args),
         ...getAOParams('Message'),
-        ...baseParams
+        ...messageParams,
       }
 
+      console.log('2.MESSAGE PARAMS', params)
       const response = await deps.aoCore.request(params)
+      console.log('3.MESSAGE RESPONSE', response)
       if (response.ok) {
         const parsedResponse = await response.json()
 
@@ -120,6 +141,7 @@ export function messageWith(deps) {
       }
       return null
     } catch (e) {
+      console.log("4.MESSAGE ERROR", e)
       throw new Error(e.message ?? 'Error sending mainnet message')
     }
   }
@@ -127,19 +149,18 @@ export function messageWith(deps) {
 
 export function resultWith(deps) {
   return async (args) => {
+    console.log('1.RESULT ARGS', args)
     try {
       const params = {
-        path: `/${args.process}~process@1.0/compute/serialize~json@1.0`,
+        path: `/${args.process}/compute=${args.slot ?? args.message}`,
         target: args.process,
-        slot: args.slot ?? args.message,
         data: getData(args),
         ...getTags(args),
-        ...baseParams,
-        method: 'POST',
-        'signing-format': 'ans104'
+        ...messageParams
       }
-
+      console.log('2.RESULT PARAMS', params)
       const response = await deps.aoCore.request(params)
+      console.log('3.RESULT RESPONSE', response)
       if (response.ok) {
         const parsedResponse = await response.json()
         return convertToLegacyOutput(parsedResponse)
@@ -155,7 +176,7 @@ export function resultsWith(deps) {
   return async (args) => {
     try {
       const slotParams = {
-        path: `/${args.process}~process@1.0/slot/current`,
+        path: `/${args.process}/slot/current`,
         ...baseParams
       }
 
@@ -165,7 +186,7 @@ export function resultsWith(deps) {
           const currentSlot = await slotResponse.text();
           
           const resultsParams = {
-            path: `/${args.process}~process@1.0/compute&slot=${currentSlot}/serialize~json@1.0`,
+            path: `/${args.process}/compute=${currentSlot}/serialize~json@1.0`,
             ...baseParams
           }
 
@@ -226,7 +247,7 @@ export function dryrunWith(deps) {
 
 async function retryInitPush(deps, args, processId, maxAttempts = 10) {
   const params = {
-    path: `/${processId}~process@1.0/push/serialize~json@1.0`,
+    path: `/${processId}/push`,
     target: processId,
     Action: 'Eval',
     data: 'require(\'.process\')._version',
