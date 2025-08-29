@@ -241,22 +241,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       })
     })
 
-    const requestLogger = logger.child('request')
-
-    // TODO: AO Core
-    const request = requestWith({
-      signer,
-      logger: requestLogger,
-      MODE,
-      method: 'GET',
-      request: HbClient.requestWith({
-        fetch: defaultFetch,
-        logger: requestLogger,
-        HB_URL: URL,
-        signer
-      })
-    })
-
+    const request = CoreClient.requestWith(coreClientDeps)
     const message = CoreClient.messageWith(coreClientDeps)
     const spawn = CoreClient.spawnWith(coreClientDeps)
     const result = CoreClient.resultWith(coreClientDeps)
