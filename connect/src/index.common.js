@@ -243,6 +243,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
 
     const requestLogger = logger.child('request')
 
+    // TODO: AO Core
     const request = requestWith({
       signer,
       logger: requestLogger,

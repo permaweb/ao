@@ -1,4 +1,4 @@
-import { describe, test, before } from 'node:test'
+import { describe, test, before, after } from 'node:test'
 import * as assert from 'node:assert'
 
 import AOCore, { createSigner } from '@permaweb/ao-core-libs'
@@ -16,14 +16,19 @@ const WALLET = {
   qi: 'HJhf2ZP_PczoOoEMAw3cN6wdrZLG9J465tDjZ4HYqL9vrzPs7fPrXWJo4-WA-p_2IDXCkMP_t6H6JFyK1xHmDmjNpP7XlTwBb_hcEgn0W3dvmZ597Ey-B38IZfn0J4Wq3s34kcq3tprB5rG08qTm4d_tG-sln8Z7Ey-bLKTWPL_kIqpTCJ0H7cGvFVRMGN2dc9nPb4MYFRXhxZS7JF4SQJyRwPuHEMsY97Ph2IpNYpxKTGR1LfqWwSwnwrfyY_Y8sgkHMSNDvZcdGmaEYxhzTXa9xFGUdEFn2IAUIdvVz0aCBqC0soyfrkF955SDbCkbD2QxhyLX1DBVBcw_HEUCRA'
 }
 
-const url = 'http://localhost:8734'
+const url = process.argv[2] || 'http://localhost:8734';
+
+console.log(`[AO Connect Client] Testing on URL: ${url}`);
+
 const aoCore = AOCore.init({ signer: createSigner(WALLET), url })
 
+const coreRequest = CoreClient.requestWith({ aoCore, url })
 const coreSpawn = CoreClient.spawnWith({ aoCore, url })
 const coreMessage = CoreClient.messageWith({ aoCore, url })
 const coreResult = CoreClient.resultWith({ aoCore, url })
 const coreResults = CoreClient.resultsWith({ aoCore, url })
 const coreDryrun = CoreClient.dryrunWith({ aoCore, url })
+
 let processId
 
 describe('ao-core (shared process)', () => {
@@ -38,6 +43,22 @@ describe('ao-core (shared process)', () => {
     test('spawn a process with ao-core', () => {
       assert.equal(typeof processId, 'string')
     })
+  })
+
+  describe('request', () => {
+    test('send a request with ao-core', async () => {
+      console.log(`Using shared process (${processId})...`)
+      const response = await coreRequest({
+        path: `/${processId}/slot/current`,
+        method: 'POST',
+        'signing-format': 'ans104',
+        'accept-bundle': 'true',
+        'accept-codec': 'httpsig@1.0'
+      })
+
+      const currentSlot = await response.text();
+      assert.ok(Number.isFinite(Number(currentSlot)), 'currentSlot should be a number')
+    }, { timeout: 30_000 })
   })
 
   describe('message', () => {
@@ -146,4 +167,8 @@ describe('ao-core (shared process)', () => {
       assert.equal(dryrun.Messages[1].Data, '{"Hello":"World 2"}')
     }, { timeout: 30_000 })
   })
+
+  after(() => {
+    process.exit(process.exitCode || 0);
+  });
 })

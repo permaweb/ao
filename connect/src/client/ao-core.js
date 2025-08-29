@@ -1,7 +1,6 @@
 import { debugLog } from '../logger.js'
 
 function convertToLegacyOutput(jsonRes) {
-  console.log({ jsonRes })
   let body = {}
   try {
     body = JSON.parse(jsonRes?.results?.json?.body)
@@ -20,13 +19,6 @@ function convertToLegacyOutput(jsonRes) {
   }
 }
 
-const spawnParams = {
-  method: 'POST',
-  'signing-format': 'ans104',
-  'accept-bundle': 'true',
-  'accept-codec': 'httpsig@1.0'
-}
-
 const baseParams = {
   method: 'POST',
   'signing-format': 'ans104',
@@ -34,6 +26,7 @@ const baseParams = {
   'accept-codec': 'httpsig@1.0'
 }
 
+// TODO
 const messageParams = {
   type: 'Message',
   method: 'POST',
@@ -56,9 +49,19 @@ const getTags = (args) =>
 
 const getData = (args) => args.data ?? '1984'
 
+export function requestWith(deps) {
+  return async (args) => {
+    try {
+      return deps.aoCore.request(args);
+    }
+    catch (e) {
+      throw new Error(e.message ?? 'Error sending request')
+    }
+  }
+}
+
 export function spawnWith(deps) {
   return async (args) => {
-    console.log('SPAWNING WITH ARGS', args)
     let scheduler = deps.scheduler
 
     if (!scheduler && deps.url) {
@@ -81,7 +84,7 @@ export function spawnWith(deps) {
       const params = {
         path: '/push',
         device: 'process@1.0',
-        scheduler,
+        scheduler: scheduler,
         'scheduler-location': scheduler,
         'scheduler-device': 'scheduler@1.0',
         'push-device': 'push@1.0',
@@ -119,7 +122,6 @@ export function spawnWith(deps) {
 
 export function messageWith(deps) {
   return async (args) => {
-    console.log('1.MESSAGE ARGS', args)
     try {
       const params = {
         path: `/${args.process}/push`,
@@ -130,9 +132,7 @@ export function messageWith(deps) {
         ...messageParams,
       }
 
-      console.log('2.MESSAGE PARAMS', params)
       const response = await deps.aoCore.request(params)
-      console.log('3.MESSAGE RESPONSE', response)
       if (response.ok) {
         const parsedResponse = await response.json()
 
@@ -141,7 +141,6 @@ export function messageWith(deps) {
       }
       return null
     } catch (e) {
-      console.log("4.MESSAGE ERROR", e)
       throw new Error(e.message ?? 'Error sending mainnet message')
     }
   }
@@ -149,7 +148,6 @@ export function messageWith(deps) {
 
 export function resultWith(deps) {
   return async (args) => {
-    console.log('1.RESULT ARGS', args)
     try {
       const params = {
         path: `/${args.process}/compute=${args.slot ?? args.message}`,
@@ -158,9 +156,7 @@ export function resultWith(deps) {
         ...getTags(args),
         ...messageParams
       }
-      console.log('2.RESULT PARAMS', params)
       const response = await deps.aoCore.request(params)
-      console.log('3.RESULT RESPONSE', response)
       if (response.ok) {
         const parsedResponse = await response.json()
         return convertToLegacyOutput(parsedResponse)
