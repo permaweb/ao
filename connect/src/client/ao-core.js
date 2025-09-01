@@ -1,5 +1,4 @@
 import { debugLog } from '../logger.js'
-import { parseMultipartContent } from '../lib/request/multipart.js'
 
 function convertToLegacyOutput(jsonRes) {
   let body = {}
