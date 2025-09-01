@@ -1,4 +1,5 @@
 import { debugLog } from '../logger.js'
+import { parseMultipartContent } from '../lib/request/multipart.js'
 
 function convertToLegacyOutput(jsonRes) {
   let body = {}
@@ -30,6 +31,15 @@ const baseParams = {
 const messageParams = {
   type: 'Message',
   method: 'POST',
+  'signing-format': 'ans104',
+  'data-protocol': 'ao',
+  'accept': 'application/json',
+  'accept-bundle': 'true'
+}
+
+const resultsBaseParams = {
+  type: 'Message',
+  method: 'GET',
   'signing-format': 'ans104',
   'data-protocol': 'ao',
   'accept': 'application/json',
@@ -182,13 +192,15 @@ export function resultsWith(deps) {
           const currentSlot = await slotResponse.text();
           
           const resultsParams = {
-            path: `/${args.process}/compute=${currentSlot}/serialize~json@1.0`,
-            ...baseParams
+            path: `/${args.process}/compute=${currentSlot}`,
+            ...resultsBaseParams
           }
 
           const resultsResponse = await deps.aoCore.request(resultsParams)
+
           if (resultsResponse.ok) {
-            const parsedResultsResponse = await resultsResponse.json()
+            let parsedResultsResponse  = await resultsResponse.json();
+            
             return {
               edges: [
                 {
