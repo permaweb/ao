@@ -23,14 +23,11 @@ const baseParams = {
   method: 'POST',
   'signing-format': 'ans104',
   'accept-bundle': 'true',
-  'accept-codec': 'httpsig@1.0'
 }
 
-const jsonParams = {
-  'signing-format': 'ans104',
-  'accept': 'application/json',
-  'accept-bundle': 'true'
-}
+const httpParams = { ...baseParams, 'accept-codec': 'httpsig@1.0' }
+
+const jsonParams = { ...baseParams, 'accept': 'application/json' }
 
 const getAOParams = (type) => ({
   Type: type,
@@ -91,7 +88,7 @@ export function spawnWith(deps) {
         data: getData(args),
         ...getTags(args),
         ...getAOParams('Process'),
-        ...baseParams
+        ...httpParams
       }
 
       const response = await deps.aoCore.request(params)
@@ -170,7 +167,7 @@ export function resultsWith(deps) {
     try {
       const slotParams = {
         path: `/${args.process}/slot/current`,
-        ...baseParams
+        ...httpParams
       }
 
       const slotResponse = await deps.aoCore.request(slotParams)
@@ -225,9 +222,7 @@ export function dryrunWith(deps) {
         path,
         target: args.process,
         data: getData(args),
-        ...baseParams,
-        'accept': 'application/json',
-        'accept-bundle': 'true'
+        ...jsonParams
       }
 
       const response = await deps.aoCore.request(params)
@@ -249,7 +244,7 @@ async function retryInitPush(deps, processId, maxAttempts = 10) {
     Action: 'Eval',
     data: 'require(\'.process\')._version',
     ...getAOParams('Message'),
-    ...baseParams
+    ...httpParams
   }
 
   let lastError = null
