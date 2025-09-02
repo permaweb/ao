@@ -18,6 +18,7 @@ const WALLET = {
 
 const url = process.argv[2] || 'http://localhost:8734';
 const scheduler = 'NoZH3pueH0Cih6zjSNu_KRAcmg4ZJV1aGHKi0Pi5_Hc';
+const module = 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk';
 
 console.log(`[AO Connect Client] Testing on URL: ${url}`);
 
@@ -37,6 +38,7 @@ let processId
 describe('ao-core (shared process)', () => {
   before(async () => {
     processId = await coreSpawn({
+      module: module,
       tags: [{ name: 'Name', value: Date.now().toString() }]
     })
     console.log(`Spawned shared process: ${processId}`)
@@ -118,6 +120,7 @@ describe('ao-core (shared process)', () => {
   describe('spawn and message (fresh)', () => {
     test('spawn and send a message with ao-core (fresh process for this test)', async () => {
       const freshProcessId = await coreSpawn({
+        module: module,
         tags: [{ name: 'Name', value: Date.now().toString() }]
       })
 
@@ -137,6 +140,7 @@ describe('ao-core (shared process)', () => {
   describe('spawn, add handlers, dryrun', () => {
     test('spawn, add handlers, dryrun', async () => {
       const freshProcessId = await coreSpawn({
+        module: module,
         tags: [{ name: 'Name', value: Date.now().toString() }]
       })
 

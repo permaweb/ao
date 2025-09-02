@@ -26,21 +26,8 @@ const baseParams = {
   'accept-codec': 'httpsig@1.0'
 }
 
-// TODO
-const messageParams = {
-  type: 'Message',
-  method: 'POST',
+const jsonParams = {
   'signing-format': 'ans104',
-  'data-protocol': 'ao',
-  'accept': 'application/json',
-  'accept-bundle': 'true'
-}
-
-const resultsBaseParams = {
-  type: 'Message',
-  method: 'GET',
-  'signing-format': 'ans104',
-  'data-protocol': 'ao',
   'accept': 'application/json',
   'accept-bundle': 'true'
 }
@@ -78,11 +65,12 @@ export function spawnWith(deps) {
       scheduler = await schedulerRes.text()
     }
 
+    const module = process.env.MODULE || args.module
+
     if (!scheduler) throw new Error('No scheduler provided')
+    if (!module) throw new Error('No module provided')
 
     const authority = process.env.AUTHORITY || scheduler
-    // const module = process.env.MODULE || 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s' // TODO
-    const module = process.env.MODULE || 'URgYpPQzvxxfYQtjrIQ116bl3YBfcImo3JEnNo8Hlrk';
 
     debugLog('info', 'Node URL:', deps.url)
     debugLog('info', 'Scheduler:', scheduler)
@@ -114,7 +102,7 @@ export function spawnWith(deps) {
         debugLog('info', 'Process ID:', processId)
 
         if (processId) {
-          await retryInitPush(deps, args, processId)
+          await retryInitPush(deps, processId, 10)
 
           return processId
         }
@@ -138,7 +126,7 @@ export function messageWith(deps) {
         data: getData(args),
         ...getTags(args),
         ...getAOParams('Message'),
-        ...messageParams,
+        ...jsonParams,
       }
 
       const response = await deps.aoCore.request(params)
@@ -163,7 +151,7 @@ export function resultWith(deps) {
         target: args.process,
         data: getData(args),
         ...getTags(args),
-        ...messageParams
+        ...jsonParams
       }
       const response = await deps.aoCore.request(params)
       if (response.ok) {
@@ -189,17 +177,17 @@ export function resultsWith(deps) {
       if (slotResponse.ok) {
         try {
           const currentSlot = await slotResponse.text();
-          
+
           const resultsParams = {
             path: `/${args.process}/compute=${currentSlot}`,
-            ...resultsBaseParams
+            ...jsonParams
           }
 
           const resultsResponse = await deps.aoCore.request(resultsParams)
 
           if (resultsResponse.ok) {
-            let parsedResultsResponse  = await resultsResponse.json();
-            
+            let parsedResultsResponse = await resultsResponse.json();
+
             return {
               edges: [
                 {
@@ -232,12 +220,14 @@ export function dryrunWith(deps) {
         ? `&${Object.entries(tags).map(([key, value]) => `${key}=${value}`).join('&')}`
         : ''
 
-      const path = `/${args.process}~process@1.0/as=execution/compute${tagsAsParams}/serialize~json@1.0`
+      const path = `/${args.process}~process@1.0/as=execution/compute${tagsAsParams}`
       const params = {
         path,
         target: args.process,
         data: getData(args),
         ...baseParams,
+        'accept': 'application/json',
+        'accept-bundle': 'true'
       }
 
       const response = await deps.aoCore.request(params)
@@ -252,7 +242,7 @@ export function dryrunWith(deps) {
   }
 }
 
-async function retryInitPush(deps, args, processId, maxAttempts = 10) {
+async function retryInitPush(deps, processId, maxAttempts = 10) {
   const params = {
     path: `/${processId}/push`,
     target: processId,
