@@ -17,17 +17,20 @@ const WALLET = {
 }
 
 const url = process.argv[2] || 'http://localhost:8734';
+const scheduler = 'NoZH3pueH0Cih6zjSNu_KRAcmg4ZJV1aGHKi0Pi5_Hc';
 
 console.log(`[AO Connect Client] Testing on URL: ${url}`);
 
 const aoCore = AOCore.init({ signer: createSigner(WALLET), url })
 
-const coreRequest = CoreClient.requestWith({ aoCore, url })
-const coreSpawn = CoreClient.spawnWith({ aoCore, url })
-const coreMessage = CoreClient.messageWith({ aoCore, url })
-const coreResult = CoreClient.resultWith({ aoCore, url })
-const coreResults = CoreClient.resultsWith({ aoCore, url })
-const coreDryrun = CoreClient.dryrunWith({ aoCore, url })
+const connectDeps = { aoCore, url, scheduler }
+
+const coreRequest = CoreClient.requestWith(connectDeps)
+const coreSpawn = CoreClient.spawnWith(connectDeps)
+const coreMessage = CoreClient.messageWith(connectDeps)
+const coreResult = CoreClient.resultWith(connectDeps)
+const coreResults = CoreClient.resultsWith(connectDeps)
+const coreDryrun = CoreClient.dryrunWith(connectDeps)
 
 let processId
 
