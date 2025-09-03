@@ -1,5 +1,5 @@
 // data item parsing/generating
-mod bytes;
+pub mod bytes;
 
 // main tx building logic
 mod builder;

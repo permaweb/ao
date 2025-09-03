@@ -51,7 +51,9 @@ pub struct AoConfig {
 
     pub enable_router_check: bool,
     pub router_url: String,
-    pub assignment: String
+    pub assignment: String,
+
+    pub cache_url: String,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -211,6 +213,11 @@ impl AoConfig {
             Err(_e) => "".to_string(),
         };
 
+        let cache_url = match env::var("CACHE_URL") {
+            Ok(val) => val,
+            Err(_e) => "https://cache.forward.computer".to_string(),
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -241,7 +248,8 @@ impl AoConfig {
             warmup_delay,
             enable_router_check,
             router_url,
-            assignment
+            assignment,
+            cache_url
         })
     }
 }
