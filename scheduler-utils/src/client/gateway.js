@@ -23,6 +23,27 @@ const findTransactionTags = (err) => pipe(
   defaultTo([])
 )
 
+export const parseHyperBeamResponse = (process) => {
+  const commitments = process.commitments
+  const processId = Object.keys(commitments).find(key => commitments[key].type === 'rsa-pss-sha256')
+
+  if (!processId) {
+    return { id: undefined, tags: [] }
+  }
+
+  const signedCommitment = commitments[processId]
+  const committed = signedCommitment.committed
+  const originalTags = Object.values(signedCommitment['original-tags'])
+  const tags = []
+  for (const tag of originalTags) {
+    const { name, value } = tag
+    if (committed.includes(name.toLowerCase())) {
+      tags.push({ name, value })
+    }
+  }
+  return { id: processId, tags }
+}
+
 function gatewayWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES = 0, GRAPHQL_RETRY_BACKOFF = 300 }) {
   return async ({ query, variables }) => {
     return backoff(
@@ -34,6 +55,77 @@ function gatewayWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES = 0, GRAPHQL_RET
         .then(okRes)
         .then((res) => res.json()),
       { maxRetries: GRAPHQL_MAX_RETRIES, delay: GRAPHQL_RETRY_BACKOFF })
+  }
+}
+
+export function loadProcessWith ({ fetch, HB_GRAPHQL_URL, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF }) {
+  const gateway = gatewayWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+  const GET_PROCESS_QUERY = `
+        query ($ids: [ID!]!) {
+        transactions(
+          ids: $ids
+          tags: [
+            { name: "Type", values: ["Process"] }
+        ]) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              anchor
+              signature
+              recipient
+              block {
+                timestamp
+              }
+              owner {
+                address
+                key
+              }
+              fee {
+                winston
+                ar
+              }
+              quantity {
+                winston
+                ar
+              }
+              data {
+                size
+                type
+              }
+              tags {
+                name
+                value
+              }
+              block {
+                id
+                timestamp
+                height
+                previous
+              }
+              parent {
+                id
+              }
+            }
+          }
+        }
+      }
+  `
+  return async (process) => {
+    return fetch(`${HB_GRAPHQL_URL}/${process}/serialize~json@1.0`, {
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+      .then((res) => res.json())
+      .then(parseHyperBeamResponse)
+      .catch(_e => {
+        return gateway({ query: GET_PROCESS_QUERY, variables: { ids: [process] } })
+          .then(path(['data', 'transactions', 'edges', '0', 'node']))
+      })
   }
 }
 
