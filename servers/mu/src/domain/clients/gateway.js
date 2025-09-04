@@ -211,9 +211,8 @@ export const isHyperBeamProcessWith = ({
     logger({ log: `No cached isHyperBeam state for process ${processId}, fetching from GQL`, logId })
 
     const process = await getProcess(processId)
-    console.dir({ process }, { depth: null })
     if (!process) return false
-    const variant = process.tags.find(t => t.name === 'Variant')?.value
+    const variant = process.tags.find(t => t.name === 'Variant' || t.name === 'variant')?.value
     if (!variant) return false
     const isHyperBeam = variant === 'ao.N.1'
     logger({ log: `Caching isHyperBeamProcess for process ${processId} with value ${isHyperBeam}`, logId })
