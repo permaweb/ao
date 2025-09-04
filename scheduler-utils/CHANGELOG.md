@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.28](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.27...scheduler-utils@v0.0.28) (2025-09-04)
+
+
+### Features
+
+* **scheduler-utils:** add getProcess to exports ([93f5925](https://github.com/permaweb/ao/commit/93f59258ab16c924703e5601faf666c00411ba37))
+
+
+### Bug Fixes
+
+* **scheduler-utils:** better parse hb response on get process ([7fefbcd](https://github.com/permaweb/ao/commit/7fefbcd205b6244ff066c43ce0c4c2b8f4d94d56))
+
 ## [0.0.27](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.26...scheduler-utils@v0.0.27) (2025-08-06)
 
 
