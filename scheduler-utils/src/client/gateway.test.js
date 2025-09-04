@@ -449,7 +449,7 @@ describe('gateway', () => {
         // Expected to fail on graphql fallback
       }
 
-      assert.equal(hyperbeamUrl, `${HB_GRAPHQL_URL}/test-process-id/serialize~json@1.0`)
+      assert.equal(hyperbeamUrl, `${HB_GRAPHQL_URL}/test-process-id?require-codec=application/json`)
     })
   })
 })

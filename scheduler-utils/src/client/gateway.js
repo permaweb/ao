@@ -34,14 +34,20 @@ export const parseHyperBeamResponse = (process) => {
   const signedCommitment = commitments[processId]
   const committed = signedCommitment.committed
   const originalTags = Object.values(signedCommitment['original-tags'])
+  const data = process.data
   const tags = []
+  if (!originalTags) {
+    delete process.data
+    const tags = Object.keys(process).map(key => ({ name: key, value: process[key] }))
+    return { id: processId, tags, data }
+  }
   for (const tag of originalTags) {
     const { name, value } = tag
-    if (committed.includes(name.toLowerCase())) {
+    if (committed.includes(name.toLowerCase()) && name.toLowerCase() !== 'data') {
       tags.push({ name, value })
     }
   }
-  return { id: processId, tags }
+  return { id: processId, tags, data }
 }
 
 function gatewayWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES = 0, GRAPHQL_RETRY_BACKOFF = 300 }) {
@@ -115,7 +121,7 @@ export function loadProcessWith ({ fetch, HB_GRAPHQL_URL, GRAPHQL_URL, GRAPHQL_M
       }
   `
   return async (process) => {
-    return fetch(`${HB_GRAPHQL_URL}/${process}/serialize~json@1.0`, {
+    return fetch(`${HB_GRAPHQL_URL}/${process}?require-codec=application/json`, {
       headers: {
         Accept: 'application/json'
       }
