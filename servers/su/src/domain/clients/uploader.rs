@@ -124,7 +124,7 @@ impl Uploader for UploaderClient {
                     );
                     return;
                 }
-              }
+              };
 
             let mut delay = Duration::from_secs(1);
             let max_delay = Duration::from_secs(32);
