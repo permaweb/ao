@@ -4,8 +4,8 @@ import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 function isWalletWith ({
   fetch,
   histogram,
+  getProcess,
   ARWEAVE_URL,
-  GRAPHQL_URL,
   SU_ROUTER_URL,
   HB_ROUTER_URL,
   ENABLE_HB_WALLET_CHECK,
@@ -79,8 +79,8 @@ function isWalletWith ({
           walletFetch(joinUrl({ url: ARWEAVE_URL, path: `/${id}` }), { method: 'HEAD' })
             .then(okRes),
         {
-          maxRetries: 4,
-          delay: 500,
+          maxRetries: 3,
+          delay: 200,
           log: logger,
           logId,
           name: `isWallet(${id})`
@@ -98,60 +98,10 @@ function isWalletWith ({
     // Step 4: Check GraphQL
     try {
       logger({ log: `Step 4: Checking GraphQL for ${id}`, logId })
-
-      const query = `
-        query GetTransactionByID($id: ID!) {
-          transactions(
-            tags: [
-              {name:"Data-Protocol", values: ["ao"]},
-              {name:"Type", values: ["Process"]}
-            ]
-            first: 100
-            sort:HEIGHT_DESC
-            ids:[$id]
-          ) {
-            edges {
-              cursor
-              node {
-                id 
-                data {
-                  size
-                }
-                owner{
-                  address
-                }
-                tags {
-                  name 
-                  value 
-                }
-                bundledIn {
-                  id
-                }
-                signature
-                recipient
-              }
-            }
-          }
-        }
-      `
-
-      const gqlResponse = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          variables: { id }
-        })
-      })
-
-      if (gqlResponse.ok) {
-        const result = await gqlResponse.json()
-        const hasProcessTransaction = result.data?.transactions?.edges?.length > 0
-
-        if (hasProcessTransaction) {
-          logger({ log: `Found process in GraphQL for ${id}`, logId })
-          return setById(id, { isWallet: false }).then(() => false)
-        }
+      const process = await getProcess(id)
+      if (process) {
+        logger({ log: `Found process in GraphQL for ${id}`, logId })
+        return setById(id, { isWallet: false }).then(() => false)
       }
     } catch (err) {
       logger({ log: `Step 4: GraphQL check failed for ${id}: ${err.message}`, logId })
@@ -246,8 +196,7 @@ function fetchTransactionDetailsWith ({ fetch, GRAPHQL_URL }) {
  * @returns {Promise<boolean>} - Whether the process is a HyperBeam process
  */
 export const isHyperBeamProcessWith = ({
-  fetch,
-  GRAPHQL_URL,
+  getProcess,
   logger,
   getIsHyperBeamProcess,
   setIsHyperBeamProcess
@@ -260,66 +209,9 @@ export const isHyperBeamProcessWith = ({
     }
 
     logger({ log: `No cached isHyperBeam state for process ${processId}, fetching from GQL`, logId })
-    const query = `
-      query {
-        transactions(ids: ["${processId}"]) {
-          pageInfo {
-            hasNextPage
-          }
-          edges {
-            cursor
-            node {
-              id
-              anchor
-              signature
-              recipient
-              block {
-                timestamp
-              }
-              owner {
-                address
-                key
-              }
-              fee {
-                winston
-                ar
-              }
-              quantity {
-                winston
-                ar
-              }
-              data {
-                size
-                type
-              }
-              tags {
-                name
-                value
-              }
-              block {
-                id
-                timestamp
-                height
-                previous
-              }
-              parent {
-                id
-              }
-            }
-          }
-        }
-      }
-    `
-    const process = await fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    }).then(response => {
-      if (!response.ok) {
-        throw new Error(`Failed to fetch transaction details: ${response.statusText}`)
-      }
-      return response.json()
-    }).then(res => res?.data?.transactions?.edges?.[0]?.node)
+
+    const process = await getProcess(processId)
+    console.dir({ process }, { depth: null })
     if (!process) return false
     const variant = process.tags.find(t => t.name === 'Variant')?.value
     if (!variant) return false
