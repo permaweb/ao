@@ -67,13 +67,13 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
 
             // Helper function to convert tags array to object (like assoc in mainnet.js)
             const tagsToObj = tags.reduce((acc, tag) => {
-              acc[tag.name] = tag.value
+              acc[tag.name.toLowerCase()] = tag.value
               return acc
             }, {})
 
             // Create push request parameters following mainnet.js pattern
             let pushParams = {}
-            if (tagsToObj.Type === 'Process') {
+            if (tagsToObj.type === 'Process') {
               pushParams = {
                 path: '/push',
                 method: 'POST',
@@ -91,19 +91,18 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
               }
             } else {
               pushParams = {
-                type: 'Message',
-                path: `/${processId}~process@1.0/push`,
+                Type: 'Message',
+                path: `/${processId}/push`,
                 method: 'POST',
                 ...tagsToObj,
                 'data-protocol': 'ao',
-                'scheduler-device': 'scheduler@1.0',
-                'push-device': 'push@1.0',
-                variant: 'ao.N.1',
                 target: processId,
-                signingFormat: 'ANS-104',
-                'accept-bundle': 'true',
-                'accept-codec': 'httpsig@1.0',
-                data: dataStr
+                'signing-format': 'ANS-104',
+                accept: 'application/json',
+                'accept-bundle': 'true'
+              }
+              if (dataStr) {
+                pushParams.data = dataStr
               }
             }
 
