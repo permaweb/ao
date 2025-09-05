@@ -58,7 +58,10 @@ There are a few environment variables that you can set:
 - `CUSTOM_CU_MAP_FILE_PATH`: The file path for the custom CU JSON map for message pushing.
 - `IP_WALLET_RATE_LIMIT`: The amount of requests from an IP-wallet pair to allow in an interval (defaults to 100)
 - `IP_WALLET_RATE_LIMIT_INTERVAL`: The interval to allow the rate limit in (defaults to 1h)
-
+- `SU_ROUTER_URL`: the SU router url to default to when checking if target is a wallet
+- `HB_ROUTER_URL`: the HB router url to default to when checking if target is a wallet
+- `ENABLE_HB_WALLET_CHECK`: whether to enable HB wallet check when checking if target is a wallet
+- `HB_GRAPHQQL_URL`: the HB graphql cache url to use when retrieving a process message
 
 
 

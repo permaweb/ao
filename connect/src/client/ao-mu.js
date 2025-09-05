@@ -3,22 +3,22 @@ import { Rejected, fromPromise, of } from 'hyper-async'
 import { toDataItemSigner } from './signer.js'
 import { verify } from '../lib/data-item.js'
 
-function signDataItemChain(args, logger) {
+function signDataItemChain (args, logger) {
   return of(args)
     .chain(fromPromise(({ processId, data, tags, anchor, signer }) =>
       toDataItemSigner(signer)({ data, tags, target: processId, anchor })
     ))
-    .map(logger.tap('Successfully built and signed data item'));
+    .map(logger.tap('Successfully built and signed data item'))
 }
 
-function sendDataItemChain(signedDataItem, { fetch, MU_URL, logger, verifyBeforeSend = false }) {
-  let chain = of(signedDataItem);
+function sendDataItemChain (signedDataItem, { fetch, MU_URL, logger, verifyBeforeSend = false }) {
+  let chain = of(signedDataItem)
   if (verifyBeforeSend) {
     chain = chain.chain(fromPromise(async (item) => {
-      const verified = await verify(item.raw);
-      if (!verified) throw new Error('Signed data item verification failed.');
-      return item;
-    }));
+      const verified = await verify(item.raw)
+      if (!verified) throw new Error('Signed data item verification failed.')
+      return item
+    }))
   }
   return chain
     .chain(fromPromise(async (item) =>
@@ -35,21 +35,21 @@ function sendDataItemChain(signedDataItem, { fetch, MU_URL, logger, verifyBefore
     .bichain(
       (err) => {
         if (err.name === 'RedirectRequested') {
-          return Rejected(err);
+          return Rejected(err)
         } else {
-          return Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`));
+          return Rejected(new Error(`Error while communicating with MU: ${JSON.stringify(err)}`))
         }
       },
       fromPromise(async (res) => {
-        if (res.ok) return res.json();
-        throw new Error(`${res.status}: ${await res.text()}`);
+        if (res.ok) return res.json()
+        throw new Error(`${res.status}: ${await res.text()}`)
       })
     )
     .bimap(
       logger.tap('Error encountered when writing message via MU'),
       logger.tap('Successfully wrote message via MU')
     )
-    .map((res) => ({ res, messageId: signedDataItem.id }));
+    .map((res) => ({ res, messageId: signedDataItem.id }))
 }
 
 /**
@@ -70,27 +70,27 @@ function sendDataItemChain(signedDataItem, { fetch, MU_URL, logger, verifyBefore
  * @param {Env3} env
  * @returns {WriteMessage2}
  */
-export function deployMessageWith({ fetch, MU_URL, logger: _logger }) {
-  const logger = _logger.child('deployMessage');
+export function deployMessageWith ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('deployMessage')
   return (args) => {
     return signDataItemChain(args, logger)
       .chain((signedDataItem) => sendDataItemChain(signedDataItem, { fetch, MU_URL, logger }))
-      .toPromise();
-  };
+      .toPromise()
+  }
 }
 
-export function signMessageWith({ logger: _logger }) {
-  const logger = _logger.child('signMessage');
+export function signMessageWith ({ logger: _logger }) {
+  const logger = _logger.child('signMessage')
   return (args) => {
-    return signDataItemChain(args, logger).toPromise();
-  };
+    return signDataItemChain(args, logger).toPromise()
+  }
 }
 
-export function sendSignedMessageWith({ fetch, MU_URL, logger: _logger }) {
-  const logger = _logger.child('sendSignedMessage');
+export function sendSignedMessageWith ({ fetch, MU_URL, logger: _logger }) {
+  const logger = _logger.child('sendSignedMessage')
   return (signedDataItem) => {
-    return sendDataItemChain(signedDataItem, { fetch, MU_URL, logger, verifyBeforeSend: true }).toPromise();
-  };
+    return sendDataItemChain(signedDataItem, { fetch, MU_URL, logger, verifyBeforeSend: true }).toPromise()
+  }
 }
 
 /**
@@ -107,7 +107,7 @@ export function sendSignedMessageWith({ fetch, MU_URL, logger: _logger }) {
  * @param {Env3} env
  * @returns {RegisterProcess}
  */
-export function deployProcessWith({ fetch, MU_URL, logger: _logger }) {
+export function deployProcessWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployProcess')
 
   return (args) => {
@@ -117,16 +117,16 @@ export function deployProcessWith({ fetch, MU_URL, logger: _logger }) {
          * Sign with the provided signer
          */
         .chain(
-          fromPromise(({ data, tags, signer }) =>
-            toDataItemSigner(signer)({ data, tags })
-          )
+          fromPromise(({ data, tags, signer }) => {
+            return toDataItemSigner(signer)({ data, tags })
+          })
         )
         .map(logger.tap('Successfully built and signed data item'))
         .chain((signedDataItem) =>
           of(signedDataItem)
             .chain(
-              fromPromise(async (signedDataItem) =>
-                fetch(MU_URL, {
+              fromPromise(async (signedDataItem) => {
+                return fetch(MU_URL, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/octet-stream',
@@ -135,7 +135,7 @@ export function deployProcessWith({ fetch, MU_URL, logger: _logger }) {
                   redirect: 'follow',
                   body: signedDataItem.raw
                 })
-              )
+              })
             )
             .bichain(
               (err) =>
@@ -153,7 +153,7 @@ export function deployProcessWith({ fetch, MU_URL, logger: _logger }) {
               logger.tap('Error encountered when deploying process via MU'),
               logger.tap('Successfully deployed process via MU')
             )
-            .map((res) => ({ res, processId: signedDataItem.id }))
+            .map((res) => ({ res, processId: res.processId || signedDataItem.id }))
         )
         .toPromise()
     )
@@ -171,7 +171,7 @@ export function deployProcessWith({ fetch, MU_URL, logger: _logger }) {
  * @param {Env4} env
  * @returns {MonitorResult}
  */
-export function deployMonitorWith({ fetch, MU_URL, logger: _logger }) {
+export function deployMonitorWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployMonitor')
 
   return (args) =>
@@ -235,7 +235,7 @@ export function deployMonitorWith({ fetch, MU_URL, logger: _logger }) {
  * @param {Env5} env
  * @returns {MonitorResult}
  */
-export function deployUnmonitorWith({ fetch, MU_URL, logger: _logger }) {
+export function deployUnmonitorWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployUnmonitor')
 
   return (args) =>
@@ -309,7 +309,7 @@ export function deployUnmonitorWith({ fetch, MU_URL, logger: _logger }) {
  * @param {Env6} env
  * @returns {WriteAssign}
  */
-export function deployAssignWith({ fetch, MU_URL, logger: _logger }) {
+export function deployAssignWith ({ fetch, MU_URL, logger: _logger }) {
   const logger = _logger.child('deployAssign')
 
   return (args) => {

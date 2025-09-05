@@ -19,7 +19,8 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@permaweb/ao-scheduler-utils": "^0.0.25",
+    "@permaweb/ao-scheduler-utils": "^0.0.28",
+    "@permaweb/aoconnect": "^0.0.88",
     "arbundles": "0.11.0",
     "arweave": "^1.14.4",
     "async-mutex": "^0.5.0",

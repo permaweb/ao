@@ -25,6 +25,7 @@ export function parseDataItemWith ({ createDataItem, logger }) {
               owner: dataItem.owner,
               target: dataItem.target,
               tags: dataItem.tags,
+              data: Buffer.from(dataItem?.data, 'base64').toString(),
               /**
                * For some reason, anchor is not included in the toJSON api on DataItem,
                * so we make sure to include it here

@@ -1,4 +1,4 @@
-import { defaultTo, find, juxt, path, pipe, prop, propEq } from 'ramda'
+import { defaultTo, find, juxt, path, pipe, prop } from 'ramda'
 
 import { InvalidSchedulerLocationError, SchedulerTagNotFoundError, TransactionNotFoundError } from '../err.js'
 import { backoff, okRes } from '../utils.js'
@@ -9,7 +9,7 @@ const SCHEDULER_TAG = 'Scheduler'
 
 const findTagValue = (name) => pipe(
   defaultTo([]),
-  find(propEq(name, 'name')),
+  find(tag => tag.name && tag.name.toLowerCase() === name.toLowerCase()),
   defaultTo({}),
   prop('value')
 )
@@ -22,6 +22,33 @@ const findTransactionTags = (err) => pipe(
   prop('tags'),
   defaultTo([])
 )
+
+export const parseHyperBeamResponse = (process) => {
+  const commitments = process.commitments
+  const processId = Object.keys(commitments).find(key => commitments[key].type === 'rsa-pss-sha256')
+
+  if (!processId) {
+    return { id: undefined, tags: [] }
+  }
+
+  const signedCommitment = commitments[processId]
+  const committed = signedCommitment.committed
+  const originalTags = Object.values(signedCommitment['original-tags'])
+  const data = process.data
+  const tags = []
+  if (!originalTags) {
+    delete process.data
+    const tags = Object.keys(process).map(key => ({ name: key, value: process[key] }))
+    return { id: processId, tags, data }
+  }
+  for (const tag of originalTags) {
+    const { name, value } = tag
+    if (committed.includes(name.toLowerCase()) && name.toLowerCase() !== 'data') {
+      tags.push({ name, value })
+    }
+  }
+  return { id: processId, tags, data }
+}
 
 function gatewayWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES = 0, GRAPHQL_RETRY_BACKOFF = 300 }) {
   return async ({ query, variables }) => {
@@ -37,13 +64,89 @@ function gatewayWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES = 0, GRAPHQL_RET
   }
 }
 
+export function loadProcessWith ({ fetch, HB_GRAPHQL_URL, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF }) {
+  const gateway = gatewayWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
+  const GET_PROCESS_QUERY = `
+        query ($ids: [ID!]!) {
+        transactions(
+          ids: $ids
+          tags: [
+            { name: "Type", values: ["Process"] }
+        ]) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              anchor
+              signature
+              recipient
+              block {
+                timestamp
+              }
+              owner {
+                address
+                key
+              }
+              fee {
+                winston
+                ar
+              }
+              quantity {
+                winston
+                ar
+              }
+              data {
+                size
+                type
+              }
+              tags {
+                name
+                value
+              }
+              block {
+                id
+                timestamp
+                height
+                previous
+              }
+              parent {
+                id
+              }
+            }
+          }
+        }
+      }
+  `
+  return async (process) => {
+    return fetch(`${HB_GRAPHQL_URL}/${process}?require-codec=application/json`, {
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+      .then((res) => res.json())
+      .then(parseHyperBeamResponse)
+      .catch(_e => {
+        return gateway({ query: GET_PROCESS_QUERY, variables: { ids: [process] } })
+          .then(path(['data', 'transactions', 'edges', '0', 'node']))
+      })
+  }
+}
+
 export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF }) {
   const gateway = gatewayWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
   const loadScheduler = loadSchedulerWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
 
   const GET_TRANSACTIONS_QUERY = `
     query GetTransactions ($transactionIds: [ID!]!) {
-      transactions(ids: $transactionIds) {
+      transactions(
+        ids: $transactionIds
+        tags: [
+          { name: "Data-Protocol", values: ["ao"] }
+        ]
+      ) {
         edges {
           node {
             tags {

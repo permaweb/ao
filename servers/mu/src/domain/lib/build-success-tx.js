@@ -1,6 +1,6 @@
 import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
-import { assoc, __, defaultTo, concat } from 'ramda'
+import { assoc, __, defaultTo } from 'ramda'
 
 import { checkStage, removeTagsByNameMaybeValue } from '../utils.js'
 
@@ -27,20 +27,31 @@ export function buildSuccessTxWith ({ buildAndSign, logger }) {
        * Append tags explicitly set by the MU on the success
        * message send to the spawning process
        */
-      .map(concat(__, [
-        { name: 'Data-Protocol', value: 'ao' },
-        { name: 'Variant', value: 'ao.TN.1' },
-        { name: 'Type', value: 'Message' },
-        /**
-         * aos interoperability
-         *
-         * set the Process tag to the id of the newly spawned Process
-         * and Action to 'Spawned' such that it can be handled
-         * by an aos Handler
-         */
-        { name: 'Process', value: ctx.processTx },
-        { name: 'Action', value: 'Spawned' }
-      ]))
+      .map((tags) => {
+        const successTags = [
+          { name: 'Data-Protocol', value: 'ao' },
+          { name: 'Type', value: 'Message' },
+          /**
+           * aos interoperability
+           *
+           * set the Process tag to the id of the newly spawned Process
+           * and Action to 'Spawned' such that it can be handled
+           * by an aos Handler
+           */
+          { name: 'Process', value: ctx.processTx },
+          { name: 'Action', value: 'Spawned' }
+        ]
+
+        // Preserve the original Variant tag from the spawn if it exists
+        const originalVariant = ctx.cachedSpawn.spawn.Tags?.find(tag => tag.name === 'Variant')
+        if (originalVariant?.value === 'ao.N.1') {
+          successTags.push({ name: 'Variant', value: 'ao.N.1' })
+        } else {
+          successTags.push({ name: 'Variant', value: 'ao.TN.1' })
+        }
+
+        return tags.concat(successTags)
+      })
       .chain(fromPromise((tags) => buildAndSign({
         processId: ctx.cachedSpawn.processId,
         tags

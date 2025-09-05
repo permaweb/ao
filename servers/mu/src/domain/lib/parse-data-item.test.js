@@ -19,7 +19,8 @@ describe('parseDataItem', () => {
       anchor: 'foobar',
       tags: [
         { name: 'Foo', value: 'Bar' }
-      ]
+      ],
+      data: Buffer.from('test-data', 'utf-8')
     }
     const parseDataItem = parseDataItemWith({
       createDataItem: (raw) => {
@@ -45,7 +46,8 @@ describe('parseDataItem', () => {
       anchor: 'foobar',
       tags: [
         { name: 'Foo', value: 'Bar' }
-      ]
+      ],
+      data: 'test-data'
     })
   })
 })

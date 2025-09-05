@@ -29,6 +29,7 @@ const tagsSchema = z.array(tagSchema)
 
 function buildTagsWith () {
   return (ctx) => {
+    const variant = ctx?.tags?.find(tag => tag.name.toLowerCase() === 'variant')?.value || 'ao.TN.1'
     return of(ctx)
       .map(prop('tags'))
       .map(defaultTo([]))
@@ -37,10 +38,11 @@ function buildTagsWith () {
       .map(removeAoProtoByName('Module'))
       .map(removeAoProtoByName('Scheduler'))
       .map(concatAoProto([
-        { name: 'Variant', value: 'ao.TN.1' },
+        { name: 'Variant', value: variant },
         { name: 'Type', value: 'Process' },
         { name: 'Module', value: ctx.module },
-        { name: 'Scheduler', value: ctx.scheduler }
+        { name: 'Scheduler', value: ctx.scheduler },
+        { name: 'Timestamp', value: Date.now().toString() }
       ]))
       .map(tagsSchema.parse)
       .map(assoc('tags', __, ctx))

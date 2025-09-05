@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.90](https://github.com/permaweb/ao/compare/connect@v0.0.89...connect@v0.0.90) (2025-08-21)
+
+## [0.0.89](https://github.com/permaweb/ao/compare/connect@v0.0.88...connect@v0.0.89) (2025-08-11)
+
+
+### Features
+
+* **connect:** hb.playground.js ([62b64c0](https://github.com/permaweb/ao/commit/62b64c0a48ff66ec880560cbde60d1d6ebb35fe5))
+
+
+### Bug Fixes
+
+* set accept-bundle on ans104 headers and allow signing-format not signingFormat ([7bbea4a](https://github.com/permaweb/ao/commit/7bbea4aff2442297270f5337304ba82891b4d4b6))
+
+## [0.0.88](https://github.com/permaweb/ao/compare/connect@v0.0.87...connect@v0.0.88) (2025-08-08)
+
+
+### Features
+
+* **connect:** attach timestamp to process tags ([6109df2](https://github.com/permaweb/ao/commit/6109df2726b4069ace9718d6da68ff66ff72aa0e))
+
+## [0.0.87](https://github.com/permaweb/ao/compare/connect@v0.0.86...connect@v0.0.87) (2025-08-06)
+
+
+### Features
+
+* **connect:** do not automatically set variant to ao.TN.1 ([3087f52](https://github.com/permaweb/ao/commit/3087f52de85270dbc213b4b3338a131b5315274a))
+
+
+### Bug Fixes
+
+* **connect:** allow variant tag to match case insensitively ([342b07f](https://github.com/permaweb/ao/commit/342b07f8eb5e542e30c16fde0d2a746b9a7c8212))
+
+## [0.0.86](https://github.com/permaweb/ao/compare/connect@v0.0.85...connect@v0.0.86) (2025-08-04)
+
+
+### Bug Fixes
+
+* **connect:** allow variant tag to be passed ([e3cee35](https://github.com/permaweb/ao/commit/e3cee35b449b29fb634543ed0c3461e00266c920))
+
 ## [0.0.85](https://github.com/permaweb/ao/compare/connect@v0.0.84...connect@v0.0.85) (2025-05-21)
 
 ## [0.0.84](https://github.com/permaweb/ao/compare/connect@v0.0.83...connect@v0.0.84) (2025-05-10)

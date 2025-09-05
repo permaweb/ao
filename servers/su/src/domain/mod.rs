@@ -21,6 +21,7 @@ use logger::SuLog;
 pub use clients::metrics::PromMetrics;
 pub use core::flows;
 pub use core::router;
+pub use core::bytes;
 pub use flows::Deps;
 pub use local_store::migration::migrate_to_local;
 pub use local_store::sync_local::sync_local_drives;
@@ -95,7 +96,11 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     let wallet = Arc::new(FileWallet);
 
     let uploader = Arc::new(
-        UploaderClient::new(&config.upload_node_url, logger.clone()).expect("Invalid uploader url"),
+        UploaderClient::new(
+          &config.upload_node_url, 
+          &config.cache_url, 
+          logger.clone()
+        ).expect("Invalid uploader url"),
     );
 
     let metrics = Arc::new(PromMetrics::new(

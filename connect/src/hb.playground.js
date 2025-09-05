@@ -7,7 +7,9 @@ import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 
 import Arweave from 'arweave'
-import { connect, createSigner } from './index.js'
+import { tap } from 'ramda'
+
+import { connect, createDataItemSigner } from './index.js'
 
 describe('hb playground', () => {
   /**
@@ -24,6 +26,23 @@ describe('hb playground', () => {
     )
   })
 
+  const mode = {
+    hyperbeam: true,
+    local: false
+  }
+  const doMsg = true
+  const doSchedule = false
+
+  const isHyperBeam = mode.hyperbeam
+  const isLocal = mode.local
+  const VARIANT = isHyperBeam ? 'ao.N.1' : 'ao.TN.1'
+  const SCHEDULER = isHyperBeam
+    ? isLocal
+      ? 'mW0CxacCCO4UkzPIsaRRNwSutAsUW9rSbZSYVMN7nRE' // https://humbly-rational-cardinal.ngrok-free.app
+      : 'NoZH3pueH0Cih6zjSNu_KRAcmg4ZJV1aGHKi0Pi5_Hc' // https://scheduler.forward.computer
+    : '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA' // https://su-router.forward.computer
+  const MU_URL = isLocal ? 'http://localhost:3004' : 'https://mu203.ao-testnet.xyz'
+  const HB_URL = isLocal ? 'http://localhost:8734' : 'https://scheduler.forward.computer'
   describe('HyperBEAM mode', () => {
     test('should relay the message through HyperBEAM', async () => {
       const pid = 'C1YcmYARIs5Tjx5CVqM1TH62IBxust8TfhtfHng8DI0'
@@ -31,54 +50,84 @@ describe('hb playground', () => {
         { name: 'Action', value: 'Info' }
       ]
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
-      const { dryrun: legacyDryrun } = connect({
+      // Spawn process using legacy MU
+
+      const { message, spawn } = connect({
         MODE: 'legacy',
-        GATEWAY_URL: 'https://arweave.net/graphql',
-        URL: 'http://localhost:8734'
+        MU_URL
       })
+      const spawnedPid = await spawn({
+        signer: createDataItemSigner(wallet),
+        tags: [
+          { name: 'Authority', value: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY' },
+          { name: 'Variant', value: VARIANT },
+          { name: 'TagData', value: 'Foo' }
+        ],
+        module: 'ISShJH1ij-hPPt9St5UFFr_8Ys3Kj5cyg7zrMGt7H9s',
+        scheduler: SCHEDULER
+      })
+      console.log({ spawnedPid })
+      if (!doMsg) return
 
-      const legacyDryrunRes = await legacyDryrun({
-        tags,
-        process: '7GoQfmSOct_aUOWKM4xbKGg6DzAmOgdKwg8Kf-CbHm4',
-        data: '1+15',
-        foo: 'bar'
-      })
-      console.log({ legacyDryrunRes })
-      const { dryrun } = connect({
-        MODE: 'mainnet',
-        device: 'process@1.0',
-        signer: createSigner(wallet),
-        GATEWAY_URL: 'https://arweave.net/graphql',
-        URL: 'http://localhost:8734'
-      })
+      console.log({ m: 'waiting 4 seconds for gateway to index process' })
+      await new Promise(resolve => setTimeout(resolve, 4000))
 
-      // const resultPath = `/${pid}~process@1.0/compute/serialize~json@1.0`
-      // const resultParams = {
-      //   type: 'Message',
-      //   path: resultPath,
-      //   method: 'POST',
-      //   ...tags.filter(t => t.name !== 'device').reduce((a, t) => assoc(t.name, t.value, a), {}),
-      //   data: '1+15',
-      //   'data-protocol': 'ao',
-      //   variant: 'ao.N.1',
-      //   target: pid,
-      //   "accept-bundle": "true",
-      //   "accept-codec": "httpsig@1.0",
-      //   signingFormat: 'ANS-104',
-      // }
-      // const resultRes = await request(resultParams).then((res) => JSON.parse(res.body))
-      // console.dir(resultRes, { depth: null, colors: true })
-
-      const dryrunRes = await dryrun({
-        tags,
-        process: pid,
-        data: '1+15',
-        foo: 'bar',
-        signingFormat: 'ANS-104'
+      const msg1 = await message({
+        process: spawnedPid,
+        signer: createDataItemSigner(wallet),
+        tags: [
+          { name: 'Variant', value: VARIANT },
+          { name: 'Type', value: 'Message' },
+          { name: 'Action', value: 'Eval' },
+          { name: 'MsgNum', value: '1' }
+        ],
+        data: 'ao.send({ Target = ao.id, Data = "Resultant Message1" })'
+      }).catch(e => {
+        console.log('Msg1 failed', { e })
       })
-      const msg = dryrunRes.Messages[0]
-      console.log({ msg })
-      assert.equal(msg.Data, 3)
+      console.log({ msg1 })
+
+      const msg2 = await message({
+        process: spawnedPid,
+        signer: createDataItemSigner(wallet),
+        tags: [
+          { name: 'Variant', value: VARIANT },
+          { name: 'Type', value: 'Message' },
+          { name: 'Action', value: 'Eval' },
+          { name: 'MsgNum', value: '2' }
+        ],
+        data: 'ao.send({ Target = ao.id, Data = "Resultant Message2" })'
+      }).catch(e => {
+        console.log('Msg2 failed', { e })
+      })
+      console.log({ msg2 })
+
+      const msg3 = await message({
+        process: spawnedPid,
+        signer: createDataItemSigner(wallet),
+        tags: [
+          { name: 'Variant', value: VARIANT },
+          { name: 'Type', value: 'Message' },
+          { name: 'Action', value: 'Eval' },
+          { name: 'MsgNum', value: '3' }
+        ],
+        data: 'ao.send({ Target = ao.id, Data = "Resultant Message3" })'
+      }).catch(e => {
+        console.log('Msg3 failed', { e })
+      })
+      console.log({ msg3 })
+
+      if (!doSchedule) return
+      if (isHyperBeam) {
+        const getScheduleUrl = `${HB_URL}/~scheduler@1.0/schedule&target=${spawnedPid}/assignments/format~hyperbuddy@1.0`
+        console.log({ getScheduleUrl })
+        const schedule = await fetch(
+          getScheduleUrl
+        ).then(res => res.text()).catch(e => {
+          console.log('Schedule failed', { e })
+        })
+        console.log({ schedule })
+      }
     })
   })
 })

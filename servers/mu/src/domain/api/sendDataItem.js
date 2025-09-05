@@ -23,7 +23,9 @@ export function sendDataItemWith ({
   locateScheduler,
   locateProcess,
   fetchResult,
+  fetchHyperBeamResult,
   crank,
+  isHyperBeamProcess,
   logger,
   fetchSchedulerProcess,
   writeDataItemArweave,
@@ -37,7 +39,7 @@ export function sendDataItemWith ({
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, logger })
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
@@ -49,6 +51,10 @@ export function sendDataItemWith ({
      * must also be performed.
      */
   const sendMessage = (ctx) => of({ ...ctx, message: ctx.dataItem })
+    .chain(fromPromise(async (ctx) => {
+      const isHyperBeam = await isHyperBeamProcess(ctx.dataItem.target, ctx.logId)
+      return { ...ctx, schedulerType: isHyperBeam ? 'hyperbeam' : 'legacy' }
+    }))
     .map(logger.tap({ log: 'Sending message...' }))
     .map(({ message, ...rest }) => ({
       ...rest,
@@ -245,7 +251,9 @@ export function sendDataItemWith ({
                 .map(logger.tap({ log: 'Successfully located process scheduler', logId: ctx.logId }))
                 .chain((schedLocation) => sendMessage({ ...ctx, schedLocation }))
             }
-            return sendProcess(ctx)
+            const variant = ctx.dataItem.tags.find(tag => tag.name === 'Variant')?.value
+            const schedulerType = variant === 'ao.N.1' ? 'hyperbeam' : 'legacy'
+            return sendProcess({ ...ctx, schedulerType })
           })
           .bimap(
             (e) => new Error(e, { cause: ctx }),

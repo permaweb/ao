@@ -74,7 +74,7 @@ export const resultSchema = z.function()
 
 export const graphqlReturnSchema = z.function()
   .args(
-    z.array(),
+    z.array()
   )
   .returns(
     z.any()
@@ -209,14 +209,21 @@ export const writeDataItemSchema = z.function()
     z.object({
       data: z.string(),
       suUrl: z.string(),
-      logId: z.string().nullish()
+      logId: z.string().nullish(),
+      schedulerType: z.string().optional(),
+      id: z.string().optional(),
+      processId: z.string().optional(),
+      tags: tagArraySchema.optional(),
+      dataStr: z.string().optional()
     })
   )
   .returns(
     z.promise(
       z.object({
         id: z.string(),
-        timestamp: z.coerce.number()
+        timestamp: z.coerce.number(),
+        slot: z.coerce.number().nullish(),
+        process: z.string().nullish()
       })
     )
   )

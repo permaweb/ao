@@ -39,12 +39,13 @@ const tagSchema = z.array(z.object({
  */
 function buildTagsWith () {
   return (ctx) => {
+    const variant = ctx?.tags?.find(tag => tag.name.toLowerCase() === 'variant')?.value || 'ao.TN.1'
     return of(ctx.tags)
       .map(defaultTo([]))
       .map(removeAoProtoByName('Variant'))
       .map(removeAoProtoByName('Type'))
       .map(concatAoProto([
-        { name: 'Variant', value: 'ao.TN.1' },
+        { name: 'Variant', value: variant },
         { name: 'Type', value: 'Message' }
       ]))
       .map(tagSchema.parse)
@@ -114,9 +115,9 @@ export function uploadMessageWith (env) {
     return of(ctx)
       .chain(buildTags)
       .chain(buildData)
-      .chain(fromPromise(({ id, data, tags, anchor, signer }) =>
-        deployMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer || env.signer) })
-      ))
+      .chain(fromPromise(({ id, data, tags, anchor, signer }) => {
+        return deployMessage({ processId: id, data, tags, anchor, signer: signerSchema.implement(signer || env.signer) })
+      }))
       .map(res => assoc('messageId', res.messageId, ctx))
   }
 }
@@ -140,7 +141,7 @@ export function prepareMessageWith (env) {
   }
 }
 
-export function sendSignedMessageWith(env) {
+export function sendSignedMessageWith (env) {
   const sendSignedMessage = sendSignedMessageSchema.implement(env.sendSignedMessage)
 
   return (ctx) => {

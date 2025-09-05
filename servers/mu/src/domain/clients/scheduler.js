@@ -2,8 +2,9 @@ import { identity } from 'ramda'
 import { of, fromPromise, Rejected } from 'hyper-async'
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
+import { connect, createDataItemSigner } from '@permaweb/aoconnect'
 
-function writeDataItemWith ({ fetch, histogram, logger }) {
+function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
   const suFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -20,52 +21,123 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
     }),
     logger
   })
+  const hbFetch = withTimerMetricsFetch({
+    fetch,
+    timer: histogram,
+    startLabelsFrom: () => ({
+      operation: 'writeDataItemHyperBeam'
+    }),
+    logger
+  })
   /**
    * writeDataItem
-   * Given a dataItem and a suUrl, forward the message to the SU
+   * Given a dataItem and a suUrl, forward the message to the SU or HyperBeam scheduler
    * to be posted to Arweave.
    *
    * @param data - the data to forward
-   * @param suUrl - the SU to forward the data to
+   * @param suUrl - the SU or HyperBeam scheduler URL
    * @param logId - The logId to aggregate the logs by
+   * @param schedulerType - 'legacy' or 'hyperbeam' to determine endpoint
    *
    * @returns
    * id - the tx-id of the data item
    * timestamp
    */
-  return async ({ data, suUrl, logId }) => {
+  return async ({ data, suUrl, logId, schedulerType = 'legacy', processId, id, tags = [], dataStr }) => {
+    const endpoint = schedulerType === 'hyperbeam'
+      ? `${suUrl}/${processId}~process@1.0/push`
+      : suUrl
+    const fetchClient = schedulerType === 'hyperbeam' ? hbFetch : suFetch
+
     return of(Buffer.from(data, 'base64'))
-      .map(logger.tap({ log: `Forwarding message to SU ${suUrl}`, logId }))
+      .map(logger.tap({
+        log: `Forwarding message to ${schedulerType} scheduler ${endpoint}`,
+        logId
+      }))
       .chain(
-        fromPromise((body) =>
-          suFetch(suUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              Accept: 'application/json'
-            },
-            redirect: 'manual',
-            body
-          }).then(async (response) => {
-            /*
-            After upgrading to node 22 we have to handle
-            the redirects manually otherwise fetch throws
-            an error
-          */
-            if ([307, 308].includes(response.status)) {
-              const newUrl = response.headers.get('Location')
-              return suRedirectFetch(newUrl, {
+        fromPromise((body) => {
+          if (schedulerType === 'hyperbeam') {
+            // Use ao connect for HyperBeam push requests
+            const aoConnect = connect({
+              MODE: 'mainnet',
+              device: 'process@1.0',
+              signer: createDataItemSigner(wallet),
+              URL: suUrl
+            })
+
+            // Helper function to convert tags array to object (like assoc in mainnet.js)
+            const tagsToObj = tags.reduce((acc, tag) => {
+              acc[tag.name] = tag.value
+              return acc
+            }, {})
+
+            // Create push request parameters following mainnet.js pattern
+            let pushParams = {}
+            if (tagsToObj.Type === 'Process') {
+              pushParams = {
+                path: '/push',
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  Accept: 'application/json'
-                },
-                body
-              })
+                Type: 'Process',
+                device: 'process@1.0',
+                'scheduler-device': 'scheduler@1.0',
+                'push-device': 'push@1.0',
+                'scheduler-location': tagsToObj.Scheduler,
+                'data-protocol': 'ao',
+                variant: 'ao.N.1',
+                ...tagsToObj,
+                Authority: tagsToObj.Scheduler,
+                'accept-bundle': 'true',
+                signingFormat: 'ANS-104'
+              }
+            } else {
+              pushParams = {
+                type: 'Message',
+                path: `/${processId}~process@1.0/push`,
+                method: 'POST',
+                ...tagsToObj,
+                'data-protocol': 'ao',
+                'scheduler-device': 'scheduler@1.0',
+                'push-device': 'push@1.0',
+                variant: 'ao.N.1',
+                target: processId,
+                signingFormat: 'ANS-104',
+                'accept-bundle': 'true',
+                'accept-codec': 'httpsig@1.0',
+                data: dataStr
+              }
             }
-            return response
-          })
-        )
+
+            return aoConnect.request(pushParams)
+          } else {
+            return fetchClient(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Accept: 'application/json'
+              },
+              redirect: 'manual',
+              body
+            }).then(async (response) => {
+              /*
+              After upgrading to node 22 we have to handle
+              the redirects manually otherwise fetch throws
+              an error
+            */
+              if ([307, 308].includes(response.status)) {
+                const newUrl = response.headers.get('Location')
+                return suRedirectFetch(newUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/octet-stream',
+                    Accept: 'application/json'
+                  },
+                  body
+                })
+              }
+              return response
+            })
+          }
+        })
       )
       .bimap((e) => {
         logger({ log: `Error while communicating with SU: ${e}`, logId })
@@ -74,6 +146,13 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
       .bichain(
         (err) => Rejected(err),
         fromPromise(async (res) => {
+          if (schedulerType === 'hyperbeam') {
+            if (+res.status === 200) {
+              // TODO: fix this
+              return { id, timestamp: Date.now(), slot: +res.slot, process: res?.process }
+            }
+            throw new Error(`${res.status}: Error posting to HyperBeam`)
+          }
           if (!res?.ok) {
             const text = await res.text()
             throw new Error(`${res.status}: ${text}`)

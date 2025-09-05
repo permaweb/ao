@@ -233,6 +233,17 @@ export const okRes = (res) => {
 }
 
 /**
+ * Checks if a HB response is OK. Otherwise, throw response.
+ *
+ * @param {Response} res - The response to check
+ * @returns
+ */
+export const okResHb = (res) => {
+  if (+res.status === 200) return res
+  throw res
+}
+
+/**
  * Checks if we are at a provided stage
  *
  * @param {String} stage - The stage to check against

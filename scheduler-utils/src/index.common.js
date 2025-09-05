@@ -5,11 +5,13 @@ import * as SchedulerClient from './client/scheduler.js'
 import { locateWith } from './locate.js'
 import { rawWith } from './raw.js'
 import { validateWith } from './validate.js'
+import { getProcessWith } from './getProcess.js'
 
 export * from './err.js'
 
 const DEFAULT_CACHE_SIZE = 100
 const DEFAULT_GRAPHQL_URL = 'https://arweave.net/graphql'
+const DEFAULT_HB_GRAPHQL_URL = 'https://cache.forward.computer'
 const DEFAULT_GRAPHQL_MAX_RETRIES = 0
 const DEFAULT_GRAPHQL_RETRY_BACKOFF = 300
 const DEFAULT_FOLLOW_REDIRECTS = false
@@ -41,10 +43,11 @@ export function connect ({
   followRedirects = DEFAULT_FOLLOW_REDIRECTS,
   GRAPHQL_URL = DEFAULT_GRAPHQL_URL,
   GRAPHQL_MAX_RETRIES = DEFAULT_GRAPHQL_MAX_RETRIES,
-  GRAPHQL_RETRY_BACKOFF = DEFAULT_GRAPHQL_RETRY_BACKOFF
+  GRAPHQL_RETRY_BACKOFF = DEFAULT_GRAPHQL_RETRY_BACKOFF,
+  HB_GRAPHQL_URL = DEFAULT_HB_GRAPHQL_URL
 } = {}) {
   const _cache = InMemoryClient.createLruCache({ size: cacheSize })
-
+  const _processCache = InMemoryClient.createLruCache({ size: cacheSize })
   const loadScheduler = GatewayClient.loadSchedulerWith({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF })
   const cache = {
     getByProcess: InMemoryClient.getByProcessWith({ cache: _cache }),
@@ -52,6 +55,12 @@ export function connect ({
     setByProcess: InMemoryClient.setByProcessWith({ cache: _cache }),
     setByOwner: InMemoryClient.setByOwnerWith({ cache: _cache })
   }
+
+  const processCache = {
+    getProcessResponse: InMemoryClient.getProcessResponseWith({ cache: _processCache }),
+    setProcessResponse: InMemoryClient.setProcessResponseWith({ cache: _processCache })
+  }
+
   /**
    * Locate the scheduler for the given process.
    */
@@ -74,5 +83,13 @@ export function connect ({
    */
   const raw = rawWith({ loadScheduler, cache })
 
-  return { locate, validate, raw }
+  /**
+   * Get the process for the given id.
+   */
+  const getProcess = getProcessWith({
+    getProcess: GatewayClient.loadProcessWith({ fetch, HB_GRAPHQL_URL, GRAPHQL_URL, GRAPHQL_MAX_RETRIES, GRAPHQL_RETRY_BACKOFF }),
+    cache: processCache
+  })
+
+  return { locate, validate, raw, getProcess }
 }

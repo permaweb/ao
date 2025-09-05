@@ -60,3 +60,23 @@ export function setByOwnerWith ({ cache }) {
     return cache.set(owner, { url, address: owner, ttl }, { ttl })
   }
 }
+
+/**
+ * @param {{ cache: LRUCache }} params
+ */
+export function getProcessResponseWith ({ cache }) {
+  return async (process) => {
+    if (!cache.max) return
+    return cache.get(process)
+  }
+}
+
+/**
+ * @param {{ cache: LRUCache }} params
+ */
+export function setProcessResponseWith ({ cache }) {
+  return async (process, processResponse, ttl) => {
+    if (!cache.max) return
+    return cache.set(process, processResponse, { ttl })
+  }
+}

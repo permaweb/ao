@@ -10,11 +10,19 @@ const ctxSchema = z.object({
     processId: z.string()
   }),
   schedLocation: z.any().nullable(),
-  tagAssignments: z.any()
+  tagAssignments: z.any(),
+  schedulerType: z.string().optional()
 }).passthrough()
 
 export function buildTxWith (env) {
-  let { buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet } = env
+  let {
+    buildAndSign,
+    logger,
+    locateProcess,
+    fetchSchedulerProcess,
+    isWallet,
+    isHyperBeamProcess
+  } = env
   locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
   fetchSchedulerProcess = fromPromise(fetchSchedulerProcessSchema.implement(fetchSchedulerProcess))
   buildAndSign = fromPromise(buildAndSignSchema.implement(buildAndSign))
@@ -26,31 +34,58 @@ export function buildTxWith (env) {
       .chain(
         (isWalletId) => {
           return locateProcess(ctx.cachedMsg.fromProcessId)
-            .chain(
-              (fromSchedLocation) => fetchSchedulerProcess(
-                ctx.cachedMsg.fromProcessId,
-                fromSchedLocation.url,
-                ctx.logId
-              )
-                .map((schedulerResult) => ({
-                  fromProcessSchedData: schedulerResult
+            .chain((fromSchedLocation) => {
+              return of()
+                .chain(fromPromise(async () => {
+                  const isHyperBeam = await isHyperBeamProcess(ctx.cachedMsg.msg.Target, ctx.logId)
+                  return { isHyperBeam }
                 }))
-                .chain(({ fromProcessSchedData }) => {
-                  /*
-                    If the target is a wallet id we will move
-                    on here without setting a schedLocation
-                    later in the pipeline this will mean the tx
-                    goes straight to Arweave.
-                  */
-                  if (isWalletId) { return of({ fromProcessSchedData }) }
-                  return locateProcess(ctx.cachedMsg.processId)
-                    .map((schedLocation) => {
-                      return {
-                        schedLocation,
-                        fromProcessSchedData
-                      }
-                    })
+                .chain(({ isHyperBeam }) => {
+                  if (isHyperBeam) {
+                    const fromProcessSchedData = {
+                      tags: ctx.cachedMsg.msg.Tags || [],
+                      schedulerType: 'hyperbeam'
+                    }
+                    if (isWalletId) {
+                      return of({ fromProcessSchedData })
+                    }
+                    return locateProcess(ctx.cachedMsg.processId)
+                      .map((schedLocation) => {
+                        return {
+                          schedLocation,
+                          fromProcessSchedData,
+                          schedulerType: 'hyperbeam'
+                        }
+                      })
+                  } else {
+                    return fetchSchedulerProcess(
+                      ctx.cachedMsg.fromProcessId,
+                      fromSchedLocation.url,
+                      ctx.logId
+                    )
+                      .map((schedulerResult) => ({
+                        fromProcessSchedData: schedulerResult
+                      }))
+                      .chain(({ fromProcessSchedData }) => {
+                        /*
+                            If the target is a wallet id we will move
+                            on here without setting a schedLocation
+                            later in the pipeline this will mean the tx
+                            goes straight to Arweave.
+                          */
+                        if (isWalletId) { return of({ fromProcessSchedData }) }
+                        return locateProcess(ctx.cachedMsg.processId)
+                          .map((schedLocation) => {
+                            return {
+                              schedLocation,
+                              fromProcessSchedData,
+                              schedulerType: 'legacy'
+                            }
+                          })
+                      })
+                  }
                 })
+            }
             )
         }
       )
@@ -60,7 +95,6 @@ export function buildTxWith (env) {
             return ![
               'Data-Protocol',
               'Type',
-              'Variant',
               'From-Process',
               'From-Module',
               'Assignments'
@@ -68,7 +102,6 @@ export function buildTxWith (env) {
           }) ?? [],
           { name: 'Data-Protocol', value: 'ao' },
           { name: 'Type', value: 'Message' },
-          { name: 'Variant', value: 'ao.TN.1' },
           { name: 'From-Process', value: ctx.cachedMsg.fromProcessId },
           {
             name: 'From-Module',
@@ -86,11 +119,12 @@ export function buildTxWith (env) {
         return {
           tags: tagsIn,
           schedLocation: res.schedLocation,
-          tagAssignments
+          tagAssignments,
+          schedulerType: res.schedulerType
         }
       })
       .chain(
-        ({ tags, schedLocation, tagAssignments }) => buildAndSign({
+        ({ tags, schedLocation, tagAssignments, schedulerType }) => buildAndSign({
           processId: ctx.cachedMsg.msg.Target,
           tags,
           anchor: ctx.cachedMsg.msg.Anchor,
@@ -100,7 +134,8 @@ export function buildTxWith (env) {
             return {
               tx,
               schedLocation,
-              tagAssignments: tagAssignments.length > 0 ? [{ Processes: tagAssignments, Message: tx.id }] : []
+              tagAssignments: tagAssignments.length > 0 ? [{ Processes: tagAssignments, Message: tx.id }] : [],
+              schedulerType
             }
           })
       )

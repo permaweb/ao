@@ -43,6 +43,7 @@ if (!MODE) throw new Error('NODE_CONFIG_ENV must be defined')
 
 export const domainConfigSchema = z.object({
   CU_URL: z.string().url('CU_URL must be a a valid URL'),
+  HB_URL: z.string().url('HB_URL must be a a valid URL').optional(),
   MU_WALLET: z.record(z.any()),
   SCHEDULED_INTERVAL: z.number(),
   DUMP_PATH: z.string(),
@@ -80,7 +81,12 @@ export const domainConfigSchema = z.object({
   ENABLE_CUSTOM_PUSH: z.boolean(),
   CUSTOM_CU_MAP_FILE_PATH: z.string(),
   IP_WALLET_RATE_LIMIT: positiveIntSchema,
-  IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema
+  IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema,
+  STALE_CURSOR_RANGE: positiveIntSchema,
+  SU_ROUTER_URL: z.string(),
+  HB_ROUTER_URL: z.string(),
+  ENABLE_HB_WALLET_CHECK: z.boolean(),
+  HB_GRAPHQQL_URL: z.string()
 })
 
 /**
@@ -111,6 +117,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL || 'http://localhost:6363',
+    HB_URL: process.env.HB_URL || 'http://localhost:8734',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
@@ -137,7 +144,12 @@ const CONFIG_ENVS = {
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
-    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
+    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
+    SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
+    HB_GRAPHQQL_URL: process.env.HB_GRAPHQQL_URL || 'https://cache.forward.computer'
   },
   production: {
     MODE,
@@ -145,6 +157,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
+    HB_URL: process.env.HB_URL || 'https://forward.computer',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
@@ -171,7 +184,12 @@ const CONFIG_ENVS = {
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
     IP_WALLET_RATE_LIMIT: process.env.IP_WALLET_RATE_LIMIT || 2000,
-    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60
+    IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
+    STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
+    SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
+    HB_GRAPHQQL_URL: process.env.HB_GRAPHQQL_URL || 'https://cache.forward.computer'
   }
 }
 

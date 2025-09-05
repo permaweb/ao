@@ -56,11 +56,14 @@ Create a .env file with the following variables, or set them in the OS:
 - `ARWEAVE_URL_LIST` list of arweave urls that have tx access aka url/txid returns the tx. Used by gateway calls for checking transactions etc...
 - `SU_FILE_SYNC_DB_DIR` a directory for a RocksDB backup that will hold the full binary files that are the bundles, messages, and assignments. Only used by the cli binary.
 - `SU_INDEX_SYNC_DB_DIR` a directory for a RocksDB backup that will hold an index of Processes and Messages for ordering and querying. Only used by the cli binary.
+- `CACHE_URL` an upload cache for process definitions
 
 To use the fully local storage system set the following evnironment variables.
 - `USE_LOCAL_STORE`  if true the SU will operate on purely RocksDB
 - `SU_FILE_DB_DIR` a local RocksDB directory of bundles
 - `SU_INDEX_DB_DIR` a local index of processes and messages
+
+
 
 > You can also use a `.env` file to set environment variables when running in
 > development mode, See the `.env.example` for an example `.env`

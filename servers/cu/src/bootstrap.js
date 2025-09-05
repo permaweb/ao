@@ -529,7 +529,9 @@ export const createApis = async (ctx) => {
           )
       ),
       logger: dryRunLogger
-    })
+    }),
+    DRY_RUN_DEFAULT_MAX_PROCESS_AGE: ctx.DRY_RUN_DEFAULT_MAX_PROCESS_AGE,
+    DRY_RUN_PROCESS_CACHE_TTL: ctx.DRY_RUN_PROCESS_CACHE_TTL
   })
 
   /**

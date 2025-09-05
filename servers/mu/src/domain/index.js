@@ -84,6 +84,8 @@ const arweave = Arweave.init()
  */
 export const createApis = async (ctx) => {
   const CU_URL = ctx.CU_URL
+  const HB_URL = ctx.HB_URL
+  const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
@@ -91,6 +93,11 @@ export const createApis = async (ctx) => {
   const CRON_CURSOR_DIR = ctx.CRON_CURSOR_DIR
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
   const ALLOW_PUSHES_AFTER = ctx.ALLOW_PUSHES_AFTER
+  const STALE_CURSOR_RANGE = ctx.STALE_CURSOR_RANGE
+  const SU_ROUTER_URL = ctx.SU_ROUTER_URL
+  const HB_ROUTER_URL = ctx.HB_ROUTER_URL
+  const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
+  const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -101,7 +108,7 @@ export const createApis = async (ctx) => {
     logger
   })
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true })
+  const { locate, raw, getProcess } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -165,7 +172,7 @@ export const createApis = async (ctx) => {
     minWorkers: queueIds.length, // We must have as many workers as there are queues to persist
     maxWorkers: ctx.MAX_WORKERS,
     onTerminateWorker: (worker) => {
-      console.log('123Terminating worker', worker)
+      console.log('Terminating worker', worker)
     },
     onCreateWorker: () => {
       let queueId = randomBytes(8).toString('hex')
@@ -213,17 +220,23 @@ export const createApis = async (ctx) => {
 
   const crank = fromPromise(enqueueResults)
 
+  const isHyperBeamProcessCache = InMemoryClient.createLruCache({ size: 1000, ttl: SIXTY_MINUTES_IN_MS })
+  const getIsHyperBeamProcess = InMemoryClient.getByIdWith({ cache: isHyperBeamProcessCache })
+  const setIsHyperBeamProcess = InMemoryClient.setByIdWith({ cache: isHyperBeamProcessCache })
+
   const sendDataItemLogger = logger.child('sendDataItem')
   const sendDataItem = sendDataItemWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
+    fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, HB_URL, histogram, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: sendDataItemLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: sendDataItemLogger }),
+    isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: sendDataItemLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     logger: sendDataItemLogger,
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
@@ -350,7 +363,11 @@ export const createApis = async (ctx) => {
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,
-      getCronProcesses
+      getCronProcesses,
+      getCronProcessCursor,
+      updateCronProcessCursor,
+      logger: monitorProcessLogger,
+      STALE_CURSOR_RANGE
     }),
     startMessageRecoveryCron
   }
@@ -364,12 +381,17 @@ export const createApis = async (ctx) => {
  */
 export const createResultApis = async (ctx) => {
   const CU_URL = ctx.CU_URL
+  const HB_URL = ctx.HB_URL
   const MU_WALLET = ctx.MU_WALLET
   const UPLOADER_URL = ctx.UPLOADER_URL
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
   const RELAY_MAP = ctx.RELAY_MAP
+  const SU_ROUTER_URL = ctx.SU_ROUTER_URL
+  const HB_ROUTER_URL = ctx.HB_ROUTER_URL
+  const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
+  const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -382,8 +404,8 @@ export const createResultApis = async (ctx) => {
     logger
   })
 
-  const { locate, raw } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true })
-  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: false })
+  const { locate, raw, getProcess } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: false, HB_GRAPHQL_URL })
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -393,6 +415,10 @@ export const createResultApis = async (ctx) => {
   const getById = InMemoryClient.getByIdWith({ cache: isWalletCache })
   const setById = InMemoryClient.setByIdWith({ cache: isWalletCache })
 
+  const isHyperBeamProcessCache = InMemoryClient.createLruCache({ size: 1000, ttl: SIXTY_MINUTES_IN_MS })
+  const getIsHyperBeamProcess = InMemoryClient.getByIdWith({ cache: isHyperBeamProcessCache })
+  const setIsHyperBeamProcess = InMemoryClient.setByIdWith({ cache: isHyperBeamProcessCache })
+
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
     logger: processMsgLogger,
@@ -400,12 +426,14 @@ export const createResultApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processMsgLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processMsgLogger, wallet: MU_WALLET }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
-    isWallet: gatewayClient.isWalletWith({ fetch, histogram, ARWEAVE_URL, logger: processMsgLogger, setById, getById }),
+    fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, HB_URL, histogram, logger: processMsgLogger }),
+    isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
+    isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     RELAY_MAP,
     topUp: RelayClient.topUpWith({
       fetch,
@@ -423,7 +451,7 @@ export const createResultApis = async (ctx) => {
     locateProcess: locate,
     locateNoRedirect,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
-    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger }),
+    writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED

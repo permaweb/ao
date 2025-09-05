@@ -7,7 +7,14 @@ default-run = "su"
 [dependencies]
 actix-web = "4"
 async-trait = "0.1.74"
-reqwest = "0.11.22"
+reqwest = { version = "0.11.22", default-features = false, features = [
+    "rustls-tls", 
+    "json",         
+    "gzip",        
+    "brotli",
+    "deflate",
+    "cookies"       
+]}
 serde = "1.0.188"
 serde_json = "1.0.107"
 serde_derive = "1.0.188"

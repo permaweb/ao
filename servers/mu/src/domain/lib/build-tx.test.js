@@ -54,6 +54,10 @@ async function isWallet (_id) {
   return false
 }
 
+async function isHyperBeamProcess (_processId, _logId) {
+  return false
+}
+
 describe('buildTx', () => {
   test('build and sign a tx from a cached msg', async () => {
     const buildTx = buildTxWith({
@@ -61,7 +65,8 @@ describe('buildTx', () => {
       logger,
       locateProcess,
       fetchSchedulerProcess,
-      isWallet
+      isWallet,
+      isHyperBeamProcess
     })
 
     const result = await buildTx({
@@ -90,7 +95,8 @@ describe('buildTx', () => {
       logger,
       locateProcess,
       fetchSchedulerProcess,
-      isWallet
+      isWallet,
+      isHyperBeamProcess
     })
 
     const result = await buildTx({
