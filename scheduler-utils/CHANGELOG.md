@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.29](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.28...scheduler-utils@v0.0.29) (2025-09-05)
+
+
+### Bug Fixes
+
+* **mu:** fix casing, pushparams for hb compat in mu ([3950dbc](https://github.com/permaweb/ao/commit/3950dbc35df29b0d36ed6ff62c43190877ec2bec))
+
 ## [0.0.28](https://github.com/permaweb/ao/compare/scheduler-utils@v0.0.27...scheduler-utils@v0.0.28) (2025-09-04)
 
 
