@@ -4139,8 +4139,6 @@ var Module = (() => {
 
       var ENV = {};
 
-      var getExecutableName = () => thisProgram || "./this.program";
-
       var getEnvStrings = () => {
         if (!getEnvStrings.strings) {
           var lang = "C.UTF-8";
@@ -4151,7 +4149,7 @@ var Module = (() => {
             "PWD": "/",
             "HOME": "/home/web_user",
             "LANG": lang,
-            "_": getExecutableName()
+            "_": "exec.js",
           };
           for (var x in ENV) {
             if (ENV[x] === undefined) delete env[x]; else env[x] = ENV[x];
@@ -4162,7 +4160,7 @@ var Module = (() => {
           }
           getEnvStrings.strings = strings;
         }
-        return []; //getEnvStrings.strings;
+        return getEnvStrings.strings;
       };
 
       var stringToAscii = (str, buffer) => {
