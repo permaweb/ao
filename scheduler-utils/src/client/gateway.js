@@ -33,10 +33,10 @@ export const parseHyperBeamResponse = (process) => {
 
   const signedCommitment = commitments[processId]
   const committed = signedCommitment.committed
-  const originalTags = Object.values(signedCommitment['original-tags'])
+  const originalTags = Object.values(signedCommitment['original-tags'] ?? {})
   const data = process.data
   const tags = []
-  if (!originalTags) {
+  if (!originalTags || originalTags.length === 0) {
     delete process.data
     const tags = Object.keys(process).map(key => ({ name: key, value: process[key] }))
     return { id: processId, tags, data }
@@ -70,9 +70,7 @@ export function loadProcessWith ({ fetch, HB_GRAPHQL_URL, GRAPHQL_URL, GRAPHQL_M
         query ($ids: [ID!]!) {
         transactions(
           ids: $ids
-          tags: [
-            { name: "Type", values: ["Process"] }
-        ]) {
+        ) {
           pageInfo {
             hasNextPage
           }

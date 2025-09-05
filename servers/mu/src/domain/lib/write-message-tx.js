@@ -78,8 +78,8 @@ export function writeMessageTxWith (env) {
             schedulerType: ctx.schedulerType,
             processId: ctx.tx.processId,
             id: ctx.dataItem?.id || '',
-            tags: ctx.dataItem?.tags || [],
-            dataStr: ctx.dataItem?.data || ''
+            tags: ctx.dataItem?.tags || ctx?.cachedMsg?.msg?.Tags || [],
+            dataStr: ctx.dataItem?.data || ctx?.cachedMsg?.msg?.Data || ''
           })
             .map(assoc('schedulerTx', __, ctx))
             .map(ctxSchema.parse)
