@@ -855,7 +855,7 @@ impl DataStore for LocalStoreClient {
 
     /*
       Retrieve the latest message for a process.
-      Uses reverse iteration to efficiently find the latest key
+      Optimized to use prefix iteration to find the latest key
       without loading all keys into memory.
     */
     async fn get_latest_message(
@@ -863,38 +863,27 @@ impl DataStore for LocalStoreClient {
         process_id: &str,
     ) -> Result<Option<Message>, StoreErrorType> {
         let process_key_prefix = format!("message_ordering:{}:", process_id);
-        
-        // Create an upper bound for the prefix to limit iteration range
-        let mut upper_bound = process_key_prefix.clone();
-        upper_bound.push_str("\u{FFFF}");
 
         let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
             StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
         })?;
 
-        // Use reverse iterator starting from the upper bound
         let iter = self
             .index_db
-            .iterator_cf(
-              cf, 
-              rocksdb::IteratorMode::From(upper_bound.as_bytes(), rocksdb::Direction::Reverse)
-            );
+            .prefix_iterator_cf(cf, process_key_prefix.as_bytes());
 
-        // Find the first key that matches our prefix
+        let mut latest_assignment_id: Option<String> = None;
         for item in iter {
-            let (key, assignment_id_bytes) = item?;
-            let key_str = String::from_utf8(key.to_vec())?;
-            
-            if key_str.starts_with(&process_key_prefix) {
-                let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
-                let latest_message = self.get_message(&assignment_id)?;
-                return Ok(Some(latest_message));
-            }
-            
-            // If we've moved past our prefix, no messages exist for this process
-            break;
+            let (_key, assignment_id_bytes) = item?;
+            latest_assignment_id = Some(String::from_utf8(assignment_id_bytes.to_vec())?);
         }
 
-        Ok(None)
+        match latest_assignment_id {
+            Some(assignment_id) => {
+                let latest_message = self.get_message(&assignment_id)?;
+                Ok(Some(latest_message))
+            }
+            None => Ok(None),
+        }
     }
 }
