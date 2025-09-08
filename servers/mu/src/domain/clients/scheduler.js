@@ -45,7 +45,7 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
    */
   return async ({ data, suUrl, logId, schedulerType = 'legacy', processId, id, tags = [], dataStr }) => {
     const endpoint = schedulerType === 'hyperbeam'
-      ? `${suUrl}/${processId}~process@1.0/push`
+      ? `${suUrl}/${processId}/push`
       : suUrl
     const fetchClient = schedulerType === 'hyperbeam' ? hbFetch : suFetch
 
@@ -97,9 +97,7 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
                 ...tagsToObj,
                 'data-protocol': 'ao',
                 target: processId,
-                'signing-format': 'ANS-104',
-                accept: 'application/json',
-                'accept-bundle': 'true'
+                'signing-format': 'ANS-104'
               }
               if (dataStr) {
                 pushParams.data = dataStr
