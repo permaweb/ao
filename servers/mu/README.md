@@ -61,7 +61,7 @@ There are a few environment variables that you can set:
 - `SU_ROUTER_URL`: the SU router url to default to when checking if target is a wallet
 - `HB_ROUTER_URL`: the HB router url to default to when checking if target is a wallet
 - `ENABLE_HB_WALLET_CHECK`: whether to enable HB wallet check when checking if target is a wallet
-- `HB_GRAPHQQL_URL`: the HB graphql cache url to use when retrieving a process message
+- `HB_GRAPHQL_URL`: the HB graphql cache url to use when retrieving a process message
 
 
 
