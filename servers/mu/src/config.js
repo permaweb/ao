@@ -157,7 +157,7 @@ const CONFIG_ENVS = {
     ENABLE_METRICS_ENDPOINT: process.env.ENABLE_METRICS_ENDPOINT,
     MU_WALLET: walletKey,
     CU_URL: process.env.CU_URL,
-    HB_URL: process.env.HB_URL || 'https://forward.computer',
+    HB_URL: process.env.HB_URL || 'https://push-router.forward.computer',
     GATEWAY_URL: process.env.GATEWAY_URL || 'https://arweave.net',
     GRAPHQL_URL: process.env.GRAPHQL_URL,
     ARWEAVE_URL: process.env.ARWEAVE_URL,
