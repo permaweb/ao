@@ -77,6 +77,11 @@ pub trait Config: Send + Sync {
     fn enable_router_check(&self) -> bool;
     fn router_url(&self) -> String;
     fn assignment(&self) -> String;
+    fn enable_message_max_size(&self) -> bool;
+    fn max_message_size(&self) -> usize;
+    fn max_size_owner_whitelist(&self) -> Vec<String>;
+    fn max_size_from_owner_whitelist(&self) -> Vec<String>;
+    fn max_size_from_whitelist(&self) -> Vec<String>;
 }
 
 #[derive(Debug)]

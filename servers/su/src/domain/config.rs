@@ -54,6 +54,12 @@ pub struct AoConfig {
     pub assignment: String,
 
     pub cache_url: String,
+
+    pub enable_message_max_size: bool,
+    pub max_message_size: usize,
+    pub max_size_owner_whitelist: Vec<String>,
+    pub max_size_from_owner_whitelist: Vec<String>,
+    pub max_size_from_whitelist: Vec<String>,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -218,6 +224,31 @@ impl AoConfig {
             Err(_e) => "https://cache.forward.computer".to_string(),
         };
 
+        let enable_message_max_size = match env::var("ENABLE_MESSAGE_MAX_SIZE") {
+            Ok(val) => val == "true",
+            Err(_e) => false,
+        };
+
+        let max_message_size = match env::var("MAX_MESSAGE_SIZE_BYTES") {
+            Ok(val) => val.parse().unwrap(),
+            Err(_e) => 102400,
+        };
+
+        let max_size_owner_whitelist: Vec<String> = match env::var("MAX_SIZE_OWNER_WHITELIST") {
+            Ok(val) => val.split(',').map(|s| s.trim().to_string()).collect(),
+            Err(_e) => vec![],
+        };
+
+        let max_size_from_whitelist: Vec<String> = match env::var("MAX_SIZE_FROM_WHITELIST") {
+            Ok(val) => val.split(',').map(|s| s.trim().to_string()).collect(),
+            Err(_e) => vec![],
+        };
+
+        let max_size_from_owner_whitelist: Vec<String> = match env::var("MAX_SIZE_FROM_OWNER_WHITELIST") {
+            Ok(val) => val.split(',').map(|s| s.trim().to_string()).collect(),
+            Err(_e) => vec![],
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -249,7 +280,12 @@ impl AoConfig {
             enable_router_check,
             router_url,
             assignment,
-            cache_url
+            cache_url,
+            enable_message_max_size,
+            max_message_size,
+            max_size_owner_whitelist,
+            max_size_from_owner_whitelist,
+            max_size_from_whitelist
         })
     }
 }
@@ -290,5 +326,20 @@ impl Config for AoConfig {
     }
     fn assignment(&self) -> String {
         self.assignment.clone()
+    }
+    fn enable_message_max_size(&self) -> bool {
+        self.enable_message_max_size.clone()
+    }
+    fn max_message_size(&self) -> usize {
+        self.max_message_size.clone()
+    }
+    fn max_size_owner_whitelist(&self) -> Vec<String> {
+        self.max_size_owner_whitelist.clone()
+    }
+    fn max_size_from_owner_whitelist(&self) -> Vec<String> {
+        self.max_size_from_owner_whitelist.clone()
+    }
+    fn max_size_from_whitelist(&self) -> Vec<String> {
+        self.max_size_from_whitelist.clone()
     }
 }

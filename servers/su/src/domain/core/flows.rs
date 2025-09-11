@@ -7,6 +7,7 @@ use dotenv::dotenv;
 use serde_json::json;
 use simd_json::to_string as simd_to_string;
 use tokio::sync::Mutex;
+use sha2::{Digest, Sha256};
 
 use super::builder::Builder;
 use super::bytes::{DataBundle, DataItem};
@@ -213,6 +214,75 @@ async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result
     Ok(())
 }
 
+fn limit_message_size(
+  deps: &Arc<Deps>, 
+  input: &Vec<u8>, 
+  data_item: &Option<DataItem>
+) -> Result<(), String> {
+    let enable_message_max_size = deps.config.enable_message_max_size();
+    let max_size_owner_whitelist = deps.config.max_size_owner_whitelist();
+    let max_size_from_owner_whitelist = deps.config.max_size_from_owner_whitelist();
+    let max_size_from_whitelist = deps.config.max_size_from_whitelist();
+    let max_message_size = deps.config.max_message_size();
+
+    if !enable_message_max_size {
+        return Ok(());
+    }
+
+    if let Some(item) = data_item {
+        let tags = item.tags();
+        let from_process = tags.iter().find(
+          |tag| tag.name == "From-Process" || tag.name == "from-process"
+        );
+
+        let owner = item.owner().to_string();
+        let owner_bytes = match base64_url::decode(&owner) {
+            Ok(b) => b,
+            Err(_) => return Err("Unable to decode owner".to_string()),
+        };
+        let mut hasher = Sha256::new();
+        hasher.update(owner_bytes);
+        let result = hasher.finalize();
+        let address_hash = result.to_vec();
+        let address = base64_url::encode(&address_hash);
+
+        println!("Owner: {}", address);
+        println!("From-process: {:?}", from_process);
+
+        match tags
+            .iter()
+            .find(|tag| tag.name == "Type" || tag.name == "type")
+        {
+            Some(type_tag) => match type_tag.value.as_str() {
+                "Process" => return Ok(()),
+                "Message" => (),
+                _ => return Err("Unsupported Type tag value".to_string()),
+            },
+            None => return Err("Type tag not present".to_string()),
+        }
+
+        if max_size_owner_whitelist.contains(&address) {
+            return Ok(());
+        }
+
+        if let Some(fp) = from_process {
+            if max_size_from_owner_whitelist.contains(&address) 
+              && max_size_from_whitelist.contains(&fp.value) {
+                return Ok(());
+            }
+        }
+    }
+
+    if input.len() > max_message_size {
+        return Err(format!(
+            "Message size exceeds maximum of {} bytes",
+            max_message_size
+        ));
+    }
+
+    Ok(())
+}
+
 /*
     This writes a message or process data item,
     it detects which it is creating by the tags.
@@ -249,6 +319,8 @@ pub async fn write_item(
             None => return Err("Type tag not present".to_string()),
         }
     };
+
+    limit_message_size(&deps, &input, &data_item)?;
 
     deps.logger.log(format!(
         "builder initialized item parsed target - {}",
