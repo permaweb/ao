@@ -262,7 +262,11 @@ export const domainConfigSchema = z.object({
   /**
    * The TTL of the dry run process cache in milliseconds.
    */
-  DRY_RUN_PROCESS_CACHE_TTL: positiveIntSchema
+  DRY_RUN_PROCESS_CACHE_TTL: positiveIntSchema,
+  /**
+   * The size of the page to load when fetching messages from the AO SU.
+   */
+  LOAD_MESSAGES_PAGE_SIZE: positiveIntSchema
 })
 
 export const bufferSchema = z.any().refine(buffer => {
