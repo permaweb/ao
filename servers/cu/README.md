@@ -149,6 +149,7 @@ There are a few environment variables that you can set. Besides
 to be retrieved from the dryrun cache.
 - `DRY_RUN_PROCESS_CACHE_TTL`: the TTL of the dryrun process memory cache.
   If a eval stream is more nonces behind than this limit, a 503 is returned.
+- `LOAD_MESSAGES_PAGE_SIZE`: the size of the page to load when fetching messages from the AO SU.
 
 ## Tests
 
