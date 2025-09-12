@@ -1,7 +1,8 @@
+import * as crypto from 'node:crypto'
+import * as B64js from "base64-js"
 import { randomBytes } from 'node:crypto'
 import { BroadcastChannel } from 'node:worker_threads'
 import cron from 'node-cron'
-
 import { apply } from 'ramda'
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
@@ -18,9 +19,8 @@ import * as InMemoryClient from './clients/in-memory.js'
 import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
 import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
-import { readTracesWith } from './clients/tracer.js'
+import { readTracesWith, recentTracesWith } from './clients/tracer.js'
 import * as RelayClient from './clients/relay.js'
-
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
 import { monitorProcessWith } from './api/monitorProcess.js'
@@ -34,13 +34,51 @@ import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
 import { handleWorkerMetricsMessage } from './lib/handle-worker-metrics-message.js'
 import { fetchCronSchema } from './dal.js'
-
 export { errFrom } from './utils.js'
 
 const { DataItem } = warpArBundles
-
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
+
+function b64UrlToBuffer(b64UrlString){
+  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)));
+}
+function b64UrlDecode(b64UrlString){
+  try {
+    b64UrlString = b64UrlString.replace(/\-/g, "+").replace(/\_/g, "/");
+    let padding;
+    b64UrlString.length % 4 == 0
+      ? (padding = 0)
+      : (padding = 4 - (b64UrlString.length % 4));
+    return b64UrlString.concat("=".repeat(padding));
+  } catch (error) {
+    throw new Error("Failed to decode string", { cause: error });
+  }
+}
+function bufferTob64(buffer) {
+  return B64js.fromByteArray(new Uint8Array(buffer));
+}
+function bufferTob64Url(buffer){
+  return b64UrlEncode(bufferTob64(buffer));
+}
+function b64UrlEncode(b64UrlString) {
+  try {
+    return b64UrlString
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/\=/g, "");
+  } catch (error) {
+    throw new Error("Failed to encode string", { cause: error });
+  }
+}
+async function ownerToAddress(owner) {
+    return bufferTob64Url(
+      await crypto
+        .createHash('SHA-256')
+        .update(b64UrlToBuffer(owner))
+        .digest()
+    );
+  }
 
 const FIVE_MINUTES_IN_MS = 1000 * 60 * 5
 const SIXTY_MINUTES_IN_MS = 1000 * 60 * 60
@@ -98,6 +136,22 @@ export const createApis = async (ctx) => {
   const HB_ROUTER_URL = ctx.HB_ROUTER_URL
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
+  const RATE_LIMIT_FILE_URL = ctx.RATE_LIMIT_FILE_URL
+  
+  let rateLimitFile = {}
+  cron.schedule('* */10 * * * *', async () => {
+    console.log('Updating rate limit file after 10 minutes', RATE_LIMIT_FILE_URL)
+    if (!RATE_LIMIT_FILE_URL) return
+    const fetchedRateLimitFile = await fetch(RATE_LIMIT_FILE_URL)
+      .then((res) => res.json())
+      .catch(err => {
+        console.error('Error updating rate limit file', err)
+        return {}
+      })
+    rateLimitFile = fetchedRateLimitFile
+    console.log('Updated rate limit file')
+  }, { runOnInit: true})
+  const getRateLimitFile = () => rateLimitFile
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -193,7 +247,9 @@ export const createApis = async (ctx) => {
             TASK_QUEUE_MAX_RETRIES: ctx.TASK_QUEUE_MAX_RETRIES,
             TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY,
             IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
-            IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL
+            IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL,
+            RATE_LIMIT_FILE_URL: RATE_LIMIT_FILE_URL,
+            DEFAULT_RATE_LIMIT: rateLimitFile
           }
         }
       }
@@ -241,6 +297,12 @@ export const createApis = async (ctx) => {
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
     db,
+    traceDb,
+    getRecentTraces: recentTracesWith({ db: traceDb, DISABLE_TRACE: false }),
+    getRateLimits: getRateLimitFile,
+    toAddress: ownerToAddress,
+    IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
+    IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL,
     GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
     GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
     ENABLE_MESSAGE_RECOVERY: ctx.ENABLE_MESSAGE_RECOVERY

@@ -124,7 +124,8 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_
       /**
        * If we have a messageId or processId, save our trace to the DB.
        */
-      if ((messageId || processId) && !DISABLE_TRACE) {
+      const isRateLimited = log.includes('Rate limit exceeded')
+      if ((messageId || processId) && !DISABLE_TRACE && !isRateLimited) {
         createTrace({ messageId, processId, wallet, parentId, ip, type })
       }
 
@@ -168,12 +169,22 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_
  * @returns {Array} - The traces
  */
 export function recentTracesWith ({ db, DISABLE_TRACE }) {
-  return async ({ wallet, ip, timestamp }) => {
-    const createWalletQuery = ({ wallet, timestamp }) => {
+  return async ({ wallet, ip, timestamp, processId, isSpawn = false }) => {
+    const createWalletQuery = ({ wallet, timestamp, processId }) => {
       return {
         sql: `
           SELECT * FROM ${TRACES_TABLE}
-          WHERE wallet = ? AND timestamp > ?
+          WHERE wallet = ? AND timestamp > ? AND processId = ?
+          ORDER BY timestamp DESC
+        `,
+        parameters: [wallet, timestamp, processId]
+      }
+    }
+    const createWalletSpawnQuery = ({ wallet, timestamp }) => {
+      return {
+        sql: `
+          SELECT * FROM ${TRACES_TABLE}
+          WHERE wallet = ? AND timestamp > ? AND type = 'SPAWN'
           ORDER BY timestamp DESC
         `,
         parameters: [wallet, timestamp]
@@ -192,7 +203,11 @@ export function recentTracesWith ({ db, DISABLE_TRACE }) {
     if (DISABLE_TRACE) {
       return []
     }
-    const walletResults = wallet ? await db.query(createWalletQuery({ wallet, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e })) : []
+    const walletResults = wallet ? 
+      isSpawn ?
+      await db.query(createWalletSpawnQuery({ wallet, timestamp })).catch((e) => console.error('Error querying database for recent spawn traces:', { e })) 
+      : await db.query(createWalletQuery({ wallet, timestamp, processId })).catch((e) => console.error('Error querying database for recent traces:', { e })) 
+      : []
     const ipResults = ip ? await db.query(createIpQuery({ ip, timestamp })).catch((e) => console.error('Error querying database for recent traces:', { e })) : []
     return { wallet: walletResults, ip: ipResults }
   }

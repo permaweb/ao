@@ -86,7 +86,8 @@ export const domainConfigSchema = z.object({
   SU_ROUTER_URL: z.string(),
   HB_ROUTER_URL: z.string(),
   ENABLE_HB_WALLET_CHECK: z.boolean(),
-  HB_GRAPHQL_URL: z.string()
+  HB_GRAPHQL_URL: z.string(),
+  RATE_LIMIT_FILE_URL: z.string().optional()
 })
 
 /**
@@ -149,7 +150,8 @@ const CONFIG_ENVS = {
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
-    HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer'
+    HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
+    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ""
   },
   production: {
     MODE,
@@ -189,7 +191,8 @@ const CONFIG_ENVS = {
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
-    HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer'
+    HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
+    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ""
   }
 }
 
