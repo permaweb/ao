@@ -51,7 +51,30 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * and a random hex string. This is so that it can
  * be removed from the database when dequeuing.
  */
-export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL }) {
+export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
+  async function checkRateLimitExceeded(task) {
+    function calculateRateLimit(walletID, procID, limits) {
+      if (!limits || Object.keys(limits).length === 0) return 0
+      const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
+      const processLimits = limits?.processes?.[procID] ?? {}
+      const processDivisor = Number(processLimits?.divide ?? 1)
+      const processSubtractor = Number(processLimits?.subtract ?? 0)
+      return Math.max(0, (userBase / processDivisor) - processSubtractor)
+    }
+    const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
+    const wallet = task?.wallet || task?.cachedMsg?.wallet || null
+    const address = await toAddress(wallet)
+    const processId = task?.cachedMsg?.msg?.Target || task?.processId || null
+    const rateLimitAllowance = calculateRateLimit(address, processId, getRateLimits())
+    const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === "SPAWN" })
+    const walletTracesCount = recentTraces.wallet.length
+    console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
+    if (walletTracesCount >= rateLimitAllowance) {
+      logger({ log: `Rate limit exceeded. Skipping enqueueing task.` })
+      return true
+    }
+    return false
+  }
   function createQuery (task, dbId, timestamp) {
     return {
       sql: `
@@ -68,13 +91,8 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, IP_W
     }
   }
   return async (task) => {
-    const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
-    const wallet = task?.wallet || task?.cachedMsg?.wallet || null
-    const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart })
-    if (recentTraces.wallet.length >= IP_WALLET_RATE_LIMIT || recentTraces.ip.length >= IP_WALLET_RATE_LIMIT) {
-      logger({ log: `Rate limit exceeded for wallet ${task.wallet} and ip ${task.ip}, ${recentTraces.wallet.length} wallet traces, ${recentTraces.ip.length} ip traces found. Skipping task.` })
-      return
-    }
+    const rateLimitExceeded = await checkRateLimitExceeded(task)
+    if (rateLimitExceeded) return
     const timestamp = new Date().getTime()
     const randomByteString = randomBytes(8).toString('hex')
     const dbId = `${queueId}-${timestamp}-${randomByteString}`

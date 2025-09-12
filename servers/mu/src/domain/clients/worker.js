@@ -1,6 +1,8 @@
 import { worker } from 'workerpool'
 import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { tap } from 'ramda'
+import * as crypto from 'node:crypto'
+import * as B64js from "base64-js";
 import cron from 'node-cron'
 
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
@@ -12,6 +14,66 @@ import { broadcastEnqueueWith, enqueueResultsWith, processResultWith, processRes
 import { deleteOldTracesWith, recentTracesWith } from './tracer.js'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
+function b64UrlToBuffer(b64UrlString){
+  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)));
+}
+function b64UrlDecode(b64UrlString){
+  try {
+    b64UrlString = b64UrlString.replace(/\-/g, "+").replace(/\_/g, "/");
+    let padding;
+    b64UrlString.length % 4 == 0
+      ? (padding = 0)
+      : (padding = 4 - (b64UrlString.length % 4));
+    return b64UrlString.concat("=".repeat(padding));
+  } catch (error) {
+    throw new Error("Failed to decode string", { cause: error });
+  }
+}
+function bufferTob64(buffer) {
+  return B64js.fromByteArray(new Uint8Array(buffer));
+}
+function bufferTob64Url(buffer){
+  return b64UrlEncode(bufferTob64(buffer));
+}
+function b64UrlEncode(b64UrlString) {
+  try {
+    return b64UrlString
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/\=/g, "");
+  } catch (error) {
+    throw new Error("Failed to encode string", { cause: error });
+  }
+}
+async function ownerToAddress(owner) {
+    return bufferTob64Url(
+      await crypto
+        .createHash('SHA-256')
+        .update(b64UrlToBuffer(owner))
+        .digest()
+    );
+  }
+
+
+let rateLimitFile = workerData.DEFAULT_RATE_LIMIT ?? {}
+cron.schedule('* */10 * * * *', async () => {
+  try {
+  console.log('Updating rate limit file after 10 minutes', workerData.RATE_LIMIT_FILE_URL)
+  if (!workerData.RATE_LIMIT_FILE_URL) return
+  const fetchedRateLimitFile = await fetch(workerData.RATE_LIMIT_FILE_URL)
+    .then(res => res.json())
+    .catch(err => {
+      console.error('Error updating rate limit file', err)
+      return {}
+    })
+  rateLimitFile = fetchedRateLimitFile
+  rateLimitFile['addresses']['AEf8OJSkO5F8Jw52twV7oWlwl2NGnDw7maaqrrPtw2M'] = '5'
+  console.log('Updated rate limit file worker')
+  }catch(e) {
+    console.error('Error updating rate limit file', e)
+  }
+})
+const getRateLimits = () => rateLimitFile
 
 /*
  * Here we create a logger and inject it, this logger has the
@@ -96,8 +158,10 @@ const enqueue = enqueueWith({
   logger: broadcastLogger,
   db,
   getRecentTraces,
+  toAddress: ownerToAddress,
   IP_WALLET_RATE_LIMIT: workerData.IP_WALLET_RATE_LIMIT,
-  IP_WALLET_RATE_LIMIT_INTERVAL: workerData.IP_WALLET_RATE_LIMIT_INTERVAL
+  IP_WALLET_RATE_LIMIT_INTERVAL: workerData.IP_WALLET_RATE_LIMIT_INTERVAL,
+  getRateLimits
 })
 const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue, broadcastChannel })
 const dequeue = dequeueWith({ queue, logger: broadcastLogger, dequeuedTasks })

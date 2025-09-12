@@ -43,7 +43,10 @@ describe('sendDataItemWith', () => {
           },
           logger,
           fetchSchedulerProcess: (res) => res,
-          writeDataItemArweave: (res) => res
+          writeDataItemArweave: (res) => res,
+          getRecentTraces: () => ({ wallet: [], ip: [] }),
+          getRateLimits: () => ({}),
+          toAddress: (str) => str
         })
 
         const { crank, ...result } = await sendDataItem({
@@ -147,7 +150,10 @@ describe('sendDataItemWith', () => {
           logger,
           fetchSchedulerProcess: (res) => res,
           writeDataItemArweave: (res) => res,
-          spawnPushEnabled: true
+          spawnPushEnabled: true,
+          getRecentTraces: () => ({ wallet: [], ip: [] }),
+          getRateLimits: () => ({}),
+          toAddress: (str) => str
         })
 
         const { crank, ...result } = await sendDataItem({

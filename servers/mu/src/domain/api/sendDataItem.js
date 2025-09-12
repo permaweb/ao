@@ -31,6 +31,11 @@ export function sendDataItemWith ({
   writeDataItemArweave,
   spawnPushEnabled,
   db,
+  getRecentTraces,
+  toAddress,
+  getRateLimits,
+  IP_WALLET_RATE_LIMIT,
+  IP_WALLET_RATE_LIMIT_INTERVAL,
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
   ENABLE_MESSAGE_RECOVERY
@@ -45,7 +50,35 @@ export function sendDataItemWith ({
   const insertMessage = insertMessageWith({ db })
 
   const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
+  /**
+   * Check if the rate limit has been exceeded using rate limit injected
+   */
+  async function checkRateLimitExceeded(ctx) {
+    function calculateRateLimit(walletID, procID, limits) {
+      if (!limits || Object.keys(limits).length === 0) return 10
+      const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
+      const processLimits = limits?.processes?.[procID] ?? {}
 
+      const processDivisor = Number(processLimits?.divide ?? 1)
+      const processSubtractor = Number(processLimits?.subtract ?? 0)
+      return Math.max(0, (userBase / processDivisor) - processSubtractor)
+    }
+    const rateLimits = getRateLimits()
+    const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
+    const wallet = ctx.dataItem.owner
+    const address = await toAddress(wallet) || null
+    const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? "SPAWN", rateLimits)
+    const recentTraces = await getRecentTraces({ wallet, timestamp: intervalStart, processId: ctx.dataItem.target })
+    const walletTracesCount = recentTraces.wallet.length
+    console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
+    if (walletTracesCount >= rateLimitAllowance) {
+      logger({ log: `Rate limit exceeded for wallet, ${recentTraces.wallet.length} wallet traces found. Rejecting.` })
+      const error = new Error('Rate limit exceeded')
+      error.code = 429
+      throw error
+    }
+    return Resolved(ctx)
+  }
   /**
      * If the data item is a Message, then cranking and tracing
      * must also be performed.
@@ -239,6 +272,11 @@ export function sendDataItemWith ({
       .chain((ctx) =>
         verifyParsedDataItem(ctx.dataItem)
           .map(logger.tap({ log: 'Successfully verified parsed data item', logId: ctx.logId }))
+          .chain(({ isMessage }) => {
+            return of(ctx)
+              .chain(fromPromise(async () => await checkRateLimitExceeded(ctx)))
+              .map(() => ({ isMessage }))
+          })
           .chain(({ isMessage }) => {
             if (isMessage) {
               /*
