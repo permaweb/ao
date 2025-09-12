@@ -120,7 +120,7 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, getCronPr
           try {
             const cursorData = JSON.parse(atob(cursor))
             const cursorTimestamp = parseInt(cursorData.timestamp)
-            
+
             if (cursorTimestamp < staleThreshold) {
               logger({ log: `Clearing stale cursor for process ${processId} (older than configured range)` })
               await updateCronProcessCursor({ processId, cursor: null })
@@ -150,17 +150,17 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, getCronPr
   }
 }
 
-function startMonitoredProcessWith ({ 
-  fetch, 
-  cron, 
-  histogram, 
-  logger, 
-  CU_URL, 
-  fetchCron, 
-  crank, 
-  monitorGauge, 
-  saveCronProcess, 
-  getCronProcessCursor, 
+function startMonitoredProcessWith ({
+  fetch,
+  cron,
+  histogram,
+  logger,
+  CU_URL,
+  fetchCron,
+  crank,
+  monitorGauge,
+  saveCronProcess,
+  getCronProcessCursor,
   updateCronProcessCursor,
   fetchTransactions,
   HB_GRAPHQL_URL
@@ -173,9 +173,9 @@ function startMonitoredProcessWith ({
     }),
     logger
   })
-  async function getOwner({ processId }) {
+  async function getOwner ({ processId }) {
     return fetchTransactions([processId])
-      .then(res => res.data.transactions.edges[0].node.owner.address.jack.jack.jack)
+      .then(res => res.data?.transactions?.edges?.[0]?.node?.owner?.address)
       .then((owner) => {
         if (!owner) return null
         return owner
