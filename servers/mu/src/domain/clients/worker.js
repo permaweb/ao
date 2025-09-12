@@ -46,6 +46,7 @@ function b64UrlEncode(b64UrlString) {
   }
 }
 async function ownerToAddress(owner) {
+    if (!owner) return null
     return bufferTob64Url(
       await crypto
         .createHash('SHA-256')
@@ -56,7 +57,7 @@ async function ownerToAddress(owner) {
 
 
 let rateLimitFile = workerData.DEFAULT_RATE_LIMIT ?? {}
-cron.schedule('* */10 * * * *', async () => {
+cron.schedule('*/10 * * * *', async () => {
   try {
   console.log('Updating rate limit file after 10 minutes', workerData.RATE_LIMIT_FILE_URL)
   if (!workerData.RATE_LIMIT_FILE_URL) return
@@ -67,7 +68,6 @@ cron.schedule('* */10 * * * *', async () => {
       return {}
     })
   rateLimitFile = fetchedRateLimitFile
-  rateLimitFile['addresses']['AEf8OJSkO5F8Jw52twV7oWlwl2NGnDw7maaqrrPtw2M'] = '5'
   console.log('Updated rate limit file worker')
   }catch(e) {
     console.error('Error updating rate limit file', e)

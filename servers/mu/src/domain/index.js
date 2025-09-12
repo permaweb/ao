@@ -139,7 +139,7 @@ export const createApis = async (ctx) => {
   const RATE_LIMIT_FILE_URL = ctx.RATE_LIMIT_FILE_URL
   
   let rateLimitFile = {}
-  cron.schedule('* */10 * * * *', async () => {
+  cron.schedule('*/10 * * * *', async () => {
     console.log('Updating rate limit file after 10 minutes', RATE_LIMIT_FILE_URL)
     if (!RATE_LIMIT_FILE_URL) return
     const fetchedRateLimitFile = await fetch(RATE_LIMIT_FILE_URL)
@@ -363,7 +363,9 @@ export const createApis = async (ctx) => {
     monitorGauge: cronMonitorGauge,
     saveCronProcess,
     updateCronProcessCursor,
-    getCronProcessCursor
+    getCronProcessCursor,
+    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
+    HB_GRAPHQL_URL
   })
 
   const monitorProcess = monitorProcessWith({

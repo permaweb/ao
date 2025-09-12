@@ -161,7 +161,9 @@ function startMonitoredProcessWith ({
   monitorGauge, 
   saveCronProcess, 
   getCronProcessCursor, 
-  updateCronProcessCursor
+  updateCronProcessCursor,
+  fetchTransactions,
+  HB_GRAPHQL_URL
 }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
@@ -171,6 +173,14 @@ function startMonitoredProcessWith ({
     }),
     logger
   })
+  async function getOwner({ processId }) {
+    return fetchTransactions([processId])
+      .then(res => res.data.transactions.edges[0].node.owner.address.jack.jack.jack)
+      .then((owner) => {
+        if (!owner) return null
+        return owner
+      })
+  }
   /**
    * startMonitoredProcess
    * Given a process ID, begin monitoring it every 10 seconds
@@ -186,6 +196,7 @@ function startMonitoredProcessWith ({
       throw new Error('Process already being monitored')
     }
 
+    const owner = await getOwner({ processId })
     let ct = null
     let isJobRunning = false
     ct = cron.schedule('*/10 * * * * *', async () => {
@@ -229,12 +240,16 @@ function startMonitoredProcessWith ({
             msg,
             processId: msg.Target,
             initialTxId: null,
-            fromProcessId: processId
+            fromProcessId: processId,
+            wallet: owner,
+            cron: true
           })),
           spawns: edge.node?.Spawns?.map(spawn => ({
             spawn,
             processId,
-            initialTxId: null
+            initialTxId: null,
+            wallet: owner,
+            cron: true
           })),
           assigns: edge.node?.Assignments
         })
