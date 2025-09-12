@@ -120,7 +120,7 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, getCronPr
           try {
             const cursorData = JSON.parse(atob(cursor))
             const cursorTimestamp = parseInt(cursorData.timestamp)
-            
+
             if (cursorTimestamp < staleThreshold) {
               logger({ log: `Clearing stale cursor for process ${processId} (older than configured range)` })
               await updateCronProcessCursor({ processId, cursor: null })
@@ -150,18 +150,20 @@ function initCronProcsWith ({ startMonitoredProcess, getCronProcesses, getCronPr
   }
 }
 
-function startMonitoredProcessWith ({ 
-  fetch, 
-  cron, 
-  histogram, 
-  logger, 
-  CU_URL, 
-  fetchCron, 
-  crank, 
-  monitorGauge, 
-  saveCronProcess, 
-  getCronProcessCursor, 
-  updateCronProcessCursor
+function startMonitoredProcessWith ({
+  fetch,
+  cron,
+  histogram,
+  logger,
+  CU_URL,
+  fetchCron,
+  crank,
+  monitorGauge,
+  saveCronProcess,
+  getCronProcessCursor,
+  updateCronProcessCursor,
+  fetchTransactions,
+  HB_GRAPHQL_URL
 }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
@@ -171,6 +173,14 @@ function startMonitoredProcessWith ({
     }),
     logger
   })
+  async function getOwner ({ processId }) {
+    return fetchTransactions([processId])
+      .then(res => res.data.transactions.edges[0].node.owner.address)
+      .then((owner) => {
+        if (!owner) return null
+        return owner
+      })
+  }
   /**
    * startMonitoredProcess
    * Given a process ID, begin monitoring it every 10 seconds
@@ -186,6 +196,7 @@ function startMonitoredProcessWith ({
       throw new Error('Process already being monitored')
     }
 
+    const owner = await getOwner({ processId })
     let ct = null
     let isJobRunning = false
     ct = cron.schedule('*/10 * * * * *', async () => {
@@ -229,12 +240,16 @@ function startMonitoredProcessWith ({
             msg,
             processId: msg.Target,
             initialTxId: null,
-            fromProcessId: processId
+            fromProcessId: processId,
+            wallet: owner,
+            cron: true
           })),
           spawns: edge.node?.Spawns?.map(spawn => ({
             spawn,
             processId,
-            initialTxId: null
+            initialTxId: null,
+            wallet: owner,
+            cron: true
           })),
           assigns: edge.node?.Assignments
         })

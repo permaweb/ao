@@ -54,7 +54,8 @@ export async function createTaskQueue ({ queueId, logger, db }) {
 export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
   async function checkRateLimitExceeded(task) {
     function calculateRateLimit(walletID, procID, limits) {
-      if (!limits || Object.keys(limits).length === 0) return 0
+      if (!walletID) return 100
+      if (!limits || Object.keys(limits).length === 0) return 50
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
       const processLimits = limits?.processes?.[procID] ?? {}
       const processDivisor = Number(processLimits?.divide ?? 1)
@@ -63,8 +64,8 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     }
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
     const wallet = task?.wallet || task?.cachedMsg?.wallet || null
-    const address = await toAddress(wallet)
     const processId = task?.cachedMsg?.msg?.Target || task?.processId || null
+    const address = task?.cachedMsg?.cron ? wallet : await toAddress(wallet)
     const rateLimitAllowance = calculateRateLimit(address, processId, getRateLimits())
     const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === "SPAWN" })
     const walletTracesCount = recentTraces.wallet.length
