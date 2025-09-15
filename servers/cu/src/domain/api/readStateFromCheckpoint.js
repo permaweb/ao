@@ -14,7 +14,7 @@ export function readStateFromCheckpointWith (env) {
       nonce,
       blockHeight,
       ordinate,
-      cron: false,
+      cron: undefined,
       Memory: body
     })
   }
