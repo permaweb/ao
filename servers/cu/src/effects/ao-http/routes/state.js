@@ -55,5 +55,38 @@ export const withStateRoutes = (app) => {
     )()
   )
 
+  app.post(
+    '/state',
+    compose(
+      withErrorHandler,
+      withCuMode,
+      withProcessRestrictionFromPath,
+      withMetrics({ tracesFrom: (req) => ({ process_id: req.headers.process }) }),
+      always(async (req, res) => {
+        const {
+          domain: { BUSY_THRESHOLD, apis: { readStateFromCheckpoint } }
+        } = req
+
+        const input = {
+          processId: req.headers.process,
+          moduleId: req.headers.module,
+          assignmentId: req.headers.assignment,
+          hashChain: req.headers['hash-chain'],
+          timestamp: req.headers.timestamp,
+          epoch: '0',
+          nonce: req.headers.nonce,
+          blockHeight: req.headers['block-height'],
+          ordinate: req.headers.nonce,
+          body: req.body
+        }
+        await busyIn(
+          BUSY_THRESHOLD,
+          readStateFromCheckpoint(input)
+            .toPromise()
+        )
+          .then(() => res.status(200).send('Successfully cached process memory for process ' + input.processId))
+      })
+    )()
+  )
   return app
 }
