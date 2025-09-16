@@ -299,8 +299,10 @@ export function cacheProcessMemoryWith ({ cache, logger }) {
            *
            * NOTE: this consumes more memory in the LRU In-Memory Cache
            */
+          cron,
           encoding: undefined,
-          cron
+          gasUsed: 0,
+          evalTime: 0
         }
         cache.set(processId, { Memory, evaluation })
 

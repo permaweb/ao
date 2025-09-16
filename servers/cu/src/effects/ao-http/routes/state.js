@@ -1,12 +1,16 @@
+import { promisify } from 'node:util'
+import { gunzip } from 'node:zlib'
+
 import { always, compose } from 'ramda'
 import { z } from 'zod'
-
 import { arrayBufferFromMaybeView, busyIn } from '../../../domain/utils.js'
 
 import { withErrorHandler } from './middleware/withErrorHandler.js'
 import { withCuMode } from './middleware/withCuMode.js'
 import { withProcessRestrictionFromPath } from './middleware/withProcessRestriction.js'
 import { withMetrics } from './middleware/withMetrics.js'
+
+const gunzipP = promisify(gunzip)
 
 const inputSchema = z.object({
   processId: z.string().min(1, 'an ao process id is required'),
@@ -72,12 +76,12 @@ export const withStateRoutes = (app) => {
           moduleId: req.headers.module,
           assignmentId: req.headers.assignment,
           hashChain: req.headers['hash-chain'],
-          timestamp: req.headers.timestamp,
-          epoch: '0',
-          nonce: req.headers.nonce,
-          blockHeight: req.headers['block-height'],
+          timestamp: Number(req.headers.timestamp),
+          epoch: undefined,
+          nonce: Number(req.headers.nonce),
+          blockHeight: Number(req.headers['block-height']),
           ordinate: req.headers.nonce,
-          body: req.body
+          body: await gunzipP(req.body)
         }
         await busyIn(
           BUSY_THRESHOLD,

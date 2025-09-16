@@ -98,5 +98,5 @@ export const createAoHttp = async ({ logger: _logger, domain, ...config }) => {
 
       return { start, stop }
     }
-  )(Fastify({ bodyLimit: 10485760 }))
+  )(Fastify({ bodyLimit: 52428800 }))
 }
