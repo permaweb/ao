@@ -12,6 +12,46 @@ use super::super::super::store::StoreClient;
 use crate::domain::config::AoConfig;
 use crate::domain::core::dal::{DataItem, Message, Process};
 
+
+pub async fn reinsert_message(
+  process_id: String, 
+  timestamp: String, 
+  message_id: String, 
+  assignment_id: String
+) -> io::Result<()> {
+    let config = AoConfig::new(None).expect("Failed to read configuration");
+
+    let local_data_store = Arc::new(
+        super::store::LocalStoreClient::new(&config.su_file_db_dir, &config.su_index_db_dir)
+            .expect("Failed to create LocalStoreClient"),
+    );
+
+    // let full_message_binary = // fetch from arweave
+
+    // let parsed_message = Message::from_bytes(
+    //     full_message_binary
+    // ).expect("Failed to parse message");
+
+    // println!("Reinserting message: {:?}", parsed_message);
+
+    // local_data_store
+    //     .save_message(
+    //         &parsed_message,
+    //         &full_message_binary.get(&(
+    //             message_id.clone(),
+    //             Some(assignment_id.clone()),
+    //             process_id.clone(),
+    //             timestamp.clone(),
+    //         )).unwrap().clone(),
+    //         None
+    //     )
+    //     .await
+    //     .expect("Failed to save message");
+
+    Ok(())
+}
+
+
 /*
   This is a migration which moves all data
   out of the old data store and into the
