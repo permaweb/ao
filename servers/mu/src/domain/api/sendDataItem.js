@@ -53,8 +53,8 @@ export function sendDataItemWith ({
   /**
    * Check if the rate limit has been exceeded using rate limit injected
    */
-  async function checkRateLimitExceeded(ctx) {
-    function calculateRateLimit(walletID, procID, limits) {
+  async function checkRateLimitExceeded (ctx) {
+    function calculateRateLimit (walletID, procID, limits) {
       if (!limits || Object.keys(limits).length === 0) return 10
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
       const processLimits = limits?.processes?.[procID] ?? {}
@@ -64,10 +64,12 @@ export function sendDataItemWith ({
       return Math.max(0, (userBase / processDivisor) - processSubtractor)
     }
     const rateLimits = getRateLimits()
+    const isWhitelisted = (rateLimits?.ips?.[ctx.ip] ?? 0) > 1
+    if (isWhitelisted) return Resolved(ctx)
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
     const wallet = ctx.dataItem.owner
     const address = await toAddress(wallet) || null
-    const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? "SPAWN", rateLimits)
+    const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? 'SPAWN', rateLimits)
     const recentTraces = await getRecentTraces({ wallet, timestamp: intervalStart, processId: ctx.dataItem.target })
     const walletTracesCount = recentTraces.wallet.length
     console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)

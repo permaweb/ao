@@ -52,8 +52,8 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * be removed from the database when dequeuing.
  */
 export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
-  async function checkRateLimitExceeded(task) {
-    function calculateRateLimit(walletID, procID, limits) {
+  async function checkRateLimitExceeded (task) {
+    function calculateRateLimit (walletID, procID, limits) {
       if (!walletID) return 100
       if (!limits || Object.keys(limits).length === 0) return 50
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
@@ -66,12 +66,15 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     const wallet = task?.wallet || task?.cachedMsg?.wallet || null
     const processId = task?.cachedMsg?.msg?.Target || task?.processId || null
     const address = task?.cachedMsg?.cron ? wallet : await toAddress(wallet)
-    const rateLimitAllowance = calculateRateLimit(address, processId, getRateLimits())
-    const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === "SPAWN" })
+    const rateLimits = getRateLimits()
+    const isWhitelisted = (rateLimits?.ips?.[task?.ip] ?? 0) > 1
+    if (isWhitelisted) return false
+    const rateLimitAllowance = calculateRateLimit(address, processId, rateLimits)
+    const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === 'SPAWN' })
     const walletTracesCount = recentTraces.wallet.length
     console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
     if (walletTracesCount >= rateLimitAllowance) {
-      logger({ log: `Rate limit exceeded. Skipping enqueueing task.` })
+      logger({ log: 'Rate limit exceeded. Skipping enqueueing task.' })
       return true
     }
     return false
