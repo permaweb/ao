@@ -60,6 +60,8 @@ pub struct AoConfig {
     pub max_size_owner_whitelist: Vec<String>,
     pub max_size_from_owner_whitelist: Vec<String>,
     pub max_size_from_whitelist: Vec<String>,
+
+    pub ip_whitelist_url: String,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -249,6 +251,11 @@ impl AoConfig {
             Err(_e) => vec![],
         };
 
+        let ip_whitelist_url: String = match env::var("IP_WHITELIST_URL") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -285,7 +292,8 @@ impl AoConfig {
             max_message_size,
             max_size_owner_whitelist,
             max_size_from_owner_whitelist,
-            max_size_from_whitelist
+            max_size_from_whitelist,
+            ip_whitelist_url
         })
     }
 }
@@ -341,5 +349,8 @@ impl Config for AoConfig {
     }
     fn max_size_from_whitelist(&self) -> Vec<String> {
         self.max_size_from_whitelist.clone()
+    }
+    fn ip_whitelist_url(&self) -> String {
+        self.ip_whitelist_url.clone()
     }
 }

@@ -1,7 +1,9 @@
 use std::env;
 use std::io::{self, Error, ErrorKind};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::collections::HashSet;
+use std::sync::RwLock;
 
 use actix_cors::Cors;
 use actix_web::{
@@ -11,8 +13,12 @@ use actix_web::{
 
 use serde::Deserialize;
 use serde_json::json;
+use tokio::time::interval;
+use reqwest;
 
 use su::domain::{flows, init_deps, router, Deps, PromMetrics};
+
+type IpWhitelist = Arc<RwLock<HashSet<String>>>;
 
 #[derive(Deserialize)]
 struct FromTo {
@@ -59,6 +65,40 @@ fn err_response(err: String) -> HttpResponse {
     HttpResponse::BadRequest()
         .content_type("application/json")
         .body(error_json.to_string())
+}
+
+fn get_client_ip(req: &HttpRequest) -> Option<String> {
+    req.connection_info()
+        .realip_remote_addr()
+        .map(|ip| ip.to_string())
+}
+
+fn is_ip_allowed(ip: &str, whitelist: &IpWhitelist) -> bool {
+    println!("Checking if IP {} is allowed", ip);
+    match whitelist.read() {
+        Ok(ips) => ips.contains(ip),
+        Err(_) => false,
+    }
+}
+
+async fn fetch_ip_whitelist(url: String) -> Result<HashSet<String>, reqwest::Error> {
+    let response = reqwest::get(url).await?;
+    let ips: Vec<String> = response.json().await?;
+    Ok(ips.into_iter().collect())
+}
+
+async fn update_ip_whitelist_loop(ip_whitelist: IpWhitelist, whitelist_url: String) {
+    let mut interval = interval(Duration::from_secs(30)); 
+
+    loop {
+        interval.tick().await;
+
+        if let Ok(new_ips) = fetch_ip_whitelist(whitelist_url.clone()).await {
+            if let Ok(mut ips) = ip_whitelist.write() {
+                *ips = new_ips;
+            }
+        }
+    }
 }
 
 async fn base(
@@ -127,6 +167,16 @@ async fn main_post_route(
     if current_time < data.startup_time + data.deps.config.warmup_delay() {
         return HttpResponse::ServiceUnavailable()
             .json(json!({"error": "Server is warming up. Please try again later."}));
+    }
+
+    if let Some(client_ip) = get_client_ip(&req) {
+        if !is_ip_allowed(&client_ip, &data.ip_whitelist) {
+            return HttpResponse::Forbidden()
+                .json(json!({"error": "Access denied"}));
+        }
+    } else {
+        return HttpResponse::BadRequest()
+            .json(json!({"error": "Access denied"}));
     }
     match router::redirect_data_item(
         data.deps.clone(),
@@ -281,6 +331,7 @@ struct AppState {
     deps: Arc<Deps>,
     metrics: Arc<PromMetrics>,
     startup_time: u64,
+    ip_whitelist: IpWhitelist,
 }
 
 #[actix_web::main]
@@ -311,13 +362,32 @@ async fn main() -> io::Result<()> {
         .as_secs();
 
     let (deps, metrics) = init_deps(mode).await;
+
+    let run_deps = deps.clone();
+
+    let ip_whitelist: IpWhitelist = Arc::new(RwLock::new(HashSet::new()));
+
+    match fetch_ip_whitelist(run_deps.config.ip_whitelist_url()).await {
+        Ok(initial_ips) => {
+            if let Ok(mut ips) = ip_whitelist.write() {
+                *ips = initial_ips;
+            }
+        }
+        Err(_) => {}
+    }
+
     let app_state = web::Data::new(AppState {
         deps,
         metrics,
         startup_time,
+        ip_whitelist: ip_whitelist.clone(),
     });
 
-    let run_deps = app_state.deps.clone();
+    let whitelist_clone = ip_whitelist.clone();
+    let whitelist_url = run_deps.config.ip_whitelist_url();
+    tokio::spawn(async move {
+        update_ip_whitelist_loop(whitelist_clone, whitelist_url).await;
+    });
 
     if run_deps.config.mode() == "router" {
         match router::init_schedulers(run_deps.clone()).await {
