@@ -26,8 +26,7 @@ const baseParams = {
 }
 
 const httpParams = { ...baseParams, 'accept-codec': 'httpsig@1.0' }
-
-const jsonParams = { ...baseParams, 'accept': 'application/json' }
+const jsonParams = { ...baseParams, 'require-codec': 'application/json' }
 
 const getAOParams = (type) => ({
   Type: type,
