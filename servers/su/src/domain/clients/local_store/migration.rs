@@ -10,43 +10,79 @@ use tokio::time::interval;
 
 use super::super::super::store::StoreClient;
 use crate::domain::config::AoConfig;
-use crate::domain::core::dal::{DataItem, Message, Process};
+use crate::domain::core::dal::{DataItem, Message, Process, DataBundle, Log, Gateway};
+use crate::domain::core::builder::Builder;
+use crate::domain::clients::{
+    gateway::ArweaveGateway, signer::ArweaveSigner,
+    wallet::FileWallet
+};
+use crate::domain::logger::SuLog;
 
 
 pub async fn reinsert_message(
-  process_id: String, 
-  timestamp: String, 
-  message_id: String, 
-  assignment_id: String
+  bundle_id: String
 ) -> io::Result<()> {
     let config = AoConfig::new(None).expect("Failed to read configuration");
+
+    let gateway: Arc<dyn Gateway> = Arc::new(
+        ArweaveGateway::new()
+            .await
+            .expect("Failed to initialize gateway"),
+    );
+
+    let signer =
+        Arc::new(ArweaveSigner::new(&config.su_wallet_path).expect("Invalid su wallet path"));
+
+    let logger: Arc<dyn Log> = SuLog::init();
+
+    let builder = Builder::new(gateway, signer, &logger).expect("Failed to create Builder");
 
     let local_data_store = Arc::new(
         super::store::LocalStoreClient::new(&config.su_file_db_dir, &config.su_index_db_dir)
             .expect("Failed to create LocalStoreClient"),
     );
 
-    // let full_message_binary = // fetch from arweave
+    let client = reqwest::Client::new();
+    let url = format!("https://arweave.net/{}", bundle_id);
+    
+    let response = client.get(url)
+        .send()
+        .await
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to fetch from Arweave: {}", e)))?;
+    
+    let full_bundle_binary = response.bytes()
+        .await
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to read response bytes: {}", e)))?;
 
-    // let parsed_message = Message::from_bytes(
-    //     full_message_binary
-    // ).expect("Failed to parse message");
+    println!("Fetched message of length: {}", full_bundle_binary.len());
 
-    // println!("Reinserting message: {:?}", parsed_message);
+    let bundle_item = DataItem::from_bytes(
+        full_bundle_binary.to_vec()
+    ).expect("Failed to parse message");
 
-    // local_data_store
-    //     .save_message(
-    //         &parsed_message,
-    //         &full_message_binary.get(&(
-    //             message_id.clone(),
-    //             Some(assignment_id.clone()),
-    //             process_id.clone(),
-    //             timestamp.clone(),
-    //         )).unwrap().clone(),
-    //         None
-    //     )
-    //     .await
-    //     .expect("Failed to save message");
+    let bundle_field = bundle_item.as_bytes().expect("Failed to get data bytes");
+
+    let parsed_bundle = DataBundle::from_bytes(&bundle_field).expect("Failed to parse bundle");
+
+    println!("Parsed bundle with {} items", parsed_bundle.items.len());
+
+    let final_build = builder.bundle_items(parsed_bundle.items.clone())
+        .await
+        .expect("Failed to build bundle items");
+
+    let message = Message::from_bundle(&final_build.bundle)
+        .expect("Failed to parse message from bundle");
+
+    println!("Parsed message: {:?}", message);
+
+    local_data_store
+        .save_message_top(
+            &message,
+            &final_build.binary,
+            None
+        )
+        .await
+        .expect("Failed to save message");
 
     Ok(())
 }

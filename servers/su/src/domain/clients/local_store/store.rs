@@ -367,6 +367,56 @@ impl LocalStoreClient {
 
         Ok((paginated_keys, has_next_page))
     }
+
+    pub async fn save_message_top(
+        &self,
+        message: &Message,
+        bundle_in: &[u8],
+        deep_hash: Option<&String>,
+    ) -> Result<String, StoreErrorType> {
+        let message_id = message.message_id()?;
+        let assignment_id = message.assignment_id()?;
+
+        let cf = self.index_db.cf_handle("message").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message' not found".to_string())
+        })?;
+
+        let message_composite_key = self.msg_composite_key(&message_id, &assignment_id);
+        self.index_db.put_cf(
+            cf,
+            message_composite_key.as_bytes(),
+            assignment_id.as_bytes(),
+        )?;
+
+        let cf = self.index_db.cf_handle("message_ordering").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+        })?;
+
+        let msg_order_key = self.msg_order_key(message)?;
+        self.index_db
+            .put_cf(cf, msg_order_key.as_bytes(), assignment_id.as_bytes())?;
+
+        let assignment_key = self.msg_assignment_key(&assignment_id);
+        self.file_db.put(assignment_key.as_bytes(), bundle_in)?;
+
+        let cf = self.index_db.cf_handle("deep_hash").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'message_ordering' not found".to_string())
+        })?;
+
+        match deep_hash {
+            Some(dh) => {
+                let deep_hash_key = self.deep_hash_key(&message.process_id()?, dh)?;
+                self.index_db.put_cf(
+                    cf,
+                    deep_hash_key.as_bytes(),
+                    message.process_id()?.as_bytes(),
+                )?;
+            }
+            None => (),
+        };
+
+        Ok("Message saved".to_string())
+    }
 }
 
 #[async_trait]

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-pub use super::bytes::DataItem;
+pub use super::bytes::{DataItem, DataBundle};
 pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
 pub use super::router::{ProcessScheduler, Scheduler};
 pub use super::tags::Tag;

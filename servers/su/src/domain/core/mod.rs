@@ -2,7 +2,7 @@
 pub mod bytes;
 
 // main tx building logic
-mod builder;
+pub mod builder;
 
 // build json from raw data
 mod json;
