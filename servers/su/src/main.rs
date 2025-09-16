@@ -74,7 +74,6 @@ fn get_client_ip(req: &HttpRequest) -> Option<String> {
 }
 
 fn is_ip_allowed(ip: &str, whitelist: &IpWhitelist) -> bool {
-    println!("Checking if IP {} is allowed", ip);
     match whitelist.read() {
         Ok(ips) => ips.contains(ip),
         Err(_) => false,
