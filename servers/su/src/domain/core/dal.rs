@@ -82,6 +82,7 @@ pub trait Config: Send + Sync {
     fn max_size_owner_whitelist(&self) -> Vec<String>;
     fn max_size_from_owner_whitelist(&self) -> Vec<String>;
     fn max_size_from_whitelist(&self) -> Vec<String>;
+    fn ip_whitelist_url(&self) -> String;
 }
 
 #[derive(Debug)]
