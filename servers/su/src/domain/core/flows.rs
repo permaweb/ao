@@ -426,16 +426,35 @@ pub async fn write_item(
             None => {
                 let tx_data = deps.gateway.raw(&assign).await?;
                 let dh = DataItem::deep_hash_fields(
+                    gateway_tx.recipient.clone(),
+                    gateway_tx.anchor.clone(),
+                    gateway_tx.tags.clone(),
+                    tx_data.clone(),
+                    true
+                )
+                .map_err(|_| "Unable to calculate deep hash".to_string())?;
+
+              let dh_unordered = DataItem::deep_hash_fields(
                     gateway_tx.recipient,
                     gateway_tx.anchor,
                     gateway_tx.tags,
                     tx_data,
+                    false
                 )
-                .map_err(|_| "Unable to calculate deep hash".to_string())?;
+                .map_err(|_| "Unable to calculate deep hash unordered".to_string())?;
 
                 if deps.config.enable_deep_hash_checks() {
                     deps.data_store
                         .check_existing_deep_hash(&process_id, &dh)
+                        .await?;
+
+                    /*
+                      A safety check for messages that may have been deep hashed
+                      with unordered tags, and have not yet been recalculated with
+                      ordered tags.
+                     */
+                    deps.data_store
+                        .check_existing_deep_hash(&process_id, &dh_unordered)
                         .await?;
                 }
 
@@ -621,7 +640,11 @@ pub async fn write_item(
             */
             Some(_) => {
                 let mut mutable_item = data_item.clone();
-                let deep_hash = match mutable_item.deep_hash() {
+                let deep_hash = match mutable_item.deep_hash(true) {
+                    Ok(d) => d,
+                    Err(_) => return Err("Unable to calculate deep hash".to_string()),
+                };
+                let deep_hash_unordered = match mutable_item.deep_hash(false) {
                     Ok(d) => d,
                     Err(_) => return Err("Unable to calculate deep hash".to_string()),
                 };
@@ -633,6 +656,14 @@ pub async fn write_item(
                 if deps.config.enable_deep_hash_checks() {
                     deps.data_store
                         .check_existing_deep_hash(&dtarget, &deep_hash)
+                        .await?;
+                    /*
+                      A safety check for messages that may have been deep hashed
+                      with unordered tags, and have not yet been recalculated with
+                      ordered tags.
+                     */
+                    deps.data_store
+                        .check_existing_deep_hash(&dtarget, &deep_hash_unordered)
                         .await?;
                 }
 
@@ -808,7 +839,7 @@ pub async fn msg_deephash(
 
             let mut message_item = bundle.items[1].clone();
             let deep_hash = match m.tags.iter().find(|tag| tag.name == "From-Process") {
-                Some(_) => match message_item.deep_hash() {
+                Some(_) => match message_item.deep_hash(true) {
                     Ok(d) => Some(d),
                     Err(_) => return Err("Unable to calculate deep hash".to_string()),
                 },
@@ -836,6 +867,7 @@ pub async fn msg_deephash(
                 gateway_tx.anchor,
                 gateway_tx.tags,
                 tx_data,
+                true
             )
             .map_err(|_| "Unable to calculate deep hash".to_string())?;
 
