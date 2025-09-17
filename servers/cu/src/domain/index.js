@@ -11,6 +11,7 @@ import { readResultsWith } from './api/readResults.js'
 import { dryRunWith } from './api/dryRun.js'
 import { statsWith } from './api/perf.js'
 import { forceSnapshotWith } from './api/forceSnapshot.js'
+import { readStateFromCheckpointWith } from './api/readStateFromCheckpoint.js'
 
 export const bootstrap = async ({ config, effects }) => {
   const logger = effects.logger
@@ -47,6 +48,9 @@ export const bootstrap = async ({ config, effects }) => {
 
   const readStateLogger = logger.child('readState')
   const readState = readStateWith(commonDeps(readStateLogger))
+
+  const readStateFromCheckpointLogger = logger.child('readStateFromCheckpoint')
+  const readStateFromCheckpoint = readStateFromCheckpointWith(commonDeps(readStateFromCheckpointLogger))
 
   const dryRunLogger = logger.child('dryRun')
   const dryRun = dryRunWith({
@@ -106,6 +110,7 @@ export const bootstrap = async ({ config, effects }) => {
       stats,
       pendingReadStates,
       readState,
+      readStateFromCheckpoint,
       dryRun,
       readResult,
       readResults,

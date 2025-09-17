@@ -295,6 +295,10 @@ export const createEffects = async (ctx) => {
       PROCESS_CHECKPOINT_TRUSTED_OWNERS: ctx.PROCESS_CHECKPOINT_TRUSTED_OWNERS,
       logger
     }),
+    cacheProcessMemory: AoProcessClient.cacheProcessMemoryWith({
+      cache: wasmMemoryCache,
+      logger
+    }),
     saveLatestProcessMemory: AoProcessClient.saveLatestProcessMemoryWith({
       cache: wasmMemoryCache,
       EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD: ctx.EAGER_CHECKPOINT_ACCUMULATED_GAS_THRESHOLD,
