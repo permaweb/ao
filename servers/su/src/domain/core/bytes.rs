@@ -740,19 +740,30 @@ impl DataItem {
       Utilized for deduplicating incoming messages even
       if they have the same id
     */
-    pub fn deep_hash(&mut self) -> Result<String, ByteErrorType> {
+    pub fn deep_hash(&mut self, ordered: bool) -> Result<String, ByteErrorType> {
         let data_chunk = match &mut self.data {
             Data::None => DeepHashChunk::Chunk(Bytes::new()),
             Data::Bytes(data) => DeepHashChunk::Chunk(data.clone().into()),
         };
 
         let encoded_tags = if !self.tags.is_empty() {
-            let filtered: Vec<Tag> = self
+            let mut filtered: Vec<Tag> = self
                 .tags
                 .iter()
                 .filter(|tag| tag.name != "Pushed-For")
                 .cloned()
                 .collect();
+            
+
+            if ordered {
+                // Sort tags alphabetically by name, then by value
+                filtered.sort_by(|a, b| {
+                    match a.name.cmp(&b.name) {
+                        std::cmp::Ordering::Equal => a.value.cmp(&b.value),
+                        other => other,
+                    }
+                });
+            }
 
             filtered.encode()?
         } else {
@@ -781,6 +792,7 @@ impl DataItem {
         anchor: Option<String>,
         tags: Vec<Tag>,
         data: Vec<u8>,
+        ordered: bool
     ) -> Result<String, ByteErrorType> {
         let target_chunk = match target {
             None => DeepHashChunk::Chunk(Bytes::new()),
@@ -793,11 +805,21 @@ impl DataItem {
         };
 
         let encoded_tags = if !tags.is_empty() {
-            let filtered: Vec<Tag> = tags
+            let mut filtered: Vec<Tag> = tags
                 .iter()
                 .filter(|tag| tag.name != "Pushed-For")
                 .cloned()
                 .collect();
+
+            if ordered {
+                // Sort tags alphabetically by name, then by value
+                filtered.sort_by(|a, b| {
+                    match a.name.cmp(&b.name) {
+                        std::cmp::Ordering::Equal => a.value.cmp(&b.value),
+                        other => other,
+                    }
+                });
+            }
 
             filtered.encode()?
         } else {
