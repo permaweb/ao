@@ -304,6 +304,8 @@ export function cacheProcessMemoryWith ({ cache, logger }) {
           gasUsed: 0,
           evalTime: 0
         }
+        const cached = cache.get(processId)
+        if (cached && cached.evaluation?.nonce >= nonce) return Resolved(evaluation)
         cache.set(processId, { Memory, evaluation })
 
         return Resolved(evaluation)
