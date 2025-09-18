@@ -33,6 +33,7 @@
     "express": "^4.18.2",
     "http-message-signatures": "^1.0.4",
     "hyper-async": "^1.1.2",
+    "keccak": "^3.0.4",
     "lru-cache": "^10.2.0",
     "node-cron": "^3.0.3",
     "p-map": "^7.0.1",

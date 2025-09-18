@@ -130,7 +130,7 @@ const CONFIG_ENVS = {
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
     DB_URL: process.env.DB_URL || 'ao-cache',
     TRACE_DB_URL: process.env.TRACE_DB_URL || 'trace',
-    TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
+    TASK_QUEUE_MAX_RETRIES: 10,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
     SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
@@ -138,7 +138,7 @@ const CONFIG_ENVS = {
     ENABLE_MESSAGE_RECOVERY: process.env.ENABLE_MESSAGE_RECOVERY === 'true',
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
-    MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
+    MESSAGE_RECOVERY_MAX_RETRIES: 10,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
     RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
@@ -151,7 +151,7 @@ const CONFIG_ENVS = {
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
-    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ""
+    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ''
   },
   production: {
     MODE,
@@ -171,7 +171,7 @@ const CONFIG_ENVS = {
     MAX_WORKERS: process.env.MAX_WORKERS || Math.max(cpus().length - 1, 1),
     DB_URL: process.env.DB_URL || 'ao-cache',
     TRACE_DB_URL: process.env.TRACE_DB_URL || 'trace',
-    TASK_QUEUE_MAX_RETRIES: process.env.TASK_QUEUE_MAX_RETRIES || 5,
+    TASK_QUEUE_MAX_RETRIES: 10,
     TASK_QUEUE_RETRY_DELAY: process.env.TASK_QUEUE_RETRY_DELAY || 1000,
     DISABLE_TRACE: process.env.DISABLE_TRACE !== 'false',
     SPAWN_PUSH_ENABLED: process.env.SPAWN_PUSH_ENABLED === 'true',
@@ -179,7 +179,7 @@ const CONFIG_ENVS = {
     ENABLE_MESSAGE_RECOVERY: process.env.ENABLE_MESSAGE_RECOVERY === 'true',
     GET_RESULT_MAX_RETRIES: process.env.GET_RESULT_MAX_RETRIES || 5,
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
-    MESSAGE_RECOVERY_MAX_RETRIES: process.env.MESSAGE_RECOVERY_MAX_RETRIES || 17,
+    MESSAGE_RECOVERY_MAX_RETRIES: 10,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
     RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
@@ -192,7 +192,7 @@ const CONFIG_ENVS = {
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
-    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ""
+    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ''
   }
 }
 
