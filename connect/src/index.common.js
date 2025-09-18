@@ -6,7 +6,6 @@ import * as CoreClient from './client/ao-core.js'
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as GatewayClient from './client/gateway.js'
-import * as HbClient from './client/hb.js'
 import * as SuClient from './client/ao-su.js'
 
 import { createLogger } from './logger.js'
@@ -14,7 +13,6 @@ import { createLogger } from './logger.js'
 import { messagesWith } from './lib/messages/index.js'
 import { messageIdWith } from './lib/message-id/index.js'
 import { processIdWith } from './lib/process-id/index.js'
-import { requestWith } from './lib/request/index.js'
 import { resultWith } from './lib/result/index.js'
 import { messageWith, prepareWith, signedMessageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
@@ -24,7 +22,6 @@ import { resultsWith } from './lib/results/index.js'
 import { dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
-// import { getOperator, getNodeBalance } from './lib/payments/index.js'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from './dal.js'
@@ -212,18 +209,16 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     const logger = _logger.child('mainnet-process')
     logger('Mode Activated %s', '🐲')
 
-    if (!signer) { throw new Error('mainnet mode requires providing a signer to connect()') }
+    const deps = {}
+    if (signer) deps.signer = signer
+    if (URL) deps.url = URL
 
-    const aoCoreDeps = { signer }
-    if (URL) aoCoreDeps.url = URL
+    const aoCore = AOCore.init(deps)
 
-    const aoCore = AOCore.init(aoCoreDeps)
-
-    const coreClientDeps = { aoCore, url: URL, signer }
+    const coreClientDeps = { aoCore, ...deps }
     if (SCHEDULER) coreClientDeps.scheduler = SCHEDULER
 
     const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
-
     const mainnetSigner = signer ? () => signer : createSigner
 
     const getMessageById = messageIdWith({
@@ -242,8 +237,8 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
     })
 
     const request = CoreClient.requestWith(coreClientDeps)
-    const message = CoreClient.messageWith(coreClientDeps)
     const spawn = CoreClient.spawnWith(coreClientDeps)
+    const message = CoreClient.messageWith(coreClientDeps)
     const result = CoreClient.resultWith(coreClientDeps)
     const results = CoreClient.resultsWith(coreClientDeps)
     const dryrun = CoreClient.dryrunWith(coreClientDeps)

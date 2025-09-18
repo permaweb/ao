@@ -71,7 +71,7 @@ describe('ao-core (shared process)', () => {
       console.log(`Using shared process (${processId})...`)
       const result = await coreMessage({
         process: processId,
-        tags: [{ name: 'Action', value: 'Eval' }],
+        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
         data: 'require(\'.process\')._version'
       })
       assert.equal(typeof result, 'number')
@@ -83,11 +83,10 @@ describe('ao-core (shared process)', () => {
       console.log(`Using shared process (${processId})...`)
       const result = await coreMessage({
         process: processId,
-        tags: [{ name: 'Action', value: 'Eval' }],
+        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
         data: 'require(\'.process\')._version',
         opts: { fullResponse: true }
       })
-      console.log(result)
       assert.strictEqual(result.Messages.length, 0)
     }, { timeout: 30_000 })
   })
@@ -97,7 +96,7 @@ describe('ao-core (shared process)', () => {
       console.log(`Using shared process (${processId})...`)
       const message = await coreMessage({
         process: processId,
-        tags: [{ name: 'Action', value: 'Eval' }],
+        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
         data: 'require(\'.process\')._version'
       })
 
@@ -129,7 +128,7 @@ describe('ao-core (shared process)', () => {
 
       const message = await coreMessage({
         process: freshProcessId,
-        tags: [{ name: 'Action', value: 'Eval' }],
+        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
         data: 'require(\'.process\')._version'
       })
 
@@ -149,7 +148,7 @@ describe('ao-core (shared process)', () => {
 
       const message = await coreMessage({
         process: freshProcessId,
-        tags: [{ name: 'Action', value: 'Eval' }],
+        tags: [{ name: 'Action', value: 'Eval' }, { name: 'Time', value: Date.now().toString() }],
         data: `
                 Handlers.add('Info', 'Info', function(msg)
                     ao.send({
@@ -167,7 +166,7 @@ describe('ao-core (shared process)', () => {
 
       const dryrun = await coreDryrun({
         process: freshProcessId,
-        tags: [{ name: 'Action', value: 'Info' }, { name: 'Test', value: 'Value' }]
+        tags: [{ name: 'Action', value: 'Info' }, { name: 'Test', value: 'Value' }, { name: 'Time', value: Date.now().toString() }]
       })
       assert.equal(dryrun.Messages.length, 2)
       assert.equal(dryrun.Messages[0].Data, '{"Hello":"World"}')
