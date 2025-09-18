@@ -42,7 +42,8 @@ export function processResultWith ({
           parentId: propOr(undefined, 'parentId', res),
           processId: propOr(undefined, 'processId', res),
           wallet: propOr(undefined, 'wallet', res),
-          ip: propOr(undefined, 'ip', res)
+          ip: propOr(undefined, 'ip', res),
+          parentOwner: propOr(undefined, 'parentOwner', res)
         })
         return of(res)
       })
@@ -60,6 +61,7 @@ export function processResultWith ({
  */
 export function enqueueResultsWith ({ enqueue }) {
   return ({ msgs, spawns, assigns, initialTxId, parentId, processId, ...rest }) => {
+    console.dir({ m: 'ENQUEUING RESULTS' }, { depth: null })
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',
@@ -70,6 +72,7 @@ export function enqueueResultsWith ({ enqueue }) {
         parentId: msg.parentId,
         logId: randomBytes(8).toString('hex'),
         ip: rest.ip,
+        parentOwner: rest.parentOwner,
         wallet: msg.wallet
       })),
       ...spawns.map(spawn => ({
@@ -81,6 +84,7 @@ export function enqueueResultsWith ({ enqueue }) {
         parentId: spawn.parentId,
         logId: randomBytes(8).toString('hex'),
         ip: rest.ip,
+        parentOwner: rest.parentOwner,
         wallet: spawn.wallet
       })),
       ...assigns.flatMap(assign => assign.Processes.map(
@@ -97,6 +101,7 @@ export function enqueueResultsWith ({ enqueue }) {
           parentId,
           logId: randomBytes(8).toString('hex'),
           ip: rest.ip,
+          parentOwner: rest.parentOwner,
           wallet: rest.wallet ?? null
         })
       ))
