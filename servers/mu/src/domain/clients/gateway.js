@@ -99,7 +99,7 @@ function isWalletWith ({
     try {
       logger({ log: `Step 4: Checking GraphQL for ${id}`, logId })
       const process = await getProcess(id)
-      if (process) {
+      if (process && process?.id) {
         logger({ log: `Found process in GraphQL for ${id}`, logId })
         return setById(id, { isWallet: false }).then(() => false)
       }

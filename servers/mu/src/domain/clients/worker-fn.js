@@ -61,7 +61,6 @@ export function processResultWith ({
  */
 export function enqueueResultsWith ({ enqueue }) {
   return ({ msgs, spawns, assigns, initialTxId, parentId, processId, ...rest }) => {
-    console.dir({ m: 'ENQUEUING RESULTS' }, { depth: null })
     const results = [
       ...msgs.map(msg => ({
         type: 'MESSAGE',
