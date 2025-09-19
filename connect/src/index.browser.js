@@ -1,6 +1,6 @@
 import { connectWith, serializeCron } from './index.common.js'
 
-import { WalletClient } from './client/browser/index.js'
+import { createSigner as coreSigner } from '@permaweb/ao-core-libs/browser'
 
 const GATEWAY_URL = globalThis.GATEWAY_URL || undefined
 const MU_URL = globalThis.MU_URL || undefined
@@ -13,12 +13,12 @@ const RELAY_URL = globalThis.RELAY_URL || undefined
 const AO_URL = globalThis.AO_URL = undefined
 
 const connect = connectWith({
-  createDataItemSigner: WalletClient.createDataItemSigner,
-  createSigner: WalletClient.createSigner
+  createDataItemSigner: coreSigner,
+  createSigner: coreSigner
 })
 
-const createDataItemSigner = WalletClient.createDataItemSigner
-const createSigner = WalletClient.createSigner
+const createDataItemSigner = coreSigner
+const createSigner = coreSigner
 
 export { createDataItemSigner, createSigner }
 export { connect }
