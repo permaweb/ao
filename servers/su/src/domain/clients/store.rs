@@ -96,6 +96,7 @@ pub struct StoreClient {
     pub bytestore: Arc<bytestore::ByteStore>,
     in_memory_cache: InMemoryCache,
     enable_process_assignment: bool,
+    use_disk: bool,
 }
 
 /*
@@ -146,6 +147,7 @@ impl StoreClient {
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
             in_memory_cache: InMemoryCache::new(config.process_cache_size),
             enable_process_assignment: config.enable_process_assignment,
+            use_disk: config.use_disk,
         })
     }
 
@@ -183,6 +185,7 @@ impl StoreClient {
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
             in_memory_cache: InMemoryCache::new(config.process_cache_size),
             enable_process_assignment: config.enable_process_assignment,
+            use_disk: config.use_disk,
         })
     }
 
@@ -819,6 +822,10 @@ impl DataStore for StoreClient {
         process_id: &String,
         deep_hash: &String,
     ) -> Result<(), StoreErrorType> {
+        if self.use_disk == false {
+            return Ok(());
+        }
+
         if self.bytestore.is_ready() {
             match self.bytestore.deep_hash_exists(process_id, deep_hash) {
                 true => {
@@ -829,7 +836,10 @@ impl DataStore for StoreClient {
                 false => return Ok(()),
             }
         }
-        Ok(())
+
+        Err(StoreErrorType::DatabaseError(
+            "Deep hash data unavailable".to_string(),
+        ))
     }
 
     async fn get_deephash_version(&self, process_id: &String) -> Result<String, StoreErrorType> {
