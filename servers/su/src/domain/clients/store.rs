@@ -623,7 +623,8 @@ impl StoreClient {
                 Ok(_) => {
                     break;
                 }
-                Err(_) => {
+                Err(e) => {
+                    println!("Bytestore failure... {:?}", e);
                     self.logger
                         .log("Bytestore not ready, waiting...".to_string());
                     std::thread::sleep(std::time::Duration::from_secs(5));
