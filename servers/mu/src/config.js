@@ -27,6 +27,13 @@ const jsonObjectSchema = z.preprocess((val) => {
   return val
 }, z.any())
 
+export const commaDelimitedArraySchema = z.preprocess((val) => {
+  if (Array.isArray(val)) return val
+  // ',' delimited string
+  if (typeof val === 'string') return val.split(',').map((s) => s.trim())
+  return val
+}, z.array(z.string()))
+
 /**
  * Some frameworks will implicitly override NODE_ENV
  *
@@ -87,7 +94,8 @@ export const domainConfigSchema = z.object({
   HB_ROUTER_URL: z.string(),
   ENABLE_HB_WALLET_CHECK: z.boolean(),
   HB_GRAPHQL_URL: z.string(),
-  RATE_LIMIT_FILE_URL: z.string().optional()
+  RATE_LIMIT_FILE_URL: z.string().optional(),
+  HB_PROCESSES: commaDelimitedArraySchema
 })
 
 /**
@@ -151,7 +159,8 @@ const CONFIG_ENVS = {
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
-    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ''
+    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
+    HB_PROCESSES: process.env.HB_PROCESSES || []
   },
   production: {
     MODE,
@@ -192,7 +201,8 @@ const CONFIG_ENVS = {
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
-    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || ''
+    RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
+    HB_PROCESSES: process.env.HB_PROCESSES || []
   }
 }
 

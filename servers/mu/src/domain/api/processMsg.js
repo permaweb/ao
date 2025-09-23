@@ -23,12 +23,14 @@ export function processMsgWith ({
   fetchHyperBeamResult,
   RELAY_MAP,
   topUp,
-  isHyperBeamProcess
+  isHyperBeamProcess,
+  HB_PROCESSES,
+  HB_URL
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess })
   const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, RELAY_MAP, topUp })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger })
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, HB_PROCESSES, HB_URL })
 
   return (ctx) => {
     return of(ctx)
