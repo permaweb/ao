@@ -1,7 +1,7 @@
 import { of, fromPromise, Resolved, Rejected } from 'hyper-async'
 import { identity, path } from 'ramda'
 import z from 'zod'
-import { checkStage } from '../utils.js'
+import { backoff, checkStage, okRes } from '../utils.js'
 import { resultSchema } from '../dal.js'
 
 const ctxSchema = z.object({
@@ -11,18 +11,22 @@ const ctxSchema = z.object({
   initialTxId: z.any()
 }).passthrough()
 
-function fetchResultWith ({ fetchResult, fetchHyperBeamResult, HB_PROCESSES, HB_URL }) {
+function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, HB_PROCESSES, HB_URL }) {
   const fetchResultAsync = fromPromise(resultSchema.implement(fetchResult))
   const fetchHyperBeamResultAsync = fetchHyperBeamResult ? fromPromise(fetchHyperBeamResult) : null
 
   function getAssignmentNum ({ suUrl, messageId, processId }) {
-    return fetch(`${suUrl}/${messageId}?process-id=${processId}`, { method: 'GET' })
-      .then((res) => res.json())
-      .then(path(['assignment', 'tags']))
-      .then((tags) => {
-        return tags.find((tag) => tag.name.toLowerCase() === 'nonce')?.value
-      })
-      .then(parseInt)
+    return backoff(
+      () => fetch(`${suUrl}/${messageId}?process-id=${processId}`, { method: 'GET' })
+        .then(okRes)
+        .then((res) => res.json())
+        .then(path(['assignment', 'tags']))
+        .then((tags) => {
+          return tags.find((tag) => tag.name.toLowerCase() === 'nonce')?.value
+        })
+        .then(parseInt),
+      { maxRetries: 3, delay: 500, log: logger, name: `getAssignmentNum(${JSON.stringify({ suUrl, messageId, processId })})` }
+    )
   }
 
   return (ctx) => {
