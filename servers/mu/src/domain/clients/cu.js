@@ -103,7 +103,6 @@ function fetchHyperBeamResultWith ({ fetch, HB_URL, histogram, logger }) {
   return async ({ processId, assignmentNum, logId }) => {
     const resultUrl = `${HB_URL}/${processId}~process@1.0/compute&slot=${assignmentNum}/results?require-codec=application/json&accept-bundle=true`
     logger({ log: `Fetching result from HyperBeam: ${resultUrl}`, logId })
-
     return backoff(
       () => hbFetch(resultUrl).then((res) => okRes(res)),
       {
@@ -123,7 +122,7 @@ function fetchHyperBeamResultWith ({ fetch, HB_URL, histogram, logger }) {
       })
       .then((res) => {
       // Parse result so that MU can use it
-        const result = JSON.parse(res.json.body)
+        const result = JSON.parse(res.json?.body ?? res.json)
         // Attach isHyperBeamResult to result
         return { ...result, isHyperBeamResult: true }
       })
