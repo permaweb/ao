@@ -143,7 +143,7 @@ export function resultWith(deps) {
   return async (args) => {
     try {
       const params = {
-        path: `/${args.process}/compute=${args.slot ?? args.message}`,
+        path: `/${args.process}~process@1.0/compute=${args.slot ?? args.message}`,
         target: args.process,
         data: getData(args),
         ...getTags(args),
