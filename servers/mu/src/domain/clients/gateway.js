@@ -204,10 +204,9 @@ export const isHyperBeamProcessWith = ({
   return async (processId, logId) => {
     const cached = await getIsHyperBeamProcess(processId)
     if (cached) {
-      logger({ log: `Found cached isHyperBeam state for process ${processId} cached: ${cached}`, logId })
+      logger({ log: `Found cached isHyperBeam state for process ${processId} cached: ${cached?.isHyperBeam}`, logId })
       return cached.isHyperBeam
     }
-
     logger({ log: `No cached isHyperBeam state for process ${processId}, fetching from GQL`, logId })
 
     const process = await getProcess(processId)

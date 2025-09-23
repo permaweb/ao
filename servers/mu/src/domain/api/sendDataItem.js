@@ -39,13 +39,15 @@ export function sendDataItemWith ({
   IP_WALLET_RATE_LIMIT_INTERVAL,
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
-  ENABLE_MESSAGE_RECOVERY
+  ENABLE_MESSAGE_RECOVERY,
+  HB_PROCESSES,
+  HB_URL
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger })
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, HB_PROCESSES, HB_URL })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })

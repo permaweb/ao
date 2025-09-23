@@ -16,7 +16,6 @@ function fetchResultWith ({ fetchResult, fetchHyperBeamResult, HB_PROCESSES, HB_
   const fetchHyperBeamResultAsync = fetchHyperBeamResult ? fromPromise(fetchHyperBeamResult) : null
 
   function getAssignmentNum ({ suUrl, messageId, processId }) {
-    console.log({ suUrl, messageId, processId })
     return fetch(`${suUrl}/${messageId}?process-id=${processId}`, { method: 'GET' })
       .then((res) => res.json())
       .then(path(['assignment', 'tags']))
@@ -40,8 +39,8 @@ function fetchResultWith ({ fetchResult, fetchHyperBeamResult, HB_PROCESSES, HB_
 
               return fetchHyperBeamResultAsync({
                 processId: ctx.tx.processId,
-                suUrl: ctx.schedLocation.url,
-                assignmentNum: assignmentNum,
+                suUrl: HB_URL,
+                assignmentNum,
                 logId: ctx.logId
               })
             })
