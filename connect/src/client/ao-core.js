@@ -117,7 +117,7 @@ export function messageWith(deps) {
   return async (args) => {
     try {
       const params = {
-        path: `/${args.process}/push`,
+        path: `/${args.process}~process@1.0/push`,
         target: args.process,
         data: getData(args),
         ...getTags(args),
