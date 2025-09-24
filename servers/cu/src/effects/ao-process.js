@@ -277,6 +277,42 @@ export async function createProcessMemoryCache ({ MAX_SIZE, TTL, logger, gauge, 
   return processMemoryCache
 }
 
+export function cacheProcessMemoryWith ({ cache, logger }) {
+  return ({ processId, moduleId, assignmentId, hashChain, timestamp, epoch, nonce, blockHeight, ordinate, cron, Memory }) => {
+    logger('Saving process memory of length %d at nonce %d for process "%s"', Memory.byteLength, nonce, processId)
+    return of({ processId, moduleId, assignmentId, hashChain, timestamp, epoch, nonce, blockHeight, ordinate, cron, Memory })
+      .chain(() => {
+        const evaluation = {
+          processId,
+          moduleId,
+          assignmentId,
+          hashChain,
+          timestamp,
+          epoch,
+          nonce,
+          blockHeight,
+          ordinate,
+          // encoding: 'gzip',
+          /**
+           * We cache the unencoded memory, as gzipping can become
+           * slow given a large buffer with a lot of entropy
+           *
+           * NOTE: this consumes more memory in the LRU In-Memory Cache
+           */
+          cron,
+          encoding: undefined,
+          gasUsed: 0,
+          evalTime: 0
+        }
+        const cached = cache.get(processId)
+        if (cached && cached.evaluation?.nonce >= nonce) return Resolved(evaluation)
+        cache.set(processId, { Memory, evaluation })
+
+        return Resolved(evaluation)
+      })
+  }
+}
+
 export function isProcessOwnerSupportedWith ({ ALLOW_OWNERS }) {
   const allowed = new Set(ALLOW_OWNERS)
 

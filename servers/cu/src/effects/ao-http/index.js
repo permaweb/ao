@@ -58,6 +58,12 @@ export const createAoHttp = async ({ logger: _logger, domain, ...config }) => {
     (app) => app.register(FastifyMiddie).then(() => app),
     (app) => app.use(helmet()),
     (app) => app.use(cors()),
+    (app) => {
+      app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, function (_req, body, done) {
+        done(null, body)
+      })
+      return app
+    },
     withDeps,
     withRoutes,
     (app) => {
@@ -92,5 +98,5 @@ export const createAoHttp = async ({ logger: _logger, domain, ...config }) => {
 
       return { start, stop }
     }
-  )(Fastify({ bodyLimit: 10485760 }))
+  )(Fastify({ bodyLimit: 512000000 }))
 }
