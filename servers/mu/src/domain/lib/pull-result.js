@@ -1,5 +1,5 @@
 import { of, fromPromise, Resolved, Rejected } from 'hyper-async'
-import { identity, path } from 'ramda'
+import { path } from 'ramda'
 import z from 'zod'
 import { backoff, checkStage, okRes } from '../utils.js'
 import { resultSchema } from '../dal.js'
@@ -119,7 +119,9 @@ export function pullResultWith (env) {
       })
       .map(ctxSchema.parse)
       .bimap(
-        identity,
+        (e) => {
+          return new Error(e, { cause: ctx })
+        },
         logger.tap({ log: 'Added msgs, spawns, and assigns to ctx' })
       )
   }
