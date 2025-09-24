@@ -1,10 +1,14 @@
 import { Buffer as BufferShim } from 'buffer/index.js'
 import base64url from 'base64url'
-import { httpbis } from 'http-message-signatures'
+import { httpbis, createVerifier } from 'http-message-signatures'
+
 import { parseItem, serializeList } from 'structured-headers'
 
 import { createDataItemBytes, getSignatureData, verify } from '../lib/data-item.js'
 import { httpSigName } from './hb.js'
+
+import forge from "node-forge";
+import { verifyMessage } from 'http-message-signatures/lib/httpbis/index.js'
 
 const { augmentHeaders, createSignatureBase, createSigningParameters, formatSignatureBase } = httpbis
 
@@ -170,10 +174,14 @@ export const toHttpSigner = (signer) => {
       // }
 
       publicKey = toView(publicKey)
+      const keyId = base64url.encode(publicKey)
+      httpSig.publicKey = publicKey
+      httpSig.alg = alg
+      httpSig.keyId = keyId
       const signingParameters = createSigningParameters({
         params,
         paramValues: {
-          keyid: base64url.encode(publicKey),
+          keyid: keyId,
           alg
         }
       })
@@ -209,7 +217,7 @@ export const toHttpSigner = (signer) => {
         return dataToSign.then(() => {
           return Promise.resolve(signature)
             .then(toView)
-            .then((rawSig) => {
+            .then(async (rawSig) => {
               const withSignature = augmentHeaders(
                 request.headers,
                 rawSig,
@@ -219,11 +227,51 @@ export const toHttpSigner = (signer) => {
 
               const signedRequest = { ...request, headers: withSignature }
 
-              // TODO: verify the request is properly signed
+              if(!await verifySig(signedRequest)) {
+                throw new Error("Request is not a valid httpsig request")
+              }
 
               return signedRequest
             })
         })
       })
   }
+}
+
+async function verifySig({url, headers} = req) {
+  return verifyMessage({
+    all: true,
+    // logic for finding a key based on the signature parameters
+    async keyLookup(params) {
+      if (params.alg == "hmac-sha256") {
+        return {
+            id: params.keyid,
+            algs: ['hmac-sha256'],
+            verify: createVerifier(params.keyid, 'hmac-sha256')
+        }
+      }
+      if (params.alg == "rsa-pss-sha512") {
+        const n = Buffer.from(params.keyid, 'base64');
+        const pem = toPublicPem(n, 65537);
+        return {
+          id: params.keyid,
+          algs: ['rsa-pss-sha512'],
+          verify: createVerifier(pem, 'rsa-pss-sha512')
+        }
+      }
+    },
+  }, {
+    method: 'GET',
+    url: url,
+    headers: headers
+  });
+}
+
+function toPublicPem(nBuf, eInt = 65537) {
+  const n = new forge.jsbn.BigInteger(nBuf.toString("hex"), 16);
+  const e = new forge.jsbn.BigInteger(eInt.toString(), 10);
+  const publicKey = forge.pki.rsa.setPublicKey(n, e);
+
+  // PKCS#8
+  return forge.pki.publicKeyToPem(publicKey);
 }
