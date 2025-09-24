@@ -1,10 +1,12 @@
 import { Buffer as BufferShim } from 'buffer/index.js'
 import base64url from 'base64url'
 import { httpbis } from 'http-message-signatures'
+
 import { parseItem, serializeList } from 'structured-headers'
 
 import { createDataItemBytes, getSignatureData, verify } from '../lib/data-item.js'
 import { httpSigName } from './hb.js'
+import { verifySig } from '../lib/utils.js'
 
 const { augmentHeaders, createSignatureBase, createSigningParameters, formatSignatureBase } = httpbis
 
@@ -209,7 +211,7 @@ export const toHttpSigner = (signer) => {
         return dataToSign.then(() => {
           return Promise.resolve(signature)
             .then(toView)
-            .then((rawSig) => {
+            .then(async (rawSig) => {
               const withSignature = augmentHeaders(
                 request.headers,
                 rawSig,
@@ -219,7 +221,9 @@ export const toHttpSigner = (signer) => {
 
               const signedRequest = { ...request, headers: withSignature }
 
-              // TODO: verify the request is properly signed
+              if(!await verifySig(signedRequest)) {
+                throw new Error("Request is not a valid httpsig request")
+              }
 
               return signedRequest
             })
@@ -227,3 +231,4 @@ export const toHttpSigner = (signer) => {
       })
   }
 }
+

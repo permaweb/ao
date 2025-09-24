@@ -4,6 +4,10 @@ import {
 } from 'ramda'
 import { ZodError, ZodIssueCode } from 'zod'
 
+import { verifyMessage } from 'http-message-signatures/lib/httpbis/index.js'
+import forge from "node-forge";
+import { httpbis, createVerifier } from 'http-message-signatures'
+
 export const joinUrl = ({ url, path }) => {
   if (!path) return url
   if (path.startsWith('/')) return joinUrl({ url, path: path.slice(1) })
@@ -140,4 +144,47 @@ function mapZodErr (zodErr) {
       ),
     join(' | ')
   )(zodErr)
+}
+
+export async function verifySig(r) {
+  let headers = r.headers
+  if (r.headers instanceof Headers) {
+    headers =  Object.fromEntries(r.headers.entries())
+  }
+
+  return verifyMessage({
+    all: true,
+    // logic for finding a key based on the signature parameters
+    async keyLookup(params) {
+      if (params.alg == "hmac-sha256") {
+        return {
+            id: params.keyid,
+            algs: ['hmac-sha256'],
+            verify: createVerifier(params.keyid, 'hmac-sha256')
+        }
+      }
+      if (params.alg == "rsa-pss-sha512") {
+        const n = Buffer.from(params.keyid, 'base64');
+        const pem = toPublicPem(n, 65537);
+        return {
+          id: params.keyid,
+          algs: ['rsa-pss-sha512'],
+          verify: createVerifier(pem, 'rsa-pss-sha512')
+        }
+      }
+    },
+  }, {
+    method: 'GET',
+    url: r.url,
+    headers: headers
+  });
+}
+
+function toPublicPem(nBuf, eInt = 65537) {
+  const n = new forge.jsbn.BigInteger(nBuf.toString("hex"), 16);
+  const e = new forge.jsbn.BigInteger(eInt.toString(), 10);
+  const publicKey = forge.pki.rsa.setPublicKey(n, e);
+
+  // PKCS#8
+  return forge.pki.publicKeyToPem(publicKey);
 }

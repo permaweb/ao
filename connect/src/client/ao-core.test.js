@@ -3,6 +3,7 @@ import * as assert from 'node:assert'
 
 import AOCore, { createSigner } from '@permaweb/ao-core-libs'
 import * as CoreClient from './ao-core.js'
+import { verifySig } from '../lib/utils.js'
 
 const WALLET = {
   kty: 'RSA',
@@ -60,6 +61,8 @@ describe('ao-core (shared process)', () => {
         'accept-bundle': 'true',
         'accept-codec': 'httpsig@1.0'
       })
+
+      assert.ok(await verifySig(response), 'invalid httpsig response')
 
       const currentSlot = await response.text();
       assert.ok(Number.isFinite(Number(currentSlot)), 'currentSlot should be a number')
