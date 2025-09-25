@@ -1,5 +1,4 @@
 import { hostname } from 'node:os'
-
 import { createLogger } from './domain/logger.js'
 import { config } from './config.js'
 
