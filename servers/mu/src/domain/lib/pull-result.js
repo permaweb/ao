@@ -38,7 +38,6 @@ function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, fetchHBPr
           ctx.schedulerType !== 'hyperbeam' && 
           fetchHyperBeamResultAsync 
         ) {
-          console.log('zzzzz')
           const messageId = ctx.tx?.id
           return fromPromise(getAssignmentNum)({ suUrl: ctx.schedLocation?.url, messageId, processId: ctx.tx.processId })
             .chain((assignmentNum) => {
