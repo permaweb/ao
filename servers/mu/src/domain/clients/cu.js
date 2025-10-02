@@ -1,3 +1,5 @@
+import cron from 'node-cron'
+
 import { messageSchema } from '../model.js'
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
@@ -80,7 +82,7 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
   }
 }
 
-function fetchHyperBeamResultWith ({ fetch, HB_URL, histogram, logger }) {
+function fetchHyperBeamResultWith ({ fetch, histogram, logger, fetchHBProcesses}) {
   const hbFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -101,6 +103,8 @@ function fetchHyperBeamResultWith ({ fetch, HB_URL, histogram, logger }) {
    * @returns result data from HyperBeam scheduler
    */
   return async ({ processId, assignmentNum, logId }) => {
+    const { HB_PROCESSES } = fetchHBProcesses()
+    const HB_URL = HB_PROCESSES[processId]
     const resultUrl = `${HB_URL}/${processId}~process@1.0/compute&slot=${assignmentNum}/results?require-codec=application/json&accept-bundle=true`
     logger({ log: `Fetching result from HyperBeam: ${resultUrl}`, logId })
     return backoff(
