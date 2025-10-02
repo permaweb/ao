@@ -40,14 +40,13 @@ export function sendDataItemWith ({
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
   ENABLE_MESSAGE_RECOVERY,
-  HB_PROCESSES,
-  HB_URL
+  fetchHBProcesses
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, HB_PROCESSES, HB_URL })
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses})
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })

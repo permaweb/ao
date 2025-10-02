@@ -11,7 +11,7 @@ const ctxSchema = z.object({
   initialTxId: z.any()
 }).passthrough()
 
-function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, HB_PROCESSES, HB_URL }) {
+function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, fetchHBProcesses }) {
   const fetchResultAsync = fromPromise(resultSchema.implement(fetchResult))
   const fetchHyperBeamResultAsync = fetchHyperBeamResult ? fromPromise(fetchHyperBeamResult) : null
 
@@ -30,10 +30,15 @@ function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, HB_PROCES
   }
 
   return (ctx) => {
+    let { HB_PROCESSES } = fetchHBProcesses ? fetchHBProcesses() : {}
     return of(ctx)
       .chain(() => {
-        // Use HyperBeam result fetching if scheduler type is hyperbeam and we have assignment info
-        if (HB_PROCESSES.includes(ctx.tx?.processId) && ctx.schedulerType !== 'hyperbeam') {
+        if (
+          HB_PROCESSES[ctx.tx?.processId] && 
+          ctx.schedulerType !== 'hyperbeam' && 
+          fetchHyperBeamResultAsync 
+        ) {
+          console.log('zzzzz')
           const messageId = ctx.tx?.id
           return fromPromise(getAssignmentNum)({ suUrl: ctx.schedLocation?.url, messageId, processId: ctx.tx.processId })
             .chain((assignmentNum) => {
@@ -43,7 +48,6 @@ function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, HB_PROCES
 
               return fetchHyperBeamResultAsync({
                 processId: ctx.tx.processId,
-                suUrl: HB_URL,
                 assignmentNum,
                 logId: ctx.logId
               })
@@ -51,7 +55,6 @@ function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, HB_PROCES
         } else if (ctx.schedulerType === 'hyperbeam' && fetchHyperBeamResultAsync && ctx.schedulerTx?.slot) {
           return fetchHyperBeamResultAsync({
             processId: ctx.tx.processId,
-            suUrl: ctx.schedLocation.url,
             assignmentNum: ctx.schedulerTx.slot, // Use scheduler tx id as assignment number
             logId: ctx.logId
           })
