@@ -103,7 +103,7 @@ function fetchHyperBeamResultWith ({ fetch, histogram, logger, fetchHBProcesses}
    * @returns result data from HyperBeam scheduler
    */
   return async ({ processId, assignmentNum, logId }) => {
-    const { HB_PROCESSES } = await fetchHBProcesses()
+    const { HB_PROCESSES } = fetchHBProcesses()
     const HB_URL = HB_PROCESSES[processId]
     const resultUrl = `${HB_URL}/${processId}~process@1.0/compute&slot=${assignmentNum}/results?require-codec=application/json&accept-bundle=true`
     logger({ log: `Fetching result from HyperBeam: ${resultUrl}`, logId })
