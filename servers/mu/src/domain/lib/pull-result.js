@@ -30,13 +30,13 @@ function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, fetchHBPr
   }
 
   return (ctx) => {
-    let { HB_PROCESSES } = fetchHBProcesses ? fetchHBProcesses() : {}
+    const { HB_PROCESSES } = fetchHBProcesses ? fetchHBProcesses() : {}
     return of(ctx)
       .chain(() => {
         if (
-          HB_PROCESSES[ctx.tx?.processId] && 
-          ctx.schedulerType !== 'hyperbeam' && 
-          fetchHyperBeamResultAsync 
+          HB_PROCESSES?.[ctx.tx?.processId] &&
+          ctx.schedulerType !== 'hyperbeam' &&
+          fetchHyperBeamResultAsync
         ) {
           const messageId = ctx.tx?.id
           return fromPromise(getAssignmentNum)({ suUrl: ctx.schedLocation?.url, messageId, processId: ctx.tx.processId })
