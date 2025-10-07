@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import { Readable, Transform } from 'node:stream'
 
-import { always, applySpec, filter, isNil, isNotNil, juxt, last, mergeAll, nth, path, pathOr, pipe, prop } from 'ramda'
+import { always, applySpec, filter, isEmpty, isNil, isNotNil, juxt, last, mergeAll, nth, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
 
 import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../../domain/utils.js'
@@ -150,8 +150,8 @@ export const mapNode = pipe(
        * whether this is an assignment of data on-chain or not.
        */
       isAssignment: pipe(
-        path(['message', 'Owner']),
-        isNil
+        path(['message', 'Target']),
+        (m) => isNil(m) || isEmpty(m)
       )
     }),
     // static
@@ -233,6 +233,44 @@ export const loadProcessWith = ({ fetch, logger }) => {
         processId: always(processId),
         nonce: always(0)
       }))
+      .then((res) => {
+        // NO PROCESS MESSAGE: Try legacy su
+        const type = res.tags?.find(t => t.name?.toLowerCase() === 'type')?.value
+        if (type === 'Process') {
+          return res
+        }
+        return backoff(
+          () => fetch(`https://su-router.ao-testnet.xyz/processes/${processId}`).then(okRes),
+          { maxRetries: 5, delay: 500, log: logger, name: `loadProcess(${JSON.stringify({ suUrl, processId })})` }
+        )
+          .then(resToJson)
+          .then(applySpec({
+            owner: path(['owner']),
+            tags: path(['tags']),
+            block: applySpec({
+              height: pipe(
+                path(['block']),
+                (block) => parseInt(block)
+              ),
+              /**
+               * SU is currently sending back timestamp in milliseconds,
+               */
+              timestamp: path(['timestamp'])
+            }),
+            /**
+             * These were added for the aop6 Boot Loader change so that
+             * the Process can be used properly downstream.
+             *
+             * See https://github.com/permaweb/ao/issues/730
+             */
+            processId: always(processId),
+            timestamp: path(['timestamp']),
+            nonce: always(0),
+            signature: path(['signature']),
+            data: path(['data']),
+            anchor: path(['anchor'])
+          }))
+      })
   }
 }
 
