@@ -48,7 +48,7 @@ describe('hb-su', () => {
     }
 
     test('should map a scheduled message', () => {
-      const res = mapNode({
+      const res = mapNode('message')({
         message: {
           Id: messageId,
           Owner: 'owner-123',
@@ -88,7 +88,7 @@ describe('hb-su', () => {
     })
 
     describe('should map an assignment tx', () => {
-      const res = mapNode({
+      const res = mapNode('message')({
         message: {
           Id: assignedMessageId
         },

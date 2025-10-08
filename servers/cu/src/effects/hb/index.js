@@ -63,7 +63,7 @@ export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) =
   return expected === actual
 }
 
-export const mapNode = pipe(
+export const mapNode = (type) => pipe(
   juxt([
     // derived from assignment
     pipe(
@@ -149,10 +149,15 @@ export const mapNode = pipe(
        * So checking for any other field, like 'Owner' should tell us
        * whether this is an assignment of data on-chain or not.
        */
-      isAssignment: pipe(
-        path(['message', 'Target']),
-        (m) => isNil(m) || isEmpty(m)
-      )
+      isAssignment: type === 'message'
+        ? pipe(
+          path(['message', 'Owner']),
+          isNil
+        )
+        : pipe(
+          path(['message', 'Target']),
+          (m) => isNil(m) || isEmpty(m)
+        )
     }),
     // static
     always({ Cron: false })
@@ -213,7 +218,7 @@ export const loadProcessWith = ({ fetch, logger }) => {
       })
       .then(resToJson)
       .then(nodeAt(0))
-      .then(mapNode)
+      .then(mapNode('process'))
       .then(applySpec({
         owner: applySpec({
           address: path(['message', 'Owner']),
@@ -450,7 +455,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
           /**
              * Map to the expected shape
              */
-          mapNode,
+          mapNode('message'),
           (scheduled) => {
             scheduled.AoGlobal = AoGlobal
             return scheduled
@@ -537,7 +542,7 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
       })
       .then(resToJson)
       .then(nodeAt(0))
-      .then(mapNode)
+      .then(mapNode('message'))
       .then(applySpec({
         timestamp: path(['message', 'Timestamp']),
         nonce: path(['message', 'Nonce']),
