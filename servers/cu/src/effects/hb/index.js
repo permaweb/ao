@@ -3,6 +3,8 @@ import { Readable, Transform } from 'node:stream'
 
 import { always, applySpec, filter, isEmpty, isNil, isNotNil, juxt, last, mergeAll, nth, path, pathOr, pipe, prop } from 'ramda'
 import DataLoader from 'dataloader'
+import createKeccakHash from 'keccak'
+import { LRUCache } from 'lru-cache'
 
 import { backoff, mapForwardedBy, mapFrom, parseTags, strFromFetchError } from '../../domain/utils.js'
 
@@ -63,6 +65,94 @@ export const isHashChainValidWith = ({ hashChain }) => async (prev, scheduled) =
   return expected === actual
 }
 
+const SIG_CONFIG = {
+  ARWEAVE: {
+    sigLength: 512,
+    pubLength: 512,
+    sigName: 'arweave'
+  },
+  ETHEREUM: {
+    sigLength: 65,
+    pubLength: 65,
+    sigName: 'ethereum'
+  }
+}
+
+const cache = new LRUCache({ max: 1000 })
+/**
+ * From ethereum docs: https://ethereum.org/en/developers/docs/accounts/#account-creation
+ *
+ * You get a public address by taking the last 20 bytes of
+ * the Keccak-256 hash of the public key and adding 0x to the beginning.
+ * A checksum must also be applied.
+ */
+function keyToEthereumAddress (key) {
+  /**
+   * We need to decode, then remove the first byte denoting compression in secp256k1
+   */
+  const noCompressionByte = Buffer.from(key, 'base64url').subarray(1)
+
+  /**
+   * the un-prefixed address is the last 20 bytes of the hashed
+   * public key
+   */
+  const noPrefix = createKeccakHash('keccak256')
+    .update(noCompressionByte)
+    .digest('hex')
+    .slice(-40)
+
+  /**
+   * Apply the checksum see https://eips.ethereum.org/EIPS/eip-55
+   */
+  const hash = createKeccakHash('keccak256')
+    .update(noPrefix)
+    .digest('hex')
+
+  let checksumAddress = '0x'
+  for (let i = 0; i < noPrefix.length; i++) {
+    checksumAddress += parseInt(hash[i], 16) >= 8
+      ? noPrefix[i].toUpperCase()
+      : noPrefix[i]
+  }
+
+  return checksumAddress
+}
+
+/**
+ * Given the address and public key, generate the owner.
+ * This function is memoized, and deduped, for performance, caching the most recent
+ * 1000 computed owners
+ *
+ * @param {{ address: string, key: string }} arg
+ * @returns {string}
+ */
+export const addressFrom = ({ address, key }) => {
+  /**
+   * If we do not have the key, then the address
+   * MUST be what we use
+   */
+  if (!key) return address
+
+  const cKey = `${address}-${key}`
+  if (cache.has(cKey)) return cache.get(cKey)
+
+  const pubKeyLength = Buffer.from(key, 'base64url').length
+  let _address
+
+  if (pubKeyLength === SIG_CONFIG.ETHEREUM.pubLength) _address = keyToEthereumAddress(key)
+  else if (pubKeyLength === SIG_CONFIG.ARWEAVE.pubLength) _address = address
+  /**
+   * Assume the address is the owner
+   *
+   * TODO: implement bonafide logic for other signers
+   */
+  else _address = address
+
+  cache.set(cKey, _address)
+
+  return _address
+}
+
 export const mapNode = (type) => pipe(
   juxt([
     // derived from assignment
@@ -117,13 +207,7 @@ export const mapNode = (type) => pipe(
          */
         if (Object.keys(message).length === 1) return { Id: message.Id }
 
-        /**
-         * TODO: HB SU does not return the public key
-         * and so we cannot detect and derive other chain
-         * addresses ie. Ethereum
-         */
-        const address = message.Owner
-
+        const address = addressFrom({ address: message.Owner, key: message.PublicKey })
         return applySpec({
           Id: path(['Id']),
           Signature: path(['Signature']),
