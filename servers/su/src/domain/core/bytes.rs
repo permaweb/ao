@@ -14,6 +14,7 @@ use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 use rand::thread_rng;
 use rsa::{pkcs8::DecodePublicKey, PaddingScheme, PublicKey, RsaPublicKey};
 use sha3::Keccak256;
+use ed25519_dalek::{Verifier, Signature as Ed25519Signature, VerifyingKey as Ed25519VerifyingKey};
 
 use std::convert::TryFrom;
 
@@ -507,6 +508,7 @@ impl DataItem {
     pub fn verify(&mut self) -> Result<(), ByteErrorType> {
         match self.signature_type {
             SignerMap::Ethereum | SignerMap::TypedEthereum => self.verify_ethereum(),
+            SignerMap::Ed25519 | SignerMap::Solana => self.verify_ed25519(),
             _ => self.verify_rsa(),
         }
     }
@@ -622,6 +624,66 @@ impl DataItem {
         }
 
         Ok(())
+    }
+
+    /// Ed25519 Signature Verification (for both Ed25519 and Solana signature types)
+    fn verify_ed25519(&mut self) -> Result<(), ByteErrorType> {
+        // Get the message to verify
+        let message = self.get_message()?;
+
+        // Validate signature length (64 bytes for Ed25519)
+        if self.signature.len() != 64 {
+            return Err(ByteErrorType::ByteError(
+                format!("Invalid Ed25519 signature length: expected 64, got {}", self.signature.len())
+            ));
+        }
+
+        // Validate public key length (32 bytes for Ed25519)
+        if self.owner.len() != 32 {
+            return Err(ByteErrorType::ByteError(
+                format!("Invalid Ed25519 public key length: expected 32, got {}", self.owner.len())
+            ));
+        }
+
+        // Parse the public key
+        let public_key_bytes: [u8; 32] = match self.owner.as_slice().try_into() {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                return Err(ByteErrorType::ByteError(
+                    "Failed to parse Ed25519 public key".to_string()
+                ));
+            }
+        };
+
+        let verifying_key = match Ed25519VerifyingKey::from_bytes(&public_key_bytes) {
+            Ok(key) => key,
+            Err(e) => {
+                return Err(ByteErrorType::ByteError(
+                    format!("Invalid Ed25519 public key: {}", e)
+                ));
+            }
+        };
+
+        // Parse the signature
+        let signature_bytes: [u8; 64] = match self.signature.as_slice().try_into() {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                return Err(ByteErrorType::ByteError(
+                    "Failed to parse Ed25519 signature".to_string()
+                ));
+            }
+        };
+
+        // In ed25519-dalek 2.x, from_bytes returns the signature directly (not a Result)
+        let signature = Ed25519Signature::from_bytes(&signature_bytes);
+
+        // Verify the signature
+        match verifying_key.verify(&message, &signature) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ByteErrorType::ByteError(
+                "Ed25519 signature verification failed".to_string()
+            ))
+        }
     }
 
     /// RSA Signature Verification
@@ -956,5 +1018,141 @@ mod tests {
         assert_eq!(data_bundle.items.len(), 1);
         let bundle_bytes = data_bundle.to_bytes();
         assert!(bundle_bytes.is_ok(), "Bundling failed");
+    }
+
+    #[test]
+    fn test_ed25519_signature_type_detection() {
+        // Test that Ed25519 (Type 2) signature type is correctly detected
+        let sig_type = SignerMap::from(2);
+        assert_eq!(sig_type, SignerMap::Ed25519);
+
+        let config = sig_type.get_config();
+        assert_eq!(config.sig_length, 64);
+        assert_eq!(config.pub_length, 32);
+        assert_eq!(config.sig_name, "ed25519");
+    }
+
+    #[test]
+    fn test_solana_signature_type_detection() {
+        // Test that Solana (Type 4) signature type is correctly detected
+        let sig_type = SignerMap::from(4);
+        assert_eq!(sig_type, SignerMap::Solana);
+
+        let config = sig_type.get_config();
+        assert_eq!(config.sig_length, 64);
+        assert_eq!(config.pub_length, 32);
+        assert_eq!(config.sig_name, "solana");
+    }
+
+    #[test]
+    fn test_ed25519_invalid_signature_length() {
+        // Create a DataItem with Ed25519 signature type but wrong signature length
+        let mut data_item = DataItem {
+            signature_type: SignerMap::Ed25519,
+            signature: vec![0u8; 32], // Wrong length (should be 64)
+            owner: vec![0u8; 32],
+            target: vec![],
+            anchor: vec![1u8; 32],
+            tags: vec![],
+            data: Data::Bytes(b"test".to_vec()),
+        };
+
+        let result = data_item.verify();
+        assert!(result.is_err(), "Should reject invalid signature length");
+
+        match result {
+            Err(ByteErrorType::ByteError(msg)) => {
+                assert!(msg.contains("Invalid Ed25519 signature length"), "Error message should mention invalid signature length");
+            },
+            _ => panic!("Expected ByteError with signature length error"),
+        }
+    }
+
+    #[test]
+    fn test_ed25519_invalid_pubkey_length() {
+        // Create a DataItem with Ed25519 signature type but wrong public key length
+        let mut data_item = DataItem {
+            signature_type: SignerMap::Solana,
+            signature: vec![0u8; 64],
+            owner: vec![0u8; 64], // Wrong length (should be 32)
+            target: vec![],
+            anchor: vec![1u8; 32],
+            tags: vec![],
+            data: Data::Bytes(b"test".to_vec()),
+        };
+
+        let result = data_item.verify();
+        assert!(result.is_err(), "Should reject invalid public key length");
+
+        match result {
+            Err(ByteErrorType::ByteError(msg)) => {
+                assert!(msg.contains("Invalid Ed25519 public key length"), "Error message should mention invalid public key length");
+            },
+            _ => panic!("Expected ByteError with public key length error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_routes_ed25519_correctly() {
+        // Test that verify() correctly routes Ed25519 signatures to verify_ed25519()
+        // Using random bytes that won't produce a valid signature
+        let mut data_item = DataItem {
+            signature_type: SignerMap::Ed25519,
+            signature: vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                           33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+                           49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],
+            owner: vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
+            target: vec![],
+            anchor: vec![1u8; 32],
+            tags: vec![],
+            data: Data::Bytes(b"test".to_vec()),
+        };
+
+        let result = data_item.verify();
+        // Should fail verification (invalid signature for this message), correctly routed to Ed25519
+        assert!(result.is_err(), "Invalid signature should fail verification");
+
+        match result {
+            Err(ByteErrorType::ByteError(msg)) => {
+                // Should get Ed25519-specific error, not RSA error
+                assert!(msg.contains("Ed25519"),
+                    "Should route to Ed25519 verification, got: {}", msg);
+            },
+            _ => panic!("Expected Ed25519 verification error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_routes_solana_correctly() {
+        // Test that verify() correctly routes Solana signatures to verify_ed25519()
+        // Using random bytes that won't produce a valid signature
+        let mut data_item = DataItem {
+            signature_type: SignerMap::Solana,
+            signature: vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                           33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+                           49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],
+            owner: vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
+            target: vec![],
+            anchor: vec![1u8; 32],
+            tags: vec![],
+            data: Data::Bytes(b"test".to_vec()),
+        };
+
+        let result = data_item.verify();
+        // Should fail verification (invalid signature for this message), correctly routed to Ed25519
+        assert!(result.is_err(), "Invalid signature should fail verification");
+
+        match result {
+            Err(ByteErrorType::ByteError(msg)) => {
+                // Should get Ed25519-specific error, not RSA error
+                assert!(msg.contains("Ed25519"),
+                    "Should route to Ed25519 verification, got: {}", msg);
+            },
+            _ => panic!("Expected Ed25519 verification error"),
+        }
     }
 }
