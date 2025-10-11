@@ -1,6 +1,8 @@
 import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
 import { compose, head, identity, isEmpty, prop, propOr } from 'ramda'
 import createKeccakHash from 'keccak'
+import { Point } from '@noble/secp256k1'
+import bs58 from 'bs58'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { writeMessageTxWith } from '../lib/write-message-tx.js'
@@ -46,42 +48,63 @@ export function sendDataItemWith ({
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses})
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
 
   const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
+
+  /**
+   * Derive Ethereum address from secp256k1 public key (compressed or uncompressed)
+   * Follows EIP-55 checksum standard
+   */
   function keyToEthereumAddress (key) {
-    /**
-     * We need to decode, then remove the first byte denoting compression in secp256k1
-     */
-    const noCompressionByte = Buffer.from(key, 'base64url').subarray(1)
+    const keyBytes = Buffer.from(key, 'base64url')
 
-    /**
-     * the un-prefixed address is the last 20 bytes of the hashed
-     * public key
-     */
-    const noPrefix = createKeccakHash('keccak256')
-      .update(noCompressionByte)
+    // Decompress if needed (33-byte compressed → 65-byte uncompressed)
+    let uncompressed
+    if (keyBytes.length === 65) {
+      // Already uncompressed (0x04 prefix + 64 bytes)
+      uncompressed = keyBytes
+    } else if (keyBytes.length === 33) {
+      // Compressed key (0x02 or 0x03 prefix + 32 bytes)
+      const point = Point.fromHex(keyBytes)
+      uncompressed = Buffer.from(point.toRawBytes(false)) // false = uncompressed
+    } else {
+      throw new Error(`Invalid ECDSA public key length: ${keyBytes.length}`)
+    }
+
+    // Hash the 64 bytes after the 0x04 prefix
+    const address = createKeccakHash('keccak256')
+      .update(uncompressed.slice(1))
       .digest('hex')
-      .slice(-40)
+      .slice(-40) // Last 20 bytes
 
-    /**
-     * Apply the checksum see https://eips.ethereum.org/EIPS/eip-55
-     */
+    // Apply EIP-55 checksum
     const hash = createKeccakHash('keccak256')
-      .update(noPrefix)
+      .update(address)
       .digest('hex')
 
     let checksumAddress = '0x'
-    for (let i = 0; i < noPrefix.length; i++) {
+    for (let i = 0; i < address.length; i++) {
       checksumAddress += parseInt(hash[i], 16) >= 8
-        ? noPrefix[i].toUpperCase()
-        : noPrefix[i]
+        ? address[i].toUpperCase()
+        : address[i]
     }
 
     return checksumAddress
+  }
+
+  /**
+   * Derive Solana address from Ed25519 public key (base58 encoding)
+   */
+  function keyToSolanaAddress (key) {
+    const keyBytes = Buffer.from(key, 'base64url')
+    if (keyBytes.length !== 32) {
+      throw new Error(`Invalid Ed25519 public key length: ${keyBytes.length}`)
+    }
+    return bs58.encode(keyBytes)
   }
 
   /**
@@ -103,9 +126,17 @@ export function sendDataItemWith ({
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
     const wallet = ctx.dataItem.owner
     let address = await toAddress(wallet) || null
-    if (ctx.dataItem.signature.length === 87) {
+
+    // Detect signature type by base64url length to derive appropriate address
+    const sigLen = ctx.dataItem.signature.length
+    if (sigLen === 87) {
+      // ECDSA signature (65 bytes) - Ethereum
       address = keyToEthereumAddress(ctx.dataItem.owner)
+    } else if (sigLen === 86) {
+      // Ed25519 signature (64 bytes) - Solana
+      address = keyToSolanaAddress(ctx.dataItem.owner)
     }
+
     const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? 'SPAWN', rateLimits)
     const recentTraces = await getRecentTraces({ wallet, timestamp: intervalStart, processId: ctx.dataItem.target })
     const walletTracesCount = recentTraces.wallet.length
