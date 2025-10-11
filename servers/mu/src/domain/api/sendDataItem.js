@@ -81,6 +81,7 @@ export function sendDataItemWith ({
       } else if (sigType === 'solana') {
         address = deriveSolanaAddress(ctx.dataItem.owner)
       }
+      // For 'arweave' or 'unknown', keep using toAddress() result
     }
 
     const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? 'SPAWN', rateLimits)

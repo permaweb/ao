@@ -77,6 +77,7 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
       } else if (keyType === 'solana') {
         address = deriveSolanaAddress(owner)
       }
+      // For 'arweave' or 'unknown', keep using toAddress() result
     }
 
     const rateLimits = getRateLimits()
