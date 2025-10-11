@@ -1,9 +1,6 @@
-import createKeccakHash from 'keccak'
-import { Point } from '@noble/secp256k1'
-import bs58 from 'bs58'
-
 import { randomBytes } from 'crypto'
 import { TASKS_TABLE } from './sqlite.js'
+import { deriveEthereumAddress, deriveSolanaAddress, detectKeyType } from '../lib/derive-address.js'
 
 /**
  * Create our task queue.
@@ -56,58 +53,6 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * be removed from the database when dequeuing.
  */
 export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
-  /**
-   * Derive Ethereum address from secp256k1 public key (compressed or uncompressed)
-   * Follows EIP-55 checksum standard
-   */
-  function keyToEthereumAddress (key) {
-    const keyBytes = Buffer.from(key, 'base64url')
-
-    // Decompress if needed (33-byte compressed → 65-byte uncompressed)
-    let uncompressed
-    if (keyBytes.length === 65) {
-      // Already uncompressed (0x04 prefix + 64 bytes)
-      uncompressed = keyBytes
-    } else if (keyBytes.length === 33) {
-      // Compressed key (0x02 or 0x03 prefix + 32 bytes)
-      const point = Point.fromHex(keyBytes)
-      uncompressed = Buffer.from(point.toRawBytes(false)) // false = uncompressed
-    } else {
-      throw new Error(`Invalid ECDSA public key length: ${keyBytes.length}`)
-    }
-
-    // Hash the 64 bytes after the 0x04 prefix
-    const address = createKeccakHash('keccak256')
-      .update(uncompressed.slice(1))
-      .digest('hex')
-      .slice(-40) // Last 20 bytes
-
-    // Apply EIP-55 checksum
-    const hash = createKeccakHash('keccak256')
-      .update(address)
-      .digest('hex')
-
-    let checksumAddress = '0x'
-    for (let i = 0; i < address.length; i++) {
-      checksumAddress += parseInt(hash[i], 16) >= 8
-        ? address[i].toUpperCase()
-        : address[i]
-    }
-
-    return checksumAddress
-  }
-
-  /**
-   * Derive Solana address from Ed25519 public key (base58 encoding)
-   */
-  function keyToSolanaAddress (key) {
-    const keyBytes = Buffer.from(key, 'base64url')
-    if (keyBytes.length !== 32) {
-      throw new Error(`Invalid Ed25519 public key length: ${keyBytes.length}`)
-    }
-    return bs58.encode(keyBytes)
-  }
-
   async function checkRateLimitExceeded (task) {
     function calculateRateLimit (walletID, procID, limits) {
       if (!walletID) return 100
@@ -124,13 +69,14 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     let address = task?.cachedMsg?.cron ? wallet : await toAddress(wallet)
     const owner = (task.parentOwner ?? task?.wallet ?? task.cachedMsg?.wallet)
 
-    // Detect signature type by base64url length to derive appropriate address
-    if (owner?.length === 87) {
-      // ECDSA signature (65 bytes) - Ethereum
-      address = keyToEthereumAddress(owner)
-    } else if (owner?.length === 86) {
-      // Ed25519 signature (64 bytes) - Solana
-      address = keyToSolanaAddress(owner)
+    // Detect key type to derive appropriate address
+    if (owner) {
+      const keyType = detectKeyType(owner)
+      if (keyType === 'ethereum') {
+        address = deriveEthereumAddress(owner)
+      } else if (keyType === 'solana') {
+        address = deriveSolanaAddress(owner)
+      }
     }
 
     const rateLimits = getRateLimits()
@@ -139,7 +85,6 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     const rateLimitAllowance = calculateRateLimit(address, processId, rateLimits)
     const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === 'SPAWN' })
     const walletTracesCount = recentTraces.wallet.length
-    console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
     if (walletTracesCount >= rateLimitAllowance) {
       logger({ log: 'Rate limit exceeded. Skipping enqueueing task.' })
       return true
