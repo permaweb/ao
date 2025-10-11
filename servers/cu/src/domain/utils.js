@@ -1,5 +1,6 @@
 import { LRUCache } from 'lru-cache'
 import createKeccakHash from 'keccak'
+import bs58 from 'bs58'
 import { Rejected, Resolved } from 'hyper-async'
 import {
   F, T, __, allPass, always, append, assoc, chain, concat, cond, defaultTo, equals,
@@ -483,6 +484,16 @@ const SIG_CONFIG = {
     sigLength: 65,
     pubLength: 65,
     sigName: 'ethereum'
+  },
+  ED25519: {
+    sigLength: 64,
+    pubLength: 32,
+    sigName: 'ed25519'
+  },
+  SOLANA: {
+    sigLength: 64,
+    pubLength: 32,
+    sigName: 'solana'
   }
 }
 
@@ -525,6 +536,34 @@ function keyToEthereumAddress (key) {
   return checksumAddress
 }
 
+/**
+ * Solana addresses are simply the base58-encoded Ed25519 public key.
+ * Unlike Ethereum which hashes the public key, Solana uses the raw public key.
+ *
+ * See: https://docs.solana.com/terminology#public-key-pubkey
+ *
+ * @param {string} key - base64url encoded 32-byte Ed25519 public key
+ * @returns {string} - base58 encoded Solana address
+ */
+function keyToSolanaAddress (key) {
+  /**
+   * Decode the base64url encoded public key to raw bytes
+   */
+  const pubKeyBytes = Buffer.from(key, 'base64url')
+
+  /**
+   * Validate it's exactly 32 bytes (Ed25519 public key length)
+   */
+  if (pubKeyBytes.length !== 32) {
+    throw new Error(`Invalid Ed25519 public key length: expected 32, got ${pubKeyBytes.length}`)
+  }
+
+  /**
+   * Solana address is the base58-encoded public key
+   */
+  return bs58.encode(pubKeyBytes)
+}
+
 const cache = new LRUCache({ max: 1000 })
 /**
  * Given the address and public key, generate the owner.
@@ -542,11 +581,15 @@ export const addressFrom = ({ address, key }) => {
   let _address
 
   if (pubKeyLength === SIG_CONFIG.ETHEREUM.pubLength) _address = keyToEthereumAddress(key)
-  else if (pubKeyLength === SIG_CONFIG.ARWEAVE.pubLength) _address = address
+  else if (pubKeyLength === SIG_CONFIG.ED25519.pubLength || pubKeyLength === SIG_CONFIG.SOLANA.pubLength) {
+    /**
+     * Both Ed25519 (Type 2) and Solana (Type 4) use 32-byte keys
+     * and derive addresses using base58 encoding
+     */
+    _address = keyToSolanaAddress(key)
+  } else if (pubKeyLength === SIG_CONFIG.ARWEAVE.pubLength) _address = address
   /**
-   * Assume the address is the owner
-   *
-   * TODO: implement bonafide logic for other signers
+   * Unknown signature type, assume the address is the owner
    */
   else _address = address
 
