@@ -1,7 +1,6 @@
-import createKeccakHash from 'keccak'
-
 import { randomBytes } from 'crypto'
 import { TASKS_TABLE } from './sqlite.js'
+import { deriveEthereumAddress, deriveSolanaAddress, detectKeyType } from '../lib/derive-address.js'
 
 /**
  * Create our task queue.
@@ -54,38 +53,6 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * be removed from the database when dequeuing.
  */
 export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
-  function keyToEthereumAddress (key) {
-    /**
-     * We need to decode, then remove the first byte denoting compression in secp256k1
-     */
-    const noCompressionByte = Buffer.from(key, 'base64url').subarray(1)
-
-    /**
-     * the un-prefixed address is the last 20 bytes of the hashed
-     * public key
-     */
-    const noPrefix = createKeccakHash('keccak256')
-      .update(noCompressionByte)
-      .digest('hex')
-      .slice(-40)
-
-    /**
-     * Apply the checksum see https://eips.ethereum.org/EIPS/eip-55
-     */
-    const hash = createKeccakHash('keccak256')
-      .update(noPrefix)
-      .digest('hex')
-
-    let checksumAddress = '0x'
-    for (let i = 0; i < noPrefix.length; i++) {
-      checksumAddress += parseInt(hash[i], 16) >= 8
-        ? noPrefix[i].toUpperCase()
-        : noPrefix[i]
-    }
-
-    return checksumAddress
-  }
-
   async function checkRateLimitExceeded (task) {
     function calculateRateLimit (walletID, procID, limits) {
       if (!walletID) return 100
@@ -101,16 +68,24 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     const processId = task?.cachedMsg?.msg?.Target || task?.processId || null
     let address = task?.cachedMsg?.cron ? wallet : await toAddress(wallet)
     const owner = (task.parentOwner ?? task?.wallet ?? task.cachedMsg?.wallet)
-    if (owner?.length === 87) {
-      address = keyToEthereumAddress(owner)
+
+    // Detect key type to derive appropriate address
+    if (owner) {
+      const keyType = detectKeyType(owner)
+      if (keyType === 'ethereum') {
+        address = deriveEthereumAddress(owner)
+      } else if (keyType === 'solana') {
+        address = deriveSolanaAddress(owner)
+      }
+      // For 'arweave' or 'unknown', keep using toAddress() result
     }
+
     const rateLimits = getRateLimits()
     const isWhitelisted = (rateLimits?.ips?.[task?.ip] ?? 0) > 1
     if (isWhitelisted) return false
     const rateLimitAllowance = calculateRateLimit(address, processId, rateLimits)
     const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === 'SPAWN' })
     const walletTracesCount = recentTraces.wallet.length
-    console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
     if (walletTracesCount >= rateLimitAllowance) {
       logger({ log: 'Rate limit exceeded. Skipping enqueueing task.' })
       return true
