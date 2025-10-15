@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
     use super::super::store::LocalStoreClient;
+    use crate::domain::clients::local_store::import::merge_dbs;
     use crate::domain::core::dal::{DataStore, Message, Process, StoreErrorType};
     use base64_url::decode;
+    use rocksdb::{DB, Options};
     use std::fs;
     use std::path::PathBuf;
 
@@ -426,5 +428,57 @@ mod tests {
         ];
         let messages = bundle_strings.iter().map(|b| decode(b).unwrap()).collect();
         (decode(process_string).unwrap(), messages)
+    }
+
+    #[tokio::test]
+    async fn test_merge_dbs() {
+        let src_test_db = TestDb::new(100);
+        let dest_test_db = TestDb::new(101);
+
+        // Create source store and populate with keys 1, 2, 3
+        let src_store = LocalStoreClient::new(
+            &src_test_db.file_db_path(),
+            &src_test_db.index_db_path()
+        ).unwrap();
+
+        src_store.file_db.put(b"1", b"value1_src").unwrap();
+        src_store.file_db.put(b"2", b"value2_src").unwrap();
+        src_store.file_db.put(b"3", b"value3_src").unwrap();
+
+        // Create destination store and populate with keys 3, 4, 5        
+        let dest_store = LocalStoreClient::new(
+            &dest_test_db.file_db_path(),
+            &dest_test_db.index_db_path()
+        ).unwrap();
+
+        dest_store.file_db.put(b"3", b"value3_dest").unwrap();
+        dest_store.file_db.put(b"4", b"value4_dest").unwrap();
+        dest_store.file_db.put(b"5", b"value5_dest").unwrap();
+
+        // Close source and destination stores before merge
+        drop(src_store);
+        drop(dest_store);
+
+        // Run merge_dbs with explicit destination paths
+        merge_dbs(
+            &src_test_db.file_db_path(), 
+            &src_test_db.index_db_path(),
+            Some(&dest_test_db.file_db_path()),
+            Some(&dest_test_db.index_db_path())
+        ).expect("merge_dbs should succeed");
+
+        // Verify results
+        let mut verify_opts = Options::default();
+        verify_opts.create_if_missing(false);
+        verify_opts.set_enable_blob_files(true);
+        
+        let verify_db = DB::open(&verify_opts, &dest_test_db.file_db_path()).unwrap();
+        
+        // Check all keys exist
+        assert_eq!(verify_db.get(b"1").unwrap().unwrap(), b"value1_src");
+        assert_eq!(verify_db.get(b"2").unwrap().unwrap(), b"value2_src");
+        assert_eq!(verify_db.get(b"3").unwrap().unwrap(), b"value3_src"); // Should be overwritten from src
+        assert_eq!(verify_db.get(b"4").unwrap().unwrap(), b"value4_dest");
+        assert_eq!(verify_db.get(b"5").unwrap().unwrap(), b"value5_dest");
     }
 }

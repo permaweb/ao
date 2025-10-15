@@ -5,7 +5,7 @@ use tokio::task::spawn_blocking;
 
 use dashmap::DashMap;
 
-mod clients;
+pub mod clients;
 pub mod config;
 mod core;
 mod logger;
@@ -23,6 +23,7 @@ pub use core::flows;
 pub use core::router;
 pub use core::bytes;
 pub use flows::Deps;
+pub use local_store::import::merge_dbs;
 pub use local_store::migration::migrate_to_local;
 pub use local_store::sync_local::sync_local_drives;
 pub use store::migrate_to_disk;
