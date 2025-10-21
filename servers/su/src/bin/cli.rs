@@ -41,6 +41,17 @@ async fn main() -> io::Result<()> {
         return Ok(());
     };
 
+    let delay = if args.len() > 4 && args[1] == "reupload_bundles" {
+        match args[4].parse::<u64>() {
+            Ok(val) => val,
+            Err(_) => {
+                10
+            }
+        }
+    } else {
+        10
+    };
+
     match args[1].as_str() {
         "migrate_to_disk" => {
             migrate_to_disk().await.unwrap();
@@ -52,7 +63,7 @@ async fn main() -> io::Result<()> {
             sync_local_drives(interval).await.unwrap();
         }
         "reupload_bundles" => {
-            reupload_bundles(pids, since).await.unwrap();
+            reupload_bundles(pids, since, delay).await.unwrap();
         }
         _ => {
             eprintln!("Invalid function name: {}", args[1]);

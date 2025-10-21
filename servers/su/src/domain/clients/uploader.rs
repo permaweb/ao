@@ -243,7 +243,7 @@ impl Uploader for UploaderClient {
     }
 }
 
-pub async fn reupload_bundles(pids: String, since: String) -> io::Result<()> {
+pub async fn reupload_bundles(pids: String, since: String, delay: u64) -> io::Result<()> {
     let config = AoConfig::new(None).expect("Failed to read configuration");
     let gateway: Arc<dyn Gateway> = Arc::new(
         ArweaveGateway::new().await.expect("Failed to init the gateway")
@@ -269,7 +269,7 @@ pub async fn reupload_bundles(pids: String, since: String) -> io::Result<()> {
       logger.log(format!("processing pid {}", pid));
 
       for assignment in assignments {
-        sleep(Duration::from_millis(300)).await;
+        sleep(Duration::from_millis(delay)).await;
         let gateway_tx = gateway.gql_tx(&assignment).await;
         match gateway_tx {
             Ok(_) => {
