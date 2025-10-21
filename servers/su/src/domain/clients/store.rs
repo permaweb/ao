@@ -1309,6 +1309,25 @@ impl DataStore for StoreClient {
         ))
     }
 
+    fn get_bundle_by_assignment(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+
+        let db_message_result: Result<Option<DbMessage>, DieselError> = messages
+            .filter(assignment_id.eq(tx_id))
+            .order(timestamp.asc())
+            .first(conn)
+            .optional();
+
+        match db_message_result {
+            Ok(Some(db_message)) => {
+                Ok(db_message.bundle)
+            }
+            Ok(None) => Err(StoreErrorType::NotFound("Bundle not found".to_string())),
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
     fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn()?;
@@ -1380,6 +1399,43 @@ impl DataStore for StoreClient {
             Err(DieselError::NotFound) => Ok(None), // No messages found
             Err(e) => Err(StoreErrorType::from(e)),
         }
+    }
+
+    async fn assignments_since(
+        &self,
+        pid: &String,
+        since: &String,
+        limit: i64
+    ) -> Result<Vec<String>, StoreErrorType> {
+        use super::schema::messages::dsl::*;
+        let conn = &mut self.get_read_conn()?;
+        let mut query = messages
+            .filter(process_id.eq(pid.clone()))
+            .into_boxed();
+        let from_timestamp = since
+            .parse::<i64>()
+            .map_err(StoreErrorType::from)?;
+        query = query.filter(timestamp.gt(from_timestamp));
+
+        let db_assignment_ids_result: Result<Vec<Option<String>>, DieselError> = query
+            .select(assignment_id)
+            .order(timestamp.asc())
+            .limit(limit)
+            .load(conn);
+
+        let assignment_ids_o = match db_assignment_ids_result {
+            Ok(d) => d,
+            Err(_) => return Err(
+                StoreErrorType::DatabaseError("Failed to read assignments".to_string())
+            )
+        };
+
+        let assignment_ids: Vec<String> = assignment_ids_o
+            .into_iter()
+            .filter_map(|id| id)
+            .collect();
+
+        Ok(assignment_ids)
     }
 }
 

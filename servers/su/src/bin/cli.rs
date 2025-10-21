@@ -3,6 +3,7 @@ use std::io;
 use su::domain::migrate_to_disk;
 use su::domain::migrate_to_local;
 use su::domain::sync_local_drives;
+use su::domain::reupload_bundles;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -10,11 +11,11 @@ async fn main() -> io::Result<()> {
 
     if args.len() < 2 {
         eprintln!("Usage: {} <function_name>", args[0]);
-        eprintln!("Available functions: migrate_to_disk, migrate_to_local, sync_local_drives");
+        eprintln!("Available functions: migrate_to_disk, migrate_to_local, sync_local_drives, reupload_bundles");
         return Ok(());
     }
 
-    let interval = if args.len() >= 3 {
+    let interval = if args.len() >= 3 && args[1] == "sync_local_drives" {
         match args[2].parse::<u64>() {
             Ok(val) => val,
             Err(_) => {
@@ -26,6 +27,20 @@ async fn main() -> io::Result<()> {
         5
     };
 
+    let pids = if args.len() > 3 && args[1] == "reupload_bundles" {
+        args[2].clone()
+    } else {
+        eprintln!("Must provid pids, and since value");
+        return Ok(());
+    };
+
+    let since = if args.len() > 3 && args[1] == "reupload_bundles" {
+        args[3].clone()
+    } else {
+        eprintln!("Must provid since");
+        return Ok(());
+    };
+
     match args[1].as_str() {
         "migrate_to_disk" => {
             migrate_to_disk().await.unwrap();
@@ -35,6 +50,9 @@ async fn main() -> io::Result<()> {
         }
         "sync_local_drives" => {
             sync_local_drives(interval).await.unwrap();
+        }
+        "reupload_bundles" => {
+            reupload_bundles(pids, since).await.unwrap();
         }
         _ => {
             eprintln!("Invalid function name: {}", args[1]);

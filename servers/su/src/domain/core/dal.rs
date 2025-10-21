@@ -181,6 +181,13 @@ pub trait DataStore: Send + Sync {
         process_id: &String,
         deep_hash: &String,
     ) -> Result<(), StoreErrorType>;
+    async fn assignments_since(
+        &self,
+        process_id: &String,
+        since: &String,
+        limit: i64
+    ) -> Result<Vec<String>, StoreErrorType>;
+    fn get_bundle_by_assignment(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType>;
 }
 
 #[async_trait]
