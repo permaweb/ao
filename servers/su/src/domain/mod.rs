@@ -16,9 +16,10 @@ use clients::{
 };
 use config::AoConfig;
 use core::dal::{Config, DataStore, Gateway, Log, MockRouterDataStore, ExtRouter};
-use logger::SuLog;
+pub use logger::SuLog;
 
 pub use clients::metrics::PromMetrics;
+pub use clients::uploader::reupload_bundles;
 pub use core::flows;
 pub use core::router;
 pub use core::bytes;

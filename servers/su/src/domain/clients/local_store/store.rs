@@ -494,6 +494,14 @@ impl DataStore for LocalStoreClient {
         Err(StoreErrorType::NotFound("Process not found".to_string()))
     }
 
+    fn get_bundle_by_assignment(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
+        let assignment_key = self.msg_assignment_key(tx_id);
+        if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
+            return Ok(message_bundle);
+        }
+        Err(StoreErrorType::DatabaseError("Failed to get bundle".to_string()))
+    }
+
     fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
         let assignment_key = self.msg_assignment_key(tx_id);
         if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
@@ -817,6 +825,22 @@ impl DataStore for LocalStoreClient {
             has_next_page,
             sequence_mode,
         )?)
+    }
+
+    async fn assignments_since(
+        &self,
+        process_id: &String,
+        since: &String,
+        limit: i64
+    ) -> Result<Vec<String>, StoreErrorType> {
+        let (keys, _has_next_page) = self.fetch_message_range(
+            process_id,
+            &Some(since.clone()),
+            &None,
+            &Some(limit.try_into().unwrap())
+        ).await?;
+
+        Ok(keys.into_iter().map(|(_, assignment_id)| assignment_id).collect())
     }
 
     /*

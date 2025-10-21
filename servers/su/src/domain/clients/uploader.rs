@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::io;
 
 use reqwest::{Client, Url};
 
@@ -11,6 +12,13 @@ use tokio::time::{sleep, Duration};
 use crate::domain::core::dal::{Uploader, UploaderErrorType};
 use crate::domain::bytes;
 use crate::domain::Log;
+
+use crate::domain::clients::store::StoreClient;
+use crate::domain::clients::local_store::store::LocalStoreClient;
+use crate::domain::config::AoConfig;
+use crate::domain::core::dal::{DataStore, Gateway};
+use crate::domain::clients::gateway::ArweaveGateway;
+use crate::domain::SuLog;
 
 pub struct UploaderClient {
     node_url: Url,
@@ -233,4 +241,52 @@ impl Uploader for UploaderClient {
 
         Ok(())
     }
+}
+
+pub async fn reupload_bundles(pids: String, since: String) -> io::Result<()> {
+    let config = AoConfig::new(None).expect("Failed to read configuration");
+    let gateway: Arc<dyn Gateway> = Arc::new(
+        ArweaveGateway::new().await.expect("Failed to init the gateway")
+    );
+    let logger = SuLog::init();
+    let uploader = UploaderClient::new(
+        &config.upload_node_url, &config.cache_url, logger.clone()
+    ).unwrap();
+
+    let data_store: Arc<dyn DataStore> = if config.use_local_store == false {
+        Arc::new(StoreClient::new_single_connection()
+            .expect("Failed to create StoreClient"))
+    } else {
+        Arc::new(LocalStoreClient::new_read_only(
+            &config.su_file_db_dir, 
+            &config.su_index_db_dir
+        ).expect("Failed to create LocalStoreClient"))
+    };
+
+    for pid in pids.split(',') {
+      let p = pid.to_string();
+      let assignments = data_store.assignments_since(&p, &since, 5000000).await.unwrap();
+      logger.log(format!("processing pid {}", pid));
+
+      for assignment in assignments {
+        sleep(Duration::from_millis(300)).await;
+        let gateway_tx = gateway.gql_tx(&assignment).await;
+        match gateway_tx {
+            Ok(_) => {
+                logger.log(format!("Assignment found, skipping {}", assignment));
+            },
+            Err(e) => {
+                if e == "Transaction not found" {
+                    logger.log(format!("Assignment not found, reuploading {}", assignment));
+                    let bundle = data_store.get_bundle_by_assignment(&assignment).unwrap();
+                    uploader.upload(bundle).unwrap();
+                } else {
+                    logger.log(format!("Error fetching tx {}: {}", assignment, e));
+                }
+            }
+        }
+      }
+    }
+
+    return Ok(())
 }
