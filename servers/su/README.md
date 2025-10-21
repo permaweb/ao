@@ -97,7 +97,7 @@ To build with docker on your local machine delete all su images and containers i
 
 ```sh
 docker system prune -a
-docker build --target builder -t su-binary .
+docker buildx build --platform linux/amd64 --target builder -t su-binary .
 docker create --name temp-container su-binary
 docker cp temp-container:/usr/src/su/target/release/su .
 ```
@@ -173,7 +173,7 @@ Over time the su database has evolved. It started as only Postgres then went to 
 Building the cli binary, delete all su images and containers if you have previously run this, then run
 ```sh
 docker system prune -a
-docker build --target cli-builder -t cli-binary -f DockerfileCli .
+docker buildx build --platform linux/amd64 --target cli-builder -t cli-binary -f DockerfileCli .
 docker create --name temp-container-cli cli-binary
 docker cp temp-container-cli:/usr/src/cli/target/release/cli .
 ```
