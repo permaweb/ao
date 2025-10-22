@@ -41,6 +41,20 @@ const TtlCache = ({ setTimeout, clearTimeout }) => {
   return cache
 }
 
+const cyrb53 = (str, seed = 0) => {
+  let h1 = 0xdeadbeef ^ seed; let h2 = 0x41c6ce57 ^ seed
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i)
+    h1 = Math.imul(h1 ^ ch, 2654435761)
+    h2 = Math.imul(h2 ^ ch, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0)
+}
+
 /**
  * @typedef Env
  *
@@ -58,6 +72,7 @@ const TtlCache = ({ setTimeout, clearTimeout }) => {
  */
 export function dryRunWith (env) {
   const DRY_RUN_DEFAULT_MAX_PROCESS_AGE = env.DRY_RUN_DEFAULT_MAX_PROCESS_AGE
+  const DRY_RUN_RESULT_MAX_AGE = env.DRY_RUN_RESULT_MAX_AGE
   const DRY_RUN_PROCESS_CACHE_TTL = env.DRY_RUN_PROCESS_CACHE_TTL
   const logger = env.logger
   const loadMessageMeta = loadMessageMetaWith(env)
@@ -73,6 +88,7 @@ export function dryRunWith (env) {
   })
 
   const readStateCache = TtlCache(env)
+  const dryRunResultCache = TtlCache(env)
 
   function loadMessageCtx ({ messageTxId, processId }) {
     /**
@@ -159,6 +175,16 @@ export function dryRunWith (env) {
   }
 
   return ({ processId, messageTxId, maxProcessAge = DRY_RUN_DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
+    const dryRunHash = cyrb53(JSON.stringify(dryRun))
+    const cached = dryRunResultCache.get(dryRunHash)
+    if (cached && new Date().getTime() - cached.age <= DRY_RUN_RESULT_MAX_AGE) {
+      logger.debug(
+        'Using recently cached dry-run result for dry-run to process "%s"',
+        processId
+      )
+      return Resolved(cached.ctx)
+    }
+
     return of({ processId, messageTxId })
       .chain(loadMessageCtx)
       .chain(ensureProcessLoaded({ maxProcessAge }))
@@ -222,6 +248,11 @@ export function dryRunWith (env) {
          */
         return evaluate({ ...ctx, dryRun: true, messages: Readable.from(dryRunMessage()) })
       })
-      .map((res) => omit(['Memory'], res.output))
+      .map((res) => {
+        const omitted = omit(['Memory'], res.output)
+        const cached = { age: new Date().getTime(), ctx: omitted }
+        dryRunResultCache.set(dryRunHash, cached, DRY_RUN_RESULT_MAX_AGE)
+        return omitted
+      })
   }
 }
