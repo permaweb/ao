@@ -175,7 +175,7 @@ export function dryRunWith (env) {
   }
 
   return ({ processId, messageTxId, maxProcessAge = DRY_RUN_DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
-    const dryRunHash = cyrb53(JSON.stringify(dryRun));
+    const dryRunHash = cyrb53(JSON.stringify(dryRun))
     const cached = dryRunResultCache.get(dryRunHash)
     if (cached && new Date().getTime() - cached.age <= DRY_RUN_RESULT_MAX_AGE) {
       logger.debug(
@@ -249,8 +249,8 @@ export function dryRunWith (env) {
         return evaluate({ ...ctx, dryRun: true, messages: Readable.from(dryRunMessage()) })
       })
       .map((res) => {
-        let omitted = omit(['Memory'], res.output)
-        let cached ={ age: new Date().getTime(), ctx: omitted }
+        const omitted = omit(['Memory'], res.output)
+        const cached ={ age: new Date().getTime(), ctx: omitted }
         dryRunResultCache.set(dryRunHash, cached, DRY_RUN_RESULT_MAX_AGE)
         return omitted
       })
