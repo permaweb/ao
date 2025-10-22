@@ -250,7 +250,7 @@ export function dryRunWith (env) {
       })
       .map((res) => {
         const omitted = omit(['Memory'], res.output)
-        const cached ={ age: new Date().getTime(), ctx: omitted }
+        const cached = { age: new Date().getTime(), ctx: omitted }
         dryRunResultCache.set(dryRunHash, cached, DRY_RUN_RESULT_MAX_AGE)
         return omitted
       })
