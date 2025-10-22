@@ -175,7 +175,7 @@ export function dryRunWith (env) {
   }
 
   return ({ processId, messageTxId, maxProcessAge = DRY_RUN_DEFAULT_MAX_PROCESS_AGE, dryRun }) => {
-    let dryRunHash = cyrb53(JSON.stringify(dryRun));
+    const dryRunHash = cyrb53(JSON.stringify(dryRun));
     const cached = dryRunResultCache.get(dryRunHash)
     if (cached && new Date().getTime() - cached.age <= DRY_RUN_RESULT_MAX_AGE) {
       logger.debug(
