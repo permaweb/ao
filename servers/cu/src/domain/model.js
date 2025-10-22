@@ -263,6 +263,10 @@ export const domainConfigSchema = z.object({
    * The TTL of the dry run process cache in milliseconds.
    */
   DRY_RUN_PROCESS_CACHE_TTL: positiveIntSchema,
+  /*
+   * Max time to cache a dry run result
+   */
+  DRY_RUN_RESULT_MAX_AGE: positiveIntSchema,
   /**
    * The size of the page to load when fetching messages from the AO SU.
    */
