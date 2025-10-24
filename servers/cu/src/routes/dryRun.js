@@ -39,6 +39,11 @@ export const withDryRunRoutes = app => {
           domain: { BUSY_THRESHOLD, apis: { dryRun } }
         } = req
 
+        if (req.limitRequest(req)) {
+          res.status(429).send({ error: 'Rate limit exceeded' })
+          return
+        }
+
         const input = inputSchema.parse({ processId, messageTxId, maxProcessAge, dryRun: body })
 
         await busyIn(
@@ -48,7 +53,12 @@ export const withDryRunRoutes = app => {
             res.status(202)
             return { message: `Evaluation of process "${input.processId}" to "${input.messageTxId || 'latest'}" is in progress.` }
           }
-        ).then((output) => res.send(output))
+        ).then((output) => {
+          res.send(output.result)
+          if (!output.wasCached) {
+            req.recordRequest(req)
+          }
+        })
       })
     )()
   )

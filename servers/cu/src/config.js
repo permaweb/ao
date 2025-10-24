@@ -47,7 +47,13 @@ const serverConfigSchema = domainConfigSchema.extend({
    */
   UNIT_MODE: z.enum(['cu', 'ru']),
   port: positiveIntSchema,
-  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean())
+  ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean()),
+  /**
+   * Rate limiting settings
+   */
+  RATE_LIMIT_WINDOW: positiveIntSchema,
+  RATE_LIMIT_MAX_REQUESTS: positiveIntSchema,
+  RATE_LIMIT_CLEANUP_INTERVAL: positiveIntSchema
 })
 
 /**
@@ -183,7 +189,10 @@ const CONFIG_ENVS = {
     DRY_RUN_DEFAULT_MAX_PROCESS_AGE: process.env.DRY_RUN_DEFAULT_MAX_PROCESS_AGE || 100,
     DRY_RUN_PROCESS_CACHE_TTL: process.env.DRY_RUN_PROCESS_CACHE_TTL || 2000,
     DRY_RUN_RESULT_MAX_AGE: process.env.DRY_RUN_RESULT_MAX_AGE || 60000,
-    LOAD_MESSAGES_PAGE_SIZE: process.env.LOAD_MESSAGES_PAGE_SIZE || 1000
+    LOAD_MESSAGES_PAGE_SIZE: process.env.LOAD_MESSAGES_PAGE_SIZE || 1000,
+    RATE_LIMIT_WINDOW: process.env.RATE_LIMIT_WINDOW || 60000,
+    RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS || 6,
+    RATE_LIMIT_CLEANUP_INTERVAL: process.env.RATE_LIMIT_CLEANUP_INTERVAL || 1000000
   },
   production: {
     MODE,
@@ -246,7 +255,10 @@ const CONFIG_ENVS = {
     DRY_RUN_DEFAULT_MAX_PROCESS_AGE: process.env.DRY_RUN_DEFAULT_MAX_PROCESS_AGE || 100,
     DRY_RUN_PROCESS_CACHE_TTL: process.env.DRY_RUN_PROCESS_CACHE_TTL || 2000,
     DRY_RUN_RESULT_MAX_AGE: process.env.DRY_RUN_RESULT_MAX_AGE || 60000,
-    LOAD_MESSAGES_PAGE_SIZE: process.env.LOAD_MESSAGES_PAGE_SIZE || 1000
+    LOAD_MESSAGES_PAGE_SIZE: process.env.LOAD_MESSAGES_PAGE_SIZE || 1000,
+    RATE_LIMIT_WINDOW: process.env.RATE_LIMIT_WINDOW || 60000,
+    RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS || 6,
+    RATE_LIMIT_CLEANUP_INTERVAL: process.env.RATE_LIMIT_CLEANUP_INTERVAL || 1000000
   }
 }
 
