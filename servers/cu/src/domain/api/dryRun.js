@@ -182,7 +182,7 @@ export function dryRunWith (env) {
         'Using recently cached dry-run result for dry-run to process "%s"',
         processId
       )
-      return Resolved(cached.ctx)
+      return Resolved({ result: cached.ctx, wasCached: true })
     }
 
     return of({ processId, messageTxId })
@@ -252,7 +252,7 @@ export function dryRunWith (env) {
         const omitted = omit(['Memory'], res.output)
         const cached = { age: new Date().getTime(), ctx: omitted }
         dryRunResultCache.set(dryRunHash, cached, DRY_RUN_RESULT_MAX_AGE)
-        return omitted
+        return { result: omitted, wasCached: false }
       })
   }
 }
