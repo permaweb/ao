@@ -3,6 +3,7 @@ import { __, assoc, identity } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
+import { pullResultFromFileWith } from '../lib/pull-result-file.js'
 import { getCustomCuAddressWith } from '../lib/get-custom-cu-address.js'
 
 export function pushMsgWith ({
@@ -14,11 +15,14 @@ export function pushMsgWith ({
   ALLOW_PUSHES_AFTER,
   ENABLE_PUSH,
   ENABLE_CUSTOM_PUSH,
-  CUSTOM_CU_MAP_FILE_PATH
+  CUSTOM_CU_MAP_FILE_PATH,
+  readResultFromFile,
+  ENABLE_FILE_PUSH
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const getCustomCuAddress = getCustomCuAddressWith({ CUSTOM_CU_MAP_FILE_PATH, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
+  const pullResultFromFile = pullResultFromFileWith({ readResultFromFile, logger })
   const fetchTransactionsAsync = fromPromise(fetchTransactions)
 
   return (ctx) => {
@@ -48,7 +52,12 @@ export function pushMsgWith ({
         }
         return getCuAddress(ctx)
       })
-      .chain(pullResult)
+      .chain((ctx) => { 
+        if (ENABLE_FILE_PUSH && ctx.resultFile) {
+          return pullResultFromFile(ctx)
+        }
+        return pullResult(ctx)
+      })
       .chain((res) => {
         const { msgs, number } = res
         if(msgs.length <= number) {

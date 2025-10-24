@@ -3,6 +3,8 @@ import * as B64js from "base64-js"
 import { randomBytes } from 'node:crypto'
 import { BroadcastChannel } from 'node:worker_threads'
 import cron from 'node-cron'
+import fs from 'fs'
+
 import { apply } from 'ramda'
 import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
@@ -405,6 +407,12 @@ export const createApis = async (ctx) => {
 
   const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL, DISABLE_TRACE: ctx.DISABLE_TRACE }))
 
+  const readResultFromFile = async (pipelineCtx) => {
+    let resultsDir = ctx.RESULT_FILE_DIRECTORY
+    let messageId = pipelineCtx.tx.id
+    return JSON.parse(fs.readFileSync(`${resultsDir}/${messageId}.json`))
+  }
+
   const pushMsgItemLogger = logger.child('pushMsg')
   const pushMsg = pushMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
@@ -415,7 +423,9 @@ export const createApis = async (ctx) => {
     ALLOW_PUSHES_AFTER,
     ENABLE_PUSH: ctx.ENABLE_PUSH,
     ENABLE_CUSTOM_PUSH: ctx.ENABLE_CUSTOM_PUSH,
-    CUSTOM_CU_MAP_FILE_PATH: ctx.CUSTOM_CU_MAP_FILE_PATH
+    ENABLE_FILE_PUSH: ctx.ENABLE_FILE_PUSH,
+    CUSTOM_CU_MAP_FILE_PATH: ctx.CUSTOM_CU_MAP_FILE_PATH,
+    readResultFromFile
   })
 
   const startMessageRecoveryCronLogger = logger.child('messageRecoveryCron')
