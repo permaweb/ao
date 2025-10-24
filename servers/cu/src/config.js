@@ -48,7 +48,7 @@ const serverConfigSchema = domainConfigSchema.extend({
   UNIT_MODE: z.enum(['cu', 'ru']),
   port: positiveIntSchema,
   ENABLE_METRICS_ENDPOINT: z.preprocess((val) => !!val, z.boolean()),
-  /** 
+  /**
    * Rate limiting settings
    */
   RATE_LIMIT_WINDOW: positiveIntSchema,

@@ -39,8 +39,8 @@ export const withDryRunRoutes = app => {
           domain: { BUSY_THRESHOLD, apis: { dryRun } }
         } = req
 
-        if(req.limitRequest(req)) {
-          res.status(429).send({'error': 'Rate limit exceeded'})
+        if (req.limitRequest(req)) {
+          res.status(429).send({ error: 'Rate limit exceeded' })
           return
         }
 
@@ -55,7 +55,7 @@ export const withDryRunRoutes = app => {
           }
         ).then((output) => {
           res.send(output.result)
-          if(!output.wasCached) {
+          if (!output.wasCached) {
             req.recordRequest(req)
           }
         })

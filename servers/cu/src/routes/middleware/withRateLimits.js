@@ -23,11 +23,11 @@ export const createRateLimitMiddleware = (config) => {
   const RATE_LIMIT_MAX_REQUESTS = config.RATE_LIMIT_MAX_REQUESTS
   const RATE_LIMIT_CLEANUP_INTERVAL = config.RATE_LIMIT_CLEANUP_INTERVAL
 
-  if(!RATE_LIMIT_WINDOW || !RATE_LIMIT_MAX_REQUESTS || !RATE_LIMIT_CLEANUP_INTERVAL) {
+  if (!RATE_LIMIT_WINDOW || !RATE_LIMIT_MAX_REQUESTS || !RATE_LIMIT_CLEANUP_INTERVAL) {
     return (handler) => (req, res) => {
-        req.recordRequest = () => {}
-        req.limitRequest = () => {}
-        return handler(req, res)
+      req.recordRequest = () => {}
+      req.limitRequest = () => {}
+      return handler(req, res)
     }
   }
 
