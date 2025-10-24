@@ -110,12 +110,12 @@ export function sendDataItemWith ({
     const recentTraces = await getRecentTraces({ wallet, timestamp: intervalStart, processId: ctx.dataItem.target })
     const walletTracesCount = recentTraces.wallet.length
     console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
-    if (walletTracesCount >= rateLimitAllowance) {
-      logger({ log: `Rate limit exceeded for wallet, ${recentTraces.wallet.length} wallet traces found. Rejecting.` })
-      const error = new Error('Rate limit exceeded')
-      error.code = 429
-      throw error
-    }
+    // if (walletTracesCount >= rateLimitAllowance) {
+    //   logger({ log: `Rate limit exceeded for wallet, ${recentTraces.wallet.length} wallet traces found. Rejecting.` })
+    //   const error = new Error('Rate limit exceeded')
+    //   error.code = 429
+    //   throw error
+    // }
     return Resolved(ctx)
   }
   /**

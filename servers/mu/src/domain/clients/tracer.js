@@ -124,7 +124,7 @@ export function traceWith ({ namespace, db, TRACE_DB_URL, activeTraces, DISABLE_
       /**
        * If we have a messageId or processId, save our trace to the DB.
        */
-      const isRateLimited = log.includes('Rate limit exceeded')
+      const isRateLimited = false
       if ((messageId || processId) && !DISABLE_TRACE && !isRateLimited) {
         createTrace({ messageId, processId, wallet, parentId, ip, type })
       }

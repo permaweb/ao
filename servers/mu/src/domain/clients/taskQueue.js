@@ -111,10 +111,10 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     const recentTraces = await getRecentTraces({ wallet, ip: task.ip, timestamp: intervalStart, processId, isSpawn: task?.type === 'SPAWN' })
     const walletTracesCount = recentTraces.wallet.length
     console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
-    if (walletTracesCount >= rateLimitAllowance) {
-      logger({ log: 'Rate limit exceeded. Skipping enqueueing task.' })
-      return true
-    }
+    // if (walletTracesCount >= rateLimitAllowance) {
+    //   logger({ log: 'Rate limit exceeded. Skipping enqueueing task.' })
+    //   return true
+    // }
     return false
   }
   function createQuery (task, dbId, timestamp) {
