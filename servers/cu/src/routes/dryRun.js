@@ -46,6 +46,9 @@ export const withDryRunRoutes = app => {
 
         const input = inputSchema.parse({ processId, messageTxId, maxProcessAge, dryRun: body })
 
+        // Record all requests upfront (before processing)
+        req.recordRequest(req)
+
         await busyIn(
           BUSY_THRESHOLD,
           dryRun(input).toPromise(),
@@ -55,8 +58,8 @@ export const withDryRunRoutes = app => {
           }
         ).then((output) => {
           res.send(output.result)
-          if (!output.wasCached) {
-            req.recordRequest(req)
+          if (output.wasCached) {
+            req.removeRequest(req)
           }
         })
       })
