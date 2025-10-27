@@ -27,6 +27,7 @@ export const createRateLimitMiddleware = (config) => {
     return (handler) => (req, res) => {
       req.recordRequest = () => {}
       req.limitRequest = () => {}
+      req.removeRequest = () => {}
       return handler(req, res)
     }
   }
@@ -52,6 +53,7 @@ export const createRateLimitMiddleware = (config) => {
 
   /*
    * Log a request in the limit table
+   * Returns the timestamp that was recorded, so it can be removed later
    */
   const recordRequest = (req) => {
     const ip = getClientIp(req)
@@ -60,6 +62,41 @@ export const createRateLimitMiddleware = (config) => {
     const timestamps = requestStore.get(ip) || []
     timestamps.push(now)
     requestStore.set(ip, timestamps)
+
+    // Store the timestamp on the request object so we can remove it later
+    req._rateLimitTimestamp = now
+  }
+
+  /*
+   * Remove a specific request from the limit table by its timestamp
+   * Used to "unrecord" requests that hit the cache
+   */
+  const removeRequest = (req) => {
+    const ip = getClientIp(req)
+    const timestamps = requestStore.get(ip) || []
+
+    // Safety check: ensure the timestamp was recorded on this request
+    if (timestamps.length === 0 || !req._rateLimitTimestamp) {
+      return
+    }
+
+    // Find and remove the specific timestamp for this request
+    const index = timestamps.indexOf(req._rateLimitTimestamp)
+    if (index !== -1) {
+      timestamps.splice(index, 1)
+    } else {
+      // This shouldn't happen, but return if it does
+      return
+    }
+
+    if (timestamps.length === 0) {
+      requestStore.delete(ip)
+    } else {
+      requestStore.set(ip, timestamps)
+    }
+
+    // Clean up the timestamp from the request object
+    delete req._rateLimitTimestamp
   }
 
   /*
@@ -88,6 +125,7 @@ export const createRateLimitMiddleware = (config) => {
    */
   return (handler) => (req, res) => {
     req.recordRequest = recordRequest
+    req.removeRequest = removeRequest
     req.limitRequest = limitRequest
     return handler(req, res)
   }
