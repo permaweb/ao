@@ -509,6 +509,12 @@ pub async fn write_item(
         return Err("Data-Protocol tag not present".to_string());
     }
 
+    if let Some(invalid_tag) = tags.iter().find(
+        |tag| tag.name.ends_with("+link") || tag.value.ends_with("+link")
+    ) {
+        return Err(format!("Tag {} cannot contain +link", invalid_tag.name));
+    }
+
     let type_tag = match type_tag {
         Some(t) => t,
         None => return Err("Invalid Type Tag".to_string()),
