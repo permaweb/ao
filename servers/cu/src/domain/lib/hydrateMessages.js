@@ -106,7 +106,15 @@ export function maybeMessageIdWith ({ logger }) {
        *
        * See: https://github.com/permaweb/ao/issues/730
        */
-      .then(() => createData(isNil(data) ? '' : data, signer, { tags, target, anchor }))
+      .then(() => {
+        // Check if anchor needs to be decoded
+        let processedAnchor = anchor
+        if (anchor && typeof anchor === 'string' && Buffer.byteLength(anchor, 'utf8') !== 32) {
+          // Decode base64url to get 32 bytes
+          processedAnchor = Buffer.from(anchor, 'base64url')
+        }
+        return createData(isNil(data) ? '' : data, signer, { tags, target, anchor: processedAnchor })
+      })
       .then((dataItem) => dataItem.getSignatureData())
       .then(bytesToBase64)
   }
