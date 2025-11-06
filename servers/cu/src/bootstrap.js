@@ -223,9 +223,29 @@ export const createApis = async (ctx) => {
   ctx.logger('Max dry-run worker threads set to %s', maxDryRunWorkerTheads)
   ctx.logger('Max dry-run worker thread pool queue size set to %s', ctx.WASM_EVALUATION_WORKERS_DRY_RUN_MAX_QUEUE)
 
+  /**
+ * TODO: Should this just be a field on stats to call?
+ */
+  const metrics = {
+    contentType: _metrics.contentType,
+    compute: fromPromise(() => _metrics.metrics())
+  }
+
+  const evaluationCounter = MetricsClient.counterWith({})({
+    name: 'ao_process_total_evaluations',
+    description: 'The total number of evaluations on a CU',
+    labelNames: ['stream_type', 'message_type', 'process_error']
+  })
+
+  const gatewayCounter = MetricsClient.counterWith({})({
+    name: 'ao_process_total_graphql_queries',
+    description: 'The total number of GraphQL queries on a CU',
+    labelNames: ['query_name', 'result']
+  })
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
     readProcessMemoryFile,
+    gatewayCounter,
     queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: ctx.logger }),
     queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger: ctx.logger }),
     hashWasmMemory: WasmClient.hashWasmMemoryWith({ logger: ctx.logger }),
@@ -293,47 +313,27 @@ export const createApis = async (ctx) => {
     loadMemoryUsage: () => process.memoryUsage(),
     loadProcessCacheUsage: () => wasmMemoryCache.data.loadProcessCacheUsage()
   })
-  /**
-   * TODO: Should this just be a field on stats to call?
-   */
-  const metrics = {
-    contentType: _metrics.contentType,
-    compute: fromPromise(() => _metrics.metrics())
-  }
-
-  const evaluationCounter = MetricsClient.counterWith({})({
-    name: 'ao_process_total_evaluations',
-    description: 'The total number of evaluations on a CU',
-    labelNames: ['stream_type', 'message_type', 'process_error']
-  })
-
-  /**
-   * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
-   */
-  // const gasCounter = MetricsClient.counterWith({})({
-  //   name: 'total_gas_used',
-  //   description: 'The total number of gas used on a CU',
-  //   labelNames: ['processId', 'cron', 'dryRun', 'error']
-  // })
 
   const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
 
   const sharedDepsCopy = (logger) => {
     return {
-      loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
+      loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ gatewayCounter, fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
       findProcess: AoProcessClient.findProcessWith({ db, logger }),
       findLatestProcessMemory: async () => {},
       saveLatestProcessMemory: async () => {},
       evaluationCounter,
+      gatewayCounter,
       // gasCounter,
       saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
       findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
       saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
       findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
       saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
-      loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
+      getLatestBlock: AoBlockClient.getLatestBlockWith({ ARWEAVE_URL: ctx.ARWEAVE_URL }),
+      loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger, gatewayCounter }),
       findModule: AoModuleClient.findModuleWith({ db, logger }),
       saveModule: AoModuleClient.saveModuleWith({ db, logger }),
       loadEvaluator: AoModuleClient.evaluatorWith({
@@ -385,7 +385,7 @@ export const createApis = async (ctx) => {
 
   const sharedDeps = (logger) => {
     return {
-      loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
+      loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ gatewayCounter, fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
       isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
       findProcess: AoProcessClient.findProcessWith({ db, logger }),
@@ -397,6 +397,7 @@ export const createApis = async (ctx) => {
         findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db }),
         findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db }),
         address,
+        gatewayCounter,
         queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
         queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
         PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
@@ -425,7 +426,8 @@ export const createApis = async (ctx) => {
       saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
       findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
       saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
-      loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
+      getLatestBlock: AoBlockClient.getLatestBlockWith({ ARWEAVE_URL: ctx.ARWEAVE_URL }),
+      loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger, gatewayCounter }),
       findModule: AoModuleClient.findModuleWith({ db, logger }),
       saveModule: AoModuleClient.saveModuleWith({ db, logger }),
       loadEvaluator: AoModuleClient.evaluatorWith({
