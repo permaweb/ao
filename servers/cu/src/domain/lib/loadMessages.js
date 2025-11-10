@@ -349,13 +349,13 @@ function reconcileBlocksWith ({ logger, loadBlocksMeta, findBlocks, saveBlocks, 
           .map((fromDb) => findMissingBlocksIn(fromDb, { min, maxTimestamp }))
           .chain((missingRange) => {
             if (!missingRange) return Resolved(fromDb)
-            const latestBlocksMatch = missingRange.min === fromDb[fromDb.length - 1].height
+            const latestBlocksMatch = missingRange?.min === fromDb?.[fromDb?.length - 1]?.height
             if (latestBlocksMatch) {
               logger('Latest blocks match at height %d. Checking Arweave for latest block', missingRange.min)
               return of()
                 .chain(getLatestBlock)
                 .chain((latestBlock) => {
-                  if (latestBlock === missingRange.min) {
+                  if (latestBlock === missingRange?.min) {
                     logger('Latest block matches missing range min height %d. Bypassing GQL call', missingRange.min)
                     return Resolved(fromDb)
                   }
