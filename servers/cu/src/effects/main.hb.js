@@ -139,6 +139,18 @@ export const createEffects = async (ctx) => {
 
   const gauge = MetricsClient.gaugeWith({})
 
+  const evaluationCounter = MetricsClient.counterWith({})({
+    name: 'ao_process_total_evaluations',
+    description: 'The total number of evaluations on a CU',
+    labelNames: ['stream_type', 'message_type', 'process_error']
+  })
+
+  const gatewayCounter = MetricsClient.counterWith({})({
+    name: 'ao_process_total_graphql_queries',
+    description: 'The total number of GraphQL queries on a CU',
+    labelNames: ['query_name', 'result']
+  })
+
   const readProcessMemoryFile = AoProcessClient.readProcessMemoryFileWith({
     DIR: ctx.PROCESS_MEMORY_CACHE_FILE_DIR,
     readFile
@@ -193,6 +205,7 @@ export const createEffects = async (ctx) => {
   const saveCheckpoint = AoProcessClient.saveCheckpointWith({
     address,
     readProcessMemoryFile,
+    gatewayCounter,
     queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger: ctx.logger }),
     queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger: ctx.logger }),
     hashWasmMemory: WasmClient.hashWasmMemoryWith({ logger: ctx.logger }),
@@ -258,12 +271,6 @@ export const createEffects = async (ctx) => {
   const loadMemoryUsage = () => process.memoryUsage()
   const loadProcessCacheUsage = () => wasmMemoryCache.data.loadProcessCacheUsage()
 
-  const evaluationCounter = MetricsClient.counterWith({})({
-    name: 'ao_process_total_evaluations',
-    description: 'The total number of evaluations on a CU',
-    labelNames: ['stream_type', 'message_type', 'process_error']
-  })
-
   /**
    * TODO: Gas can grow to a huge number. We need to make sure this doesn't crash when that happens
    */
@@ -276,7 +283,7 @@ export const createEffects = async (ctx) => {
   const BLOCK_GRAPHQL_ARRAY = ctx.GRAPHQL_URLS.length > 0 ? ctx.GRAPHQL_URLS : [ctx.GRAPHQL_URL]
 
   const common = (logger) => ({
-    loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
+    loadTransactionMeta: ArweaveClient.loadTransactionMetaWith({ gatewayCounter, fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
     loadTransactionData: ArweaveClient.loadTransactionDataWith({ fetch: ctx.fetch, ARWEAVE_URL: ctx.ARWEAVE_URL, logger }),
     isProcessOwnerSupported: AoProcessClient.isProcessOwnerSupportedWith({ ALLOW_OWNERS: ctx.ALLOW_OWNERS }),
     findProcess: AoProcessClient.findProcessWith({ db, logger }),
@@ -288,6 +295,7 @@ export const createEffects = async (ctx) => {
       findFileCheckpointBefore: AoProcessClient.findFileCheckpointBeforeWith({ db }),
       findRecordCheckpointBefore: AoProcessClient.findRecordCheckpointBeforeWith({ db }),
       address,
+      gatewayCounter,
       queryGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.GRAPHQL_URL, logger }),
       queryCheckpointGateway: ArweaveClient.queryGatewayWith({ fetch: ctx.fetch, GRAPHQL_URL: ctx.CHECKPOINT_GRAPHQL_URL, logger }),
       PROCESS_IGNORE_ARWEAVE_CHECKPOINTS: ctx.PROCESS_IGNORE_ARWEAVE_CHECKPOINTS,
@@ -307,12 +315,14 @@ export const createEffects = async (ctx) => {
       logger
     }),
     evaluationCounter,
+    gatewayCounter,
     // gasCounter,
     saveProcess: AoProcessClient.saveProcessWith({ db, logger }),
     findEvaluation: AoEvaluationClient.findEvaluationWith({ db, logger }),
     saveEvaluation: AoEvaluationClient.saveEvaluationWith({ db, logger }),
     findBlocks: AoBlockClient.findBlocksWith({ db, logger }),
     saveBlocks: AoBlockClient.saveBlocksWith({ db, logger }),
+    getLatestBlock: AoBlockClient.getLatestBlockWith({ ARWEAVE_URL: ctx.ARWEAVE_URL }),
     loadBlocksMeta: AoBlockClient.loadBlocksMetaWith({ fetch: ctx.fetch, GRAPHQL_URLS: BLOCK_GRAPHQL_ARRAY, pageSize: 90, logger }),
     findModule: AoModuleClient.findModuleWith({ db, logger }),
     saveModule: AoModuleClient.saveModuleWith({ db, logger }),
@@ -343,6 +353,7 @@ export const createEffects = async (ctx) => {
     loadTimestamp: HbClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: HbClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: HbClient.loadMessagesWith({
+      gatewayCounter,
       hashChain: (...args) => hashChainWorker.exec('hashChain', args),
       fetch: ctx.fetch,
       pageSize: 1000,

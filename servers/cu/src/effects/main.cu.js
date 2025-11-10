@@ -376,6 +376,7 @@ export const createEffects = async (ctx) => {
     loadTimestamp: AoSuClient.loadTimestampWith({ fetch: ctx.fetch, logger }),
     loadProcess: AoSuClient.loadProcessWith({ fetch: ctx.fetch, logger }),
     loadMessages: AoSuClient.loadMessagesWith({
+      gatewayCounter,
       hashChain: (...args) => hashChainWorker.exec('hashChain', args),
       fetch: ctx.fetch,
       pageSize: 1000,
