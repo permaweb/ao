@@ -77,12 +77,11 @@ export function spawnWith(deps) {
       const params = {
         path: '/push',
         device: 'process@1.0',
-        scheduler: scheduler,
-        'scheduler-location': scheduler,
         'scheduler-device': 'scheduler@1.0',
         'push-device': 'push@1.0',
         'execution-device': 'genesis-wasm@1.0',
         Authority: authority,
+        Scheduler: scheduler,
         Module: module,
         data: getData(args),
         ...getTags(args),
