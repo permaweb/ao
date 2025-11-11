@@ -792,6 +792,7 @@ export function findLatestProcessMemoryWith ({
   findFileCheckpointBefore,
   findRecordCheckpointBefore,
   address,
+  gatewayCounter,
   queryGateway,
   queryCheckpointGateway,
   loadTransactionData,
@@ -1288,6 +1289,7 @@ export function findLatestProcessMemoryWith ({
       })
       .map(path(['data', 'transactions', 'edges']))
       .chain((nonPreferredCheckpoints) => {
+        gatewayCounter.inc(1, { query_name: 'GetAoProcessCheckpoints', result: 'success' })
         if (isEmpty(PROCESS_CHECKPOINT_PREFERRED_OWNERS)) {
           return of({ checkpoints: nonPreferredCheckpoints, preferredCheckponts: [] })
         }
@@ -1303,6 +1305,7 @@ export function findLatestProcessMemoryWith ({
           })
           .map(path(['data', 'transactions', 'edges']))
           .map((preferredCheckponts) => {
+            gatewayCounter.inc(1, { query_name: 'GetAoProcessCheckpoints', result: 'success' })
             return {
               checkpoints: nonPreferredCheckpoints,
               preferredCheckponts
@@ -1602,6 +1605,7 @@ export function saveCheckpointWith ({
   readProcessMemoryFile,
   queryCheckpointGateway,
   queryGateway,
+  gatewayCounter,
   hashWasmMemory,
   buildAndSignDataItem,
   uploadDataItem,
@@ -1886,6 +1890,7 @@ export function saveCheckpointWith ({
       }))
       .map(path(['data', 'transactions', 'edges', '0']))
       .chain((checkpoint) => {
+        gatewayCounter.inc(1, { query_name: 'GetAoProcessCheckpoints', result: 'success' })
         const createCheckpointDataItem = createCheckpointDataItemWith({ CU_IDENTIFIER })
         if (checkpoint) {
           if (!Array.isArray(checkpoint.node.tags)) {
