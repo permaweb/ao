@@ -749,6 +749,9 @@ describe('ao-process', () => {
 
           return { data: { transactions: { edges } } }
         },
+        gatewayCounter: {
+          inc: () => {}
+        },
         queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
         loadTransactionData: async (id) => {
           assert.ok(id.includes('tx-123-'))
@@ -1320,6 +1323,9 @@ describe('ao-process', () => {
           findRecordCheckpointBefore: async () => assert.fail('should not call if found in cache'),
           address: async () => assert.fail('should not call if found in file checkpoint'),
           queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
+          gatewayCounter: {
+            inc: () => {}
+          },
           queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
           loadTransactionData: async (id) => {
             assert.equal(id, 'tx-123')
@@ -1361,6 +1367,9 @@ describe('ao-process', () => {
           address: async () => assert.fail('should not call if found in file checkpoint'),
           queryGateway: async () => assert.fail('should not call if found in file checkpoint'),
           queryCheckpointGateway: async () => assert.fail('should not call if file checkpoint'),
+          gatewayCounter: {
+            inc: () => {}
+          },
           loadTransactionData: async (id) => {
             assert.equal(id, 'tx-123')
             return new Response(Readable.toWeb(Readable.from(zipped)))
@@ -1417,6 +1426,9 @@ describe('ao-process', () => {
             }
           }),
           queryCheckpointGateway: async () => assert.fail('should not call if default gateway is successful'),
+          gatewayCounter: {
+            inc: () => {}
+          },
           loadTransactionData: async (id) => {
             assert.ok(id.includes('tx-123-'))
             return new Response(Readable.toWeb(Readable.from(zipped)))
@@ -1786,7 +1798,10 @@ describe('ao-process', () => {
   describe('saveCheckpointWith', () => {
     const logger = createTestLogger({ name: 'saveCheckpointWith' })
     const depsAll = {
-      logger
+      logger,
+      gatewayCounter: {
+        inc: () => {}
+      }
     }
 
     describe('should create an arweave checkpoint and file checkpoint', async () => {

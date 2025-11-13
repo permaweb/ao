@@ -136,6 +136,9 @@ describe('ao-block', () => {
     test('load the block data across multiple pages', async () => {
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch,
+        gatewayCounter: {
+          inc: () => {}
+        },
         GRAPHQL_URLS,
         /**
          * Weird page size, so we know we are chopping off the excess
@@ -164,6 +167,9 @@ describe('ao-block', () => {
           errorCount++
           throw Error('Fetch error!')
         },
+        gatewayCounter: {
+          inc: () => {}
+        },
         GRAPHQL_URLS,
         pageSize: 17,
         logger
@@ -182,6 +188,9 @@ describe('ao-block', () => {
         fetch: (url) => {
           assert.equal(url, GRAPHQL_URLS[errorsCount % GRAPHQL_URLS.length])
           throw Error('Fetch error!')
+        },
+        gatewayCounter: {
+          inc: () => {}
         },
         GRAPHQL_URLS,
         pageSize: 17,
@@ -229,6 +238,9 @@ describe('ao-block', () => {
       const loadBlocksMeta = loadBlocksMetaSchema.implement(loadBlocksMetaWith({
         fetch: () => {
           throw Error('Fetch error!')
+        },
+        gatewayCounter: {
+          inc: () => {}
         },
         GRAPHQL_URLS,
         pageSize: 17,
@@ -333,6 +345,9 @@ describe('ao-block', () => {
               }
             })
           }
+        },
+        gatewayCounter: {
+          inc: () => {}
         },
         GRAPHQL_URLS,
         pageSize: 5,
