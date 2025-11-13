@@ -13,6 +13,9 @@ describe('arweave', () => {
     test('load transaction meta', async () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
         loadTransactionMetaWith({
+          gatewayCounter: {
+            inc: () => {}
+          },
           fetch: (url, options) => {
             const body = JSON.parse(options.body)
             assert.deepStrictEqual(body.variables, {
@@ -41,6 +44,9 @@ describe('arweave', () => {
       const loadTransactionMeta = loadTransactionMetaSchema.implement(
         loadTransactionMetaWith({
           GRAPHQL_URL,
+          gatewayCounter: {
+            inc: () => {}
+          },
           fetch: async (url, options) => {
             assert.equal(url, GRAPHQL_URL)
             const body = JSON.parse(options.body)
