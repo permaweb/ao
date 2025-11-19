@@ -66,7 +66,7 @@ export function spawnWith(deps) {
     if (!scheduler) throw new Error('No scheduler provided')
     if (!module) throw new Error('No module provided')
 
-    const authority = process.env.AUTHORITY || scheduler
+    const authority = process.env.AUTHORITY || args.authority || scheduler
 
     debugLog('info', 'Node URL:', deps.url)
     debugLog('info', 'Scheduler:', scheduler)
@@ -93,21 +93,15 @@ export function spawnWith(deps) {
 
       try {
         const processId = response.headers.get('process')
-
         debugLog('info', 'Process ID:', processId)
 
-        if (processId) {
-          await retryInitPush(deps, processId, 10)
-
-          return processId
-        }
-
-        return null;
+        if (processId) return processId;
+        else throw new Error('Error spawning process')
       } catch (e) {
-        throw new Error(e.message ?? 'Error spawning mainnet process')
+        throw new Error(e.message ?? 'Error spawning process')
       }
     } catch (e) {
-      throw new Error(e.message ?? 'Error spawning mainnet process')
+      throw new Error(e.message ?? 'Error spawning process')
     }
   }
 }
@@ -131,9 +125,9 @@ export function messageWith(deps) {
         if (args.opts?.fullResponse) return convertToLegacyOutput(parsedResponse)
         else return parsedResponse.slot
       }
-      return null
+      else throw new Error('Error sending message')
     } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
+      throw new Error(e.message ?? 'Error sending message')
     }
   }
 }
@@ -153,9 +147,9 @@ export function resultWith(deps) {
         const parsedResponse = await response.json()
         return convertToLegacyOutput(parsedResponse)
       }
-      return null
+      else throw new Error('Error getting result')
     } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
+      throw new Error(e.message ?? 'Error getting result')
     }
   }
 }
@@ -195,14 +189,14 @@ export function resultsWith(deps) {
             }
           }
 
-          return null
+          else throw new Error('Error getting results')
         } catch (e) {
           throw new Error(e.message ?? 'Error getting current process slot')
         }
       }
-      return null
+      else throw new Error('Error getting results')
     } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
+      throw new Error(e.message ?? 'Error getting results')
     }
   }
 }
@@ -228,14 +222,14 @@ export function dryrunWith(deps) {
         const parsedResponse = await response.json()
         return convertToLegacyOutput(parsedResponse)
       }
-      return null
+      else throw new Error('Error running dryrun')
     } catch (e) {
-      throw new Error(e.message ?? 'Error sending mainnet message')
+      throw new Error(e.message ?? 'Error running dryrun')
     }
   }
 }
 
-async function retryInitPush(deps, processId, maxAttempts = 10) {
+async function _retryInitPush(deps, processId, maxAttempts = 10) {
   const params = {
     path: `/${processId}/push`,
     target: processId,

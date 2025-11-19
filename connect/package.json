@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@dha-team/arbundles": "1.0.3",
-    "@permaweb/ao-core-libs": "0.0.6",
+    "@permaweb/ao-core-libs": "0.0.7",
     "@permaweb/ao-scheduler-utils": "~0.0.25",
     "@permaweb/protocol-tag-utils": "~0.0.2",
     "axios": "^1.7.9",
