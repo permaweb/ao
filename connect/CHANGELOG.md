@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.91](https://github.com/permaweb/ao/compare/connect@v0.0.90...connect@v0.0.91) (2025-11-28)
+
+
+### Features
+
+* add full response opt to message function, add result function ([38b2c71](https://github.com/permaweb/ao/commit/38b2c711d083729a1b64b675def8fd9e1e8bf821))
+* add results ([8cf2b13](https://github.com/permaweb/ao/commit/8cf2b137b04582705ccb468594c82a6849870721))
+* **connect:** ao-core dryrun ([6f03c98](https://github.com/permaweb/ao/commit/6f03c98349bd8e4da2f02b6e43650ac2cc41aca8))
+
+
+### Bug Fixes
+
+* **connect:** hb-core draft with new hb compat ([4be0b2c](https://github.com/permaweb/ao/commit/4be0b2cb815d5a84b864b4910402bbd12d44f1b6))
+* **connect:** remove accidental import in ao-core client ([02bb29d](https://github.com/permaweb/ao/commit/02bb29de164b37d006808cbfcc01e017c8f5c8b0))
+* **connect:** remove serialize json from results call ([86be173](https://github.com/permaweb/ao/commit/86be1734e010f77f9b834eba0013e072285f5084))
+* **connect:** update hb dryrun with new path ([d36a8f7](https://github.com/permaweb/ao/commit/d36a8f7ebb3292df5592a8baee52a15ff8407eb9))
+* current slot response body type ([456de06](https://github.com/permaweb/ao/commit/456de0655581350bc8bb2f049f170d186172496e))
+* remove seralize json from requests ([1a5b6db](https://github.com/permaweb/ao/commit/1a5b6db4447e6da5783e2bd084701b06a0191d6f))
+
 ## [0.0.90](https://github.com/permaweb/ao/compare/connect@v0.0.89...connect@v0.0.90) (2025-08-21)
 
 ## [0.0.89](https://github.com/permaweb/ao/compare/connect@v0.0.88...connect@v0.0.89) (2025-08-11)
