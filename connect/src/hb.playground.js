@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { describe, test, before } from 'node:test'
-// import * as assert from 'node:assert'
+import * as assert from 'node:assert'
 import { tmpdir } from 'node:os'
 import { writeFileSync, readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
@@ -45,6 +45,10 @@ describe('hb playground', () => {
   const HB_URL = isLocal ? 'http://localhost:8734' : 'https://scheduler.forward.computer'
   describe('HyperBEAM mode', () => {
     test('should relay the message through HyperBEAM', async () => {
+      const pid = 'C1YcmYARIs5Tjx5CVqM1TH62IBxust8TfhtfHng8DI0'
+      const tags = [
+        { name: 'Action', value: 'Info' }
+      ]
       const wallet = JSON.parse(readFileSync(tmpWallet).toString())
       // Spawn process using legacy MU
 

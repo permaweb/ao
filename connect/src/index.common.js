@@ -1,9 +1,11 @@
 import { connect as schedulerUtilsConnect, locate } from '@permaweb/ao-scheduler-utils'
 
+import AOCore from '@permaweb/ao-core-libs'
+
+import * as CoreClient from './client/ao-core.js'
 import * as MuClient from './client/ao-mu.js'
 import * as CuClient from './client/ao-cu.js'
 import * as GatewayClient from './client/gateway.js'
-import * as HbClient from './client/hb.js'
 import * as SuClient from './client/ao-su.js'
 
 import { createLogger } from './logger.js'
@@ -11,7 +13,6 @@ import { createLogger } from './logger.js'
 import { messagesWith } from './lib/messages/index.js'
 import { messageIdWith } from './lib/message-id/index.js'
 import { processIdWith } from './lib/process-id/index.js'
-import { requestWith } from './lib/request/index.js'
 import { resultWith } from './lib/result/index.js'
 import { messageWith, prepareWith, signedMessageWith } from './lib/message/index.js'
 import { spawnWith } from './lib/spawn/index.js'
@@ -21,7 +22,6 @@ import { resultsWith } from './lib/results/index.js'
 import { dryrunWith } from './lib/dryrun/index.js'
 import { assignWith } from './lib/assign/index.js'
 import { joinUrl } from './lib/utils.js'
-// import { getOperator, getNodeBalance } from './lib/payments/index.js'
 
 // eslint-disable-next-line no-unused-vars
 import { Types } from './dal.js'
@@ -29,12 +29,7 @@ import { Types } from './dal.js'
 const DEFAULT_GATEWAY_URL = 'https://arweave.net'
 const DEFAULT_MU_URL = 'https://mu.ao-testnet.xyz'
 const DEFAULT_CU_URL = 'https://cu.ao-testnet.xyz'
-const DEFAULT_RELAY_URL = 'http://relay.ao-hb.xyz'
-// eslint-disable-next-line no-unused-vars
-const DEFAULT_AO_URL = 'http://m2.ao.computer'
-const DEFAULT_RELAY_CU_URL = 'http://cu.s451-comm3-main.xyz'
-const DEFAULT_RELAY_MU_URL = 'http://mu.s451-comm3-main.xyz'
-const DEFAULT_DEVICE = 'relay@1.0'
+const DEFAULT_HB_URL = 'https://tee-6.forward.computer'
 
 const defaultFetch = fetch
 
@@ -43,10 +38,10 @@ export { serializeCron } from './lib/serializeCron/index.js'
 /**
  * @param {{ createDataItemSigner: (wallet:any) => Types['signer'], createSigner: any }}
  */
-export function connectWith({ createDataItemSigner, createSigner }) {
+export function connectWith ({ createDataItemSigner, createSigner }) {
   const _logger = createLogger()
 
-  function legacyMode({
+  function legacyMode ({
     MODE,
     GRAPHQL_URL,
     GRAPHQL_MAX_RETRIES,
@@ -204,23 +199,26 @@ export function connectWith({ createDataItemSigner, createSigner }) {
     }
   }
 
-  function mainnetMode({
+  function mainnetMode ({
     MODE,
     signer,
-    GRAPHQL_URL,
-    device = DEFAULT_DEVICE,
-    URL = DEFAULT_RELAY_URL,
-    MU_URL = DEFAULT_RELAY_MU_URL,
-    CU_URL = DEFAULT_RELAY_CU_URL,
+    URL = DEFAULT_HB_URL,
+    SCHEDULER,
     fetch = defaultFetch
   }) {
     const logger = _logger.child('mainnet-process')
     logger('Mode Activated %s', '🐲')
 
-    if (!signer) { throw new Error('mainnet mode requires providing a signer to connect()') }
+    const deps = {}
+    if (signer) deps.signer = signer
+    if (URL) deps.url = URL
+
+    const aoCore = AOCore.init(deps)
+
+    const coreClientDeps = { aoCore, ...deps }
+    if (SCHEDULER) coreClientDeps.scheduler = SCHEDULER
 
     const mainnetDataItemSigner = signer ? () => signer : createDataItemSigner
-
     const mainnetSigner = signer ? () => signer : createSigner
 
     const getMessageById = messageIdWith({
@@ -238,29 +236,26 @@ export function connectWith({ createDataItemSigner, createSigner }) {
       })
     })
 
-    const requestLogger = logger.child('request')
+    const request = CoreClient.requestWith(coreClientDeps)
+    const spawn = CoreClient.spawnWith(coreClientDeps)
+    const message = CoreClient.messageWith(coreClientDeps)
+    const result = CoreClient.resultWith(coreClientDeps)
+    const results = CoreClient.resultsWith(coreClientDeps)
+    const dryrun = CoreClient.dryrunWith(coreClientDeps)
 
-    const request = requestWith({
-      signer,
-      logger: requestLogger,
-      MODE,
-      method: 'GET',
-      request: HbClient.requestWith({
-        fetch: defaultFetch,
-        logger: requestLogger,
-        HB_URL: URL,
-        signer
-      })
-    })
-
-
-    return { MODE: 'mainnet', 
-      request, 
+    return {
+      MODE: 'mainnet',
+      spawn,
+      message,
+      result,
+      results,
+      dryrun,
+      request,
       createSigner: mainnetSigner,
       createDataItemSigner: mainnetDataItemSigner,
       getMessages,
       getLastSlot,
-      getMessageById,
+      getMessageById
       /**
       * do we want helpers for payments?
       *
@@ -309,6 +304,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
    * @property {number} [GRAPHQL_RETRY_BACKOFF] - the initial backoff, in milliseconds (moot if GRAPHQL_MAX_RETRIES is set to 0)
    * @property {string} [MU_URL] - the url of the desried ao Messenger Unit. Also used as the relay MU in 'relay' mode
    * @property {string} [CU_URL] - the url of the desried ao Compute Unit. Also used as the relay CU in 'relay' mode
+   * @property {string} [SCHEDULER] - the url of the desried Scheduler Unit
    *
    * @typedef ConnectArgsMainnet
    * @property {Types['signer']} [signer] - the signer used to sign Data items and HTTP messages.
@@ -329,7 +325,7 @@ export function connectWith({ createDataItemSigner, createSigner }) {
    * @param {ConnectArgs} args
    * @returns {ReturnType<typeof legacyMode> | ReturnType<typeof mainnetMode>}
    */
-  function connect(args = {}) {
+  function connect (args = {}) {
     let { GRAPHQL_URL, GATEWAY_URL = DEFAULT_GATEWAY_URL, ...restArgs } = args
 
     if (!GRAPHQL_URL) { GRAPHQL_URL = joinUrl({ url: GATEWAY_URL, path: '/graphql' }) }

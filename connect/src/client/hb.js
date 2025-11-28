@@ -113,6 +113,7 @@ export function requestWith(args) {
   const logger = _logger.child('request')
 
   return async function (fields) {
+    console.log('REQUEST FIELDS', fields)
     const { path, method, ...restFields } = fields
 
     signingFormat = fields['signing-format'] || fields.signingFormat
@@ -155,6 +156,7 @@ export function requestWith(args) {
 
       verboseLog('Sending signed message to HB: %o')
 
+      console.log('SENDING REQUEST', fetch_req)
       // Step 4: Send the request
       const res = await fetch(fetch_req.url, {
         method: fetch_req.method,
