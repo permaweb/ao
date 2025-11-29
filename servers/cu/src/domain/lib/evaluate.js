@@ -192,13 +192,35 @@ export function evaluateWith (env) {
               continue
             }
 
+            const skip = message.Skip === 'true'
+            if (skip) logger(`Skipping message "${name}" because 'Skip' tag is set to 'true'`)
+
             prev = await Promise.resolve(prev)
               .then((prev) =>
                 Promise.resolve(prev.Memory)
                   /**
                    * Where the actual evaluation is performed
                    */
-                  .then((Memory) => ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal }))
+                  .then((Memory) => {
+                    // console.dir({ m: 'Evaluating message', message }, {depth:null})
+                    if (skip) {
+                      return {
+                        Memory,
+                        Error: undefined,
+                        Messages: [],
+                        Assignments: [],
+                        Spawns: [],
+                        Output: {
+                          data: '',
+                          prompt: '',
+                          print: false
+                        },
+                        Patches: [],
+                        GasUsed: 0
+                      }
+                    }
+                    return ctx.evaluator({ first, noSave, name, deepHash, cron, ordinate, isAssignment, processId: ctx.id, Memory, message, AoGlobal })
+                  })
                   /**
                    * These values are folded,
                    * so that we can potentially update the process memory cache

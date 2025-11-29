@@ -182,6 +182,7 @@ export const mapNode = (type) => pipe(
             Target: path(['Process']),
             Epoch: pipe(path(['Epoch']), parseInt),
             Nonce: pipe(path(['Slot'])(tags) ? path(['Slot']) : path(['Nonce']), parseInt),
+            Skip: pathOr('false', ['Skip']),
             Timestamp: pipe(path(['Timestamp']), parseInt),
             'Block-Height': pipe(
               /**
@@ -453,7 +454,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
             body.edges.length === (+to - +from + 1) &&
             +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce' || t.name === 'Slot')?.value === +from
           if (bodyIsValid) return body
-          return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
+          throw new Error('Body is not valid: would attempt to fetch from scheduler in loadMessages')
         },
         { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
       )
@@ -605,15 +606,13 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
 
 export const loadMessageMetaWith = ({ fetch, logger }) => {
   return async ({ suUrl, processId, messageUid, body }) => {
-    const params = toParams({ processId, to: messageUid, from: messageUid, pageSize: 1 })
-
     return backoff(
       () => {
         const bodyIsValid = body &&
           body.edges.length === 1 &&
           +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce' || t.name === 'Slot')?.value === +messageUid
         if (bodyIsValid) return body
-        return fetch(`${suUrl}/~scheduler@1.0/schedule?${params.toString()}`).then(okRes)
+        throw new Error('Body is not valid: would attempt to fetch from scheduler in loadMessageMeta')
       },
       { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
     )
