@@ -126,7 +126,8 @@ export function dryRunWith (env) {
            * So we explicitly set cron to undefined, for posterity
            */
           cron: undefined,
-          needsOnlyMemory: true
+          needsOnlyMemory: true,
+          dryRun: true
         }).map((res) => {
           const cached = { age: new Date().getTime(), ctx: res }
           /**

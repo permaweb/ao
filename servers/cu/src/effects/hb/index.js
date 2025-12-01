@@ -431,7 +431,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
    * When the currently fetched page is drained, the next page is fetched
    * dynamically
    */
-  function fetchAllPages ({ suUrl, processId, isColdStart, from, to, body }) {
+  function fetchAllPages ({ suUrl, processId, isColdStart, from, to, body, dryRun }) {
     /**
      * The HB SU 'from' and 'to' are both inclusive.
      * So when we pass from (which is the cached most recent evaluated message)
@@ -454,9 +454,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
             body.edges.length === (+to - +from + 1) &&
             +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce' || t.name === 'Slot')?.value === +from
           if (bodyIsValid) return body
-          throw new Error('Body is not valid: would attempt to fetch from scheduler in loadMessages')
+          if (!dryRun) throw new Error('Body is not valid: would attempt to fetch from scheduler in loadMessages')
+          return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
         },
-        { maxRetries: 5, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
+        { maxRetries: 1, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
       )
     }
 
@@ -582,10 +583,10 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
     .then(({
       suUrl, processId, block: processBlock, owner: processOwner, tags: processTags,
       moduleId, moduleOwner, moduleTags, fromOrdinate, toOrdinate, assignmentId, hashChain,
-      isColdStart, body
+      isColdStart, body, dryRun
     }) => {
       return [
-        Readable.from(fetchAllPages({ suUrl, processId, isColdStart, from: fromOrdinate, to: toOrdinate, body })()),
+        Readable.from(fetchAllPages({ suUrl, processId, isColdStart, from: fromOrdinate, to: toOrdinate, body, dryRun })()),
         Transform.from(mapAoMessage({
           processId,
           processBlock,
@@ -614,7 +615,7 @@ export const loadMessageMetaWith = ({ fetch, logger }) => {
         if (bodyIsValid) return body
         throw new Error('Body is not valid: would attempt to fetch from scheduler in loadMessageMeta')
       },
-      { maxRetries: 5, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
+      { maxRetries: 2, delay: 500, log: logger, name: `loadMessageMeta(${JSON.stringify({ suUrl, processId, messageUid })})` }
     )
       .catch(async (err) => {
         logger(

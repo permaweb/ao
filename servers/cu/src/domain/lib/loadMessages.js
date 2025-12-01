@@ -493,7 +493,8 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
           assignmentId: ctx.mostRecentAssignmentId,
           hashChain: ctx.mostRecentHashChain,
           isColdStart: ctx.isColdStart,
-          body: ctx.body
+          body: ctx.body,
+          dryRun: ctx.dryRun
         })
       )
 }
