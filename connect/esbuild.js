@@ -60,11 +60,15 @@ await esbuild.build({
    */
   plugins: [
     nodeModulesPolyfillPlugin({
+      globals: {
+        process: true
+      },
       modules: {
         crypto: true,
         constants: true,
         events: true,
-        stream: true
+        stream: true,
+        process: true
       }
     })
   ],
