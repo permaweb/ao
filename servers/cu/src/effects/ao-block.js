@@ -5,7 +5,7 @@ import pMap from 'p-map'
 import CircuitBreaker from 'opossum'
 
 import { blockSchema } from '../domain/model.js'
-import { backoff, strFromFetchError } from '../domain/utils.js'
+import { backoff, okRes, strFromFetchError } from '../domain/utils.js'
 import { BLOCKS_TABLE } from './db.js'
 
 const blockDocSchema = z.object({
@@ -94,15 +94,6 @@ export function findBlocksWith ({ db }) {
   }
 }
 
-export function getLatestBlockWith ({ ARWEAVE_URL }) {
-  return () => {
-    return of(ARWEAVE_URL)
-      .chain(fromPromise((url) => fetch(url).then(res => res.json())))
-      .map(path(['height']))
-      .toPromise()
-  }
-}
-
 /**
  * @typedef Env2
  * @property {fetch} fetch
@@ -117,7 +108,7 @@ export function getLatestBlockWith ({ ARWEAVE_URL }) {
  * @returns {LoadBlocksMeta}
  */
 export function loadBlocksMetaWith ({
-  fetch, GRAPHQL_URLS, pageSize, logger, gatewayCounter, breakerOptions = {
+  fetch, GRAPHQL_URLS, pageSize, logger, breakerOptions = {
     timeout: 10000, // 10 seconds timeout
     errorThresholdPercentage: 50, // open circuit after 50% failures
     resetTimeout: 15000, // attempt to close circuit after 15 seconds
@@ -176,14 +167,7 @@ export function loadBlocksMetaWith ({
               },
               retry
             )
-              .then((res) => {
-                if (res.ok) {
-                  gatewayCounter.inc(1, { query_name: 'GetBlocks', result: 'success' })
-                  return res
-                }
-                gatewayCounter.inc(1, { query_name: 'GetBlocks', result: 'error' })
-                throw res
-              })
+              .then(okRes)
               .catch(async (e) => {
                 logger(
                   'Error Encountered when fetching page of block metadata from gateway with minBlock \'%s\' and maxTimestamp \'%s\'',
@@ -280,8 +264,8 @@ export function loadBlocksMetaWith ({
 
   return (args) =>
     of(args)
-      .chain(fromPromise(({ min, maxTimestamp }) => {
-        return fetchAllPages({ min, maxTimestamp })
+      .chain(fromPromise(({ min, maxTimestamp }) =>
+        fetchAllPages({ min, maxTimestamp })
           .then(prop('edges'))
           .then(pluck('node'))
           .then(map(block => ({
@@ -292,6 +276,6 @@ export function loadBlocksMetaWith ({
              */
             timestamp: block.timestamp * 1000
           })))
-      }))
+      ))
       .toPromise()
 }

@@ -48,9 +48,6 @@ export const loadBlocksMetaSchema = z.function()
     z.array(blockSchema.passthrough())
   ))
 
-export const getLatestBlockSchema = z.function()
-  .returns(z.promise(z.number()))
-
 // Process
 
 export const findProcessSchema = z.function()

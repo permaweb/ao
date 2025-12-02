@@ -1,11 +1,11 @@
 import { Transform } from 'node:stream'
 
-import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of } from 'hyper-async'
 import { T, always, ascend, cond, equals, identity, ifElse, isNil, last, length, pipe, prop, reduce, uniqBy } from 'ramda'
 import ms from 'ms'
 
 import { mapFrom, parseTags } from '../utils.js'
-import { findBlocksSchema, getLatestBlockSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
+import { findBlocksSchema, loadBlocksMetaSchema, loadMessagesSchema, loadTimestampSchema, saveBlocksSchema } from '../dal.js'
 
 export const toSeconds = (millis) => Math.floor(millis / 1000)
 
@@ -329,11 +329,10 @@ export function cronMessagesBetweenWith ({
   }
 }
 
-function reconcileBlocksWith ({ logger, loadBlocksMeta, findBlocks, saveBlocks, getLatestBlock }) {
+function reconcileBlocksWith ({ loadBlocksMeta, findBlocks, saveBlocks }) {
   findBlocks = fromPromise(findBlocksSchema.implement(findBlocks))
   saveBlocks = fromPromise(saveBlocksSchema.implement(saveBlocks))
   loadBlocksMeta = fromPromise(loadBlocksMetaSchema.implement(loadBlocksMeta))
-  getLatestBlock = fromPromise(getLatestBlockSchema.implement(getLatestBlock))
 
   return ({ min, maxTimestamp }) => {
     /**
@@ -349,25 +348,6 @@ function reconcileBlocksWith ({ logger, loadBlocksMeta, findBlocks, saveBlocks, 
           .map((fromDb) => findMissingBlocksIn(fromDb, { min, maxTimestamp }))
           .chain((missingRange) => {
             if (!missingRange) return Resolved(fromDb)
-            const latestBlocksMatch = missingRange?.min === fromDb?.[fromDb?.length - 1]?.height
-            if (latestBlocksMatch) {
-              logger('Latest blocks match at height %d. Checking Arweave for latest block', missingRange.min)
-              return of()
-                .chain(getLatestBlock)
-                .chain((latestBlock) => {
-                  if (latestBlock === missingRange?.min) {
-                    logger('Latest block matches missing range min height %d. Bypassing GQL call', missingRange.min)
-                    return Resolved(fromDb)
-                  }
-                  logger('Latest blocks do not match (arweave: %d, db: %d). Fetching missing blocks from gateway', latestBlock, missingRange.min)
-                  return Rejected(missingRange)
-                })
-            }
-            return Rejected(missingRange)
-          })
-          .bichain((missingRange) => {
-            if (!missingRange) return Resolved(fromDb)
-            logger('Loading missing blocks within range of %j', missingRange)
 
             /**
              * Load any missing blocks within the determined range,
@@ -382,7 +362,7 @@ function reconcileBlocksWith ({ logger, loadBlocksMeta, findBlocks, saveBlocks, 
                */
               .chain((fromGateway) => saveBlocks(fromGateway).map(() => fromGateway))
               .map((fromGateway) => mergeBlocks(fromDb, fromGateway))
-          }, Resolved)
+          })
       })
   }
 }
@@ -519,10 +499,10 @@ function loadScheduledMessagesWith ({ loadMessages, logger }) {
       )
 }
 
-function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, loadTransactionData, saveBlocks, getLatestBlock, logger }) {
+function loadCronMessagesWith ({ loadTimestamp, findBlocks, loadBlocksMeta, loadTransactionData, saveBlocks, logger }) {
   loadTimestamp = fromPromise(loadTimestampSchema.implement(loadTimestamp))
 
-  const reconcileBlocks = reconcileBlocksWith({ logger, findBlocks, loadBlocksMeta, saveBlocks, getLatestBlock })
+  const reconcileBlocks = reconcileBlocksWith({ findBlocks, loadBlocksMeta, saveBlocks })
 
   return (ctx) => of(ctx)
     .chain(parseCrons)
