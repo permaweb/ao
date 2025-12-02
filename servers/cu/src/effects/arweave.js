@@ -50,7 +50,7 @@ export function buildAndSignDataItemWith ({ WALLET, createDataItem = createData 
  * @param {Env1} env
  * @returns {LoadTransactionMeta}
  */
-export function loadTransactionMetaWith ({ gatewayCounter, fetch, GRAPHQL_URL, logger }) {
+export function loadTransactionMetaWith ({ fetch, GRAPHQL_URL, logger }) {
   // TODO: create a dataloader and use that to batch load contracts
 
   const GET_PROCESSES_QUERY = `
@@ -123,15 +123,11 @@ export function loadTransactionMetaWith ({ gatewayCounter, fetch, GRAPHQL_URL, l
           .then(transactionConnectionSchema.parse)
           .then(path(['data', 'transactions', 'edges', '0', 'node']))
           .then((node) => {
-            if (node) {
-              gatewayCounter.inc(1, { query_name: 'GetTransactionMeta', result: 'success' })
-              return node
-            }
+            if (node) return node
             logger('Transaction "%s" was not found on gateway', id)
             // TODO: better error handling
             const err = new Error(`Transaction '${id}' not found on gateway`)
             err.status = 404
-            gatewayCounter.inc(1, { query_name: 'GetTransactionMeta', result: 'error' })
             throw err
           })
       ))
