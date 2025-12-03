@@ -1,6 +1,5 @@
 import { of, Rejected, fromPromise, Resolved } from 'hyper-async'
 import { compose, head, identity, isEmpty, prop, propOr } from 'ramda'
-import createKeccakHash from 'keccak'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { writeMessageTxWith } from '../lib/write-message-tx.js'
@@ -8,6 +7,7 @@ import { pullResultWith } from '../lib/pull-result.js'
 import { parseDataItemWith } from '../lib/parse-data-item.js'
 import { verifyParsedDataItemWith } from '../lib/verify-parsed-data-item.js'
 import { writeProcessTxWith } from '../lib/write-process-tx.js'
+import { deriveEthereumAddress, deriveSolanaAddress, detectSignatureType } from '../lib/derive-address.js'
 import { locateProcessSchema } from '../dal.js'
 import { MESSAGES_TABLE } from '../clients/sqlite.js'
 
@@ -46,43 +46,12 @@ export function sendDataItemWith ({
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses})
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
 
   const locateProcessLocal = fromPromise(locateProcessSchema.implement(locateProcess))
-  function keyToEthereumAddress (key) {
-    /**
-     * We need to decode, then remove the first byte denoting compression in secp256k1
-     */
-    const noCompressionByte = Buffer.from(key, 'base64url').subarray(1)
-
-    /**
-     * the un-prefixed address is the last 20 bytes of the hashed
-     * public key
-     */
-    const noPrefix = createKeccakHash('keccak256')
-      .update(noCompressionByte)
-      .digest('hex')
-      .slice(-40)
-
-    /**
-     * Apply the checksum see https://eips.ethereum.org/EIPS/eip-55
-     */
-    const hash = createKeccakHash('keccak256')
-      .update(noPrefix)
-      .digest('hex')
-
-    let checksumAddress = '0x'
-    for (let i = 0; i < noPrefix.length; i++) {
-      checksumAddress += parseInt(hash[i], 16) >= 8
-        ? noPrefix[i].toUpperCase()
-        : noPrefix[i]
-    }
-
-    return checksumAddress
-  }
 
   /**
    * Check if the rate limit has been exceeded using rate limit injected
@@ -103,13 +72,21 @@ export function sendDataItemWith ({
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
     const wallet = ctx.dataItem.owner
     let address = await toAddress(wallet) || null
-    if (ctx.dataItem.signature.length === 87) {
-      address = keyToEthereumAddress(ctx.dataItem.owner)
+
+    // Detect signature type and derive appropriate address
+    if (ctx.dataItem.signature) {
+      const sigType = detectSignatureType(ctx.dataItem.signature)
+      if (sigType === 'ethereum') {
+        address = deriveEthereumAddress(ctx.dataItem.owner)
+      } else if (sigType === 'solana') {
+        address = deriveSolanaAddress(ctx.dataItem.owner)
+      }
+      // For 'arweave' or 'unknown', keep using toAddress() result
     }
+
     const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? 'SPAWN', rateLimits)
     const recentTraces = await getRecentTraces({ wallet, timestamp: intervalStart, processId: ctx.dataItem.target })
     const walletTracesCount = recentTraces.wallet.length
-    console.log(`Rate limit result for address ${address}, ${walletTracesCount} wallet traces found, ${rateLimitAllowance} rate limit allowance`)
     if (walletTracesCount >= rateLimitAllowance) {
       logger({ log: `Rate limit exceeded for wallet, ${recentTraces.wallet.length} wallet traces found. Rejecting.` })
       const error = new Error('Rate limit exceeded')
