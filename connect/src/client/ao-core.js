@@ -1,22 +1,25 @@
 import { debugLog } from '../logger.js'
 
-function convertToLegacyOutput(jsonRes) {
-  let body = {}
-  try {
-    body = JSON.parse(jsonRes?.results?.json?.body)
-    debugLog('info', 'HyperBEAM Response Body:', body)
-  } catch (_) { }
+function normalizeOutput(jsonRes) {
+  debugLog('info', 'HyperBEAM Response Body Raw:', jsonRes);
 
-  debugLog('info', 'Parsed HyperBEAM Response Body:', body)
+  let body = {};
+  try {
+    body = typeof jsonRes === 'string'
+      ? JSON.parse(jsonRes?.results?.json?.body)
+      : jsonRes?.results?.raw ?? {};
+  } catch {}
+
+  debugLog('info', 'Parsed HyperBEAM Response Body:', body);
 
   return {
-    Output: body?.Output || {},
-    Messages: body?.Messages || [],
-    Assignments: body?.Assignments || [],
-    Spawns: body?.Spawns || [],
-    Error: body?.Error,
-    ...(body ?? {})
-  }
+    Output: body.Output ?? {},
+    Messages: body.Messages ?? [],
+    Assignments: body.Assignments ?? [],
+    Spawns: body.Spawns ?? [],
+    Error: body.Error,
+    ...body,
+  };
 }
 
 const baseParams = {
@@ -122,7 +125,7 @@ export function messageWith(deps) {
       if (response.ok) {
         const parsedResponse = await response.json()
 
-        if (args.opts?.fullResponse) return convertToLegacyOutput(parsedResponse)
+        if (args.opts?.fullResponse) return normalizeOutput(parsedResponse)
         else return parsedResponse.slot
       }
       else throw new Error('Error sending message')
@@ -145,7 +148,7 @@ export function resultWith(deps) {
       const response = await deps.aoCore.request(params)
       if (response.ok) {
         const parsedResponse = await response.json()
-        return convertToLegacyOutput(parsedResponse)
+        return normalizeOutput(parsedResponse)
       }
       else throw new Error('Error getting result')
     } catch (e) {
@@ -182,7 +185,7 @@ export function resultsWith(deps) {
                 {
                   cursor: currentSlot,
                   node: {
-                    ...convertToLegacyOutput(parsedResultsResponse)
+                    ...normalizeOutput(parsedResultsResponse)
                   }
                 }
               ]
@@ -220,7 +223,7 @@ export function dryrunWith(deps) {
       const response = await deps.aoCore.request(params)
       if (response.ok) {
         const parsedResponse = await response.json()
-        return convertToLegacyOutput(parsedResponse)
+        return normalizeOutput(parsedResponse)
       }
       else throw new Error('Error running dryrun')
     } catch (e) {
