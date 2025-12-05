@@ -192,8 +192,7 @@ export const loadMessagesSchema = z.function()
       assignmentId: z.string().nullish(),
       hashChain: z.string().nullish(),
       isColdStart: z.boolean(),
-      body: z.any().optional(),
-      dryRun: z.boolean().optional()
+      body: z.any().optional()
     })
   )
   /**
