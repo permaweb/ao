@@ -450,5 +450,110 @@ describe('utils', () => {
         assert.equal(res.length, 42) // last 20 bytes prefixed with '0x'
       })
     })
+
+    test('should return the solana address for solana/ed25519 public keys', () => {
+      const address = 'some-arweave-transaction-id-1234567890'
+      /**
+       * Test with a 32-byte Ed25519 public key (base64url encoded)
+       * This represents a typical Solana wallet public key
+       */
+      const key = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+
+      const res = addressFrom({ address, key })
+
+      /**
+       * Should derive Solana address, not return the Arweave tx ID
+       */
+      assert.notEqual(res, address, 'Should not return Arweave address for Ed25519 key')
+
+      /**
+       * Solana addresses use base58 encoding (no 0, O, I, l characters)
+       */
+      assert.ok(/^[1-9A-HJ-NP-Za-km-z]+$/.test(res), 'Should be valid base58 encoding')
+
+      /**
+       * Solana addresses are typically 32-44 characters (base58 encoding of 32 bytes)
+       */
+      assert.ok(res.length >= 32 && res.length <= 44, `Address length should be 32-44, got ${res.length}`)
+
+      /**
+       * All-zero key is Solana's system program address (known value)
+       */
+      assert.equal(res, '11111111111111111111111111111111', 'All-zero key should produce system program address')
+    })
+
+    test('should return consistent solana addresses for same key', () => {
+      /**
+       * Create a test Ed25519 key (32 bytes of sequential data)
+       */
+      const testKeyBytes = Buffer.from([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+      ])
+      const key = testKeyBytes.toString('base64url')
+      const address = 'some-tx-id'
+
+      const res1 = addressFrom({ address, key })
+      const res2 = addressFrom({ address, key })
+
+      /**
+       * Same key should always produce same address (testing caching)
+       */
+      assert.strictEqual(res1, res2, 'Same key should always produce same address')
+
+      /**
+       * Should be valid base58
+       */
+      assert.ok(/^[1-9A-HJ-NP-Za-km-z]+$/.test(res1), 'Should be valid base58 encoding')
+    })
+
+    test('should differentiate between ethereum and solana keys by length', () => {
+      /**
+       * Ed25519 key (32 bytes) vs Ethereum uncompressed key (65 bytes)
+       */
+      const ed25519Key = Buffer.alloc(32, 1).toString('base64url')
+      const ethereumKey = Buffer.alloc(65, 1).toString('base64url')
+      const address = 'some-tx-id'
+
+      const solanaAddr = addressFrom({ address, key: ed25519Key })
+      const ethAddr = addressFrom({ address, key: ethereumKey })
+
+      /**
+       * Solana addresses are base58, Ethereum addresses start with 0x
+       */
+      assert.ok(!solanaAddr.startsWith('0x'), 'Solana address should not start with 0x')
+      assert.ok(ethAddr.startsWith('0x'), 'Ethereum address should start with 0x')
+
+      /**
+       * Should produce different address formats
+       */
+      assert.notEqual(solanaAddr, ethAddr, 'Should produce different address formats')
+
+      /**
+       * Ethereum addresses are always 42 characters (0x + 40 hex)
+       */
+      assert.equal(ethAddr.length, 42, 'Ethereum address should be 42 characters')
+
+      /**
+       * Solana addresses are typically 32-44 characters (base58)
+       */
+      assert.ok(solanaAddr.length >= 32 && solanaAddr.length <= 44, 'Solana address should be 32-44 characters')
+    })
+
+    test('should fallback to address for unknown key lengths', () => {
+      /**
+       * Test with wrong key lengths (not 32, 65, or 512 bytes)
+       * Following CU pattern: unknown types fall through and return address
+       */
+      const invalidKey = Buffer.alloc(31).toString('base64url') // 31 bytes, not a known type
+      const address = 'some-tx-id'
+
+      /**
+       * Should fall through to default behavior and return address
+       * This matches the existing CU pattern for unknown signature types
+       */
+      const res = addressFrom({ address, key: invalidKey })
+      assert.equal(res, address, 'Unknown key lengths should return the provided address')
+    })
   })
 })
