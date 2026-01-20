@@ -4,26 +4,6 @@ import WeaveDrive from '@permaweb/weavedrive'
 
 import { saveEvaluationSchema } from '../../domain/dal.js'
 
-import crypto from 'node:crypto'
-import { fromByteArray } from 'base64-js'
-
-const toBase64Url = (u8) =>
-  fromByteArray(u8)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '')
-
-export const memSha256B64url = (Memory) => {
-  if (Memory == null) return 'null'
-
-  const u8 = ArrayBuffer.isView(Memory)
-    ? new Uint8Array(Memory.buffer, Memory.byteOffset, Memory.byteLength)
-    : new Uint8Array(Memory)
-
-  const hash = crypto.createHash('sha256').update(u8).digest() // Buffer
-  return toBase64Url(hash)
-}
-
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
 export function evaluateWith ({
