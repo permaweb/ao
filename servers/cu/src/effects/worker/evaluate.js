@@ -215,8 +215,6 @@ export function evaluateWith ({
       AoGlobal.Process.Owner === message.Owner
     )
 
-    console.log('shouldReset', shouldReset)
-
     if (shouldReset) {
       wasmInstanceCache.delete(streamId)
     }
