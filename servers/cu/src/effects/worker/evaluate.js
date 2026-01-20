@@ -4,6 +4,26 @@ import WeaveDrive from '@permaweb/weavedrive'
 
 import { saveEvaluationSchema } from '../../domain/dal.js'
 
+import crypto from 'node:crypto'
+import { fromByteArray } from 'base64-js'
+
+const toBase64Url = (u8) =>
+  fromByteArray(u8)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
+
+export const memSha256B64url = (Memory) => {
+  if (Memory == null) return 'null'
+
+  const u8 = ArrayBuffer.isView(Memory)
+    ? new Uint8Array(Memory.buffer, Memory.byteOffset, Memory.byteLength)
+    : new Uint8Array(Memory)
+
+  const hash = crypto.createHash('sha256').update(u8).digest() // Buffer
+  return toBase64Url(hash)
+}
+
 const WASM_64_FORMAT = 'wasm64-unknown-emscripten-draft_2024_02_15'
 
 export function evaluateWith ({
@@ -12,12 +32,13 @@ export function evaluateWith ({
    * is passed in. Eventually remove usage and injection
    */
   loadWasmModule,
-  loadProcess,
+  locateScheduler,
   wasmInstanceCache,
   bootstrapWasmInstance,
   saveEvaluation,
   addExtension,
   ARWEAVE_URL,
+  ENABLE_MEMORY_RESET,
   logger
 }) {
   loadWasmModule = fromPromise(loadWasmModule)
@@ -148,10 +169,16 @@ export function evaluateWith ({
     })
   )
 
-  async function evalInitialMemory({ wasmInstance, AoGlobal }) {                                       
-    logger('Initializing fresh memory for process "%s"', AoGlobal.Process.Id)   
+  async function evalInitialMemory ({ wasmInstance, AoGlobal }) {
+    logger('Initializing fresh memory for process "%s"', AoGlobal.Process.Id)
+
+    const scheduler = await locateScheduler(
+      AoGlobal.Process.Id,
+      '_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA'
+    )
+
     const processMessageFetch = await fetch(
-      `https://su-router.ao-testnet.xyz/${AoGlobal.Process.Id}?limit=1`
+      `${scheduler.url}/${AoGlobal.Process.Id}?limit=1`
     ).then(res => res.json())
     const processMessage = processMessageFetch.edges[0].node
 
@@ -160,7 +187,7 @@ export function evaluateWith ({
       Signature: processMessage.message.signature,
       Data: processMessage.message.data,
       Owner: processMessage.message.owner.address,
-      Target: null,
+      Target: AoGlobal.Process.Id,
       Anchor: processMessage.message.anchor,
       From: processMessage.message.owner.address,
       'Forwarded-By': undefined,
@@ -179,10 +206,10 @@ export function evaluateWith ({
       Cron: false,
       'Read-Only': false
     }
-
-    const result = await wasmInstance(new Uint8Array(null), initMessage, AoGlobal)
+    const mem = new Uint8Array(null)
+    const result = await wasmInstance(mem, initMessage, AoGlobal)
     return result
-  }      
+  }
 
   /**
    * Evaluate a message using the handler that wraps the WebAssembly.Instance,
@@ -202,30 +229,29 @@ export function evaluateWith ({
    * Finally, evaluates the message and returns the result of the evaluation.
    */
   return ({ streamId, moduleId, wasmModule, moduleOptions, processId, noSave, name, deepHash, cron, ordinate, isAssignment, Memory, message, AoGlobal }) => {
-    const shouldReset = message.Tags && message.Tags.some(t =>
+    const shouldReset = ENABLE_MEMORY_RESET && message.Tags && message.Tags.some(t =>
       t.name === 'Action' &&
       t.value === 'Reset-Memory' &&
       AoGlobal.Process.Owner === message.Owner
     )
 
     if (shouldReset) {
-      const hadCache = wasmInstanceCache.has(streamId)
       wasmInstanceCache.delete(streamId)
     }
-    
+
     /**
      * Dynamically load the module, either from cache,
      * or from a file
      */
     return maybeCachedInstance({ streamId, moduleId, wasmModule, moduleOptions, name, processId, Memory, message, AoGlobal })
       .bichain(loadInstance, Resolved)
-      .chain(fromPromise(async (wasmInstance) => {                                                                            
-        const maybeSwappedResult = shouldReset                                                                                  
-          ? await evalInitialMemory({ wasmInstance, message, AoGlobal })                                                        
-          : null                                                                                                                                                                                                                       
-                                                                                                                                
-        return { wasmInstance, Memory, maybeSwappedResult }                                       
-      }))              
+      .chain(fromPromise(async (wasmInstance) => {
+        const maybeSwappedResult = shouldReset
+          ? await evalInitialMemory({ wasmInstance, message, AoGlobal })
+          : null
+
+        return { wasmInstance, Memory, maybeSwappedResult }
+      }))
       /**
        * Perform the evaluation
        */
@@ -235,7 +261,7 @@ export function evaluateWith ({
             logger('Evaluating message "%s" to process "%s"', name, processId)
             return { wasmInstance, Memory, maybeSwappedResult }
           })
-          .chain(fromPromise(async ({ wasmInstance, Memory, maybeSwappedResult }) =>{
+          .chain(fromPromise(async ({ wasmInstance, Memory, maybeSwappedResult }) => {
             /**
              * AoLoader requires Memory to be a View, so that it can set the WebAssembly.Instance
              * memory.
@@ -252,7 +278,7 @@ export function evaluateWith ({
              *
              * TODO: check if any performance implications in using set() within AoLoaderrs
              */
-            if(maybeSwappedResult) {
+            if (maybeSwappedResult) {
               return maybeSwappedResult
             }
             const mem = ArrayBuffer.isView(Memory) ? Memory : new Uint8Array(Memory)
