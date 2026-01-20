@@ -1,6 +1,7 @@
 import * as WasmClient from '../../wasm.js'
 import * as AoEvaluationClient from '../../ao-evaluation.js'
 import * as DbClient from '../../db.js'
+import * as AoSuClient from '../../ao-su.js'
 
 import { evaluateWith } from '../evaluate.js'
 
