@@ -132,6 +132,7 @@ export function evaluateWith ({
       Messages: pathOr([], ['Messages']),
       Assignments: pathOr([], ['Assignments']),
       Spawns: pathOr([], ['Spawns']),
+      Patches: pathOr([], ['Patches']),
       Output: pipe(
         pathOr('', ['Output']),
         /**
