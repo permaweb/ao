@@ -270,7 +270,12 @@ export const domainConfigSchema = z.object({
   /**
    * The size of the page to load when fetching messages from the AO SU.
    */
-  LOAD_MESSAGES_PAGE_SIZE: positiveIntSchema
+  LOAD_MESSAGES_PAGE_SIZE: positiveIntSchema,
+
+  /**
+   * Whether to allow Memory reset by a message
+   */
+  ENABLE_MEMORY_RESET: z.preprocess((val) => !!val, z.boolean())
 })
 
 export const bufferSchema = z.any().refine(buffer => {
