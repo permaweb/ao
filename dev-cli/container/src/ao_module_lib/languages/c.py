@@ -1,8 +1,7 @@
 import glob
 from ao_module_lib.definition import Definition
-from ao_module_lib.file import BundleFile
 
-def inject_c_files(definition: Definition, c_program: str, c_source_files: list, link_libraries: list):
+def inject_c_files(definition: Definition, c_program: str, c_source_files: list):
 
     c_header_files = []
     
