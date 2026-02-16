@@ -1,5 +1,5 @@
 import * as crypto from 'node:crypto'
-import * as B64js from "base64-js"
+import * as B64js from 'base64-js'
 import { randomBytes } from 'node:crypto'
 import { BroadcastChannel } from 'node:worker_threads'
 import cron from 'node-cron'
@@ -40,45 +40,45 @@ const { DataItem } = warpArBundles
 const createDataItem = (raw) => new DataItem(raw)
 export { createLogger }
 
-function b64UrlToBuffer(b64UrlString){
-  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)));
+function b64UrlToBuffer (b64UrlString) {
+  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)))
 }
-function b64UrlDecode(b64UrlString){
+function b64UrlDecode (b64UrlString) {
   try {
-    b64UrlString = b64UrlString.replace(/\-/g, "+").replace(/\_/g, "/");
-    let padding;
-    b64UrlString.length % 4 == 0
+    b64UrlString = b64UrlString.replace(/-/g, '+').replace(/_/g, '/')
+    let padding
+    b64UrlString.length % 4 === 0
       ? (padding = 0)
-      : (padding = 4 - (b64UrlString.length % 4));
-    return b64UrlString.concat("=".repeat(padding));
+      : (padding = 4 - (b64UrlString.length % 4))
+    return b64UrlString.concat('='.repeat(padding))
   } catch (error) {
-    throw new Error("Failed to decode string", { cause: error });
+    throw new Error('Failed to decode string', { cause: error })
   }
 }
-function bufferTob64(buffer) {
-  return B64js.fromByteArray(new Uint8Array(buffer));
+function bufferTob64 (buffer) {
+  return B64js.fromByteArray(new Uint8Array(buffer))
 }
-function bufferTob64Url(buffer){
-  return b64UrlEncode(bufferTob64(buffer));
+function bufferTob64Url (buffer) {
+  return b64UrlEncode(bufferTob64(buffer))
 }
-function b64UrlEncode(b64UrlString) {
+function b64UrlEncode (b64UrlString) {
   try {
     return b64UrlString
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/\=/g, "");
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
   } catch (error) {
-    throw new Error("Failed to encode string", { cause: error });
+    throw new Error('Failed to encode string', { cause: error })
   }
 }
-async function ownerToAddress(owner) {
-    return bufferTob64Url(
-      await crypto
-        .createHash('SHA-256')
-        .update(b64UrlToBuffer(owner))
-        .digest()
-    );
-  }
+async function ownerToAddress (owner) {
+  return bufferTob64Url(
+    await crypto
+      .createHash('SHA-256')
+      .update(b64UrlToBuffer(owner))
+      .digest()
+  )
+}
 
 const FIVE_MINUTES_IN_MS = 1000 * 60 * 5
 const SIXTY_MINUTES_IN_MS = 1000 * 60 * 60
@@ -137,7 +137,7 @@ export const createApis = async (ctx) => {
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
   const RATE_LIMIT_FILE_URL = ctx.RATE_LIMIT_FILE_URL
   const HB_PROCESSES_URL = ctx.HB_PROCESSES_URL
-  
+
   let rateLimitFile = {}
   cron.schedule('*/10 * * * *', async () => {
     console.log('Updating rate limit file after 10 minutes', RATE_LIMIT_FILE_URL)
@@ -150,7 +150,7 @@ export const createApis = async (ctx) => {
       })
     rateLimitFile = fetchedRateLimitFile
     console.log('Updated rate limit file')
-  }, { runOnInit: true})
+  }, { runOnInit: true })
   const getRateLimitFile = () => rateLimitFile
 
   const logger = ctx.logger
@@ -199,7 +199,7 @@ export const createApis = async (ctx) => {
       })
     processesFile = { HB_PROCESSES: fetchedProcessesFile }
     console.log('Updated processes file')
-  }, { runOnInit: true})
+  }, { runOnInit: true })
 
   const fetchHBProcesses = () => { return processesFile }
 
@@ -264,7 +264,7 @@ export const createApis = async (ctx) => {
             TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY,
             IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
             IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL,
-            RATE_LIMIT_FILE_URL: RATE_LIMIT_FILE_URL,
+            RATE_LIMIT_FILE_URL,
             DEFAULT_RATE_LIMIT: rateLimitFile
           }
         }
@@ -415,7 +415,8 @@ export const createApis = async (ctx) => {
     ALLOW_PUSHES_AFTER,
     ENABLE_PUSH: ctx.ENABLE_PUSH,
     ENABLE_CUSTOM_PUSH: ctx.ENABLE_CUSTOM_PUSH,
-    CUSTOM_CU_MAP_FILE_PATH: ctx.CUSTOM_CU_MAP_FILE_PATH
+    CUSTOM_CU_MAP_FILE_PATH: ctx.CUSTOM_CU_MAP_FILE_PATH,
+    SKIP_REPUSH_CHECKS_TOKEN: ctx.SKIP_REPUSH_CHECKS_TOKEN
   })
 
   const startMessageRecoveryCronLogger = logger.child('messageRecoveryCron')
@@ -512,7 +513,7 @@ export const createResultApis = async (ctx) => {
       })
     processesFile = { HB_PROCESSES: fetchedProcessesFile }
     console.log('Updated processes file')
-  }, { runOnInit: true})
+  }, { runOnInit: true })
 
   const fetchHBProcesses = () => { return processesFile }
 

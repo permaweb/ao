@@ -94,7 +94,8 @@ export const domainConfigSchema = z.object({
   ENABLE_HB_WALLET_CHECK: z.boolean(),
   HB_GRAPHQL_URL: z.string(),
   RATE_LIMIT_FILE_URL: z.string().optional(),
-  HB_PROCESSES_URL: z.string().optional()
+  HB_PROCESSES_URL: z.string().optional(),
+  SKIP_REPUSH_CHECKS_TOKEN: z.string().optional()
 })
 
 /**
@@ -158,7 +159,8 @@ const CONFIG_ENVS = {
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
-    HB_PROCESSES_URL: process.env.HB_PROCESSES_URL || ''
+    HB_PROCESSES_URL: process.env.HB_PROCESSES_URL || '',
+    SKIP_REPUSH_CHECKS_TOKEN: process.env.SKIP_REPUSH_CHECKS_TOKEN || ''
   },
   production: {
     MODE,
@@ -199,7 +201,8 @@ const CONFIG_ENVS = {
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
-    HB_PROCESSES_URL: process.env.HB_PROCESSES_URL || ''
+    HB_PROCESSES_URL: process.env.HB_PROCESSES_URL || '',
+    SKIP_REPUSH_CHECKS_TOKEN: process.env.SKIP_REPUSH_CHECKS_TOKEN || ''
   }
 }
 

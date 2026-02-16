@@ -17,7 +17,8 @@ const withPushRoute = (app) => {
           params: { id, number },
           query: {
             'process-id': processId,
-            'custom-cu': customCu
+            'custom-cu': customCu,
+            'skip-repush-checks-token': skipRepushChecksToken
           }
         } = req
 
@@ -25,10 +26,10 @@ const withPushRoute = (app) => {
         const logId = randomBytes(8).toString('hex')
 
         if (isNaN(Number(number))) {
-          return res.status(400).send({ error: `'number' parameter must be a valid number` });
+          return res.status(400).send({ error: '\'number\' parameter must be a valid number' })
         }
 
-        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCu })
+        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCu, skipRepushChecksToken })
           .chain(pushMsg)
           .bimap(
             (e) => {
@@ -50,5 +51,5 @@ const withPushRoute = (app) => {
 }
 
 export const withPushRoutes = pipe(
-  withPushRoute,
+  withPushRoute
 )
