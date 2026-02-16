@@ -1,5 +1,4 @@
 import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
-import { __, assoc, identity } from 'ramda'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { pullResultWith } from '../lib/pull-result.js'
@@ -14,7 +13,8 @@ export function pushMsgWith ({
   ALLOW_PUSHES_AFTER,
   ENABLE_PUSH,
   ENABLE_CUSTOM_PUSH,
-  CUSTOM_CU_MAP_FILE_PATH
+  CUSTOM_CU_MAP_FILE_PATH,
+  SKIP_REPUSH_CHECKS_TOKEN
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const getCustomCuAddress = getCustomCuAddressWith({ CUSTOM_CU_MAP_FILE_PATH, logger })
@@ -29,18 +29,27 @@ export function pushMsgWith ({
 
     return of(ctx)
       .chain((ctx) => {
-        return fetchTransactionsAsync([ctx.tx.id])
-      })
-      .chain(res => {
-        if(res?.data?.transactions?.edges?.length >= 1) {
-          if(res.data.transactions.edges[0].node?.block?.height) {
-            if (res.data.transactions.edges[0].node.block.height >= ALLOW_PUSHES_AFTER) {
-              return Resolved(ctx)
-            } 
-          }
-          return Rejected(new Error('Message does not yet have a block', { cause: ctx }))
+        // Skip block height check if token matches
+        const shouldSkipCheck = SKIP_REPUSH_CHECKS_TOKEN &&
+                                 ctx.skipRepushChecksToken &&
+                                 SKIP_REPUSH_CHECKS_TOKEN === ctx.skipRepushChecksToken
+
+        if (shouldSkipCheck) {
+          return Resolved(ctx)
         }
-        return Rejected(new Error('Message id not found on the gateway.', { cause: ctx }))
+
+        return fetchTransactionsAsync([ctx.tx.id])
+          .chain(res => {
+            if (res?.data?.transactions?.edges?.length >= 1) {
+              if (res.data.transactions.edges[0].node?.block?.height) {
+                if (res.data.transactions.edges[0].node.block.height >= ALLOW_PUSHES_AFTER) {
+                  return Resolved(ctx)
+                }
+              }
+              return Rejected(new Error('Message does not yet have a block', { cause: ctx }))
+            }
+            return Rejected(new Error('Message id not found on the gateway.', { cause: ctx }))
+          })
       })
       .chain((ctx) => {
         if (ENABLE_CUSTOM_PUSH && ctx.customCu) {
@@ -51,7 +60,7 @@ export function pushMsgWith ({
       .chain(pullResult)
       .chain((res) => {
         const { msgs, number } = res
-        if(msgs.length <= number) {
+        if (msgs.length <= number) {
           return Rejected(new Error('Message number does not exist in the result.', { cause: ctx }))
         }
         return Resolved(res)
@@ -59,7 +68,7 @@ export function pushMsgWith ({
       .bichain(
         (error) => {
           return of(error)
-            .map(() => logger({ log: `Initial result failed: with error` }, ctx))
+            .map(() => logger({ log: 'Initial result failed: with error' }, ctx))
             .chain(() => Rejected(error))
         },
         (res) => Resolved(res)
