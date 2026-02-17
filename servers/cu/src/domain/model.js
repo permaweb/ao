@@ -370,7 +370,6 @@ export const messageSchema = z.object({
      * Whether the message is a cron generated message or not
      */
     Cron: z.boolean(),
-    Skip: z.string().default('false'),
     'Read-Only': z.boolean().default(false)
   }),
   AoGlobal: z.object({
