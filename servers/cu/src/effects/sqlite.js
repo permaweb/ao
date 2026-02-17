@@ -109,6 +109,12 @@ const createCheckpointFilesIndexes = async (db) => db.prepare(
     (processId, timestamp);`
 ).run()
 
+const createEvaluationsIndexes = async (db) => db.prepare(
+  `CREATE INDEX IF NOT EXISTS idx_${EVALUATIONS_TABLE}_id_messageId
+    ON ${EVALUATIONS_TABLE}
+    (id, messageId);`
+).run()
+
 let internalSqliteDb
 export async function createSqliteClient ({ url, bootstrap = false, walLimit = bytes.parse('100mb') }) {
   if (internalSqliteDb) return internalSqliteDb
@@ -138,6 +144,7 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
       .then(() => createMessagesIndexes(db))
       .then(() => createCheckpointsIndexes(db))
       .then(() => createCheckpointFilesIndexes(db))
+      .then(() => createEvaluationsIndexes(db))
   }
 
   return {
