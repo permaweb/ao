@@ -11,6 +11,7 @@
     "test": "node --experimental-wasm-memory64 --test"
   },
   "dependencies": {
+    "@aws-sdk/client-kinesis": "^3.658.1",
     "@fastify/middie": "^9.0.3",
     "@permaweb/ao-loader": "^0.0.44",
     "@permaweb/ao-scheduler-utils": "^0.0.25",
@@ -27,6 +28,7 @@
     "helmet": "^8.0.0",
     "hyper-async": "^1.1.2",
     "keccak": "^3.0.4",
+    "libhoney": "^4.3.0",
     "long-timeout": "^0.1.1",
     "lru-cache": "^11.0.2",
     "ms": "^2.1.3",
