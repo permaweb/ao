@@ -67,6 +67,18 @@ fn err_response(err: String) -> HttpResponse {
         .body(error_json.to_string())
 }
 
+fn process_whitelist_check(deps: &Arc<Deps>, process_id: &str) -> Option<HttpResponse> {
+    if let Some(whitelist) = &deps.process_whitelist {
+        if !whitelist.is_process_allowed(process_id.to_string()) {
+            return Some(
+                HttpResponse::Forbidden()
+                    .json(json!({ "error": format!("Process {} is not allowed on this SU", process_id) }))
+            );
+        }
+    }
+    None
+}
+
 fn get_client_ip(req: &HttpRequest) -> Option<String> {
     req.connection_info()
         .realip_remote_addr()
@@ -230,6 +242,10 @@ async fn main_get_route(
     let from_nonce = query_params.from_nonce.clone();
     let to_nonce = query_params.to_nonce.clone();
 
+    if let Some(resp) = process_whitelist_check(&data.deps, &process_id) {
+        return resp;
+    }
+
     match router::redirect_tx_id(data.deps.clone(), tx_id.clone(), process_id.clone()).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
@@ -268,6 +284,10 @@ async fn read_latest_route(
 ) -> impl Responder {
     let process_id = path.process_id.clone();
 
+    if let Some(resp) = process_whitelist_check(&data.deps, &process_id) {
+        return resp;
+    }
+
     match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
         Ok(Some(redirect_url)) => {
             let target_url = format!("{}{}", redirect_url, req.uri());
@@ -295,6 +315,10 @@ async fn read_process_route(
     path: web::Path<ProcessIdRequired>,
 ) -> impl Responder {
     let process_id = path.process_id.clone();
+
+    if let Some(resp) = process_whitelist_check(&data.deps, &process_id) {
+        return resp;
+    }
 
     match router::redirect_process_id(data.deps.clone(), Some(process_id.clone())).await {
         Ok(Some(redirect_url)) => {

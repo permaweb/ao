@@ -128,6 +128,8 @@ pub async fn redirect_tx_id(
         return Ok(None);
     }
 
+    println!("{}", process_id);
+
     let process_scheduler = deps
         .router_data_store
         .get_process_scheduler(&process_id)?;

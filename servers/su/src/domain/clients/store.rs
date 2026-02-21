@@ -205,7 +205,10 @@ impl StoreClient {
         let mut tenant_bytestores: HashMap<String, Arc<bytestore::ByteStore>> = HashMap::new();
         for (efs_name, db_name) in process_whitelist.su_efs_names() {
             let mut tenant_config = config.clone();
-            tenant_config.su_data_dir = efs_name.clone();
+            if config.multi_tenant_base_data_dir.is_empty() {
+                panic!("MULTI_TENANT_BASE_DATA_DIR must be set in multi-tenant mode (needed for bytestore path of '{}')", efs_name);
+            }
+            tenant_config.su_data_dir = format!("{}/{}", config.multi_tenant_base_data_dir, efs_name);
             tenant_bytestores.insert(db_name, Arc::new(bytestore::ByteStore::new(tenant_config)));
         }
 
@@ -564,13 +567,6 @@ impl StoreClient {
                         Some((msg_id, asgn_id, bundle, proc_id, ts)) => {
                             let ts_str = ts.to_string();
                             if bytestore.clone().exists(&msg_id, &asgn_id, &proc_id, &ts_str) {
-                                let duration = start.elapsed();
-                                self.logger.log(format!(
-                                    "Time elapsed in sync for '{}': {:?}", db_name, duration
-                                ));
-                                self.logger.log(format!(
-                                    "Messages synced for '{}': {}", db_name, synced_count
-                                ));
                                 break 'offset_loop;
                             }
 

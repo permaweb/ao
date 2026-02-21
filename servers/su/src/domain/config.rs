@@ -65,6 +65,7 @@ pub struct AoConfig {
     pub process_whitelist_url: String,
     pub multi_tenant_base_conn: String,
     pub multi_tenant_base_read_conn: String,
+    pub multi_tenant_base_data_dir: String,
     pub url: String,
 }
 
@@ -275,6 +276,11 @@ impl AoConfig {
             Err(_e) => multi_tenant_base_conn.clone(),
         };
 
+        let multi_tenant_base_data_dir: String = match env::var("MULTI_TENANT_BASE_DATA_DIR") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
         let url: String = match env::var("URL") {
             Ok(val) => val,
             Err(_e) => "".to_string(),
@@ -321,6 +327,7 @@ impl AoConfig {
             process_whitelist_url,
             multi_tenant_base_conn,
             multi_tenant_base_read_conn,
+            multi_tenant_base_data_dir,
             url,
         })
     }

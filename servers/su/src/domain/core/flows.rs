@@ -324,6 +324,12 @@ pub async fn write_item(
 
     limit_message_size(&deps, &input, &data_item)?;
 
+    if let Some(ref whitelist) = deps.process_whitelist {
+        if !whitelist.is_process_allowed(target_id.clone()) {
+            return Err(format!("Process {} is not allowed on this SU", target_id));
+        }
+    }
+
     deps.logger.log(format!(
         "builder initialized item parsed target - {}",
         &target_id
@@ -524,7 +530,7 @@ pub async fn write_item(
 
     if type_tag.value == "Process" {
         if deps.process_whitelist.is_some() {
-            return Err("Process spawning is not supported in multi-tenant mode".to_string());
+            return Err("Process spawning is not supported".to_string());
         }
 
         let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");

@@ -36,16 +36,18 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
             None
         } else {
             Some(Arc::new(
-                FileUrlWhitelist::new(&config.process_whitelist_url, &config.url)
+                FileUrlWhitelist::new(&config.process_whitelist_url, &config.url, logger.clone(), config.mode == "router")
                     .await
                     .expect("Failed to init whitelist"),
             ))
         };
 
 
+    let store_whitelist = if config.mode == "router" { None } else { process_whitelist.clone() };
+
     let data_store = if !config.use_local_store {
         let ds = Arc::new(store::StoreClient::new(
-            process_whitelist.clone()
+            store_whitelist
         ).expect("Failed to create StoreClient"));
 
         match ds.run_migrations() {
