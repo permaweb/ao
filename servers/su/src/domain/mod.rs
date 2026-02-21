@@ -15,26 +15,39 @@ use clients::{
     wallet::FileWallet, su_router::SuRouter
 };
 use config::AoConfig;
-use core::dal::{Config, DataStore, Gateway, Log, MockRouterDataStore, ExtRouter};
+use core::dal::{Config, DataStore, Gateway, Log, MockRouterDataStore, ExtRouter, ProcessWhitelist};
 pub use logger::SuLog;
 
 pub use clients::metrics::PromMetrics;
 pub use clients::uploader::reupload_bundles;
+pub use clients::whitelist::FileUrlWhitelist;
 pub use core::flows;
 pub use core::router;
 pub use core::bytes;
 pub use flows::Deps;
-pub use local_store::migration::migrate_to_local;
-pub use local_store::sync_local::sync_local_drives;
-pub use store::migrate_to_disk;
 
 pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
     let logger: Arc<dyn Log> = SuLog::init();
 
     let config = Arc::new(AoConfig::new(mode.clone()).expect("Failed to read configuration"));
 
+    let process_whitelist: Option<Arc<dyn ProcessWhitelist>> =
+        if config.process_whitelist_url.is_empty() {
+            None
+        } else {
+            Some(Arc::new(
+                FileUrlWhitelist::new(&config.process_whitelist_url, &config.url)
+                    .await
+                    .expect("Failed to init whitelist"),
+            ))
+        };
+
+
     let data_store = if !config.use_local_store {
-        let ds = Arc::new(store::StoreClient::new().expect("Failed to create StoreClient"));
+        let ds = Arc::new(store::StoreClient::new(
+            process_whitelist.clone()
+        ).expect("Failed to create StoreClient"));
+
         match ds.run_migrations() {
             Ok(m) => logger.log(m),
             Err(e) => logger.log(format!("{:?}", e)),
@@ -126,7 +139,8 @@ pub async fn init_deps(mode: Option<String>) -> (Arc<Deps>, Arc<PromMetrics>) {
             uploader,
             metrics,
             deephash_locks,
-            ext_router
+            ext_router,
+            process_whitelist
         }),
         metrics_clone,
     )

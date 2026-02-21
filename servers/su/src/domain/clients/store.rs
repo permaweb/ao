@@ -1,8 +1,7 @@
+use std::collections::HashMap;
 use std::env::VarError;
 use std::num::NonZeroUsize;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::{env, io};
 
 use async_trait::async_trait;
 use diesel::pg::PgConnection;
@@ -10,18 +9,14 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::r2d2::Pool;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use dotenv::dotenv;
-use futures::future::join_all;
 use lru::LruCache;
 use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
-use tokio::time::interval;
 
 use super::super::SuLog;
 
 use super::super::core::dal::{
     DataStore, JsonErrorType, Log, Message, PaginatedMessages, Process, ProcessScheduler,
-    RouterDataStore, Scheduler, StoreErrorType,
+    RouterDataStore, Scheduler, StoreErrorType, ProcessWhitelist
 };
 
 use crate::domain::config::AoConfig;
@@ -85,8 +80,12 @@ impl InMemoryCache {
 }
 
 pub struct StoreClient {
-    pool: Pool<ConnectionManager<PgConnection>>,
-    read_pool: Pool<ConnectionManager<PgConnection>>,
+    pool: Option<Pool<ConnectionManager<PgConnection>>>,
+    read_pool: Option<Pool<ConnectionManager<PgConnection>>>,
+    tenant_pools: HashMap<String, Pool<ConnectionManager<PgConnection>>>,
+    tenant_read_pools: HashMap<String, Pool<ConnectionManager<PgConnection>>>,
+    tenant_bytestores: HashMap<String, Arc<bytestore::ByteStore>>,
+    process_db_map: HashMap<String, String>,
 
     /*
       These are only public for the purposes of
@@ -113,9 +112,17 @@ pub struct StoreClient {
   up unless the data is already migrated.
 */
 impl StoreClient {
-    pub fn new() -> Result<Self, StoreErrorType> {
+    pub fn new(process_whitelist: Option<Arc<dyn ProcessWhitelist>>) -> Result<Self, StoreErrorType> {
         let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
         let c_clone = config.clone();
+
+        match process_whitelist {
+            Some(p) => {
+                return StoreClient::multi_tenant_db(p, config.clone())
+            },
+            _ => ()
+        }
+
         let database_url = config.database_url;
         let database_read_url = config.database_read_url;
         let manager = ConnectionManager::<PgConnection>::new(database_url);
@@ -141,8 +148,76 @@ impl StoreClient {
             })?;
 
         Ok(StoreClient {
-            pool,
-            read_pool,
+            pool: Some(pool),
+            read_pool: Some(read_pool),
+            tenant_pools: HashMap::new(),
+            tenant_read_pools: HashMap::new(),
+            tenant_bytestores: HashMap::new(),
+            process_db_map: HashMap::new(),
+            logger,
+            bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
+            in_memory_cache: InMemoryCache::new(config.process_cache_size),
+            enable_process_assignment: config.enable_process_assignment,
+            use_disk: config.use_disk,
+        })
+    }
+
+    fn multi_tenant_db(process_whitelist: Arc<dyn ProcessWhitelist>, config: AoConfig) -> Result<Self, StoreErrorType> {
+        let c_clone = config.clone();
+        let logger = SuLog::init();
+
+        let base_conn = config.multi_tenant_base_conn.trim_end_matches('/').to_string();
+        let base_read_conn = config.multi_tenant_base_read_conn.trim_end_matches('/').to_string();
+
+        let mut tenant_pools: HashMap<String, Pool<ConnectionManager<PgConnection>>> = HashMap::new();
+        let mut tenant_read_pools: HashMap<String, Pool<ConnectionManager<PgConnection>>> = HashMap::new();
+
+        for db_name in process_whitelist.su_db_names() {
+            let write_url = format!("{}/{}", base_conn, db_name);
+            let tenant_manager = ConnectionManager::<PgConnection>::new(write_url);
+            let tenant_pool = Pool::builder()
+                .max_size(config.db_write_connections)
+                .test_on_check_out(true)
+                .build(tenant_manager)
+                .map_err(|_| {
+                    StoreErrorType::DatabaseError(format!(
+                        "Failed to initialize write connection pool for tenant db '{}'.",
+                        db_name
+                    ))
+                })?;
+            tenant_pools.insert(db_name.clone(), tenant_pool);
+
+            let read_url = format!("{}/{}", base_read_conn, db_name);
+            let tenant_read_manager = ConnectionManager::<PgConnection>::new(read_url);
+            let tenant_read_pool = Pool::builder()
+                .max_size(config.db_read_connections)
+                .test_on_check_out(true)
+                .build(tenant_read_manager)
+                .map_err(|_| {
+                    StoreErrorType::DatabaseError(format!(
+                        "Failed to initialize read connection pool for tenant db '{}'.",
+                        db_name
+                    ))
+                })?;
+            tenant_read_pools.insert(db_name, tenant_read_pool);
+        }
+
+        let mut tenant_bytestores: HashMap<String, Arc<bytestore::ByteStore>> = HashMap::new();
+        for (efs_name, db_name) in process_whitelist.su_efs_names() {
+            let mut tenant_config = config.clone();
+            tenant_config.su_data_dir = efs_name.clone();
+            tenant_bytestores.insert(db_name, Arc::new(bytestore::ByteStore::new(tenant_config)));
+        }
+
+        let process_db_map = process_whitelist.process_db_names();
+
+        Ok(StoreClient {
+            pool: None,
+            read_pool: None,
+            tenant_pools,
+            tenant_read_pools,
+            tenant_bytestores,
+            process_db_map,
             logger,
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
             in_memory_cache: InMemoryCache::new(config.process_cache_size),
@@ -179,8 +254,12 @@ impl StoreClient {
             })?;
 
         Ok(StoreClient {
-            pool,
-            read_pool,
+            pool: Some(pool),
+            read_pool: Some(read_pool),
+            tenant_pools: HashMap::new(),
+            tenant_read_pools: HashMap::new(),
+            tenant_bytestores: HashMap::new(),
+            process_db_map: HashMap::new(),
             logger,
             bytestore: Arc::new(bytestore::ByteStore::new(c_clone)),
             in_memory_cache: InMemoryCache::new(config.process_cache_size),
@@ -197,11 +276,30 @@ impl StoreClient {
     */
     pub fn get_conn(
         &self,
+        process_id: &String,
     ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType>
     {
-        self.pool.get().map_err(|_| {
-            StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string())
-        })
+        if !self.tenant_pools.is_empty() {
+            let db_name = self.process_db_map
+                .get(process_id.as_str())
+                .ok_or_else(|| StoreErrorType::DatabaseError(
+                    format!("No db mapping found for process '{}'.", process_id)
+                ))?;
+            return self.tenant_pools
+                .get(db_name)
+                .ok_or_else(|| StoreErrorType::DatabaseError(
+                    format!("No connection pool found for db '{}'.", db_name)
+                ))?
+                .get()
+                .map_err(|_| StoreErrorType::DatabaseError(
+                    "Failed to get connection from tenant pool.".to_string()
+                ));
+        }
+        self.pool
+            .as_ref()
+            .ok_or_else(|| StoreErrorType::DatabaseError("No connection pool available.".to_string()))?
+            .get()
+            .map_err(|_| StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string()))
     }
 
     /*
@@ -212,11 +310,47 @@ impl StoreClient {
     */
     pub fn get_read_conn(
         &self,
+        process_id: &String,
     ) -> Result<diesel::r2d2::PooledConnection<ConnectionManager<PgConnection>>, StoreErrorType>
     {
-        self.read_pool.get().map_err(|_| {
-            StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string())
-        })
+        if !self.tenant_read_pools.is_empty() {
+            let db_name = self.process_db_map
+                .get(process_id.as_str())
+                .ok_or_else(|| StoreErrorType::DatabaseError(
+                    format!("No db mapping found for process '{}'.", process_id)
+                ))?;
+            return self.tenant_read_pools
+                .get(db_name)
+                .ok_or_else(|| StoreErrorType::DatabaseError(
+                    format!("No read connection pool found for db '{}'.", db_name)
+                ))?
+                .get()
+                .map_err(|_| StoreErrorType::DatabaseError(
+                    "Failed to get connection from tenant read pool.".to_string()
+                ));
+        }
+        self.read_pool
+            .as_ref()
+            .ok_or_else(|| StoreErrorType::DatabaseError("No read connection pool available.".to_string()))?
+            .get()
+            .map_err(|_| StoreErrorType::DatabaseError("Failed to get connection from read pool.".to_string()))
+    }
+
+    /*
+      Returns the correct ByteStore for a given process_id.
+      In multi-tenant mode, resolves process_id → db_name via
+      process_db_map, then returns the tenant bytestore for that db.
+      Falls back to self.bytestore in single-tenant mode.
+    */
+    fn get_bytestore(&self, process_id: &String) -> Arc<bytestore::ByteStore> {
+        if !self.tenant_pools.is_empty() {
+            if let Some(db_name) = self.process_db_map.get(process_id.as_str()) {
+                if let Some(bs) = self.tenant_bytestores.get(db_name) {
+                    return bs.clone();
+                }
+            }
+        }
+        self.bytestore.clone()
     }
 
     /*
@@ -225,7 +359,28 @@ impl StoreClient {
         get built.
     */
     pub fn run_migrations(&self) -> Result<String, StoreErrorType> {
-        let conn = &mut self.get_conn()?;
+        if !self.tenant_pools.is_empty() {
+            let mut results: Vec<String> = Vec::new();
+            for (db_name, pool) in &self.tenant_pools {
+                let conn = &mut pool.get().map_err(|_| {
+                    StoreErrorType::DatabaseError(format!(
+                        "Failed to get connection from tenant pool '{}'.", db_name
+                    ))
+                })?;
+                match conn.run_pending_migrations(MIGRATIONS) {
+                    Ok(m) => results.push(format!("{}: {:?}", db_name, m)),
+                    Err(e) => return Err(StoreErrorType::DatabaseError(format!(
+                        "Error applying migrations for '{}': {}", db_name, e
+                    ))),
+                }
+            }
+            return Ok(format!("Migrations applied... {}", results.join(", ")));
+        }
+        let conn = &mut self.pool
+            .as_ref()
+            .ok_or_else(|| StoreErrorType::DatabaseError("No connection pool available.".to_string()))?
+            .get()
+            .map_err(|_| StoreErrorType::DatabaseError("Failed to get connection from pool.".to_string()))?;
         match conn.run_pending_migrations(MIGRATIONS) {
             Ok(m) => Ok(format!("Migrations applied... {:?}", m)),
             Err(e) => Err(StoreErrorType::DatabaseError(format!(
@@ -242,273 +397,12 @@ impl StoreClient {
     */
     pub fn get_message_count(&self) -> Result<i64, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&String::new())?;
 
         let count_result: Result<i64, DieselError> = messages.count().get_result(conn);
 
         match count_result {
             Ok(count) => Ok(count),
-            Err(e) => Err(StoreErrorType::from(e)),
-        }
-    }
-
-    /*
-      Method to get the total number of processes
-      in the database, this is used by the mig_local migration.
-    */
-    pub fn get_process_count(&self) -> Result<i64, StoreErrorType> {
-        use super::schema::processes::dsl::*;
-        let conn = &mut self.get_read_conn()?;
-
-        let count_result: Result<i64, DieselError> = processes.count().get_result(conn);
-
-        match count_result {
-            Ok(count) => Ok(count),
-            Err(e) => Err(StoreErrorType::from(e)),
-        }
-    }
-
-    /*
-      Get all processes in the database, within a
-      certain range. This is used for migrations.
-    */
-    pub fn get_all_processes(
-        &self,
-        from: i64,
-        to: Option<i64>,
-    ) -> Result<Vec<Vec<u8>>, StoreErrorType> {
-        use super::schema::processes::dsl::*;
-        let conn = &mut self.get_read_conn()?;
-        let mut query = processes.into_boxed();
-
-        // Apply the offset
-        query = query.offset(from);
-
-        // Apply the limit if `to` is provided
-        if let Some(to) = to {
-            let limit = to - from;
-            query = query.limit(limit);
-        }
-
-        let db_processes_result: Result<Vec<DbProcess>, DieselError> = query.load(conn);
-
-        match db_processes_result {
-            Ok(db_processes) => {
-                let mut processes_mapped: Vec<Vec<u8>> = vec![];
-                for db_process in db_processes.iter() {
-                    let bytes: Vec<u8> = db_process.bundle.clone();
-                    processes_mapped.push(bytes);
-                }
-
-                Ok(processes_mapped)
-            }
-            Err(e) => Err(StoreErrorType::from(e)),
-        }
-    }
-
-    /*
-      Get all messages in the database, within a
-      certain range. This is used for the migration.
-    */
-    pub fn get_all_messages(
-        &self,
-        from: i64,
-        to: Option<i64>,
-    ) -> Result<
-        Vec<(
-            String,
-            Option<String>,
-            Vec<u8>,
-            String,
-            serde_json::Value,
-            String,
-        )>,
-        StoreErrorType,
-    > {
-        use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
-        let mut query = messages.into_boxed();
-
-        // Apply the offset
-        query = query.offset(from);
-
-        // Apply the limit if `to` is provided
-        if let Some(to) = to {
-            let limit = to - from;
-            query = query.limit(limit);
-        }
-
-        let db_messages_result: Result<Vec<DbMessage>, DieselError> =
-            query.order(timestamp.asc()).load(conn);
-
-        match db_messages_result {
-            Ok(db_messages) => {
-                let mut messages_mapped: Vec<(
-                    String,
-                    Option<String>,
-                    Vec<u8>,
-                    String,
-                    serde_json::Value,
-                    String,
-                )> = vec![];
-                for db_message in db_messages.iter() {
-                    let bytes: Vec<u8> = db_message.bundle.clone();
-                    messages_mapped.push((
-                        db_message.message_id.clone(),
-                        db_message.assignment_id.clone(),
-                        bytes,
-                        db_message.process_id.clone(),
-                        db_message.message_data.clone(),
-                        db_message.timestamp.to_string().clone(),
-                    ));
-                }
-
-                Ok(messages_mapped)
-            }
-            Err(e) => Err(StoreErrorType::from(e)),
-        }
-    }
-
-    // used by the mig_local migration
-    pub async fn get_all_messages_using_bytestore(
-        &self,
-        from: i64,
-        to: Option<i64>,
-    ) -> Result<
-        Vec<(
-            String,         // message_id
-            Option<String>, // assignment_id
-            String,         // process_id
-            i64,            // timestamp
-            i32,            // epoch
-            i32,            // nonce
-            String,         // hash_chain
-            Vec<u8>,        // bundle
-        )>,
-        StoreErrorType,
-    > {
-        use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
-        let mut query = messages.into_boxed();
-
-        // Apply the offset
-        query = query.offset(from);
-
-        // Apply the limit if `to` is provided
-        if let Some(to) = to {
-            let limit = to - from;
-            query = query.limit(limit);
-        }
-
-        // Select only the fields that you are using
-        let selected_fields = query.select((
-            message_id,
-            assignment_id,
-            process_id,
-            timestamp,
-            epoch,
-            nonce,
-            hash_chain,
-        ));
-
-        // Load only the selected fields
-        let db_messages_result: Result<
-            Vec<(
-                String,         // message_id
-                Option<String>, // assignment_id
-                String,         // process_id
-                i64,            // timestamp
-                i32,            // epoch
-                i32,            // nonce
-                String,         // hash_chain
-            )>,
-            DieselError,
-        > = selected_fields.order(timestamp.asc()).load(conn);
-
-        match db_messages_result {
-            Ok(db_messages) => {
-                // Map the result into the desired tuple with timestamp as String
-                let messages_mapped = db_messages
-                    .into_iter()
-                    .map(|db_message| {
-                        (
-                            db_message.0, // message_id
-                            db_message.1, // assignment_id
-                            db_message.2, // process_id
-                            db_message.3, // timestamp
-                            db_message.4, // epoch
-                            db_message.5, // nonce
-                            db_message.6, // hash_chain
-                        )
-                    })
-                    .collect::<Vec<_>>();
-
-                let message_ids: Vec<(String, Option<String>, String, String)> = messages_mapped
-                    .iter()
-                    .map(|msg| {
-                        (
-                            msg.0.clone(),
-                            msg.1.clone(),
-                            msg.2.clone(),
-                            msg.3.to_string().clone(),
-                        )
-                    })
-                    .collect();
-
-                let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
-                let mut messages_with_bundles = vec![];
-
-                for db_message in messages_mapped.iter() {
-                    match binaries.get(&(
-                        db_message.0.clone(),             // message id
-                        db_message.1.clone(),             // assignment id
-                        db_message.2.clone(),             // process id
-                        db_message.3.to_string().clone(), // timestamp
-                    )) {
-                        Some(bytes_result) => {
-                            messages_with_bundles.push((
-                                db_message.0.clone(), // message_id
-                                db_message.1.clone(), // assignment_id
-                                db_message.2.clone(), // process_id
-                                db_message.3.clone(), // timestamp
-                                db_message.4.clone(), // epoch
-                                db_message.5.clone(), // nonce
-                                db_message.6.clone(), // hash_chain
-                                bytes_result.clone(), // bundle
-                            ));
-                        }
-                        None => {
-                            // Fall back to the database if the binary isn't available
-                            let db_message_with_bundle: DbMessage = match db_message.1.clone() {
-                                Some(assignment_id_d) => messages
-                                    .filter(
-                                        message_id
-                                            .eq(db_message.0.clone())
-                                            .and(assignment_id.eq(assignment_id_d)),
-                                    )
-                                    .order(timestamp.asc())
-                                    .first(conn)?,
-                                None => messages
-                                    .filter(message_id.eq(db_message.0.clone()))
-                                    .order(timestamp.asc())
-                                    .first(conn)?,
-                            };
-                            messages_with_bundles.push((
-                                db_message.0.clone(),                  // message_id
-                                db_message.1.clone(),                  // assignment_id
-                                db_message.2.clone(),                  // process_id
-                                db_message.3.clone(),                  // timestamp
-                                db_message.4.clone(),                  // epoch
-                                db_message.5.clone(),                  // nonce
-                                db_message.6.clone(),                  // hash_chain
-                                db_message_with_bundle.bundle.clone(), // bundle
-                            ));
-                        }
-                    }
-                }
-
-                Ok(messages_with_bundles)
-            }
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
@@ -578,7 +472,7 @@ impl StoreClient {
         StoreErrorType,
     > {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&String::new())?;
 
         let db_message_result: Result<Option<DbMessage>, DieselError> = messages
             .order(timestamp.desc())
@@ -608,18 +502,110 @@ impl StoreClient {
       backwards and insert messages into the bytestore
       if they dont exist. Run at server startup to
       sync the bytestore if USE_DISK is true.
+
+      In multi-tenant mode, iterates every tenant pool and
+      its corresponding bytestore (keyed by db_name) and
+      runs the same tail-sync for each one independently.
     */
     pub fn sync_bytestore(&self) -> Result<(), ()> {
+        use std::time::Instant;
+
+        if !self.tenant_pools.is_empty() {
+            for (db_name, pool) in &self.tenant_pools {
+                let bytestore = match self.tenant_bytestores.get(db_name) {
+                    Some(b) => b.clone(),
+                    None => {
+                        self.logger.error(format!(
+                            "No bytestore configured for tenant db '{}', skipping.", db_name
+                        ));
+                        continue;
+                    }
+                };
+
+                loop {
+                    match bytestore.clone().try_connect() {
+                        Ok(_) => break,
+                        Err(_) => {
+                            self.logger.log(format!(
+                                "Bytestore for '{}' not ready, waiting...", db_name
+                            ));
+                            std::thread::sleep(std::time::Duration::from_secs(5));
+                        }
+                    }
+                }
+
+                self.logger.log(format!(
+                    "Syncing the tail of the messages table for '{}'", db_name
+                ));
+                let start = Instant::now();
+
+                let total_count: i64 = {
+                    use super::schema::messages::dsl::*;
+                    let conn = &mut pool.get().map_err(|_| ())?;
+                    messages.count().get_result(conn).map_err(|_| ())?
+                };
+
+                let mut synced_count = 0i64;
+
+                'offset_loop: for offset in 0..total_count {
+                    let row: Option<(String, Option<String>, Vec<u8>, String, i64)> = {
+                        use super::schema::messages::dsl::*;
+                        let conn = &mut pool.get().map_err(|_| ())?;
+                        messages
+                            .select((message_id, assignment_id, bundle, process_id, timestamp))
+                            .order(timestamp.desc())
+                            .offset(offset)
+                            .first(conn)
+                            .optional()
+                            .map_err(|_| ())?
+                    };
+
+                    match row {
+                        Some((msg_id, asgn_id, bundle, proc_id, ts)) => {
+                            let ts_str = ts.to_string();
+                            if bytestore.clone().exists(&msg_id, &asgn_id, &proc_id, &ts_str) {
+                                let duration = start.elapsed();
+                                self.logger.log(format!(
+                                    "Time elapsed in sync for '{}': {:?}", db_name, duration
+                                ));
+                                self.logger.log(format!(
+                                    "Messages synced for '{}': {}", db_name, synced_count
+                                ));
+                                break 'offset_loop;
+                            }
+
+                            bytestore.clone().save_binary(
+                                msg_id, asgn_id, proc_id, ts_str, bundle,
+                            ).expect("Failed to save message binary");
+
+                            synced_count += 1;
+                        }
+                        None => {
+                            self.logger.log(format!(
+                                "No more messages for db '{}'.", db_name
+                            ));
+                            break;
+                        }
+                    }
+                }
+
+                let duration = start.elapsed();
+                self.logger.log(format!(
+                    "Time elapsed in sync for '{}': {:?}", db_name, duration
+                ));
+                self.logger.log(format!(
+                    "Messages synced for '{}': {}", db_name, synced_count
+                ));
+            }
+            return Ok(());
+        }
+
         /*
+          Non-multi-tenant path: single bytestore.
           if self.bytestore.clone().try_connect() is never
           called, the is_ready method on the byte store will
           never return true, and the rest of the StoreClient
           will not read or write bytestore.
-
-          We call it here because this runs the in background.
-          So the server can operate normally without bytestore
-          until bytestore can be initialized. This is in case
-          another program is still using the same embedded db.
         */
         loop {
             match self.bytestore.clone().try_connect() {
@@ -635,7 +621,6 @@ impl StoreClient {
         }
         self.logger
             .log("Syncing the tail of the messages table".to_string());
-        use std::time::Instant;
         let start = Instant::now();
 
         let total_count = self
@@ -717,7 +702,7 @@ impl StoreClient {
 impl DataStore for StoreClient {
     fn save_process(&self, process: &Process, bundle_in: &[u8]) -> Result<String, StoreErrorType> {
         use super::schema::processes::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_conn(&process.process.process_id)?;
 
         let (process_epoch, process_hash_chain, process_timestamp, process_nonce) =
             match self.enable_process_assignment {
@@ -761,7 +746,7 @@ impl DataStore for StoreClient {
         }
 
         use super::schema::processes::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&process_id_in.to_string())?;
 
         let db_process_result: Result<Option<DbProcess>, DieselError> = processes
             .filter(process_id.eq(process_id_in))
@@ -786,8 +771,8 @@ impl DataStore for StoreClient {
         not just an assignment we need to check that it
         doesnt already exist.
     */
-    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType> {
-        match self.get_message(&message_id) {
+    fn check_existing_message(&self, message_id: &String, process_id: &String) -> Result<(), StoreErrorType> {
+        match self.get_message(&message_id, process_id) {
             Ok(parsed) => {
                 /*
                     If the message already exists and it contains
@@ -826,8 +811,9 @@ impl DataStore for StoreClient {
             return Ok(());
         }
 
-        if self.bytestore.is_ready() {
-            match self.bytestore.deep_hash_exists(process_id, deep_hash) {
+        let bytestore = self.get_bytestore(process_id);
+        if bytestore.is_ready() {
+            match bytestore.deep_hash_exists(process_id, deep_hash) {
                 true => {
                     return Err(StoreErrorType::MessageExists(
                         "Deep hash already exists".to_string(),
@@ -843,8 +829,9 @@ impl DataStore for StoreClient {
     }
 
     async fn get_deephash_version(&self, process_id: &String) -> Result<String, StoreErrorType> {
-        if self.bytestore.is_ready() {
-            if let Ok(dhv) = self.bytestore.get_deep_hash_version(process_id) {
+        let bytestore = self.get_bytestore(process_id);
+        if bytestore.is_ready() {
+            if let Ok(dhv) = bytestore.get_deep_hash_version(process_id) {
                 return Ok(dhv);
             }
         }
@@ -858,8 +845,9 @@ impl DataStore for StoreClient {
         process_id: &String,
         version: &String,
     ) -> Result<(), StoreErrorType> {
-        if self.bytestore.is_ready() {
-            self.bytestore.save_deep_hash_version(process_id, version)?;
+        let bytestore = self.get_bytestore(process_id);
+        if bytestore.is_ready() {
+            bytestore.save_deep_hash_version(process_id, version)?;
         }
         Ok(())
     }
@@ -869,8 +857,9 @@ impl DataStore for StoreClient {
         process_id: &String,
         deep_hash: &String,
     ) -> Result<(), StoreErrorType> {
-        if self.bytestore.is_ready() {
-            self.bytestore.save_deep_hash(process_id, deep_hash)?;
+        let bytestore = self.get_bytestore(process_id);
+        if bytestore.is_ready() {
+            bytestore.save_deep_hash(process_id, deep_hash)?;
         }
         Ok(())
     }
@@ -882,7 +871,7 @@ impl DataStore for StoreClient {
         deep_hash: Option<&String>,
     ) -> Result<String, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_conn(&message.process_id()?)?;
 
         let new_message = NewMessage {
             process_id: &message.process_id()?,
@@ -907,7 +896,7 @@ impl DataStore for StoreClient {
           down so it is better to fail loud here. and not
           schedule the message. 
         */
-        let bytestore = self.bytestore.clone();
+        let bytestore = self.get_bytestore(&message.process_id()?);
         if bytestore.is_ready() {
             bytestore.save_binary(
                 message.message_id()?,
@@ -984,7 +973,7 @@ impl DataStore for StoreClient {
         to_nonce: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&process_in.process.process_id)?;
         let mut query = messages
             .filter(process_id.eq(process_in.process.process_id.clone()))
             .into_boxed();
@@ -1060,7 +1049,8 @@ impl DataStore for StoreClient {
             limit_val
         };
 
-        if self.bytestore.clone().is_ready() {
+        let bytestore = self.get_bytestore(&process_in.process.process_id);
+        if bytestore.is_ready() {
             let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
                 .select((
                     row_id,
@@ -1108,7 +1098,7 @@ impl DataStore for StoreClient {
                         })
                         .collect();
 
-                    let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
+                    let binaries = bytestore.read_binaries(message_ids).await?;
 
                     for db_message in messages_o.iter() {
                         match binaries.get(&(
@@ -1198,7 +1188,7 @@ impl DataStore for StoreClient {
         limit: &Option<i32>,
     ) -> Result<(Vec<(String, Vec<u8>)>, bool), StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&process_in.process.process_id)?;
         let mut query = messages
             .filter(process_id.eq(process_in.process.process_id.clone()))
             .into_boxed();
@@ -1211,8 +1201,9 @@ impl DataStore for StoreClient {
         }
 
         let limit_val = limit.unwrap_or(100) as i64;
+        let bytestore = self.get_bytestore(&process_in.process.process_id);
 
-        if self.bytestore.clone().is_ready() {
+        if bytestore.is_ready() {
             let db_messages_result: Result<Vec<DbMessageWithoutData>, DieselError> = query
                 .select((
                     row_id,
@@ -1252,7 +1243,7 @@ impl DataStore for StoreClient {
                         })
                         .collect();
 
-                    let binaries = self.bytestore.clone().read_binaries(message_ids).await?;
+                    let binaries = bytestore.read_binaries(message_ids).await?;
 
                     for db_message in messages_o.iter() {
                         match binaries.get(&(
@@ -1309,9 +1300,9 @@ impl DataStore for StoreClient {
         ))
     }
 
-    fn get_bundle_by_assignment(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
+    fn get_bundle_by_assignment(&self, tx_id: &str, pid: &str) -> Result<Vec<u8>, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&pid.to_string())?;
 
         let db_message_result: Result<Option<DbMessage>, DieselError> = messages
             .filter(assignment_id.eq(tx_id))
@@ -1328,9 +1319,9 @@ impl DataStore for StoreClient {
         }
     }
 
-    fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
+    fn get_message(&self, tx_id: &str, process_id_in: &str) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&process_id_in.to_string())?;
 
         /*
             get the oldest match. in the case of a message that has
@@ -1369,7 +1360,7 @@ impl DataStore for StoreClient {
             it cannot be behind at all as it is used
             in the scheduling process.
         */
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_conn(&process_id_in.to_string())?;
 
         self.logger
             .log(format!("connection established - {}", &process_id_in));
@@ -1408,7 +1399,7 @@ impl DataStore for StoreClient {
         limit: i64
     ) -> Result<Vec<String>, StoreErrorType> {
         use super::schema::messages::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(pid)?;
         let mut query = messages
             .filter(process_id.eq(pid.clone()))
             .into_boxed();
@@ -1445,7 +1436,7 @@ impl RouterDataStore for StoreClient {
         process_scheduler: &ProcessScheduler,
     ) -> Result<String, StoreErrorType> {
         use super::schema::process_schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_conn(&String::new())?;
 
         let new_process_scheduler = NewProcessScheduler {
             process_id: &process_scheduler.process_id,
@@ -1468,7 +1459,7 @@ impl RouterDataStore for StoreClient {
         process_id_in: &str,
     ) -> Result<ProcessScheduler, StoreErrorType> {
         use super::schema::process_schedulers::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&String::new())?;
 
         let db_process_result: Result<Option<DbProcessScheduler>, DieselError> = process_schedulers
             .filter(process_id.eq(process_id_in))
@@ -1493,7 +1484,7 @@ impl RouterDataStore for StoreClient {
 
     fn save_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_conn(&String::new())?;
 
         let new_scheduler = NewScheduler {
             url: &scheduler.url,
@@ -1516,7 +1507,7 @@ impl RouterDataStore for StoreClient {
 
     fn update_scheduler(&self, scheduler: &Scheduler) -> Result<String, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_conn()?;
+        let conn = &mut self.get_conn(&String::new())?;
 
         // Ensure scheduler.row_id is Some(value) before calling this function
         match diesel::update(schedulers.filter(row_id.eq(scheduler.row_id.unwrap())))
@@ -1536,7 +1527,7 @@ impl RouterDataStore for StoreClient {
 
     fn get_scheduler(&self, row_id_in: &i32) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&String::new())?;
 
         let db_scheduler_result: Result<Option<DbScheduler>, DieselError> = schedulers
             .filter(row_id.eq(row_id_in))
@@ -1562,7 +1553,7 @@ impl RouterDataStore for StoreClient {
 
     fn get_scheduler_by_url(&self, url_in: &String) -> Result<Scheduler, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&String::new())?;
 
         let db_scheduler_result: Result<Option<DbScheduler>, DieselError> =
             schedulers.filter(url.eq(url_in)).first(conn).optional();
@@ -1586,7 +1577,7 @@ impl RouterDataStore for StoreClient {
 
     fn get_all_schedulers(&self) -> Result<Vec<Scheduler>, StoreErrorType> {
         use super::schema::schedulers::dsl::*;
-        let conn = &mut self.get_read_conn()?;
+        let conn = &mut self.get_read_conn(&String::new())?;
 
         match schedulers.order(row_id.asc()).load::<DbScheduler>(conn) {
             Ok(db_schedulers) => {
@@ -1752,20 +1743,6 @@ mod bytestore {
 
             let new_db = DB::open(&opts, &self.config.su_data_dir)
                 .map_err(|e| format!("Failed to open RocksDB: {:?}", e))?;
-
-            let mut db_write = self.db.write().unwrap();
-            *db_write = Some(new_db);
-
-            Ok(())
-        }
-
-        pub fn try_read_instance_connect(&self) -> Result<(), String> {
-            let mut opts = Options::default();
-            opts.set_enable_blob_files(true); // Enable blob files
-
-            // Open the database in read-only mode
-            let new_db = DB::open_for_read_only(&opts, &self.config.su_data_dir, false)
-                .map_err(|e| format!("Failed to open RocksDB in read-only mode: {:?}", e))?;
 
             let mut db_write = self.db.write().unwrap();
             *db_write = Some(new_db);
@@ -2012,133 +1989,4 @@ mod bytestore {
             }
         }
     }
-}
-
-/*
-  This function is the migation program will
-  copy all the message data from the database to rocksdb.
-  It is not meant to be run anywhere within the su
-  server itself but is built into its own binary.
-*/
-pub async fn migrate_to_disk() -> io::Result<()> {
-    use std::time::{Duration, Instant};
-    let start = Instant::now();
-    dotenv().ok();
-
-    let data_store = Arc::new(StoreClient::new().expect("Failed to create StoreClient"));
-    data_store
-        .bytestore
-        .try_connect()
-        .expect("Failed to connect to bytestore");
-
-    let args: Vec<String> = env::args().collect();
-    let range: &String = args.get(2).expect("Range argument not provided");
-    let parts: Vec<&str> = range.split('-').collect();
-    let from = parts[0].parse().expect("Invalid starting offset");
-    let to = if parts.len() > 1 {
-        Some(parts[1].parse().expect("Invalid records to pull"))
-    } else {
-        None
-    };
-
-    let total_count = match to {
-        Some(t) => {
-            let total = data_store
-                .get_message_count()
-                .expect("Failed to get message count");
-            if t > total {
-                total - from
-            } else {
-                t - from
-            }
-        }
-        None => {
-            data_store
-                .get_message_count()
-                .expect("Failed to get message count")
-                - from
-        }
-    };
-
-    format!("Total messages to process: {}", total_count);
-
-    let config = AoConfig::new(Some("su".to_string())).expect("Failed to read configuration");
-    let batch_size = config.migration_batch_size.clone() as usize;
-
-    let processed_count = Arc::new(AtomicUsize::new(0));
-
-    // Spawn a task to log progress every minute
-    let processed_count_clone = Arc::clone(&processed_count);
-    let data_store_c = Arc::clone(&data_store);
-    tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(10));
-        loop {
-            interval.tick().await;
-            data_store_c.logger.log(format!(
-                "Messages processed update: {}",
-                processed_count_clone.load(Ordering::SeqCst)
-            ));
-            if processed_count_clone.load(Ordering::SeqCst) >= total_count as usize {
-                break;
-            }
-        }
-    });
-
-    for batch_start in (from..from + total_count).step_by(batch_size) {
-        let batch_end = if let Some(t) = to {
-            std::cmp::min(batch_start + batch_size as i64, t)
-        } else {
-            batch_start + batch_size as i64
-        };
-
-        let data_store = Arc::clone(&data_store);
-        let processed_count = Arc::clone(&processed_count);
-
-        let result = data_store.get_all_messages(batch_start, Some(batch_end));
-
-        match result {
-            Ok(messages) => {
-                let mut save_handles: Vec<JoinHandle<()>> = Vec::new();
-                for message in messages {
-                    let msg_id = message.0;
-                    let assignment_id = message.1;
-                    let bundle = message.2;
-                    let process_id = message.3;
-                    let timestamp = message.5;
-                    let data_store = Arc::clone(&data_store);
-                    let processed_count = Arc::clone(&processed_count);
-
-                    let handle = tokio::spawn(async move {
-                        data_store
-                            .bytestore
-                            .clone()
-                            .save_binary(
-                                msg_id.clone(),
-                                assignment_id.clone(),
-                                process_id.clone(),
-                                timestamp.clone(),
-                                bundle,
-                            )
-                            .unwrap();
-                        processed_count.fetch_add(1, Ordering::SeqCst);
-                    });
-
-                    save_handles.push(handle);
-                }
-                join_all(save_handles).await;
-            }
-            Err(e) => {
-                data_store
-                    .logger
-                    .error(format!("Error fetching messages: {:?}", e));
-            }
-        }
-    }
-
-    let duration = start.elapsed();
-    data_store
-        .logger
-        .log(format!("Time elapsed in data migration is: {:?}", duration));
-
-    Ok(())
 }

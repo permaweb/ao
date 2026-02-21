@@ -26,7 +26,7 @@ struct FromTo {
     to: Option<String>,
     limit: Option<i32>,
     #[serde(rename = "process-id")]
-    process_id: Option<String>,
+    process_id: String,
     #[serde(rename = "from-nonce")]
     from_nonce: Option<String>,
     #[serde(rename = "to-nonce")]
@@ -74,6 +74,10 @@ fn get_client_ip(req: &HttpRequest) -> Option<String> {
 }
 
 fn is_ip_allowed(ip: &str, whitelist: &IpWhitelist) -> bool {
+    if ip == "127.0.0.1" {
+        return true;
+    }
+
     match whitelist.read() {
         Ok(ips) => ips.contains(ip),
         Err(_) => false,
@@ -240,6 +244,7 @@ async fn main_get_route(
     let result = flows::read_message_data(
         data.deps.clone(),
         tx_id,
+        process_id.clone(),
         from,
         to,
         limit,

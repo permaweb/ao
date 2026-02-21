@@ -62,6 +62,10 @@ pub struct AoConfig {
     pub max_size_from_whitelist: Vec<String>,
 
     pub ip_whitelist_url: String,
+    pub process_whitelist_url: String,
+    pub multi_tenant_base_conn: String,
+    pub multi_tenant_base_read_conn: String,
+    pub url: String,
 }
 
 fn get_db_dirs() -> (String, String, String, String) {
@@ -256,6 +260,26 @@ impl AoConfig {
             Err(_e) => "".to_string(),
         };
 
+        let process_whitelist_url: String = match env::var("PROCESS_WHITELIST_URL") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
+        let multi_tenant_base_conn: String = match env::var("MULTI_TENANT_BASE_CONN") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
+        let multi_tenant_base_read_conn: String = match env::var("MULTI_TENANT_BASE_READ_CONN") {
+            Ok(val) => val,
+            Err(_e) => multi_tenant_base_conn.clone(),
+        };
+
+        let url: String = match env::var("URL") {
+            Ok(val) => val,
+            Err(_e) => "".to_string(),
+        };
+
         Ok(AoConfig {
             database_url: env::var("DATABASE_URL")?,
             database_read_url,
@@ -293,7 +317,11 @@ impl AoConfig {
             max_size_owner_whitelist,
             max_size_from_owner_whitelist,
             max_size_from_whitelist,
-            ip_whitelist_url
+            ip_whitelist_url,
+            process_whitelist_url,
+            multi_tenant_base_conn,
+            multi_tenant_base_read_conn,
+            url,
         })
     }
 }
@@ -352,5 +380,8 @@ impl Config for AoConfig {
     }
     fn ip_whitelist_url(&self) -> String {
         self.ip_whitelist_url.clone()
+    }
+    fn process_whitelist_url(&self) -> String {
+        self.process_whitelist_url.clone()
     }
 }

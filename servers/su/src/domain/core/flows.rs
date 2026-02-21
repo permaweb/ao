@@ -15,7 +15,7 @@ use super::json::{Message, Process};
 use super::scheduler;
 
 use super::dal::{
-    Config, CoreMetrics, DataStore, ExtRouter, ExtRouterErrorType, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet
+    Config, CoreMetrics, DataStore, ExtRouter, ExtRouterErrorType, Gateway, Log, RouterDataStore, Signer, Uploader, Wallet, ProcessWhitelist
 };
 
 pub struct Deps {
@@ -43,6 +43,8 @@ pub struct Deps {
       given process
     */
     pub deephash_locks: Arc<DashMap<String, Arc<Mutex<String>>>>,
+
+    pub process_whitelist: Option<Arc<dyn ProcessWhitelist>>,
 }
 
 /*
@@ -357,7 +359,7 @@ pub async fn write_item(
       set cache that gets set before the lock is released
     */
     if let Some(ref item) = data_item {
-        deps.data_store.check_existing_message(&item.id())?;
+        deps.data_store.check_existing_message(&item.id(), &target_id)?;
     };
 
     deps.logger
@@ -521,6 +523,10 @@ pub async fn write_item(
     };
 
     if type_tag.value == "Process" {
+        if deps.process_whitelist.is_some() {
+            return Err("Process spawning is not supported in multi-tenant mode".to_string());
+        }
+
         let mod_tag_exists = tags.iter().any(|tag| tag.name == "Module");
         let sched_tag_exists = tags.iter().any(|tag| tag.name == "Scheduler");
 
@@ -706,6 +712,7 @@ pub async fn write_item(
 pub async fn read_message_data(
     deps: Arc<Deps>,
     tx_id: String,
+    process_id: String,
     from: Option<String>,
     to: Option<String>,
     limit: Option<i32>,
@@ -714,7 +721,7 @@ pub async fn read_message_data(
 ) -> Result<String, String> {
     let start_top_level = Instant::now();
     let start_get_message = Instant::now();
-    if let Ok(message) = deps.data_store.get_message(&tx_id) {
+    if let Ok(message) = deps.data_store.get_message(&tx_id, &process_id) {
         if message.message.is_some()
             || ((message.message_id()? != message.process_id()?)
                 && (message.assignment_id()? == tx_id))

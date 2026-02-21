@@ -278,7 +278,7 @@ pub async fn reupload_bundles(pids: String, since: String, delay: u64) -> io::Re
             Err(e) => {
                 if e == "Transaction not found" {
                     logger.log(format!("Assignment not found, reuploading {}", assignment));
-                    let bundle = data_store.get_bundle_by_assignment(&assignment).unwrap();
+                    let bundle = data_store.get_bundle_by_assignment(&assignment, &pid).unwrap();
                     uploader.upload(bundle).unwrap();
                 } else {
                     logger.log(format!("Error fetching tx {}: {}", assignment, e));
