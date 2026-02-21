@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
+use std::collections::HashMap;
 
-pub use super::bytes::DataItem;
 pub use super::json::{JsonErrorType, Message, PaginatedMessages, Process};
 pub use super::router::{ProcessScheduler, Scheduler};
 pub use super::tags::Tag;
@@ -83,6 +83,7 @@ pub trait Config: Send + Sync {
     fn max_size_from_owner_whitelist(&self) -> Vec<String>;
     fn max_size_from_whitelist(&self) -> Vec<String>;
     fn ip_whitelist_url(&self) -> String;
+    fn process_whitelist_url(&self) -> String;
 }
 
 #[derive(Debug)]
@@ -159,12 +160,12 @@ pub trait DataStore: Send + Sync {
         from: &Option<String>,
         limit: &Option<i32>,
     ) -> Result<(Vec<(String, Vec<u8>)>, bool), StoreErrorType>;
-    fn get_message(&self, message_id_in: &str) -> Result<Message, StoreErrorType>;
+    fn get_message(&self, message_id_in: &str, process_id_in: &str) -> Result<Message, StoreErrorType>;
     async fn get_latest_message(
         &self,
         process_id_in: &str,
     ) -> Result<Option<Message>, StoreErrorType>;
-    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType>;
+    fn check_existing_message(&self, message_id: &String, process_id: &String) -> Result<(), StoreErrorType>;
     async fn check_existing_deep_hash(
         &self,
         process_id: &String,
@@ -187,7 +188,7 @@ pub trait DataStore: Send + Sync {
         since: &String,
         limit: i64
     ) -> Result<Vec<String>, StoreErrorType>;
-    fn get_bundle_by_assignment(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType>;
+    fn get_bundle_by_assignment(&self, tx_id: &str, pid: &str) -> Result<Vec<u8>, StoreErrorType>;
 }
 
 #[async_trait]
@@ -266,4 +267,12 @@ pub enum ExtRouterErrorType {
     NotFound(String),
     NetworkError(String),
     ConfigError(String)
+}
+
+#[async_trait]
+pub trait ProcessWhitelist: Send + Sync {
+    fn is_process_allowed(&self, process_id: String) -> bool;
+    fn su_db_names(&self) -> Vec<String>;
+    fn su_efs_names(&self) -> HashMap<String, String>;
+    fn process_db_names(&self) -> HashMap<String, String>;
 }

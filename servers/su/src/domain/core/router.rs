@@ -121,25 +121,18 @@ pub async fn redirect_process_id(
 // if this returns Ok(Some(String)) then the server should return a redirect to the String
 pub async fn redirect_tx_id(
     deps: Arc<Deps>,
-    tx_id: String,
-    process_id: Option<String>,
+    _tx_id: String,
+    process_id: String,
 ) -> Result<Option<String>, String> {
     if deps.config.mode() != "router" {
         return Ok(None);
     }
 
-    let process_to_query = match deps.router_data_store.get_process_scheduler(&tx_id) {
-        Ok(_) => tx_id,
-        /*
-            we didn't find a process scheduler based on the tx_id
-            so we need to try and find one based on process_id query param
-        */
-        Err(_) => process_id.ok_or("Unable to locate process, if this is a message id query be sure to pass the process-id query parameter")?,
-    };
+    println!("{}", process_id);
 
     let process_scheduler = deps
         .router_data_store
-        .get_process_scheduler(&process_to_query)?;
+        .get_process_scheduler(&process_id)?;
     let scheduler = deps
         .router_data_store
         .get_scheduler(&process_scheduler.scheduler_row_id)?;

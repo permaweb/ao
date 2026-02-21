@@ -494,7 +494,7 @@ impl DataStore for LocalStoreClient {
         Err(StoreErrorType::NotFound("Process not found".to_string()))
     }
 
-    fn get_bundle_by_assignment(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
+    fn get_bundle_by_assignment(&self, tx_id: &str, _pid: &str) -> Result<Vec<u8>, StoreErrorType> {
         let assignment_key = self.msg_assignment_key(tx_id);
         if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
             return Ok(message_bundle);
@@ -502,7 +502,7 @@ impl DataStore for LocalStoreClient {
         Err(StoreErrorType::DatabaseError("Failed to get bundle".to_string()))
     }
 
-    fn get_message(&self, tx_id: &str) -> Result<Message, StoreErrorType> {
+    fn get_message(&self, tx_id: &str, _process_id_in: &str) -> Result<Message, StoreErrorType> {
         let assignment_key = self.msg_assignment_key(tx_id);
         if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
             let message: Message = Message::from_bytes(message_bundle)?;
@@ -539,8 +539,8 @@ impl DataStore for LocalStoreClient {
         Err(StoreErrorType::NotFound("Message not found".to_string()))
     }
 
-    fn check_existing_message(&self, message_id: &String) -> Result<(), StoreErrorType> {
-        if let Ok(_message) = self.get_message(message_id) {
+    fn check_existing_message(&self, message_id: &String, process_id: &String) -> Result<(), StoreErrorType> {
+        if let Ok(_message) = self.get_message(message_id, process_id) {
             Err(StoreErrorType::MessageExists(
                 "Message already exists".to_string(),
             ))
@@ -904,7 +904,7 @@ impl DataStore for LocalStoreClient {
 
         match latest_assignment_id {
             Some(assignment_id) => {
-                let latest_message = self.get_message(&assignment_id)?;
+                let latest_message = self.get_message(&assignment_id, &process_id.to_string())?;
                 Ok(Some(latest_message))
             }
             None => Ok(None),

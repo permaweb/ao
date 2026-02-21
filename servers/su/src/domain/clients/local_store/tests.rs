@@ -70,7 +70,7 @@ mod tests {
         client
             .save_message(&test_message, &message_bundle, None)
             .await?;
-        let retrieved_message = client.get_message(&test_message.assignment.id)?;
+        let retrieved_message = client.get_message(&test_message.assignment.id, &String::new())?;
 
         assert_eq!(retrieved_message.assignment.id, test_message.assignment.id);
         Ok(())
