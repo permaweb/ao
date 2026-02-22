@@ -65,7 +65,7 @@ export function sendAssignWith ({
   return (ctx) => {
     const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
     if (whitelist && Object.keys(whitelist).length > 0 && !whitelist[ctx.assign.processId]) {
-      const error = new Error('Forbidden')
+      const error = new Error('Forbidden, process not whitelisted')
       error.code = 403
       return Rejected(error)
     }
