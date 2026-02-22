@@ -15,7 +15,8 @@ export function sendAssignWith ({
   locateProcess,
   fetchResult,
   crank,
-  logger
+  logger,
+  fetchProcessWhitelist
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
@@ -62,6 +63,12 @@ export function sendAssignWith ({
     }))
 
   return (ctx) => {
+    const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
+    if (whitelist && Object.keys(whitelist).length > 0 && !whitelist[ctx.assign.processId]) {
+      const error = new Error('Forbidden')
+      error.code = 403
+      return Rejected(error)
+    }
     return of(ctx)
       .chain((ctx) =>
         locateProcessLocal(ctx.assign.processId)

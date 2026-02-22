@@ -40,13 +40,14 @@ export function sendDataItemWith ({
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
   ENABLE_MESSAGE_RECOVERY,
-  fetchHBProcesses
+  fetchHBProcesses,
+  fetchProcessWhitelist
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses})
+  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
@@ -319,6 +320,12 @@ export function sendDataItemWith ({
           })
           .chain(({ isMessage }) => {
             if (isMessage) {
+              const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
+              if (whitelist && Object.keys(whitelist).length > 0 && !whitelist[ctx.dataItem.target]) {
+                const error = new Error('Forbidden')
+                error.code = 403
+                return Rejected(error)
+              }
               /*
                   add schedLocation into the context if the
                   target is a process. if its a wallet dont add

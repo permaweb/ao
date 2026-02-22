@@ -136,7 +136,7 @@ export const createApis = async (ctx) => {
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
   const RATE_LIMIT_FILE_URL = ctx.RATE_LIMIT_FILE_URL
-  const HB_PROCESSES_URL = ctx.HB_PROCESSES_URL
+  const PROCESS_WHITELIST_URL = ctx.PROCESS_WHITELIST_URL
 
   let rateLimitFile = {}
   cron.schedule('*/10 * * * *', async () => {
@@ -189,19 +189,20 @@ export const createApis = async (ctx) => {
 
   let processesFile = {}
   cron.schedule('*/5 * * * *', async () => {
-    if (!HB_PROCESSES_URL || HB_PROCESSES_URL === '') return
-    console.log('Updating HB_PROCESSES file after 5 minutes', HB_PROCESSES_URL)
-    const fetchedProcessesFile = await fetch(HB_PROCESSES_URL)
+    if (!PROCESS_WHITELIST_URL || PROCESS_WHITELIST_URL === '') return
+    console.log('Updating process whitelist file after 5 minutes', PROCESS_WHITELIST_URL)
+    const json = await fetch(PROCESS_WHITELIST_URL)
       .then((res) => res.json())
       .catch(err => {
         console.error('Error updating hb processes file', err)
         return {}
       })
-    processesFile = { HB_PROCESSES: fetchedProcessesFile }
+    processesFile = { HB_PROCESSES: json.hb_processes || {}, PROCESSES: json.processes || {} }
     console.log('Updated processes file')
   }, { runOnInit: true })
 
   const fetchHBProcesses = () => { return processesFile }
+  const fetchProcessWhitelist = () => processesFile.PROCESSES || {}
 
   // Create trace database metrics
   MetricsClient.gaugeWith({})({
@@ -322,7 +323,8 @@ export const createApis = async (ctx) => {
     GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
     GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
     ENABLE_MESSAGE_RECOVERY: ctx.ENABLE_MESSAGE_RECOVERY,
-    fetchHBProcesses
+    fetchHBProcesses,
+    fetchProcessWhitelist
   })
 
   const sendAssignLogger = logger.child('sendAssign')
@@ -332,7 +334,8 @@ export const createApis = async (ctx) => {
     writeAssignment: schedulerClient.writeAssignmentWith({ fetch, histogram, logger: sendAssignLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
-    logger: sendAssignLogger
+    logger: sendAssignLogger,
+    fetchProcessWhitelist
   })
 
   /**
@@ -388,7 +391,8 @@ export const createApis = async (ctx) => {
   const monitorProcess = monitorProcessWith({
     startProcessMonitor,
     createDataItem,
-    logger: monitorProcessLogger
+    logger: monitorProcessLogger,
+    fetchProcessWhitelist
   })
 
   const stopMonitorProcessLogger = logger.child('stopMonitorProcess')
@@ -473,7 +477,7 @@ export const createResultApis = async (ctx) => {
   const HB_ROUTER_URL = ctx.HB_ROUTER_URL
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
-  const HB_PROCESSES_URL = ctx.HB_PROCESSES_URL
+  const PROCESS_WHITELIST_URL = ctx.PROCESS_WHITELIST_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -503,15 +507,15 @@ export const createResultApis = async (ctx) => {
 
   let processesFile = {}
   cron.schedule('*/5 * * * *', async () => {
-    if (!HB_PROCESSES_URL || HB_PROCESSES_URL === '') return
-    console.log('Updating HB_PROCESSES file after 5 minutes', HB_PROCESSES_URL)
-    const fetchedProcessesFile = await fetch(HB_PROCESSES_URL)
+    if (!PROCESS_WHITELIST_URL || PROCESS_WHITELIST_URL === '') return
+    console.log('Updating process whitelist file after 5 minutes', PROCESS_WHITELIST_URL)
+    const json = await fetch(PROCESS_WHITELIST_URL)
       .then((res) => res.json())
       .catch(err => {
         console.error('Error updating hb processes file', err)
         return {}
       })
-    processesFile = { HB_PROCESSES: fetchedProcessesFile }
+    processesFile = { HB_PROCESSES: json.hb_processes || {}, PROCESSES: json.processes || {} }
     console.log('Updated processes file')
   }, { runOnInit: true })
 
