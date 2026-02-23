@@ -321,7 +321,7 @@ export function sendDataItemWith ({
           .chain(({ isMessage }) => {
             if (isMessage) {
               const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
-              if (whitelist && Object.keys(whitelist).length > 0 && !whitelist[ctx.dataItem.target]) {
+              if (whitelist && !whitelist[ctx.dataItem.target]) {
                 const error = new Error('Forbidden, process not whitelisted')
                 error.code = 403
                 return Rejected(error)
