@@ -444,7 +444,7 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
      * Similar logic can be found below when checking for the expected nonce
      */
 
-    if (!isColdStart) from = from + 1
+    if (!isColdStart) from = parseInt(`${from}`) + 1
     async function fetchPage ({ from }) {
       const params = toParams({ processId, from, to, pageSize })
 
@@ -454,7 +454,6 @@ export const loadMessagesWith = ({ hashChain, fetch, logger: _logger, pageSize }
             body.edges.length === (+to - +from + 1) &&
             +body.edges[0]?.node?.assignment?.Tags?.find(t => t.name === 'Nonce' || t.name === 'Slot')?.value === +from
           if (bodyIsValid) return body
-          if (!dryRun) throw new Error('Body is not valid: would attempt to fetch from scheduler in loadMessages')
           return fetchPageDataloader.load({ suUrl, processId, from, to, pageSize })
         },
         { maxRetries: 1, delay: 500, log: logger, name: `loadMessages(${JSON.stringify({ suUrl, processId, params: params.toString() })})` }
