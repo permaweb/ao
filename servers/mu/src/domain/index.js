@@ -197,7 +197,8 @@ export const createApis = async (ctx) => {
         console.error('Error updating hb processes file', err)
         return {}
       })
-    processesFile = { HB_PROCESSES: json.hb_processes || {}, PROCESSES: json.processes || {} }
+    // disable result from HB_PROCESSES because it is happening in the cu router
+    processesFile = { HB_PROCESSES: {} || {}, PROCESSES: json.processes || {} }
     console.log('Updated processes file')
   }, { runOnInit: true })
 
@@ -515,7 +516,8 @@ export const createResultApis = async (ctx) => {
         console.error('Error updating hb processes file', err)
         return {}
       })
-    processesFile = { HB_PROCESSES: json.hb_processes || {}, PROCESSES: json.processes || {} }
+    // disable result from HB_PROCESSES because it is happening in the cu router
+    processesFile = { HB_PROCESSES: {} || {}, PROCESSES: json.processes || {} }
     console.log('Updated processes file')
   }, { runOnInit: true })
 

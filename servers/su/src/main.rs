@@ -26,7 +26,7 @@ struct FromTo {
     to: Option<String>,
     limit: Option<i32>,
     #[serde(rename = "process-id")]
-    process_id: String,
+    process_id: Option<String>,
     #[serde(rename = "from-nonce")]
     from_nonce: Option<String>,
     #[serde(rename = "to-nonce")]
