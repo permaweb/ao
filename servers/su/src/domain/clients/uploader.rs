@@ -137,7 +137,7 @@ impl Uploader for UploaderClient {
             let mut delay = Duration::from_secs(1);
             let max_delay = Duration::from_secs(32);
 
-            let bundle_item = match bytes::DataItem::from_bytes(tx_for_cache.clone()) {
+            let target_item = match bytes::DataItem::from_bytes(tx_for_cache.clone()) {
                 Ok(item) => item,
                 Err(e) => {
                     logger_for_cache.error(
@@ -147,40 +147,19 @@ impl Uploader for UploaderClient {
                 }
             };
 
-            let bundle_bytes = match bundle_item.data_bytes() {
-                Some(bytes) => bytes,
-                None => {
-                    logger_for_cache.error(
-                      "Cache upload failed bundle item has no data bytes".to_string()
-                    );
-                    return;
-                }
-            };
-
-            let bundle = match bytes::DataBundle::from_bytes(&bundle_bytes) {
-                Ok(bundle) => bundle,
-                Err(e) => {
-                    logger_for_cache.error(format!("Cache upload failed to parse data bundle: {:?}", e));
-                    return;
-                }
-            };
-
-            let target_item = match bundle.items
-                .into_iter()
-                .find(|item| {
-                    item.tags().iter().any(|tag| {
+            match target_item.tags()
+                .iter().any(|tag| {
                         tag.name == "Type" && (tag.value == "Process")
-                    })
                 }) {
-                  Some(item) => item,
-                  None => {
-                      logger_for_cache.log(
-                        "Cache upload skipping, not a Process"
-                        .to_string()
-                      );
-                      return;
-                  }
-            };
+                    true => (),
+                    false => {
+                        logger_for_cache.log(
+                            "Cache upload skipping, not a Process"
+                            .to_string()
+                        );
+                        return;
+                    }
+                };
 
             let tx_for_cache_parsed = match target_item.as_bytes() {
                 Ok(bytes) => bytes,
