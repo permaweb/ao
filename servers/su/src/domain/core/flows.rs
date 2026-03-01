@@ -603,6 +603,9 @@ pub async fn write_item(
 
             let aid = assignment.id();
             let did = data_item.id();
+            let assignment_bytes = assignment
+                .as_bytes()
+                .map_err(|e| format!("{:?}", e))?;
             let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
 
             let process = Process::from_bundle(&build_result.bundle)?;
@@ -613,7 +616,8 @@ pub async fn write_item(
                 .commit(&mut *schedule_info, &next_schedule_info, did, aid);
             drop(schedule_info);
 
-            upload(&deps, build_result.binary.to_vec()).await?;
+            upload(&deps, input).await?;
+            upload(&deps, assignment_bytes).await?;
 
             return id_res(&deps, process.process.process_id.clone(), start_top_level);
         } else {
@@ -690,6 +694,9 @@ pub async fn write_item(
             None => None,
         };
 
+        let assignment_bytes = assignment
+            .as_bytes()
+            .map_err(|e| format!("{:?}", e))?;
         let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
         let message = Message::from_bundle(&build_result.bundle)?;
 
@@ -708,7 +715,8 @@ pub async fn write_item(
             .commit(&mut *schedule_info, &next_schedule_info, dtarget, aid);
         drop(schedule_info);
 
-        upload(&deps, build_result.binary.to_vec()).await?;
+        upload(&deps, input).await?;
+        upload(&deps, assignment_bytes).await?;
         return id_res(&deps, message.message_id()?, start_top_level);
     } else {
         return Err("Type tag not present".to_string());
