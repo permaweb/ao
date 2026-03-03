@@ -48,7 +48,12 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
               Accept: 'application/json'
             },
             body
-          }).then(() => res)
+          })
+            .then(() => res)
+            .catch((err) => {
+              logger.tap({ log: 'Error while communicating with HB uploader:' })(err)
+              return res
+            })
         )
       )
       .bimap(logger.tap({ log: 'Error while communicating with uploader:' }), identity)
