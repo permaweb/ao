@@ -312,7 +312,7 @@ export const createApis = async (ctx) => {
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: sendDataItemLogger }),
     isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: sendDataItemLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     logger: sendDataItemLogger,
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram }),
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: sendDataItemLogger, fetch, histogram, HB_GRAPHQL_URL }),
     spawnPushEnabled: SPAWN_PUSH_ENABLED,
     db,
     traceDb,
@@ -536,7 +536,7 @@ export const createResultApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, histogram, logger: processMsgLogger, fetchHBProcesses }),
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: processMsgLogger, setById, getById }),
-    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram }),
+    writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram, HB_GRAPHQL_URL }),
     isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
     RELAY_MAP,
     topUp: RelayClient.topUpWith({
