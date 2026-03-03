@@ -2,7 +2,7 @@ import { identity } from 'ramda'
 import { of, fromPromise, Rejected } from 'hyper-async'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 
-function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
+function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQL_URL }) {
   const dataItemFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -36,7 +36,24 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger }) {
               Accept: 'application/json'
             },
             body
+          }).then((res) => { return { body, res } })
+        )
+      )
+      .chain(
+        fromPromise(({ body, res }) =>
+          dataItemFetch(`${HB_GRAPHQL_URL}/~arweave@2.9-pre/tx?codec-device=ans104@1.0`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              Accept: 'application/json'
+            },
+            body
           })
+            .then(() => res)
+            .catch((err) => {
+              logger.tap({ log: 'Error while communicating with HB uploader:' })(err)
+              return res
+            })
         )
       )
       .bimap(logger.tap({ log: 'Error while communicating with uploader:' }), identity)
