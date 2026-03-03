@@ -104,7 +104,7 @@ export function sendDataItemWith ({
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
     const wallet = ctx.dataItem.owner
     let address = await toAddress(wallet) || null
-    if (ctx.dataItem.signature.length === 87) {
+    if (ctx.dataItem.signature?.length === 87) {
       address = keyToEthereumAddress(ctx.dataItem.owner)
     }
     const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? 'SPAWN', rateLimits)
