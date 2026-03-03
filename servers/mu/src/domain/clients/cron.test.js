@@ -54,7 +54,7 @@ describe('cron', () => {
       test('should clear stale cursors before starting processes', async () => {
         const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000) - 1000 // 1 second older than threshold
         const staleCursor = btoa(JSON.stringify({ timestamp: oneWeekAgo, ordinate: 1, cron: null, sort: 'ASC' }))
-        
+
         let cursorCleared = false
         const initCronProcs = cron.initCronProcsWith({
           getCronProcesses: () => [{ processId: 'stale-process', status: 'running' }],
@@ -74,7 +74,7 @@ describe('cron', () => {
       test('should not clear fresh cursors', async () => {
         const now = Date.now()
         const freshCursor = btoa(JSON.stringify({ timestamp: now, ordinate: 1, cron: null, sort: 'ASC' }))
-        
+
         let cursorCleared = false
         const initCronProcs = cron.initCronProcsWith({
           getCronProcesses: () => [{ processId: 'fresh-process', status: 'running' }],
@@ -93,7 +93,7 @@ describe('cron', () => {
 
       test('should clear invalid cursors', async () => {
         const invalidCursor = 'invalid-base64-cursor'
-        
+
         let cursorCleared = false
         const initCronProcs = cron.initCronProcsWith({
           getCronProcesses: () => [{ processId: 'invalid-cursor-process', status: 'running' }],
@@ -132,7 +132,8 @@ describe('cron', () => {
         inc: () => {
           monitorGaugeValue++
         }
-      }
+      },
+      fetchTransactions: async () => ({ data: { transactions: { edges: [] } } })
     })
 
     test('start initial monitor of process foo', async () => {
@@ -176,7 +177,8 @@ describe('cron', () => {
         inc: () => {
           monitorGaugeValue++
         }
-      }
+      },
+      fetchTransactions: async () => ({ data: { transactions: { edges: [] } } })
     })
     const killMonitoredProcess = cron.killMonitoredProcessWith({
       logger,
