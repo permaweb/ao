@@ -49,7 +49,10 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
             },
             body
           })
-            .then(() => res)
+            .then((HBRes) => {
+              logger.tap({ log: 'Successfully forwarded DataItem to HB uploader' })(HBRes)
+              return res
+            })
             .catch((err) => {
               logger.tap({ log: 'Error while communicating with HB uploader:' })(err)
               return res
