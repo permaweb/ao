@@ -295,8 +295,6 @@ impl Gateway for ArweaveGateway {
         let query_string = serde_json::to_string(&query)
             .map_err(|e| GatewayErrorType::GraphQLError(e.to_string()))?;
 
-        println!("{}", query_string);
-
         let response = client
             .post(format!("{}/graphql", graphql_url))
             .header("Content-Type", "application/json")
