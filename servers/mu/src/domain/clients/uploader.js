@@ -26,7 +26,7 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
    */
   return async (data) => {
     return of(data)
-      .map(logger.tap({ log: `Forwarding message to uploader ${UPLOADER_URL}` }))
+      .map(logger.tap({ log: `Forwarding message to uploader ${UPLOADER_URL}, HB uploader ${HB_GRAPHQL_URL}` }))
       .chain(
         fromPromise((body) =>
           dataItemFetch(`${UPLOADER_URL}/tx/arweave`, {
