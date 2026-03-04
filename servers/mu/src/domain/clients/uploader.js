@@ -43,20 +43,13 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
         fromPromise(({ body, res }) =>
           dataItemFetch(`${HB_GRAPHQL_URL}/~arweave@2.9-pre/tx?codec-device=ans104@1.0`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              Accept: 'application/json'
-            },
             body
           })
             .then((HBRes) => {
-              logger.tap({ log: 'Successfully forwarded DataItem to HB uploader' })(HBRes)
+              logger.tap({ log: 'Successfully forwarded DataItem to HB uploader' })()
               return res
             })
-            .catch((err) => {
-              logger.tap({ log: 'Error while communicating with HB uploader:' })(err)
-              return res
-            })
+            .catch((_) => res)
         )
       )
       .bimap(logger.tap({ log: 'Error while communicating with uploader:' }), identity)
