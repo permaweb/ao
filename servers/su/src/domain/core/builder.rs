@@ -203,6 +203,12 @@ impl<'a> Builder<'a> {
         process: &Process,
         base_layer: &Option<String>,
     ) -> Result<Option<GatewayTx>, BuilderErrorType> {
+        if tx_id.len() != 43 {
+            return Err(BuilderErrorType::BuilderError(
+                "assign param must be 43 characters".to_string(),
+            ));
+        }
+
         // Process the assignment verification
         let result = match base_layer {
             Some(_) => {
