@@ -2,7 +2,7 @@ import { worker } from 'workerpool'
 import { BroadcastChannel, workerData } from 'node:worker_threads'
 import { tap } from 'ramda'
 import * as crypto from 'node:crypto'
-import * as B64js from "base64-js";
+import * as B64js from 'base64-js'
 import cron from 'node-cron'
 
 import { createTaskQueue, enqueueWith, dequeueWith, removeDequeuedTasksWith } from './taskQueue.js'
@@ -14,62 +14,61 @@ import { broadcastEnqueueWith, enqueueResultsWith, processResultWith, processRes
 import { deleteOldTracesWith, recentTracesWith } from './tracer.js'
 
 const broadcastChannel = new BroadcastChannel('mu-worker')
-function b64UrlToBuffer(b64UrlString){
-  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)));
+function b64UrlToBuffer (b64UrlString) {
+  return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)))
 }
-function b64UrlDecode(b64UrlString){
+function b64UrlDecode (b64UrlString) {
   try {
-    b64UrlString = b64UrlString.replace(/\-/g, "+").replace(/\_/g, "/");
-    let padding;
-    b64UrlString.length % 4 == 0
+    b64UrlString = b64UrlString.replace(/-/g, '+').replace(/_/g, '/')
+    let padding
+    b64UrlString.length % 4 === 0
       ? (padding = 0)
-      : (padding = 4 - (b64UrlString.length % 4));
-    return b64UrlString.concat("=".repeat(padding));
+      : (padding = 4 - (b64UrlString.length % 4))
+    return b64UrlString.concat('='.repeat(padding))
   } catch (error) {
-    throw new Error("Failed to decode string", { cause: error });
+    throw new Error('Failed to decode string', { cause: error })
   }
 }
-function bufferTob64(buffer) {
-  return B64js.fromByteArray(new Uint8Array(buffer));
+function bufferTob64 (buffer) {
+  return B64js.fromByteArray(new Uint8Array(buffer))
 }
-function bufferTob64Url(buffer){
-  return b64UrlEncode(bufferTob64(buffer));
+function bufferTob64Url (buffer) {
+  return b64UrlEncode(bufferTob64(buffer))
 }
-function b64UrlEncode(b64UrlString) {
+function b64UrlEncode (b64UrlString) {
   try {
     return b64UrlString
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/\=/g, "");
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
   } catch (error) {
-    throw new Error("Failed to encode string", { cause: error });
+    throw new Error('Failed to encode string', { cause: error })
   }
 }
-async function ownerToAddress(owner) {
-    if (!owner) return null
-    return bufferTob64Url(
-      await crypto
-        .createHash('SHA-256')
-        .update(b64UrlToBuffer(owner))
-        .digest()
-    );
-  }
-
+async function ownerToAddress (owner) {
+  if (!owner) return null
+  return bufferTob64Url(
+    await crypto
+      .createHash('SHA-256')
+      .update(b64UrlToBuffer(owner))
+      .digest()
+  )
+}
 
 let rateLimitFile = workerData.DEFAULT_RATE_LIMIT ?? {}
 cron.schedule('*/10 * * * *', async () => {
   try {
-  console.log('Updating rate limit file after 10 minutes', workerData.RATE_LIMIT_FILE_URL)
-  if (!workerData.RATE_LIMIT_FILE_URL) return
-  const fetchedRateLimitFile = await fetch(workerData.RATE_LIMIT_FILE_URL)
-    .then(res => res.json())
-    .catch(err => {
-      console.error('Error updating rate limit file', err)
-      return {}
-    })
-  rateLimitFile = fetchedRateLimitFile
-  console.log('Updated rate limit file worker')
-  }catch(e) {
+    console.log('Updating rate limit file after 10 minutes', workerData.RATE_LIMIT_FILE_URL)
+    if (!workerData.RATE_LIMIT_FILE_URL) return
+    const fetchedRateLimitFile = await fetch(workerData.RATE_LIMIT_FILE_URL)
+      .then(res => res.json())
+      .catch(err => {
+        console.error('Error updating rate limit file', err)
+        return {}
+      })
+    rateLimitFile = fetchedRateLimitFile
+    console.log('Updated rate limit file worker')
+  } catch (e) {
     console.error('Error updating rate limit file', e)
   }
 })
@@ -161,6 +160,7 @@ const enqueue = enqueueWith({
   toAddress: ownerToAddress,
   IP_WALLET_RATE_LIMIT: workerData.IP_WALLET_RATE_LIMIT,
   IP_WALLET_RATE_LIMIT_INTERVAL: workerData.IP_WALLET_RATE_LIMIT_INTERVAL,
+  RATE_LIMITS_ENABLED: workerData.RATE_LIMITS_ENABLED,
   getRateLimits
 })
 const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue, broadcastChannel })
