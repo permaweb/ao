@@ -29,6 +29,7 @@ import { sendDataItemWith, startMessageRecoveryCronWith } from './api/sendDataIt
 import { sendAssignWith } from './api/sendAssign.js'
 import { processAssignWith } from './api/processAssign.js'
 import { pushMsgWith } from './api/pushMsg.js'
+import { pushResultToHbWith } from './api/pushResultToHb.js'
 
 import { createLogger } from './logger.js'
 import { cuFetchWithCache } from './lib/cu-fetch-with-cache.js'
@@ -410,6 +411,17 @@ export const createApis = async (ctx) => {
 
   const traceMsgs = fromPromise(readTracesWith({ db: traceDb, TRACE_DB_URL: ctx.TRACE_DB_URL, DISABLE_TRACE: ctx.DISABLE_TRACE }))
 
+  const pushResultToHbLogger = logger.child('pushResultToHb')
+  const pushResultToHb = pushResultToHbWith({
+    selectNode: cuClient.selectNodeWith({ CU_URL, logger: pushResultToHbLogger }),
+    fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: pushResultToHbLogger }),
+    buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: pushResultToHbLogger }),
+    logger: pushResultToHbLogger,
+    HB_GRAPHQL_URL,
+    ENABLE_PUSH: ctx.ENABLE_PUSH,
+    fetch
+  })
+
   const pushMsgItemLogger = logger.child('pushMsg')
   const pushMsg = pushMsgWith({
     selectNode: cuClient.selectNodeWith({ CU_URL, logger: sendDataItemLogger }),
@@ -447,6 +459,7 @@ export const createApis = async (ctx) => {
     sendAssign,
     fetchCron,
     pushMsg,
+    pushResultToHb,
     traceMsgs,
     initCronProcs: cronClient.initCronProcsWith({
       startMonitoredProcess: startProcessMonitor,

@@ -11,9 +11,10 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
     }),
     logger
   })
+
   /**
    * uploadDataItem
-   * Upload a Data Item directly to Arweave
+   * Upload a Data Item directly to Arweave, and fire-and-forget to HB.
    *
    * @param data - the Data Item to upload
    *
@@ -22,26 +23,22 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
    * timestamp
    * signature
    * owner
-   *
    */
   return async (data) => {
     return of(data)
-      .map(logger.tap({ log: `Forwarding message to uploader ${UPLOADER_URL}` }))
       .chain(
-        fromPromise((body) =>
-          dataItemFetch(`${UPLOADER_URL}/tx/arweave`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              Accept: 'application/json'
-            },
-            body
-          }).then((res) => { return { body, res } })
-        )
-      )
-      .chain(
-        fromPromise(({ body, res }) =>
-          dataItemFetch(`${HB_GRAPHQL_URL}/~arweave@2.9-pre/tx?codec-device=ans104@1.0`, {
+        fromPromise(async (body) => {
+          // Fire HB upload in parallel — never blocks or fails the main flow
+          const hbUrl = `${HB_GRAPHQL_URL}/id?codec-device=ans104@1.0`
+          logger.tap({ log: `[uploader] Forwarding to HB: ${hbUrl}` })()
+          dataItemFetch(hbUrl, { method: 'POST', body })
+            .then((res) => res.text())
+            .then((text) => logger.tap({ log: `[uploader] HB response: ${text}` })())
+            .catch((err) => logger.tap({ log: `[uploader] HB upload error (non-fatal): ${err.message}` })())
+
+          // Arweave upload — this is the one we await and return
+          logger.tap({ log: `[uploader] Forwarding to Arweave: ${UPLOADER_URL}/tx/arweave` })()
+          return dataItemFetch(`${UPLOADER_URL}/tx/arweave`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/octet-stream',
@@ -49,25 +46,22 @@ function uploadDataItemWith ({ UPLOADER_URL, fetch, histogram, logger, HB_GRAPHQ
             },
             body
           })
-            .then(() => res)
-            .catch((err) => {
-              logger.tap({ log: 'Error while communicating with HB uploader:' })(err)
-              return res
-            })
-        )
+        })
       )
-      .bimap(logger.tap({ log: 'Error while communicating with uploader:' }), identity)
+      .bimap(logger.tap({ log: '[uploader] Error communicating with Arweave uploader:' }), identity)
       .bichain(
         (err) => Rejected(JSON.stringify(err)),
         fromPromise(async (res) => {
           if (!res?.ok) {
             const text = await res.text()
+            logger.tap({ log: `[uploader] Arweave upload failed: ${res.status} ${text}` })()
             throw new Error(`${res.status}: ${text}`)
           }
-          return res.json()
+          const json = await res.json()
+          logger.tap({ log: `[uploader] Arweave upload succeeded: ${json.id}` })()
+          return json
         })
       )
-      .map(logger.tap({ log: 'Successfully forwarded DataItem to uploader' }))
       .toPromise()
   }
 }
