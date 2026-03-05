@@ -24,7 +24,6 @@ export function sendDataItemWith ({
   locateScheduler,
   locateProcess,
   fetchResult,
-  fetchHyperBeamResult,
   crank,
   isHyperBeamProcess,
   logger,
@@ -40,14 +39,14 @@ export function sendDataItemWith ({
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
   ENABLE_MESSAGE_RECOVERY,
-  fetchHBProcesses,
+  RATE_LIMITS_ENABLED,
   fetchProcessWhitelist
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses })
+  const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
@@ -89,6 +88,7 @@ export function sendDataItemWith ({
    * Check if the rate limit has been exceeded using rate limit injected
    */
   async function checkRateLimitExceeded (ctx) {
+    if (RATE_LIMITS_ENABLED === false) return Resolved(ctx)
     function calculateRateLimit (walletID, procID, limits) {
       if (!limits || Object.keys(limits).length === 0) return 10
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)

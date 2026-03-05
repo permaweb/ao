@@ -8,7 +8,6 @@ import warpArBundles from 'warp-arbundles'
 import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
 import workerpool from 'workerpool'
-import Arweave from 'arweave'
 
 import cuClient from './clients/cu.js'
 import schedulerClient from './clients/scheduler.js'
@@ -20,7 +19,6 @@ import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
 import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
 import { readTracesWith, recentTracesWith } from './clients/tracer.js'
-import * as RelayClient from './clients/relay.js'
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
 import { monitorProcessWith } from './api/monitorProcess.js'
@@ -113,8 +111,6 @@ const errorStageGauge = MetricsClient.gaugeWith({})({
   labelNames: ['stage', 'type']
 })
 
-const arweave = Arweave.init()
-
 /**
  * A set of apis used by the express server
  * to send initial items and start the message
@@ -197,12 +193,10 @@ export const createApis = async (ctx) => {
         console.error('Error updating hb processes file', err)
         return {}
       })
-    // disable result from HB_PROCESSES because it is happening in the cu router
-    processesFile = { HB_PROCESSES: {} || {}, PROCESSES: json.processes || {} }
+    processesFile = { PROCESSES: json.processes || {} }
     console.log('Updated processes file')
   }, { runOnInit: true })
 
-  const fetchHBProcesses = () => { return processesFile }
   const fetchProcessWhitelist = () => processesFile.PROCESSES || {}
 
   // Create trace database metrics
@@ -266,6 +260,7 @@ export const createApis = async (ctx) => {
             TASK_QUEUE_RETRY_DELAY: ctx.TASK_QUEUE_RETRY_DELAY,
             IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
             IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL,
+            RATE_LIMITS_ENABLED: ctx.RATE_LIMITS_ENABLED,
             RATE_LIMIT_FILE_URL,
             DEFAULT_RATE_LIMIT: rateLimitFile
           }
@@ -306,7 +301,6 @@ export const createApis = async (ctx) => {
     locateProcess: locate,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
-    fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, histogram, logger: sendDataItemLogger, fetchHBProcesses }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),
     crank,
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: sendDataItemLogger }),
@@ -321,10 +315,10 @@ export const createApis = async (ctx) => {
     toAddress: ownerToAddress,
     IP_WALLET_RATE_LIMIT: ctx.IP_WALLET_RATE_LIMIT,
     IP_WALLET_RATE_LIMIT_INTERVAL: ctx.IP_WALLET_RATE_LIMIT_INTERVAL,
+    RATE_LIMITS_ENABLED: ctx.RATE_LIMITS_ENABLED,
     GET_RESULT_MAX_RETRIES: ctx.GET_RESULT_MAX_RETRIES,
     GET_RESULT_RETRY_DELAY: ctx.GET_RESULT_RETRY_DELAY,
     ENABLE_MESSAGE_RECOVERY: ctx.ENABLE_MESSAGE_RECOVERY,
-    fetchHBProcesses,
     fetchProcessWhitelist
   })
 
@@ -385,7 +379,7 @@ export const createApis = async (ctx) => {
     saveCronProcess,
     updateCronProcessCursor,
     getCronProcessCursor,
-    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
+    fetchTransaction: schedulerClient.fetchTransactionDetailsWith({ locate }),
     HB_GRAPHQL_URL
   })
 
@@ -416,7 +410,7 @@ export const createApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: pushMsgItemLogger,
-    fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL }),
+    fetchTransaction: schedulerClient.fetchTransactionDetailsWith({ locate }),
     ALLOW_PUSHES_AFTER,
     ENABLE_PUSH: ctx.ENABLE_PUSH,
     ENABLE_CUSTOM_PUSH: ctx.ENABLE_CUSTOM_PUSH,
@@ -473,7 +467,6 @@ export const createResultApis = async (ctx) => {
   const GRAPHQL_URL = ctx.GRAPHQL_URL
   const ARWEAVE_URL = ctx.ARWEAVE_URL
   const SPAWN_PUSH_ENABLED = ctx.SPAWN_PUSH_ENABLED
-  const RELAY_MAP = ctx.RELAY_MAP
   const SU_ROUTER_URL = ctx.SU_ROUTER_URL
   const HB_ROUTER_URL = ctx.HB_ROUTER_URL
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
@@ -482,8 +475,6 @@ export const createResultApis = async (ctx) => {
 
   const logger = ctx.logger
   const fetch = ctx.fetch
-
-  const walletAddress = await arweave.wallets.getAddress(MU_WALLET)
 
   const fetchWithCache = cuFetchWithCache({
     fetch,
@@ -516,12 +507,11 @@ export const createResultApis = async (ctx) => {
         console.error('Error updating hb processes file', err)
         return {}
       })
-    // disable result from HB_PROCESSES because it is happening in the cu router
-    processesFile = { HB_PROCESSES: {} || {}, PROCESSES: json.processes || {} }
+    processesFile = { PROCESSES: json.processes || {} }
     console.log('Updated processes file')
   }, { runOnInit: true })
 
-  const fetchHBProcesses = () => { return processesFile }
+  const fetchProcessWhitelist = () => processesFile.PROCESSES || {}
 
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
@@ -534,19 +524,10 @@ export const createResultApis = async (ctx) => {
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
-    fetchHyperBeamResult: cuClient.fetchHyperBeamResultWith({ fetch, histogram, logger: processMsgLogger, fetchHBProcesses }),
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram, HB_GRAPHQL_URL }),
     isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
-    RELAY_MAP,
-    topUp: RelayClient.topUpWith({
-      fetch,
-      logger: processMsgLogger,
-      wallet: MU_WALLET,
-      address: walletAddress,
-      fetchTransactions: gatewayClient.fetchTransactionDetailsWith({ fetch, GRAPHQL_URL })
-    }),
-    fetchHBProcesses
+    fetchProcessWhitelist
   })
 
   const processSpawnLogger = logger.child('processSpawn')

@@ -1,4 +1,4 @@
-import { of } from 'hyper-async'
+import { Rejected, of } from 'hyper-async'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { writeMessageTxWith } from '../lib/write-message-tx.js'
@@ -20,16 +20,13 @@ export function processMsgWith ({
   writeDataItemArweave,
   isWallet,
   fetchSchedulerProcess,
-  fetchHyperBeamResult,
-  RELAY_MAP,
-  topUp,
   isHyperBeamProcess,
-  fetchHBProcesses
+  fetchProcessWhitelist
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess })
-  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, RELAY_MAP, topUp })
+  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses})
+  const pullResult = pullResultWith({ fetchResult, logger })
 
   return (ctx) => {
     return of(ctx)
@@ -50,6 +47,15 @@ export function processMsgWith ({
                 .map(setStage('write-message-arweave', 'end'))
               : of(ctx)
                 .map(setStage('write-message-su', 'get-cu-address'))
+                .chain((ctx) => {
+                  const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
+                  if (whitelist && !whitelist[ctx.cachedMsg.processId]) {
+                    const error = new Error('Forbidden, process not whitelisted')
+                    error.status = 403
+                    return Rejected(error)
+                  }
+                  return of(ctx)
+                })
                 .chain(getCuAddress)
                 .map(setStage('get-cu-address', 'pull-result'))
                 .chain(pullResult)

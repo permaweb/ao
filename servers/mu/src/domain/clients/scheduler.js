@@ -325,8 +325,15 @@ function fetchSchedulerProcessWith ({
   }
 }
 
+function fetchTransactionDetailsWith ({ locate }) {
+  return async ({ messageId, processId }) => {
+
+  }
+}
+
 export default {
   writeDataItemWith,
   writeAssignmentWith,
-  fetchSchedulerProcessWith
+  fetchSchedulerProcessWith,
+  fetchTransactionDetailsWith
 }
