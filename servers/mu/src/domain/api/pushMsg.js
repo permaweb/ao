@@ -30,8 +30,6 @@ export function pushMsgWith ({
       .chain((ctx) => {
         return fetchTransactionAsync({ messageId: ctx.tx.id, processId: ctx.tx.processId })
           .chain(res => {
-            console.log(res)
-            console.log(ALLOW_PUSHES_AFTER)
             if (res.block >= ALLOW_PUSHES_AFTER) {
               return Resolved(ctx)
             }

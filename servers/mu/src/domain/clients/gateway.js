@@ -97,14 +97,14 @@ function isWalletWith ({
 
     // Step 4: Check GraphQL
     try {
-      logger({ log: `Step 4: Checking Arweave for ${id}`, logId })
+      logger({ log: `Step 4: Checking Arweave or local cache for ${id}`, logId })
       const process = await getProcess(id)
       if (process && process?.id) {
-        logger({ log: `Found process on Arweave for ${id}`, logId })
+        logger({ log: `Found process on Arweave/local cache for ${id}`, logId })
         return setById(id, { isWallet: false }).then(() => false)
       }
     } catch (err) {
-      logger({ log: `Step 4: GraphQL check failed for ${id}: ${err.message}`, logId })
+      logger({ log: `Step 4: Arweave/local cache check failed for ${id}: ${err.message}`, logId })
     }
 
     // If no process found in any step, it's a wallet
