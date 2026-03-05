@@ -83,8 +83,7 @@ export const domainConfigSchema = z.object({
   HB_GRAPHQL_URL: z.string(),
   RATE_LIMITS_ENABLED: z.boolean(),
   RATE_LIMIT_FILE_URL: z.string().optional(),
-  PROCESS_WHITELIST_URL: z.string().optional(),
-  SKIP_REPUSH_CHECKS_TOKEN: z.string().optional()
+  PROCESS_WHITELIST_URL: z.string().optional()
 })
 
 /**
@@ -148,8 +147,7 @@ const CONFIG_ENVS = {
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
     RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
-    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || '',
-    SKIP_REPUSH_CHECKS_TOKEN: process.env.SKIP_REPUSH_CHECKS_TOKEN || ''
+    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || ''
   },
   production: {
     MODE,
@@ -190,8 +188,7 @@ const CONFIG_ENVS = {
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
     RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
-    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || '',
-    SKIP_REPUSH_CHECKS_TOKEN: process.env.SKIP_REPUSH_CHECKS_TOKEN || ''
+    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || ''
   }
 }
 

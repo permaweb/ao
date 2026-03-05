@@ -58,7 +58,6 @@ async function ownerToAddress (owner) {
 let rateLimitFile = workerData.DEFAULT_RATE_LIMIT ?? {}
 cron.schedule('*/10 * * * *', async () => {
   try {
-    console.log('Updating rate limit file after 10 minutes', workerData.RATE_LIMIT_FILE_URL)
     if (!workerData.RATE_LIMIT_FILE_URL) return
     const fetchedRateLimitFile = await fetch(workerData.RATE_LIMIT_FILE_URL)
       .then(res => res.json())
@@ -67,7 +66,6 @@ cron.schedule('*/10 * * * *', async () => {
         return {}
       })
     rateLimitFile = fetchedRateLimitFile
-    console.log('Updated rate limit file worker')
   } catch (e) {
     console.error('Error updating rate limit file', e)
   }
