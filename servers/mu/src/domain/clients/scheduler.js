@@ -325,9 +325,63 @@ function fetchSchedulerProcessWith ({
   }
 }
 
-function fetchTransactionDetailsWith ({ locate }) {
-  return async ({ messageId, processId }) => {
+function fetchTransactionDetailsWith ({
+  fetch,
+  histogram,
+  logger,
+  locate
+}) {
+  const suFetch = withTimerMetricsFetch({
+    fetch,
+    timer: histogram,
+    startLabelsFrom: () => ({
+      operation: 'writeAssignmentWithRedirect'
+    }),
+    logger
+  })
 
+  /**
+   * fetchTransactionDetailsWith
+   * Given a processId, an optional messagId and a su location function, find transaction info
+   * from the SU
+   *
+   * @param {string} processId - The processId of to retrieve information of
+   * @param {string} messageId - The messageId
+   * @param {string} logId - The logId to aggregate the logs by
+   *
+   */
+  return async ({ processId, messageId }) => {
+    return locate(processId)
+      .then(async (scheduler) => {
+        const url = messageId
+          ? `${scheduler.url}/${messageId}?process-id=${processId}`
+          : `${scheduler.url}/processes/${processId}`
+
+        return suFetch(url)
+          .then((res) => res.json())
+          .then((res) => {
+            if (res.message) {
+              const blockTag = res.assignment.tags.find(
+                (t) => t.name === 'Block-Height'
+              )
+
+              return {
+                process_id: res.message.target,
+                owner: res.message.owner.address,
+                block: parseInt(blockTag.value, 10)
+              }
+            } else if (res.process_id) {
+              return {
+                process_id: res.process_id,
+                owner: res.owner.address,
+                block: parseInt(res.block, 10)
+              }
+            }
+          })
+      })
+      .catch((e) => {
+        logger({ log: `error fetching transction ${e}` })
+      })
   }
 }
 

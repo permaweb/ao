@@ -1,4 +1,4 @@
-import { Rejected, of } from 'hyper-async'
+import { of } from 'hyper-async'
 
 import { getCuAddressWith } from '../lib/get-cu-address.js'
 import { writeMessageTxWith } from '../lib/write-message-tx.js'
@@ -20,8 +20,7 @@ export function processMsgWith ({
   writeDataItemArweave,
   isWallet,
   fetchSchedulerProcess,
-  isHyperBeamProcess,
-  fetchProcessWhitelist
+  isHyperBeamProcess
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess })
   const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave })
@@ -47,15 +46,6 @@ export function processMsgWith ({
                 .map(setStage('write-message-arweave', 'end'))
               : of(ctx)
                 .map(setStage('write-message-su', 'get-cu-address'))
-                .chain((ctx) => {
-                  const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
-                  if (whitelist && !whitelist[ctx.cachedMsg.processId]) {
-                    const error = new Error('Forbidden, process not whitelisted')
-                    error.status = 403
-                    return Rejected(error)
-                  }
-                  return of(ctx)
-                })
                 .chain(getCuAddress)
                 .map(setStage('get-cu-address', 'pull-result'))
                 .chain(pullResult)

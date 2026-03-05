@@ -133,7 +133,7 @@ describe('cron', () => {
           monitorGaugeValue++
         }
       },
-      fetchTransactions: async () => ({ data: { transactions: { edges: [] } } })
+      fetchTransaction: async () => ({ owner: 'address' })
     })
 
     test('start initial monitor of process foo', async () => {
@@ -178,7 +178,7 @@ describe('cron', () => {
           monitorGaugeValue++
         }
       },
-      fetchTransactions: async () => ({ data: { transactions: { edges: [] } } })
+      fetchTransaction: async () => ({ owner: 'address' })
     })
     const killMonitoredProcess = cron.killMonitoredProcessWith({
       logger,

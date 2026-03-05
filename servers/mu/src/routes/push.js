@@ -17,8 +17,7 @@ const withPushRoute = (app) => {
           params: { id, number },
           query: {
             'process-id': processId,
-            'custom-cu': customCu,
-            'skip-repush-checks-token': skipRepushChecksToken
+            'custom-cu': customCu
           }
         } = req
 
@@ -29,7 +28,7 @@ const withPushRoute = (app) => {
           return res.status(400).send({ error: '\'number\' parameter must be a valid number' })
         }
 
-        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCu, skipRepushChecksToken })
+        await of({ tx: { id, processId }, number: Number(number), logId, messageId: id, initialTxId: id, customCu })
           .chain(pushMsg)
           .bimap(
             (e) => {
