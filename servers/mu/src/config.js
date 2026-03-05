@@ -16,17 +16,6 @@ const positiveIntSchema = z.preprocess((val) => {
   return typeof val === 'string' ? parseInt(val.replaceAll('_', '')) : -1
 }, z.number().nonnegative())
 
-const jsonObjectSchema = z.preprocess((val) => {
-  if (typeof val === 'string') {
-    try {
-      return JSON.parse(val)
-    } catch (error) {
-      return {} // Default to an empty object if parsing fails
-    }
-  }
-  return val
-}, z.any())
-
 export const commaDelimitedArraySchema = z.preprocess((val) => {
   if (Array.isArray(val)) return val
   // ',' delimited string
@@ -82,7 +71,6 @@ export const domainConfigSchema = z.object({
   GET_RESULT_RETRY_DELAY: positiveIntSchema,
   MESSAGE_RECOVERY_MAX_RETRIES: positiveIntSchema,
   MESSAGE_RECOVERY_RETRY_DELAY: positiveIntSchema,
-  RELAY_MAP: jsonObjectSchema,
   ENABLE_PUSH: z.boolean(),
   ENABLE_CUSTOM_PUSH: z.boolean(),
   CUSTOM_CU_MAP_FILE_PATH: z.string(),
@@ -93,6 +81,7 @@ export const domainConfigSchema = z.object({
   HB_ROUTER_URL: z.string(),
   ENABLE_HB_WALLET_CHECK: z.boolean(),
   HB_GRAPHQL_URL: z.string(),
+  RATE_LIMITS_ENABLED: z.boolean(),
   RATE_LIMIT_FILE_URL: z.string().optional(),
   PROCESS_WHITELIST_URL: z.string().optional(),
   SKIP_REPUSH_CHECKS_TOKEN: z.string().optional()
@@ -147,7 +136,6 @@ const CONFIG_ENVS = {
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: 10,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
@@ -158,6 +146,7 @@ const CONFIG_ENVS = {
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
+    RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
     PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || '',
     SKIP_REPUSH_CHECKS_TOKEN: process.env.SKIP_REPUSH_CHECKS_TOKEN || ''
@@ -189,7 +178,6 @@ const CONFIG_ENVS = {
     GET_RESULT_RETRY_DELAY: process.env.GET_RESULT_RETRY_DELAY || 1000,
     MESSAGE_RECOVERY_MAX_RETRIES: 10,
     MESSAGE_RECOVERY_RETRY_DELAY: process.env.MESSAGE_RECOVERY_RETRY_DELAY || 1000,
-    RELAY_MAP: process.env.RELAY_MAP || '',
     ENABLE_PUSH: process.env.ENABLE_PUSH === 'true',
     ENABLE_CUSTOM_PUSH: process.env.ENABLE_CUSTOM_PUSH === 'true',
     CUSTOM_CU_MAP_FILE_PATH: process.env.CUSTOM_CU_MAP_FILE_PATH || 'custom-cu-map.json',
@@ -200,6 +188,7 @@ const CONFIG_ENVS = {
     HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
+    RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
     PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || '',
     SKIP_REPUSH_CHECKS_TOKEN: process.env.SKIP_REPUSH_CHECKS_TOKEN || ''

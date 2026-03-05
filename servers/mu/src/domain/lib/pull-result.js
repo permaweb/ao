@@ -1,7 +1,6 @@
-import { of, fromPromise, Resolved, Rejected } from 'hyper-async'
-import { path } from 'ramda'
+import { of, fromPromise, Resolved } from 'hyper-async'
 import z from 'zod'
-import { backoff, checkStage, okRes } from '../utils.js'
+import { checkStage } from '../utils.js'
 import { resultSchema } from '../dal.js'
 
 const ctxSchema = z.object({
@@ -11,56 +10,13 @@ const ctxSchema = z.object({
   initialTxId: z.any()
 }).passthrough()
 
-function fetchResultWith ({ logger, fetchResult, fetchHyperBeamResult, fetchHBProcesses }) {
+function fetchResultWith ({ fetchResult }) {
   const fetchResultAsync = fromPromise(resultSchema.implement(fetchResult))
-  const fetchHyperBeamResultAsync = fetchHyperBeamResult ? fromPromise(fetchHyperBeamResult) : null
-
-  function getAssignmentNum ({ suUrl, messageId, processId }) {
-    return backoff(
-      () => fetch(`${suUrl}/${messageId}?process-id=${processId}`, { method: 'GET' })
-        .then(okRes)
-        .then((res) => res.json())
-        .then(path(['assignment', 'tags']))
-        .then((tags) => {
-          return tags.find((tag) => tag.name.toLowerCase() === 'nonce')?.value
-        })
-        .then(parseInt),
-      { maxRetries: 3, delay: 500, log: logger, name: `getAssignmentNum(${JSON.stringify({ suUrl, messageId, processId })})` }
-    )
-  }
 
   return (ctx) => {
-    const { HB_PROCESSES } = fetchHBProcesses ? fetchHBProcesses() : {}
     return of(ctx)
       .chain(() => {
-        if (
-          HB_PROCESSES?.[ctx.tx?.processId] &&
-          ctx.schedulerType !== 'hyperbeam' &&
-          fetchHyperBeamResultAsync
-        ) {
-          const messageId = ctx.tx?.id
-          return fromPromise(getAssignmentNum)({ suUrl: ctx.schedLocation?.url, messageId, processId: ctx.tx.processId })
-            .chain((assignmentNum) => {
-              if (!assignmentNum || isNaN(assignmentNum)) {
-                return Rejected(new Error('Assignment number not found', { cause: ctx }))
-              }
-
-              return fetchHyperBeamResultAsync({
-                processId: ctx.tx.processId,
-                assignmentNum,
-                logId: ctx.logId
-              })
-            })
-        } else if (ctx.schedulerType === 'hyperbeam' && fetchHyperBeamResultAsync && ctx.schedulerTx?.slot) {
-          return fetchHyperBeamResultAsync({
-            processId: ctx.tx.processId,
-            assignmentNum: ctx.schedulerTx.slot, // Use scheduler tx id as assignment number
-            logId: ctx.logId
-          })
-        } else {
-          // Use legacy CU result fetching
-          return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
-        }
+        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages

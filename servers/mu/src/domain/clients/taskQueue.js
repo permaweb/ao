@@ -53,7 +53,7 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * and a random hex string. This is so that it can
  * be removed from the database when dequeuing.
  */
-export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
+export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, RATE_LIMITS_ENABLED, rateLimits }) {
   function keyToEthereumAddress (key) {
     /**
      * We need to decode, then remove the first byte denoting compression in secp256k1
@@ -87,6 +87,7 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
   }
 
   async function checkRateLimitExceeded (task) {
+    if (RATE_LIMITS_ENABLED === false) return false
     function calculateRateLimit (walletID, procID, limits) {
       if (!walletID) return 100
       if (!limits || Object.keys(limits).length === 0) return 50
