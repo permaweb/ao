@@ -34,7 +34,7 @@ export function cuFetchWithCache ({ fetch, cache, logger }) {
       logger({ log: ['found redirect url in cache for process: %s redirect: %s', processId, foundRedirectUrl], logId })
       // only sets the host, the protocol will be reused from the passed in url
       // this is a safe assumption because all CUs are implementing the same APIs over the same protocols
-      requestUrl.host = foundRedirectUrl
+      // requestUrl.host = foundRedirectUrl
     }
     return runFetch(requestUrl.toString(), opts, logId)
   }
