@@ -136,7 +136,6 @@ export const createApis = async (ctx) => {
 
   let rateLimitFile = {}
   cron.schedule('*/10 * * * *', async () => {
-    console.log('Updating rate limit file after 10 minutes', RATE_LIMIT_FILE_URL)
     if (!RATE_LIMIT_FILE_URL) return
     const fetchedRateLimitFile = await fetch(RATE_LIMIT_FILE_URL)
       .then((res) => res.json())
@@ -145,7 +144,6 @@ export const createApis = async (ctx) => {
         return {}
       })
     rateLimitFile = fetchedRateLimitFile
-    console.log('Updated rate limit file')
   }, { runOnInit: true })
   const getRateLimitFile = () => rateLimitFile
 
@@ -186,7 +184,6 @@ export const createApis = async (ctx) => {
   let processesFile = {}
   cron.schedule('*/5 * * * *', async () => {
     if (!PROCESS_WHITELIST_URL || PROCESS_WHITELIST_URL === '') return
-    console.log('Updating process whitelist file after 5 minutes', PROCESS_WHITELIST_URL)
     const json = await fetch(PROCESS_WHITELIST_URL)
       .then((res) => res.json())
       .catch(err => {
@@ -194,7 +191,6 @@ export const createApis = async (ctx) => {
         return {}
       })
     processesFile = { PROCESSES: json.processes || {} }
-    console.log('Updated processes file')
   }, { runOnInit: true })
 
   const fetchProcessWhitelist = () => processesFile.PROCESSES || {}
@@ -379,7 +375,7 @@ export const createApis = async (ctx) => {
     saveCronProcess,
     updateCronProcessCursor,
     getCronProcessCursor,
-    fetchTransaction: schedulerClient.fetchTransactionDetailsWith({ locate }),
+    fetchTransaction: schedulerClient.fetchTransactionDetailsWith({ locate, logger: monitorProcessLogger, fetch, histogram }),
     HB_GRAPHQL_URL
   })
 
@@ -410,7 +406,7 @@ export const createApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     crank,
     logger: pushMsgItemLogger,
-    fetchTransaction: schedulerClient.fetchTransactionDetailsWith({ locate }),
+    fetchTransaction: schedulerClient.fetchTransactionDetailsWith({ locate, logger: pushMsgItemLogger, fetch, histogram }),
     ALLOW_PUSHES_AFTER,
     ENABLE_PUSH: ctx.ENABLE_PUSH,
     ENABLE_CUSTOM_PUSH: ctx.ENABLE_CUSTOM_PUSH,
@@ -471,7 +467,6 @@ export const createResultApis = async (ctx) => {
   const HB_ROUTER_URL = ctx.HB_ROUTER_URL
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
-  const PROCESS_WHITELIST_URL = ctx.PROCESS_WHITELIST_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -497,22 +492,6 @@ export const createResultApis = async (ctx) => {
   const getIsHyperBeamProcess = InMemoryClient.getByIdWith({ cache: isHyperBeamProcessCache })
   const setIsHyperBeamProcess = InMemoryClient.setByIdWith({ cache: isHyperBeamProcessCache })
 
-  let processesFile = {}
-  cron.schedule('*/5 * * * *', async () => {
-    if (!PROCESS_WHITELIST_URL || PROCESS_WHITELIST_URL === '') return
-    console.log('Updating process whitelist file after 5 minutes', PROCESS_WHITELIST_URL)
-    const json = await fetch(PROCESS_WHITELIST_URL)
-      .then((res) => res.json())
-      .catch(err => {
-        console.error('Error updating hb processes file', err)
-        return {}
-      })
-    processesFile = { PROCESSES: json.processes || {} }
-    console.log('Updated processes file')
-  }, { runOnInit: true })
-
-  const fetchProcessWhitelist = () => processesFile.PROCESSES || {}
-
   const processMsgLogger = logger.child('processMsg')
   const processMsg = processMsgWith({
     logger: processMsgLogger,
@@ -526,8 +505,7 @@ export const createResultApis = async (ctx) => {
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),
     isWallet: gatewayClient.isWalletWith({ fetch, histogram, getProcess, ARWEAVE_URL, SU_ROUTER_URL, HB_ROUTER_URL, ENABLE_HB_WALLET_CHECK, logger: processMsgLogger, setById, getById }),
     writeDataItemArweave: uploaderClient.uploadDataItemWith({ UPLOADER_URL, logger: processMsgLogger, fetch, histogram, HB_GRAPHQL_URL }),
-    isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess }),
-    fetchProcessWhitelist
+    isHyperBeamProcess: gatewayClient.isHyperBeamProcessWith({ getProcess, logger: processMsgLogger, getIsHyperBeamProcess, setIsHyperBeamProcess })
   })
 
   const processSpawnLogger = logger.child('processSpawn')
