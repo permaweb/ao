@@ -9,6 +9,7 @@ export function pushResultToHbWith ({
   buildAndSign,
   logger,
   HB_GRAPHQL_URL,
+  ENABLE_PUSH,
   fetch
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
@@ -38,6 +39,9 @@ export function pushResultToHbWith ({
       .chain(getCuAddress)
       .chain(pullResult)
       .chain((res) => {
+        if(!ENABLE_PUSH) {
+          return Rejected(new Error('Repush not enabled on this MU.', { cause: ctx }))
+        }
         const { msgs, number } = res
         if (msgs.length <= number) {
           return Rejected(new Error('Message number does not exist in the result.', { cause: ctx }))

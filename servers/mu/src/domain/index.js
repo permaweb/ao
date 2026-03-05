@@ -418,6 +418,7 @@ export const createApis = async (ctx) => {
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: pushResultToHbLogger }),
     logger: pushResultToHbLogger,
     HB_GRAPHQL_URL,
+    ENABLE_PUSH: ctx.ENABLE_PUSH,
     fetch
   })
 
