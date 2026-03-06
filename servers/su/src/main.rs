@@ -80,16 +80,13 @@ fn process_whitelist_check(deps: &Arc<Deps>, process_id: &str) -> Option<HttpRes
 }
 
 fn get_client_ip(req: &HttpRequest) -> Option<String> {
-    req.connection_info()
-        .realip_remote_addr()
-        .map(|ip| ip.to_string())
+    req.headers()
+        .get("X-Real-IP")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
 }
 
 fn is_ip_allowed(ip: &str, whitelist: &IpWhitelist) -> bool {
-    if ip == "127.0.0.1" {
-        return true;
-    }
-
     match whitelist.read() {
         Ok(ips) => ips.contains(ip),
         Err(_) => false,
