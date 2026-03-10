@@ -367,6 +367,32 @@ impl LocalStoreClient {
 
         Ok((paginated_keys, has_next_page))
     }
+
+    fn get_process_bundle(&self, tx_id: &str) -> Result<Vec<u8>, StoreErrorType> {
+        let assignment_key = self.proc_assignment_key(tx_id);
+        if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
+            return Ok(process_bundle);
+        }
+
+        let cf = self.index_db.cf_handle("process").ok_or_else(|| {
+            StoreErrorType::DatabaseError("Column family 'process' not found".to_string())
+        })?;
+        let process_key_prefix = format!("process:{}:", tx_id);
+        let mut iter = self
+            .index_db
+            .prefix_iterator_cf(cf, process_key_prefix.as_bytes());
+
+        if let Some(result) = iter.next() {
+            let (_key, assignment_id_bytes) = result?;
+            let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
+            let assignment_key = self.proc_assignment_key(&assignment_id);
+            if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
+                return Ok(process_bundle);
+            }
+        }
+
+        Err(StoreErrorType::NotFound("Process not found".to_string()))
+    }
 }
 
 #[async_trait]
@@ -462,7 +488,7 @@ impl DataStore for LocalStoreClient {
     async fn get_process(&self, tx_id: &str) -> Result<Process, StoreErrorType> {
         let assignment_key = self.proc_assignment_key(tx_id);
         if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
-            return Ok(Process::from_bytes(process_bundle)?);
+            return Ok(Process::from_bytes(process_bundle, &None)?);
         }
 
         /*
@@ -487,7 +513,7 @@ impl DataStore for LocalStoreClient {
             let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
             let assignment_key = self.proc_assignment_key(&assignment_id);
             if let Some(process_bundle) = self.file_db.get(assignment_key.as_bytes())? {
-                return Ok(Process::from_bytes(process_bundle)?);
+                return Ok(Process::from_bytes(process_bundle, &None)?);
             }
         }
 
@@ -505,7 +531,7 @@ impl DataStore for LocalStoreClient {
     fn get_message(&self, tx_id: &str, _process_id_in: &str) -> Result<Message, StoreErrorType> {
         let assignment_key = self.msg_assignment_key(tx_id);
         if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
-            let message: Message = Message::from_bytes(message_bundle)?;
+            let message: Message = Message::from_bytes(message_bundle, &None)?;
             return Ok(message);
         }
 
@@ -531,7 +557,7 @@ impl DataStore for LocalStoreClient {
             let assignment_id = String::from_utf8(assignment_id_bytes.to_vec())?;
             let assignment_key = self.msg_assignment_key(&assignment_id);
             if let Some(message_bundle) = self.file_db.get(assignment_key.as_bytes())? {
-                let message: Message = Message::from_bytes(message_bundle)?;
+                let message: Message = Message::from_bytes(message_bundle, &None)?;
                 return Ok(message);
             }
         }
@@ -651,6 +677,7 @@ impl DataStore for LocalStoreClient {
         limit: &Option<i32>,
         from_nonce: &Option<String>,
         to_nonce: &Option<String>,
+        show_anchor: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         let process_id = &process_in.process.process_id;
         let limit_val = limit.unwrap_or(100) as usize;
@@ -679,7 +706,12 @@ impl DataStore for LocalStoreClient {
                     };
 
                 if include_process {
-                    let process_message = Message::from_process(process_in.clone())?;
+                    let proc_bundle = self.get_process_bundle(&process_in.process.process_id)?;
+                    let process_message = Message::from_process(
+                        process_in.clone(), 
+                        &proc_bundle, 
+                        show_anchor
+                    )?;
                     messages.push(process_message);
                     /*
                       Adjust the limit since the process itself
@@ -746,7 +778,12 @@ impl DataStore for LocalStoreClient {
                     };
 
                 if include_process {
-                    let process_message = Message::from_process(process_in.clone())?;
+                    let proc_bundle = self.get_process_bundle(&process_in.process.process_id)?;
+                    let process_message = Message::from_process(
+                        process_in.clone(), 
+                        &proc_bundle, 
+                        show_anchor
+                    )?;
                     messages.push(process_message);
                     /*
                       Adjust the limit since the process itself
@@ -811,7 +848,7 @@ impl DataStore for LocalStoreClient {
             */
             for _ in 0..10 {
                 if let Some(message_data) = self.file_db.get(assignment_key.as_bytes())? {
-                    let message: Message = Message::from_bytes(message_data)?;
+                    let message: Message = Message::from_bytes(message_data, show_anchor)?;
                     messages.push(message);
                     break;
                 } else {
@@ -865,7 +902,7 @@ impl DataStore for LocalStoreClient {
 
             for _ in 0..10 {
                 if let Some(message_data) = self.file_db.get(assignment_key.as_bytes())? {
-                    let message: Message = Message::from_bytes(message_data.clone())?;
+                    let message: Message = Message::from_bytes(message_data.clone(), &None)?;
                     bundles.push((message.assignment.id, message_data));
                     break;
                 } else {

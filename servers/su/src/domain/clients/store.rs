@@ -419,7 +419,8 @@ impl StoreClient {
         &self,
         message_id_in: &String,
         assignment_id_in: &Option<String>,
-        conn: &mut PooledConnection<ConnectionManager<PgConnection>>
+        conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+        show_anchor: &Option<String>,
     ) -> Result<Message, StoreErrorType> {
         use super::schema::messages::dsl::*;
 
@@ -446,12 +447,28 @@ impl StoreClient {
 
         match db_message_result {
             Ok(Some(db_message)) => {
-                let message_val: serde_json::Value =
-                    serde_json::from_value(db_message.message_data.clone())?;
-                let message: Message = Message::from_val(&message_val, db_message.bundle.clone())?;
+                let message: Message = Message::from_bytes(db_message.bundle.clone(), show_anchor)?;
                 Ok(message)
             }
             Ok(None) => Err(StoreErrorType::NotFound("Message not found".to_string())), // Adjust this error type as needed
+            Err(e) => Err(StoreErrorType::from(e)),
+        }
+    }
+
+    pub fn get_process_bundle(&self, process_id_in: &str) -> Result<Vec<u8>, StoreErrorType> {
+        use super::schema::processes::dsl::*;
+        let conn = &mut self.get_read_conn(&process_id_in.to_string())?;
+
+        let db_process_result: Result<Option<DbProcess>, DieselError> = processes
+            .filter(process_id.eq(process_id_in))
+            .first(conn)
+            .optional();
+
+        match db_process_result {
+            Ok(Some(db_process)) => {
+                Ok(db_process.bundle)
+            }
+            Ok(None) => Err(StoreErrorType::NotFound("Process bundle not found".to_string())),
             Err(e) => Err(StoreErrorType::from(e)),
         }
     }
@@ -967,6 +984,7 @@ impl DataStore for StoreClient {
         limit: &Option<i32>,
         from_nonce: &Option<String>,
         to_nonce: &Option<String>,
+        show_anchor: &Option<String>,
     ) -> Result<PaginatedMessages, StoreErrorType> {
         use super::schema::messages::dsl::*;
         let conn = &mut self.get_read_conn(&process_in.process.process_id)?;
@@ -1077,7 +1095,12 @@ impl DataStore for StoreClient {
 
                     // Include the process as the first message if determined to be on the first page and has assignment
                     if include_process {
-                        let process_message = Message::from_process(process_in.clone())?;
+                        let proc_bundle = self.get_process_bundle(&process_in.process.process_id)?;
+                        let process_message = Message::from_process(
+                            process_in.clone(), 
+                            &proc_bundle, 
+                            show_anchor
+                        )?;
                         messages_mapped.push(process_message);
                     }
 
@@ -1104,7 +1127,7 @@ impl DataStore for StoreClient {
                             db_message.timestamp.to_string().clone(),
                         )) {
                             Some(bytes_result) => {
-                                let mapped = Message::from_bytes(bytes_result.clone())?;
+                                let mapped = Message::from_bytes(bytes_result.clone(), show_anchor)?;
                                 messages_mapped.push(mapped);
                             }
                             None => {
@@ -1112,7 +1135,8 @@ impl DataStore for StoreClient {
                                 let full_message = self.get_message_internal(
                                     &db_message.message_id,
                                     &db_message.assignment_id,
-                                    conn
+                                    conn,
+                                    show_anchor
                                 )?;
                                 messages_mapped.push(full_message);
                             }
@@ -1150,14 +1174,18 @@ impl DataStore for StoreClient {
 
                     // Include the process as the first message if determined to be on the first page and has assignment
                     if include_process {
-                        let process_message = Message::from_process(process_in.clone())?;
+                        let proc_bundle = self.get_process_bundle(&process_in.process.process_id)?;
+                        let process_message = Message::from_process(
+                            process_in.clone(), 
+                            &proc_bundle, 
+                            show_anchor
+                        )?;
                         messages_mapped.push(process_message);
                     }
 
                     for db_message in messages_o.iter() {
-                        let json = serde_json::from_value(db_message.message_data.clone())?;
                         let bytes: Vec<u8> = db_message.bundle.clone();
-                        let mapped = Message::from_val(&json, bytes)?;
+                        let mapped = Message::from_bytes(bytes, show_anchor)?;
                         messages_mapped.push(mapped);
                     }
 

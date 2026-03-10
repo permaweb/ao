@@ -153,6 +153,7 @@ pub trait DataStore: Send + Sync {
         limit: &Option<i32>,
         from_nonce: &Option<String>,
         to_nonce: &Option<String>,
+        show_anchor: &Option<String>
     ) -> Result<PaginatedMessages, StoreErrorType>;
     async fn get_message_bundles(
         &self,

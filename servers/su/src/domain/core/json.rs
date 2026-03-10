@@ -126,7 +126,7 @@ pub fn hash(data: &[u8]) -> Vec<u8> {
 }
 
 impl Process {
-    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, JsonErrorType> {
+    pub fn from_bytes(bytes: Vec<u8>, show_anchor: &Option<String>) -> Result<Self, JsonErrorType> {
         let data_item = DataItem::from_bytes(bytes)?;
 
         /*
@@ -145,7 +145,7 @@ impl Process {
                   Current process structure, because it has an
                   assignment and a message
                 */
-                Ok(Process::from_bundle(&bundle_data)?)
+                Ok(Process::from_bundle(&bundle_data, show_anchor)?)
             }
             1 => {
                 /*
@@ -162,13 +162,17 @@ impl Process {
         }
     }
 
-    pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
+    pub fn from_bundle(data_bundle: &DataBundle, show_anchor: &Option<String>) -> Result<Self, JsonErrorType> {
         let id_assign = data_bundle.items[0].id().clone();
         let tags_assign = data_bundle.items[0].tags();
         let owner_assign = data_bundle.items[0].owner().clone();
         let target_assign = data_bundle.items[0].target().clone();
         let signature_assign = data_bundle.items[0].signature().clone();
-        let anchor_assign = data_bundle.items[0].anchor().clone();
+
+        let anchor_assign = match show_anchor {
+            Some(_) => data_bundle.items[0].anchor_b64().clone(),
+            None => data_bundle.items[0].anchor().clone()
+        };
 
         let ac_assign = anchor_assign.clone();
         let anchor_r_assign = match &*anchor_assign {
@@ -422,7 +426,7 @@ impl Process {
 }
 
 impl Message {
-    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, JsonErrorType> {
+    pub fn from_bytes(bytes: Vec<u8>, show_anchor: &Option<String>) -> Result<Self, JsonErrorType> {
         let data_item = DataItem::from_bytes(bytes)?;
         let top_level_tags = data_item.tags();
 
@@ -444,7 +448,7 @@ impl Message {
                         .data_bytes()
                         .ok_or("Bundle data not present in DataItem")?,
                 )?;
-                Ok(Message::from_bundle(&bundle_data)?)
+                Ok(Message::from_bundle(&bundle_data, &show_anchor)?)
             }
             Some(_) => {
                 /*
@@ -525,13 +529,17 @@ impl Message {
         }
     }
 
-    pub fn from_bundle(data_bundle: &DataBundle) -> Result<Self, JsonErrorType> {
+    pub fn from_bundle(data_bundle: &DataBundle, show_anchor: &Option<String>) -> Result<Self, JsonErrorType> {
         let id = data_bundle.items[0].id().clone();
         let tags = data_bundle.items[0].tags();
         let owner = data_bundle.items[0].owner().clone();
         let target = data_bundle.items[0].target().clone();
         let signature = data_bundle.items[0].signature().clone();
-        let anchor = data_bundle.items[0].anchor().clone();
+
+        let anchor = match show_anchor  {
+            Some(_) => data_bundle.items[0].anchor_b64().clone(),
+            None => data_bundle.items[0].anchor().clone()
+        };
 
         let ac = anchor.clone();
         let anchor_r = match &*anchor {
@@ -610,8 +618,8 @@ impl Message {
       it shouldn't be used as the first Message so we
       throw an error.
     */
-    pub fn from_process(process: Process) -> Result<Self, JsonErrorType> {
-        let assignment_inner = match process.assignment {
+    pub fn from_process(process: Process, proc_bundle: &Vec<u8>, show_anchor: &Option<String>) -> Result<Self, JsonErrorType> {
+        let mut assignment_inner = match process.assignment {
             Some(assignment) => assignment,
             None => {
                 return Err(JsonErrorType::JsonError(
@@ -619,6 +627,19 @@ impl Message {
                 ));
             }
         };
+
+        match show_anchor {
+            Some(_) => {
+                let proc = Process::from_bytes(proc_bundle.clone(), show_anchor)?;
+                match proc.assignment {
+                    Some(a) => {
+                        assignment_inner.anchor = a.anchor;
+                    },
+                    None => ()
+                }
+            },
+            None => ()
+        }
 
         let message_inner = Some(MessageInner {
             id: process.process.process_id,
@@ -892,7 +913,7 @@ mod tests {
         let mut data_bundle = DataBundle::new();
         data_bundle.add_item(assignment_data_item);
         data_bundle.add_item(data_item);
-        let message = Message::from_bundle(&data_bundle).expect("failed to create message");
+        let message = Message::from_bundle(&data_bundle, &None).expect("failed to create message");
         let m = message.clone().message.unwrap();
         assert_eq!(
             message.message_id().unwrap(),
@@ -921,7 +942,7 @@ mod tests {
         let mut data_bundle = DataBundle::new();
         data_bundle.add_item(assignment_data_item);
         data_bundle.add_item(data_item);
-        let process = Process::from_bundle(&data_bundle).expect("failed to create process");
+        let process = Process::from_bundle(&data_bundle, &None).expect("failed to create process");
         assert_eq!(
             process.process.owner.address,
             "4QKhXnyl1z3HEPprMKfTeXrWPRuQjK6O99k5SFKGuck".to_string()

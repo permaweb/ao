@@ -904,6 +904,13 @@ impl DataItem {
             Err(_) => "".to_string(),
         }
     }
+
+    pub fn anchor_b64(&self) -> String {
+        match String::from_utf8(self.anchor.clone()) {
+            Ok(s) => s,
+            Err(_) => base64_url::encode(&self.anchor),
+        }
+    }
 }
 
 #[cfg(test)]
