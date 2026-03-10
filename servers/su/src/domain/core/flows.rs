@@ -173,11 +173,11 @@ async fn maybe_recalc_deephashes(deps: Arc<Deps>, process_id: &String) -> Result
         ));
 
         let final_bundle = bundles.0[bundles.0.len() - 1].clone();
-        let final_message = Message::from_bytes(final_bundle.1)?;
+        let final_message = Message::from_bytes(final_bundle.1, &None)?;
         from = Some(final_message.timestamp()?.to_string());
 
         for (_, bundle) in &bundles.0 {
-            let msg = Message::from_bytes(bundle.clone())?;
+            let msg = Message::from_bytes(bundle.clone(), &None)?;
             /*
               msg_deephash produces an error or None for a message
               that shouldn't get deep hashed. So we swallow the error
@@ -473,7 +473,7 @@ pub async fn write_item(
         let aid = assignment.id();
         let return_aid = assignment.id();
         let build_result = builder.bundle_items(vec![assignment]).await?;
-        let message = Message::from_bundle(&build_result.bundle)?;
+        let message = Message::from_bundle(&build_result.bundle, &None)?;
         deps.data_store
             .save_message(&message, &build_result.binary, deep_hash.as_ref())
             .await?;
@@ -608,7 +608,7 @@ pub async fn write_item(
                 .map_err(|e| format!("{:?}", e))?;
             let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
 
-            let process = Process::from_bundle(&build_result.bundle)?;
+            let process = Process::from_bundle(&build_result.bundle, &None)?;
             deps.data_store
                 .save_process(&process, &build_result.binary)?;
 
@@ -698,7 +698,7 @@ pub async fn write_item(
             .as_bytes()
             .map_err(|e| format!("{:?}", e))?;
         let build_result = builder.bundle_items(vec![assignment, data_item]).await?;
-        let message = Message::from_bundle(&build_result.bundle)?;
+        let message = Message::from_bundle(&build_result.bundle, &None)?;
 
         deps.data_store
             .save_message(&message, &build_result.binary, deep_hash.as_ref())
@@ -732,6 +732,7 @@ pub async fn read_message_data(
     limit: Option<i32>,
     from_nonce: Option<String>,
     to_nonce: Option<String>,
+    show_anchor: Option<String>,
 ) -> Result<String, String> {
     let start_top_level = Instant::now();
     let start_get_message = Instant::now();
@@ -751,7 +752,7 @@ pub async fn read_message_data(
         let start = Instant::now();
         let messages = deps
             .data_store
-            .get_messages(&process, &from, &to, &limit, &from_nonce, &to_nonce)
+            .get_messages(&process, &from, &to, &limit, &from_nonce, &to_nonce, &show_anchor)
             .await?;
         let duration = start.elapsed();
         deps.logger

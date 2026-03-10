@@ -31,6 +31,8 @@ struct FromTo {
     from_nonce: Option<String>,
     #[serde(rename = "to-nonce")]
     to_nonce: Option<String>,
+    #[serde(rename = "show-anchor")]
+    show_anchor: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -190,6 +192,7 @@ async fn main_post_route(
         return HttpResponse::BadRequest()
             .json(json!({"error": "Access denied"}));
     }
+
     match router::redirect_data_item(
         data.deps.clone(),
         req_body.to_vec(),
@@ -238,6 +241,7 @@ async fn main_get_route(
     let process_id = query_params.process_id.clone();
     let from_nonce = query_params.from_nonce.clone();
     let to_nonce = query_params.to_nonce.clone();
+    let show_anchor = query_params.show_anchor.clone();
 
     if let Some(resp) = process_whitelist_check(&data.deps, &process_id) {
         return resp;
@@ -263,6 +267,7 @@ async fn main_get_route(
         limit,
         from_nonce,
         to_nonce,
+        show_anchor,
     )
     .await;
 

@@ -47,7 +47,7 @@ mod tests {
         let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
 
         let process_bundle = create_test_process_bundle();
-        let test_process = Process::from_bytes(process_bundle.clone())?;
+        let test_process = Process::from_bytes(process_bundle.clone(), &None)?;
 
         client.save_process(&test_process, &process_bundle)?;
         let retrieved_process = client.get_process(&test_process.process.process_id).await?;
@@ -65,7 +65,7 @@ mod tests {
         let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
 
         let message_bundle = create_test_message_bundle();
-        let test_message = Message::from_bytes(message_bundle.clone())?;
+        let test_message = Message::from_bytes(message_bundle.clone(), &None)?;
 
         client
             .save_message(&test_message, &message_bundle, None)
@@ -82,18 +82,18 @@ mod tests {
         let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
 
         let (process_bundle, message_bundles) = bundle_list();
-        let test_process = Process::from_bytes(process_bundle.clone())?;
+        let test_process = Process::from_bytes(process_bundle.clone(), &None)?;
         client.save_process(&test_process, &process_bundle)?;
 
         // Save all messages
         for bundle in message_bundles.iter() {
-            let test_message = Message::from_bytes(bundle.clone())?;
+            let test_message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&test_message, &bundle, None).await?;
         }
 
         // Retrieve messages and check nonce order and continuity
         let result = client
-            .get_messages(&test_process, &None, &None, &None, &None, &None)
+            .get_messages(&test_process, &None, &None, &None, &None, &None, &None)
             .await?;
         let mut previous_nonce: Option<i32> = None;
 
@@ -121,17 +121,17 @@ mod tests {
         let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
 
         let (process_bundle, message_bundles) = bundle_list();
-        let test_process = Process::from_bytes(process_bundle.clone())?;
+        let test_process = Process::from_bytes(process_bundle.clone(), &None)?;
         client.save_process(&test_process, &process_bundle)?;
 
         for bundle in message_bundles.iter() {
-            let test_message = Message::from_bytes(bundle.clone())?;
+            let test_message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&test_message, &bundle, None).await?;
         }
 
         // Case 1: Default parameters
         let result = client
-            .get_messages(&test_process, &None, &None, &None, &None, &None)
+            .get_messages(&test_process, &None, &None, &None, &None, &None, &None)
             .await?;
         // result should also include the process
         assert_eq!(result.edges.len(), message_bundles.len() + 1);
@@ -140,7 +140,7 @@ mod tests {
         // Case 2: Limit parameter
         let limit = 11;
         let result = client
-            .get_messages(&test_process, &None, &None, &Some(limit), &None, &None)
+            .get_messages(&test_process, &None, &None, &Some(limit), &None, &None, &None)
             .await?;
         assert_eq!(result.edges.len(), limit as usize);
         assert!(result.page_info.has_next_page);
@@ -155,6 +155,7 @@ mod tests {
                 &None,
                 &None,
                 &None,
+                &None,
             )
             .await?;
         assert!(result
@@ -165,7 +166,7 @@ mod tests {
         // // Case 4: With 'to' parameter
         let to = "1728412714154".to_string();
         let result = client
-            .get_messages(&test_process, &None, &Some(to.clone()), &None, &None, &None)
+            .get_messages(&test_process, &None, &Some(to.clone()), &None, &None, &None, &None)
             .await?;
         assert!(result
             .edges
@@ -178,6 +179,7 @@ mod tests {
                 &test_process,
                 &Some(from.clone()),
                 &Some(to.clone()),
+                &None,
                 &None,
                 &None,
                 &None,
@@ -197,6 +199,7 @@ mod tests {
                 &Some(limit),
                 &None,
                 &None,
+                &None
             )
             .await?;
         assert!(result.edges.iter().all(|m| {
@@ -214,40 +217,40 @@ mod tests {
         let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
 
         let (process_bundle, message_bundles) = bundle_list();
-        let test_process = Process::from_bytes(process_bundle.clone())?;
+        let test_process = Process::from_bytes(process_bundle.clone(), &None)?;
         client.save_process(&test_process, &process_bundle)?;
 
         // Save half of the messages
         for bundle in message_bundles.iter().take(message_bundles.len() / 2) {
-            let test_message = Message::from_bytes(bundle.clone())?;
+            let test_message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&test_message, &bundle, None).await?;
         }
 
         let (process_bundle_2, message_bundles_2) = bundle_list_2();
-        let test_process_2 = Process::from_bytes(process_bundle_2.clone())?;
+        let test_process_2 = Process::from_bytes(process_bundle_2.clone(), &None)?;
         client.save_process(&test_process_2, &process_bundle_2)?;
 
         // Save half of the messages of next process
         for bundle in message_bundles_2.iter().take(message_bundles_2.len() / 2) {
-            let test_message = Message::from_bytes(bundle.clone())?;
+            let test_message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&test_message, &bundle, None).await?;
         }
 
         // Save second half of messages for the first process
         for bundle in message_bundles.iter().skip(message_bundles.len() / 2) {
-            let test_message = Message::from_bytes(bundle.clone())?;
+            let test_message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&test_message, &bundle, None).await?;
         }
 
         // Save second half of messages for the second process
         for bundle in message_bundles_2.iter().skip(message_bundles_2.len() / 2) {
-            let test_message = Message::from_bytes(bundle.clone())?;
+            let test_message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&test_message, &bundle, None).await?;
         }
 
         // Retrieve messages and check length, nonce order, and continuity
         let result = client
-            .get_messages(&test_process, &None, &None, &None, &None, &None)
+            .get_messages(&test_process, &None, &None, &None, &None, &None, &None)
             .await?;
         let mut previous_nonce: Option<i32> = None;
 
@@ -293,7 +296,7 @@ mod tests {
         let client = LocalStoreClient::new(&test_db.file_db_path(), &test_db.index_db_path())?;
 
         let (process_bundle, message_bundles) = bundle_list();
-        let test_process = Process::from_bytes(process_bundle.clone())?;
+        let test_process = Process::from_bytes(process_bundle.clone(), &None)?;
         let process_id = &test_process.process.process_id;
 
         // Test with no messages - should return None
@@ -304,7 +307,7 @@ mod tests {
 
         // Save messages with different timestamps to test ordering
         for (_i, bundle) in message_bundles.iter().enumerate() {
-            let message = Message::from_bytes(bundle.clone())?;
+            let message = Message::from_bytes(bundle.clone(), &None)?;
             client.save_message(&message, bundle, None).await?;
         }
 
@@ -317,7 +320,7 @@ mod tests {
         // The last message should have the highest timestamp
         // Based on the bundle_list() messages, we expect the message with highest timestamp
         let all_messages: Vec<Message> = message_bundles.iter()
-            .map(|b| Message::from_bytes(b.clone()).unwrap())
+            .map(|b| Message::from_bytes(b.clone(), &None).unwrap())
             .collect();
         let expected_latest = all_messages.iter()
             .max_by_key(|m| m.timestamp().unwrap_or(0))
