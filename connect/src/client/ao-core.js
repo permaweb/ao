@@ -8,7 +8,7 @@ function normalizeOutput(jsonRes) {
     body = typeof jsonRes === 'string'
       ? JSON.parse(jsonRes?.results?.json?.body)
       : jsonRes?.results?.raw ?? {};
-  } catch {}
+  } catch { }
 
   debugLog('info', 'Parsed HyperBEAM Response Body:', body);
 
@@ -76,20 +76,42 @@ export function spawnWith(deps) {
     debugLog('info', 'Authority:', authority)
     debugLog('info', 'Module:', module)
 
+    let executionDevice;
+    let signingFormat;
+
+    switch (args.type) {
+      case 'genesis-wasm':
+        executionDevice = 'genesis-wasm@1.0'
+        signingFormat = 'ans104'
+        break
+      case 'hyper-aos':
+        executionDevice = 'lua@5.3a'
+        signingFormat = 'ans104'
+        break;
+      default:
+        executionDevice = 'genesis-wasm@1.0'
+        signingFormat = 'ans104'
+        break
+    }
+
+    console.log(executionDevice)
+    console.log(signingFormat)
+
     try {
       const params = {
         path: '/push',
         device: 'process@1.0',
         'scheduler-device': 'scheduler@1.0',
         'push-device': 'push@1.0',
-        'execution-device': 'genesis-wasm@1.0',
+        'execution-device': executionDevice,
         Authority: authority,
         Scheduler: scheduler,
         Module: module,
         data: getData(args),
         ...getTags(args),
         ...getAOParams('Process'),
-        ...httpParams
+        ...httpParams,
+        'signing-format': signingFormat
       }
 
       const response = await deps.aoCore.request(params)
