@@ -35,6 +35,16 @@ export function writeMessageTxWith (env) {
 
     return of()
       .chain(() => {
+        const tagsVal = ctx.dataItem?.tags || ctx?.cachedMsg?.msg?.Tags || []
+        if (
+          tagsVal.find(
+            (t) =>
+              t.name === 'From-Process' &&
+              t.value === 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'
+          )
+        ) {
+          return Rejected(new Error('Invalid From-Process value.', { cause: ctx }))
+        }
         if (RELAY_MAP && Object.keys(RELAY_MAP).includes(ctx.tx.processId)) {
           if (ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Action' && t.value === 'Credit-Notice')) {
             const sender = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Sender')?.value
