@@ -10,7 +10,6 @@ use tokio::spawn;
 use tokio::time::{sleep, Duration};
 
 use crate::domain::core::dal::{Uploader, UploaderErrorType};
-use crate::domain::bytes;
 use crate::domain::Log;
 
 use crate::domain::clients::store::StoreClient;
@@ -137,42 +136,8 @@ impl Uploader for UploaderClient {
             let mut delay = Duration::from_secs(1);
             let max_delay = Duration::from_secs(32);
 
-            let target_item = match bytes::DataItem::from_bytes(tx_for_cache.clone()) {
-                Ok(item) => item,
-                Err(e) => {
-                    logger_for_cache.error(
-                      format!("Cache upload failed to parse bundle item: {:?}", e)
-                    );
-                    return;
-                }
-            };
-
-            match target_item.tags()
-                .iter().any(|tag| {
-                        tag.name == "Type" && (tag.value == "Process")
-                }) {
-                    true => (),
-                    false => {
-                        logger_for_cache.log(
-                            "Cache upload skipping, not a Process"
-                            .to_string()
-                        );
-                        return;
-                    }
-                };
-
-            let tx_for_cache_parsed = match target_item.as_bytes() {
-                Ok(bytes) => bytes,
-                Err(e) => {
-                    logger_for_cache.error(format!(
-                      "Cache upload failed to convert item to bytes: {:?}", e
-                    ));
-                    return;
-                }
-            };
-
             let url = match node_url_for_cache.join(
-              "/~arweave@2.9-pre/tx?codec-device=ans104@1.0"
+              "/id?codec-device=ans104@1.0"
             ) {
                 Ok(url) => url,
                 Err(e) => {
@@ -186,7 +151,7 @@ impl Uploader for UploaderClient {
             for attempt in 0..1 {
                 let response = client
                     .post(url.clone())
-                    .body(tx_for_cache_parsed.clone())
+                    .body(tx_for_cache.clone())
                     .send()
                     .await;
 
