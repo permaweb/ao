@@ -19,6 +19,7 @@ import * as MetricsClient from './clients/metrics.js'
 import * as SqliteClient from './clients/sqlite.js'
 import cronClient, { deleteCronProcessWith, getCronProcessCursorWith, saveCronProcessWith, updateCronProcessCursorWith } from './clients/cron.js'
 import { readTracesWith, recentTracesWith } from './clients/tracer.js'
+import { schedulerLocationsWith } from './clients/schedulerLocations.js'
 import { processMsgWith } from './api/processMsg.js'
 import { processSpawnWith } from './api/processSpawn.js'
 import { monitorProcessWith } from './api/monitorProcess.js'
@@ -157,7 +158,14 @@ export const createApis = async (ctx) => {
     logger
   })
 
-  const { locate, raw, getProcess } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+  const schedUtilsConnect = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+
+  const isWhitelistMode = PROCESS_WHITELIST_URL && PROCESS_WHITELIST_URL !== ''
+  const schedLocationsLocal = isWhitelistMode
+    ? await schedulerLocationsWith({ PROCESS_WHITELIST_URL, GRAPHQL_URL, DB_URL: ctx.DB_URL })
+    : null
+
+  const { locate, raw, getProcess } = isWhitelistMode ? schedLocationsLocal : schedUtilsConnect
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -480,6 +488,7 @@ export const createResultApis = async (ctx) => {
   const HB_ROUTER_URL = ctx.HB_ROUTER_URL
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
+  const PROCESS_WHITELIST_URL = ctx.PROCESS_WHITELIST_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -490,8 +499,19 @@ export const createResultApis = async (ctx) => {
     logger
   })
 
-  const { locate, raw, getProcess } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
-  const { locate: locateNoRedirect } = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: false, HB_GRAPHQL_URL })
+  const schedUtilsConnect = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+  const schedUtilsConnectNoRedirect = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+
+  const isWhitelistMode = PROCESS_WHITELIST_URL && PROCESS_WHITELIST_URL !== ''
+  const schedLocationsLocal = isWhitelistMode
+    ? await schedulerLocationsWith({ PROCESS_WHITELIST_URL, GRAPHQL_URL, DB_URL: ctx.DB_URL })
+    : null
+
+  const { locate, raw, getProcess } = isWhitelistMode ? schedLocationsLocal : schedUtilsConnect
+
+  const { locate: locateNoRedirect } = isWhitelistMode
+    ? { locate: () => { throw new Error('No spawning in whitelist mode') } }
+    : schedUtilsConnectNoRedirect
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })

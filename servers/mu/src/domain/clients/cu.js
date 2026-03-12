@@ -46,8 +46,8 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
           logId
         ).then(okRes),
       {
-        maxRetries: 5,
-        delay: 500,
+        maxRetries: 10,
+        delay: 1000,
         log: logger,
         logId,
         name: `fetchResult(${JSON.stringify({
