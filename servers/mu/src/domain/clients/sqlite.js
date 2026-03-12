@@ -3,11 +3,20 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [TASKS_TABLE, TRACES_TABLE, CRON_PROCESSES_TABLE, MESSAGES_TABLE] = [
+export const [
+  TASKS_TABLE,
+  TRACES_TABLE,
+  CRON_PROCESSES_TABLE,
+  MESSAGES_TABLE,
+  PROCESSES_TABLE,
+  SCHEDULER_LOCATIONS
+] = [
   'tasks',
   'traces',
   'cron_processes',
-  'messages'
+  'messages',
+  'processes',
+  'scheduler_locations'
 ]
 
 const createMessages = async (db) => db.prepare(
@@ -48,6 +57,20 @@ const createCronProcesses = async (db) => db.prepare(
     cursor TEXT
   ) WITHOUT ROWID;`
 ).run()
+
+// const _createProcesses = async (db) => db.prepare(
+//   `CREATE TABLE IF NOT EXISTS ${PROCESSES_TABLE}(
+//     processId TEXT PRIMARY KEY,
+//     schedulerAddress TEXT
+//   ) WITHOUT ROWID;`
+// ).run()
+
+// const _createSchedulerLocations = async (db) => db.prepare(
+//   `CREATE TABLE IF NOT EXISTS ${SCHEDULER_LOCATIONS}(
+//     schedulerAddress TEXT PRIMARY KEY,
+//     url TEXT
+//   ) WITHOUT ROWID;`
+// ).run()
 
 const createTracesIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${TRACES_TABLE}_messageId_processId

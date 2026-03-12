@@ -183,7 +183,7 @@ const CONFIG_ENVS = {
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
     STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
-    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
+    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://push.forward.computer',
     ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
     RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
