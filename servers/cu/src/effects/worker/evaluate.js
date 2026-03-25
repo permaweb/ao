@@ -159,7 +159,7 @@ export function evaluateWith ({
     )
 
     const processMessageFetch = await fetch(
-      `${scheduler.url}/${AoGlobal.Process.Id}?limit=1`
+      `${scheduler.url}/${AoGlobal.Process.Id}?process-id=${AoGlobal.Process.Id}&limit=1`
     ).then(res => res.json())
     const processMessage = processMessageFetch.edges[0].node
 
