@@ -5,7 +5,6 @@ import { BroadcastChannel } from 'node:worker_threads'
 import cron from 'node-cron'
 import { apply } from 'ramda'
 import warpArBundles from 'warp-arbundles'
-import { connect as schedulerUtilsConnect } from '@permaweb/ao-scheduler-utils'
 import { fromPromise } from 'hyper-async'
 import workerpool from 'workerpool'
 
@@ -158,14 +157,17 @@ export const createApis = async (ctx) => {
     logger
   })
 
-  const schedUtilsConnect = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+  // Create database client
+  const DB_URL = `${ctx.DB_URL}.sqlite`
+  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true, type: 'tasks' })
 
-  const isWhitelistMode = PROCESS_WHITELIST_URL && PROCESS_WHITELIST_URL !== ''
-  const schedLocationsLocal = isWhitelistMode
-    ? await schedulerLocationsWith({ PROCESS_WHITELIST_URL, GRAPHQL_URL, DB_URL: ctx.DB_URL })
-    : null
+  // Create log database client
+  const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
+  const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
 
-  const { locate, raw, getProcess } = isWhitelistMode ? schedLocationsLocal : schedUtilsConnect
+  const schedLocationsLocal = await schedulerLocationsWith({ GRAPHQL_URL, ARWEAVE_URL, DB_URL: ctx.DB_URL, logger })
+
+  const { locate, raw, getProcess } = schedLocationsLocal
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -181,14 +183,6 @@ export const createApis = async (ctx) => {
     contentType: _metrics.contentType,
     compute: fromPromise(() => _metrics.metrics())
   }
-
-  // Create database client
-  const DB_URL = `${ctx.DB_URL}.sqlite`
-  const db = await SqliteClient.createSqliteClient({ url: DB_URL, bootstrap: true, type: 'tasks' })
-
-  // Create log database client
-  const TRACE_DB_URL = `${ctx.TRACE_DB_URL}.sqlite`
-  const traceDb = await SqliteClient.createSqliteClient({ url: TRACE_DB_URL, bootstrap: true, type: 'traces' })
 
   let processesFile = {}
   cron.schedule('*/5 * * * *', async () => {
@@ -488,7 +482,6 @@ export const createResultApis = async (ctx) => {
   const HB_ROUTER_URL = ctx.HB_ROUTER_URL
   const ENABLE_HB_WALLET_CHECK = ctx.ENABLE_HB_WALLET_CHECK
   const HB_GRAPHQL_URL = ctx.HB_GRAPHQL_URL
-  const PROCESS_WHITELIST_URL = ctx.PROCESS_WHITELIST_URL
 
   const logger = ctx.logger
   const fetch = ctx.fetch
@@ -499,19 +492,9 @@ export const createResultApis = async (ctx) => {
     logger
   })
 
-  const schedUtilsConnect = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
-  const schedUtilsConnectNoRedirect = schedulerUtilsConnect({ cacheSize: 500, GRAPHQL_URL, followRedirects: true, HB_GRAPHQL_URL })
+  const schedLocationsLocal = await schedulerLocationsWith({ GRAPHQL_URL, ARWEAVE_URL, DB_URL: ctx.DB_URL, logger, worker: true })
 
-  const isWhitelistMode = PROCESS_WHITELIST_URL && PROCESS_WHITELIST_URL !== ''
-  const schedLocationsLocal = isWhitelistMode
-    ? await schedulerLocationsWith({ PROCESS_WHITELIST_URL, GRAPHQL_URL, DB_URL: ctx.DB_URL })
-    : null
-
-  const { locate, raw, getProcess } = isWhitelistMode ? schedLocationsLocal : schedUtilsConnect
-
-  const { locate: locateNoRedirect } = isWhitelistMode
-    ? { locate: () => { throw new Error('No spawning in whitelist mode') } }
-    : schedUtilsConnectNoRedirect
+  const { locate, raw, getProcess } = schedLocationsLocal
 
   const cache = InMemoryClient.createLruCache({ size: 500 })
   const getByProcess = InMemoryClient.getByProcessWith({ cache })
@@ -546,7 +529,7 @@ export const createResultApis = async (ctx) => {
     logger: processSpawnLogger,
     locateScheduler: raw,
     locateProcess: locate,
-    locateNoRedirect,
+    locate,
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processSpawnLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: processMsgLogger }),

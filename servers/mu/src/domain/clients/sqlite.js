@@ -58,19 +58,19 @@ const createCronProcesses = async (db) => db.prepare(
   ) WITHOUT ROWID;`
 ).run()
 
-// const _createProcesses = async (db) => db.prepare(
-//   `CREATE TABLE IF NOT EXISTS ${PROCESSES_TABLE}(
-//     processId TEXT PRIMARY KEY,
-//     schedulerAddress TEXT
-//   ) WITHOUT ROWID;`
-// ).run()
+const createProcesses = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${PROCESSES_TABLE}(
+    processId TEXT PRIMARY KEY,
+    processData TEXT
+  ) WITHOUT ROWID;`
+).run()
 
-// const _createSchedulerLocations = async (db) => db.prepare(
-//   `CREATE TABLE IF NOT EXISTS ${SCHEDULER_LOCATIONS}(
-//     schedulerAddress TEXT PRIMARY KEY,
-//     url TEXT
-//   ) WITHOUT ROWID;`
-// ).run()
+const createSchedulerLocations = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${SCHEDULER_LOCATIONS}(
+    schedulerAddress TEXT PRIMARY KEY,
+    schedulerData TEXT
+  ) WITHOUT ROWID;`
+).run()
 
 const createTracesIndexes = async (db) => db.prepare(
   `CREATE INDEX IF NOT EXISTS idx_${TRACES_TABLE}_messageId_processId
@@ -112,6 +112,8 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
         .then(() => createTasks(db))
         .then(() => createCronProcesses(db))
         .then(() => createMessages(db))
+        .then(() => createSchedulerLocations(db))
+        .then(() => createProcesses(db))
     }
     if (type === 'traces') {
       await Promise.resolve()
