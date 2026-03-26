@@ -1,9 +1,6 @@
 import cron from 'node-cron'
-import warpArBundles from 'warp-arbundles'
 
 import { createSqliteClient, SCHEDULER_LOCATIONS, PROCESSES_TABLE } from './sqlite.js'
-
-const { DataItem } = warpArBundles
 
 const SCHEDULER_LOCATION_QUERY = `
   query GetSchedulerLocations($cursor: String) {
@@ -202,9 +199,35 @@ export async function schedulerLocationsWith ({ GRAPHQL_URL, ARWEAVE_URL, DB_URL
       return { url }
     }
 
+    const IGNORE_HEADERS = new Set([
+      'access-control-allow-headers',
+      'access-control-allow-methods',
+      'access-control-allow-origin',
+      'access-control-expose-headers',
+      'ao-body-key',
+      'ao-types',
+      'content-digest',
+      'content-encoding',
+      'signature',
+      'signature-input',
+      'date',
+      'vary',
+      'server',
+      'cache-control',
+      'location',
+      'content-length',
+      'transfer-encoding',
+      'connection',
+      'device',
+      'status'
+    ])
+
     /**
-     * Fetch a process data item from Arweave, parse it via warp-arbundles,
-     * and return its id and tags. Results are cached in the processes table.
+     * Fetch a process from Arweave and enumerate the HTTP response
+     * headers as tags. Results are cached in the processes table.
+     *
+     * @param {string} processId - the Arweave transaction id of the process
+     * @returns {Promise<{ id: string, tags: Array<{ name: string, value: string }> } | undefined>}
      */
     async function getProcess (processId) {
       const cached = await db.query({
@@ -216,23 +239,23 @@ export async function schedulerLocationsWith ({ GRAPHQL_URL, ARWEAVE_URL, DB_URL
         return JSON.parse(cached[0].processData)
       }
 
-      const res = await fetch(`${ARWEAVE_URL}/raw/${processId}`)
+      const res = await fetch(`${ARWEAVE_URL}/${processId}`, { redirect: 'follow' })
       if (!res.ok) {
         schedLogger({ log: `Failed to fetch process ${processId} from Arweave: ${res.status}` })
         return undefined
       }
 
-      const buffer = Buffer.from(await res.arrayBuffer())
-      console.log(buffer)
-      const dataItem = new DataItem(buffer)
+      const tags = []
+      for (const [name, value] of res.headers) {
+        if (IGNORE_HEADERS.has(name.toLowerCase())) continue
+        if (name.startsWith('x-')) continue
+        const titleCased = name.replace(/(^|-)(\w)/g, (_, sep, ch) => sep + ch.toUpperCase())
+        tags.push({ name: titleCased, value })
+      }
 
       const process = {
         id: processId,
-        tags: dataItem.tags,
-        owner: dataItem.owner,
-        anchor: dataItem.anchor,
-        target: dataItem.target,
-        signature: dataItem.signature
+        tags
       }
 
       await db.run({
