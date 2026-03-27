@@ -20,10 +20,11 @@ export function processMsgWith ({
   writeDataItemArweave,
   isWallet,
   fetchSchedulerProcess,
-  isHyperBeamProcess
+  isHyperBeamProcess,
+  FROM_PROCESS_BLACKLIST
 }) {
   const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess })
-  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave })
+  const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, FROM_PROCESS_BLACKLIST })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
 

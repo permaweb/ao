@@ -78,12 +78,10 @@ export const domainConfigSchema = z.object({
   IP_WALLET_RATE_LIMIT_INTERVAL: positiveIntSchema,
   STALE_CURSOR_RANGE: positiveIntSchema,
   SU_ROUTER_URL: z.string(),
-  HB_ROUTER_URL: z.string(),
-  ENABLE_HB_WALLET_CHECK: z.boolean(),
   HB_GRAPHQL_URL: z.string(),
-  RATE_LIMITS_ENABLED: z.boolean(),
   RATE_LIMIT_FILE_URL: z.string().optional(),
-  PROCESS_WHITELIST_URL: z.string().optional()
+  PROCESS_WHITELIST_URL: z.string().optional(),
+  FROM_PROCESS_BLACKLIST: commaDelimitedArraySchema
 })
 
 /**
@@ -142,12 +140,10 @@ const CONFIG_ENVS = {
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
     STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
-    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://forward.computer',
-    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
-    RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
-    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || ''
+    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || '',
+    FROM_PROCESS_BLACKLIST: process.env.FROM_PROCESS_BLACKLIST || 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'
   },
   production: {
     MODE,
@@ -183,12 +179,10 @@ const CONFIG_ENVS = {
     IP_WALLET_RATE_LIMIT_INTERVAL: process.env.IP_WALLET_RATE_LIMIT_INTERVAL || 1000 * 60 * 60,
     STALE_CURSOR_RANGE: process.env.STALE_CURSOR_RANGE || 1 * 24 * 60 * 60 * 1000,
     SU_ROUTER_URL: process.env.SU_ROUTER_URL || 'https://su-router.ao-testnet.xyz',
-    HB_ROUTER_URL: process.env.HB_ROUTER_URL || 'https://push.forward.computer',
-    ENABLE_HB_WALLET_CHECK: process.env.ENABLE_HB_WALLET_CHECK !== 'false',
     HB_GRAPHQL_URL: process.env.HB_GRAPHQL_URL || 'https://cache.forward.computer',
-    RATE_LIMITS_ENABLED: process.env.RATE_LIMITS_ENABLED !== 'false',
     RATE_LIMIT_FILE_URL: process.env.RATE_LIMIT_FILE_URL || '',
-    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || ''
+    PROCESS_WHITELIST_URL: process.env.PROCESS_WHITELIST_URL || '',
+    FROM_PROCESS_BLACKLIST: process.env.FROM_PROCESS_BLACKLIST || 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'
   }
 }
 

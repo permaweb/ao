@@ -140,7 +140,7 @@ export async function schedulerLocationsWith ({ GRAPHQL_URL, ARWEAVE_URL, DB_URL
 
     if (!worker) {
       await fetchAndPopulate({ GRAPHQL_URL, DB_URL, logger: schedLogger })
-      cron.schedule('*/5 * * * *', async () => {
+      cron.schedule('*/15 * * * *', async () => {
         schedLogger({ log: 'Running scheduled refresh of scheduler locations' })
         await fetchAndPopulate({ GRAPHQL_URL, DB_URL, logger: schedLogger }).catch((err) => {
           schedLogger({ log: `Error refreshing scheduler locations: ${err.message}` })
@@ -242,6 +242,11 @@ export async function schedulerLocationsWith ({ GRAPHQL_URL, ARWEAVE_URL, DB_URL
       const res = await fetch(`${ARWEAVE_URL}/${processId}`, { redirect: 'follow' })
       if (!res.ok) {
         schedLogger({ log: `Failed to fetch process ${processId} from Arweave: ${res.status}` })
+        return undefined
+      }
+
+      if (res.headers.get('type').toLowerCase() !== 'process') {
+        schedLogger({ log: `Response for ${processId} is not a process (type header: ${res.headers.get('type')})` })
         return undefined
       }
 

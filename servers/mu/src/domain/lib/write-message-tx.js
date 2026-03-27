@@ -1,4 +1,4 @@
-import { Resolved, fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of, Rejected } from 'hyper-async'
 import { __, assoc } from 'ramda'
 import z from 'zod'
 import { checkStage, setStage } from '../utils.js'
@@ -19,7 +19,7 @@ const ctxSchemaArweave = z.object({
 }).passthrough()
 
 export function writeMessageTxWith (env) {
-  let { logger, writeDataItem, writeDataItemArweave } = env
+  let { logger, writeDataItem, writeDataItemArweave, FROM_PROCESS_BLACKLIST } = env
 
   writeDataItem = fromPromise(writeDataItemSchema.implement(writeDataItem))
   writeDataItemArweave = fromPromise(uploadDataItemSchema.implement(writeDataItemArweave))
@@ -39,7 +39,7 @@ export function writeMessageTxWith (env) {
           tagsVal.find(
             (t) =>
               t.name === 'From-Process' &&
-              t.value === 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'
+              FROM_PROCESS_BLACKLIST.includes(t.value)
           )
         ) {
           return Rejected(new Error('Invalid From-Process value.', { cause: ctx }))

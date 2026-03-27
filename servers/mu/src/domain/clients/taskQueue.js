@@ -53,7 +53,7 @@ export async function createTaskQueue ({ queueId, logger, db }) {
  * and a random hex string. This is so that it can
  * be removed from the database when dequeuing.
  */
-export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, RATE_LIMITS_ENABLED, rateLimits }) {
+export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAddress, getRateLimits, IP_WALLET_RATE_LIMIT, IP_WALLET_RATE_LIMIT_INTERVAL, rateLimits }) {
   function keyToEthereumAddress (key) {
     /**
      * We need to decode, then remove the first byte denoting compression in secp256k1
@@ -87,10 +87,10 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
   }
 
   async function checkRateLimitExceeded (task) {
-    if (RATE_LIMITS_ENABLED === false) return false
+    const rateLimits = getRateLimits()
+    if (!rateLimits || Object.keys(rateLimits).length === 0) return false
     function calculateRateLimit (walletID, procID, limits) {
       if (!walletID) return 100
-      if (!limits || Object.keys(limits).length === 0) return 50
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
       const processLimits = limits?.processes?.[procID] ?? {}
       const processDivisor = Number(processLimits?.divide ?? 1)
@@ -105,7 +105,6 @@ export function enqueueWith ({ queue, queueId, logger, db, getRecentTraces, toAd
     if (owner?.length === 87) {
       address = keyToEthereumAddress(owner)
     }
-    const rateLimits = getRateLimits()
     const isWhitelisted = (rateLimits?.ips?.[task?.ip] ?? 0) > 1
     if (isWhitelisted) return false
     const rateLimitAllowance = calculateRateLimit(address, processId, rateLimits)

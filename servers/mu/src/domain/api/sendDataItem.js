@@ -39,13 +39,13 @@ export function sendDataItemWith ({
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
   ENABLE_MESSAGE_RECOVERY,
-  RATE_LIMITS_ENABLED,
-  fetchProcessWhitelist
+  fetchProcessWhitelist,
+  FROM_PROCESS_BLACKLIST
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
+  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave, FROM_PROCESS_BLACKLIST })
   const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
@@ -88,9 +88,9 @@ export function sendDataItemWith ({
    * Check if the rate limit has been exceeded using rate limit injected
    */
   async function checkRateLimitExceeded (ctx) {
-    if (RATE_LIMITS_ENABLED === false) return Resolved(ctx)
+    const rateLimits = getRateLimits()
+    if (!rateLimits || Object.keys(rateLimits).length === 0) return Resolved(ctx)
     function calculateRateLimit (walletID, procID, limits) {
-      if (!limits || Object.keys(limits).length === 0) return 10
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
       const processLimits = limits?.processes?.[procID] ?? {}
 
@@ -98,7 +98,6 @@ export function sendDataItemWith ({
       const processSubtractor = Number(processLimits?.subtract ?? 0)
       return Math.max(0, (userBase / processDivisor) - processSubtractor)
     }
-    const rateLimits = getRateLimits()
     const isWhitelisted = (rateLimits?.ips?.[ctx.ip] ?? 0) > 1
     if (isWhitelisted) return Resolved(ctx)
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL

@@ -7,8 +7,6 @@ function isWalletWith ({
   getProcess,
   ARWEAVE_URL,
   SU_ROUTER_URL,
-  HB_ROUTER_URL,
-  ENABLE_HB_WALLET_CHECK,
   logger,
   setById,
   getById
@@ -53,22 +51,6 @@ function isWalletWith ({
       }
     } catch (err) {
       logger({ log: `Step 1: SU router check failed for ${id}: ${err.message}`, logId })
-    }
-
-    // Step 2: Check HyperBeam
-    if (ENABLE_HB_WALLET_CHECK) {
-      try {
-        logger({ log: `Step 2: Checking HyperBeam for process ${id}`, logId })
-        const hyperbeamResponse = await walletFetch(`${HB_ROUTER_URL}/${id}~meta@1.0/info/serialize~json@1.0`)
-        if (hyperbeamResponse.status === 200) {
-          logger({ log: `Found process in HyperBeam for ${id}`, logId })
-          return setById(id, { isWallet: false }).then(() => false)
-        }
-      } catch (err) {
-        logger({ log: `Step 2: HyperBeam check failed for ${id}: ${err.message}`, logId })
-      }
-    } else {
-      logger({ log: `Step 2: Skipping HyperBeam check for ${id}`, logId })
     }
 
     // Step 3: Check Arweave

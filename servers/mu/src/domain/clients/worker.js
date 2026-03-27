@@ -158,7 +158,6 @@ const enqueue = enqueueWith({
   toAddress: ownerToAddress,
   IP_WALLET_RATE_LIMIT: workerData.IP_WALLET_RATE_LIMIT,
   IP_WALLET_RATE_LIMIT_INTERVAL: workerData.IP_WALLET_RATE_LIMIT_INTERVAL,
-  RATE_LIMITS_ENABLED: workerData.RATE_LIMITS_ENABLED,
   getRateLimits
 })
 const broadcastEnqueue = broadcastEnqueueWith({ enqueue, queue, broadcastChannel })
