@@ -54,6 +54,7 @@ export function writeMessageTxWith (env) {
             data: ctx.tx.data.toString('base64'),
             logId: ctx.logId,
             schedulerType: ctx.schedulerType,
+            schedulerAddress: ctx.schedLocation.address,
             processId: ctx.tx.processId,
             id: ctx.dataItem?.id || '',
             tags: ctx.dataItem?.tags || ctx?.cachedMsg?.msg?.Tags || [],

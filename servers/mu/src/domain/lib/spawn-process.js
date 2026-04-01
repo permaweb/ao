@@ -141,7 +141,7 @@ export function spawnProcessWith (env) {
             })
         })
       .chain(({ schedulerResult, signedData }) => {
-        return writeDataItem({ suUrl: schedulerResult.url, data: signedData.data.toString('base64'), logId: ctx.logId })
+        return writeDataItem({ suUrl: schedulerResult.url, schedulerAddress: schedulerResult.address, data: signedData.data.toString('base64'), logId: ctx.logId })
           .map((result) => { return { id: signedData.id, block: result.block, timestamp: result.timestamp } })
           .map((r) => assoc('processTx', r.id, ctx))
           .map((ctx) => assoc('messageId', ctx.processTx, ctx))

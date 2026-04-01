@@ -43,9 +43,9 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
    * id - the tx-id of the data item
    * timestamp
    */
-  return async ({ data, suUrl, logId, schedulerType = 'legacy', processId, id, tags = [], dataStr }) => {
+  return async ({ data, suUrl, logId, schedulerType = 'legacy', schedulerAddress, processId, id, tags = [], dataStr }) => {
     const endpoint = schedulerType === 'hyperbeam'
-      ? `${suUrl}/${processId}/push`
+      ? `${suUrl}/~scheduler@1.0/schedule`
       : suUrl
     const fetchClient = schedulerType === 'hyperbeam' ? hbFetch : suFetch
 
@@ -57,7 +57,7 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
       .chain(
         fromPromise((body) => {
           if (schedulerType === 'hyperbeam') {
-            // Use ao connect for HyperBeam push requests
+            // Use ao connect for HyperBeam scheduler requests
             const aoConnect = connect({
               MODE: 'mainnet',
               device: 'process@1.0',
@@ -71,40 +71,25 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
               return acc
             }, {})
 
-            // Create push request parameters following mainnet.js pattern
-            let pushParams = {}
+            // Create scheduler request parameters
+            let scheduleParams = {}
             if (tagsToObj.type === 'Process') {
-              pushParams = {
-                path: '/push',
-                method: 'POST',
-                Type: 'Process',
-                device: 'process@1.0',
-                'scheduler-device': 'scheduler@1.0',
-                'push-device': 'push@1.0',
-                'scheduler-location': tagsToObj.Scheduler,
-                'data-protocol': 'ao',
-                variant: 'ao.N.1',
-                ...tagsToObj,
-                Authority: tagsToObj.Scheduler,
-                'accept-bundle': 'true',
-                signingFormat: 'ANS-104'
-              }
+              throw new Error('Mainnet spawning not supported through legacynet')
             } else {
-              pushParams = {
-                Type: 'Message',
-                path: `/${processId}/push`,
+              scheduleParams = {
+                path: '/~scheduler@1.0/schedule',
                 method: 'POST',
                 ...tagsToObj,
-                'data-protocol': 'ao',
                 target: processId,
-                'signing-format': 'ANS-104'
+                'signing-format': 'ANS-104',
+                'scheduler-location': schedulerAddress
               }
               if (dataStr) {
-                pushParams.data = dataStr
+                scheduleParams.data = dataStr
               }
             }
 
-            return aoConnect.request(pushParams)
+            return aoConnect.request(scheduleParams)
           } else {
             return fetchClient(endpoint, {
               method: 'POST',

@@ -211,6 +211,7 @@ export const writeDataItemSchema = z.function()
       suUrl: z.string(),
       logId: z.string().nullish(),
       schedulerType: z.string().optional(),
+      schedulerAddress: z.string().optional(),
       id: z.string().optional(),
       processId: z.string().optional(),
       tags: tagArraySchema.optional(),

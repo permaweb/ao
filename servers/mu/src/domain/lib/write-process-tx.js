@@ -34,12 +34,13 @@ export function writeProcessTxWith (env) {
       .chain(findSchedulerTag)
       .chain((schedulerAddress) => {
         return locateScheduler(schedulerAddress)
-          .chain(({ url }) => {
+          .chain(({ url, address }) => {
             return writeDataItem({
               suUrl: url,
               data: ctx.tx.data.toString('base64'),
               logId: ctx.logId,
               schedulerType: ctx.schedulerType,
+              schedulerAddress: address,
               processId: ctx.tx.id,
               id: ctx.dataItem?.id || '',
               tags: ctx.dataItem?.tags || ctx?.cachedMsg?.msg?.Tags || [],
