@@ -162,8 +162,7 @@ function startMonitoredProcessWith ({
   saveCronProcess,
   getCronProcessCursor,
   updateCronProcessCursor,
-  fetchTransactions,
-  HB_GRAPHQL_URL
+  fetchTransaction
 }) {
   const getCursorFetch = withTimerMetricsFetch({
     fetch,
@@ -174,8 +173,8 @@ function startMonitoredProcessWith ({
     logger
   })
   async function getOwner ({ processId }) {
-    return fetchTransactions([processId])
-      .then(res => res.data?.transactions?.edges?.[0]?.node?.owner?.address)
+    return fetchTransaction({ processId })
+      .then(res => res.owner)
       .then((owner) => {
         if (!owner) return null
         return owner

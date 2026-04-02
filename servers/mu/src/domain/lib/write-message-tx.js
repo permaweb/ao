@@ -1,4 +1,4 @@
-import { Rejected, Resolved, fromPromise, of } from 'hyper-async'
+import { Resolved, fromPromise, of, Rejected } from 'hyper-async'
 import { __, assoc } from 'ramda'
 import z from 'zod'
 import { checkStage, setStage } from '../utils.js'
@@ -19,11 +19,10 @@ const ctxSchemaArweave = z.object({
 }).passthrough()
 
 export function writeMessageTxWith (env) {
-  let { logger, writeDataItem, writeDataItemArweave, topUp, RELAY_MAP } = env
+  let { logger, writeDataItem, writeDataItemArweave, FROM_PROCESS_BLACKLIST } = env
 
   writeDataItem = fromPromise(writeDataItemSchema.implement(writeDataItem))
   writeDataItemArweave = fromPromise(uploadDataItemSchema.implement(writeDataItemArweave))
-  topUp = fromPromise(topUp)
 
   return (ctx) => {
     /*
@@ -40,42 +39,11 @@ export function writeMessageTxWith (env) {
           tagsVal.find(
             (t) =>
               t.name === 'From-Process' &&
-              t.value === 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'
+              FROM_PROCESS_BLACKLIST.includes(t.value)
           )
         ) {
           return Rejected(new Error('Invalid From-Process value.', { cause: ctx }))
         }
-        if (RELAY_MAP && Object.keys(RELAY_MAP).includes(ctx.tx.processId)) {
-          if (ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Action' && t.value === 'Credit-Notice')) {
-            const sender = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Sender')?.value
-            const amount = ctx.cachedMsg?.msg?.Tags?.find((t) => t.name === 'Quantity')?.value
-
-            if (!amount || !sender) {
-              return Rejected(new Error('Must set Sender and Quantity to top up.', { cause: ctx }))
-            }
-
-            if (!Object.keys(RELAY_MAP).includes('ALLOWED_CURRENCIES')) {
-              return Rejected(new Error('No allowed currencies configured on this MU.', { cause: ctx }))
-            }
-
-            if (!RELAY_MAP.ALLOWED_CURRENCIES.includes('ALL')) {
-              if (!RELAY_MAP.ALLOWED_CURRENCIES.includes(ctx.cachedMsg.fromProcessId)) {
-                return Rejected(new Error('This currency is not supported on this MU.', { cause: ctx }))
-              }
-            }
-
-            return topUp({ ctx, relayUrls: RELAY_MAP[ctx.tx.processId], amount, recipientProcessId: sender })
-              .bimap(
-                (e) => {
-                  return new Error(e, { cause: { ...ctx, stage: 'write-message' } })
-                },
-                logger.tap({ log: `Topped up relay id ${ctx.tx.processId}` })
-              )
-          }
-        }
-        return Resolved()
-      })
-      .chain(() => {
         if (ctx.schedLocation) {
           ctx = setStage('write-message', 'write-message-su')(ctx)
 
@@ -86,6 +54,7 @@ export function writeMessageTxWith (env) {
             data: ctx.tx.data.toString('base64'),
             logId: ctx.logId,
             schedulerType: ctx.schedulerType,
+            schedulerAddress: ctx.schedLocation.address,
             processId: ctx.tx.processId,
             id: ctx.dataItem?.id || '',
             tags: ctx.dataItem?.tags || ctx?.cachedMsg?.msg?.Tags || [],

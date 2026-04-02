@@ -7,8 +7,6 @@ function isWalletWith ({
   getProcess,
   ARWEAVE_URL,
   SU_ROUTER_URL,
-  HB_ROUTER_URL,
-  ENABLE_HB_WALLET_CHECK,
   logger,
   setById,
   getById
@@ -55,22 +53,6 @@ function isWalletWith ({
       logger({ log: `Step 1: SU router check failed for ${id}: ${err.message}`, logId })
     }
 
-    // Step 2: Check HyperBeam
-    if (ENABLE_HB_WALLET_CHECK) {
-      try {
-        logger({ log: `Step 2: Checking HyperBeam for process ${id}`, logId })
-        const hyperbeamResponse = await walletFetch(`${HB_ROUTER_URL}/${id}~meta@1.0/info/serialize~json@1.0`)
-        if (hyperbeamResponse.status === 200) {
-          logger({ log: `Found process in HyperBeam for ${id}`, logId })
-          return setById(id, { isWallet: false }).then(() => false)
-        }
-      } catch (err) {
-        logger({ log: `Step 2: HyperBeam check failed for ${id}: ${err.message}`, logId })
-      }
-    } else {
-      logger({ log: `Step 2: Skipping HyperBeam check for ${id}`, logId })
-    }
-
     // Step 3: Check Arweave
     try {
       logger({ log: `Step 3: Checking Arweave for ${id}`, logId })
@@ -97,95 +79,19 @@ function isWalletWith ({
 
     // Step 4: Check GraphQL
     try {
-      logger({ log: `Step 4: Checking GraphQL for ${id}`, logId })
+      logger({ log: `Step 4: Checking Arweave or local cache for ${id}`, logId })
       const process = await getProcess(id)
       if (process && process?.id) {
-        logger({ log: `Found process in GraphQL for ${id}`, logId })
+        logger({ log: `Found process on Arweave/local cache for ${id}`, logId })
         return setById(id, { isWallet: false }).then(() => false)
       }
     } catch (err) {
-      logger({ log: `Step 4: GraphQL check failed for ${id}: ${err.message}`, logId })
+      logger({ log: `Step 4: Arweave/local cache check failed for ${id}: ${err.message}`, logId })
     }
 
     // If no process found in any step, it's a wallet
     logger({ log: `No process found in any step for ${id}, treating as wallet`, logId })
     return setById(id, { isWallet: true }).then(() => true)
-  }
-}
-
-/**
- * @name fetchTransactionDetails
- * Fetches transaction details using the provided GraphQL query
- * from the Arweave search endpoint.
- *
- * @param {string[]} ids - The list of transaction IDs to query.
- * @param {function} fetch - The fetch implementation to use for HTTP requests.
- * @returns {Promise<object>} The GraphQL query result.
- */
-function fetchTransactionDetailsWith ({ fetch, GRAPHQL_URL }) {
-  return async (ids) => {
-    const query = `
-      query {
-        transactions(ids: ${JSON.stringify(ids)}) {
-          pageInfo {
-            hasNextPage
-          }
-          edges {
-            cursor
-            node {
-              id
-              anchor
-              signature
-              recipient
-              block {
-                timestamp
-              }
-              owner {
-                address
-                key
-              }
-              fee {
-                winston
-                ar
-              }
-              quantity {
-                winston
-                ar
-              }
-              data {
-                size
-                type
-              }
-              tags {
-                name
-                value
-              }
-              block {
-                id
-                timestamp
-                height
-                previous
-              }
-              parent {
-                id
-              }
-            }
-          }
-        }
-      }
-    `
-
-    const response = await fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch transaction details: ${response.statusText}`)
-    }
-
-    return response.json()
   }
 }
 
@@ -222,6 +128,5 @@ export const isHyperBeamProcessWith = ({
 
 export default {
   isWalletWith,
-  fetchTransactionDetailsWith,
   isHyperBeamProcessWith
 }

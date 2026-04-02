@@ -1,5 +1,3 @@
-import cron from 'node-cron'
-
 import { messageSchema } from '../model.js'
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
@@ -48,8 +46,8 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
           logId
         ).then(okRes),
       {
-        maxRetries: 5,
-        delay: 500,
+        maxRetries: 10,
+        delay: 1000,
         log: logger,
         logId,
         name: `fetchResult(${JSON.stringify({
@@ -79,65 +77,6 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
             Output: ''
           }
       )
-  }
-}
-
-function fetchHyperBeamResultWith ({ fetch, histogram, logger, fetchHBProcesses}) {
-  const hbFetch = withTimerMetricsFetch({
-    fetch,
-    timer: histogram,
-    startLabelsFrom: () => ({
-      operation: 'fetchHyperBeamResult'
-    }),
-    logger
-  })
-
-  /**
-   * fetchHyperBeamResult
-   * Fetches result from HyperBeam scheduler using the new endpoint format
-   *
-   * @param {string} processId - The process ID
-   * @param {string} assignmentNum - The assignment/slot number
-   * @param {string} logId - The logId to aggregate the logs by
-   *
-   * @returns result data from HyperBeam scheduler
-   */
-  return async ({ processId, assignmentNum, logId }) => {
-    const { HB_PROCESSES } = fetchHBProcesses()
-    const HB_URL = HB_PROCESSES[processId]
-    const resultUrl = `${HB_URL}/${processId}~process@1.0/compute&slot=${assignmentNum}/results?require-codec=application/json&accept-bundle=true`
-    logger({ log: `Fetching result from HyperBeam: ${resultUrl}`, logId })
-    return backoff(
-      () => hbFetch(resultUrl).then((res) => okRes(res)),
-      {
-        maxRetries: 5,
-        delay: 500,
-        log: logger,
-        logId,
-        name: `fetchHyperBeamResult(${processId}, ${assignmentNum})`
-      }
-    )
-      .then(async (res) => {
-        if (!res?.ok) {
-          const text = await res.text()
-          throw new Error(`${res.status}: ${text}`)
-        }
-        return res.json()
-      })
-      .then((res) => {
-      // Parse result so that MU can use it
-        const result = JSON.parse(res.json?.body ?? res.json)
-        // Attach isHyperBeamResult to result
-        return { ...result, isHyperBeamResult: true }
-      })
-      .then((result) => {
-        logger({ log: 'Successfully fetched result from HyperBeam scheduler', logId })
-        return result
-      })
-      .catch((e) => {
-        logger({ log: `Error fetching result from HyperBeam scheduler: ${e}`, logId })
-        throw e
-      })
   }
 }
 
@@ -186,6 +125,5 @@ function fetchCronWith ({ fetch, histogram, CU_URL, logger }) {
 export default {
   fetchCronWith,
   resultWith,
-  selectNodeWith,
-  fetchHyperBeamResultWith
+  selectNodeWith
 }

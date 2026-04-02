@@ -3,11 +3,20 @@ import { stat } from 'node:fs'
 import Database from 'better-sqlite3'
 import bytes from 'bytes'
 
-export const [TASKS_TABLE, TRACES_TABLE, CRON_PROCESSES_TABLE, MESSAGES_TABLE] = [
+export const [
+  TASKS_TABLE,
+  TRACES_TABLE,
+  CRON_PROCESSES_TABLE,
+  MESSAGES_TABLE,
+  PROCESSES_TABLE,
+  SCHEDULER_LOCATIONS
+] = [
   'tasks',
   'traces',
   'cron_processes',
-  'messages'
+  'messages',
+  'processes',
+  'scheduler_locations'
 ]
 
 const createMessages = async (db) => db.prepare(
@@ -46,6 +55,20 @@ const createCronProcesses = async (db) => db.prepare(
     processId TEXT PRIMARY KEY,
     status TEXT,
     cursor TEXT
+  ) WITHOUT ROWID;`
+).run()
+
+const createProcesses = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${PROCESSES_TABLE}(
+    processId TEXT PRIMARY KEY,
+    processData TEXT
+  ) WITHOUT ROWID;`
+).run()
+
+const createSchedulerLocations = async (db) => db.prepare(
+  `CREATE TABLE IF NOT EXISTS ${SCHEDULER_LOCATIONS}(
+    schedulerAddress TEXT PRIMARY KEY,
+    schedulerData TEXT
   ) WITHOUT ROWID;`
 ).run()
 
@@ -89,6 +112,8 @@ export async function createSqliteClient ({ url, bootstrap = false, walLimit = b
         .then(() => createTasks(db))
         .then(() => createCronProcesses(db))
         .then(() => createMessages(db))
+        .then(() => createSchedulerLocations(db))
+        .then(() => createProcesses(db))
     }
     if (type === 'traces') {
       await Promise.resolve()

@@ -24,7 +24,6 @@ export function sendDataItemWith ({
   locateScheduler,
   locateProcess,
   fetchResult,
-  fetchHyperBeamResult,
   crank,
   isHyperBeamProcess,
   logger,
@@ -40,14 +39,14 @@ export function sendDataItemWith ({
   GET_RESULT_MAX_RETRIES,
   GET_RESULT_RETRY_DELAY,
   ENABLE_MESSAGE_RECOVERY,
-  fetchHBProcesses,
-  fetchProcessWhitelist
+  fetchProcessWhitelist,
+  FROM_PROCESS_BLACKLIST
 }) {
   const verifyParsedDataItem = verifyParsedDataItemWith()
   const parseDataItem = parseDataItemWith({ createDataItem, logger })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
-  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave })
-  const pullResult = pullResultWith({ fetchResult, fetchHyperBeamResult, logger, fetchHBProcesses })
+  const writeMessage = writeMessageTxWith({ locateProcess, writeDataItem, logger, fetchSchedulerProcess, writeDataItemArweave, FROM_PROCESS_BLACKLIST })
+  const pullResult = pullResultWith({ fetchResult, logger })
   const writeProcess = writeProcessTxWith({ locateScheduler, writeDataItem, logger })
   const getResult = getResultWith({ selectNode, fetchResult, logger, GET_RESULT_MAX_RETRIES, GET_RESULT_RETRY_DELAY })
   const insertMessage = insertMessageWith({ db })
@@ -89,8 +88,9 @@ export function sendDataItemWith ({
    * Check if the rate limit has been exceeded using rate limit injected
    */
   async function checkRateLimitExceeded (ctx) {
+    const rateLimits = getRateLimits()
+    if (!rateLimits || Object.keys(rateLimits).length === 0) return Resolved(ctx)
     function calculateRateLimit (walletID, procID, limits) {
-      if (!limits || Object.keys(limits).length === 0) return 10
       const userBase = Number(limits?.addresses?.[walletID] ?? 0) + Number(limits.default)
       const processLimits = limits?.processes?.[procID] ?? {}
 
@@ -98,13 +98,12 @@ export function sendDataItemWith ({
       const processSubtractor = Number(processLimits?.subtract ?? 0)
       return Math.max(0, (userBase / processDivisor) - processSubtractor)
     }
-    const rateLimits = getRateLimits()
     const isWhitelisted = (rateLimits?.ips?.[ctx.ip] ?? 0) > 1
     if (isWhitelisted) return Resolved(ctx)
     const intervalStart = new Date().getTime() - IP_WALLET_RATE_LIMIT_INTERVAL
     const wallet = ctx.dataItem.owner
     let address = await toAddress(wallet) || null
-    if (ctx.dataItem.signature.length === 87) {
+    if (ctx.dataItem.signature?.length === 87) {
       address = keyToEthereumAddress(ctx.dataItem.owner)
     }
     const rateLimitAllowance = calculateRateLimit(address, ctx.dataItem.target ?? 'SPAWN', rateLimits)

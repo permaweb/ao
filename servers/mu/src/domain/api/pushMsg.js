@@ -7,19 +7,18 @@ import { getCustomCuAddressWith } from '../lib/get-custom-cu-address.js'
 export function pushMsgWith ({
   selectNode,
   fetchResult,
-  fetchTransactions,
+  fetchTransaction,
   crank,
   logger,
   ALLOW_PUSHES_AFTER,
   ENABLE_PUSH,
   ENABLE_CUSTOM_PUSH,
-  CUSTOM_CU_MAP_FILE_PATH,
-  SKIP_REPUSH_CHECKS_TOKEN
+  CUSTOM_CU_MAP_FILE_PATH
 }) {
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const getCustomCuAddress = getCustomCuAddressWith({ CUSTOM_CU_MAP_FILE_PATH, logger })
   const pullResult = pullResultWith({ fetchResult, logger })
-  const fetchTransactionsAsync = fromPromise(fetchTransactions)
+  const fetchTransactionAsync = fromPromise(fetchTransaction)
 
   return (ctx) => {
     // If push is disabled, return the context immediately
@@ -29,26 +28,12 @@ export function pushMsgWith ({
 
     return of(ctx)
       .chain((ctx) => {
-        // Skip block height check if token matches
-        const shouldSkipCheck = SKIP_REPUSH_CHECKS_TOKEN &&
-                                 ctx.skipRepushChecksToken &&
-                                 SKIP_REPUSH_CHECKS_TOKEN === ctx.skipRepushChecksToken
-
-        if (shouldSkipCheck) {
-          return Resolved(ctx)
-        }
-
-        return fetchTransactionsAsync([ctx.tx.id])
+        return fetchTransactionAsync({ messageId: ctx.tx.id, processId: ctx.tx.processId })
           .chain(res => {
-            if (res?.data?.transactions?.edges?.length >= 1) {
-              if (res.data.transactions.edges[0].node?.block?.height) {
-                if (res.data.transactions.edges[0].node.block.height >= ALLOW_PUSHES_AFTER) {
-                  return Resolved(ctx)
-                }
-              }
-              return Rejected(new Error('Message does not yet have a block', { cause: ctx }))
+            if (res.block >= ALLOW_PUSHES_AFTER) {
+              return Resolved(ctx)
             }
-            return Rejected(new Error('Message id not found on the gateway.', { cause: ctx }))
+            return Rejected(new Error('Message id not found on the scheduler with a valid block.', { cause: ctx }))
           })
       })
       .chain((ctx) => {
