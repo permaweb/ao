@@ -24,7 +24,8 @@ function buildAndSignWith ({ MU_WALLET }) {
     return {
       id: await interactionDataItem.id,
       data: interactionDataItem.getRaw(),
-      processId
+      processId,
+      tags
     }
   }
 }

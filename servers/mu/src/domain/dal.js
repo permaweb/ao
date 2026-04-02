@@ -325,6 +325,7 @@ export const rawSchema = z.function()
  * @returns id - the data item's id
  * @returns data - the data item's raw data as a buffer array
  * @returns processId - the data item's process id
+ * @returns tags - the tags
  */
 export const buildAndSignSchema = z.function()
   .args(
@@ -340,7 +341,8 @@ export const buildAndSignSchema = z.function()
       z.object({
         id: z.string(),
         data: bufferSchema,
-        processId: z.string()
+        processId: z.string(),
+        tags: tagArraySchema
       })
     )
   )

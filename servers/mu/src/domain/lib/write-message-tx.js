@@ -57,7 +57,8 @@ export function writeMessageTxWith (env) {
             schedulerAddress: ctx.schedLocation.address,
             processId: ctx.tx.processId,
             id: ctx.dataItem?.id || '',
-            tags: ctx.dataItem?.tags || ctx?.cachedMsg?.msg?.Tags || [],
+            // grab the tx tags because the contain the proper protocol level tags
+            tags: ctx.dataItem?.tags || ctx?.tx?.tags || [],
             dataStr: ctx.dataItem?.data || ctx?.cachedMsg?.msg?.Data || ''
           })
             .map(assoc('schedulerTx', __, ctx))

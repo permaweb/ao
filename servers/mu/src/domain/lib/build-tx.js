@@ -2,12 +2,14 @@ import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
 import { checkStage } from '../utils.js'
 import { buildAndSignSchema, fetchSchedulerProcessSchema, isWalletSchema, locateProcessSchema } from '../dal.js'
+import { tagArraySchema } from '../model.js'
 
 const ctxSchema = z.object({
   tx: z.object({
     id: z.string(),
     data: z.any(),
-    processId: z.string()
+    processId: z.string(),
+    tags: tagArraySchema
   }),
   schedLocation: z.any().nullable(),
   tagAssignments: z.any(),
