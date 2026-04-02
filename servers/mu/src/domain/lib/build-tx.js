@@ -43,49 +43,27 @@ export function buildTxWith (env) {
                   return { isHyperBeam }
                 }))
                 .chain(({ isHyperBeam }) => {
-                  if (isHyperBeam) {
-                    const fromProcessSchedData = {
-                      tags: ctx.cachedMsg.msg.Tags || [],
-                      schedulerType: 'hyperbeam'
-                    }
-                    if (isWalletId) {
-                      return of({ fromProcessSchedData })
-                    }
-                    return locateProcess(ctx.cachedMsg.processId)
-                      .map((schedLocation) => {
-                        return {
-                          schedLocation,
-                          fromProcessSchedData,
-                          schedulerType: 'hyperbeam'
-                        }
-                      })
-                  } else {
-                    return fetchSchedulerProcess(
-                      ctx.cachedMsg.fromProcessId,
-                      fromSchedLocation.url,
-                      ctx.logId
-                    )
-                      .map((schedulerResult) => ({
-                        fromProcessSchedData: schedulerResult
-                      }))
-                      .chain(({ fromProcessSchedData }) => {
-                        /*
-                            If the target is a wallet id we will move
-                            on here without setting a schedLocation
-                            later in the pipeline this will mean the tx
-                            goes straight to Arweave.
-                          */
-                        if (isWalletId) { return of({ fromProcessSchedData }) }
-                        return locateProcess(ctx.cachedMsg.processId)
-                          .map((schedLocation) => {
-                            return {
-                              schedLocation,
-                              fromProcessSchedData,
-                              schedulerType: 'legacy'
-                            }
-                          })
-                      })
-                  }
+                  return fetchSchedulerProcess(
+                    ctx.cachedMsg.fromProcessId,
+                    fromSchedLocation.url,
+                    ctx.logId
+                  )
+                    .map((schedulerResult) => ({
+                      fromProcessSchedData: schedulerResult
+                    }))
+                    .chain(({ fromProcessSchedData }) => {
+                      if (isWalletId) {
+                        return of({ fromProcessSchedData })
+                      }
+                      return locateProcess(ctx.cachedMsg.processId)
+                        .map((schedLocation) => {
+                          return {
+                            schedLocation,
+                            fromProcessSchedData,
+                            schedulerType: isHyperBeam ? 'hyperbeam' : 'legacy'
+                          }
+                        })
+                    })
                 })
             }
             )
