@@ -141,9 +141,6 @@ export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETR
     query GetTransactions ($transactionIds: [ID!]!) {
       transactions(
         ids: $transactionIds
-        tags: [
-          { name: "Data-Protocol", values: ["ao"] }
-        ]
       ) {
         edges {
           node {
@@ -178,6 +175,12 @@ export function loadProcessSchedulerWith ({ fetch, GRAPHQL_URL, GRAPHQL_MAX_RETR
     return gateway({ query: GET_TRANSACTIONS_QUERY, variables: { transactionIds: [process] } })
       .then(path(['data', 'transactions', 'edges', '0', 'node']))
       .then(findTransactionTags(`Process ${process} was not found on gateway`))
+      .then((tags) => {
+        if (findTagValue('Data-Protocol')(tags) !== 'ao') {
+          throw new TransactionNotFoundError(`Process ${process} is not an ao process`)
+        }
+        return tags
+      })
       .then(findTagValue(SCHEDULER_TAG))
       .then((walletAddress) => {
         if (!walletAddress) throw new SchedulerTagNotFoundError('No "Scheduler" tag found on process')
