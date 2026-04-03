@@ -12,6 +12,7 @@ import { setStage } from '../utils.js'
  */
 export function processMsgWith ({
   locateProcess,
+  getProcess,
   selectNode,
   writeDataItem,
   fetchResult,
@@ -23,7 +24,7 @@ export function processMsgWith ({
   isHyperBeamProcess,
   FROM_PROCESS_BLACKLIST
 }) {
-  const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess })
+  const buildTx = buildTxWith({ buildAndSign, logger, locateProcess, fetchSchedulerProcess, isWallet, isHyperBeamProcess, getProcess })
   const writeMessage = writeMessageTxWith({ writeDataItem, logger, writeDataItemArweave, FROM_PROCESS_BLACKLIST })
   const getCuAddress = getCuAddressWith({ selectNode, logger })
   const pullResult = pullResultWith({ fetchResult, logger })

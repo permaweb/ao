@@ -511,6 +511,7 @@ export const createResultApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
+    getProcess,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: processMsgLogger, wallet: MU_WALLET }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: processMsgLogger }),
     buildAndSign: signerClient.buildAndSignWith({ MU_WALLET, logger: processMsgLogger }),

@@ -1,7 +1,7 @@
 import { Resolved, fromPromise, of } from 'hyper-async'
 import z from 'zod'
 import { checkStage } from '../utils.js'
-import { buildAndSignSchema, fetchSchedulerProcessSchema, isWalletSchema, locateProcessSchema } from '../dal.js'
+import { buildAndSignSchema, isWalletSchema, locateProcessSchema } from '../dal.js'
 import { tagArraySchema } from '../model.js'
 
 const ctxSchema = z.object({
@@ -21,12 +21,11 @@ export function buildTxWith (env) {
     buildAndSign,
     logger,
     locateProcess,
-    fetchSchedulerProcess,
+    getProcess,
     isWallet,
     isHyperBeamProcess
   } = env
   locateProcess = fromPromise(locateProcessSchema.implement(locateProcess))
-  fetchSchedulerProcess = fromPromise(fetchSchedulerProcessSchema.implement(fetchSchedulerProcess))
   buildAndSign = fromPromise(buildAndSignSchema.implement(buildAndSign))
   isWallet = fromPromise(isWalletSchema.implement(isWallet))
 
@@ -40,29 +39,20 @@ export function buildTxWith (env) {
               return of()
                 .chain(fromPromise(async () => {
                   const isHyperBeam = await isHyperBeamProcess(ctx.cachedMsg.msg.Target, ctx.logId)
-                  return { isHyperBeam }
+                  const fromProcessData = await getProcess(ctx.cachedMsg.fromProcessId)
+                  return { isHyperBeam, fromProcessData }
                 }))
-                .chain(({ isHyperBeam }) => {
-                  return fetchSchedulerProcess(
-                    ctx.cachedMsg.fromProcessId,
-                    fromSchedLocation.url,
-                    ctx.logId
-                  )
-                    .map((schedulerResult) => ({
-                      fromProcessSchedData: schedulerResult
-                    }))
-                    .chain(({ fromProcessSchedData }) => {
-                      if (isWalletId) {
-                        return of({ fromProcessSchedData })
+                .chain(({ isHyperBeam, fromProcessData }) => {
+                  if (isWalletId) {
+                    return of({ fromProcessData })
+                  }
+                  return locateProcess(ctx.cachedMsg.processId)
+                    .map((schedLocation) => {
+                      return {
+                        schedLocation,
+                        fromProcessData,
+                        schedulerType: isHyperBeam ? 'hyperbeam' : 'legacy'
                       }
-                      return locateProcess(ctx.cachedMsg.processId)
-                        .map((schedLocation) => {
-                          return {
-                            schedLocation,
-                            fromProcessSchedData,
-                            schedulerType: isHyperBeam ? 'hyperbeam' : 'legacy'
-                          }
-                        })
                     })
                 })
             }
@@ -85,7 +75,7 @@ export function buildTxWith (env) {
           { name: 'From-Process', value: ctx.cachedMsg.fromProcessId },
           {
             name: 'From-Module',
-            value: res.fromProcessSchedData.tags.find((t) => t.name === 'Module')?.value ?? ''
+            value: res.fromProcessData.tags.find((t) => t.name === 'Module')?.value ?? ''
           }
         ]
 
