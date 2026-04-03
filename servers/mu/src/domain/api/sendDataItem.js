@@ -23,6 +23,7 @@ export function sendDataItemWith ({
   writeDataItem,
   locateScheduler,
   locateProcess,
+  getProcess,
   fetchResult,
   crank,
   isHyperBeamProcess,
@@ -318,9 +319,15 @@ export function sendDataItemWith ({
               .map(() => ({ isMessage }))
           })
           .chain(({ isMessage }) => {
+            return of()
+              .chain(fromPromise(async () => await getProcess(ctx.dataItem.target)))
+              .map((proc) => ({ isMessage, proc }))
+          })
+          .chain(({ isMessage, proc }) => {
             if (isMessage) {
+              const variant = proc.tags.find(tag => tag.name === 'Variant')?.value
               const whitelist = fetchProcessWhitelist ? fetchProcessWhitelist() : {}
-              if (whitelist && !whitelist[ctx.dataItem.target]) {
+              if (variant !== 'ao.N.1' && whitelist && !whitelist[ctx.dataItem.target]) {
                 const error = new Error('Forbidden, process not whitelisted')
                 error.status = 403
                 return Rejected(error)

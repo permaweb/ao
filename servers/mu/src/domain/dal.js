@@ -58,7 +58,9 @@ export const resultSchema = z.function()
   .args(
     z.string(),
     z.string(),
-    z.string()
+    z.string(),
+    z.any(),
+    z.any()
   )
   .returns(
     z.promise(

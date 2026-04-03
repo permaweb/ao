@@ -295,6 +295,7 @@ export const createApis = async (ctx) => {
     createDataItem,
     locateScheduler: raw,
     locateProcess: locate,
+    getProcess,
     writeDataItem: schedulerClient.writeDataItemWith({ fetch, histogram, logger: sendDataItemLogger, wallet: MU_WALLET }),
     fetchResult: cuClient.resultWith({ fetch: fetchWithCache, histogram, CU_URL, logger: sendDataItemLogger }),
     fetchSchedulerProcess: schedulerClient.fetchSchedulerProcessWith({ getByProcess, setByProcess, fetch, histogram, logger: sendDataItemLogger }),

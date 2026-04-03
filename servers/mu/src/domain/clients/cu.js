@@ -27,21 +27,29 @@ function resultWith ({ fetch, histogram, CU_URL, logger }) {
    * Output - The message's output
    * GasUsed - The gas used to process the current message
    */
-  return async (txId, processId, logId, customCuUrl) => {
+  return async (txId, processId, logId, customCuUrl, schedulerTx, schedulerType) => {
     let cuUrl = CU_URL
     if (customCuUrl) {
       cuUrl = customCuUrl
     }
-    logger({ log: `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
+    if (schedulerType === 'hyperbeam') {
+      logger({ log: `${cuUrl}/result/${schedulerTx.slot}?process-id=${processId}&no-busy=1`, logId })
+    } else {
+      logger({ log: `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`, logId })
+    }
 
     const requestOptions = {
       timeout: 0
     }
 
+    const url = schedulerType === 'hyperbeam'
+      ? `${cuUrl}/result/${schedulerTx.slot}?process-id=${processId}&no-busy=1`
+      : `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`
+
     return backoff(
       () =>
         resultFetch(
-          `${cuUrl}/result/${txId}?process-id=${processId}&no-busy=1`,
+          url,
           requestOptions,
           logId
         ).then(okRes),

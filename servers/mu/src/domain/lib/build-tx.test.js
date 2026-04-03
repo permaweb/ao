@@ -27,7 +27,8 @@ async function buildAndSign ({ processId, tags, anchor }) {
   return {
     id: 'id-1',
     data: Buffer.alloc(0),
-    processId
+    processId,
+    tags: []
   }
 }
 
