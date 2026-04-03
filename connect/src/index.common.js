@@ -76,6 +76,7 @@ export function connectWith ({ createDataItemSigner, createSigner }) {
       deployMessage: MuClient.deployMessageWith({
         fetch,
         MU_URL,
+        locate,
         logger: messageLogger
       }),
       logger: messageLogger

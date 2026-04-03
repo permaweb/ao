@@ -53,7 +53,8 @@ export const deployMessageSchema = z.function()
     data: z.any(),
     tags: z.array(tagSchema),
     anchor: z.string().optional(),
-    signer: z.any().nullish()
+    signer: z.any().nullish(),
+    returnAssignmentSlot: z.boolean().optional()
   }))
   .returns(z.promise(
     z.object({
