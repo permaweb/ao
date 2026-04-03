@@ -16,7 +16,14 @@ function fetchResultWith ({ fetchResult }) {
   return (ctx) => {
     return of(ctx)
       .chain(() => {
-        return fetchResultAsync(ctx.tx.id, ctx.tx.processId, ctx.logId, ctx.customCuUrl)
+        return fetchResultAsync(
+          ctx.tx.id,
+          ctx.tx.processId,
+          ctx.logId,
+          ctx.customCuUrl,
+          ctx.schedulerTx,
+          ctx.schedulerType
+        )
       })
       .chain(fetchedResult => {
         const msgs = fetchedResult.Messages

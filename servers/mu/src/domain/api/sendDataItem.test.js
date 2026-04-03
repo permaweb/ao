@@ -31,10 +31,10 @@ describe('sendDataItemWith', () => {
           }),
           locateScheduler: async () => ({ url: 'url-123' }),
           locateProcess: async (res) => {
-            return ({
+            return {
               url: 'url-1234',
               address: 'address-123'
-            })
+            }
           },
           fetchResult: (res) => res,
           crank: (res) => {
@@ -46,7 +46,8 @@ describe('sendDataItemWith', () => {
           writeDataItemArweave: (res) => res,
           getRecentTraces: () => ({ wallet: [], ip: [] }),
           getRateLimits: () => ({}),
-          toAddress: (str) => str
+          toAddress: (str) => str,
+          getProcess: async () => ({ tags: [] })
         })
 
         const { crank, ...result } = await sendDataItem({
@@ -97,7 +98,8 @@ describe('sendDataItemWith', () => {
           writeDataItemArweave: (res) => res,
           getRecentTraces: () => ({ wallet: [], ip: [] }),
           getRateLimits: () => ({}),
-          toAddress: (str) => str
+          toAddress: (str) => str,
+          getProcess: async () => ({ tags: [] })
         })
 
         const { crank, ...result } = await sendDataItem({
@@ -133,12 +135,14 @@ describe('sendDataItemWith', () => {
           locateProcess: (res) => res,
           fetchResult: async (res) => {
             return {
-              Messages: [{
-                Tags: [],
-                Target: 'target',
-                Data: 'Data',
-                Anchor: '0000'
-              }],
+              Messages: [
+                {
+                  Tags: [],
+                  Target: 'target',
+                  Data: 'Data',
+                  Anchor: '0000'
+                }
+              ],
               Spawns: [],
               Assignments: [],
               Output: ''
@@ -156,7 +160,8 @@ describe('sendDataItemWith', () => {
           spawnPushEnabled: true,
           getRecentTraces: () => ({ wallet: [], ip: [] }),
           getRateLimits: () => ({}),
-          toAddress: (str) => str
+          toAddress: (str) => str,
+          getProcess: async () => ({ tags: [] })
         })
 
         const { crank, ...result } = await sendDataItem({
