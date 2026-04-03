@@ -1,8 +1,11 @@
 import { identity } from 'ramda'
+import { createHash } from 'node:crypto'
 import { of, fromPromise, Rejected } from 'hyper-async'
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
 import { connect, createDataItemSigner } from '@permaweb/aoconnect'
+import warpArBundles from 'warp-arbundles'
+const { DataItem } = warpArBundles
 
 function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
   const suFetch = withTimerMetricsFetch({
@@ -55,8 +58,13 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
         logId
       }))
       .chain(
-        fromPromise((body) => {
+        fromPromise(async (body) => {
           if (schedulerType === 'hyperbeam') {
+            const di = new DataItem(Buffer.from(data, 'base64'))
+            const id = await di.id
+            const owner = createHash('sha256')
+              .update(Buffer.from(di.owner, 'base64url'))
+              .digest('base64url')
             // Use ao connect for HyperBeam scheduler requests
             const aoConnect = connect({
               MODE: 'mainnet',
@@ -81,6 +89,8 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
                 method: 'POST',
                 ...tagsToObj,
                 target: processId,
+                'original-owner': owner,
+                'original-id': id,
                 'signing-format': 'ANS-104',
                 'scheduler-location': schedulerAddress
               }
