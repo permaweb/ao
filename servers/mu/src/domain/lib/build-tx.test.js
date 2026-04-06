@@ -65,7 +65,7 @@ describe('buildTx', () => {
       buildAndSign,
       logger,
       locateProcess,
-      fetchSchedulerProcess,
+      getProcess: fetchSchedulerProcess,
       isWallet,
       isHyperBeamProcess
     })
@@ -95,7 +95,7 @@ describe('buildTx', () => {
       buildAndSign,
       logger,
       locateProcess,
-      fetchSchedulerProcess,
+      getProcess: fetchSchedulerProcess,
       isWallet,
       isHyperBeamProcess
     })
