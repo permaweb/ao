@@ -1,13 +1,9 @@
 import { identity } from 'ramda'
-import { createHash } from 'node:crypto'
 import { of, fromPromise, Rejected } from 'hyper-async'
 import { backoff, okRes } from '../utils.js'
 import { withTimerMetricsFetch } from '../lib/with-timer-metrics-fetch.js'
-import { connect, createDataItemSigner } from '@permaweb/aoconnect'
-import warpArBundles from 'warp-arbundles'
-const { DataItem } = warpArBundles
 
-function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
+function writeDataItemWith ({ fetch, histogram, logger }) {
   const suFetch = withTimerMetricsFetch({
     fetch,
     timer: histogram,
@@ -60,46 +56,14 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
       .chain(
         fromPromise(async (body) => {
           if (schedulerType === 'hyperbeam') {
-            const di = new DataItem(Buffer.from(data, 'base64'))
-            const id = await di.id
-            const owner = createHash('sha256')
-              .update(Buffer.from(di.owner, 'base64url'))
-              .digest('base64url')
-            // Use ao connect for HyperBeam scheduler requests
-            const aoConnect = connect({
-              MODE: 'mainnet',
-              device: 'process@1.0',
-              signer: createDataItemSigner(wallet),
-              URL: suUrl
+            return hbFetch(`${suUrl}/${processId}/~scheduler@1.0/schedule`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/ans104',
+                'codec-device': 'ans104@1.0'
+              },
+              body
             })
-
-            // Helper function to convert tags array to object (like assoc in mainnet.js)
-            const tagsToObj = tags.reduce((acc, tag) => {
-              acc[tag.name.toLowerCase()] = tag.value
-              return acc
-            }, {})
-
-            // Create scheduler request parameters
-            let scheduleParams = {}
-            if (tagsToObj.type === 'Process') {
-              throw new Error('Mainnet spawning not supported through legacynet')
-            } else {
-              scheduleParams = {
-                path: '/~scheduler@1.0/schedule',
-                method: 'POST',
-                ...tagsToObj,
-                target: processId,
-                'original-owner': owner,
-                'original-id': id,
-                'signing-format': 'ANS-104',
-                'scheduler-location': schedulerAddress
-              }
-              if (dataStr) {
-                scheduleParams.data = dataStr
-              }
-            }
-
-            return aoConnect.request(scheduleParams)
           } else {
             return fetchClient(endpoint, {
               method: 'POST',
@@ -140,8 +104,10 @@ function writeDataItemWith ({ fetch, histogram, logger, wallet }) {
         fromPromise(async (res) => {
           if (schedulerType === 'hyperbeam') {
             if (+res.status === 200) {
-              // TODO: fix this
-              return { id, timestamp: Date.now(), slot: +res.slot, process: res?.process }
+              const slot = res.headers.get('slot')
+              const timestamp = res.headers.get('timestamp')
+              const process = res.headers.get('process')
+              return { id, timestamp, slot, process }
             }
             throw new Error(`${res.status}: Error posting to HyperBeam`)
           }
