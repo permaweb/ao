@@ -104,8 +104,10 @@ function writeDataItemWith ({ fetch, histogram, logger }) {
         fromPromise(async (res) => {
           if (schedulerType === 'hyperbeam') {
             if (+res.status === 200) {
-              // TODO: fix this
-              return { id, timestamp: Date.now(), slot: +res.slot, process: res?.process }
+              const slot = res.headers.get('slot')
+              const timestamp = res.headers.get('timestamp')
+              const process = res.headers.get('process')
+              return { id, timestamp, slot, process }
             }
             throw new Error(`${res.status}: Error posting to HyperBeam`)
           }
